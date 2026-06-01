@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Avoid preallocating scope attributes in Prometheus exporter when disabled. (#8404)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
