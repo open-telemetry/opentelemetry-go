@@ -11,6 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
+### Added
+
+- Add experimental `ProbabilitySampler` in `go.opentelemetry.io/otel/sdk/trace/x` that conforms to the [OpenTelemetry specification's threshold-based sampling algorithm](https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased). (#8123)
+
+
 ## [1.44.0/0.66.0/0.20.0/0.0.17] 2026-05-27
 
 ### Added
@@ -54,7 +59,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/otel/semconv/v1.41.0` package.
   The package contains semantic conventions from the `v1.41.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.41.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.40.0`. (#8324)
-- Add experimental `ProbabilitySampler` in `go.opentelemetry.io/otel/sdk/trace/x` that conforms to the [OpenTelemetry specification's threshold-based sampling algorithm](https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased). (#8123)
 - Add Observable variants of instruments to `go.opentelemetry.io/otel/semconv/v1.41.0` package. (#8350)
 - Generate explicit histogram bucket boundaries from weaver configuration for HTTP and RPC duration instruments in `go.opentelemetry.io/otel/semconv/v1.41.0`. (#8002)
 
