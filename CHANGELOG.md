@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix histogram datapoint reuse in SDK metric aggregation to avoid leaking stale sum/min/max values when they are disabled in subsequent collections. (#8403)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
