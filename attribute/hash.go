@@ -45,7 +45,6 @@ func hashKVs(kvs []KeyValue) uint64 {
 		return remappedZeroHash
 	}
 	return sum
-	return sum
 }
 
 // hashKV returns the xxHash64 hash of kv with h as the base.
