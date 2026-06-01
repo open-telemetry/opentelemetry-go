@@ -39,7 +39,7 @@ func hashKVs(kvs []KeyValue) uint64 {
 		h = hashKV(h, kv)
 	}
 	sum := h.Sum64()
-	// Remap 0 to 1 for non-empty sets because 0 is reserved as an empty sentinel.
+	// Remap 0 to 1 for non-empty sets because 0 is reserved for the empty set.
 	if sum == 0 && len(kvs) > 0 {
 		return 1
 	}
