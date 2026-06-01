@@ -38,7 +38,12 @@ func hashKVs(kvs []KeyValue) uint64 {
 	for _, kv := range kvs {
 		h = hashKV(h, kv)
 	}
-	return h.Sum64()
+	sum := h.Sum64()
+	// Remap 0 to 1 for non-empty sets because 0 is reserved as an empty sentinel.
+	if sum == 0 && len(kvs) > 0 {
+		return 1
+	}
+	return sum
 }
 
 // hashKV returns the xxHash64 hash of kv with h as the base.
