@@ -36,6 +36,10 @@ module-sets:
       - go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc
       - go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp
       - go.opentelemetry.io/otel/exporters/stdout/stdoutlog
+  experimental-traces:
+    version: v0.1.0
+    modules:
+      - go.opentelemetry.io/otel/sdk/trace/x
   experimental-schema:
     version: v0.0.17
     modules:
