@@ -24,7 +24,7 @@ jobs:
     outputs:
       shards: ${{ steps.sharding.outputs.shards }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - id: sharding
         run: |
           echo "shards=$(make print-sharded-benchmarks)" >> $GITHUB_OUTPUT
@@ -39,7 +39,7 @@ jobs:
       matrix:
         shard: ${{ fromJson(needs.sharding-benchmark.outputs.shards) }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       # Bare metal uses Ubuntu 24.04, which does not have `make` and `build-essential`.
       - name: Install make and build-essential
         run: sudo apt-get update && sudo apt-get install -y make build-essential
