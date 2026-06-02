@@ -6,7 +6,6 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"errors"
-	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -98,6 +97,9 @@ type BatchProcessor struct {
 	// stopped holds the stopped state of the BatchProcessor.
 	stopped atomic.Bool
 
+	// pool is used to reuse slices of Record.
+	pool sync.Pool
+
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
@@ -127,8 +129,18 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 		pollTrigger: make(chan struct{}, 1),
 		pollKill:    make(chan struct{}),
 	}
+	b.pool.New = func() any {
+		buf := make([]Record, b.batchSize)
+		return &buf
+	}
 	b.pollDone = b.poll(cfg.expInterval.Value)
 	return b
+}
+
+func clearRecords(recs []Record) {
+	for i := range recs {
+		recs[i] = Record{}
+	}
 }
 
 // poll spawns a goroutine to handle interval polling and batch exporting. The
@@ -137,8 +149,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 	done = make(chan struct{})
 
 	ticker := time.NewTicker(interval)
-	// TODO: investigate using a sync.Pool instead of cloning.
-	buf := make([]Record, b.batchSize)
+	bufPtr := b.pool.Get().(*[]Record)
 	go func() {
 		defer close(done)
 		defer ticker.Stop()
@@ -159,10 +170,14 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 			var qLen int
 			// Don't copy data from queue unless exporter can accept more, it is very expensive.
 			if b.exporter.Ready() {
-				qLen = b.q.TryDequeue(buf, func(r []Record) bool {
-					ok := b.exporter.EnqueueExport(r)
+				currentBufPtr := bufPtr
+				qLen = b.q.TryDequeue(*currentBufPtr, func(r []Record) bool {
+					ok := b.exporter.EnqueueExport(r, func(_ []Record) {
+						clearRecords(*currentBufPtr)
+						b.pool.Put(currentBufPtr)
+					})
 					if ok {
-						buf = slices.Clone(buf)
+						bufPtr = b.pool.Get().(*[]Record)
 					}
 					return ok
 				})
@@ -245,7 +260,7 @@ func (b *BatchProcessor) ForceFlush(ctx context.Context) error {
 	notFlushed := func() bool {
 		var flushed bool
 		_ = b.q.TryDequeue(buf, func(r []Record) bool {
-			flushed = b.exporter.EnqueueExport(r)
+			flushed = b.exporter.EnqueueExport(r, nil)
 			return flushed
 		})
 		return !flushed
