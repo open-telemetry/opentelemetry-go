@@ -158,18 +158,16 @@ type exportData struct {
 // will be returned on e's respCh if not nil. The error will be handled by the
 // default OTel error handle if it is not nil and respCh is nil or full.
 func (e exportData) DoExport(exportFn func(context.Context, []Record) error) {
+	if e.release != nil {
+		defer e.release(e.records)
+	}
+
 	if len(e.records) == 0 {
 		e.respond(nil)
-		if e.release != nil {
-			e.release(e.records)
-		}
 		return
 	}
 
 	e.respond(exportFn(e.ctx, e.records))
-	if e.release != nil {
-		e.release(e.records)
-	}
 }
 
 func (e exportData) respond(err error) {
