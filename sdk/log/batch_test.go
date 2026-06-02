@@ -339,6 +339,23 @@ func TestBatchProcessor(t *testing.T) {
 
 			assert.ErrorIs(t, b.Shutdown(c), context.Canceled)
 		})
+
+		t.Run("PoolRecycleOnShutdown", func(t *testing.T) {
+			e := newTestExporter(nil)
+			b := NewBatchProcessor(e)
+
+			var newCalled int
+			b.pool.New = func() any {
+				newCalled++
+				buf := make([]Record, b.batchSize)
+				return &buf
+			}
+
+			assert.NoError(t, b.Shutdown(ctx))
+
+			_ = b.pool.Get().(*[]Record)
+			assert.Equal(t, 0, newCalled, "pool.Get should have returned a recycled buffer without calling New")
+		})
 	})
 
 	t.Run("ForceFlush", func(t *testing.T) {

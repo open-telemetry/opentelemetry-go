@@ -147,6 +147,10 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 	go func() {
 		defer close(done)
 		defer ticker.Stop()
+		defer func() {
+			clear(*bufPtr)
+			b.pool.Put(bufPtr)
+		}()
 
 		for {
 			select {
