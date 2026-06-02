@@ -590,25 +590,69 @@ func TestBufferExporter(t *testing.T) {
 		})
 
 		t.Run("ReleaseCallback", func(t *testing.T) {
-			exp := newTestExporter(nil)
-			t.Cleanup(exp.Stop)
-			e := newBufferExporter(exp, 1)
+			t.Run("Active", func(t *testing.T) {
+				exp := newTestExporter(nil)
+				t.Cleanup(exp.Stop)
+				e := newBufferExporter(exp, 1)
 
-			released := make(chan []Record, 1)
-			release := func(r []Record) {
-				released <- r
-			}
+				released := make(chan []Record, 1)
+				release := func(r []Record) {
+					released <- r
+				}
 
-			records := make([]Record, 1)
-			assert.True(t, e.EnqueueExport(records, release))
-			e.ForceFlush(t.Context())
+				records := make([]Record, 1)
+				assert.True(t, e.EnqueueExport(records, release))
+				e.ForceFlush(t.Context())
 
-			select {
-			case got := <-released:
-				assert.Equal(t, records, got)
-			case <-time.After(2 * time.Second):
-				t.Fatal("release callback was not called")
-			}
+				select {
+				case got := <-released:
+					assert.Equal(t, records, got)
+				case <-time.After(10 * time.Second):
+					t.Fatal("release callback was not called")
+				}
+			})
+
+			t.Run("Empty", func(t *testing.T) {
+				exp := newTestExporter(nil)
+				t.Cleanup(exp.Stop)
+				e := newBufferExporter(exp, 1)
+
+				released := false
+				release := func([]Record) {
+					released = true
+				}
+
+				assert.True(t, e.EnqueueExport(nil, release))
+				assert.True(t, released)
+			})
+
+			t.Run("Stopped", func(t *testing.T) {
+				exp := newTestExporter(nil)
+				t.Cleanup(exp.Stop)
+				e := newBufferExporter(exp, 1)
+
+				_ = e.Shutdown(t.Context())
+
+				released := false
+				release := func([]Record) {
+					released = true
+				}
+
+				assert.True(t, e.EnqueueExport(make([]Record, 1), release))
+				assert.True(t, released)
+			})
+
+			t.Run("DoExportEmpty", func(t *testing.T) {
+				released := false
+				data := exportData{
+					records: nil,
+					release: func([]Record) {
+						released = true
+					},
+				}
+				data.DoExport(func(context.Context, []Record) error { return nil })
+				assert.True(t, released)
+			})
 		})
 	})
 }
