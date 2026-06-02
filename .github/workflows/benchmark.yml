@@ -10,6 +10,11 @@ on:
       - 'Makefile'
       - '.github/workflows/benchmark.yml'
   workflow_dispatch:
+    inputs:
+      full:
+        description: "Run benchmarks for every module, ignoring the affected-module diff."
+        type: boolean
+        default: false
 
 # Declare default permissions as read only.
 permissions: read-all
@@ -25,12 +30,40 @@ jobs:
       shards: ${{ steps.sharding.outputs.shards }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Need history so the affected-module detector can diff
+          # against the prior commit.
+          fetch-depth: 0
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
+          cache-dependency-path: "**/go.sum"
       - id: sharding
+        env:
+          # We want to diff HEAD against whatever "before this change"
+          # means for the current event.
+          #
+          # For a PR, that's the commit on main the PR branched from --
+          # we want every commit in the PR, not just the latest push.
+          # (Tempting to use github.event.before here, but on PRs it's
+          # the previous tip of the PR branch, so it'd miss earlier
+          # commits in the same PR.)
+          #
+          # For a push to main, it's the commit that was at the tip
+          # before this push -- exactly the new work this push brings.
+          #
+          # For a manual workflow_dispatch run, neither field is set,
+          # and the Makefile's default base ref kicks in.
+          BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+          ARGS: ${{ inputs.full && '-all' || '' }}
         run: |
-          echo "shards=$(make print-sharded-benchmarks)" >> $GITHUB_OUTPUT
+          echo "shards=$(make print-affected-benchmarks)" >> $GITHUB_OUTPUT
 
   benchmark:
     needs: sharding-benchmark
+    # Skip the matrix entirely when nothing benchmark-relevant changed.
+    if: needs.sharding-benchmark.outputs.shards != '[]'
     permissions:
       contents: write # required for pushing to gh-pages branch
     name: Benchmarks
@@ -47,7 +80,14 @@ jobs:
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true
-          cache-dependency-path: "**/go.sum"
+          # Disable setup-go's GOMODCACHE/GOCACHE caching on the bare-metal
+          # runner. The runner is persistent, so ~/go/pkg/mod and
+          # ~/.cache/go-build already survive between jobs locally. The
+          # Actions cache for this key reaches multiple GB across the matrix,
+          # which makes every shard pay ~1-2 min on either the restore
+          # (download + tar -xf) or the post-step save (tar + upload), with
+          # no benefit over the on-disk caches.
+          cache: false
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@9d332c4d90b43981c3e55ae8e38e68709996240f # v4.17.0
         with:
@@ -55,10 +95,4 @@ jobs:
           allow-empty: true
           # CodSpeed runs extremely slow when there are 128 processes involved, which is the number
           # of CPUs on the bare metal machine. Limiting the number of processes to 4 helps mitigate this. 4 also matches the number of CPUs on GitHub runners.
-          #
-          # CodSpeed overrides the default benchtime if we don't explicitly specify it.
-          # Having this would avoid running benchmark for more than 1 hour.
-          #
-          # The benchtime is adjusted to 500 ms to speed up the benchmark time.
-          # Per https://github.com/open-telemetry/community/issues/2331#issuecomment-2356403352
-          run: GOMAXPROCS=4 make benchmark/${{matrix.shard}} ARGS=-benchtime=500ms
+          run: GOMAXPROCS=4 make benchmark/${{matrix.shard}}
