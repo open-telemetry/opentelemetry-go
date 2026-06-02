@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Optimize `go.opentelemetry.io/otel/sdk/log` to use `sync.Pool` for recycling record buffers in the batch log processor, reducing reducing bytes allocated during batch export handoff.
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

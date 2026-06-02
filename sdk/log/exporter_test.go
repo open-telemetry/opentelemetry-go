@@ -89,7 +89,8 @@ func (e *testExporter) Export(ctx context.Context, r []Record) error {
 	e.inputMu.Lock()
 	defer e.inputMu.Unlock()
 	if !e.stopped.Load() {
-		e.input <- instruction{Record: &r}
+		cp := slices.Clone(r)
+		e.input <- instruction{Record: &cp}
 	}
 	return e.Err
 }
@@ -339,7 +340,7 @@ func TestBufferExporter(t *testing.T) {
 					case <-stop:
 						return
 					default:
-						_ = e.EnqueueExport(records)
+						_ = e.EnqueueExport(records, nil)
 						_ = e.Export(ctx, records)
 						_ = e.ForceFlush(ctx)
 					}
@@ -386,7 +387,7 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 1)
 
 			// Make sure there is something to flush.
-			require.True(t, e.EnqueueExport(make([]Record, 1)))
+			require.True(t, e.EnqueueExport(make([]Record, 1), nil))
 
 			ctx, cancel := context.WithCancel(t.Context())
 			cancel()
@@ -435,7 +436,7 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 1)
 
 			ctx, cancel := context.WithCancel(t.Context())
-			require.True(t, e.EnqueueExport(make([]Record, 1)))
+			require.True(t, e.EnqueueExport(make([]Record, 1), nil))
 
 			got := make(chan error, 1)
 			go func() { got <- e.ForceFlush(ctx) }()
@@ -557,7 +558,7 @@ func TestBufferExporter(t *testing.T) {
 			t.Cleanup(exp.Stop)
 			e := newBufferExporter(exp, 1)
 
-			assert.True(t, e.EnqueueExport(nil))
+			assert.True(t, e.EnqueueExport(nil, nil))
 			e.ForceFlush(t.Context())
 			assert.Equal(t, 0, exp.ExportN(), "empty batch enqueued")
 		})
@@ -570,8 +571,8 @@ func TestBufferExporter(t *testing.T) {
 			records := make([]Record, 1)
 			records[0].SetBody(log.BoolValue(true))
 
-			assert.True(t, e.EnqueueExport(records))
-			assert.True(t, e.EnqueueExport(records))
+			assert.True(t, e.EnqueueExport(records, nil))
+			assert.True(t, e.EnqueueExport(records, nil))
 			e.ForceFlush(t.Context())
 
 			n := exp.ExportN()
@@ -585,7 +586,29 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 1)
 
 			_ = e.Shutdown(t.Context())
-			assert.True(t, e.EnqueueExport(make([]Record, 1)))
+			assert.True(t, e.EnqueueExport(make([]Record, 1), nil))
+		})
+
+		t.Run("ReleaseCallback", func(t *testing.T) {
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
+			e := newBufferExporter(exp, 1)
+
+			released := make(chan []Record, 1)
+			release := func(r []Record) {
+				released <- r
+			}
+
+			records := make([]Record, 1)
+			assert.True(t, e.EnqueueExport(records, release))
+			e.ForceFlush(t.Context())
+
+			select {
+			case got := <-released:
+				assert.Equal(t, records, got)
+			case <-time.After(2 * time.Second):
+				t.Fatal("release callback was not called")
+			}
 		})
 	})
 }
