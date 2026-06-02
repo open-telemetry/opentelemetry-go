@@ -238,12 +238,14 @@ func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan
 }
 
 // EnqueueExport enqueues an export of records to be performed asynchronously.
-// This will return true if the records are successfully enqueued (or the
-// bufferExporter is shut down), false otherwise.
+// It returns true if the records are accepted for export (or if the exporter
+// is shut down), false otherwise.
 //
-// The passed records are held after this call returns. If a non-nil release
-// callback is provided, it will be called once the export has completed or if
-// the export is discarded.
+// If this returns true, the exporter takes ownership of the records and the
+// release callback (if non-nil) is guaranteed to be called eventually.
+//
+// If this returns false, the records are not accepted, and the release
+// callback is not called.
 func (e *bufferExporter) EnqueueExport(records []Record, release func([]Record)) bool {
 	if len(records) == 0 {
 		// Nothing to enqueue, do not waste input space.
