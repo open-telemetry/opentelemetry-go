@@ -137,12 +137,6 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	return b
 }
 
-func clearRecords(recs []Record) {
-	for i := range recs {
-		recs[i] = Record{}
-	}
-}
-
 // poll spawns a goroutine to handle interval polling and batch exporting. The
 // returned done chan is closed when the spawned goroutine completes.
 func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
@@ -173,7 +167,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				currentBufPtr := bufPtr
 				qLen = b.q.TryDequeue(*currentBufPtr, func(r []Record) bool {
 					ok := b.exporter.EnqueueExport(r, func(_ []Record) {
-						clearRecords(*currentBufPtr)
+						clear(*currentBufPtr)
 						b.pool.Put(currentBufPtr)
 					})
 					if ok {

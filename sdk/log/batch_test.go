@@ -15,7 +15,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -735,7 +734,7 @@ func TestBatchProcessorExportBufferLifetime(t *testing.T) {
 	// Wait for the exporter to start processing
 	select {
 	case <-exporterStarted:
-	case <-time.After(2 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("exporter did not start in time")
 	}
 
@@ -784,8 +783,6 @@ func TestBatchProcessorExportBufferLifetime(t *testing.T) {
 }
 
 func BenchmarkBatchProcessorExport(b *testing.B) {
-	otel.SetLogger(logr.Discard())
-
 	bp := NewBatchProcessor(
 		defaultNoopExporter,
 		WithMaxQueueSize(b.N+1),

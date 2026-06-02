@@ -147,7 +147,7 @@ type exportData struct {
 
 	// respCh is the channel any error returned from the export will be sent
 	// on. If this is nil, and the export error is non-nil, the error will
-	// passed to the OTel error handler.
+	// be passed to the OTel error handler.
 	respCh chan<- error
 
 	// release is called after the export has completed.
@@ -237,11 +237,13 @@ func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan
 	return nil
 }
 
-// EnqueueExport enqueues an export of records in the context of ctx to be
-// performed asynchronously. This will return true if the records are
-// successfully enqueued (or the bufferExporter is shut down), false otherwise.
+// EnqueueExport enqueues an export of records to be performed asynchronously.
+// This will return true if the records are successfully enqueued (or the
+// bufferExporter is shut down), false otherwise.
 //
-// The passed records are held after this call returns.
+// The passed records are held after this call returns. If a non-nil release
+// callback is provided, it will be called once the export has completed or if
+// the export is discarded.
 func (e *bufferExporter) EnqueueExport(records []Record, release func([]Record)) bool {
 	if len(records) == 0 {
 		// Nothing to enqueue, do not waste input space.
@@ -254,23 +256,24 @@ func (e *bufferExporter) EnqueueExport(records []Record, release func([]Record))
 	data := exportData{ctx: context.Background(), records: records, release: release}
 
 	e.inputMu.Lock()
-	defer e.inputMu.Unlock()
+	stopped := e.stopped.Load()
+	var enqueued bool
+	if !stopped {
+		select {
+		case e.input <- data:
+			enqueued = true
+		default:
+		}
+	}
+	e.inputMu.Unlock()
 
-	// Check stopped before enqueueing now that e.inputMu is held. This
-	// prevents sends on a closed chan when Shutdown is called concurrently.
-	if e.stopped.Load() {
+	if stopped {
 		if release != nil {
 			release(records)
 		}
 		return true
 	}
-
-	select {
-	case e.input <- data:
-		return true
-	default:
-		return false
-	}
+	return enqueued
 }
 
 // Export synchronously exports records in the context of ctx. This will not
