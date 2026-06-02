@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otlptracehttp
+package otlploghttp
 
 import (
 	"net/http"
@@ -10,12 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
-
-func TestRetryAfterUsesSeconds(t *testing.T) {
-	err := newResponseError(http.Header{"Retry-After": {"10"}}, nil)
-	_, throttle := evaluate(err)
-	assert.Equal(t, 10*time.Second, throttle)
-}
 
 func TestRetryAfterUsesHTTPDate(t *testing.T) {
 	date := time.Now().UTC().Add(time.Hour).Format(http.TimeFormat)

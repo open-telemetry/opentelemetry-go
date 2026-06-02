@@ -361,8 +361,10 @@ type retryableError struct {
 func newResponseError(header http.Header, wrapped error) error {
 	var rErr retryableError
 	if v := header.Get("Retry-After"); v != "" {
-		if t, err := strconv.ParseInt(v, 10, 64); err == nil {
+		if t, err := strconv.ParseInt(v, 10, 64); err == nil && t >= 0 {
 			rErr.throttle = time.Duration(t) * time.Second
+		} else if date, err := http.ParseTime(v); err == nil {
+			rErr.throttle = max(time.Until(date), 0)
 		}
 	}
 
