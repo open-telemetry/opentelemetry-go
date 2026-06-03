@@ -8,6 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Interpret HTTP `Retry-After` header values as seconds instead of nanoseconds when retrying OTLP HTTP exports in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8383)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.44.0/0.66.0/0.20.0/0.0.17] 2026-05-27
+
 ### Added
 
 - Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
@@ -32,16 +41,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithMaxRequestSize` option in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8157)
 - Add `WithMaxRequestSize` option in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#8157)
 - Add `WithMaxRequestSize` option in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8157)
+- Add `Settable` to `go.opentelemetry.io/otel/metric/x` to allow reusing attribute options. (#8178)
 - Add experimental support for splitting metric data across multiple batches in `go.opentelemetry.io/otel/sdk/metric`.
   Set `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE=<max_size>` to enable for all periodic readers.
   See `go.opentelemetry.io/otel/sdk/metric/internal/x` for feature documentation. (#8071)
+- Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`.
+  Enable with `OTEL_GO_X_SELF_OBSERVABILITY=true` environment variable.
+  See `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x` for feature documentation. (#8192)
+- Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`.
+  Enable with `OTEL_GO_X_SELF_OBSERVABILITY=true` environment variable.
+  See `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/x` for feature documentation. (#8194)
+- Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`.
+  Enable with `OTEL_GO_X_SELF_OBSERVABILITY=true` environment variable.
+  See `go.opentelemetry.io/otel/stdout/stdoutlog/internal/x` for feature documentation. (#8263)
 - Add `WithDefaultAttributes` to `go.opentelemetry.io/otel/metric/x` to support setting default attributes on instruments. (#8135)
-- Add `Settable` to `go.opentelemetry.io/otel/metric/x` to allow reusing attribute options. (#8178)
-- Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8194)
 - Add `go.opentelemetry.io/otel/semconv/v1.41.0` package.
   The package contains semantic conventions from the `v1.41.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.41.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.40.0`. (#8324)
-- Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#8263)
 - Add Observable variants of instruments to `go.opentelemetry.io/otel/semconv/v1.41.0` package. (#8350)
 - Generate explicit histogram bucket boundaries from weaver configuration for HTTP and RPC duration instruments in `go.opentelemetry.io/otel/semconv/v1.41.0`. (#8002)
 
@@ -65,8 +81,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` to safely handle zero size.
-  A capacity check in the constructor initializes the reservoir safely and skips initialization for zero-cap; early returns in `Offer()` and `Collect()` ensure no-op behavior. (#8295)
 - Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`.
   The limit applies before compression, oversized requests are treated as non-retryable errors, and the limit can be configured with the new `WithMaxRequestSize` option. (#8157, #8365)
 - Limit OTLP request size to 64 MiB by default in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`.
@@ -86,15 +100,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix stale status code reporting on self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8226)
 - Fix a concurrent `Collect` data race and potential panic in `go.opentelemetry.io/otel/exporters/prometheus` when `WithResourceAsConstantLabels` option is used. (#8227)
 - Fix race condition in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` by reverting #7447. (#8249)
+- Fix `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` to safely handle zero size.
+  A capacity check in the constructor initializes the reservoir safely and skips initialization for zero-cap; early returns in `Offer()` and `Collect()` ensure no-op behavior. (#8295)
 - Fix counting of spans and logs in self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8254)
 - Drop conflicting scope attributes named `name`, `version`, or `schema_url` from metric labels in `go.opentelemetry.io/otel/exporters/prometheus`, preserving the dedicated `otel_scope_name`, `otel_scope_version`, and `otel_scope_schema_url` labels. (#8264)
 - Close schema files opened by `ParseFile` in `go.opentelemetry.io/otel/schema/v1.0` and `go.opentelemetry.io/otel/schema/v1.1`. ([GHSA-995v-fvrw-c78m](https://github.com/open-telemetry/opentelemetry-go/security/advisories/GHSA-995v-fvrw-c78m))
 - Enforce the 8192-byte baggage size limit during extraction/parsing, changing behavior when the limit is exceeded in `go.opentelemetry.io/otel/baggage` and `go.opentelemetry.io/otel/propagation`. (#8222)
 - Fix `go.opentelemetry.io/otel/semconv/v1.41.0` to include `Attr*` helper methods for required attributes on observable instruments. (#8361)
 - Limit baggage extraction error reporting in `go.opentelemetry.io/otel/propagation` to prevent malformed or oversized baggage headers from flooding logs. ([GHSA-5wrp-cwcj-q835](https://github.com/open-telemetry/opentelemetry-go/security/advisories/GHSA-5wrp-cwcj-q835))
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.43.0/0.65.0/0.19.0] 2026-04-02
 
@@ -3704,7 +3717,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.43.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.44.0...HEAD
+[1.44.0/0.66.0/0.20.0/0.0.17]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.44.0
 [1.43.0/0.65.0/0.19.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.43.0
 [1.42.0/0.64.0/0.18.0/0.0.16]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.42.0
 [1.41.0/0.63.0/0.17.0/0.0.15]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.41.0

@@ -376,7 +376,7 @@ func (r *request) reset(ctx context.Context) {
 
 // retryableError represents a request failure that can be retried.
 type retryableError struct {
-	throttle int64
+	throttle time.Duration
 	err      error
 }
 
@@ -387,7 +387,7 @@ func newResponseError(header http.Header, wrapped error) error {
 	var rErr retryableError
 	if s, ok := header["Retry-After"]; ok {
 		if t, err := strconv.ParseInt(s[0], 10, 64); err == nil {
-			rErr.throttle = t
+			rErr.throttle = time.Duration(t) * time.Second
 		}
 	}
 
@@ -436,7 +436,7 @@ func evaluate(err error) (bool, time.Duration) {
 		return false, 0
 	}
 
-	return true, time.Duration(rErr.throttle)
+	return true, rErr.throttle
 }
 
 func (c *client) getScheme() string {
