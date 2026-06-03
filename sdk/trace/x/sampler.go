@@ -75,8 +75,9 @@ func (ps *probabilitySampler) ShouldSample(p sdktrace.SamplingParameters) sdktra
 
 	combined, err := state.Insert("ot", newOtts)
 	if err != nil {
+		// This should never happen, but we handle it here for code hygiene.
 		otel.Handle(fmt.Errorf("could not combine tracestate: %w", err))
-		return sdktrace.SamplingResult{Decision: sdktrace.Drop, Tracestate: state}
+		return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample, Tracestate: state}
 	}
 	return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample, Tracestate: combined}
 }

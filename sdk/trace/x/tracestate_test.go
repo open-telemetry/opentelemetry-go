@@ -53,8 +53,8 @@ func TestInsertOrUpdateTraceStateThKeyValue(t *testing.T) {
 		{
 			"no th in existing adds th at front",
 			"rv:0123456789abcd;other:value",
-			"th:fedcba987654321",
-			"th:fedcba987654321;rv:0123456789abcd;other:value",
+			"th:fedcba98765432",
+			"th:fedcba98765432;rv:0123456789abcd;other:value",
 		},
 		{
 			"existing th is replaced",
@@ -67,8 +67,8 @@ func TestInsertOrUpdateTraceStateThKeyValue(t *testing.T) {
 		{
 			"th substring in another key (path:0) is left intact; th prepended",
 			"path:0;rv:0123456789abcd",
-			"th:fedcba987654321",
-			"th:fedcba987654321;path:0;rv:0123456789abcd",
+			"th:fedcba98765432",
+			"th:fedcba98765432;path:0;rv:0123456789abcd",
 		},
 	}
 
