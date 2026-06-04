@@ -255,6 +255,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			mediatype, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 			if err != nil {
 				mediatype = ""
+				err = nil
 			}
 			var respProto colmetricpb.ExportMetricsServiceResponse
 			switch mediatype {
