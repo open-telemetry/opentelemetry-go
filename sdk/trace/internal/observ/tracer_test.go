@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 	tapi "go.opentelemetry.io/otel/trace"
 )
 
@@ -164,7 +164,8 @@ func TestTracerRemoteParent(t *testing.T) {
 			SpanID:     tapi.SpanID{0x01},
 			TraceFlags: 0x1,
 			Remote:     true,
-		}))
+		}),
+	)
 
 	_, _ = tracer.Start(ctx, "span")
 	check(t, collect(), sampledLive(1), remoteStarted(1))

@@ -2820,7 +2820,8 @@ func TestMeterDefaultAttributes(t *testing.T) {
 			name:     "Int64ObservableCounter",
 			instName: "aint",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Int64ObservableCounter("aint",
+				_, err := m.Int64ObservableCounter(
+					"aint",
 					x.WithDefaultAttributes(k1),
 					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
 						o.Observe(4, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
@@ -2841,7 +2842,8 @@ func TestMeterDefaultAttributes(t *testing.T) {
 			name:     "Float64ObservableCounter",
 			instName: "afloat",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Float64ObservableCounter("afloat",
+				_, err := m.Float64ObservableCounter(
+					"afloat",
 					x.WithDefaultAttributes(k1),
 					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
 						o.Observe(4.5, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
@@ -2862,7 +2864,8 @@ func TestMeterDefaultAttributes(t *testing.T) {
 			name:     "Int64ObservableUpDownCounter",
 			instName: "aud",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Int64ObservableUpDownCounter("aud",
+				_, err := m.Int64ObservableUpDownCounter(
+					"aud",
 					x.WithDefaultAttributes(k1),
 					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
 						o.Observe(4, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
@@ -2883,7 +2886,8 @@ func TestMeterDefaultAttributes(t *testing.T) {
 			name:     "Float64ObservableUpDownCounter",
 			instName: "aud_float",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Float64ObservableUpDownCounter("aud_float",
+				_, err := m.Float64ObservableUpDownCounter(
+					"aud_float",
 					x.WithDefaultAttributes(k1),
 					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
 						o.Observe(4.5, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
@@ -2904,7 +2908,8 @@ func TestMeterDefaultAttributes(t *testing.T) {
 			name:     "Int64ObservableGauge",
 			instName: "agauge_async",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Int64ObservableGauge("agauge_async",
+				_, err := m.Int64ObservableGauge(
+					"agauge_async",
 					x.WithDefaultAttributes(k1),
 					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
 						o.Observe(4, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
@@ -2923,7 +2928,8 @@ func TestMeterDefaultAttributes(t *testing.T) {
 			name:     "Float64ObservableGauge",
 			instName: "agauge_float_async",
 			record: func(t *testing.T, m metric.Meter) {
-				_, err := m.Float64ObservableGauge("agauge_float_async",
+				_, err := m.Float64ObservableGauge(
+					"agauge_float_async",
 					x.WithDefaultAttributes(k1),
 					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
 						o.Observe(4.5, metric.WithAttributes(k1.String("alice"), k2.String("bob")))

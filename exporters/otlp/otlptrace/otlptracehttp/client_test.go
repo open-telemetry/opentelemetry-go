@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 )
 
 const (
@@ -126,7 +126,7 @@ func TestEndToEnd(t *testing.T) {
 			mcCfg: mockCollectorConfig{
 				InjectHTTPStatus: []int{504},
 				InjectResponseHeader: []map[string]string{
-					{"Retry-After": "10"},
+					{"Retry-After": "1"},
 				},
 			},
 		},

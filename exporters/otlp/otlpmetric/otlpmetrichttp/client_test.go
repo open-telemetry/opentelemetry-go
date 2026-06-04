@@ -39,8 +39,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
 )
 
 type clientShim struct {
@@ -438,7 +438,7 @@ func TestConfig(t *testing.T) {
 	t.Run("WithRetry", func(t *testing.T) {
 		emptyErr := errors.New("")
 		rCh := make(chan otest.ExportResult, 5)
-		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"10"}}
+		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"1"}}
 		// All retryable errors.
 		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
 			Status: http.StatusServiceUnavailable,
@@ -520,7 +520,8 @@ func TestConfig(t *testing.T) {
 	})
 
 	t.Run("WithInsecureAndTLSClientConfig", func(t *testing.T) {
-		exp, err := New(t.Context(),
+		exp, err := New(
+			t.Context(),
 			WithEndpoint("localhost:4318"),
 			WithInsecure(),
 			WithTLSClientConfig(&tls.Config{}),
@@ -1045,7 +1046,8 @@ func TestClientInstrumentationStaleStatusCode(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	exp, err := New(ctx,
+	exp, err := New(
+		ctx,
 		WithHTTPClient(client),
 		WithInsecure(),
 		WithRetry(RetryConfig{
@@ -1081,6 +1083,12 @@ func TestClientInstrumentationStaleStatusCode(t *testing.T) {
 		assert.False(t, ok, "should not report status code when the request fails before getting a response.")
 	}
 	assert.True(t, found, "expected to find operation duration metric")
+}
+
+func TestRetryAfterUsesSeconds(t *testing.T) {
+	err := newResponseError(http.Header{"Retry-After": {"10"}}, nil)
+	_, throttle := evaluate(err)
+	assert.Equal(t, 10*time.Second, throttle)
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)

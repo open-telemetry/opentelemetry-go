@@ -37,7 +37,7 @@ const (
 	DefaultMetricsPath string = "/v1/metrics"
 	// DefaultMaxRequestSize is the default maximum size of a serialized export
 	// request, before compression.
-	DefaultMaxRequestSize int = 32 * 1024 * 1024
+	DefaultMaxRequestSize int = 64 * 1024 * 1024
 	// DefaultBackoff is a default base backoff time used in the
 	// exponential backoff strategy.
 	DefaultBackoff time.Duration = 300 * time.Millisecond
