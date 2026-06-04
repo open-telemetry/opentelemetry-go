@@ -127,8 +127,10 @@ func TestAttributes(t *testing.T) {
 			},
 		},
 	} {
-		got := KeyValues(test.attrs)
+		arena := NewArena(16) // use arena but without reset
+		got := KeyValues(test.attrs, arena)
 		if !assert.Len(t, got, len(test.expected)) {
+			arena.Reset()
 			continue
 		}
 		for i, actual := range got {
@@ -145,6 +147,7 @@ func TestAttributes(t *testing.T) {
 			}
 			assert.Equal(t, test.expected[i], actual)
 		}
+		arena.Reset()
 	}
 }
 
@@ -185,7 +188,8 @@ func TestArrayAttributes(t *testing.T) {
 			},
 		},
 	} {
-		actualArrayAttributes := KeyValues(test.attrs)
+		arena := NewArena(16) // use arena but without reset
+		actualArrayAttributes := KeyValues(test.attrs, arena)
 		expectedArrayAttributes := test.expected
 		if !assert.Len(t, actualArrayAttributes, len(expectedArrayAttributes)) {
 			continue

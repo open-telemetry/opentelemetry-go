@@ -13,20 +13,20 @@ import (
 )
 
 // KeyValues transforms a slice of attribute KeyValues into OTLP key-values.
-func KeyValues(attrs []attribute.KeyValue) []*commonpb.KeyValue {
+func KeyValues(attrs []attribute.KeyValue, arena *Arena) []*commonpb.KeyValue {
 	if len(attrs) == 0 {
 		return nil
 	}
 
 	out := make([]*commonpb.KeyValue, 0, len(attrs))
 	for _, kv := range attrs {
-		out = append(out, KeyValue(kv))
+		out = append(out, KeyValue(kv, arena))
 	}
 	return out
 }
 
 // Iterator transforms an attribute iterator into OTLP key-values.
-func Iterator(iter attribute.Iterator) []*commonpb.KeyValue {
+func Iterator(iter attribute.Iterator, arena *Arena) []*commonpb.KeyValue {
 	l := iter.Len()
 	if l == 0 {
 		return nil
@@ -34,29 +34,34 @@ func Iterator(iter attribute.Iterator) []*commonpb.KeyValue {
 
 	out := make([]*commonpb.KeyValue, 0, l)
 	for iter.Next() {
-		out = append(out, KeyValue(iter.Attribute()))
+		out = append(out, KeyValue(iter.Attribute(), arena))
 	}
 	return out
 }
 
 // ResourceAttributes transforms a Resource OTLP key-values.
-func ResourceAttributes(res *resource.Resource) []*commonpb.KeyValue {
-	return Iterator(res.Iter())
+func ResourceAttributes(res *resource.Resource, arena *Arena) []*commonpb.KeyValue {
+	return Iterator(res.Iter(), arena)
 }
 
 // KeyValue transforms an attribute KeyValue into an OTLP key-value.
-func KeyValue(kv attribute.KeyValue) *commonpb.KeyValue {
-	return &commonpb.KeyValue{Key: string(kv.Key), Value: Value(kv.Value)}
+func KeyValue(kv attribute.KeyValue, arena *Arena) *commonpb.KeyValue {
+	pbKV := arena.kvs.alloc()
+	pbKV.Key = string(kv.Key)
+	pbKV.Value = Value(kv.Value, arena)
+	return pbKV
 }
 
 // Value transforms an attribute Value into an OTLP AnyValue.
-func Value(v attribute.Value) *commonpb.AnyValue {
-	av := new(commonpb.AnyValue)
+func Value(v attribute.Value, arena *Arena) *commonpb.AnyValue {
+	// todo allocate slice elements with arena too?
+	av := arena.avs.alloc()
 	switch v.Type() {
 	case attribute.BOOL:
-		av.Value = &commonpb.AnyValue_BoolValue{
+		arena.avBoolValues = append(arena.avBoolValues, commonpb.AnyValue_BoolValue{
 			BoolValue: v.AsBool(),
-		}
+		})
+		av.Value = &arena.avBoolValues[len(arena.avBoolValues)-1]
 	case attribute.BOOLSLICE:
 		av.Value = &commonpb.AnyValue_ArrayValue{
 			ArrayValue: &commonpb.ArrayValue{
@@ -64,9 +69,10 @@ func Value(v attribute.Value) *commonpb.AnyValue {
 			},
 		}
 	case attribute.INT64:
-		av.Value = &commonpb.AnyValue_IntValue{
+		arena.avIntValues = append(arena.avIntValues, commonpb.AnyValue_IntValue{
 			IntValue: v.AsInt64(),
-		}
+		})
+		av.Value = &arena.avIntValues[len(arena.avIntValues)-1]
 	case attribute.INT64SLICE:
 		av.Value = &commonpb.AnyValue_ArrayValue{
 			ArrayValue: &commonpb.ArrayValue{
@@ -74,9 +80,10 @@ func Value(v attribute.Value) *commonpb.AnyValue {
 			},
 		}
 	case attribute.FLOAT64:
-		av.Value = &commonpb.AnyValue_DoubleValue{
+		arena.avFloatValues = append(arena.avFloatValues, commonpb.AnyValue_DoubleValue{
 			DoubleValue: v.AsFloat64(),
-		}
+		})
+		av.Value = &arena.avFloatValues[len(arena.avFloatValues)-1]
 	case attribute.FLOAT64SLICE:
 		av.Value = &commonpb.AnyValue_ArrayValue{
 			ArrayValue: &commonpb.ArrayValue{
@@ -84,9 +91,10 @@ func Value(v attribute.Value) *commonpb.AnyValue {
 			},
 		}
 	case attribute.STRING:
-		av.Value = &commonpb.AnyValue_StringValue{
+		arena.avStrValues = append(arena.avStrValues, commonpb.AnyValue_StringValue{
 			StringValue: v.AsString(),
-		}
+		})
+		av.Value = &arena.avStrValues[len(arena.avStrValues)-1]
 	case attribute.BYTESLICE:
 		av.Value = &commonpb.AnyValue_BytesValue{
 			BytesValue: v.AsByteSlice(),
@@ -94,7 +102,7 @@ func Value(v attribute.Value) *commonpb.AnyValue {
 	case attribute.SLICE:
 		av.Value = &commonpb.AnyValue_ArrayValue{
 			ArrayValue: &commonpb.ArrayValue{
-				Values: values(v.AsSlice()),
+				Values: values(v.AsSlice(), arena),
 			},
 		}
 	case attribute.STRINGSLICE:
@@ -160,10 +168,10 @@ func stringSliceValues(vals []string) []*commonpb.AnyValue {
 	return converted
 }
 
-func values(vals []attribute.Value) []*commonpb.AnyValue {
+func values(vals []attribute.Value, arena *Arena) []*commonpb.AnyValue {
 	converted := make([]*commonpb.AnyValue, len(vals))
 	for i, v := range vals {
-		converted[i] = Value(v)
+		converted[i] = Value(v, arena)
 	}
 	return converted
 }

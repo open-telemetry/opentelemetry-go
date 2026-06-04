@@ -13,6 +13,12 @@ import (
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
+const arenaSize = 512
+
+var arenaPool = sync.Pool{
+	New: func() any { return tracetransform.NewArena(arenaSize) },
+}
+
 var errAlreadyStarted = errors.New("already started")
 
 // Exporter exports trace data in the OTLP wire format.
@@ -28,7 +34,13 @@ type Exporter struct {
 
 // ExportSpans exports a batch of spans.
 func (e *Exporter) ExportSpans(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
-	protoSpans := tracetransform.Spans(ss)
+	a := arenaPool.Get().(*tracetransform.Arena)
+	defer func() {
+		a.Reset()
+		arenaPool.Put(a)
+	}()
+	protoSpans := tracetransform.Spans(ss, a)
+
 	if len(protoSpans) == 0 {
 		return nil
 	}
