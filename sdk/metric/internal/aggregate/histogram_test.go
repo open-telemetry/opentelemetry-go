@@ -5,6 +5,7 @@ package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggreg
 
 import (
 	"context"
+	"reflect"
 	"sort"
 	"testing"
 	"time"
@@ -488,6 +489,23 @@ func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 		bucketCounts,
 		"modifying the Aggregator bucket counts should not change the Aggregator",
 	)
+}
+
+func TestCumulativeHistogramBucketCountsReuseAcrossCollects(t *testing.T) {
+	h := newCumulativeHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
+	h.measure(t.Context(), 5, alice, nil)
+
+	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
+	require.Equal(t, 1, h.collect(&data))
+	dp1 := data.(metricdata.Histogram[int64]).DataPoints[0]
+	ptr1 := reflect.ValueOf(dp1.BucketCounts).Pointer()
+
+	h.measure(t.Context(), 1, alice, nil)
+	require.Equal(t, 1, h.collect(&data))
+	dp2 := data.(metricdata.Histogram[int64]).DataPoints[0]
+	ptr2 := reflect.ValueOf(dp2.BucketCounts).Pointer()
+
+	assert.Equal(t, ptr1, ptr2)
 }
 
 func TestDeltaHistogramReset(t *testing.T) {
