@@ -27,11 +27,12 @@ const (
 )
 
 type providerConfig struct {
-	resource      *resource.Resource
-	processors    []Processor
-	attrCntLim    setting[int]
-	attrValLenLim setting[int]
-	allowDupKeys  setting[bool]
+	resource           *resource.Resource
+	processors         []Processor
+	attrCntLim         setting[int]
+	attrValLenLim      setting[int]
+	allowDupKeys       setting[bool]
+	loggerConfigurator func(instrumentation.Scope) *log.LoggerConfig
 }
 
 type experimentalOption interface {
@@ -74,6 +75,7 @@ type LoggerProvider struct {
 	attributeCountLimit       int
 	attributeValueLengthLimit int
 	allowDupKeys              bool
+	loggerConfigurator        func(instrumentation.Scope) *log.LoggerConfig
 
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
@@ -100,6 +102,7 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 		attributeCountLimit:       cfg.attrCntLim.Value,
 		attributeValueLengthLimit: cfg.attrValLenLim.Value,
 		allowDupKeys:              cfg.allowDupKeys.Value,
+		loggerConfigurator:        cfg.loggerConfigurator,
 	}
 }
 
@@ -123,6 +126,18 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 		Version:    cfg.InstrumentationVersion(),
 		SchemaURL:  cfg.SchemaURL(),
 		Attributes: cfg.InstrumentationAttributes(),
+	}
+
+	if p.loggerConfigurator != nil {
+		if configured := p.loggerConfigurator(scope); configured != nil {
+			cfg = *configured
+			scope = instrumentation.Scope{
+				Name:       name,
+				Version:    cfg.InstrumentationVersion(),
+				SchemaURL:  cfg.SchemaURL(),
+				Attributes: cfg.InstrumentationAttributes(),
+			}
+		}
 	}
 
 	p.loggersMu.Lock()
@@ -271,6 +286,13 @@ func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 func WithAllowKeyDuplication() LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.allowDupKeys = newSetting(true)
+		return cfg
+	})
+}
+
+func withLoggerConfigurator(configurator func(instrumentation.Scope) *log.LoggerConfig) LoggerProviderOption {
+	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
+		cfg.loggerConfigurator = configurator
 		return cfg
 	})
 }
