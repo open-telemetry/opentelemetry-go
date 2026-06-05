@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
+
 ### Fixed
 
 - Interpret HTTP `Retry-After` header values as seconds instead of nanoseconds when retrying OTLP HTTP exports in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8383)
@@ -60,7 +64,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See the [migration documentation](./semconv/v1.41.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.40.0`. (#8324)
 - Add Observable variants of instruments to `go.opentelemetry.io/otel/semconv/v1.41.0` package. (#8350)
 - Generate explicit histogram bucket boundaries from weaver configuration for HTTP and RPC duration instruments in `go.opentelemetry.io/otel/semconv/v1.41.0`. (#8002)
-- Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
 
 ### Changed
 
