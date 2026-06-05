@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Interpret HTTP `Retry-After` header values as seconds instead of nanoseconds when retrying OTLP HTTP exports in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8383)
+- Drastically reduce histogram heap allocations during Collect() by reusing `BucketCounts` and `Exemplars` slices across `Collect()` cycles in the cumulative histogram aggregation in `go.opentelemetry.io/otel/sdk/metric`. (#8428)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

@@ -350,9 +350,12 @@ func (s *cumulativeHistogram[N]) collect(
 	// Do not allow modification of our copy of bounds.
 	bounds := slices.Clone(s.bounds)
 
-	// Values are being concurrently written while we iterate, so only use the
-	// current length for capacity.
-	hDPts := reset(h.DataPoints, 0, s.values.Len())
+	// Pre-size hDPts so per-series destination slots are addressable by index.
+	// This lets loadCountsInto and collectExemplars reuse each slot's existing
+	// BucketCounts/Exemplars slices from the previous cycle, addressing the
+	// large per-cycle allocations called out in TODO #3047 above.
+	n := s.values.Len()
+	hDPts := reset(h.DataPoints, n, n)
 
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
@@ -366,35 +369,41 @@ func (s *cumulativeHistogram[N]) collect(
 		}
 		// swap, observe, and clear the point
 		readIdx := val.hcwg.swapHotAndWait()
-		var bucketCounts []uint64
-		count := val.hotColdPoint[readIdx].loadCountsInto(&bucketCounts)
-		newPt := metricdata.HistogramDataPoint[N]{
-			Attributes: val.attrs,
-			StartTime:  startTime,
-			Time:       t,
-			Count:      count,
-			Bounds:     bounds,
-			// The HistogramDataPoint field values returned need to be copies of
-			// the histogramPoint value as we will keep updating them.
-			BucketCounts: bucketCounts,
-		}
 
-		if !s.noSum {
-			newPt.Sum = val.hotColdPoint[readIdx].total.load()
+		// Concurrent writers can grow s.values between Len() and Range.
+		// Cold-path grow.
+		if i >= len(hDPts) {
+			hDPts = append(hDPts, metricdata.HistogramDataPoint[N]{})
 		}
-		if !s.noMinMax {
-			if val.hotColdPoint[readIdx].minMax.set.Load() {
-				newPt.Min = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.minimum.Load())
-				newPt.Max = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.maximum.Load())
-			}
+		dp := &hDPts[i]
+
+		count := val.hotColdPoint[readIdx].loadCountsInto(&dp.BucketCounts)
+		dp.Attributes = val.attrs
+		dp.StartTime = startTime
+		dp.Time = t
+		dp.Count = count
+		dp.Bounds = bounds
+		if !s.noSum {
+			dp.Sum = val.hotColdPoint[readIdx].total.load()
+		} else {
+			// Slot may be reused; clear stale Sum from previous series.
+			var zero N
+			dp.Sum = zero
+		}
+		if !s.noMinMax && val.hotColdPoint[readIdx].minMax.set.Load() {
+			dp.Min = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.minimum.Load())
+			dp.Max = metricdata.NewExtrema(val.hotColdPoint[readIdx].minMax.maximum.Load())
+		} else {
+			// Slot may be reused; clear stale Min/Max from previous series.
+			dp.Min = metricdata.Extrema[N]{}
+			dp.Max = metricdata.Extrema[N]{}
 		}
 		// Once we've read the point, merge it back into the hot histogram
 		// point since it is cumulative.
 		hotIdx := (readIdx + 1) % 2
 		val.hotColdPoint[readIdx].mergeIntoAndReset(&val.hotColdPoint[hotIdx], s.noMinMax, s.noSum)
 
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
-		hDPts = append(hDPts, newPt)
+		collectExemplars(&dp.Exemplars, val.res.Collect)
 
 		i++
 		// TODO (#3006): This will use an unbounded amount of memory if there
@@ -403,6 +412,9 @@ func (s *cumulativeHistogram[N]) collect(
 		// overload the system.
 		return true
 	})
+
+	// Trim if iteration was shorter than the pre-sized length.
+	hDPts = hDPts[:i]
 
 	h.DataPoints = hDPts
 	*dest = h
