@@ -81,7 +81,7 @@ func TestNewInstrumentation(t *testing.T) {
 func set(err error) attribute.Set {
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(GetComponentName(ID)),
-		semconv.OTelComponentNameKey.String(ComponentType),
+		semconv.OTelComponentTypeKey.String(ComponentType),
 	}
 	if err != nil {
 		attrs = append(attrs, semconv.ErrorType(err))

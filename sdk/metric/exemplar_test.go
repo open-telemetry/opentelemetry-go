@@ -62,22 +62,69 @@ func TestFixedSizeExemplarConcurrentSafe(t *testing.T) {
 	wg.Wait()
 }
 
-func TestReservoirFuncAlwaysOff(t *testing.T) {
-	var invoked bool
-	provider := func(attribute.Set) exemplar.Reservoir {
-		invoked = true
-		return nil
+func TestReservoirFunc(t *testing.T) {
+	type testCase struct {
+		name       string
+		kind       InstrumentKind
+		filter     exemplar.Filter
+		expectDrop bool
 	}
 
-	f := reservoirFunc[int64](provider, exemplar.AlwaysOffFilter)
-	_ = f(*attribute.EmptySet())
+	testCases := []testCase{
+		{
+			name:       "AlwaysOff",
+			kind:       InstrumentKindCounter,
+			filter:     exemplar.AlwaysOffFilter,
+			expectDrop: true,
+		},
+		{
+			name:       "AlwaysOn",
+			kind:       InstrumentKindCounter,
+			filter:     exemplar.AlwaysOnFilter,
+			expectDrop: false,
+		},
+		{
+			name:       "TraceBasedSync",
+			kind:       InstrumentKindCounter,
+			filter:     exemplar.TraceBasedFilter,
+			expectDrop: false,
+		},
+		{
+			name:       "TraceBasedAsyncCounter",
+			kind:       InstrumentKindObservableCounter,
+			filter:     exemplar.TraceBasedFilter,
+			expectDrop: true,
+		},
+		{
+			name:       "TraceBasedAsyncUpDownCounter",
+			kind:       InstrumentKindObservableUpDownCounter,
+			filter:     exemplar.TraceBasedFilter,
+			expectDrop: true,
+		},
+		{
+			name:       "TraceBasedAsyncGauge",
+			kind:       InstrumentKindObservableGauge,
+			filter:     exemplar.TraceBasedFilter,
+			expectDrop: true,
+		},
+	}
 
-	require.False(t, invoked, "ReservoirProvider should not be invoked when AlwaysOffFilter is used")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var invoked bool
+			provider := func(attribute.Set) exemplar.Reservoir {
+				invoked = true
+				return nil
+			}
 
-	// Test non-off filter
-	invoked = false
-	f = reservoirFunc[int64](provider, exemplar.AlwaysOnFilter)
-	_ = f(*attribute.EmptySet())
+			f := reservoirFunc[int64](tc.kind, provider, tc.filter)
+			_ = f(*attribute.EmptySet())
 
-	require.True(t, invoked, "ReservoirProvider should be invoked when AlwaysOnFilter is used")
+			if tc.expectDrop {
+				require.False(t, invoked, "ReservoirProvider should not be invoked")
+			} else {
+				require.True(t, invoked, "ReservoirProvider should be invoked")
+			}
+		})
+	}
 }
