@@ -215,6 +215,105 @@ func TestInstrumentationExportSpansPartialErrored(t *testing.T) {
 	assertMetrics(t, collect(), n, success, assert.AnError)
 }
 
+func TestExportSpansErrorTypeRecorded(t *testing.T) {
+	exportedSpansName := otelconv.SDKExporterSpanExported{}.Name()
+	opDurationName := otelconv.SDKExporterOperationDuration{}.Name()
+	inflightSpansName := otelconv.SDKExporterSpanInflight{}.Name()
+
+	tests := []struct {
+		name              string
+		drop              string
+		wantExported      bool
+		wantOpDuration    bool
+		wantInflight      bool
+		errorOnExported   bool
+		errorOnOpDuration bool
+	}{
+		{
+			name:              "drop exportedSpans: opDuration still records error.type",
+			drop:              exportedSpansName,
+			wantExported:      false,
+			wantOpDuration:    true,
+			wantInflight:      true,
+			errorOnOpDuration: true,
+		},
+		{
+			name:            "drop opDuration: exportedSpans still records error.type",
+			drop:            opDurationName,
+			wantExported:    true,
+			wantOpDuration:  false,
+			wantInflight:    true,
+			errorOnExported: true,
+		},
+		{
+			name:              "drop inflightSpans: error.type still on exported and opDuration",
+			drop:              inflightSpansName,
+			wantExported:      true,
+			wantOpDuration:    true,
+			wantInflight:      false,
+			errorOnExported:   true,
+			errorOnOpDuration: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+			original := otel.GetMeterProvider()
+			t.Cleanup(func() { otel.SetMeterProvider(original) })
+
+			r := metric.NewManualReader()
+			mp := metric.NewMeterProvider(
+				metric.WithReader(r),
+				metric.WithView(metric.NewView(
+					metric.Instrument{Name: tt.drop},
+					metric.Stream{Aggregation: metric.AggregationDrop{}},
+				)),
+			)
+			otel.SetMeterProvider(mp)
+
+			inst, err := observ.NewInstrumentation(ID)
+			require.NoError(t, err)
+			require.NotNil(t, inst)
+
+			const n = 10
+			inst.ExportSpans(t.Context(), n).End(0, assert.AnError)
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, r.Collect(t.Context(), &rm))
+			require.Len(t, rm.ScopeMetrics, 1)
+			got := rm.ScopeMetrics[0]
+
+			assert.Equal(t, Scope, got.Scope, "unexpected scope")
+			// Each case drops exactly one of the three instruments.
+			require.Len(t, got.Metrics, 2, "unexpected metric count")
+
+			o := metricdatatest.IgnoreTimestamp()
+			for _, m := range got.Metrics {
+				switch m.Name {
+				case exportedSpansName:
+					var exportedErr error
+					if tt.errorOnExported {
+						exportedErr = assert.AnError
+					}
+					metricdatatest.AssertEqual(t, spanExported(0, n, exportedErr), m, o)
+				case opDurationName:
+					var opErr error
+					if tt.errorOnOpDuration {
+						opErr = assert.AnError
+					}
+					metricdatatest.AssertEqual(
+						t, operationDuration(opErr), m, o, metricdatatest.IgnoreValue(),
+					)
+				case inflightSpansName:
+					metricdatatest.AssertEqual(t, spanInflight(), m, o)
+				}
+			}
+		})
+	}
+}
+
 func BenchmarkInstrumentationExportSpans(b *testing.B) {
 	setup := func(b *testing.B) *observ.Instrumentation {
 		b.Helper()
