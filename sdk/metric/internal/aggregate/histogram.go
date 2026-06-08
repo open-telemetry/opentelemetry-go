@@ -350,7 +350,12 @@ func (s *cumulativeHistogram[N]) collect(
 
 	// Pre-size hDPts so per-series destination slots are addressable by index.
 	// This lets loadCountsInto and collectExemplars reuse each slot's existing
-	// BucketCounts/Exemplars slices from the previous cycle.
+	// BucketCounts/Exemplars slices from the previous cycle. s.values is
+	// append-only here during cumulative collect, and limitedSyncMap only
+	// increments its len after a successful underlying LoadOrStore, so Range
+	// will visit at least n entries. Concurrent measurers may add more between
+	// Len() and Range; those extra slots are appended on demand inside the
+	// loop.
 	n := s.values.Len()
 	hDPts := reset(h.DataPoints, n, n)
 
@@ -409,9 +414,6 @@ func (s *cumulativeHistogram[N]) collect(
 		// overload the system.
 		return true
 	})
-
-	// Trim if iteration was shorter than the pre-sized length.
-	hDPts = hDPts[:i]
 
 	h.DataPoints = hDPts
 	*dest = h
