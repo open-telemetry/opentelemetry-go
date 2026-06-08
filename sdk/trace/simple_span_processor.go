@@ -141,11 +141,15 @@ func (*simpleSpanProcessor) ForceFlush(context.Context) error {
 // MarshalLog is the marshaling function used by the logging system to represent
 // this Span Processor.
 func (ssp *simpleSpanProcessor) MarshalLog() any {
+	ssp.exporterMu.Lock()
+	exporter := ssp.exporter
+	ssp.exporterMu.Unlock()
+
 	return struct {
 		Type     string
 		Exporter string
 	}{
 		Type:     "SimpleSpanProcessor",
-		Exporter: fmt.Sprintf("%T", ssp.exporter),
+		Exporter: fmt.Sprintf("%T", exporter),
 	}
 }
