@@ -142,7 +142,7 @@ func (*simpleSpanProcessor) ForceFlush(context.Context) error {
 // this Span Processor.
 func (ssp *simpleSpanProcessor) MarshalLog() any {
 	ssp.exporterMu.Lock()
-	exporter := ssp.exporter
+	exp := ssp.exporter
 	ssp.exporterMu.Unlock()
 
 	return struct {
@@ -150,6 +150,6 @@ func (ssp *simpleSpanProcessor) MarshalLog() any {
 		Exporter string
 	}{
 		Type:     "SimpleSpanProcessor",
-		Exporter: fmt.Sprintf("%T", exporter),
+		Exporter: fmt.Sprintf("%T", exp),
 	}
 }
