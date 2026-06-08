@@ -5,6 +5,7 @@ package trace // import "go.opentelemetry.io/otel/sdk/trace"
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -142,9 +143,9 @@ func (*simpleSpanProcessor) ForceFlush(context.Context) error {
 func (ssp *simpleSpanProcessor) MarshalLog() any {
 	return struct {
 		Type     string
-		Exporter SpanExporter
+		Exporter string
 	}{
 		Type:     "SimpleSpanProcessor",
-		Exporter: ssp.exporter,
+		Exporter: fmt.Sprintf("%T", ssp.exporter),
 	}
 }
