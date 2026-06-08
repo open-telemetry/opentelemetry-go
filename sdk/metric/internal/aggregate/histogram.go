@@ -44,8 +44,6 @@ type histogramPointCounters[N int64 | float64] struct {
 }
 
 func (b *histogramPointCounters[N]) loadCountsInto(into *[]uint64) uint64 {
-	// TODO (#3047): Making copies for counts incurs a large
-	// memory allocation footprint. Alternatives should be explored.
 	counts := reset(*into, len(b.counts), len(b.counts))
 	count := uint64(0)
 	for i := range b.counts {
@@ -352,8 +350,7 @@ func (s *cumulativeHistogram[N]) collect(
 
 	// Pre-size hDPts so per-series destination slots are addressable by index.
 	// This lets loadCountsInto and collectExemplars reuse each slot's existing
-	// BucketCounts/Exemplars slices from the previous cycle, addressing the
-	// large per-cycle allocations called out in TODO #3047 above.
+	// BucketCounts/Exemplars slices from the previous cycle.
 	n := s.values.Len()
 	hDPts := reset(h.DataPoints, n, n)
 
