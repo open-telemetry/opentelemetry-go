@@ -589,7 +589,7 @@ func TestHistogramMinMaxUnset(t *testing.T) {
 	}
 	// hPt.minMax.set is false by default
 
-	h.hotColdValMap[0].LoadOrStoreAttr(alice, func(attribute.Set) any {
+	h.hotColdValMap[0].LoadOrStoreAttr(alice, func(attribute.Set) *histogramPoint[int64] {
 		return hPt
 	})
 
