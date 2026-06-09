@@ -274,11 +274,12 @@ func TestExportSpansErrorTypeRecorded(t *testing.T) {
 			got := rm.ScopeMetrics[0]
 
 			assert.Equal(t, Scope, got.Scope, "unexpected scope")
-			// Each case drops exactly one of the three instruments.
 			require.Len(t, got.Metrics, 2, "unexpected metric count")
 
 			o := metricdatatest.IgnoreTimestamp()
+			seen := make(map[string]bool, 2)
 			for _, m := range got.Metrics {
+				seen[m.Name] = true
 				switch m.Name {
 				case exportedSpansName:
 					var exportedErr error
@@ -297,6 +298,14 @@ func TestExportSpansErrorTypeRecorded(t *testing.T) {
 				case inflightSpansName:
 					metricdatatest.AssertEqual(t, spanInflight(), m, o)
 				}
+			}
+			// Verify the dropped instrument is absent and the other two are present.
+			assert.False(t, seen[tt.drop], "expected %q to be absent", tt.drop)
+			for _, name := range []string{exportedSpansName, opDurationName, inflightSpansName} {
+				if name == tt.drop {
+					continue
+				}
+				assert.True(t, seen[name], "expected %q to be present", name)
 			}
 		})
 	}
