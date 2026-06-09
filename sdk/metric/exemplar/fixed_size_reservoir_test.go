@@ -80,10 +80,9 @@ func TestFixedSizeReservoirConcurrentSafe(t *testing.T) {
 
 func TestFixedSizeReservoirSamplesAfterFilling(t *testing.T) {
 	k := 1
-	sampledSecondItem := false
-	// Run many times because it is random.
-	// Ensure it is possible to sample the `k+1`th item.
-	for range 1000 {
+	var sampledSecondItemCount int
+	iterations := 10000
+	for range iterations {
 		r := NewFixedSizeReservoir(k)
 		// Offer k items (1 item)
 		r.Offer(t.Context(), staticTime, NewValue(float64(1)), nil)
@@ -93,9 +92,13 @@ func TestFixedSizeReservoirSamplesAfterFilling(t *testing.T) {
 		var dest []Exemplar
 		r.Collect(&dest)
 		if len(dest) == 1 && dest[0].Value.Float64() == 2 {
-			sampledSecondItem = true
-			break
+			sampledSecondItemCount++
 		}
 	}
-	assert.True(t, sampledSecondItem, "should have sampled the second item at least once in 1000 tries")
+	rate := float64(sampledSecondItemCount) / float64(iterations)
+	// For k=1, the probability of sampling the k+1 item is k/(k+1) = 1/2.
+	// Expected rate is 0.5.
+	// With 10000 iterations, the standard deviation is sqrt(10000 * 0.5 * 0.5) = 50.
+	// 5 standard deviations is 250, which is 2.5% (0.025).
+	assert.InDelta(t, 0.5, rate, 0.025, "should sample the second item with ~50% probability")
 }
