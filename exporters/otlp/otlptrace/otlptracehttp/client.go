@@ -334,15 +334,11 @@ func (c *client) newRequest(body []byte) (request, error) {
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Client.
-func (c *client) MarshalLog() any {
+func (*client) MarshalLog() any {
 	return struct {
-		Type     string
-		Endpoint string
-		Insecure bool
+		Type string
 	}{
-		Type:     "otlptracehttp",
-		Endpoint: c.cfg.Endpoint,
-		Insecure: c.cfg.Insecure,
+		Type: "otlptracehttp",
 	}
 }
 
@@ -376,7 +372,7 @@ func (r *request) reset(ctx context.Context) {
 
 // retryableError represents a request failure that can be retried.
 type retryableError struct {
-	throttle int64
+	throttle time.Duration
 	err      error
 }
 
@@ -387,7 +383,7 @@ func newResponseError(header http.Header, wrapped error) error {
 	var rErr retryableError
 	if s, ok := header["Retry-After"]; ok {
 		if t, err := strconv.ParseInt(s[0], 10, 64); err == nil {
-			rErr.throttle = t
+			rErr.throttle = time.Duration(t) * time.Second
 		}
 	}
 
@@ -436,7 +432,7 @@ func evaluate(err error) (bool, time.Duration) {
 		return false, 0
 	}
 
-	return true, time.Duration(rErr.throttle)
+	return true, rErr.throttle
 }
 
 func (c *client) getScheme() string {
