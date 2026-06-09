@@ -223,34 +223,22 @@ func TestExportSpansErrorTypeRecorded(t *testing.T) {
 	tests := []struct {
 		name              string
 		drop              string
-		wantExported      bool
-		wantOpDuration    bool
-		wantInflight      bool
 		errorOnExported   bool
 		errorOnOpDuration bool
 	}{
 		{
 			name:              "drop exportedSpans: opDuration still records error.type",
 			drop:              exportedSpansName,
-			wantExported:      false,
-			wantOpDuration:    true,
-			wantInflight:      true,
 			errorOnOpDuration: true,
 		},
 		{
 			name:            "drop opDuration: exportedSpans still records error.type",
 			drop:            opDurationName,
-			wantExported:    true,
-			wantOpDuration:  false,
-			wantInflight:    true,
 			errorOnExported: true,
 		},
 		{
 			name:              "drop inflightSpans: error.type still on exported and opDuration",
 			drop:              inflightSpansName,
-			wantExported:      true,
-			wantOpDuration:    true,
-			wantInflight:      false,
 			errorOnExported:   true,
 			errorOnOpDuration: true,
 		},
