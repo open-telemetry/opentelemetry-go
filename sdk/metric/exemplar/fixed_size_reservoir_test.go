@@ -98,7 +98,8 @@ func TestFixedSizeReservoirSamplesAfterFilling(t *testing.T) {
 	rate := float64(sampledSecondItemCount) / float64(iterations)
 	// For k=1, the probability of sampling the k+1 item is k/(k+1) = 1/2.
 	// Expected rate is 0.5.
-	// With 10000 iterations, the standard deviation is sqrt(10000 * 0.5 * 0.5) = 50.
+	// With 10000 iterations, the standard deviation of the count is:
+	//   sqrt(10000 * 0.5 * 0.5) = 50.
 	// 5 standard deviations is 250, which is 2.5% (0.025).
 	assert.InDelta(t, 0.5, rate, 0.025, "should sample the second item with ~50% probability")
 }
