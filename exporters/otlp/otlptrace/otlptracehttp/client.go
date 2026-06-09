@@ -334,15 +334,11 @@ func (c *client) newRequest(body []byte) (request, error) {
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Client.
-func (c *client) MarshalLog() any {
+func (*client) MarshalLog() any {
 	return struct {
-		Type     string
-		Endpoint string
-		Insecure bool
+		Type string
 	}{
-		Type:     "otlptracehttp",
-		Endpoint: c.cfg.Endpoint,
-		Insecure: c.cfg.Insecure,
+		Type: "otlptracehttp",
 	}
 }
 
