@@ -95,7 +95,7 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 // unused attribute sets do not report in subsequent collect() calls.
 type deltaHistogram[N int64 | float64] struct {
 	hcwg          hotColdWaitGroup
-	hotColdValMap [2]limitedSyncMap
+	hotColdValMap [2]limitedSyncMap[*histogramPoint[N]]
 
 	start    time.Time
 	noMinMax bool
@@ -112,7 +112,7 @@ func (s *deltaHistogram[N]) measure(
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) *histogramPoint[N] {
 		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
 		hPt := &histogramPoint[N]{
@@ -129,7 +129,7 @@ func (s *deltaHistogram[N]) measure(
 			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(s.bounds)+1)},
 		}
 		return hPt
-	}).(*histogramPoint[N])
+	})
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
@@ -169,7 +169,7 @@ func newDeltaHistogram[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		hotColdValMap: [2]limitedSyncMap{
+		hotColdValMap: [2]limitedSyncMap[*histogramPoint[N]]{
 			{aggLimit: limit},
 			{aggLimit: limit},
 		},
@@ -247,7 +247,7 @@ func (s *deltaHistogram[N]) collect(
 // to reading. Unlike deltaHistogram, this maintains a single map so that the
 // preserved attribute sets do not change when collect() is called.
 type cumulativeHistogram[N int64 | float64] struct {
-	values limitedSyncMap
+	values limitedSyncMap[*hotColdHistogramPoint[N]]
 
 	start    time.Time
 	noMinMax bool
@@ -276,7 +276,7 @@ func newCumulativeHistogram[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		values:   limitedSyncMap{aggLimit: limit},
+		values:   limitedSyncMap[*hotColdHistogramPoint[N]]{aggLimit: limit},
 	}
 }
 
@@ -286,7 +286,7 @@ func (s *cumulativeHistogram[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+	h := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) *hotColdHistogramPoint[N] {
 		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
 		hPt := &hotColdHistogramPoint[N]{
@@ -311,7 +311,7 @@ func (s *cumulativeHistogram[N]) measure(
 			},
 		}
 		return hPt
-	}).(*hotColdHistogramPoint[N])
+	})
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
