@@ -3,7 +3,8 @@
 
 /*
 Package otlploghttp provides an OTLP log exporter. The exporter uses HTTP to
-transport OTLP protobuf payloads.
+transport OTLP payloads. By default, payloads are serialized in protobuf binary
+format. JSON serialization can be selected with [WithEncoding].
 
 Exporter should be created using [New].
 
