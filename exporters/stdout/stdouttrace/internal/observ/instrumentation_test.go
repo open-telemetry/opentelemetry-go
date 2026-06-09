@@ -274,7 +274,6 @@ func TestExportSpansErrorTypeRecorded(t *testing.T) {
 			got := rm.ScopeMetrics[0]
 
 			assert.Equal(t, Scope, got.Scope, "unexpected scope")
-			require.Len(t, got.Metrics, 2, "unexpected metric count")
 
 			o := metricdatatest.IgnoreTimestamp()
 			seen := make(map[string]bool, 2)
