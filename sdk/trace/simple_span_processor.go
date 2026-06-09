@@ -141,6 +141,9 @@ func (*simpleSpanProcessor) ForceFlush(context.Context) error {
 // MarshalLog is the marshaling function used by the logging system to represent
 // this Span Processor.
 func (ssp *simpleSpanProcessor) MarshalLog() any {
+	// Shutdown clears exporter under exporterMu.
+	// Copy it while holding the same lock so MarshalLog
+	// can run concurrently without racing with Shutdown.
 	ssp.exporterMu.Lock()
 	exp := ssp.exporter
 	ssp.exporterMu.Unlock()
