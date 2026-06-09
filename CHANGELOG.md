@@ -12,6 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Avoid preallocating scope attributes when they are disabled in `go.opentelemetry.io/otel/exporters/prometheus` . (#8404)
 - Interpret HTTP `Retry-After` header values as seconds instead of nanoseconds when retrying OTLP HTTP exports in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8383)
+- Stop including trace exporter endpoint configuration in internal logs from `go.opentelemetry.io/otel/sdk/trace`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, and `go.opentelemetry.io/otel/exporters/zipkin`. (#8438)
+- Fix `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` self-observability to record `error.type` on operation duration histogram when the `exportedSpans` metric is disabled. (#8432)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
