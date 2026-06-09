@@ -103,10 +103,15 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	}
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
+	maxResponseBodySize := defaultMaxResponseBodySize
+	if cfg.maxResponseBodySize.Set {
+		maxResponseBodySize = cfg.maxResponseBodySize.Value
+	}
+
 	c := &httpClient{
 		compression:         cfg.compression.Value,
 		maxRequestSize:      cfg.maxRequestSize.Value,
-		maxResponseBodySize: cfg.maxResponseBodySize.Value,
+		maxResponseBodySize: maxResponseBodySize,
 		req:                 req,
 		requestFunc:         cfg.retryCfg.Value.RequestFunc(evaluate),
 		client:              hc,

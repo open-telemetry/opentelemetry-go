@@ -62,7 +62,7 @@ type (
 		TLSCfg         *tls.Config
 		Headers        map[string]string
 		Compression    Compression
-		MaxRequestSize      int
+		MaxRequestSize int
 {{ if .isHTTP }}
 		MaxResponseBodySize int64
 {{ end }}
@@ -142,7 +142,8 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorGRPCPort),
 			URLPath:        DefaultMetricsPath,
 			Compression:    NoCompression,
-			MaxRequestSize:      DefaultMaxRequestSize,			Timeout:        DefaultTimeout,
+			MaxRequestSize: DefaultMaxRequestSize,
+			Timeout:        DefaultTimeout,
 
 			TemporalitySelector: metric.DefaultTemporalitySelector,
 			AggregationSelector: metric.DefaultAggregationSelector,
@@ -379,7 +380,7 @@ func WithMaxRequestSize(size int) GenericOption {
 
 {{ if .isHTTP }}
 func WithMaxResponseBodySize(size int64) HTTPOption {
-	return newHTTPOption(func(cfg Config) Config {
+	return NewHTTPOption(func(cfg Config) Config {
 		cfg.Metrics.MaxResponseBodySize = size
 		return cfg
 	})
