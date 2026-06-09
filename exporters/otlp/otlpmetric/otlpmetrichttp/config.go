@@ -195,6 +195,16 @@ func WithMaxRequestSize(size int) Option {
 	return wrappedOption{oconf.WithMaxRequestSize(size)}
 }
 
+// WithMaxResponseBodySize sets the maximum size, in bytes, of an OTLP/HTTP
+// response body the exporter will read.
+//
+// If size is less than or equal to zero, no response body size limit is applied.
+// Disabling the limit is not recommended because it can lead to excessive
+// resource consumption or abuse.
+func WithMaxResponseBodySize(size int64) Option {
+	return wrappedOption{oconf.WithMaxResponseBodySize(size)}
+}
+
 // WithRetry sets the retry policy for transient retryable errors that are
 // returned by the target endpoint.
 //

@@ -23,12 +23,13 @@ import (
 
 // Default values.
 var (
-	defaultEndpoint                              = "localhost:4318"
-	defaultPath                                  = "/v1/logs"
-	defaultTimeout                               = 10 * time.Second
-	defaultMaxRequestSize                        = 64 * 1024 * 1024
-	defaultProxy          HTTPTransportProxyFunc = http.ProxyFromEnvironment
-	defaultRetryCfg                              = retry.DefaultConfig
+	defaultEndpoint                                   = "localhost:4318"
+	defaultPath                                       = "/v1/logs"
+	defaultTimeout                                    = 10 * time.Second
+	defaultMaxRequestSize                             = 64 * 1024 * 1024
+	defaultMaxResponseBodySize                        = int64(4 * 1024 * 1024)
+	defaultProxy               HTTPTransportProxyFunc = http.ProxyFromEnvironment
+	defaultRetryCfg                                   = retry.DefaultConfig
 )
 
 // Environment variable keys.
@@ -90,17 +91,18 @@ type fnOpt func(config) config
 func (f fnOpt) applyHTTPOption(c config) config { return f(c) }
 
 type config struct {
-	endpoint       setting[string]
-	path           setting[string]
-	insecure       setting[bool]
-	tlsCfg         setting[*tls.Config]
-	headers        setting[map[string]string]
-	compression    setting[Compression]
-	maxRequestSize setting[int]
-	timeout        setting[time.Duration]
-	proxy          setting[HTTPTransportProxyFunc]
-	retryCfg       setting[retry.Config]
-	httpClient     *http.Client
+	endpoint            setting[string]
+	path                setting[string]
+	insecure            setting[bool]
+	tlsCfg              setting[*tls.Config]
+	headers             setting[map[string]string]
+	compression         setting[Compression]
+	maxRequestSize      setting[int]
+	maxResponseBodySize setting[int64]
+	timeout             setting[time.Duration]
+	proxy               setting[HTTPTransportProxyFunc]
+	retryCfg            setting[retry.Config]
+	httpClient          *http.Client
 }
 
 func newConfig(options []Option) config {
@@ -137,6 +139,9 @@ func newConfig(options []Option) config {
 	)
 	c.maxRequestSize = c.maxRequestSize.Resolve(
 		fallback[int](defaultMaxRequestSize),
+	)
+	c.maxResponseBodySize = c.maxResponseBodySize.Resolve(
+		fallback[int64](defaultMaxResponseBodySize),
 	)
 	c.proxy = c.proxy.Resolve(
 		fallback[HTTPTransportProxyFunc](defaultProxy),
@@ -327,6 +332,19 @@ func WithTimeout(duration time.Duration) Option {
 func WithMaxRequestSize(size int) Option {
 	return fnOpt(func(c config) config {
 		c.maxRequestSize = newSetting(size)
+		return c
+	})
+}
+
+// WithMaxResponseBodySize sets the maximum size, in bytes, of an OTLP/HTTP
+// response body the exporter will read.
+//
+// If size is less than or equal to zero, no response body size limit is applied.
+// Disabling the limit is not recommended because it can lead to excessive
+// resource consumption or abuse.
+func WithMaxResponseBodySize(size int64) Option {
+	return fnOpt(func(c config) config {
+		c.maxResponseBodySize = newSetting(size)
 		return c
 	})
 }
