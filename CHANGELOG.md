@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support HTTP-date values in the HTTP `Retry-After` header when retrying OTLP HTTP exports in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8417)
 - Stop including trace exporter endpoint configuration in internal logs from `go.opentelemetry.io/otel/sdk/trace`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, and `go.opentelemetry.io/otel/exporters/zipkin`. (#8438)
 - Fix `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` self-observability to record `error.type` on operation duration histogram when the `exportedSpans` metric is disabled. (#8432)
+- Fix off-by-one error in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar`, which prevented the first exemplar after the reservoir is filled from being sampled. (#8309)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
