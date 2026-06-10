@@ -56,7 +56,7 @@ const (
 	BYTESLICE
 	// SLICE is a slice of Value Type values.
 	SLICE
-	// MAP is a map of KeyValue Type values.
+	// MAP is a slice of KeyValue values representing a map of heterogeneous values.
 	MAP
 	// INVALID is used for a Value with no value set.
 	//
