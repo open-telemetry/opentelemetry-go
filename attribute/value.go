@@ -287,7 +287,8 @@ func asValueSliceReflect(v any) []Value {
 }
 
 // AsMap returns the []KeyValue value. Make sure that the Value's type is
-// MAP.
+// MAP. The returned slice is sorted by key and may differ from the order
+// provided when creating the map value.
 func (v Value) AsMap() []KeyValue {
 	if v.vtype != MAP {
 		return nil
