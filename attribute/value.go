@@ -1020,6 +1020,8 @@ func appendMap(dst *strings.Builder, vals []KeyValue) {
 }
 
 func appendMapReflect(dst *strings.Builder, rv reflect.Value) {
+	// Estimate 32 bytes per value for small values, plus key quotes, colon,
+	// and commas. Escaped keys and larger values grow the builder as needed.
 	size := len("{}") + rv.Len()*commaLen + rv.Len()*32
 	for i := 0; i < rv.Len(); i++ {
 		size += len(rv.Index(i).Field(0).String()) + len(`"":`)
