@@ -537,6 +537,21 @@ func TestAsMap(t *testing.T) {
 				attribute.String("dup", "second"),
 			},
 		},
+		{
+			name: "empty keys and values",
+			in: []attribute.KeyValue{
+				attribute.String("z", "last"),
+				{Key: "empty-value"},
+				attribute.String("", "empty-key"),
+				{},
+			},
+			want: []attribute.KeyValue{
+				attribute.String("", "empty-key"),
+				{},
+				{Key: "empty-value"},
+				attribute.String("z", "last"),
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.want == nil {
@@ -894,6 +909,21 @@ func TestValueString(t *testing.T) {
 			name: "empty map",
 			v:    attribute.MapValue(),
 			want: "{}",
+		},
+		{
+			name: "map with empty key",
+			v:    attribute.MapValue(attribute.String("", "value")),
+			want: `{"":"value"}`,
+		},
+		{
+			name: "map with empty value",
+			v:    attribute.MapValue(attribute.KeyValue{Key: "empty"}),
+			want: `{"empty":null}`,
+		},
+		{
+			name: "map with empty key and value",
+			v:    attribute.MapValue(attribute.KeyValue{}),
+			want: `{"":null}`,
 		},
 		{
 			name: "map len2 sorted",
