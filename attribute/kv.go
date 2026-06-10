@@ -79,6 +79,9 @@ func Slice(k string, v ...Value) KeyValue {
 }
 
 // Map creates a KeyValue with a MAP Value type.
+//
+// Users should avoid providing duplicate keys; many receivers handle maps
+// containing duplicate keys unpredictably.
 func Map(k string, v ...KeyValue) KeyValue {
 	return Key(k).Map(v...)
 }

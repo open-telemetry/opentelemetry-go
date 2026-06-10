@@ -57,6 +57,9 @@ const (
 	// SLICE is a slice of Value Type values.
 	SLICE
 	// MAP is a slice of KeyValue values representing a map of heterogeneous values.
+	//
+	// Note that MAP values may contain duplicate keys if duplicate keys are
+	// provided when creating the value.
 	MAP
 	// INVALID is used for a Value with no value set.
 	//
@@ -161,6 +164,9 @@ func SliceValue(v ...Value) Value {
 }
 
 // MapValue creates a MAP Value.
+//
+// Users should avoid providing duplicate keys; many receivers handle maps
+// containing duplicate keys unpredictably.
 func MapValue(v ...KeyValue) Value {
 	return Value{vtype: MAP, slice: mapValue(v)}
 }
@@ -288,7 +294,9 @@ func asValueSliceReflect(v any) []Value {
 
 // AsMap returns the []KeyValue value. Make sure that the Value's type is
 // MAP. The returned slice is sorted by key and may differ from the order
-// provided when creating the map value.
+// provided when creating the map value. It may contain duplicate keys if
+// duplicate keys were provided when creating the map value; callers should not
+// assume the returned keys are unique.
 func (v Value) AsMap() []KeyValue {
 	if v.vtype != MAP {
 		return nil
