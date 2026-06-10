@@ -293,10 +293,14 @@ func asValueSliceReflect(v any) []Value {
 }
 
 // AsMap returns the []KeyValue value. Make sure that the Value's type is
-// MAP. The returned slice is sorted by key and may differ from the order
-// provided when creating the map value. It may contain duplicate keys if
-// duplicate keys were provided when creating the map value; callers should not
-// assume the returned keys are unique.
+// MAP.
+//
+// The returned slice is sorted by key and may differ from the order
+// provided when creating the map value.
+//
+// The returned slice may contain duplicate keys if duplicate keys were
+// provided when creating the map value. Callers should not assume the returned
+// keys are unique.
 func (v Value) AsMap() []KeyValue {
 	if v.vtype != MAP {
 		return nil
