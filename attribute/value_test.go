@@ -474,6 +474,21 @@ func TestAsMap(t *testing.T) {
 			},
 		},
 		{
+			name: "len4 sorted",
+			in: []attribute.KeyValue{
+				attribute.String("d", "4"),
+				attribute.String("a", "1"),
+				attribute.String("c", "3"),
+				attribute.String("b", "2"),
+			},
+			want: []attribute.KeyValue{
+				attribute.String("a", "1"),
+				attribute.String("b", "2"),
+				attribute.String("c", "3"),
+				attribute.String("d", "4"),
+			},
+		},
+		{
 			name: "len5 sorted",
 			in: []attribute.KeyValue{
 				attribute.String("e", "5"),
@@ -889,6 +904,27 @@ func TestValueString(t *testing.T) {
 			want: `{"a":"hello \"world\"","b":2}`,
 		},
 		{
+			name: "map len4 fast path",
+			v: attribute.MapValue(
+				attribute.String("d", "4"),
+				attribute.String("a", "1"),
+				attribute.String("c", "3"),
+				attribute.String("b", "2"),
+			),
+			want: `{"a":"1","b":"2","c":"3","d":"4"}`,
+		},
+		{
+			name: "map len5 fast path",
+			v: attribute.MapValue(
+				attribute.String("e", "5"),
+				attribute.String("a", "1"),
+				attribute.String("d", "4"),
+				attribute.String("b", "2"),
+				attribute.String("c", "3"),
+			),
+			want: `{"a":"1","b":"2","c":"3","d":"4","e":"5"}`,
+		},
+		{
 			name: "map escapes keys",
 			v: attribute.MapValue(
 				attribute.String("line\nkey", "value"),
@@ -907,6 +943,39 @@ func TestValueString(t *testing.T) {
 				attribute.Key("slice").Slice(attribute.IntValue(1), attribute.StringValue("two")),
 			),
 			want: `{"bytes":"Ymlu","empty":[null],"float":"Infinity","map":{"nested":"value"},"slice":[1,"two"],"z":"last"}`,
+		},
+		{
+			name: "slice nested map storage paths",
+			v: attribute.SliceValue(
+				attribute.MapValue(),
+				attribute.MapValue(
+					attribute.String("c", "3"),
+					attribute.String("a", "1"),
+					attribute.String("b", "2"),
+				),
+				attribute.MapValue(
+					attribute.String("d", "4"),
+					attribute.String("a", "1"),
+					attribute.String("c", "3"),
+					attribute.String("b", "2"),
+				),
+				attribute.MapValue(
+					attribute.String("e", "5"),
+					attribute.String("a", "1"),
+					attribute.String("d", "4"),
+					attribute.String("b", "2"),
+					attribute.String("c", "3"),
+				),
+				attribute.MapValue(
+					attribute.String("f", "6"),
+					attribute.String("a", "1"),
+					attribute.String("e", "5"),
+					attribute.String("b", "2"),
+					attribute.String("d", "4"),
+					attribute.String("c", "3"),
+				),
+			),
+			want: `[{},{"a":"1","b":"2","c":"3"},{"a":"1","b":"2","c":"3","d":"4"},{"a":"1","b":"2","c":"3","d":"4","e":"5"},{"a":"1","b":"2","c":"3","d":"4","e":"5","f":"6"}]`,
 		},
 		{
 			name: "empty",

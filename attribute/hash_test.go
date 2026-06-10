@@ -169,6 +169,57 @@ func TestHashKVs(t *testing.T) {
 	}
 }
 
+func TestHashValueMapOrdering(t *testing.T) {
+	tests := []struct {
+		name string
+		kvs  []KeyValue
+	}{
+		{
+			name: "Len4",
+			kvs: []KeyValue{
+				String("d", "4"),
+				String("a", "1"),
+				String("c", "3"),
+				String("b", "2"),
+			},
+		},
+		{
+			name: "Len5",
+			kvs: []KeyValue{
+				String("e", "5"),
+				String("a", "1"),
+				String("d", "4"),
+				String("b", "2"),
+				String("c", "3"),
+			},
+		},
+		{
+			name: "Reflect",
+			kvs: []KeyValue{
+				String("f", "6"),
+				String("a", "1"),
+				String("e", "5"),
+				String("b", "2"),
+				String("d", "4"),
+				String("c", "3"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reversed := slices.Clone(tt.kvs)
+			slices.Reverse(reversed)
+
+			got := hashValue(xxhash.New(), MapValue(tt.kvs...)).Sum64()
+			want := hashValue(xxhash.New(), MapValue(reversed...)).Sum64()
+			if got != want {
+				t.Fatalf("hashValue(MapValue(%v)) = %d, want %d", tt.kvs, got, want)
+			}
+		})
+	}
+}
+
 func slice(kvs []KeyValue) string {
 	if len(kvs) == 0 {
 		return "[]"
