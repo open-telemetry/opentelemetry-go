@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `http/json` support, and the `WithEncoding` option to `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#7804)
+
 ### Fixed
 
 - Avoid preallocating scope attributes when they are disabled in `go.opentelemetry.io/otel/exporters/prometheus` . (#8404)
