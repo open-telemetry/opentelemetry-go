@@ -603,3 +603,132 @@ func FuzzHashKVs(f *testing.F) {
 		}
 	})
 }
+
+func TestNewDistinctFiltered(t *testing.T) {
+	k0 := String("k0", "v0")
+	k1 := String("k1", "v1")
+	k2 := String("k2", "v2")
+	s := NewSet(k0, k1, k2)
+	empty := NewSet()
+
+	filterEven := func(kv KeyValue) bool {
+		var num int
+		_, _ = fmt.Sscanf(string(kv.Key), "k%d", &num)
+		return num%2 == 0
+	}
+
+	t.Run("EmptySet", func(t *testing.T) {
+		d, mask := NewDistinctFiltered(empty, filterEven)
+		if d != empty.Equivalent() {
+			t.Errorf("NewDistinctFiltered(empty, filter) Distinct = %v, want %v", d, empty.Equivalent())
+		}
+		if mask != 0 {
+			t.Errorf("NewDistinctFiltered(empty, filter) mask = %d, want 0", mask)
+		}
+
+		d, mask = NewDistinctFiltered(empty, nil)
+		if d != empty.Equivalent() {
+			t.Errorf("NewDistinctFiltered(empty, nil) Distinct = %v, want %v", d, empty.Equivalent())
+		}
+		if mask != 0 {
+			t.Errorf("NewDistinctFiltered(empty, nil) mask = %d, want 0", mask)
+		}
+	})
+
+	t.Run("NilFilter", func(t *testing.T) {
+		t.Run("SmallSet", func(t *testing.T) {
+			d, mask := NewDistinctFiltered(s, nil)
+			if d != s.Equivalent() {
+				t.Errorf("NewDistinctFiltered(s, nil) Distinct = %v, want %v", d, s.Equivalent())
+			}
+			if mask != 7 {
+				t.Errorf("NewDistinctFiltered(s, nil) mask = %d, want 7", mask)
+			}
+		})
+
+		t.Run("Size64", func(t *testing.T) {
+			var kvs []KeyValue
+			for i := range 64 {
+				kvs = append(kvs, Int(fmt.Sprintf("k%d", i), i))
+			}
+			set64 := NewSet(kvs...)
+			d, mask := NewDistinctFiltered(set64, nil)
+			if d != set64.Equivalent() {
+				t.Errorf("NewDistinctFiltered(set64, nil) Distinct = %v, want %v", d, set64.Equivalent())
+			}
+			if mask != ^uint64(0) {
+				t.Errorf("NewDistinctFiltered(set64, nil) mask = %d, want %d", mask, ^uint64(0))
+			}
+		})
+
+		t.Run("Size65", func(t *testing.T) {
+			var kvs []KeyValue
+			for i := range 65 {
+				kvs = append(kvs, Int(fmt.Sprintf("k%d", i), i))
+			}
+			set65 := NewSet(kvs...)
+			d, mask := NewDistinctFiltered(set65, nil)
+			if d != set65.Equivalent() {
+				t.Errorf("NewDistinctFiltered(set65, nil) Distinct = %v, want %v", d, set65.Equivalent())
+			}
+			if mask != 0 {
+				t.Errorf("NewDistinctFiltered(set65, nil) mask = %d, want 0", mask)
+			}
+		})
+	})
+
+	t.Run("WithFilter", func(t *testing.T) {
+		t.Run("SmallSet", func(t *testing.T) {
+			d, mask := NewDistinctFiltered(s, filterEven)
+			filtered, _ := s.Filter(filterEven)
+			if d != filtered.Equivalent() {
+				t.Errorf("NewDistinctFiltered(s, filter) Distinct = %v, want %v", d, filtered.Equivalent())
+			}
+			if mask != 5 {
+				t.Errorf("NewDistinctFiltered(s, filter) mask = %d, want 5", mask)
+			}
+		})
+
+		t.Run("Size64", func(t *testing.T) {
+			var kvs []KeyValue
+			for i := range 64 {
+				kvs = append(kvs, Int(fmt.Sprintf("k%d", i), i))
+			}
+			set64 := NewSet(kvs...)
+			d, mask := NewDistinctFiltered(set64, filterEven)
+			filtered, _ := set64.Filter(filterEven)
+			if d != filtered.Equivalent() {
+				t.Errorf("NewDistinctFiltered(set64, filter) Distinct = %v, want %v", d, filtered.Equivalent())
+			}
+
+			var expectedMask uint64
+			iter := set64.Iter()
+			i := 0
+			for iter.Next() {
+				if filterEven(iter.Attribute()) {
+					expectedMask |= 1 << i
+				}
+				i++
+			}
+			if mask != expectedMask {
+				t.Errorf("NewDistinctFiltered(set64, filter) mask = %d, want %d", mask, expectedMask)
+			}
+		})
+
+		t.Run("Size65", func(t *testing.T) {
+			var kvs []KeyValue
+			for i := range 65 {
+				kvs = append(kvs, Int(fmt.Sprintf("k%d", i), i))
+			}
+			set65 := NewSet(kvs...)
+			d, mask := NewDistinctFiltered(set65, filterEven)
+			filtered, _ := set65.Filter(filterEven)
+			if d != filtered.Equivalent() {
+				t.Errorf("NewDistinctFiltered(set65, filter) Distinct = %v, want %v", d, filtered.Equivalent())
+			}
+			if mask != 0 {
+				t.Errorf("NewDistinctFiltered(set65, filter) mask = %d, want 0", mask)
+			}
+		})
+	})
+}

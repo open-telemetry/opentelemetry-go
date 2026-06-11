@@ -10,8 +10,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `NewDistinctFiltered` to `go.opentelemetry.io/otel/attribute` to compute the hash and bitmask of filtered attributes without allocation. (#8230)
 - Add `Map` and `MapValue` functions for new `MAP` attribute type in `go.opentelemetry.io/otel/attribute`. (#8445)
 - Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
+
+### Changed
+
+- Optimize `go.opentelemetry.io/otel/sdk/metric` to lazily filter attributes and compute dropped attributes, eliminating allocations on the hot path. (#8230)
 
 ### Fixed
 
