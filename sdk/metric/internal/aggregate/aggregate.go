@@ -148,8 +148,15 @@ func (b Builder[N]) ExponentialBucketHistogram(
 		h := newDeltaExpoHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
 		return b.filter(h.measure), h.collect
 	default:
-		h := newCumulativeExpoHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
-		return b.filter(h.measure), h.collect
+		measure, collect := newCumulativeExpoHistogram[N](
+			maxSize,
+			maxScale,
+			noMinMax,
+			noSum,
+			b.AggregationLimit,
+			b.resFunc(),
+		)
+		return b.filter(measure), collect
 	}
 }
 
