@@ -157,7 +157,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 
 			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				measureExpoHistogram(h, t.Context(), v, alice)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -199,7 +199,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				measureExpoHistogram(h, t.Context(), v, alice)
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -1282,9 +1282,9 @@ func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
 	h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 	ctx := t.Context()
 
-	h.measure(ctx, math.NaN(), attribute.NewSet(), nil)
-	h.measure(ctx, math.Inf(1), attribute.NewSet(), nil)
-	h.measure(ctx, math.Inf(-1), attribute.NewSet(), nil)
+	measureExpoHistogram(h, ctx, math.NaN(), attribute.NewSet())
+	measureExpoHistogram(h, ctx, math.Inf(1), attribute.NewSet())
+	measureExpoHistogram(h, ctx, math.Inf(-1), attribute.NewSet())
 
 	var dest metricdata.Aggregation
 	h.delta(&dest)
