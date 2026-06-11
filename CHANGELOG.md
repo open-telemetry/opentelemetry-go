@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
+
 ### Changed
 
 - `HistogramReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` now samples Exemplars to distribute them evenly over time. (#8306)
@@ -23,6 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` self-observability to record `error.type` on operation duration histogram when the `exportedSpans` metric is disabled. (#8432)
 - Fix off-by-one error in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar`, which prevented the first exemplar after the reservoir is filled from being sampled. (#8309)
 - Fix histogram datapoint reuse in `go.opentelemetry.io/otel/sdk/metric` aggregation to avoid leaking stale sum/min/max values when they are disabled in subsequent collections. (#8403)
+- Prevent zero-hash collapse to empty set in `go.opentelemetry.io/otel/attribute` when computed hash is zero for non-empty input. (#8402)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
