@@ -673,3 +673,132 @@ func BenchmarkBatchProcessorOnEmit(b *testing.B) {
 		_ = err
 	})
 }
+
+type blockingRecordExporter struct {
+	ExportFunc func(context.Context, []Record) error
+}
+
+func (e *blockingRecordExporter) Export(ctx context.Context, records []Record) error {
+	if e.ExportFunc != nil {
+		return e.ExportFunc(ctx, records)
+	}
+	return nil
+}
+
+func (*blockingRecordExporter) Shutdown(context.Context) error   { return nil }
+func (*blockingRecordExporter) ForceFlush(context.Context) error { return nil }
+
+func TestBatchProcessorExportBufferLifetime(t *testing.T) {
+	exportDone := make(chan struct{})
+	exporterStarted := make(chan struct{})
+
+	// Safe cleanup to guarantee exportDone is closed to prevent hangs during Shutdown()
+	defer func() {
+		select {
+		case <-exportDone:
+		default:
+			close(exportDone)
+		}
+	}()
+
+	var capturedRecords []Record
+	var mu sync.Mutex
+	var startOnce sync.Once
+
+	exporter := &blockingRecordExporter{
+		ExportFunc: func(_ context.Context, records []Record) error {
+			mu.Lock()
+			capturedRecords = records
+			mu.Unlock()
+			startOnce.Do(func() {
+				close(exporterStarted)
+			})
+			<-exportDone
+			return nil
+		},
+	}
+
+	b := NewBatchProcessor(
+		exporter,
+		WithMaxQueueSize(10),
+		WithExportMaxBatchSize(1),
+		WithExportInterval(time.Hour), // Large interval to prevent ticker noise
+	)
+	t.Cleanup(func() { _ = b.Shutdown(t.Context()) })
+
+	// Emit 1 record to trigger immediate batch export (batch size is 1)
+	r := Record{}
+	r.SetBody(log.StringValue("test-message"))
+	assert.NoError(t, b.OnEmit(t.Context(), &r))
+
+	// Wait for the exporter to start processing
+	select {
+	case <-exporterStarted:
+	case <-time.After(10 * time.Second):
+		t.Fatal("exporter did not start in time")
+	}
+
+	// Read and assert that the record remains completely intact while blocked.
+	// We read concurrently to let the race detector (go test -race) catch any
+	// concurrent mutation/clear by the poll loop.
+	stopAssert := make(chan struct{})
+	doneAssert := make(chan struct{})
+	go func() {
+		defer close(doneAssert)
+		for {
+			select {
+			case <-stopAssert:
+				return
+			default:
+				mu.Lock()
+				recs := capturedRecords
+				mu.Unlock()
+				if len(recs) > 0 {
+					if recs[0].Body().AsString() != "test-message" {
+						t.Errorf(
+							"records slice mutated prematurely: expected body 'test-message', got %q",
+							recs[0].Body().AsString(),
+						)
+					}
+				}
+				time.Sleep(time.Microsecond)
+			}
+		}
+	}()
+
+	// Emit another record to trigger further poll loop activity (won't be exported yet since export buffer size is 1)
+	r2 := Record{}
+	r2.SetBody(log.StringValue("another-message"))
+	assert.NoError(t, b.OnEmit(t.Context(), &r2))
+
+	// Let the assert goroutine run for a short duration
+	time.Sleep(10 * time.Millisecond)
+
+	// Stop the asserting loop first before unblocking the export, avoiding races with clearRecords
+	close(stopAssert)
+	<-doneAssert
+
+	// Complete the export
+	close(exportDone)
+}
+
+func BenchmarkBatchProcessorExport(b *testing.B) {
+	bp := NewBatchProcessor(
+		defaultNoopExporter,
+		WithMaxQueueSize(b.N+1),
+		WithExportMaxBatchSize(100),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	b.Cleanup(func() { _ = bp.Shutdown(b.Context()) })
+
+	r := new(Record)
+	r.SetBody(log.BoolValue(true))
+	ctx := b.Context()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for range b.N {
+		_ = bp.OnEmit(ctx, r)
+	}
+}
