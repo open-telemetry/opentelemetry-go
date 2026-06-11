@@ -128,3 +128,48 @@ func hashValueSlice(h xxhash.Hash, vals []Value) xxhash.Hash {
 	}
 	return h
 }
+
+// NewDistinctFiltered returns the Distinct (hash) of the filtered attributes
+// and a bitmask of the accepted attributes.
+// It is designed for internal use by the metrics SDK to implement lazy filtering
+// without allocation on the hot path, while sharing the hashing implementation.
+//
+// The returned mask is only valid if set.Len() <= 64. If set.Len() > 64,
+// the mask will be 0 and the distinct value is computed by materializing the set.
+func NewDistinctFiltered(set Set, filter Filter) (Distinct, uint64) {
+	if filter == nil {
+		return set.Equivalent(), ^uint64(0)
+	}
+	if set.Len() == 0 {
+		return Distinct{hash: emptySet.hash}, 0
+	}
+
+	if set.Len() > 64 {
+		filtered, _ := set.Filter(filter)
+		return filtered.Equivalent(), 0
+	}
+
+	h := xxhash.New()
+	var mask uint64
+	iter := set.Iter()
+	i := 0
+	hasAttributes := false
+	for iter.Next() {
+		kv := iter.Attribute()
+		if filter(kv) {
+			h = hashKV(h, kv)
+			mask |= 1 << i
+			hasAttributes = true
+		}
+		i++
+	}
+
+	var distinct Distinct
+	if !hasAttributes {
+		distinct = Distinct{hash: emptySet.hash}
+	} else {
+		distinct = Distinct{hash: h.Sum64()}
+	}
+
+	return distinct, mask
+}
