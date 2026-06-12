@@ -288,7 +288,8 @@ func TestUnmarshalIgnoresUnknownFields(t *testing.T) {
 	require.Len(t, req.ResourceSpans, 1)
 	s := req.ResourceSpans[0].ScopeSpans[0].Spans[0]
 	assert.Equal(t, "op", s.Name)
-	assert.Equal(t,
+	assert.Equal(
+		t,
 		[]byte{0x5B, 0x8E, 0xFF, 0xF7, 0x98, 0x03, 0x81, 0x03, 0xD2, 0x69, 0xB6, 0x33, 0x81, 0x3F, 0xC6, 0x0C},
 		s.TraceId,
 	)
