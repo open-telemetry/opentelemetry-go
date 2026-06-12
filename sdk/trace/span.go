@@ -476,7 +476,10 @@ func needsTruncation(limit int, v attribute.Value) bool {
 	case attribute.SLICE:
 		return slices.ContainsFunc(v.AsSlice(), func(e attribute.Value) bool { return needsTruncation(limit, e) })
 	case attribute.MAP:
-		return slices.ContainsFunc(v.AsMap(), func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) })
+		return slices.ContainsFunc(
+			v.AsMap(),
+			func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) },
+		)
 	}
 	return false
 }
