@@ -1146,6 +1146,30 @@ func TestResponseBodySizeLimit(t *testing.T) {
 			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 		})
 	}
+
+	t.Run("disabled response body size limit", func(t *testing.T) {
+		var calls int
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			calls++
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(largeBody)
+		}))
+		t.Cleanup(srv.Close)
+
+		opts := []Option{
+			WithEndpoint(srv.Listener.Addr().String()),
+			WithInsecure(),
+			WithMaxResponseBodySize(0),
+		}
+		cfg := newConfig(opts)
+		c, err := newHTTPClient(t.Context(), cfg)
+		require.NoError(t, err)
+
+		err = c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
+		require.NoError(t, err)
+		assert.Equal(t, 1, calls)
+	})
 }
 
 func TestRequestBodySizeLimit(t *testing.T) {
