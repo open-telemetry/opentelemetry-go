@@ -284,6 +284,15 @@ func BenchmarkKeyValueFromAttribute(b *testing.B) {
 				attribute.SliceValue(attribute.IntValue(7)),
 			),
 		},
+		{
+			desc: "Map",
+			kv: attribute.Map(
+				"k",
+				attribute.String("b", "two"),
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+				attribute.Key("slice").Slice(attribute.BoolValue(true)),
+			),
+		},
 	}
 	for _, tc := range testCases {
 		b.Run(tc.desc, func(b *testing.B) {
