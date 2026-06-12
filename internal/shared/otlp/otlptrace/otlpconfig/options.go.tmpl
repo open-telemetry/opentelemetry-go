@@ -36,7 +36,7 @@ const (
 	DefaultMaxRequestSize int = 64 * 1024 * 1024
 {{ if .isHTTP }}
 	// DefaultMaxResponseBodySize is the default maximum size of an OTLP/HTTP
-	// response body, including after decompression.
+	// response body, after decompression.
 	DefaultMaxResponseBodySize int64 = 4 * 1024 * 1024
 {{ end }}
 	// DefaultTimeout is a default max waiting time for the backend to process

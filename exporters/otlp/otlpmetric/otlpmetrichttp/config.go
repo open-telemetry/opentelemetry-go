@@ -195,8 +195,8 @@ func WithMaxRequestSize(size int) Option {
 	return wrappedOption{oconf.WithMaxRequestSize(size)}
 }
 
-// WithMaxResponseBodySize sets the maximum size, in bytes, of a deserialized
-// response body, after decompression, the exporter will read.
+// WithMaxResponseBodySize sets the maximum size, in bytes, of the response body
+// (after decompression) that the exporter will read.
 //
 // If size is less than or equal to zero, no response body size limit is applied.
 // Disabling the limit is not recommended because it can lead to excessive
