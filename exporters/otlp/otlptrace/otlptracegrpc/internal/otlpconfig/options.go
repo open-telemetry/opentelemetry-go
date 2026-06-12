@@ -34,6 +34,7 @@ const (
 	// DefaultMaxRequestSize is the default maximum size of a serialized export
 	// request, before compression.
 	DefaultMaxRequestSize int = 64 * 1024 * 1024
+
 	// DefaultTimeout is a default max waiting time for the backend to process
 	// each span batch.
 	DefaultTimeout time.Duration = 10 * time.Second
@@ -51,6 +52,7 @@ type (
 		Headers        map[string]string
 		Compression    Compression
 		MaxRequestSize int
+
 		Timeout        time.Duration
 		URLPath        string
 
@@ -84,7 +86,8 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:        DefaultTracesPath,
 			Compression:    NoCompression,
-			MaxRequestSize: DefaultMaxRequestSize,
+			MaxRequestSize:      DefaultMaxRequestSize,
+
 			Timeout:        DefaultTimeout,
 		},
 		RetryConfig: retry.DefaultConfig,
@@ -357,6 +360,8 @@ func WithMaxRequestSize(size int) GenericOption {
 		return cfg
 	})
 }
+
+
 
 func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {

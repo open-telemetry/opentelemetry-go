@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -31,13 +32,6 @@ import (
 )
 
 const contentTypeProto = "application/x-protobuf"
-
-// maxResponseBodySize is the maximum number of bytes to read from a response
-// body. It is set to 4 MiB per the OTLP specification recommendation to
-// mitigate excessive memory usage caused by a misconfigured or malicious
-// server. If exceeded, the response is treated as a not-retryable error.
-// This is a variable to allow tests to override it.
-var maxResponseBodySize int64 = 4 * 1024 * 1024
 
 var gzPool = sync.Pool{
 	New: func() any {
@@ -221,11 +215,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			// Success, do not retry.
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-				var maxBytesErr *http.MaxBytesError
-				if errors.As(err, &maxBytesErr) {
-					return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-				}
+			if err := copyResponseBody(&respData, resp.Body, c.cfg.MaxResponseBodySize); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
@@ -256,11 +246,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-			var maxBytesErr *http.MaxBytesError
-			if errors.As(err, &maxBytesErr) {
-				return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-			}
+		if err := copyResponseBody(&respData, resp.Body, c.cfg.MaxResponseBodySize); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
@@ -368,6 +354,35 @@ type request struct {
 func (r *request) reset(ctx context.Context) {
 	r.Body = r.bodyReader()
 	r.Request = r.WithContext(ctx)
+}
+
+type responseBodyTooLargeError struct {
+	limit int64
+}
+
+func (e responseBodyTooLargeError) Error() string {
+	return fmt.Sprintf("response body too large: exceeded %d bytes", e.limit)
+}
+
+func copyResponseBody(dst io.Writer, src io.ReadCloser, maxSize int64) error {
+	if maxSize <= 0 || maxSize == math.MaxInt64 {
+		_, err := io.Copy(dst, src)
+		return err
+	}
+
+	if _, err := io.Copy(dst, io.LimitReader(src, maxSize)); err != nil {
+		return err
+	}
+
+	var extra [1]byte
+	n, err := src.Read(extra[:])
+	if err != nil && err != io.EOF {
+		return err
+	}
+	if n > 0 {
+		return responseBodyTooLargeError{limit: maxSize}
+	}
+	return nil
 }
 
 // retryableError represents a request failure that can be retried.
