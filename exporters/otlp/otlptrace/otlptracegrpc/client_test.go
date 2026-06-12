@@ -486,7 +486,9 @@ func TestExporterWithArena(t *testing.T) {
 	}
 
 	for _, rs := range rss {
-		spanID := trace.SpanID(rs.SpanId)
+		var spanID trace.SpanID
+		assert.Len(t, rs.SpanId, len(spanID))
+		copy(spanID[:], rs.SpanId)
 		expected := generateExpected(spanID)
 		assert.Len(t, rs.Attributes, len(expected))
 		for _, actual := range rs.Attributes {
