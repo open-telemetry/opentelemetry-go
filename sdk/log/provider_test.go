@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -270,6 +271,24 @@ func TestLoggerProviderConcurrentSafe(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestLoggerProviderLoggerConfigurator(t *testing.T) {
+	p := NewLoggerProvider(withLoggerConfigurator(func(scope instrumentation.Scope) *log.LoggerConfig {
+		cfg := log.NewLoggerConfig(
+			log.WithInstrumentationVersion("v1.2.3"),
+			log.WithSchemaURL("https://example.com/schema"),
+			log.WithInstrumentationAttributes(attribute.String("config", "applied")),
+		)
+		return &cfg
+	}))
+
+	gotLogger := p.Logger("test")
+	loggerImpl, ok := gotLogger.(*logger)
+	require.True(t, ok)
+	assert.Equal(t, "v1.2.3", loggerImpl.instrumentationScope.Version)
+	assert.Equal(t, "https://example.com/schema", loggerImpl.instrumentationScope.SchemaURL)
+	assert.Equal(t, attribute.NewSet(attribute.String("config", "applied")), loggerImpl.instrumentationScope.Attributes)
 }
 
 type logSink struct {
