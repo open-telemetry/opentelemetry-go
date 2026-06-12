@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"net"
 	"strings"
 	"testing"
@@ -305,6 +306,7 @@ func TestExportSpansRequestSizeLimit(t *testing.T) {
 
 func TestExporterWithArena(t *testing.T) {
 	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	ctx, cancel := contextWithTimeout(context.Background(), t, 10*time.Second)
@@ -332,31 +334,39 @@ func TestExporterWithArena(t *testing.T) {
 		_, span := tr.Start(ctx, "AlwaysSample")
 		sc := span.SpanContext()
 
+		spanIDStr := sc.SpanID().String()
 		testKvs := []attribute.KeyValue{
-			attribute.Int("Int"+sc.SpanID().String(), int(sc.SpanID()[0])),
-			attribute.Int64("Int64"+sc.SpanID().String(), int64(sc.SpanID()[1])),
-			attribute.Float64("Float64"+sc.SpanID().String(), 2.22*float64(sc.SpanID()[2])),
-			attribute.Bool("Bool"+sc.SpanID().String(), sc.SpanID()[3]%2 == 0),
-			attribute.String("String"+sc.SpanID().String(), "test"+sc.SpanID().String()),
-			{Key: attribute.Key("Empty" + sc.SpanID().String())},
-			//	todo add some slice attrs?
+			attribute.Int("Int"+spanIDStr, int(sc.SpanID()[0])),
+			attribute.Int64("Int64"+spanIDStr, int64(sc.SpanID()[1])),
+			attribute.Float64("Float64"+spanIDStr, 2.22*float64(sc.SpanID()[2])),
+			attribute.Bool("Bool"+spanIDStr, sc.SpanID()[3]%2 == 0),
+			attribute.String("String"+spanIDStr, "test"+spanIDStr),
+			{Key: attribute.Key("Empty" + spanIDStr)},
+			attribute.Slice(
+				"Slice"+spanIDStr,
+				attribute.BoolValue(sc.SpanID()[4]%2 == 0),
+				attribute.ByteSliceValue([]byte(spanIDStr)),
+				attribute.SliceValue(attribute.IntValue(int(sc.SpanID()[4])), attribute.Value{}),
+			),
 		}
-		// we swap elements to "randomly" allocate them with arena on different place for each span
+
+		// we shuffle to "randomly" allocate them with arena on different place for each span
 		// to be sure that arena reset works properly
-		idxToSwap := int(sc.SpanID()[4]) % len(testKvs)
-		testKvs[0], testKvs[idxToSwap] = testKvs[idxToSwap], testKvs[0]
+		rand.Shuffle(len(testKvs), func(i, j int) {
+			testKvs[i], testKvs[j] = testKvs[j], testKvs[i]
+		})
 
 		span.SetAttributes(testKvs...)
 		span.AddEvent(
 			"one",
 			trace.WithAttributes(
-				attribute.String("EventString"+sc.SpanID().String()+"one", "testEvent"+sc.SpanID().String()+"one"),
+				attribute.String("EventString"+spanIDStr+"one", "testEvent"+spanIDStr+"one"),
 			),
 		)
 		span.AddEvent(
 			"two",
 			trace.WithAttributes(
-				attribute.String("EventString"+sc.SpanID().String()+"two", "testEvent"+sc.SpanID().String()+"two"),
+				attribute.String("EventString"+spanIDStr+"two", "testEvent"+spanIDStr+"two"),
 			),
 		)
 		span.End()
@@ -369,25 +379,14 @@ func TestExporterWithArena(t *testing.T) {
 		require.NoError(t, tp.Shutdown(shutdownCtx))
 	}()
 
-	// Wait >2 cycles.
-	<-time.After(40 * time.Millisecond)
-
-	// Now shutdown the exporter
-	require.NoError(t, exp.Shutdown(ctx))
-
-	// Shutdown the collector too so that we can begin
-	// verification checks of expected data back.
-	require.NoError(t, mc.stop())
-
-	// Now verify that we only got one span
 	rss := mc.getSpans()
-
 	require.Len(t, rss, spanCount, "resource span count: got %d, want %d", len(rss), spanCount)
 
-	generateExpected := func(spanID trace.SpanID) []*commonpb.KeyValue {
+	generateExpected := func(spanID trace.SpanID) map[string]*commonpb.KeyValue {
+		spanIDStr := spanID.String()
 		kvs := []*commonpb.KeyValue{
 			{
-				Key: "Int" + spanID.String(),
+				Key: "Int" + spanIDStr,
 				Value: &commonpb.AnyValue{
 					Value: &commonpb.AnyValue_IntValue{
 						IntValue: int64(spanID[0]),
@@ -395,7 +394,7 @@ func TestExporterWithArena(t *testing.T) {
 				},
 			},
 			{
-				Key: "Int64" + spanID.String(),
+				Key: "Int64" + spanIDStr,
 				Value: &commonpb.AnyValue{
 					Value: &commonpb.AnyValue_IntValue{
 						IntValue: int64(spanID[1]),
@@ -403,7 +402,7 @@ func TestExporterWithArena(t *testing.T) {
 				},
 			},
 			{
-				Key: "Float64" + spanID.String(),
+				Key: "Float64" + spanIDStr,
 				Value: &commonpb.AnyValue{
 					Value: &commonpb.AnyValue_DoubleValue{
 						DoubleValue: 2.22 * float64(spanID[2]),
@@ -411,7 +410,7 @@ func TestExporterWithArena(t *testing.T) {
 				},
 			},
 			{
-				Key: "Bool" + spanID.String(),
+				Key: "Bool" + spanIDStr,
 				Value: &commonpb.AnyValue{
 					Value: &commonpb.AnyValue_BoolValue{
 						BoolValue: spanID[3]%2 == 0,
@@ -419,22 +418,58 @@ func TestExporterWithArena(t *testing.T) {
 				},
 			},
 			{
-				Key: "String" + spanID.String(),
+				Key: "String" + spanIDStr,
 				Value: &commonpb.AnyValue{
 					Value: &commonpb.AnyValue_StringValue{
-						StringValue: "test" + spanID.String(),
+						StringValue: "test" + spanIDStr,
 					},
 				},
 			},
 			{
-				Key:   "Empty" + spanID.String(),
+				Key:   "Empty" + spanIDStr,
 				Value: &commonpb.AnyValue{},
 			},
+			{
+				Key: "Slice" + spanIDStr,
+				Value: &commonpb.AnyValue{
+					Value: &commonpb.AnyValue_ArrayValue{
+						ArrayValue: &commonpb.ArrayValue{
+							Values: []*commonpb.AnyValue{
+								{
+									Value: &commonpb.AnyValue_BoolValue{
+										BoolValue: spanID[4]%2 == 0,
+									},
+								},
+								{
+									Value: &commonpb.AnyValue_BytesValue{
+										BytesValue: []byte(spanIDStr),
+									},
+								},
+								{
+									Value: &commonpb.AnyValue_ArrayValue{
+										ArrayValue: &commonpb.ArrayValue{
+											Values: []*commonpb.AnyValue{
+												{
+													Value: &commonpb.AnyValue_IntValue{
+														IntValue: int64(spanID[4]),
+													},
+												},
+												{},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		}
-
-		idxToSwap := int(spanID[4]) % len(kvs)
-		kvs[0], kvs[idxToSwap] = kvs[idxToSwap], kvs[0]
-		return kvs
+		r := make(map[string]*commonpb.KeyValue, len(kvs))
+		for _, kv := range kvs {
+			r[kv.Key] = kv
+		}
+		return r
 	}
 
 	generateEventAttributes := func(name string, spanID trace.SpanID) []*commonpb.KeyValue {
@@ -453,11 +488,16 @@ func TestExporterWithArena(t *testing.T) {
 	for _, rs := range rss {
 		spanID := trace.SpanID(rs.SpanId)
 		expected := generateExpected(spanID)
-		for i, actual := range rs.Attributes {
+		assert.Len(t, rs.Attributes, len(expected))
+		for _, actual := range rs.Attributes {
+			expKV, ok := expected[actual.Key]
+			if !assert.True(t, ok, "missing attribute %q", expKV.Key) {
+				continue
+			}
 			if a, ok := actual.Value.Value.(*commonpb.AnyValue_DoubleValue); ok {
-				e, ok := expected[i].Value.Value.(*commonpb.AnyValue_DoubleValue)
+				e, ok := expKV.Value.Value.(*commonpb.AnyValue_DoubleValue)
 				if !ok {
-					t.Errorf("expected AnyValue_DoubleValue, got %T", expected[i].Value.Value)
+					t.Errorf("expected AnyValue_DoubleValue, got %T", expKV.Value.Value)
 					continue
 				}
 				if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
@@ -465,7 +505,7 @@ func TestExporterWithArena(t *testing.T) {
 				}
 				e.DoubleValue = a.DoubleValue
 			}
-			assert.Equal(t, expected[i], actual)
+			assert.Equal(t, expKV, actual)
 		}
 
 		for _, event := range rs.Events {

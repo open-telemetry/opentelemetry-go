@@ -38,7 +38,6 @@ func NewArena(size int) *Arena {
 func (a *Arena) Reset() {
 	a.kvs.reset()
 	a.avs.reset()
-	// todo do we need to recreate too big arrays to free mem?
 	// strings allocated on heap so we clear avStrValues for GC to collect it properly
 	clear(a.avStrValues)
 	a.avStrValues = a.avStrValues[:0]
@@ -65,7 +64,6 @@ func (s *chunkedStorage[T]) alloc() *T {
 }
 
 func (s *chunkedStorage[T]) reset() {
-	// todo cut chunks when arena is too big?
 	for i := range s.idx {
 		chunk := i / s.chunkSize
 		pos := i % s.chunkSize
