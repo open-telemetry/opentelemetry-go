@@ -139,6 +139,20 @@ func (k Key) Slice(v ...Value) KeyValue {
 	}
 }
 
+// Map creates a KeyValue instance with a MAP Value.
+//
+// Users should avoid providing duplicate keys; many receivers handle maps
+// containing duplicate keys unpredictably.
+//
+// If creating both a key and value at the same time, use the provided
+// convenience function instead -- Map(name, values...).
+func (k Key) Map(v ...KeyValue) KeyValue {
+	return KeyValue{
+		Key:   k,
+		Value: MapValue(v...),
+	}
+}
+
 // Defined reports whether the key is not empty.
 func (k Key) Defined() bool {
 	return len(k) != 0

@@ -243,6 +243,42 @@ func TestConvAttrValueSlice(t *testing.T) {
 	}
 }
 
+func TestConvAttrValueMap(t *testing.T) {
+	t.Parallel()
+
+	val := convAttrValue(attribute.MapValue(
+		attribute.String("b", "two"),
+		attribute.Key("a").Map(attribute.Int("nested", 1)),
+		attribute.Key("slice").Slice(attribute.BoolValue(true)),
+	))
+
+	assert.Equal(t, telemetry.ValueKindMap, val.Kind())
+
+	kvs := val.AsMap()
+	if assert.Len(t, kvs, 3) {
+		assert.Equal(t, "a", kvs[0].Key)
+		assert.Equal(t, telemetry.ValueKindMap, kvs[0].Value.Kind())
+		nested := kvs[0].Value.AsMap()
+		if assert.Len(t, nested, 1) {
+			assert.Equal(t, "nested", nested[0].Key)
+			assert.Equal(t, telemetry.ValueKindInt64, nested[0].Value.Kind())
+			assert.EqualValues(t, 1, nested[0].Value.AsInt64())
+		}
+
+		assert.Equal(t, "b", kvs[1].Key)
+		assert.Equal(t, telemetry.ValueKindString, kvs[1].Value.Kind())
+		assert.Equal(t, "two", kvs[1].Value.AsString())
+
+		assert.Equal(t, "slice", kvs[2].Key)
+		assert.Equal(t, telemetry.ValueKindSlice, kvs[2].Value.Kind())
+		slice := kvs[2].Value.AsSlice()
+		if assert.Len(t, slice, 1) {
+			assert.Equal(t, telemetry.ValueKindBool, slice[0].Kind())
+			assert.True(t, slice[0].AsBool())
+		}
+	}
+}
+
 func TestTracerStartPropagatesOrigCtx(t *testing.T) {
 	t.Parallel()
 
