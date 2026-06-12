@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -335,17 +336,21 @@ func (e responseBodyTooLargeError) Error() string {
 }
 
 func copyResponseBody(dst io.Writer, src io.ReadCloser, maxSize int64) error {
-	if maxSize <= 0 {
+	if maxSize <= 0 || maxSize == math.MaxInt64 {
 		_, err := io.Copy(dst, src)
 		return err
 	}
 
-	lr := &io.LimitedReader{R: src, N: maxSize + 1}
-	_, err := io.Copy(dst, lr)
-	if err != nil {
+	if _, err := io.Copy(dst, io.LimitReader(src, maxSize)); err != nil {
 		return err
 	}
-	if lr.N == 0 {
+
+	var extra [1]byte
+	n, err := src.Read(extra[:])
+	if err != nil && err != io.EOF {
+		return err
+	}
+	if n > 0 {
 		return responseBodyTooLargeError{limit: maxSize}
 	}
 	return nil
