@@ -29,6 +29,7 @@ const (
 	stringSliceID  uint64 = 7453010373645655387 // "[]string" (little endian)
 	byteSliceID    uint64 = 6874028470941080415 // "_[]byte_" (little endian)
 	sliceID        uint64 = 7883494272577650031 // "__slice_" (little endian)
+	mapID          uint64 = 6872316492666199903 // "__map___" (little endian)
 	emptyID        uint64 = 7305809155345288421 // "__empty_" (little endian)
 )
 
@@ -38,7 +39,13 @@ func hashKVs(kvs []KeyValue) uint64 {
 	for _, kv := range kvs {
 		h = hashKV(h, kv)
 	}
-	return h.Sum64()
+	sum := h.Sum64()
+	// Remap 0 to a non-zero value for non-empty input because hash == 0 is a reserved sentinel (treated as empty/invalid).
+	const remappedZeroHash uint64 = 1
+	if sum == 0 && len(kvs) > 0 {
+		return remappedZeroHash
+	}
+	return sum
 }
 
 // hashKV returns the xxHash64 hash of kv with h as the base.
@@ -110,6 +117,29 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 				h = hashValue(h, rv.Index(i).Interface().(Value))
 			}
 		}
+	case MAP:
+		h = h.Uint64(mapID)
+		switch vals := v.slice.(type) {
+		case [0]KeyValue:
+			// No values to hash, but the type identifier is still hashed above.
+		case [1]KeyValue:
+			h = hashMap(h, vals[:])
+		case [2]KeyValue:
+			h = hashMap(h, vals[:])
+		case [3]KeyValue:
+			h = hashMap(h, vals[:])
+		case [4]KeyValue:
+			h = hashMap(h, vals[:])
+		case [5]KeyValue:
+			h = hashMap(h, vals[:])
+		default:
+			rv := reflect.ValueOf(v.slice)
+			for i := 0; i < rv.Len(); i++ {
+				kv := rv.Index(i).Interface().(KeyValue)
+				h = h.String(string(kv.Key))
+				h = hashValue(h, kv.Value)
+			}
+		}
 	case EMPTY:
 		h = h.Uint64(emptyID)
 	default:
@@ -125,6 +155,14 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 func hashValueSlice(h xxhash.Hash, vals []Value) xxhash.Hash {
 	for _, v := range vals {
 		h = hashValue(h, v)
+	}
+	return h
+}
+
+func hashMap(h xxhash.Hash, vals []KeyValue) xxhash.Hash {
+	for _, kv := range vals {
+		h = h.String(string(kv.Key))
+		h = hashValue(h, kv.Value)
 	}
 	return h
 }

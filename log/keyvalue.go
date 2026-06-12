@@ -438,6 +438,13 @@ func ValueFromAttribute(value attribute.Value) Value {
 			res = append(res, ValueFromAttribute(v))
 		}
 		return SliceValue(res...)
+	case attribute.MAP:
+		val := value.AsMap()
+		res := make([]KeyValue, 0, len(val))
+		for _, kv := range val {
+			res = append(res, KeyValueFromAttribute(kv))
+		}
+		return MapValue(res...)
 	}
 	// This code should never be reached
 	// as log attributes are a superset of standard attributes.

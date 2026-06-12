@@ -379,6 +379,19 @@ func TestValueFromAttribute(t *testing.T) {
 				log.SliceValue(log.Int64Value(7)),
 			),
 		},
+		{
+			desc: "Map",
+			v: attribute.MapValue(
+				attribute.String("b", "two"),
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+				attribute.Key("slice").Slice(attribute.BoolValue(true)),
+			),
+			want: log.MapValue(
+				log.Map("a", log.Int("nested", 1)),
+				log.String("b", "two"),
+				log.Slice("slice", log.BoolValue(true)),
+			),
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
@@ -454,6 +467,21 @@ func TestKeyValueFromAttribute(t *testing.T) {
 				log.BoolValue(true),
 				log.StringValue("foo"),
 				log.SliceValue(log.Int64Value(7)),
+			),
+		},
+		{
+			desc: "Map",
+			kv: attribute.Map(
+				"k",
+				attribute.String("b", "two"),
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+				attribute.Key("slice").Slice(attribute.BoolValue(true)),
+			),
+			want: log.Map(
+				"k",
+				log.Map("a", log.Int("nested", 1)),
+				log.String("b", "two"),
+				log.Slice("slice", log.BoolValue(true)),
 			),
 		},
 	}

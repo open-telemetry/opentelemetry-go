@@ -150,21 +150,17 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 func (r *FixedSizeReservoir) reset() {
 	// This resets the number of exemplars known.
 	r.count = 0
-	// Random index inserts should only happen after the storage is full.
-	r.next = int64(cap(r.measurements))
 
 	// Initial random number in the series used to generate r.next.
-	//
-	// This is set before r.advance to reset or initialize the random number
-	// series. Without doing so it would always be 0 or never restart a new
-	// random number series.
 	//
 	// This maps the uniform random number in (0,1) to a geometric distribution
 	// over the same interval. The mean of the distribution is inversely
 	// proportional to the storage capacity.
 	r.w = math.Exp(math.Log(r.randomFloat64()) / float64(cap(r.measurements)))
 
-	r.advance()
+	// Random index inserts should only happen after the storage is full.
+	// Calculate the first next without updating r.w.
+	r.next = int64(cap(r.measurements)) + int64(math.Log(r.randomFloat64())/math.Log(1-r.w))
 }
 
 // advance updates the count at which the offered measurement will overwrite an
