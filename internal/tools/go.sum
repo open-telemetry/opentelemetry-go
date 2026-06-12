@@ -2,8 +2,8 @@
 4d63.com/gocheckcompilerdirectives v1.4.0/go.mod h1:9ZOAiMOjqC/nRwci2fcUXVHUNLG/cH6r6rhUh+jTFtQ=
 4d63.com/gochecknoglobals v0.2.2 h1:H1vdnwnMaZdQW/N+NrkT1SZMTBmcwHe9Vq8lJcYYTtU=
 4d63.com/gochecknoglobals v0.2.2/go.mod h1:lLxwTQjL5eIesRbvnzIP3jZtG140FnTdz+AlMa+ogt0=
-charm.land/lipgloss/v2 v2.0.3 h1:yM2zJ4Cf5Y51b7RHIwioil4ApI/aypFXXVHSwlM6RzU=
-charm.land/lipgloss/v2 v2.0.3/go.mod h1:7myLU9iG/3xluAWzpY/fSxYYHCgoKTie7laxk6ATwXA=
+charm.land/lipgloss/v2 v2.0.4 h1:lcPeVtcp23SNra7lHy8iYE4UC2aIipVQ47sbGyyxR5Q=
+charm.land/lipgloss/v2 v2.0.4/go.mod h1:0653x8epbZSzdDfO/XPS1a/uYPOBeSsCssOpJOqDzik=
 codeberg.org/chavacava/garif v0.2.1 h1:K9oYxSlvlXrHXyW26Z4q61bTpJDo1wbvXcYKar/F/LM=
 codeberg.org/chavacava/garif v0.2.1/go.mod h1:oHnDSmc0f9K1MeE+MQD/yjkiIB5Xsn5y3S9Dg96Xk84=
 codeberg.org/polyfloyd/go-errorlint v1.9.0 h1:VkdEEmA1VBpH6ecQoMR4LdphVI3fA4RrCh2an7YmodI=
