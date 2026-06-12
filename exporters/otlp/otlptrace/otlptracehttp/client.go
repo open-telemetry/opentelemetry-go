@@ -366,15 +366,11 @@ func (c *client) newRequest(pbRequest *coltracepb.ExportTraceServiceRequest) (re
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Client.
-func (c *client) MarshalLog() any {
+func (*client) MarshalLog() any {
 	return struct {
-		Type     string
-		Endpoint string
-		Insecure bool
+		Type string
 	}{
-		Type:     "otlptracehttp",
-		Endpoint: c.cfg.Endpoint,
-		Insecure: c.cfg.Insecure,
+		Type: "otlptracehttp",
 	}
 }
 
@@ -408,7 +404,7 @@ func (r *request) reset(ctx context.Context) {
 
 // retryableError represents a request failure that can be retried.
 type retryableError struct {
-	throttle int64
+	throttle time.Duration
 	err      error
 }
 
@@ -417,14 +413,28 @@ type retryableError struct {
 // if it is not nil.
 func newResponseError(header http.Header, wrapped error) error {
 	var rErr retryableError
-	if s, ok := header["Retry-After"]; ok {
-		if t, err := strconv.ParseInt(s[0], 10, 64); err == nil {
-			rErr.throttle = t
-		}
+	if v := header.Get("Retry-After"); v != "" {
+		rErr.throttle = retryAfterDuration(v)
 	}
 
 	rErr.err = wrapped
 	return rErr
+}
+
+func retryAfterDuration(v string) time.Duration {
+	if t, err := strconv.ParseInt(v, 10, 64); err == nil && t >= 0 {
+		const maxRetryAfterSeconds = int64(1<<63-1) / int64(time.Second)
+		if t > maxRetryAfterSeconds {
+			return time.Duration(1<<63 - 1)
+		}
+		return time.Duration(t) * time.Second
+	}
+
+	if date, err := http.ParseTime(v); err == nil {
+		return max(time.Until(date), 0)
+	}
+
+	return 0
 }
 
 func (e retryableError) Error() string {
@@ -468,7 +478,7 @@ func evaluate(err error) (bool, time.Duration) {
 		return false, 0
 	}
 
-	return true, time.Duration(rErr.throttle)
+	return true, rErr.throttle
 }
 
 func (c *client) getScheme() string {

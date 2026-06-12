@@ -31,7 +31,7 @@ func (r *storage) store(ctx context.Context, idx int, ts time.Time, v Value, dro
 	r.measurements[idx].FilteredAttributes = droppedAttr
 	r.measurements[idx].Time = ts
 	r.measurements[idx].Value = v
-	r.measurements[idx].Ctx = ctx
+	r.measurements[idx].SpanContext = trace.SpanContextFromContext(ctx)
 	r.measurements[idx].valid = true
 }
 
@@ -58,8 +58,8 @@ type measurement struct {
 	Time time.Time
 	// Value is the value of the measurement.
 	Value Value
-	// Ctx is the context active when a measurement was made.
-	Ctx context.Context
+	// SpanContext is the SpanContext active when a measurement was made.
+	SpanContext trace.SpanContext
 
 	valid bool
 }
@@ -77,7 +77,7 @@ func (m *measurement) exemplar(dest *Exemplar) bool {
 	dest.Time = m.Time
 	dest.Value = m.Value
 
-	sc := trace.SpanContextFromContext(m.Ctx)
+	sc := m.SpanContext
 	if sc.HasTraceID() {
 		traceID := sc.TraceID()
 		dest.TraceID = traceID[:]
