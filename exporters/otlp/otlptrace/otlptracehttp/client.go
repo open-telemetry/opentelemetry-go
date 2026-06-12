@@ -215,10 +215,6 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
 			if err := copyResponseBody(&respData, resp.Body, c.cfg.MaxResponseBodySize); err != nil {
-				var maxBytesErr *http.MaxBytesError
-				if errors.As(err, &maxBytesErr) {
-					return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-				}
 				return err
 			}
 			if respData.Len() == 0 {
@@ -250,10 +246,6 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		// debugging the actual issue.
 		var respData bytes.Buffer
 		if err := copyResponseBody(&respData, resp.Body, c.cfg.MaxResponseBodySize); err != nil {
-			var maxBytesErr *http.MaxBytesError
-			if errors.As(err, &maxBytesErr) {
-				return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-			}
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
@@ -363,14 +355,29 @@ func (r *request) reset(ctx context.Context) {
 	r.Request = r.WithContext(ctx)
 }
 
+type responseBodyTooLargeError struct {
+	limit int64
+}
+
+func (e responseBodyTooLargeError) Error() string {
+	return fmt.Sprintf("response body too large: exceeded %d bytes", e.limit)
+}
+
 func copyResponseBody(dst io.Writer, src io.ReadCloser, maxSize int64) error {
 	if maxSize <= 0 {
 		_, err := io.Copy(dst, src)
 		return err
 	}
 
-	_, err := io.Copy(dst, http.MaxBytesReader(nil, src, maxSize))
-	return err
+	lr := &io.LimitedReader{R: src, N: maxSize + 1}
+	_, err := io.Copy(dst, lr)
+	if err != nil {
+		return err
+	}
+	if lr.N == 0 {
+		return responseBodyTooLargeError{limit: maxSize}
+	}
+	return nil
 }
 
 // retryableError represents a request failure that can be retried.
