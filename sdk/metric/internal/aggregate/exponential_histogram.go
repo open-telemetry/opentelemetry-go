@@ -281,6 +281,7 @@ func (b *expoBuckets) merge(other *expoBuckets) {
 }
 
 func (p *expoHistogramDataPoint[N]) merge(other *expoHistogramDataPoint[N]) {
+	// Caller must ensure other is quiescent (no concurrent record/merge), as merge reads and mutates other.
 	p.mu.Lock()
 	defer p.mu.Unlock()
 

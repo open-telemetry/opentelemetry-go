@@ -1351,15 +1351,22 @@ func TestExpoHistogramUnderflow(t *testing.T) {
 			wantErr: "exponential histogram scale underflow",
 		},
 		{
-			name: "cumulative merge underflow",
+			name: "cumulative multi-cycle underflow",
 			run: func(t *testing.T, ctx context.Context) {
 				measure, collect := newCumulativeExpoHistogram[float64](2, 20, false, false, 0, dropExemplars[float64])
 				measure(ctx, math.MaxFloat64, attribute.NewSet(), nil)
 				var dest metricdata.Aggregation
-				collect(&dest) // Merge MaxFloat64 into cumulative
+				collect(&dest) // Collect MaxFloat64
 
-				measure(ctx, math.SmallestNonzeroFloat64, attribute.NewSet(), nil)
-				collect(&dest) // Merge SmallestNonzeroFloat64 into cumulative -> underflow!
+				measure(
+					ctx,
+					math.SmallestNonzeroFloat64,
+					attribute.NewSet(),
+					nil,
+				) // Underflow happens here during measure
+				collect(
+					&dest,
+				) // Collect again, should not contain SmallestNonzeroFloat64
 
 				eh := dest.(metricdata.ExponentialHistogram[float64])
 				require.Len(t, eh.DataPoints, 1)
@@ -1507,7 +1514,7 @@ func TestExponentialHistogramDatapointReuseLeakedStaleValues_Cumulative(t *testi
 	assert.False(t, defined, "stale Max leaked")
 }
 
-func TestExponentialHistogramMinMaxUnset(t *testing.T) {
+func TestExponentialHistogramNoMinMax(t *testing.T) {
 	alice := attribute.NewSet(attribute.String("user", "alice"))
 	ctx := t.Context()
 
