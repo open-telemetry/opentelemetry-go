@@ -205,6 +205,12 @@ func AttrValue(v attribute.Value) *cpb.AnyValue {
 				Values: attrValues(v.AsSlice()),
 			},
 		}
+	case attribute.MAP:
+		av.Value = &cpb.AnyValue_KvlistValue{
+			KvlistValue: &cpb.KeyValueList{
+				Values: Attrs(v.AsMap()),
+			},
+		}
 	case attribute.STRINGSLICE:
 		av.Value = &cpb.AnyValue_ArrayValue{
 			ArrayValue: &cpb.ArrayValue{

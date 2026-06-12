@@ -1003,6 +1003,29 @@ func TestAttributeToStringPairSlice(t *testing.T) {
 	assert.Equal(t, `[true,"Ymlu",[2,null]]`, v)
 }
 
+func TestAttributeToStringPairMap(t *testing.T) {
+	k, v := attributeToStringPair(attribute.Map(
+		"map",
+		attribute.String("string", "o"),
+		attribute.Int("number", 2),
+		attribute.ByteSlice("bytes", []byte("bin")),
+		attribute.Slice(
+			"slice",
+			attribute.BoolValue(true),
+			attribute.MapValue(attribute.String("inner", "value")),
+		),
+		attribute.Map("nested", attribute.Bool("ok", true)),
+		attribute.KeyValue{Key: "empty"},
+	))
+
+	assert.Equal(t, "map", k)
+	assert.JSONEq(
+		t,
+		`{"bytes":"Ymlu","empty":null,"nested":{"ok":true},"number":2,"slice":[true,{"inner":"value"}],"string":"o"}`,
+		v,
+	)
+}
+
 func zkmodelIDPtr(n uint64) *zkmodel.ID {
 	id := zkmodel.ID(n)
 	return &id
