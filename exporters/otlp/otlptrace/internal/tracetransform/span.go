@@ -37,17 +37,18 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 		}
 
 		rKey := sd.Resource().Equivalent()
+		scope := sd.InstrumentationScope()
 		k := key{
 			r:  rKey,
-			is: sd.InstrumentationScope(),
+			is: scope,
 		}
 		scopeSpan, iOk := ssm[k]
 		if !iOk {
 			// Either the resource or instrumentation scope were unknown.
 			scopeSpan = &tracepb.ScopeSpans{
-				Scope:     InstrumentationScope(sd.InstrumentationScope()),
+				Scope:     InstrumentationScope(scope),
 				Spans:     []*tracepb.Span{},
-				SchemaUrl: sd.InstrumentationScope().SchemaURL,
+				SchemaUrl: scope.SchemaURL,
 			}
 		}
 		scopeSpan.Spans = append(scopeSpan.Spans, span(sd))
