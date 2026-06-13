@@ -3,7 +3,14 @@
 
 package telemetry
 
-import "testing"
+import (
+	"encoding/json"
+	"math"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
 func TestAttrEncoding(t *testing.T) {
 	attrs := []Attr{
@@ -153,4 +160,53 @@ func TestAttrEncoding(t *testing.T) {
 			}
 		}
 	]`)))
+}
+
+func TestFloat64ValueNonFiniteEncoding(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   float64
+		encoded []byte
+	}{
+		{
+			name:    "Finite",
+			value:   0.21362,
+			encoded: []byte(`{"doubleValue":0.21362}`),
+		},
+		{
+			name:    "NaN",
+			value:   math.NaN(),
+			encoded: []byte(`{"doubleValue":"NaN"}`),
+		},
+		{
+			name:    "PositiveInfinity",
+			value:   math.Inf(1),
+			encoded: []byte(`{"doubleValue":"Infinity"}`),
+		},
+		{
+			name:    "NegativeInfinity",
+			value:   math.Inf(-1),
+			encoded: []byte(`{"doubleValue":"-Infinity"}`),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			value := Float64Value(test.value)
+
+			got, err := json.Marshal(&value)
+			require.NoError(t, err)
+			assert.JSONEq(t, string(test.encoded), string(got))
+
+			var decoded Value
+			require.NoError(t, json.Unmarshal(test.encoded, &decoded))
+			if math.IsNaN(test.value) {
+				assert.True(t, math.IsNaN(decoded.AsFloat64()))
+			} else {
+				assert.Equal(t, value, decoded)
+				decodedFloat := protoFloat64(decoded.AsFloat64())
+				assert.Equal(t, test.value, (&decodedFloat).Float64())
+			}
+		})
+	}
 }
