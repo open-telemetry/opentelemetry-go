@@ -91,13 +91,14 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 		return nil
 	}
 
-	tid := sd.SpanContext().TraceID()
-	sid := sd.SpanContext().SpanID()
+	spanContext := sd.SpanContext()
+	tid := spanContext.TraceID()
+	sid := spanContext.SpanID()
 
 	s := &tracepb.Span{
 		TraceId:                tid[:],
 		SpanId:                 sid[:],
-		TraceState:             sd.SpanContext().TraceState().String(),
+		TraceState:             spanContext.TraceState().String(),
 		Status:                 status(sd.Status().Code, sd.Status().Description),
 		StartTimeUnixNano:      uint64(max(0, sd.StartTime().UnixNano())), // nolint:gosec // Overflow checked.
 		EndTimeUnixNano:        uint64(max(0, sd.EndTime().UnixNano())),   // nolint:gosec // Overflow checked.
@@ -114,7 +115,7 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 	if psid := sd.Parent().SpanID(); psid.IsValid() {
 		s.ParentSpanId = psid[:]
 	}
-	s.Flags = buildSpanFlagsWith(sd.SpanContext().TraceFlags(), sd.Parent())
+	s.Flags = buildSpanFlagsWith(spanContext.TraceFlags(), sd.Parent())
 
 	return s
 }
