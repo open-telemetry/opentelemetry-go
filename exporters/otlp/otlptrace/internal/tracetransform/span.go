@@ -113,10 +113,11 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 		DroppedLinksCount:      clampUint32(sd.DroppedLinks()),
 	}
 
-	if psid := sd.Parent().SpanID(); psid.IsValid() {
+	sdParent := sd.Parent()
+	if psid := sdParent.SpanID(); psid.IsValid() {
 		s.ParentSpanId = psid[:]
 	}
-	s.Flags = buildSpanFlagsWith(spanContext.TraceFlags(), sd.Parent())
+	s.Flags = buildSpanFlagsWith(spanContext.TraceFlags(), sdParent)
 
 	return s
 }
