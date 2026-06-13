@@ -50,9 +50,9 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 				Spans:     []*tracepb.Span{},
 				SchemaUrl: scope.SchemaURL,
 			}
+			ssm[k] = scopeSpan
 		}
 		scopeSpan.Spans = append(scopeSpan.Spans, span(sd))
-		ssm[k] = scopeSpan
 
 		rs, rOk := rsm[rKey]
 		if !rOk {
