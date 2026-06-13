@@ -95,11 +95,12 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 	tid := spanContext.TraceID()
 	sid := spanContext.SpanID()
 
+	sdStatus := sd.Status()
 	s := &tracepb.Span{
 		TraceId:                tid[:],
 		SpanId:                 sid[:],
 		TraceState:             spanContext.TraceState().String(),
-		Status:                 status(sd.Status().Code, sd.Status().Description),
+		Status:                 status(sdStatus.Code, sdStatus.Description),
 		StartTimeUnixNano:      uint64(max(0, sd.StartTime().UnixNano())), // nolint:gosec // Overflow checked.
 		EndTimeUnixNano:        uint64(max(0, sd.EndTime().UnixNano())),   // nolint:gosec // Overflow checked.
 		Links:                  links(sd.Links()),
