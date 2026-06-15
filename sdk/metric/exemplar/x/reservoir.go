@@ -14,13 +14,18 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/internal/reservoir"
 	"go.opentelemetry.io/otel/trace"
 )
 
 // FixedSizeRoundRobinReservoir is a [exemplar.Reservoir] that samples at most
 // a fixed number of exemplars using a round-robin strategy to distribute
 // measurements across independent buckets, each using Algorithm L for sampling.
+//
+// This reservoir can be used as a drop-in replacement for a FixedSizeReservoir
+// when better concurrent performance is needed, and some sampling bias is acceptable.
 type FixedSizeRoundRobinReservoir struct {
+	reservoir.ConcurrentSafe
 	*storage
 	count atomic.Int64
 }
@@ -97,8 +102,8 @@ type measurement struct {
 	Time time.Time
 	// Value is the value of the measurement.
 	Value exemplar.Value
-	// Ctx is the context active when a measurement was made.
-	Ctx context.Context
+	// SpanContext is the SpanContext active when a measurement was made.
+	SpanContext trace.SpanContext
 
 	valid bool
 
@@ -125,7 +130,7 @@ func (m *measurement) exemplar(dest *exemplar.Exemplar) bool {
 	dest.Time = m.Time
 	dest.Value = m.Value
 
-	sc := trace.SpanContextFromContext(m.Ctx)
+	sc := m.SpanContext
 	if sc.HasTraceID() {
 		traceID := sc.TraceID()
 		dest.TraceID = traceID[:]
@@ -192,7 +197,7 @@ func (m *measurement) offer(ctx context.Context, ts time.Time, v exemplar.Value,
 		m.FilteredAttributes = droppedAttr
 		m.Time = ts
 		m.Value = v
-		m.Ctx = ctx
+		m.SpanContext = trace.SpanContextFromContext(ctx)
 		m.valid = true
 
 		m.advance()
