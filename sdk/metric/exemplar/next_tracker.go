@@ -10,7 +10,7 @@ import (
 
 // nextTracker tracks the next measurement that should be sampled using Algorithm L.
 type nextTracker struct {
-	// count is the number of measurement seen.
+	// count is the number of measurements seen.
 	count int64
 	// next is the next count that will store a measurement at a random index
 	// once the reservoir has been filled.
@@ -123,13 +123,16 @@ func (t *nextTracker) shouldSample() (bool, int) {
 	if t.k <= 0 {
 		return false, 0
 	}
-	if int(t.count) < t.k {
+	if t.count < int64(t.k) {
 		idx := int(t.count)
 		t.count++
 		return true, idx
 	}
 	if t.count == t.next {
-		idx := int(rand.Int64N(int64(t.k)))
+		idx := 0
+		if t.k > 1 {
+			idx = int(rand.Int64N(int64(t.k)))
+		}
 		t.advance()
 		t.count++
 		return true, idx

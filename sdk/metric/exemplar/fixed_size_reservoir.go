@@ -71,7 +71,7 @@ func (r *FixedSizeReservoir) Offer(ctx context.Context, t time.Time, n Value, a 
 
 // Collect returns all the held exemplars.
 //
-// The Reservoir state is preserved after this call.
+// The stored exemplars are preserved after this call, but the sampling state is reset.
 func (r *FixedSizeReservoir) Collect(dest *[]Exemplar) {
 	if len(r.storage) == 0 {
 		*dest = (*dest)[:0]

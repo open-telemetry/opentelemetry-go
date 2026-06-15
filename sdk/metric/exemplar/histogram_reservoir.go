@@ -93,7 +93,7 @@ func (r *HistogramReservoir) Offer(ctx context.Context, t time.Time, v Value, a 
 
 // Collect returns all the held exemplars.
 //
-// The Reservoir state is preserved after this call.
+// The stored exemplars are preserved after this call, but the sampling state is reset.
 func (r *HistogramReservoir) Collect(dest *[]Exemplar) {
 	*dest = reset(*dest, len(r.buckets), len(r.buckets))
 	var n int
