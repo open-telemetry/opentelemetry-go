@@ -214,7 +214,13 @@ func NewDistinctFiltered(set Set, filter Filter) (Distinct, uint64) {
 	if !hasAttributes {
 		distinct = Distinct{hash: emptySet.hash}
 	} else {
-		distinct = Distinct{hash: h.Sum64()}
+		sum := h.Sum64()
+		// Remap 0 to a non-zero value for non-empty input because hash == 0 is a reserved sentinel (treated as empty/invalid).
+		const remappedZeroHash uint64 = 1
+		if sum == 0 {
+			sum = remappedZeroHash
+		}
+		distinct = Distinct{hash: sum}
 	}
 
 	return distinct, mask

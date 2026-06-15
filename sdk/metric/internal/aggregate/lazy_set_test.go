@@ -54,7 +54,7 @@ func TestLazyFilteredSetVariousSizes(t *testing.T) {
 		size   int
 		filter func(attribute.KeyValue) bool
 	}{
-		// Sizes 1-10 use default filter (accept even values) to guarantee full coverage of switch cases
+		// Sizes 1-10 use the default filter (accept even values) to exercise the <=64 mask-based path across small set sizes
 		{name: "Size1", size: 1},
 		{name: "Size2", size: 2},
 		{name: "Size3", size: 3},
