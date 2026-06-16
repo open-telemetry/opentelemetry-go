@@ -79,7 +79,10 @@ type errOnNthObsCounterMeter struct {
 	err    error
 }
 
-func (m *errOnNthObsCounterMeter) Int64ObservableUpDownCounter(name string, opts ...mapi.Int64ObservableUpDownCounterOption) (mapi.Int64ObservableUpDownCounter, error) {
+func (m *errOnNthObsCounterMeter) Int64ObservableUpDownCounter(
+	name string,
+	opts ...mapi.Int64ObservableUpDownCounterOption,
+) (mapi.Int64ObservableUpDownCounter, error) {
 	m.cnt++
 	if m.cnt == m.n {
 		return nil, m.err
