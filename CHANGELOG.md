@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `Map` and `MapValue` functions for new `MAP` attribute type in `go.opentelemetry.io/otel/attribute`. (#8445)
 - Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
+- Add experimental observability metrics to the BatchProcessor in `go.opentelemetry.io/otel/sdk/log`. (#7124)
 
 ### Fixed
 
@@ -25,10 +26,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix off-by-one error in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar`, which prevented the first exemplar after the reservoir is filled from being sampled. (#8309)
 - Fix histogram datapoint reuse in `go.opentelemetry.io/otel/sdk/metric` aggregation to avoid leaking stale sum/min/max values when they are disabled in subsequent collections. (#8403)
 - Prevent zero-hash collapse to empty set in `go.opentelemetry.io/otel/attribute` when computed hash is zero for non-empty input. (#8402)
-
-### Added
-
-- Add experimental observability metrics to the BatchProcessor in `go.opentelemetry.io/otel/sdk/log`. (#7124)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
