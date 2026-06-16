@@ -689,7 +689,8 @@ const blpComponentID int64 = 0
 func TestBatchProcessorMetricsDisabled(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
 
-	counter.SetExporterID(blpComponentID)
+	origID := counter.SetExporterID(blpComponentID)
+	t.Cleanup(func() { counter.SetExporterID(origID) })
 
 	orig := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
@@ -725,7 +726,8 @@ func TestBatchProcessorMetricsDisabled(t *testing.T) {
 }
 
 func TestBatchProcessorMetrics(t *testing.T) {
-	counter.SetExporterID(blpComponentID)
+	origID := counter.SetExporterID(blpComponentID)
+	t.Cleanup(func() { counter.SetExporterID(origID) })
 
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
