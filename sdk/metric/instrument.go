@@ -431,9 +431,9 @@ type int64MeasureBinder interface {
 // boundFloat64Counter implements metric.Float64Counter using resolved measures.
 type boundFloat64Counter struct {
 	embedded.Float64Counter
-	inst           *float64Inst
-	preboundAttrs  attribute.Set
-	
+	inst          *float64Inst
+	preboundAttrs attribute.Set
+
 	directCounters []metric.Float64Counter
 	resolved       atomic.Bool
 	mux            sync.Mutex
@@ -470,7 +470,7 @@ func (b *boundFloat64Counter) Add(ctx context.Context, val float64, opts ...metr
 	kvs2 := extraAttrs.ToSlice()
 	mergedKvs := append(kvs1, kvs2...)
 	mergedSet := attribute.NewSet(mergedKvs...)
-	
+
 	b.inst.aggregate(ctx, val, mergedSet)
 }
 
@@ -481,9 +481,9 @@ func (*boundFloat64Counter) Enabled(_ context.Context) bool {
 // boundInt64Counter implements metric.Int64Counter using resolved measures.
 type boundInt64Counter struct {
 	embedded.Int64Counter
-	inst           *int64Inst
-	preboundAttrs  attribute.Set
-	
+	inst          *int64Inst
+	preboundAttrs attribute.Set
+
 	directCounters []metric.Int64Counter
 	resolved       atomic.Bool
 	mux            sync.Mutex
@@ -520,7 +520,7 @@ func (b *boundInt64Counter) Add(ctx context.Context, val int64, opts ...metric.A
 	kvs2 := extraAttrs.ToSlice()
 	mergedKvs := append(kvs1, kvs2...)
 	mergedSet := attribute.NewSet(mergedKvs...)
-	
+
 	b.inst.aggregate(ctx, val, mergedSet)
 }
 

@@ -240,7 +240,7 @@ func benchmarkAtomicMinMax[N int64 | float64](b *testing.B) {
 }
 
 func TestLimitedSyncMapLimit(t *testing.T) {
-	m := limitedSyncMap[any]{aggLimit: 3}
+	m := limitedSyncMap[any]{state: &cardinalityState{limit: 3}}
 	newValue := func(attribute.Set) any { return new(int) }
 
 	attr1 := attribute.NewSet(attribute.String("key", "1"))
@@ -293,7 +293,7 @@ func TestLimitedSyncMapLimit(t *testing.T) {
 }
 
 func TestLimitedSyncMapConcurrentSafe(t *testing.T) {
-	m := limitedSyncMap[any]{aggLimit: 5}
+	m := limitedSyncMap[any]{state: &cardinalityState{limit: 5}}
 	newValue := func(attribute.Set) any { return 1 }
 	attr := attribute.NewSet(attribute.String("k", "v"))
 
@@ -337,7 +337,7 @@ func BenchmarkSyncMap(b *testing.B) {
 	newValue := func(attribute.Set) any { return 1 }
 
 	b.Run("limitedSyncMap/LoadOrStoreNoClear", func(b *testing.B) {
-		m := limitedSyncMap[any]{aggLimit: 10}
+		m := limitedSyncMap[any]{state: &cardinalityState{limit: 10}}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			m.LoadOrStoreAttr(attr, newValue)
@@ -345,7 +345,7 @@ func BenchmarkSyncMap(b *testing.B) {
 	})
 
 	b.Run("limitedSyncMap/LoadOrStoreWithClear", func(b *testing.B) {
-		m := limitedSyncMap[any]{aggLimit: 10}
+		m := limitedSyncMap[any]{state: &cardinalityState{limit: 10}}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			m.Clear()
@@ -354,7 +354,7 @@ func BenchmarkSyncMap(b *testing.B) {
 	})
 
 	b.Run("limitedSyncMap/OnlyClear", func(b *testing.B) {
-		m := limitedSyncMap[any]{aggLimit: 10}
+		m := limitedSyncMap[any]{state: &cardinalityState{limit: 10}}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			m.Clear()
