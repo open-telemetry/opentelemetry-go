@@ -47,6 +47,9 @@ func NewBLP(id int64, qLen func() int64, qMax int64) (*BLP, error) {
 	if !x.Observability.Enabled() {
 		return nil, nil
 	}
+	if qLen == nil {
+		return nil, fmt.Errorf("BLP qLen must not be nil")
+	}
 
 	meter := otel.GetMeterProvider().Meter(
 		ScopeName,

@@ -732,9 +732,12 @@ func TestBatchProcessorMetrics(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
 	origLogger := global.GetLogger()
-	t.Cleanup(func() { global.SetLogger(origLogger) })
+	origVerbosity := stdr.SetVerbosity(1)
+	t.Cleanup(func() {
+		global.SetLogger(origLogger)
+		stdr.SetVerbosity(origVerbosity)
+	})
 	buf := new(concurrentBuffer)
-	stdr.SetVerbosity(1)
 	global.SetLogger(stdr.New(stdlog.New(buf, "", 0)))
 
 	orig := otel.GetMeterProvider()

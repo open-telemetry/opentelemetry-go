@@ -34,6 +34,13 @@ func TestNewBLPDisabled(t *testing.T) {
 	assert.Nil(t, blp)
 }
 
+func TestNewBLPNilQLen(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	blp, err := observ.NewBLP(id, nil, 0)
+	assert.Nil(t, blp)
+	assert.ErrorContains(t, err, "qLen must not be nil")
+}
+
 func TestNewBLPErrors(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
@@ -42,7 +49,7 @@ func TestNewBLPErrors(t *testing.T) {
 
 	check := func(t *testing.T, wantMsg string) {
 		t.Helper()
-		_, err := observ.NewBLP(id, nil, 0)
+		_, err := observ.NewBLP(id, func() int64 { return 0 }, 0)
 		require.ErrorIs(t, err, assert.AnError)
 		assert.ErrorContains(t, err, wantMsg)
 	}
@@ -136,7 +143,7 @@ func processed(dPts ...metricdata.DataPoint[int64]) metricdata.Metrics {
 func TestBLPProcessed(t *testing.T) {
 	collect := setup(t)
 
-	blp, err := observ.NewBLP(id, nil, 0)
+	blp, err := observ.NewBLP(id, func() int64 { return 0 }, 0)
 	require.NoError(t, err)
 	require.NotNil(t, blp)
 	require.NoError(t, blp.Shutdown()) // Unregister callback.
