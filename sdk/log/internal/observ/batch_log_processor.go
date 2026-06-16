@@ -5,6 +5,7 @@ package observ // import "go.opentelemetry.io/otel/sdk/log/internal/observ"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"go.opentelemetry.io/otel"
@@ -48,7 +49,7 @@ func NewBLP(id int64, qLen func() int64, qMax int64) (*BLP, error) {
 		return nil, nil
 	}
 	if qLen == nil {
-		return nil, fmt.Errorf("BLP qLen must not be nil")
+		return nil, errors.New("BLP qLen must not be nil")
 	}
 
 	meter := otel.GetMeterProvider().Meter(
