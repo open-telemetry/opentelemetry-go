@@ -573,11 +573,16 @@ func TestHistogramDatapointReuseLeakedStaleValues(t *testing.T) {
 func TestHistogramMinMaxUnset(t *testing.T) {
 	alice := attribute.NewSet(attribute.String("user", "alice"))
 
+	state := &cardinalityState{limit: 0}
 	h := &deltaHistogram[int64]{
 		noMinMax: false,
 		noSum:    false,
 		bounds:   []float64{1, 5},
 		start:    time.Now(),
+		hotColdValMap: [2]limitedSyncMap[*histogramPoint[int64]]{
+			{state: state},
+			{state: state},
+		},
 	}
 
 	hPt := &histogramPoint[int64]{

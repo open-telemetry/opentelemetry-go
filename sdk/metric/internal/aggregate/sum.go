@@ -127,7 +127,7 @@ type deltaSum[N int64 | float64] struct {
 }
 
 func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
-	sv := s.vals.LoadOrStoreUnbound(fltrAttr, func(attr attribute.Set) *sumValue[N] {
+	s.vals.WriteUnbound(fltrAttr, func(attr attribute.Set) *sumValue[N] {
 		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
 		return &sumValue[N]{
@@ -136,12 +136,12 @@ func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.S
 			startTime:     now(),
 			dropExemplars: isDrop,
 		}
+	}, func(sv *sumValue[N]) {
+		sv.n.add(value)
+		if !sv.dropExemplars {
+			sv.res.Offer(ctx, value, droppedAttr)
+		}
 	})
-	
-	sv.n.add(value)
-	if !sv.dropExemplars {
-		sv.res.Offer(ctx, value, droppedAttr)
-	}
 }
 
 func (s *deltaSum[N]) collect(
@@ -158,7 +158,7 @@ func (s *deltaSum[N]) collect(
 	// delta always clears values on collection
 	readIdx := s.vals.SwapHotAndWait()
 	hotIdx := 1 - readIdx
-	
+
 	// We don't know the total count ahead of time easily because we only collect
 	// bound entries from hot map, and all from cold map.
 	dPts := reset(sData.DataPoints, 0, s.vals.Len(readIdx))
@@ -170,7 +170,7 @@ func (s *deltaSum[N]) collect(
 			n := val.n.load()
 			last := s.reported[key]
 			delta := n - last
-			
+
 			newPt := metricdata.DataPoint[N]{
 				Attributes: val.attrs,
 				StartTime:  s.start,
@@ -179,7 +179,7 @@ func (s *deltaSum[N]) collect(
 			}
 			collectExemplars(&newPt.Exemplars, val.res.Collect)
 			dPts = append(dPts, newPt)
-			
+
 			s.reported[key] = n // Update reported value
 			// Do NOT delete from map!
 		} else {
@@ -192,7 +192,7 @@ func (s *deltaSum[N]) collect(
 			}
 			collectExemplars(&newPt.Exemplars, val.res.Collect)
 			dPts = append(dPts, newPt)
-			
+
 			s.vals.Delete(readIdx, key)
 		}
 		return true
@@ -204,7 +204,7 @@ func (s *deltaSum[N]) collect(
 			n := val.n.load()
 			last := s.reported[key]
 			delta := n - last
-			
+
 			newPt := metricdata.DataPoint[N]{
 				Attributes: val.attrs,
 				StartTime:  s.start,
@@ -213,7 +213,7 @@ func (s *deltaSum[N]) collect(
 			}
 			collectExemplars(&newPt.Exemplars, val.res.Collect)
 			dPts = append(dPts, newPt)
-			
+
 			s.reported[key] = n // Update reported value
 			// Do NOT delete from map!
 		}
@@ -339,9 +339,7 @@ func (s *cumulativeSum[N]) collect(
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
 	var i int
-	s.values.Range(func(_, value any) bool {
-		val := value.(*sumValue[N])
-
+	s.values.Range(func(_ any, val *sumValue[N]) bool {
 		startTime := s.start
 		if perSeriesStartTimeEnabled {
 			startTime = val.startTime
@@ -480,8 +478,7 @@ func (s *precomputedSum[N]) delta(
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	s.vals.Range(readIdx, func(key, value any) bool {
-		val := value.(*sumValue[N])
+	s.vals.Range(readIdx, func(key any, val *sumValue[N]) bool {
 		n := val.n.load()
 
 		delta := n - s.reported[key]
@@ -524,8 +521,7 @@ func (s *precomputedSum[N]) cumulative(
 	dPts := reset(sData.DataPoints, n, n)
 
 	var i int
-	s.vals.Range(readIdx, func(_, value any) bool {
-		val := value.(*sumValue[N])
+	s.vals.Range(readIdx, func(_ any, val *sumValue[N]) bool {
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
