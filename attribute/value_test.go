@@ -100,6 +100,15 @@ func TestValue(t *testing.T) {
 			wantValue: []attribute.Value{attribute.BoolValue(true), attribute.IntValue(42), attribute.StringValue("foo")},
 		},
 		{
+			name:     "Key.Map() correctly returns keys's internal []KeyValue value",
+			value:    k.Map(attribute.String("b", "two"), attribute.Int("a", 1)).Value,
+			wantType: attribute.MAP,
+			wantValue: []attribute.KeyValue{
+				attribute.Int("a", 1),
+				attribute.String("b", "two"),
+			},
+		},
+		{
 			name:      "empty value",
 			value:     attribute.Value{},
 			wantType:  attribute.EMPTY,
@@ -176,6 +185,18 @@ func TestEquivalence(t *testing.T) {
 				attribute.BoolValue(true),
 				attribute.IntValue(42),
 				attribute.SliceValue(attribute.StringValue("nested")),
+			),
+		},
+		{
+			attribute.Map(
+				"Map",
+				attribute.Bool("b", true),
+				attribute.Map("a", attribute.String("nested", "value")),
+			),
+			attribute.Map(
+				"Map",
+				attribute.Map("a", attribute.String("nested", "value")),
+				attribute.Bool("b", true),
 			),
 		},
 		{
@@ -280,6 +301,14 @@ func TestNotEquivalence(t *testing.T) {
 		{
 			attribute.Slice("Slice", attribute.BoolValue(true), attribute.IntValue(42)),
 			attribute.Slice("Slice", attribute.BoolValue(true), attribute.IntValue(43)),
+		},
+		{
+			attribute.Map("Map", attribute.String("key", "value")),
+			attribute.Map("Map", attribute.String("key", "other")),
+		},
+		{
+			attribute.Map("Map", attribute.String("key", "value")),
+			attribute.Map("Map", attribute.String("other", "value")),
 		},
 		{
 			attribute.KeyValue{Key: "Empty"},
@@ -415,6 +444,131 @@ func TestAsSlice(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			kv = attribute.Slice("Slice", tc.in...)
 			assert.Equal(t, tc.in, kv.Value.AsSlice())
+		})
+	}
+}
+
+func TestAsMap(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   []attribute.KeyValue
+		want []attribute.KeyValue
+	}{
+		{
+			name: "empty",
+		},
+		{
+			name: "len1",
+			in:   []attribute.KeyValue{attribute.Bool("a", true)},
+			want: []attribute.KeyValue{attribute.Bool("a", true)},
+		},
+		{
+			name: "len2 sorted",
+			in: []attribute.KeyValue{
+				attribute.Int("b", 2),
+				attribute.Int("a", 1),
+			},
+			want: []attribute.KeyValue{
+				attribute.Int("a", 1),
+				attribute.Int("b", 2),
+			},
+		},
+		{
+			name: "len4 sorted",
+			in: []attribute.KeyValue{
+				attribute.String("d", "4"),
+				attribute.String("a", "1"),
+				attribute.String("c", "3"),
+				attribute.String("b", "2"),
+			},
+			want: []attribute.KeyValue{
+				attribute.String("a", "1"),
+				attribute.String("b", "2"),
+				attribute.String("c", "3"),
+				attribute.String("d", "4"),
+			},
+		},
+		{
+			name: "len5 sorted",
+			in: []attribute.KeyValue{
+				attribute.String("e", "5"),
+				attribute.String("a", "1"),
+				attribute.String("d", "4"),
+				attribute.String("b", "2"),
+				attribute.String("c", "3"),
+			},
+			want: []attribute.KeyValue{
+				attribute.String("a", "1"),
+				attribute.String("b", "2"),
+				attribute.String("c", "3"),
+				attribute.String("d", "4"),
+				attribute.String("e", "5"),
+			},
+		},
+		{
+			name: "reflect path sorted",
+			in: []attribute.KeyValue{
+				attribute.String("f", "6"),
+				attribute.String("a", "1"),
+				attribute.String("e", "5"),
+				attribute.String("b", "2"),
+				attribute.String("d", "4"),
+				attribute.String("c", "3"),
+			},
+			want: []attribute.KeyValue{
+				attribute.String("a", "1"),
+				attribute.String("b", "2"),
+				attribute.String("c", "3"),
+				attribute.String("d", "4"),
+				attribute.String("e", "5"),
+				attribute.String("f", "6"),
+			},
+		},
+		{
+			name: "duplicate keys keep stable order",
+			in: []attribute.KeyValue{
+				attribute.String("dup", "first"),
+				attribute.String("a", "before"),
+				attribute.String("dup", "second"),
+			},
+			want: []attribute.KeyValue{
+				attribute.String("a", "before"),
+				attribute.String("dup", "first"),
+				attribute.String("dup", "second"),
+			},
+		},
+		{
+			name: "empty keys and values",
+			in: []attribute.KeyValue{
+				attribute.String("z", "last"),
+				{Key: "empty-value"},
+				attribute.String("", "empty-key"),
+				{},
+			},
+			want: []attribute.KeyValue{
+				attribute.String("", "empty-key"),
+				{},
+				{Key: "empty-value"},
+				attribute.String("z", "last"),
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.want == nil {
+				tc.want = []attribute.KeyValue{}
+			}
+			v := attribute.MapValue(tc.in...)
+			if len(tc.in) > 0 {
+				tc.in[0] = attribute.String("mutated", "input")
+			}
+
+			assert.Equal(t, tc.want, v.AsMap())
+
+			got := v.AsMap()
+			if len(got) > 0 {
+				got[0] = attribute.String("mutated", "output")
+			}
+			assert.Equal(t, tc.want, v.AsMap())
 		})
 	}
 }
@@ -750,6 +904,108 @@ func TestValueString(t *testing.T) {
 				`,[""],["hello \"world\"","line\nbreak"],["snowman ☃","left\u2028right","left\u2029right"]` +
 				`,["tab\treturn\rformfeed\fbackslash\\quote\"backspace\b","\u0001\u2029","<tag>&","a\ufffdb"]` +
 				`,[],[true],[true,2],[true,2,"x"],[true,2,"x","Infinity"],[true,2,"x","Infinity","Ymlu"],[true,2,"x","Infinity","Ymlu",null]]`,
+		},
+		{
+			name: "empty map",
+			v:    attribute.MapValue(),
+			want: "{}",
+		},
+		{
+			name: "map with empty key",
+			v:    attribute.MapValue(attribute.String("", "value")),
+			want: `{"":"value"}`,
+		},
+		{
+			name: "map with empty value",
+			v:    attribute.MapValue(attribute.KeyValue{Key: "empty"}),
+			want: `{"empty":null}`,
+		},
+		{
+			name: "map with empty key and value",
+			v:    attribute.MapValue(attribute.KeyValue{}),
+			want: `{"":null}`,
+		},
+		{
+			name: "map len2 sorted",
+			v: attribute.MapValue(
+				attribute.Int("b", 2),
+				attribute.String("a", `hello "world"`),
+			),
+			want: `{"a":"hello \"world\"","b":2}`,
+		},
+		{
+			name: "map len4 fast path",
+			v: attribute.MapValue(
+				attribute.String("d", "4"),
+				attribute.String("a", "1"),
+				attribute.String("c", "3"),
+				attribute.String("b", "2"),
+			),
+			want: `{"a":"1","b":"2","c":"3","d":"4"}`,
+		},
+		{
+			name: "map len5 fast path",
+			v: attribute.MapValue(
+				attribute.String("e", "5"),
+				attribute.String("a", "1"),
+				attribute.String("d", "4"),
+				attribute.String("b", "2"),
+				attribute.String("c", "3"),
+			),
+			want: `{"a":"1","b":"2","c":"3","d":"4","e":"5"}`,
+		},
+		{
+			name: "map escapes keys",
+			v: attribute.MapValue(
+				attribute.String("line\nkey", "value"),
+				attribute.Bool("<tag>&", true),
+			),
+			want: `{"<tag>&":true,"line\nkey":"value"}`,
+		},
+		{
+			name: "map reflect path nested values",
+			v: attribute.MapValue(
+				attribute.String("z", "last"),
+				attribute.Key("bytes").ByteSlice([]byte("bin")),
+				attribute.Key("empty").Slice(attribute.Value{}),
+				attribute.Key("float").Float64(math.Inf(1)),
+				attribute.Key("map").Map(attribute.String("nested", "value")),
+				attribute.Key("slice").Slice(attribute.IntValue(1), attribute.StringValue("two")),
+			),
+			want: `{"bytes":"Ymlu","empty":[null],"float":"Infinity","map":{"nested":"value"},"slice":[1,"two"],"z":"last"}`,
+		},
+		{
+			name: "slice nested map storage paths",
+			v: attribute.SliceValue(
+				attribute.MapValue(),
+				attribute.MapValue(
+					attribute.String("c", "3"),
+					attribute.String("a", "1"),
+					attribute.String("b", "2"),
+				),
+				attribute.MapValue(
+					attribute.String("d", "4"),
+					attribute.String("a", "1"),
+					attribute.String("c", "3"),
+					attribute.String("b", "2"),
+				),
+				attribute.MapValue(
+					attribute.String("e", "5"),
+					attribute.String("a", "1"),
+					attribute.String("d", "4"),
+					attribute.String("b", "2"),
+					attribute.String("c", "3"),
+				),
+				attribute.MapValue(
+					attribute.String("f", "6"),
+					attribute.String("a", "1"),
+					attribute.String("e", "5"),
+					attribute.String("b", "2"),
+					attribute.String("d", "4"),
+					attribute.String("c", "3"),
+				),
+			),
+			want: `[{},{"a":"1","b":"2","c":"3"},{"a":"1","b":"2","c":"3","d":"4"},{"a":"1","b":"2","c":"3","d":"4","e":"5"},{"a":"1","b":"2","c":"3","d":"4","e":"5","f":"6"}]`,
 		},
 		{
 			name: "empty",

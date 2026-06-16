@@ -358,6 +358,16 @@ func convAttrValue(value attribute.Value) telemetry.Value {
 			out = append(out, convAttrValue(v))
 		}
 		return telemetry.SliceValue(out...)
+	case attribute.MAP:
+		kvs := value.AsMap()
+		out := make([]telemetry.Attr, 0, len(kvs))
+		for _, kv := range kvs {
+			out = append(out, telemetry.Attr{
+				Key:   string(kv.Key),
+				Value: convAttrValue(kv.Value),
+			})
+		}
+		return telemetry.MapValue(out...)
 	}
 	return telemetry.Value{}
 }
