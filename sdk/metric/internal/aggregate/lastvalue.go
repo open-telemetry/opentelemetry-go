@@ -119,8 +119,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 	dPts := reset(gData.DataPoints, n, n)
 
 	var i int
-	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
-		v := value.(*lastValuePoint[N])
+	s.hotColdValMap[readIdx].values.Range(func(_ any, v *lastValuePoint[N]) bool {
 		dPts[i].Attributes = v.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
@@ -170,9 +169,7 @@ func (s *cumulativeLastValue[N]) collect(
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
 	var i int
-	s.values.Range(func(_, value any) bool {
-		v := value.(*lastValuePoint[N])
-
+	s.values.Range(func(_ any, v *lastValuePoint[N]) bool {
 		startTime := s.start
 		if perSeriesStartTimeEnabled {
 			startTime = v.startTime

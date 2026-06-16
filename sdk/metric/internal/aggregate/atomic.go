@@ -315,17 +315,19 @@ func NewHotColdSyncMap[V any](limit int) *HotColdSyncMap[V] {
 	}
 }
 
-// LoadOrStoreUnbound looks up or stores a value in the current hot map.
-func (m *HotColdSyncMap[V]) LoadOrStoreUnbound(fltrAttr attribute.Set, newValue func(attribute.Set) V) V {
+// WriteUnbound executes write for the value associated with fltrAttr in the current hot map.
+// It ensures the write is completed before the reader can swap and collect the value.
+func (m *HotColdSyncMap[V]) WriteUnbound(fltrAttr attribute.Set, newValue func(attribute.Set) V, write func(V)) {
 	hotIdx := m.hcwg.start()
 	defer m.hcwg.done(hotIdx)
-	return m.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, newValue)
+	val := m.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, newValue)
+	write(val)
 }
 
 // LoadOrStoreBound looks up a value in both maps, or stores it in the current hot map.
 func (m *HotColdSyncMap[V]) LoadOrStoreBound(fltrAttr attribute.Set, newValue func(attribute.Set) V) V {
 	d := fltrAttr.Equivalent()
-	
+
 	startedAndHot := m.hcwg.startedCountAndHotIdx.Load()
 	hotIdx := startedAndHot >> 63
 	coldIdx := 1 - hotIdx
@@ -397,4 +399,3 @@ func (m *HotColdSyncMap[V]) Len(readIdx uint64) int {
 func (m *HotColdSyncMap[V]) Clear(readIdx uint64) {
 	m.hotColdValMap[readIdx].Clear()
 }
-
