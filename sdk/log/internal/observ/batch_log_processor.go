@@ -5,7 +5,6 @@ package observ // import "go.opentelemetry.io/otel/sdk/log/internal/observ"
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"go.opentelemetry.io/otel"
@@ -55,18 +54,15 @@ func NewBLP(id int64, qLen func() int64, qMax int64) (*BLP, error) {
 		metric.WithSchemaURL(SchemaURL),
 	)
 
-	var err error
-	qCap, e := otelconv.NewSDKProcessorLogQueueCapacity(meter)
-	if e != nil {
-		e = fmt.Errorf("failed to create BLP queue capacity metric: %w", e)
-		err = errors.Join(err, e)
+	qCap, err := otelconv.NewSDKProcessorLogQueueCapacity(meter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create BLP queue capacity metric: %w", err)
 	}
 	qCapInst := qCap.Inst()
 
-	qSize, e := otelconv.NewSDKProcessorLogQueueSize(meter)
-	if e != nil {
-		e = fmt.Errorf("failed to create BLP queue size metric: %w", e)
-		err = errors.Join(err, e)
+	qSize, err := otelconv.NewSDKProcessorLogQueueSize(meter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create BLP queue size metric: %w", err)
 	}
 	qSizeInst := qSize.Inst()
 
@@ -76,7 +72,7 @@ func NewBLP(id int64, qLen func() int64, qMax int64) (*BLP, error) {
 
 	// Register callback for async metrics
 	obsOpts := []metric.ObserveOption{metric.WithAttributeSet(set)}
-	reg, e := meter.RegisterCallback(
+	reg, err := meter.RegisterCallback(
 		func(_ context.Context, o metric.Observer) error {
 			o.ObserveInt64(qSizeInst, qLen(), obsOpts...)
 			o.ObserveInt64(qCapInst, qMax, obsOpts...)
@@ -85,15 +81,13 @@ func NewBLP(id int64, qLen func() int64, qMax int64) (*BLP, error) {
 		qSizeInst,
 		qCapInst,
 	)
-	if e != nil {
-		e = fmt.Errorf("failed to register BLP queue size/capacity callback: %w", e)
-		err = errors.Join(err, e)
+	if err != nil {
+		return nil, fmt.Errorf("failed to register BLP queue size/capacity callback: %w", err)
 	}
 
-	processed, e := otelconv.NewSDKProcessorLogProcessed(meter)
-	if e != nil {
-		e = fmt.Errorf("failed to create BLP processed logs metric: %w", e)
-		err = errors.Join(err, e)
+	processed, err := otelconv.NewSDKProcessorLogProcessed(meter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create BLP processed logs metric: %w", err)
 	}
 
 	processedOpts := []metric.AddOption{metric.WithAttributeSet(set)}
@@ -105,7 +99,7 @@ func NewBLP(id int64, qLen func() int64, qMax int64) (*BLP, error) {
 		processed:              processed.Inst(),
 		processedOpts:          processedOpts,
 		processedQueueFullOpts: processedQueueFullOpts,
-	}, err
+	}, nil
 }
 
 func (b *BLP) Shutdown() error {

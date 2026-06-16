@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	mapi "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log/internal/observ"
@@ -64,41 +65,42 @@ func dPt(set attribute.Set, value int64) metricdata.DataPoint[int64] {
 	return metricdata.DataPoint[int64]{Attributes: set, Value: value}
 }
 
-type errMeterProvider struct {
+type meterProvider struct {
 	mapi.MeterProvider
+	m mapi.Meter
+}
 
+func (p meterProvider) Meter(_ string, _ ...mapi.MeterOption) mapi.Meter { return p.m }
+
+// errOnNthObsCounterMeter fails Int64ObservableUpDownCounter on the nth call.
+type errOnNthObsCounterMeter struct {
+	noop.Meter
+	n, cnt int
+	err    error
+}
+
+func (m *errOnNthObsCounterMeter) Int64ObservableUpDownCounter(name string, opts ...mapi.Int64ObservableUpDownCounterOption) (mapi.Int64ObservableUpDownCounter, error) {
+	m.cnt++
+	if m.cnt == m.n {
+		return nil, m.err
+	}
+	return m.Meter.Int64ObservableUpDownCounter(name, opts...)
+}
+
+type errCallbackMeter struct {
+	noop.Meter
 	err error
 }
 
-func (m *errMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
-	return &errMeter{err: m.err}
+func (m *errCallbackMeter) RegisterCallback(mapi.Callback, ...mapi.Observable) (mapi.Registration, error) {
+	return nil, m.err
 }
 
-type errMeter struct {
-	mapi.Meter
-
+type errCounterMeter struct {
+	noop.Meter
 	err error
 }
 
-func (m *errMeter) Int64UpDownCounter(string, ...mapi.Int64UpDownCounterOption) (mapi.Int64UpDownCounter, error) {
-	return nil, m.err
-}
-
-func (m *errMeter) Int64Counter(string, ...mapi.Int64CounterOption) (mapi.Int64Counter, error) {
-	return nil, m.err
-}
-
-func (m *errMeter) Int64ObservableUpDownCounter(
-	string,
-	...mapi.Int64ObservableUpDownCounterOption,
-) (mapi.Int64ObservableUpDownCounter, error) {
-	return nil, m.err
-}
-
-func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
-	return nil, m.err
-}
-
-func (m *errMeter) RegisterCallback(mapi.Callback, ...mapi.Observable) (mapi.Registration, error) {
+func (m *errCounterMeter) Int64Counter(_ string, _ ...mapi.Int64CounterOption) (mapi.Int64Counter, error) {
 	return nil, m.err
 }

@@ -40,16 +40,29 @@ func TestNewBLPErrors(t *testing.T) {
 	orig := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
 
-	mp := &errMeterProvider{err: assert.AnError}
-	otel.SetMeterProvider(mp)
+	check := func(t *testing.T, wantMsg string) {
+		t.Helper()
+		_, err := observ.NewBLP(id, nil, 0)
+		require.ErrorIs(t, err, assert.AnError)
+		assert.ErrorContains(t, err, wantMsg)
+	}
 
-	_, err := observ.NewBLP(id, nil, 0)
-	require.ErrorIs(t, err, assert.AnError, "new instrument errors")
-
-	assert.ErrorContains(t, err, "create BLP queue capacity metric")
-	assert.ErrorContains(t, err, "create BLP queue size metric")
-	assert.ErrorContains(t, err, "register BLP queue size/capacity callback")
-	assert.ErrorContains(t, err, "create BLP processed logs metric")
+	t.Run("qCap", func(t *testing.T) {
+		otel.SetMeterProvider(meterProvider{m: &errOnNthObsCounterMeter{n: 1, err: assert.AnError}})
+		check(t, "create BLP queue capacity metric")
+	})
+	t.Run("qSize", func(t *testing.T) {
+		otel.SetMeterProvider(meterProvider{m: &errOnNthObsCounterMeter{n: 2, err: assert.AnError}})
+		check(t, "create BLP queue size metric")
+	})
+	t.Run("callback", func(t *testing.T) {
+		otel.SetMeterProvider(meterProvider{m: &errCallbackMeter{err: assert.AnError}})
+		check(t, "register BLP queue size/capacity callback")
+	})
+	t.Run("processed", func(t *testing.T) {
+		otel.SetMeterProvider(meterProvider{m: &errCounterMeter{err: assert.AnError}})
+		check(t, "create BLP processed logs metric")
+	})
 }
 
 func blpSet(attrs ...attribute.KeyValue) attribute.Set {
