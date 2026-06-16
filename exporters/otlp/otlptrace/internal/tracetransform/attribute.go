@@ -97,6 +97,12 @@ func Value(v attribute.Value) *commonpb.AnyValue {
 				Values: values(v.AsSlice()),
 			},
 		}
+	case attribute.MAP:
+		av.Value = &commonpb.AnyValue_KvlistValue{
+			KvlistValue: &commonpb.KeyValueList{
+				Values: KeyValues(v.AsMap()),
+			},
+		}
 	case attribute.STRINGSLICE:
 		av.Value = &commonpb.AnyValue_ArrayValue{
 			ArrayValue: &commonpb.ArrayValue{
