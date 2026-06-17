@@ -44,7 +44,7 @@ type tracerProviderConfig struct {
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
 
-	// allowDupKeys disables duplicate-key removal in nested MAP values.
+	// allowDupKeys disables duplicate-key removal in nested map values.
 	allowDupKeys bool
 }
 
@@ -382,12 +382,12 @@ func WithResource(r *resource.Resource) TracerProviderOption {
 	})
 }
 
-// WithAllowKeyDuplication disables duplicate-key removal in MAP-valued
-// span, event, link, and instrumentation scope attributes exported by the
-// TracerProvider.
+// WithAllowKeyDuplication disables duplicate-key removal from map attribute
+// values in span, event, link, and instrumentation scope attributes exported by
+// the TracerProvider.
 //
-// By default, MAP-valued attributes are deduplicated to comply with the
-// OpenTelemetry Specification. Duplicate MAP keys are resolved using
+// By default, map attribute values are deduplicated to comply with the
+// OpenTelemetry Specification. Duplicate map keys are resolved using
 // last-value-wins semantics. Resource attributes are always deduplicated by
 // go.opentelemetry.io/otel/sdk/resource.
 func WithAllowKeyDuplication() TracerProviderOption {

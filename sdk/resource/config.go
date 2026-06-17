@@ -24,7 +24,7 @@ type Option interface {
 }
 
 // WithAttributes adds attributes to the configured Resource. Duplicate
-// top-level attribute keys and duplicate keys inside nested MAP values are
+// top-level attribute keys and duplicate keys inside nested map values are
 // resolved using last-value-wins semantics.
 func WithAttributes(attributes ...attribute.KeyValue) Option {
 	return WithDetectors(detectAttributes{attributes})

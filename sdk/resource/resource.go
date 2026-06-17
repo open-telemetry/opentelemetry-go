@@ -48,7 +48,7 @@ var (
 var ErrSchemaURLConflict = errors.New("conflicting Schema URL")
 
 // New returns a [Resource] built using opts.
-// Duplicate top-level attribute keys and duplicate keys inside nested MAP
+// Duplicate top-level attribute keys and duplicate keys inside nested map
 // values are resolved using last-value-wins semantics.
 //
 // This may return a partial Resource along with an error containing
@@ -71,7 +71,7 @@ func New(ctx context.Context, opts ...Option) (*Resource, error) {
 
 // NewWithAttributes creates a resource from attrs and associates the resource
 // with a schema URL. If attrs contains duplicate top-level attribute keys or
-// duplicate keys inside nested MAP values, the last value will be used. If attrs
+// duplicate keys inside nested map values, the last value will be used. If attrs
 // contains any invalid items those items will be dropped. The attrs are assumed
 // to be in a schema identified by schemaURL.
 func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Resource {
@@ -81,7 +81,7 @@ func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Resource 
 }
 
 // NewSchemaless creates a resource from attrs. If attrs contains duplicate
-// top-level attribute keys or duplicate keys inside nested MAP values, the last
+// top-level attribute keys or duplicate keys inside nested map values, the last
 // value will be used. If attrs contains any invalid items those items will be
 // dropped. The resource will not be associated with a schema URL. If the schema
 // of the attrs is known use NewWithAttributes instead.

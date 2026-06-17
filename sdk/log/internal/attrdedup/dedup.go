@@ -4,7 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package attrdedup deduplicates attribute MAP values.
+// Package attrdedup deduplicates attribute map values.
 package attrdedup // import "go.opentelemetry.io/otel/sdk/log/internal/attrdedup"
 
 import (
@@ -28,9 +28,9 @@ type rawValue struct {
 	slice    any
 }
 
-// Value returns value with all MAP values deduplicated.
+// Value returns value with all map values deduplicated.
 //
-// Duplicate MAP keys are resolved using last-value-wins semantics. If
+// Duplicate map keys are resolved using last-value-wins semantics. If
 // allowKeyDuplication is true, value is returned unchanged.
 func Value(value attribute.Value, allowKeyDuplication bool) attribute.Value {
 	if allowKeyDuplication {
@@ -40,7 +40,7 @@ func Value(value attribute.Value, allowKeyDuplication bool) attribute.Value {
 	return value
 }
 
-// KeyValue returns kv with all MAP values deduplicated.
+// KeyValue returns kv with all map values deduplicated.
 //
 // If allowKeyDuplication is true, kv is returned unchanged.
 func KeyValue(kv attribute.KeyValue, allowKeyDuplication bool) attribute.KeyValue {
@@ -51,7 +51,7 @@ func KeyValue(kv attribute.KeyValue, allowKeyDuplication bool) attribute.KeyValu
 	return kv
 }
 
-// KeyValues returns kvs with all MAP values deduplicated.
+// KeyValues returns kvs with all map values deduplicated.
 //
 // The returned slice is the original kvs slice if no value needs
 // deduplication. Top-level keys in kvs are not deduplicated.
@@ -63,17 +63,17 @@ func KeyValues(kvs []attribute.KeyValue, allowKeyDuplication bool) []attribute.K
 	return kvs
 }
 
-// Set returns set with all MAP values deduplicated.
+// Set returns set with all map values deduplicated.
 //
 // The returned Set is the original set if no value needs deduplication.
 // Top-level key uniqueness remains attribute.Set's responsibility; this only
-// normalizes MAP-valued attribute values.
+// normalizes map attribute values.
 func Set(set attribute.Set, allowKeyDuplication bool) attribute.Set {
 	if allowKeyDuplication || set.Len() == 0 {
 		return set
 	}
 
-	// Most attribute sets contain no MAP duplicates. Delay allocation until
+	// Most attribute sets contain no duplicate map keys. Delay allocation until
 	// the first changed value so the no-op path returns the original Set.
 	var normalized []attribute.KeyValue
 	for i := 0; i < set.Len(); i++ {
@@ -149,7 +149,7 @@ func deduplicateSliceValue(value attribute.Value) (attribute.Value, bool) {
 	storage := valueStorage(value)
 	length := valueLen(storage)
 
-	// SLICE values can contain MAP values, so recurse into each element while
+	// Slice values can contain map values, so recurse into each element while
 	// keeping the original attribute.Value when no element changes.
 	var normalized []attribute.Value
 	for i := 0; i < length; i++ {
@@ -179,8 +179,8 @@ func deduplicateMapValue(value attribute.Value) (attribute.Value, bool) {
 	storage := valueStorage(value)
 	length := keyValueLen(storage)
 	if length <= 1 {
-		// A single MAP entry cannot duplicate its own key, but its value might
-		// contain a MAP or SLICE that needs recursive normalization.
+		// A single map entry cannot duplicate its own key, but its value might
+		// contain a map or slice that needs recursive normalization.
 		if length == 1 {
 			kv, changed := deduplicateKeyValue(keyValueAt(storage, 0))
 			if changed {
@@ -222,7 +222,7 @@ func deduplicateMapValue(value attribute.Value) (attribute.Value, bool) {
 }
 
 func valueStorage(value attribute.Value) any {
-	// attribute.Value does not expose allocation-free MAP/SLICE iteration.
+	// attribute.Value does not expose allocation-free map/slice iteration.
 	// The raw mirror lets us read the immutable backing array directly and
 	// reserve AsMap/AsSlice-style allocation for paths that actually change.
 	return (*rawValue)(unsafe.Pointer(&value)).slice //nolint:gosec // Read-only mirror of attribute.Value for allocation-free iteration.

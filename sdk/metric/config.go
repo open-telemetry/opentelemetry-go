@@ -124,12 +124,12 @@ func WithResource(res *resource.Resource) Option {
 	})
 }
 
-// WithAllowKeyDuplication disables duplicate-key removal in MAP-valued
-// measurement, default, and instrumentation scope attributes exported by the
-// MeterProvider.
+// WithAllowKeyDuplication disables duplicate-key removal from map attribute
+// values in measurement, default, and instrumentation scope attributes exported
+// by the MeterProvider.
 //
-// By default, MAP-valued attributes are deduplicated to comply with the
-// OpenTelemetry Specification. Duplicate MAP keys are resolved using
+// By default, map attribute values are deduplicated to comply with the
+// OpenTelemetry Specification. Duplicate map keys are resolved using
 // last-value-wins semantics. Resource attributes are always deduplicated by
 // go.opentelemetry.io/otel/sdk/resource.
 func WithAllowKeyDuplication() Option {
