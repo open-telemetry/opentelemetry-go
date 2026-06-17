@@ -212,14 +212,6 @@ func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) a
 		return configAttrs
 	}
 	rawKVs = attrdedup.KeyValues(rawKVs)
-	return mergeAttributes(configAttrs, rawKVs)
-}
-
-func mergeAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) attribute.Set {
-	if len(rawKVs) == 0 {
-		return configAttrs
-	}
-
 	merged := make([]attribute.KeyValue, 0, configAttrs.Len()+len(rawKVs))
 	merged = append(merged, configAttrs.ToSlice()...)
 	// rawKVs are appended after configAttrs, meaning they will override any duplicate keys in configAttrs.
