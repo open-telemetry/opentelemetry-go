@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Improve performance of `SLICE` and `MAP` attribute hashing in `go.opentelemetry.io/otel/attribute` by inlining small collection hashing. (#8450)
+- Improve performance of `SLICE` and `MAP` attribute hashing in `go.opentelemetry.io/otel/attribute` by inlining small collection hashing. (#8476)
 
 ### Fixed
 
