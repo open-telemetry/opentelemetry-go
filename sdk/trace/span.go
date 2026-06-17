@@ -270,7 +270,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 			s.addDroppedAttr(1)
 			continue
 		}
-		a = deduplicateNestedAttr(a)
+		a = dedupAttr(a)
 		a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 		s.attributes = append(s.attributes, a)
 	}
@@ -331,7 +331,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 		if idx, ok := exists[a.Key]; ok {
 			// Perform all updates before dropping, even when at capacity.
-			a = deduplicateNestedAttr(a)
+			a = dedupAttr(a)
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes[idx] = a
 			continue
@@ -342,7 +342,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 			// updates are checked and performed.
 			s.addDroppedAttr(1)
 		} else {
-			a = deduplicateNestedAttr(a)
+			a = dedupAttr(a)
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes = append(s.attributes, a)
 			exists[a.Key] = len(s.attributes) - 1
@@ -350,7 +350,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	}
 }
 
-func deduplicateNestedAttr(attr attribute.KeyValue) attribute.KeyValue {
+func dedupAttr(attr attribute.KeyValue) attribute.KeyValue {
 	switch attr.Value.Type() {
 	case attribute.SLICE, attribute.MAP:
 		return attrdedup.KeyValue(attr)

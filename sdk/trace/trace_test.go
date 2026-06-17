@@ -1513,7 +1513,7 @@ func TestWithResource(t *testing.T) {
 	}
 }
 
-func TestNestedMapDeduplication(t *testing.T) {
+func TestMapDeduplication(t *testing.T) {
 	dup := attribute.Map(
 		"map",
 		attribute.String("key", "first"),

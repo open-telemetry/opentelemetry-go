@@ -89,7 +89,7 @@ func TestMeterInstrumentConcurrentSafe(*testing.T) {
 	wg.Wait()
 }
 
-func TestNestedMapDeduplication(t *testing.T) {
+func TestMapDeduplication(t *testing.T) {
 	t.Setenv(envVarResourceAttributes, "")
 
 	dup := attribute.Map(
