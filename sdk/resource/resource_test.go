@@ -70,6 +70,46 @@ func TestNewWithAttributes(t *testing.T) {
 	}
 }
 
+func TestNestedMapDeduplication(t *testing.T) {
+	attr := attribute.Map(
+		"map",
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	want := attribute.Map("map", attribute.String("key", "second"))
+
+	t.Run("NewSchemaless", func(t *testing.T) {
+		res := resource.NewSchemaless(attr)
+		assert.Equal(t, []attribute.KeyValue{want}, res.Attributes())
+	})
+
+	t.Run("NewWithAttributes", func(t *testing.T) {
+		res := resource.NewWithAttributes(v121, attr)
+		assert.Equal(t, []attribute.KeyValue{want}, res.Attributes())
+	})
+
+	t.Run("NewWithAttributesOption", func(t *testing.T) {
+		res, err := resource.New(t.Context(), resource.WithAttributes(attr))
+		require.NoError(t, err)
+		assert.Equal(t, []attribute.KeyValue{want}, res.Attributes())
+	})
+
+	t.Run("NewWithDetector", func(t *testing.T) {
+		detectorResource := resource.NewSchemaless(attr)
+		res, err := resource.New(t.Context(), resource.WithDetectors(staticDetector{res: detectorResource}))
+		require.NoError(t, err)
+		assert.Equal(t, []attribute.KeyValue{want}, res.Attributes())
+	})
+}
+
+type staticDetector struct {
+	res *resource.Resource
+}
+
+func (d staticDetector) Detect(context.Context) (*resource.Resource, error) {
+	return d.res, nil
+}
+
 func TestMerge(t *testing.T) {
 	cases := []struct {
 		name      string

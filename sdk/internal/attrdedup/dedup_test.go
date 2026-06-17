@@ -1,0 +1,335 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package attrdedup_test
+
+import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
+)
+
+var cmpValue = cmp.AllowUnexported(attribute.Value{})
+
+func TestValue(t *testing.T) {
+	tests := []struct {
+		name  string
+		value attribute.Value
+		want  attribute.Value
+	}{
+		{
+			name: "unique map",
+			value: attribute.MapValue(
+				attribute.String("one", "1"),
+				attribute.String("two", "2"),
+			),
+			want: attribute.MapValue(
+				attribute.String("one", "1"),
+				attribute.String("two", "2"),
+			),
+		},
+		{
+			name: "duplicate map",
+			value: attribute.MapValue(
+				attribute.String("one", "1"),
+				attribute.String("one", "2"),
+				attribute.String("two", "3"),
+			),
+			want: attribute.MapValue(
+				attribute.String("one", "2"),
+				attribute.String("two", "3"),
+			),
+		},
+		{
+			name: "duplicate map after prior key",
+			value: attribute.MapValue(
+				attribute.String("a", "1"),
+				attribute.String("b", "2"),
+				attribute.String("b", "3"),
+				attribute.String("c", "4"),
+			),
+			want: attribute.MapValue(
+				attribute.String("a", "1"),
+				attribute.String("b", "3"),
+				attribute.String("c", "4"),
+			),
+		},
+		{
+			name: "nested map",
+			value: attribute.MapValue(
+				attribute.Map(
+					"outer",
+					attribute.String("inner", "1"),
+					attribute.String("inner", "2"),
+				),
+			),
+			want: attribute.MapValue(
+				attribute.Map(
+					"outer",
+					attribute.String("inner", "2"),
+				),
+			),
+		},
+		{
+			name: "map inside slice",
+			value: attribute.SliceValue(
+				attribute.StringValue("prior"),
+				attribute.MapValue(
+					attribute.String("inner", "1"),
+					attribute.String("inner", "2"),
+				),
+				attribute.StringValue("tail"),
+			),
+			want: attribute.SliceValue(
+				attribute.StringValue("prior"),
+				attribute.MapValue(
+					attribute.String("inner", "2"),
+				),
+				attribute.StringValue("tail"),
+			),
+		},
+		{
+			name: "unique slice",
+			value: attribute.SliceValue(
+				attribute.StringValue("one"),
+				attribute.IntValue(2),
+			),
+			want: attribute.SliceValue(
+				attribute.StringValue("one"),
+				attribute.IntValue(2),
+			),
+		},
+		{
+			name: "empty and invalid keys",
+			value: attribute.MapValue(
+				attribute.KeyValue{},
+				attribute.String("", "empty"),
+				attribute.String("valid", "value"),
+			),
+			want: attribute.MapValue(
+				attribute.String("", "empty"),
+				attribute.String("valid", "value"),
+			),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := attrdedup.Value(test.value, false)
+			if diff := cmp.Diff(test.want, got, cmpValue); diff != "" {
+				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestValueAllowKeyDuplication(t *testing.T) {
+	value := attribute.MapValue(
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+
+	got := attrdedup.Value(value, true)
+	if diff := cmp.Diff(value, got, cmpValue); diff != "" {
+		t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestValueNoopAllocationFree(t *testing.T) {
+	value := attribute.MapValue(
+		attribute.String("one", "1"),
+		attribute.String("two", "2"),
+	)
+	var got attribute.Value
+
+	allocs := testing.AllocsPerRun(1000, func() {
+		got = attrdedup.Value(value, false)
+	})
+	if allocs != 0 {
+		t.Fatalf("Value() allocations = %v, want 0", allocs)
+	}
+	if diff := cmp.Diff(value, got, cmpValue); diff != "" {
+		t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestValueStorageShapes(t *testing.T) {
+	for n := 0; n <= 6; n++ {
+		t.Run("map", func(t *testing.T) {
+			kvs := make([]attribute.KeyValue, n)
+			for i := range kvs {
+				kvs[i] = attribute.Int(string(rune('a'+i)), i)
+			}
+			value := attribute.MapValue(kvs...)
+
+			got := attrdedup.Value(value, false)
+			if diff := cmp.Diff(value, got, cmpValue); diff != "" {
+				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
+			}
+		})
+		t.Run("slice", func(t *testing.T) {
+			values := make([]attribute.Value, n)
+			for i := range values {
+				values[i] = attribute.IntValue(i)
+			}
+			value := attribute.SliceValue(values...)
+
+			got := attrdedup.Value(value, false)
+			if diff := cmp.Diff(value, got, cmpValue); diff != "" {
+				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestKeyValue(t *testing.T) {
+	kv := attribute.Map(
+		"map",
+		attribute.String("nested", "first"),
+		attribute.String("nested", "second"),
+	)
+	want := attribute.Map(
+		"map",
+		attribute.String("nested", "second"),
+	)
+
+	got := attrdedup.KeyValue(kv, false)
+	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
+		t.Fatalf("KeyValue() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestKeyValueAllowKeyDuplication(t *testing.T) {
+	kv := attribute.Map(
+		"map",
+		attribute.String("nested", "first"),
+		attribute.String("nested", "second"),
+	)
+
+	got := attrdedup.KeyValue(kv, true)
+	if diff := cmp.Diff(kv, got, cmpValue); diff != "" {
+		t.Fatalf("KeyValue() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestKeyValuesNoopReturnsInput(t *testing.T) {
+	kvs := []attribute.KeyValue{
+		attribute.String("one", "1"),
+		attribute.Map("two", attribute.String("nested", "value")),
+	}
+
+	got := attrdedup.KeyValues(kvs, false)
+	if len(got) != len(kvs) {
+		t.Fatalf("KeyValues() length = %d, want %d", len(got), len(kvs))
+	}
+	if &got[0] != &kvs[0] {
+		t.Fatal("KeyValues() copied a no-op input")
+	}
+}
+
+func TestKeyValues(t *testing.T) {
+	kvs := []attribute.KeyValue{
+		attribute.String("top", "value"),
+		attribute.Map(
+			"map",
+			attribute.String("nested", "first"),
+			attribute.String("nested", "second"),
+		),
+		attribute.String("tail", "value"),
+	}
+	want := []attribute.KeyValue{
+		attribute.String("top", "value"),
+		attribute.Map(
+			"map",
+			attribute.String("nested", "second"),
+		),
+		attribute.String("tail", "value"),
+	}
+
+	got := attrdedup.KeyValues(kvs, false)
+	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
+		t.Fatalf("KeyValues() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestKeyValuesAllowKeyDuplication(t *testing.T) {
+	kvs := []attribute.KeyValue{
+		attribute.Map(
+			"map",
+			attribute.String("nested", "first"),
+			attribute.String("nested", "second"),
+		),
+	}
+
+	got := attrdedup.KeyValues(kvs, true)
+	if &got[0] != &kvs[0] {
+		t.Fatal("KeyValues() copied allowed duplicate input")
+	}
+	if diff := cmp.Diff(kvs, got, cmpValue); diff != "" {
+		t.Fatalf("KeyValues() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestSet(t *testing.T) {
+	set := attribute.NewSet(
+		attribute.String("a-top", "value"),
+		attribute.Map(
+			"m-map",
+			attribute.String("nested", "first"),
+			attribute.String("nested", "second"),
+		),
+		attribute.String("z-tail", "value"),
+	)
+	want := attribute.NewSet(
+		attribute.String("a-top", "value"),
+		attribute.Map(
+			"m-map",
+			attribute.String("nested", "second"),
+		),
+		attribute.String("z-tail", "value"),
+	)
+
+	got := attrdedup.Set(set, false)
+	if diff := cmp.Diff(want.ToSlice(), got.ToSlice(), cmpValue); diff != "" {
+		t.Fatalf("Set() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestSetNoop(t *testing.T) {
+	set := attribute.NewSet(
+		attribute.String("top", "value"),
+		attribute.Map("map", attribute.String("nested", "value")),
+	)
+
+	got := attrdedup.Set(set, false)
+	if !got.Equals(&set) {
+		t.Fatal("Set() changed a no-op input")
+	}
+}
+
+func TestSetAllowKeyDuplication(t *testing.T) {
+	set := attribute.NewSet(
+		attribute.Map(
+			"map",
+			attribute.String("nested", "first"),
+			attribute.String("nested", "second"),
+		),
+	)
+
+	got := attrdedup.Set(set, true)
+	if !got.Equals(&set) {
+		t.Fatal("Set() changed allowed duplicate input")
+	}
+}
+
+func TestSetEmpty(t *testing.T) {
+	set := attribute.Set{}
+
+	got := attrdedup.Set(set, false)
+	if !got.Equals(&set) {
+		t.Fatal("Set() changed an empty input")
+	}
+}

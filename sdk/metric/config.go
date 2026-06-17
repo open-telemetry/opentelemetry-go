@@ -23,6 +23,8 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+	resSet           bool
+	allowDupKeys     bool
 }
 
 const defaultCardinalityLimit = 2000
@@ -77,7 +79,6 @@ type experimentalOption interface {
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
 	conf := config{
-		res:              resource.Default(),
 		exemplarFilter:   exemplar.TraceBasedFilter,
 		cardinalityLimit: cardinalityLimitFromEnv(),
 	}
@@ -89,6 +90,15 @@ func newConfig(options []Option) config {
 			continue
 		}
 		conf = o.apply(conf)
+	}
+	if conf.resSet {
+		var err error
+		conf.res, err = mergeResourceWithEnv(conf.res)
+		if err != nil {
+			otel.Handle(err)
+		}
+	} else if conf.res == nil {
+		conf.res = resource.Default()
 	}
 	return conf
 }
@@ -114,12 +124,24 @@ func (o optionFunc) apply(conf config) config {
 // go.opentelemetry.io/otel/sdk/resource package will be used.
 func WithResource(res *resource.Resource) Option {
 	return optionFunc(func(conf config) config {
-		var err error
-		conf.res, err = resource.Merge(resource.Environment(), res)
-		if err != nil {
-			otel.Handle(err)
-		}
+		conf.res = res
+		conf.resSet = true
 		return conf
+	})
+}
+
+// WithAllowKeyDuplication disables duplicate-key removal in MAP-valued
+// measurement, default, and instrumentation scope attributes exported by the
+// MeterProvider.
+//
+// By default, MAP-valued attributes are deduplicated to comply with the
+// OpenTelemetry Specification. Duplicate MAP keys are resolved using
+// last-value-wins semantics. Resource attributes are always deduplicated by
+// go.opentelemetry.io/otel/sdk/resource.
+func WithAllowKeyDuplication() Option {
+	return optionFunc(func(cfg config) config {
+		cfg.allowDupKeys = true
+		return cfg
 	})
 }
 
@@ -217,4 +239,8 @@ func cardinalityLimitFromEnv() int {
 		return defaultCardinalityLimit
 	}
 	return n
+}
+
+func mergeResourceWithEnv(res *resource.Resource) (*resource.Resource, error) {
+	return resource.Merge(resource.Environment(), res)
 }

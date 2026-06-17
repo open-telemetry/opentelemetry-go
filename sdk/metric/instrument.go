@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+	"go.opentelemetry.io/otel/sdk/metric/internal/attrdedup"
 )
 
 var zeroScope instrumentation.Scope
@@ -205,10 +206,12 @@ func extractRawKVs[T any](opts []T) []attribute.KeyValue {
 	return rawKVs
 }
 
-func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) attribute.Set {
+func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue, allowKeyDuplication bool) attribute.Set {
+	configAttrs = attrdedup.Set(configAttrs, allowKeyDuplication)
 	if len(rawKVs) == 0 {
 		return configAttrs
 	}
+	rawKVs = attrdedup.KeyValues(rawKVs, allowKeyDuplication)
 	merged := make([]attribute.KeyValue, 0, configAttrs.Len()+len(rawKVs))
 	merged = append(merged, configAttrs.ToSlice()...)
 	// rawKVs are appended after configAttrs, meaning they will override any duplicate keys in configAttrs.
@@ -219,7 +222,8 @@ func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) a
 }
 
 type int64Inst struct {
-	measures []aggregate.Measure[int64]
+	measures     []aggregate.Measure[int64]
+	allowDupKeys bool
 
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
@@ -237,13 +241,13 @@ var (
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs, i.allowDupKeys))
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs, i.allowDupKeys))
 }
 
 func (i *int64Inst) Enabled(context.Context) bool {
@@ -261,7 +265,8 @@ func (i *int64Inst) aggregate(
 }
 
 type float64Inst struct {
-	measures []aggregate.Measure[float64]
+	measures     []aggregate.Measure[float64]
+	allowDupKeys bool
 
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
@@ -279,13 +284,13 @@ var (
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs, i.allowDupKeys))
 }
 
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs, i.allowDupKeys))
 }
 
 func (i *float64Inst) Enabled(context.Context) bool {

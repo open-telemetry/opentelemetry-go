@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	"go.opentelemetry.io/otel/trace"
@@ -42,6 +43,12 @@ type tracerProviderConfig struct {
 
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
+
+	// resourceSet indicates resource was explicitly configured.
+	resourceSet bool
+
+	// allowDupKeys disables duplicate-key removal in nested MAP values.
+	allowDupKeys bool
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Provider.
@@ -74,10 +81,11 @@ type TracerProvider struct {
 
 	// These fields are not protected by the lock mu. They are assumed to be
 	// immutable after creation of the TracerProvider.
-	sampler     Sampler
-	idGenerator IDGenerator
-	spanLimits  SpanLimits
-	resource    *resource.Resource
+	sampler      Sampler
+	idGenerator  IDGenerator
+	spanLimits   SpanLimits
+	resource     *resource.Resource
+	allowDupKeys bool
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -112,11 +120,12 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o = ensureValidTracerProviderConfig(o)
 
 	tp := &TracerProvider{
-		namedTracer: make(map[instrumentation.Scope]*tracer),
-		sampler:     o.sampler,
-		idGenerator: o.idGenerator,
-		spanLimits:  o.spanLimits,
-		resource:    o.resource,
+		namedTracer:  make(map[instrumentation.Scope]*tracer),
+		sampler:      o.sampler,
+		idGenerator:  o.idGenerator,
+		spanLimits:   o.spanLimits,
+		resource:     o.resource,
+		allowDupKeys: o.allowDupKeys,
 	}
 	global.Info("TracerProvider created", "config", o)
 
@@ -142,6 +151,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		return noop.NewTracerProvider().Tracer(name, opts...)
 	}
 	c := trace.NewTracerConfig(opts...)
+	attrs := attrdedup.Set(c.InstrumentationAttributes(), p.allowDupKeys)
 	if name == "" {
 		name = defaultTracerName
 	}
@@ -149,7 +159,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		Name:       name,
 		Version:    c.InstrumentationVersion(),
 		SchemaURL:  c.SchemaURL(),
-		Attributes: c.InstrumentationAttributes(),
+		Attributes: attrs,
 	}
 
 	t, ok := func() (trace.Tracer, bool) {
@@ -366,11 +376,23 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 // resource.Default() Resource by default.
 func WithResource(r *resource.Resource) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
-		var err error
-		cfg.resource, err = resource.Merge(resource.Environment(), r)
-		if err != nil {
-			otel.Handle(err)
-		}
+		cfg.resource = r
+		cfg.resourceSet = true
+		return cfg
+	})
+}
+
+// WithAllowKeyDuplication disables duplicate-key removal in MAP-valued
+// span, event, link, and instrumentation scope attributes exported by the
+// TracerProvider.
+//
+// By default, MAP-valued attributes are deduplicated to comply with the
+// OpenTelemetry Specification. Duplicate MAP keys are resolved using
+// last-value-wins semantics. Resource attributes are always deduplicated by
+// go.opentelemetry.io/otel/sdk/resource.
+func WithAllowKeyDuplication() TracerProviderOption {
+	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
+		cfg.allowDupKeys = true
 		return cfg
 	})
 }
@@ -503,8 +525,18 @@ func ensureValidTracerProviderConfig(cfg tracerProviderConfig) tracerProviderCon
 	if cfg.idGenerator == nil {
 		cfg.idGenerator = defaultIDGenerator()
 	}
-	if cfg.resource == nil {
+	if cfg.resourceSet {
+		var err error
+		cfg.resource, err = mergeResourceWithEnv(cfg.resource)
+		if err != nil {
+			otel.Handle(err)
+		}
+	} else if cfg.resource == nil {
 		cfg.resource = resource.Default()
 	}
 	return cfg
+}
+
+func mergeResourceWithEnv(res *resource.Resource) (*resource.Resource, error) {
+	return resource.Merge(resource.Environment(), res)
 }

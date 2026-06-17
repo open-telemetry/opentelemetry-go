@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/internal/attrdedup"
 )
 
 // MeterProvider handles the creation and coordination of Meters. All Meters
@@ -26,6 +27,7 @@ type MeterProvider struct {
 
 	forceFlush, shutdown func(context.Context) error
 	stopped              atomic.Bool
+	allowDupKeys         bool
 }
 
 // Compile-time check MeterProvider implements metric.MeterProvider.
@@ -42,9 +44,10 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 	flush, sdown := conf.readerSignals()
 
 	mp := &MeterProvider{
-		pipes:      newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
-		forceFlush: flush,
-		shutdown:   sdown,
+		pipes:        newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
+		forceFlush:   flush,
+		shutdown:     sdown,
+		allowDupKeys: conf.allowDupKeys,
 	}
 	// Log after creation so all readers show correctly they are registered.
 	global.Info(
@@ -76,11 +79,12 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	}
 
 	c := metric.NewMeterConfig(options...)
+	attrs := attrdedup.Set(c.InstrumentationAttributes(), mp.allowDupKeys)
 	s := instrumentation.Scope{
 		Name:       name,
 		Version:    c.InstrumentationVersion(),
 		SchemaURL:  c.SchemaURL(),
-		Attributes: c.InstrumentationAttributes(),
+		Attributes: attrs,
 	}
 
 	global.Info(
@@ -92,7 +96,7 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	)
 
 	return mp.meters.Lookup(s, func() *meter {
-		return newMeter(s, mp.pipes)
+		return newMeter(s, mp.pipes, mp.allowDupKeys)
 	})
 }
 

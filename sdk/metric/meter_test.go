@@ -89,6 +89,61 @@ func TestMeterInstrumentConcurrentSafe(*testing.T) {
 	wg.Wait()
 }
 
+func TestNestedMapDeduplication(t *testing.T) {
+	t.Setenv(envVarResourceAttributes, "")
+
+	dup := attribute.Map(
+		"map",
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	dedup := attribute.Map("map", attribute.String("key", "second"))
+	res := resource.NewSchemaless(dup)
+
+	for _, test := range []struct {
+		name       string
+		opts       []Option
+		wantSignal attribute.KeyValue
+	}{
+		{
+			name:       "Default",
+			wantSignal: dedup,
+		},
+		{
+			name:       "WithAllowKeyDuplication",
+			opts:       []Option{WithAllowKeyDuplication()},
+			wantSignal: dup,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			reader := NewManualReader()
+			opts := []Option{
+				WithReader(reader),
+				WithResource(res),
+			}
+			opts = append(opts, test.opts...)
+			mp := NewMeterProvider(opts...)
+			meter := mp.Meter("scope", metric.WithInstrumentationAttributes(dup))
+			counter, err := meter.Int64Counter("counter")
+			require.NoError(t, err)
+
+			counter.Add(t.Context(), 1, metric.WithAttributes(dup))
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+
+			assert.Equal(t, []attribute.KeyValue{dedup}, rm.Resource.Attributes())
+			require.Len(t, rm.ScopeMetrics, 1)
+			assert.Equal(t, attribute.NewSet(test.wantSignal), rm.ScopeMetrics[0].Scope.Attributes)
+			require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+			sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.Len(t, sum.DataPoints, 1)
+			assert.Equal(t, attribute.NewSet(test.wantSignal), sum.DataPoints[0].Attributes)
+		})
+	}
+}
+
 var emptyCallback metric.Callback = func(context.Context, metric.Observer) error { return nil }
 
 // A Meter Should be able register Callbacks Concurrently.

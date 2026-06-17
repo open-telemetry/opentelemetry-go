@@ -11,6 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
 	"go.opentelemetry.io/otel/sdk/internal/x"
 )
 
@@ -47,6 +48,8 @@ var (
 var ErrSchemaURLConflict = errors.New("conflicting Schema URL")
 
 // New returns a [Resource] built using opts.
+// Duplicate top-level attribute keys and duplicate keys inside nested MAP
+// values are resolved using last-value-wins semantics.
 //
 // This may return a partial Resource along with an error containing
 // [ErrPartialResource] if options that provide a [Detector] are used and that
@@ -66,24 +69,32 @@ func New(ctx context.Context, opts ...Option) (*Resource, error) {
 	return r, detect(ctx, r, cfg.detectors)
 }
 
-// NewWithAttributes creates a resource from attrs and associates the resource with a
-// schema URL. If attrs contains duplicate keys, the last value will be used. If attrs
-// contains any invalid items those items will be dropped. The attrs are assumed to be
-// in a schema identified by schemaURL.
+// NewWithAttributes creates a resource from attrs and associates the resource
+// with a schema URL. If attrs contains duplicate top-level attribute keys or
+// duplicate keys inside nested MAP values, the last value will be used. If attrs
+// contains any invalid items those items will be dropped. The attrs are assumed
+// to be in a schema identified by schemaURL.
 func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Resource {
-	resource := NewSchemaless(attrs...)
+	resource := newSchemaless(attrs)
 	resource.schemaURL = schemaURL
 	return resource
 }
 
-// NewSchemaless creates a resource from attrs. If attrs contains duplicate keys,
-// the last value will be used. If attrs contains any invalid items those items will
-// be dropped. The resource will not be associated with a schema URL. If the schema
+// NewSchemaless creates a resource from attrs. If attrs contains duplicate
+// top-level attribute keys or duplicate keys inside nested MAP values, the last
+// value will be used. If attrs contains any invalid items those items will be
+// dropped. The resource will not be associated with a schema URL. If the schema
 // of the attrs is known use NewWithAttributes instead.
 func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
+	return newSchemaless(attrs)
+}
+
+func newSchemaless(attrs []attribute.KeyValue) *Resource {
 	if len(attrs) == 0 {
 		return &Resource{}
 	}
+
+	attrs = attrdedup.KeyValues(attrs, false)
 
 	// Ensure attributes comply with the specification:
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/common/README.md#attribute
@@ -187,14 +198,18 @@ func (r *Resource) Equal(o *Resource) bool {
 //
 // [OpenTelemetry specification rules]: https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/resource/sdk.md#merge
 func Merge(a, b *Resource) (*Resource, error) {
+	return merge(a, b)
+}
+
+func merge(a, b *Resource) (*Resource, error) {
 	if a == nil && b == nil {
 		return Empty(), nil
 	}
 	if a == nil {
-		return b, nil
+		return normalize(b), nil
 	}
 	if b == nil {
-		return a, nil
+		return normalize(a), nil
 	}
 
 	// Note: 'b' attributes will overwrite 'a' with last-value-wins in attribute.Key()
@@ -207,20 +222,37 @@ func Merge(a, b *Resource) (*Resource, error) {
 
 	switch {
 	case a.schemaURL == "":
-		return NewWithAttributes(b.schemaURL, combine...), nil
+		return newWithAttributes(b.schemaURL, combine), nil
 	case b.schemaURL == "":
-		return NewWithAttributes(a.schemaURL, combine...), nil
+		return newWithAttributes(a.schemaURL, combine), nil
 	case a.schemaURL == b.schemaURL:
-		return NewWithAttributes(a.schemaURL, combine...), nil
+		return newWithAttributes(a.schemaURL, combine), nil
 	}
 	// Return the merged resource with an appropriate error. It is up to
 	// the user to decide if the returned resource can be used or not.
-	return NewSchemaless(combine...), fmt.Errorf(
+	return newSchemaless(combine), fmt.Errorf(
 		"%w: %s and %s",
 		ErrSchemaURLConflict,
 		a.schemaURL,
 		b.schemaURL,
 	)
+}
+
+func newWithAttributes(schemaURL string, attrs []attribute.KeyValue) *Resource {
+	resource := newSchemaless(attrs)
+	resource.schemaURL = schemaURL
+	return resource
+}
+
+func normalize(r *Resource) *Resource {
+	if r == nil {
+		return Empty()
+	}
+	attrs := attrdedup.Set(r.attrs, false)
+	if attrs == r.attrs {
+		return r
+	}
+	return &Resource{attrs: attrs, schemaURL: r.schemaURL}
 }
 
 // Empty returns an instance of Resource with no attributes. It is

@@ -23,7 +23,9 @@ type Option interface {
 	apply(config) config
 }
 
-// WithAttributes adds attributes to the configured Resource.
+// WithAttributes adds attributes to the configured Resource. Duplicate
+// top-level attribute keys and duplicate keys inside nested MAP values are
+// resolved using last-value-wins semantics.
 func WithAttributes(attributes ...attribute.KeyValue) Option {
 	return WithDetectors(detectAttributes{attributes})
 }
@@ -33,7 +35,7 @@ type detectAttributes struct {
 }
 
 func (d detectAttributes) Detect(context.Context) (*Resource, error) {
-	return NewSchemaless(d.attributes...), nil
+	return newSchemaless(d.attributes), nil
 }
 
 // WithDetectors adds detectors to be evaluated for the configured resource.

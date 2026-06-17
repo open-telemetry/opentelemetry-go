@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.opentelemetry.io/otel/trace"
@@ -269,6 +270,9 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 			s.addDroppedAttr(1)
 			continue
 		}
+		if !s.tracer.provider.allowDupKeys {
+			a = deduplicateNestedAttr(a)
+		}
 		a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 		s.attributes = append(s.attributes, a)
 	}
@@ -329,6 +333,9 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 		if idx, ok := exists[a.Key]; ok {
 			// Perform all updates before dropping, even when at capacity.
+			if !s.tracer.provider.allowDupKeys {
+				a = deduplicateNestedAttr(a)
+			}
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes[idx] = a
 			continue
@@ -339,10 +346,22 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 			// updates are checked and performed.
 			s.addDroppedAttr(1)
 		} else {
+			if !s.tracer.provider.allowDupKeys {
+				a = deduplicateNestedAttr(a)
+			}
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes = append(s.attributes, a)
 			exists[a.Key] = len(s.attributes) - 1
 		}
+	}
+}
+
+func deduplicateNestedAttr(attr attribute.KeyValue) attribute.KeyValue {
+	switch attr.Value.Type() {
+	case attribute.SLICE, attribute.MAP:
+		return attrdedup.KeyValue(attr, false)
+	default:
+		return attr
 	}
 }
 
@@ -717,7 +736,8 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
-	e := Event{Name: name, Attributes: c.Attributes(), Time: c.Timestamp()}
+	attrs := attrdedup.KeyValues(c.Attributes(), s.tracer.provider.allowDupKeys)
+	e := Event{Name: name, Attributes: attrs, Time: c.Timestamp()}
 
 	// Discard attributes over limit.
 	limit := s.tracer.provider.spanLimits.AttributePerEventCountLimit
@@ -890,7 +910,8 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		return
 	}
 
-	l := Link{SpanContext: link.SpanContext, Attributes: link.Attributes}
+	attrs := attrdedup.KeyValues(link.Attributes, s.tracer.provider.allowDupKeys)
+	l := Link{SpanContext: link.SpanContext, Attributes: attrs}
 
 	// Discard attributes over limit.
 	limit := s.tracer.provider.spanLimits.AttributePerLinkCountLimit
