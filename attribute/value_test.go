@@ -200,6 +200,19 @@ func TestEquivalence(t *testing.T) {
 			),
 		},
 		{
+			// Currently maps with the same keys and values but same order are equivalent.
+			attribute.Map(
+				"Map",
+				attribute.Bool("a", true),
+				attribute.Map("a", attribute.String("nested", "value")),
+			),
+			attribute.Map(
+				"Map",
+				attribute.Bool("a", true),
+				attribute.Map("a", attribute.String("nested", "value")),
+			),
+		},
+		{
 			attribute.KeyValue{Key: "Empty"},
 			attribute.KeyValue{Key: "Empty"},
 		},
@@ -309,6 +322,19 @@ func TestNotEquivalence(t *testing.T) {
 		{
 			attribute.Map("Map", attribute.String("key", "value")),
 			attribute.Map("Map", attribute.String("other", "value")),
+		},
+		{
+			// Currently maps with the same keys and values but different order are not equivalent.
+			attribute.Map(
+				"Map",
+				attribute.Bool("a", true),
+				attribute.Map("a", attribute.String("nested", "value")),
+			),
+			attribute.Map(
+				"Map",
+				attribute.Map("a", attribute.String("nested", "value")),
+				attribute.Bool("a", true),
+			),
 		},
 		{
 			attribute.KeyValue{Key: "Empty"},
