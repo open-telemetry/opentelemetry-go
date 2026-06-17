@@ -4,6 +4,8 @@
 // Package x contains experimental SDK-level metric configuration.
 package x // import "go.opentelemetry.io/otel/sdk/metric/x"
 
+import "go.opentelemetry.io/otel/sdk/instrumentation"
+
 // MeterConfig contains SDK runtime configuration for a Meter.
 // It is returned by [MeterConfigurator] and controls whether a Meter
 // records measurements.
@@ -43,3 +45,8 @@ type meterEnabledOption bool
 func (o meterEnabledOption) applyMeterConfig(c *MeterConfig) {
 	c.disabled = !bool(o)
 }
+
+// MeterConfigurator is called by a MeterProvider when a Meter is created.
+// It receives the instrumentation scope and returns the runtime configuration
+// for that Meter.
+type MeterConfigurator func(instrumentation.Scope) MeterConfig
