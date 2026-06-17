@@ -18,10 +18,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Apply `AttributeValueLengthLimit` to `attribute.MAP` type attribute values in `go.opentelemetry.io/otel/sdk/trace`, recursively truncating contained values. (#8454)
 - Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
 
-### Changed
-
-- Improve performance of `SLICE` and `MAP` attribute hashing in `go.opentelemetry.io/otel/attribute` by inlining small collection hashing. (#8476)
-
 ### Fixed
 
 - Avoid preallocating scope attributes when they are disabled in `go.opentelemetry.io/otel/exporters/prometheus` . (#8404)
