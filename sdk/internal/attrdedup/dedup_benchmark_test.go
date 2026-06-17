@@ -55,6 +55,7 @@ func BenchmarkValue(b *testing.B) {
 		b.Run(value.name, func(b *testing.B) {
 			for _, mode := range dedupModes {
 				b.Run(mode.name, func(b *testing.B) {
+					b.ReportAllocs()
 					for b.Loop() {
 						attrdedup.Value(value.value, mode.allowKeyDuplication)
 					}
