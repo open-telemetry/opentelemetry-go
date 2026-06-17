@@ -11,6 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `Map` and `MapValue` functions for new `MAP` attribute type in `go.opentelemetry.io/otel/attribute`. (#8445)
+- Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#8453)
+- Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlplog`. (#8453)
+- Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#8453)
+- Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/zipkin`. (#8453)
+- Apply `AttributeValueLengthLimit` to `attribute.MAP` type attribute values in `go.opentelemetry.io/otel/sdk/trace`, recursively truncating contained values. (#8454)
 - Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
 
 ### Fixed
