@@ -166,3 +166,62 @@ func hashMap(h xxhash.Hash, vals []KeyValue) xxhash.Hash {
 	}
 	return h
 }
+
+// NewDistinctFiltered returns the Distinct (hash) of the filtered attributes
+// and a bitmask of the accepted attributes.
+//
+// The mask can be used to reconstruct the filtered or dropped attributes
+// without re-evaluating the filter function, which might be non-deterministic.
+//
+// The returned mask is only valid if set.Len() <= 64. A mask of 0 returned
+// when set.Len() > 64 indicates that no reconstruction information is available
+// (and the distinct value may have been computed by materializing the set).
+func NewDistinctFiltered(set Set, filter Filter) (Distinct, uint64) {
+	if filter == nil {
+		if set.Len() > 64 {
+			return set.Equivalent(), 0
+		}
+		if set.Len() == 64 {
+			return set.Equivalent(), ^uint64(0)
+		}
+		return set.Equivalent(), (uint64(1) << set.Len()) - 1
+	}
+	if set.Len() == 0 {
+		return Distinct{hash: emptySet.hash}, 0
+	}
+
+	if set.Len() > 64 {
+		filtered, _ := set.Filter(filter)
+		return filtered.Equivalent(), 0
+	}
+
+	h := xxhash.New()
+	var mask uint64
+	iter := set.Iter()
+	i := 0
+	hasAttributes := false
+	for iter.Next() {
+		kv := iter.Attribute()
+		if filter(kv) {
+			h = hashKV(h, kv)
+			mask |= 1 << i
+			hasAttributes = true
+		}
+		i++
+	}
+
+	var distinct Distinct
+	if !hasAttributes {
+		distinct = Distinct{hash: emptySet.hash}
+	} else {
+		sum := h.Sum64()
+		// Remap 0 to a non-zero value for non-empty input because hash == 0 is a reserved sentinel (treated as empty/invalid).
+		const remappedZeroHash uint64 = 1
+		if sum == 0 {
+			sum = remappedZeroHash
+		}
+		distinct = Distinct{hash: sum}
+	}
+
+	return distinct, mask
+}

@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal/reservoir"
 )
@@ -22,7 +21,7 @@ type FilteredExemplarReservoir[N int64 | float64] interface {
 	// The passed ctx needs to contain any baggage or span that were active
 	// when the measurement was made. This information may be used by the
 	// Reservoir in making a sampling decision.
-	Offer(ctx context.Context, val N, attr []attribute.KeyValue)
+	Offer(ctx context.Context, val N, lazySet lazyFilteredSet)
 	// Collect returns all the held exemplars in the reservoir.
 	Collect(dest *[]exemplar.Exemplar)
 }
@@ -52,15 +51,16 @@ func NewFilteredExemplarReservoir[N int64 | float64](
 	}
 }
 
-func (f *filteredExemplarReservoir[N]) Offer(ctx context.Context, val N, attr []attribute.KeyValue) {
+func (f *filteredExemplarReservoir[N]) Offer(ctx context.Context, val N, lazySet lazyFilteredSet) {
 	if f.filter(ctx) {
 		// only record the current time if we are sampling this measurement.
 		ts := time.Now()
+		dropped := lazySet.Dropped()
 		if !f.concurrentSafe {
 			f.reservoirMux.Lock()
 			defer f.reservoirMux.Unlock()
 		}
-		f.reservoir.Offer(ctx, ts, exemplar.NewValue(val), attr)
+		f.reservoir.Offer(ctx, ts, exemplar.NewValue(val), dropped)
 	}
 }
 
