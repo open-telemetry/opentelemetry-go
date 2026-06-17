@@ -24,7 +24,7 @@ import (
 
 const (
 	// ScopeName is the unique name of the meter used for instrumentation.
-	ScopeName = "go.opentelemetry.io/otel/exporters/stdoutlog/internal/observ"
+	ScopeName = "go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/observ"
 
 	// ComponentType uniquely identifies the OpenTelemetry Exporter component
 	// being instrumented.
@@ -83,8 +83,7 @@ type Instrumentation struct {
 	duration metric.Float64Histogram
 
 	attrs  []attribute.KeyValue
-	addOpt metric.AddOption
-	recOpt metric.RecordOption
+	setOpt metric.MeasurementOption
 }
 
 // GetComponentName returns the constant name for the exporter with the
@@ -97,7 +96,7 @@ func getAttrs(id int64) []attribute.KeyValue {
 	attrs := make([]attribute.KeyValue, 0, 2)
 	attrs = append(attrs,
 		semconv.OTelComponentName(GetComponentName(id)),
-		semconv.OTelComponentNameKey.String(ComponentType))
+		semconv.OTelComponentTypeKey.String(ComponentType))
 
 	return attrs
 }
@@ -144,8 +143,7 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 		return nil, err
 	}
 	inst.attrs = getAttrs(id)
-	inst.addOpt = metric.WithAttributeSet(attribute.NewSet(inst.attrs...))
-	inst.recOpt = metric.WithAttributeSet(attribute.NewSet(inst.attrs...))
+	inst.setOpt = metric.WithAttributeSet(attribute.NewSet(inst.attrs...))
 	return inst, nil
 }
 
@@ -155,11 +153,12 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp {
 	start := time.Now()
 
-	addOpt := get[metric.AddOption](addOptPool)
-	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, i.addOpt)
-
-	i.inflight.Add(ctx, count, *addOpt...)
+	if i.inflight.Enabled(ctx) {
+		addOpt := get[metric.AddOption](addOptPool)
+		defer put(addOptPool, addOpt)
+		*addOpt = append(*addOpt, i.setOpt)
+		i.inflight.Add(ctx, count, *addOpt...)
+	}
 
 	return ExportOp{
 		count: count,
@@ -185,42 +184,47 @@ type ExportOp struct {
 // If err is not nil, End records failed log exports as count-success with the
 // error.type attribute set from err.
 func (e ExportOp) End(success int64, err error) {
+	inflightLogsEnable := e.inst.inflight.Enabled(e.ctx)
+	exportedLogsEnable := e.inst.exported.Enabled(e.ctx)
+	opDurationEnable := e.inst.duration.Enabled(e.ctx)
+
+	if !inflightLogsEnable && !exportedLogsEnable && !opDurationEnable {
+		return
+	}
+
 	addOpt := get[metric.AddOption](addOptPool)
 	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, e.inst.addOpt)
+	*addOpt = append(*addOpt, e.inst.setOpt)
 
-	e.inst.inflight.Add(e.ctx, -e.count, *addOpt...)
+	if inflightLogsEnable {
+		e.inst.inflight.Add(e.ctx, -e.count, *addOpt...)
+	}
 
-	e.inst.exported.Add(e.ctx, success, *addOpt...)
+	if exportedLogsEnable {
+		e.inst.exported.Add(e.ctx, success, *addOpt...)
+	}
 
-	if err != nil {
+	mOpt := e.inst.setOpt
+	if err != nil && (exportedLogsEnable || opDurationEnable) {
 		// Add the error.type attribute to the attribute set.
 		attrs := get[attribute.KeyValue](attrsPool)
 		defer put(attrsPool, attrs)
 		*attrs = append(*attrs, e.inst.attrs...)
 		*attrs = append(*attrs, semconv.ErrorType(err))
 
-		o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
+		mOpt = metric.WithAttributeSet(attribute.NewSet(*attrs...))
 
-		*addOpt = append((*addOpt)[:0], o)
-		e.inst.exported.Add(e.ctx, e.count-success, *addOpt...)
+		if exportedLogsEnable {
+			*addOpt = append((*addOpt)[:0], mOpt)
+			e.inst.exported.Add(e.ctx, e.count-success, *addOpt...)
+		}
 	}
 
-	recordOpt := get[metric.RecordOption](recordOptPool)
-	defer put(recordOptPool, recordOpt)
+	if opDurationEnable {
+		recordOpt := get[metric.RecordOption](recordOptPool)
+		defer put(recordOptPool, recordOpt)
 
-	*recordOpt = append(*recordOpt, e.inst.recordOption(err))
-	e.inst.duration.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
-}
-
-func (i *Instrumentation) recordOption(err error) metric.RecordOption {
-	if err == nil {
-		return i.recOpt
+		*recordOpt = append(*recordOpt, mOpt)
+		e.inst.duration.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
 	}
-	attrs := get[attribute.KeyValue](attrsPool)
-	defer put(attrsPool, attrs)
-
-	*attrs = append(*attrs, i.attrs...)
-	*attrs = append(*attrs, semconv.ErrorType(err))
-	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
 }

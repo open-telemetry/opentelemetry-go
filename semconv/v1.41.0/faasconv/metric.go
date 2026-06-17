@@ -9,16 +9,11 @@ package faasconv
 
 import (
 	"context"
-	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
-)
-
-var (
-	addOptPool = &sync.Pool{New: func() any { return &[]metric.AddOption{} }}
-	recOptPool = &sync.Pool{New: func() any { return &[]metric.RecordOption{} }}
+	"go.opentelemetry.io/otel/semconv/internal/metricpool"
 )
 
 // TriggerAttr is an attribute conforming to the faas.trigger semantic
@@ -115,11 +110,8 @@ func (m Coldstarts) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -141,11 +133,8 @@ func (m Coldstarts) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
@@ -155,6 +144,71 @@ func (m Coldstarts) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 // convention. It represents the type of the trigger which caused this function
 // invocation.
 func (Coldstarts) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
+}
+
+// ColdstartsObservable is an instrument used to record metric values conforming
+// to the "faas.coldstarts" semantic conventions. It represents the number of
+// invocation cold starts.
+type ColdstartsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newColdstartsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Number of invocation cold starts."),
+	metric.WithUnit("{coldstart}"),
+}
+
+// NewColdstartsObservable returns a new ColdstartsObservable instrument.
+func NewColdstartsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (ColdstartsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ColdstartsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newColdstartsObservableOpts
+	} else {
+		opt = append(opt, newColdstartsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"faas.coldstarts",
+		opt...,
+	)
+	if err != nil {
+		return ColdstartsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return ColdstartsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ColdstartsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ColdstartsObservable) Name() string {
+	return "faas.coldstarts"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ColdstartsObservable) Unit() string {
+	return "{coldstart}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ColdstartsObservable) Description() string {
+	return "Number of invocation cold starts."
+}
+
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
+// convention. It represents the type of the trigger which caused this function
+// invocation.
+func (ColdstartsObservable) AttrTrigger(val TriggerAttr) attribute.KeyValue {
 	return attribute.String("faas.trigger", string(val))
 }
 
@@ -232,11 +286,8 @@ func (m CPUUsage) Record(
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(
 		*o,
@@ -258,11 +309,8 @@ func (m CPUUsage) RecordSet(ctx context.Context, val float64, set attribute.Set)
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
@@ -349,11 +397,8 @@ func (m Errors) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -375,11 +420,8 @@ func (m Errors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
@@ -389,6 +431,71 @@ func (m Errors) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 // convention. It represents the type of the trigger which caused this function
 // invocation.
 func (Errors) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
+}
+
+// ErrorsObservable is an instrument used to record metric values conforming to
+// the "faas.errors" semantic conventions. It represents the number of invocation
+// errors.
+type ErrorsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newErrorsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Number of invocation errors."),
+	metric.WithUnit("{error}"),
+}
+
+// NewErrorsObservable returns a new ErrorsObservable instrument.
+func NewErrorsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (ErrorsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ErrorsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newErrorsObservableOpts
+	} else {
+		opt = append(opt, newErrorsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"faas.errors",
+		opt...,
+	)
+	if err != nil {
+		return ErrorsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return ErrorsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ErrorsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ErrorsObservable) Name() string {
+	return "faas.errors"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ErrorsObservable) Unit() string {
+	return "{error}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ErrorsObservable) Description() string {
+	return "Number of invocation errors."
+}
+
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
+// convention. It represents the type of the trigger which caused this function
+// invocation.
+func (ErrorsObservable) AttrTrigger(val TriggerAttr) attribute.KeyValue {
 	return attribute.String("faas.trigger", string(val))
 }
 
@@ -466,11 +573,8 @@ func (m InitDuration) Record(
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(
 		*o,
@@ -492,11 +596,8 @@ func (m InitDuration) RecordSet(ctx context.Context, val float64, set attribute.
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
@@ -583,11 +684,8 @@ func (m Invocations) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -609,11 +707,8 @@ func (m Invocations) AddSet(ctx context.Context, incr int64, set attribute.Set) 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
@@ -623,6 +718,71 @@ func (m Invocations) AddSet(ctx context.Context, incr int64, set attribute.Set) 
 // convention. It represents the type of the trigger which caused this function
 // invocation.
 func (Invocations) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
+}
+
+// InvocationsObservable is an instrument used to record metric values conforming
+// to the "faas.invocations" semantic conventions. It represents the number of
+// successful invocations.
+type InvocationsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newInvocationsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Number of successful invocations."),
+	metric.WithUnit("{invocation}"),
+}
+
+// NewInvocationsObservable returns a new InvocationsObservable instrument.
+func NewInvocationsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (InvocationsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return InvocationsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newInvocationsObservableOpts
+	} else {
+		opt = append(opt, newInvocationsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"faas.invocations",
+		opt...,
+	)
+	if err != nil {
+		return InvocationsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return InvocationsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m InvocationsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (InvocationsObservable) Name() string {
+	return "faas.invocations"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (InvocationsObservable) Unit() string {
+	return "{invocation}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (InvocationsObservable) Description() string {
+	return "Number of successful invocations."
+}
+
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
+// convention. It represents the type of the trigger which caused this function
+// invocation.
+func (InvocationsObservable) AttrTrigger(val TriggerAttr) attribute.KeyValue {
 	return attribute.String("faas.trigger", string(val))
 }
 
@@ -700,11 +860,8 @@ func (m InvokeDuration) Record(
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(
 		*o,
@@ -726,11 +883,8 @@ func (m InvokeDuration) RecordSet(ctx context.Context, val float64, set attribut
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
@@ -817,11 +971,8 @@ func (m MemUsage) Record(
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(
 		*o,
@@ -843,11 +994,8 @@ func (m MemUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
@@ -934,11 +1082,8 @@ func (m NetIO) Record(
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(
 		*o,
@@ -960,11 +1105,8 @@ func (m NetIO) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Histogram.Record(ctx, val, *o...)
@@ -1051,11 +1193,8 @@ func (m Timeouts) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -1077,11 +1216,8 @@ func (m Timeouts) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
@@ -1091,5 +1227,70 @@ func (m Timeouts) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 // convention. It represents the type of the trigger which caused this function
 // invocation.
 func (Timeouts) AttrTrigger(val TriggerAttr) attribute.KeyValue {
+	return attribute.String("faas.trigger", string(val))
+}
+
+// TimeoutsObservable is an instrument used to record metric values conforming to
+// the "faas.timeouts" semantic conventions. It represents the number of
+// invocation timeouts.
+type TimeoutsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newTimeoutsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Number of invocation timeouts."),
+	metric.WithUnit("{timeout}"),
+}
+
+// NewTimeoutsObservable returns a new TimeoutsObservable instrument.
+func NewTimeoutsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (TimeoutsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return TimeoutsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newTimeoutsObservableOpts
+	} else {
+		opt = append(opt, newTimeoutsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"faas.timeouts",
+		opt...,
+	)
+	if err != nil {
+		return TimeoutsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return TimeoutsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m TimeoutsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (TimeoutsObservable) Name() string {
+	return "faas.timeouts"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (TimeoutsObservable) Unit() string {
+	return "{timeout}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (TimeoutsObservable) Description() string {
+	return "Number of invocation timeouts."
+}
+
+// AttrTrigger returns an optional attribute for the "faas.trigger" semantic
+// convention. It represents the type of the trigger which caused this function
+// invocation.
+func (TimeoutsObservable) AttrTrigger(val TriggerAttr) attribute.KeyValue {
 	return attribute.String("faas.trigger", string(val))
 }

@@ -4,8 +4,10 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -39,6 +41,45 @@ func errorType(err error) {}
 	wantRemoval := []string{"DeploymentEnvironmentName"}
 	if len(m.Removals) != len(wantRemoval) || m.Removals[0] != wantRemoval[0] {
 		t.Fatalf("newMigration() removals = %#v, want %#v", m.Removals, wantRemoval)
+	}
+}
+
+// TestNoInvalidObservableHistogramTypes asserts that the semconv code
+// generator never emits types containing "HistogramObservable" or
+// "ObservableObservable", which would indicate the histogram-exclusion
+// rule in metric.go.j2 was accidentally removed or bypassed.
+func TestNoInvalidObservableHistogramTypes(t *testing.T) {
+	t.Parallel()
+
+	semconvDir := filepath.Join("..", "..", "..", "semconv")
+
+	forbidden := [][]byte{
+		[]byte("HistogramObservable"),
+		[]byte("ObservableObservable"),
+	}
+
+	err := filepath.WalkDir(semconvDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || filepath.Base(path) != "metric.go" || !strings.HasSuffix(filepath.Base(filepath.Dir(path)), "conv") {
+			return nil
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		for _, term := range forbidden {
+			if bytes.Contains(data, term) {
+				t.Errorf("%s: contains forbidden substring %q", path, term)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("WalkDir(%q) error = %v", semconvDir, err)
 	}
 }
 

@@ -9,16 +9,11 @@ package messagingconv
 
 import (
 	"context"
-	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
-)
-
-var (
-	addOptPool = &sync.Pool{New: func() any { return &[]metric.AddOption{} }}
-	recOptPool = &sync.Pool{New: func() any { return &[]metric.RecordOption{} }}
+	"go.opentelemetry.io/otel/semconv/internal/metricpool"
 )
 
 // ErrorTypeAttr is an attribute conforming to the error.type semantic
@@ -179,11 +174,8 @@ func (m ClientConsumedMessages) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -216,11 +208,8 @@ func (m ClientConsumedMessages) AddSet(ctx context.Context, incr int64, set attr
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
@@ -279,6 +268,135 @@ func (ClientConsumedMessages) AttrDestinationPartitionID(val string) attribute.K
 // AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
 func (ClientConsumedMessages) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
+}
+
+// ClientConsumedMessagesObservable is an instrument used to record metric values
+// conforming to the "messaging.client.consumed.messages" semantic conventions.
+// It represents the number of messages that were delivered to the application.
+type ClientConsumedMessagesObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newClientConsumedMessagesObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Number of messages that were delivered to the application."),
+	metric.WithUnit("{message}"),
+}
+
+// NewClientConsumedMessagesObservable returns a new
+// ClientConsumedMessagesObservable instrument.
+func NewClientConsumedMessagesObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (ClientConsumedMessagesObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientConsumedMessagesObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientConsumedMessagesObservableOpts
+	} else {
+		opt = append(opt, newClientConsumedMessagesObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"messaging.client.consumed.messages",
+		opt...,
+	)
+	if err != nil {
+		return ClientConsumedMessagesObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return ClientConsumedMessagesObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientConsumedMessagesObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientConsumedMessagesObservable) Name() string {
+	return "messaging.client.consumed.messages"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientConsumedMessagesObservable) Unit() string {
+	return "{message}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientConsumedMessagesObservable) Description() string {
+	return "Number of messages that were delivered to the application."
+}
+
+// AttrOperationName returns a required attribute for the
+// "messaging.operation.name" semantic convention. It represents the
+// system-specific name of the messaging operation.
+func (ClientConsumedMessagesObservable) AttrOperationName(val string) attribute.KeyValue {
+	return attribute.String("messaging.operation.name", val)
+}
+
+// AttrSystem returns a required attribute for the "messaging.system" semantic
+// convention. It represents the messaging system as identified by the client
+// instrumentation.
+func (ClientConsumedMessagesObservable) AttrSystem(val SystemAttr) attribute.KeyValue {
+	return attribute.String("messaging.system", string(val))
+}
+
+// AttrErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ClientConsumedMessagesObservable) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
+}
+
+// AttrConsumerGroupName returns an optional attribute for the
+// "messaging.consumer.group.name" semantic convention. It represents the name of
+// the consumer group with which a consumer is associated.
+func (ClientConsumedMessagesObservable) AttrConsumerGroupName(val string) attribute.KeyValue {
+	return attribute.String("messaging.consumer.group.name", val)
+}
+
+// AttrDestinationName returns an optional attribute for the
+// "messaging.destination.name" semantic convention. It represents the message
+// destination name.
+func (ClientConsumedMessagesObservable) AttrDestinationName(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.name", val)
+}
+
+// AttrDestinationSubscriptionName returns an optional attribute for the
+// "messaging.destination.subscription.name" semantic convention. It represents
+// the name of the destination subscription from which a message is consumed.
+func (ClientConsumedMessagesObservable) AttrDestinationSubscriptionName(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.subscription.name", val)
+}
+
+// AttrDestinationTemplate returns an optional attribute for the
+// "messaging.destination.template" semantic convention. It represents the low
+// cardinality representation of the messaging destination name.
+func (ClientConsumedMessagesObservable) AttrDestinationTemplate(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.template", val)
+}
+
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ClientConsumedMessagesObservable) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
+}
+
+// AttrDestinationPartitionID returns an optional attribute for the
+// "messaging.destination.partition.id" semantic convention. It represents the
+// identifier of the partition messages are sent to or received from, unique
+// within the `messaging.destination.name`.
+func (ClientConsumedMessagesObservable) AttrDestinationPartitionID(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.partition.id", val)
+}
+
+// AttrServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ClientConsumedMessagesObservable) AttrServerPort(val int) attribute.KeyValue {
 	return attribute.Int("server.port", val)
 }
 
@@ -370,11 +488,8 @@ func (m ClientOperationDuration) Record(
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(
 		*o,
@@ -403,11 +518,8 @@ func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
@@ -563,11 +675,8 @@ func (m ClientSentMessages) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -596,11 +705,8 @@ func (m ClientSentMessages) AddSet(ctx context.Context, incr int64, set attribut
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
@@ -645,6 +751,121 @@ func (ClientSentMessages) AttrDestinationPartitionID(val string) attribute.KeyVa
 // AttrServerPort returns an optional attribute for the "server.port" semantic
 // convention. It represents the server port number.
 func (ClientSentMessages) AttrServerPort(val int) attribute.KeyValue {
+	return attribute.Int("server.port", val)
+}
+
+// ClientSentMessagesObservable is an instrument used to record metric values
+// conforming to the "messaging.client.sent.messages" semantic conventions. It
+// represents the number of messages producer attempted to send to the broker.
+type ClientSentMessagesObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newClientSentMessagesObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("Number of messages producer attempted to send to the broker."),
+	metric.WithUnit("{message}"),
+}
+
+// NewClientSentMessagesObservable returns a new ClientSentMessagesObservable
+// instrument.
+func NewClientSentMessagesObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (ClientSentMessagesObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClientSentMessagesObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClientSentMessagesObservableOpts
+	} else {
+		opt = append(opt, newClientSentMessagesObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"messaging.client.sent.messages",
+		opt...,
+	)
+	if err != nil {
+		return ClientSentMessagesObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return ClientSentMessagesObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClientSentMessagesObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClientSentMessagesObservable) Name() string {
+	return "messaging.client.sent.messages"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClientSentMessagesObservable) Unit() string {
+	return "{message}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClientSentMessagesObservable) Description() string {
+	return "Number of messages producer attempted to send to the broker."
+}
+
+// AttrOperationName returns a required attribute for the
+// "messaging.operation.name" semantic convention. It represents the
+// system-specific name of the messaging operation.
+func (ClientSentMessagesObservable) AttrOperationName(val string) attribute.KeyValue {
+	return attribute.String("messaging.operation.name", val)
+}
+
+// AttrSystem returns a required attribute for the "messaging.system" semantic
+// convention. It represents the messaging system as identified by the client
+// instrumentation.
+func (ClientSentMessagesObservable) AttrSystem(val SystemAttr) attribute.KeyValue {
+	return attribute.String("messaging.system", string(val))
+}
+
+// AttrErrorType returns an optional attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (ClientSentMessagesObservable) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
+}
+
+// AttrDestinationName returns an optional attribute for the
+// "messaging.destination.name" semantic convention. It represents the message
+// destination name.
+func (ClientSentMessagesObservable) AttrDestinationName(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.name", val)
+}
+
+// AttrDestinationTemplate returns an optional attribute for the
+// "messaging.destination.template" semantic convention. It represents the low
+// cardinality representation of the messaging destination name.
+func (ClientSentMessagesObservable) AttrDestinationTemplate(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.template", val)
+}
+
+// AttrServerAddress returns an optional attribute for the "server.address"
+// semantic convention. It represents the server domain name if available without
+// reverse DNS lookup; otherwise, IP address or Unix domain socket name.
+func (ClientSentMessagesObservable) AttrServerAddress(val string) attribute.KeyValue {
+	return attribute.String("server.address", val)
+}
+
+// AttrDestinationPartitionID returns an optional attribute for the
+// "messaging.destination.partition.id" semantic convention. It represents the
+// identifier of the partition messages are sent to or received from, unique
+// within the `messaging.destination.name`.
+func (ClientSentMessagesObservable) AttrDestinationPartitionID(val string) attribute.KeyValue {
+	return attribute.String("messaging.destination.partition.id", val)
+}
+
+// AttrServerPort returns an optional attribute for the "server.port" semantic
+// convention. It represents the server port number.
+func (ClientSentMessagesObservable) AttrServerPort(val int) attribute.KeyValue {
 	return attribute.Int("server.port", val)
 }
 
@@ -735,11 +956,8 @@ func (m ProcessDuration) Record(
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(
 		*o,
@@ -768,11 +986,8 @@ func (m ProcessDuration) RecordSet(ctx context.Context, val float64, set attribu
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)

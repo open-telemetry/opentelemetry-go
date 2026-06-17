@@ -347,11 +347,11 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 }
 
 // truncateAttr returns a truncated version of attr. Only string, string
-// slice, byte slice, and slice attribute values are truncated. String values are truncated
-// to at most a length of limit. Each string slice value is truncated in this
-// fashion (the slice length itself is unaffected), and byte slice values are truncated to at most
-// limit bytes. For slice attribute values, the limit is applied to each
-// element recursively.
+// slice, byte slice, slice, and map attribute values are truncated. String
+// values are truncated to at most a length of limit. Each string slice value
+// is truncated in this fashion (the slice length itself is unaffected), and
+// byte slice values are truncated to at most limit bytes. For slice and map
+// attribute values, the limit is applied recursively to contained values.
 //
 // No truncation is performed for a negative limit.
 func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
@@ -384,12 +384,23 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 			newV[i] = truncateValue(limit, elem)
 		}
 		return attr.Key.Slice(newV...)
+	case attribute.MAP:
+		v := attr.Value.AsMap()
+		if !slices.ContainsFunc(v, func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) }) {
+			return attr
+		}
+		newV := make([]attribute.KeyValue, len(v))
+		for i, elem := range v {
+			elem.Value = truncateValue(limit, elem.Value)
+			newV[i] = elem
+		}
+		return attr.Key.Map(newV...)
 	}
 	return attr
 }
 
 // truncateValue returns a truncated version of v. Only string, string slice,
-// byte slice, and (recursively) slice values are modified.
+// byte slice, and (recursively) slice and map values are modified.
 //
 // No truncation is performed for a negative limit.
 func truncateValue(limit int, v attribute.Value) attribute.Value {
@@ -420,6 +431,17 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 			newSl[i] = truncateValue(limit, elem)
 		}
 		return attribute.SliceValue(newSl...)
+	case attribute.MAP:
+		m := v.AsMap()
+		if !slices.ContainsFunc(m, func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) }) {
+			return v
+		}
+		newM := make([]attribute.KeyValue, len(m))
+		for i, elem := range m {
+			elem.Value = truncateValue(limit, elem.Value)
+			newM[i] = elem
+		}
+		return attribute.MapValue(newM...)
 	}
 	return v
 }
@@ -453,6 +475,11 @@ func needsTruncation(limit int, v attribute.Value) bool {
 		}
 	case attribute.SLICE:
 		return slices.ContainsFunc(v.AsSlice(), func(e attribute.Value) bool { return needsTruncation(limit, e) })
+	case attribute.MAP:
+		return slices.ContainsFunc(
+			v.AsMap(),
+			func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) },
+		)
 	}
 	return false
 }

@@ -8,12 +8,12 @@ replace go.opentelemetry.io/otel/trace => ../../trace
 
 require (
 	github.com/opentracing-contrib/go-grpc v0.1.3
-	github.com/opentracing-contrib/go-grpc/test v0.0.0-20260423170045-2f88a5803c23
+	github.com/opentracing-contrib/go-grpc/test v0.0.0-20260601000821-bc171b28f13f
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/otel v1.43.0
-	go.opentelemetry.io/otel/trace v1.43.0
-	google.golang.org/grpc v1.81.0
+	go.opentelemetry.io/otel v1.44.0
+	go.opentelemetry.io/otel/trace v1.44.0
+	google.golang.org/grpc v1.81.1
 )
 
 require (
@@ -24,11 +24,11 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.43.0 // indirect
-	golang.org/x/net v0.54.0 // indirect
-	golang.org/x/sys v0.44.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260511170946-3700d4141b60 // indirect
+	go.opentelemetry.io/otel/metric v1.44.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260615183401-62b3387ff324 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -97,9 +97,9 @@ func NewUnstarted(client Client) *Exporter {
 func (e *Exporter) MarshalLog() any {
 	return struct {
 		Type   string
-		Client Client
+		Client string
 	}{
 		Type:   "otlptrace",
-		Client: e.client,
+		Client: fmt.Sprintf("%T", e.client),
 	}
 }

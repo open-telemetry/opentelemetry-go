@@ -539,10 +539,29 @@ func TestExtractOversizedSingleBaggageHeader(t *testing.T) {
 }
 
 type errHandler struct {
-	err error
+	err   error
+	count int
 }
 
-func (e *errHandler) Handle(err error) { e.err = err }
+func (e *errHandler) Handle(err error) {
+	e.err = err
+	e.count++
+}
+
+func setBaggageErrHandler(t *testing.T) *errHandler {
+	t.Helper()
+
+	propagation.ResetHandleExtractErrOnce()
+	originalErrorHandler := otel.GetErrorHandler()
+	eh := &errHandler{}
+	otel.SetErrorHandler(eh)
+	t.Cleanup(func() {
+		otel.SetErrorHandler(originalErrorHandler)
+		propagation.ResetHandleExtractErrOnce()
+	})
+
+	return eh
+}
 
 func TestExtractManyBaggageHeader(t *testing.T) {
 	tests := []struct {
@@ -619,10 +638,7 @@ func TestExtractManyBaggageHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			originalErrorHandler := otel.GetErrorHandler()
-			eh := &errHandler{}
-			otel.SetErrorHandler(eh)
-			t.Cleanup(func() { otel.SetErrorHandler(originalErrorHandler) })
+			eh := setBaggageErrHandler(t)
 
 			prop := propagation.Baggage{}
 			req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
@@ -634,9 +650,66 @@ func TestExtractManyBaggageHeader(t *testing.T) {
 			got := baggage.FromContext(ctx)
 
 			assert.Equal(t, tt.want().Baggage(t), got)
-			assert.Error(t, eh.err)
-			for _, s := range tt.wantErrStr {
-				assert.Contains(t, eh.err.Error(), s)
+			if assert.Error(t, eh.err) {
+				for _, s := range tt.wantErrStr {
+					assert.Contains(t, eh.err.Error(), s)
+				}
+			}
+		})
+	}
+}
+
+func TestExtractInvalidBaggageReportsErrorOnce(t *testing.T) {
+	tests := []struct {
+		name    string
+		carrier func(t *testing.T) propagation.TextMapCarrier
+		wantErr string
+	}{
+		{
+			name: "single header parse error",
+			carrier: func(t *testing.T) propagation.TextMapCarrier {
+				t.Helper()
+				return propagation.MapCarrier{"baggage": "invalid"}
+			},
+			wantErr: "invalid baggage list-member",
+		},
+		{
+			name: "multiple header parse errors",
+			carrier: func(t *testing.T) propagation.TextMapCarrier {
+				t.Helper()
+				req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
+				req.Header.Add("baggage", "invalid")
+				return propagation.HeaderCarrier(req.Header)
+			},
+			wantErr: "invalid baggage list-member",
+		},
+		{
+			name: "aggregate header size error",
+			carrier: func(t *testing.T) propagation.TextMapCarrier {
+				t.Helper()
+				req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
+				req.Header.Add("baggage", "k="+strings.Repeat("v", maxBytesPerBaggageString/2-2))
+				req.Header.Add("baggage", "y="+strings.Repeat("v", maxBytesPerBaggageString/2-2))
+				return propagation.HeaderCarrier(req.Header)
+			},
+			wantErr: "exceeds 8192 byte limit",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			eh := setBaggageErrHandler(t)
+			prop := propagation.Baggage{}
+
+			for range 10 {
+				ctx := prop.Extract(t.Context(), tt.carrier(t))
+				got := baggage.FromContext(ctx)
+				assert.Equal(t, 0, got.Len(), "invalid header should result in empty baggage")
+			}
+
+			assert.Equal(t, 1, eh.count, "invalid baggage extraction should report only once")
+			if assert.Error(t, eh.err) {
+				assert.Contains(t, eh.err.Error(), tt.wantErr)
 			}
 		})
 	}
