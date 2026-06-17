@@ -200,7 +200,7 @@ func TestEquivalence(t *testing.T) {
 			),
 		},
 		{
-			// Currently maps with the same keys and values but same order are equivalent.
+			// Similarly like sets, maps with the same keys and values but same order are equivalent.
 			attribute.Map(
 				"Map",
 				attribute.Bool("a", true),
@@ -324,7 +324,7 @@ func TestNotEquivalence(t *testing.T) {
 			attribute.Map("Map", attribute.String("other", "value")),
 		},
 		{
-			// Currently maps with the same keys and values but different order are not equivalent.
+			// Similarly like sets, maps with the same keys and values but different order are not equivalent.
 			attribute.Map(
 				"Map",
 				attribute.Bool("a", true),
