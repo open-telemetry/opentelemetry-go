@@ -23,7 +23,6 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
-	resSet           bool
 	allowDupKeys     bool
 }
 
@@ -79,6 +78,7 @@ type experimentalOption interface {
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
 	conf := config{
+		res:              resource.Default(),
 		exemplarFilter:   exemplar.TraceBasedFilter,
 		cardinalityLimit: cardinalityLimitFromEnv(),
 	}
@@ -90,15 +90,6 @@ func newConfig(options []Option) config {
 			continue
 		}
 		conf = o.apply(conf)
-	}
-	if conf.resSet {
-		var err error
-		conf.res, err = mergeResourceWithEnv(conf.res)
-		if err != nil {
-			otel.Handle(err)
-		}
-	} else if conf.res == nil {
-		conf.res = resource.Default()
 	}
 	return conf
 }
@@ -124,8 +115,11 @@ func (o optionFunc) apply(conf config) config {
 // go.opentelemetry.io/otel/sdk/resource package will be used.
 func WithResource(res *resource.Resource) Option {
 	return optionFunc(func(conf config) config {
-		conf.res = res
-		conf.resSet = true
+		var err error
+		conf.res, err = resource.Merge(resource.Environment(), res)
+		if err != nil {
+			otel.Handle(err)
+		}
 		return conf
 	})
 }
@@ -239,8 +233,4 @@ func cardinalityLimitFromEnv() int {
 		return defaultCardinalityLimit
 	}
 	return n
-}
-
-func mergeResourceWithEnv(res *resource.Resource) (*resource.Resource, error) {
-	return resource.Merge(resource.Environment(), res)
 }

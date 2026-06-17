@@ -33,7 +33,6 @@ type providerConfig struct {
 	attrCntLim    setting[int]
 	attrValLenLim setting[int]
 	allowDupKeys  setting[bool]
-	resourceSet   bool
 }
 
 type experimentalOption interface {
@@ -49,13 +48,7 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 		c = opt.apply(c)
 	}
 
-	if c.resourceSet {
-		var err error
-		c.resource, err = mergeResourceWithEnv(c.resource)
-		if err != nil {
-			otel.Handle(err)
-		}
-	} else if c.resource == nil {
+	if c.resource == nil {
 		c.resource = resource.Default()
 	}
 
@@ -202,8 +195,11 @@ func (fn loggerProviderOptionFunc) apply(c providerConfig) providerConfig {
 // go.opentelemetry.io/otel/sdk/resource package will be used.
 func WithResource(res *resource.Resource) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		cfg.resource = res
-		cfg.resourceSet = true
+		var err error
+		cfg.resource, err = resource.Merge(resource.Environment(), res)
+		if err != nil {
+			otel.Handle(err)
+		}
 		return cfg
 	})
 }
@@ -283,8 +279,4 @@ func WithAllowKeyDuplication() LoggerProviderOption {
 		cfg.allowDupKeys = newSetting(true)
 		return cfg
 	})
-}
-
-func mergeResourceWithEnv(res *resource.Resource) (*resource.Resource, error) {
-	return resource.Merge(resource.Environment(), res)
 }

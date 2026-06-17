@@ -44,9 +44,6 @@ type tracerProviderConfig struct {
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
 
-	// resourceSet indicates resource was explicitly configured.
-	resourceSet bool
-
 	// allowDupKeys disables duplicate-key removal in nested MAP values.
 	allowDupKeys bool
 }
@@ -376,8 +373,11 @@ func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 // resource.Default() Resource by default.
 func WithResource(r *resource.Resource) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
-		cfg.resource = r
-		cfg.resourceSet = true
+		var err error
+		cfg.resource, err = resource.Merge(resource.Environment(), r)
+		if err != nil {
+			otel.Handle(err)
+		}
 		return cfg
 	})
 }
@@ -525,18 +525,8 @@ func ensureValidTracerProviderConfig(cfg tracerProviderConfig) tracerProviderCon
 	if cfg.idGenerator == nil {
 		cfg.idGenerator = defaultIDGenerator()
 	}
-	if cfg.resourceSet {
-		var err error
-		cfg.resource, err = mergeResourceWithEnv(cfg.resource)
-		if err != nil {
-			otel.Handle(err)
-		}
-	} else if cfg.resource == nil {
+	if cfg.resource == nil {
 		cfg.resource = resource.Default()
 	}
 	return cfg
-}
-
-func mergeResourceWithEnv(res *resource.Resource) (*resource.Resource, error) {
-	return resource.Merge(resource.Environment(), res)
 }
