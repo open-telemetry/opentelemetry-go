@@ -10,8 +10,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
 )
 
-var valueSink attribute.Value
-
 func BenchmarkValue(b *testing.B) {
 	uniqueMap := attribute.MapValue(
 		attribute.String("one", "1"),
@@ -33,22 +31,22 @@ func BenchmarkValue(b *testing.B) {
 
 	b.Run("FastPath", func(b *testing.B) {
 		for b.Loop() {
-			valueSink = attrdedup.Value(uniqueMap, false)
+			attrdedup.Value(uniqueMap, false)
 		}
 	})
 	b.Run("DuplicateMap", func(b *testing.B) {
 		for b.Loop() {
-			valueSink = attrdedup.Value(duplicateMap, false)
+			attrdedup.Value(duplicateMap, false)
 		}
 	})
 	b.Run("NestedMapInSlice", func(b *testing.B) {
 		for b.Loop() {
-			valueSink = attrdedup.Value(nestedMapInSlice, false)
+			attrdedup.Value(nestedMapInSlice, false)
 		}
 	})
 	b.Run("AllowKeyDuplication", func(b *testing.B) {
 		for b.Loop() {
-			valueSink = attrdedup.Value(duplicateMap, true)
+			attrdedup.Value(duplicateMap, true)
 		}
 	})
 }
