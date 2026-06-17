@@ -198,18 +198,14 @@ func (r *Resource) Equal(o *Resource) bool {
 //
 // [OpenTelemetry specification rules]: https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/resource/sdk.md#merge
 func Merge(a, b *Resource) (*Resource, error) {
-	return merge(a, b)
-}
-
-func merge(a, b *Resource) (*Resource, error) {
 	if a == nil && b == nil {
 		return Empty(), nil
 	}
 	if a == nil {
-		return normalize(b), nil
+		return b, nil
 	}
 	if b == nil {
-		return normalize(a), nil
+		return a, nil
 	}
 
 	// Note: 'b' attributes will overwrite 'a' with last-value-wins in attribute.Key()
@@ -242,17 +238,6 @@ func newWithAttributes(schemaURL string, attrs []attribute.KeyValue) *Resource {
 	resource := newSchemaless(attrs)
 	resource.schemaURL = schemaURL
 	return resource
-}
-
-func normalize(r *Resource) *Resource {
-	if r == nil {
-		return Empty()
-	}
-	attrs := attrdedup.Set(r.attrs, false)
-	if attrs == r.attrs {
-		return r
-	}
-	return &Resource{attrs: attrs, schemaURL: r.schemaURL}
 }
 
 // Empty returns an instance of Resource with no attributes. It is

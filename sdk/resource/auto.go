@@ -72,7 +72,7 @@ func detect(ctx context.Context, res *Resource, detectors []Detector) error {
 				continue
 			}
 		}
-		r, e = merge(res, r)
+		r, e = Merge(res, r)
 		if e != nil {
 			err = errors.Join(err, e)
 		}
