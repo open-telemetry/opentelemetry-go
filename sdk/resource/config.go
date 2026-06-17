@@ -35,7 +35,7 @@ type detectAttributes struct {
 }
 
 func (d detectAttributes) Detect(context.Context) (*Resource, error) {
-	return newSchemaless(d.attributes), nil
+	return NewSchemaless(d.attributes...), nil
 }
 
 // WithDetectors adds detectors to be evaluated for the configured resource.

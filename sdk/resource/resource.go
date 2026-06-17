@@ -75,7 +75,7 @@ func New(ctx context.Context, opts ...Option) (*Resource, error) {
 // contains any invalid items those items will be dropped. The attrs are assumed
 // to be in a schema identified by schemaURL.
 func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Resource {
-	resource := newSchemaless(attrs)
+	resource := NewSchemaless(attrs...)
 	resource.schemaURL = schemaURL
 	return resource
 }
@@ -86,10 +86,6 @@ func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Resource 
 // dropped. The resource will not be associated with a schema URL. If the schema
 // of the attrs is known use NewWithAttributes instead.
 func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
-	return newSchemaless(attrs)
-}
-
-func newSchemaless(attrs []attribute.KeyValue) *Resource {
 	if len(attrs) == 0 {
 		return &Resource{}
 	}
@@ -226,7 +222,7 @@ func Merge(a, b *Resource) (*Resource, error) {
 	}
 	// Return the merged resource with an appropriate error. It is up to
 	// the user to decide if the returned resource can be used or not.
-	return newSchemaless(combine), fmt.Errorf(
+	return NewSchemaless(combine...), fmt.Errorf(
 		"%w: %s and %s",
 		ErrSchemaURLConflict,
 		a.schemaURL,
@@ -235,7 +231,7 @@ func Merge(a, b *Resource) (*Resource, error) {
 }
 
 func newWithAttributes(schemaURL string, attrs []attribute.KeyValue) *Resource {
-	resource := newSchemaless(attrs)
+	resource := NewSchemaless(attrs...)
 	resource.schemaURL = schemaURL
 	return resource
 }
