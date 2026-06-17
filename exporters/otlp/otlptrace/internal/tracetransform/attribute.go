@@ -108,7 +108,7 @@ func Value(v attribute.Value, arena *Arena) *commonpb.AnyValue {
 	case attribute.MAP:
 		av.Value = &commonpb.AnyValue_KvlistValue{
 			KvlistValue: &commonpb.KeyValueList{
-				Values: KeyValues(v.AsMap()),
+				Values: KeyValues(v.AsMap(), arena),
 			},
 		}
 	case attribute.STRINGSLICE:
