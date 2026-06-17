@@ -14,7 +14,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
-	"go.opentelemetry.io/otel/sdk/metric/internal/reservoir"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -25,7 +24,7 @@ import (
 // This reservoir can be used as a drop-in replacement for a FixedSizeReservoir
 // when better concurrent performance is needed, and some sampling bias is acceptable.
 type FixedSizeRoundRobinReservoir struct {
-	reservoir.ConcurrentSafe
+	exemplar.ConcurrentSafe
 	*storage
 	count atomic.Int64
 }
