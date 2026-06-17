@@ -4,7 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package attrdedup deduplicates nested attribute MAP values.
+// Package attrdedup deduplicates attribute MAP values.
 package attrdedup // import "go.opentelemetry.io/otel/sdk/internal/attrdedup"
 
 import (
@@ -28,7 +28,7 @@ type rawValue struct {
 	slice    any
 }
 
-// Value returns value with all nested MAP values deduplicated.
+// Value returns value with all MAP values deduplicated.
 //
 // Duplicate MAP keys are resolved using last-value-wins semantics. If
 // allowKeyDuplication is true, value is returned unchanged.
@@ -40,7 +40,7 @@ func Value(value attribute.Value, allowKeyDuplication bool) attribute.Value {
 	return value
 }
 
-// KeyValue returns kv with all nested MAP values deduplicated.
+// KeyValue returns kv with all MAP values deduplicated.
 //
 // If allowKeyDuplication is true, kv is returned unchanged.
 func KeyValue(kv attribute.KeyValue, allowKeyDuplication bool) attribute.KeyValue {
@@ -51,7 +51,7 @@ func KeyValue(kv attribute.KeyValue, allowKeyDuplication bool) attribute.KeyValu
 	return kv
 }
 
-// KeyValues returns kvs with all nested MAP values deduplicated.
+// KeyValues returns kvs with all MAP values deduplicated.
 //
 // The returned slice is the original kvs slice if no value needs
 // deduplication. Top-level keys in kvs are not deduplicated.
@@ -63,7 +63,7 @@ func KeyValues(kvs []attribute.KeyValue, allowKeyDuplication bool) []attribute.K
 	return kvs
 }
 
-// Set returns set with all nested MAP values deduplicated.
+// Set returns set with all MAP values deduplicated.
 //
 // The returned Set is the original set if no value needs deduplication.
 func Set(set attribute.Set, allowKeyDuplication bool) attribute.Set {
@@ -181,6 +181,9 @@ func deduplicateMapValue(value attribute.Value) (attribute.Value, bool) {
 
 	var normalized []attribute.KeyValue
 	for i := 0; i < length; {
+		// attribute.MapValue stores key-values sorted by key using a stable
+		// sort. Equal keys therefore form a contiguous run, and the last
+		// element in that run is the last value provided by the caller.
 		first := keyValueAt(storage, i)
 		j := i + 1
 		for j < length && keyValueAt(storage, j).Key == first.Key {
@@ -188,6 +191,7 @@ func deduplicateMapValue(value attribute.Value) (attribute.Value, bool) {
 		}
 
 		kv, nestedChanged := deduplicateKeyValue(keyValueAt(storage, j-1))
+		// j-i > 1 means the current key run contained duplicates.
 		changed := nestedChanged || j-i > 1
 		if normalized != nil {
 			normalized = append(normalized, kv)
