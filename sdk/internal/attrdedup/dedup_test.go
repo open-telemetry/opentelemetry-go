@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package attrdedup_test
+package attrdedup
 
 import (
 	"testing"
@@ -9,7 +9,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
 )
 
 var cmpValue = cmp.AllowUnexported(attribute.Value{})
@@ -118,7 +117,7 @@ func TestValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := attrdedup.Value(test.value, false)
+			got := Value(test.value, false)
 			if diff := cmp.Diff(test.want, got, cmpValue); diff != "" {
 				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 			}
@@ -132,7 +131,7 @@ func TestValueAllowKeyDuplication(t *testing.T) {
 		attribute.String("key", "second"),
 	)
 
-	got := attrdedup.Value(value, true)
+	got := Value(value, true)
 	if diff := cmp.Diff(value, got, cmpValue); diff != "" {
 		t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 	}
@@ -146,7 +145,7 @@ func TestValueNoopAllocationFree(t *testing.T) {
 	var got attribute.Value
 
 	allocs := testing.AllocsPerRun(1000, func() {
-		got = attrdedup.Value(value, false)
+		got = Value(value, false)
 	})
 	if allocs != 0 {
 		t.Fatalf("Value() allocations = %v, want 0", allocs)
@@ -165,7 +164,7 @@ func TestValueStorageShapes(t *testing.T) {
 			}
 			value := attribute.MapValue(kvs...)
 
-			got := attrdedup.Value(value, false)
+			got := Value(value, false)
 			if diff := cmp.Diff(value, got, cmpValue); diff != "" {
 				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 			}
@@ -177,7 +176,7 @@ func TestValueStorageShapes(t *testing.T) {
 			}
 			value := attribute.SliceValue(values...)
 
-			got := attrdedup.Value(value, false)
+			got := Value(value, false)
 			if diff := cmp.Diff(value, got, cmpValue); diff != "" {
 				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 			}
@@ -196,7 +195,7 @@ func TestKeyValue(t *testing.T) {
 		attribute.String("nested", "second"),
 	)
 
-	got := attrdedup.KeyValue(kv, false)
+	got := KeyValue(kv, false)
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
 		t.Fatalf("KeyValue() mismatch (-want +got):\n%s", diff)
 	}
@@ -209,7 +208,7 @@ func TestKeyValueAllowKeyDuplication(t *testing.T) {
 		attribute.String("nested", "second"),
 	)
 
-	got := attrdedup.KeyValue(kv, true)
+	got := KeyValue(kv, true)
 	if diff := cmp.Diff(kv, got, cmpValue); diff != "" {
 		t.Fatalf("KeyValue() mismatch (-want +got):\n%s", diff)
 	}
@@ -221,7 +220,7 @@ func TestKeyValuesNoopReturnsInput(t *testing.T) {
 		attribute.Map("two", attribute.String("nested", "value")),
 	}
 
-	got := attrdedup.KeyValues(kvs, false)
+	got := KeyValues(kvs, false)
 	if len(got) != len(kvs) {
 		t.Fatalf("KeyValues() length = %d, want %d", len(got), len(kvs))
 	}
@@ -249,7 +248,7 @@ func TestKeyValues(t *testing.T) {
 		attribute.String("tail", "value"),
 	}
 
-	got := attrdedup.KeyValues(kvs, false)
+	got := KeyValues(kvs, false)
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
 		t.Fatalf("KeyValues() mismatch (-want +got):\n%s", diff)
 	}
@@ -264,7 +263,7 @@ func TestKeyValuesAllowKeyDuplication(t *testing.T) {
 		),
 	}
 
-	got := attrdedup.KeyValues(kvs, true)
+	got := KeyValues(kvs, true)
 	if &got[0] != &kvs[0] {
 		t.Fatal("KeyValues() copied allowed duplicate input")
 	}
@@ -292,7 +291,7 @@ func TestSet(t *testing.T) {
 		attribute.String("z-tail", "value"),
 	)
 
-	got := attrdedup.Set(set, false)
+	got := Set(set, false)
 	if diff := cmp.Diff(want.ToSlice(), got.ToSlice(), cmpValue); diff != "" {
 		t.Fatalf("Set() mismatch (-want +got):\n%s", diff)
 	}
@@ -304,7 +303,7 @@ func TestSetNoop(t *testing.T) {
 		attribute.Map("map", attribute.String("nested", "value")),
 	)
 
-	got := attrdedup.Set(set, false)
+	got := Set(set, false)
 	if !got.Equals(&set) {
 		t.Fatal("Set() changed a no-op input")
 	}
@@ -319,7 +318,7 @@ func TestSetAllowKeyDuplication(t *testing.T) {
 		),
 	)
 
-	got := attrdedup.Set(set, true)
+	got := Set(set, true)
 	if !got.Equals(&set) {
 		t.Fatal("Set() changed allowed duplicate input")
 	}
@@ -328,8 +327,32 @@ func TestSetAllowKeyDuplication(t *testing.T) {
 func TestSetEmpty(t *testing.T) {
 	set := attribute.Set{}
 
-	got := attrdedup.Set(set, false)
+	got := Set(set, false)
 	if !got.Equals(&set) {
 		t.Fatal("Set() changed an empty input")
+	}
+}
+
+func TestInvalidArrayStorage(t *testing.T) {
+	if got := arrayLen("invalid", valueType); got != 0 {
+		t.Fatalf("arrayLen() = %d, want 0", got)
+	}
+
+	if got := arrayAt[attribute.Value]("invalid", valueType, 0); got.Type() != attribute.EMPTY {
+		t.Fatalf("arrayAt() = %v, want empty value", got)
+	}
+	if got := arrayAt[attribute.Value](
+		[1]attribute.Value{attribute.StringValue("value")},
+		keyValueType,
+		0,
+	); got.Type() != attribute.EMPTY {
+		t.Fatalf("arrayAt() = %v, want empty value", got)
+	}
+	if got := arrayAt[attribute.Value](
+		[1]attribute.Value{attribute.StringValue("value")},
+		valueType,
+		-1,
+	); got.Type() != attribute.EMPTY {
+		t.Fatalf("arrayAt() = %v, want empty value", got)
 	}
 }
