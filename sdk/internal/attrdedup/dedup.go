@@ -66,11 +66,15 @@ func KeyValues(kvs []attribute.KeyValue, allowKeyDuplication bool) []attribute.K
 // Set returns set with all MAP values deduplicated.
 //
 // The returned Set is the original set if no value needs deduplication.
+// Top-level key uniqueness remains attribute.Set's responsibility; this only
+// normalizes MAP-valued attribute values.
 func Set(set attribute.Set, allowKeyDuplication bool) attribute.Set {
 	if allowKeyDuplication || set.Len() == 0 {
 		return set
 	}
 
+	// Most attribute sets contain no MAP duplicates. Delay allocation until
+	// the first changed value so the no-op path returns the original Set.
 	var normalized []attribute.KeyValue
 	for i := 0; i < set.Len(); i++ {
 		kv, _ := set.Get(i)
@@ -98,6 +102,9 @@ func Set(set attribute.Set, allowKeyDuplication bool) attribute.Set {
 }
 
 func deduplicateKeyValues(kvs []attribute.KeyValue) ([]attribute.KeyValue, bool) {
+	// Preserve the caller's slice on the common no-op path. Once a changed
+	// value is found, copy the prior values exactly once and fill the rest in
+	// place as the scan continues.
 	var normalized []attribute.KeyValue
 	for i, kv := range kvs {
 		kv, changed := deduplicateKeyValue(kv)
@@ -142,6 +149,8 @@ func deduplicateSliceValue(value attribute.Value) (attribute.Value, bool) {
 	storage := valueStorage(value)
 	length := valueLen(storage)
 
+	// SLICE values can contain MAP values, so recurse into each element while
+	// keeping the original attribute.Value when no element changes.
 	var normalized []attribute.Value
 	for i := 0; i < length; i++ {
 		elem := valueAt(storage, i)
@@ -170,6 +179,8 @@ func deduplicateMapValue(value attribute.Value) (attribute.Value, bool) {
 	storage := valueStorage(value)
 	length := keyValueLen(storage)
 	if length <= 1 {
+		// A single MAP entry cannot duplicate its own key, but its value might
+		// contain a MAP or SLICE that needs recursive normalization.
 		if length == 1 {
 			kv, changed := deduplicateKeyValue(keyValueAt(storage, 0))
 			if changed {
@@ -211,10 +222,15 @@ func deduplicateMapValue(value attribute.Value) (attribute.Value, bool) {
 }
 
 func valueStorage(value attribute.Value) any {
+	// attribute.Value does not expose allocation-free MAP/SLICE iteration.
+	// The raw mirror lets us read the immutable backing array directly and
+	// reserve AsMap/AsSlice-style allocation for paths that actually change.
 	return (*rawValue)(unsafe.Pointer(&value)).slice //nolint:gosec // Read-only mirror of attribute.Value for allocation-free iteration.
 }
 
 func valueLen(storage any) int {
+	// attribute.Value stores small slices in fixed-size array values. Handle
+	// the common sizes directly and fall back to reflection for larger arrays.
 	switch storage.(type) {
 	case [0]attribute.Value:
 		return 0
@@ -251,6 +267,8 @@ func valueAt(storage any, i int) attribute.Value {
 }
 
 func keyValueLen(storage any) int {
+	// attribute.Value stores small maps in fixed-size key-value arrays. Handle
+	// the common sizes directly and fall back to reflection for larger arrays.
 	switch storage.(type) {
 	case [0]attribute.KeyValue:
 		return 0
@@ -287,6 +305,8 @@ func keyValueAt(storage any, i int) attribute.KeyValue {
 }
 
 func arrayLen(storage any, elem reflect.Type) int {
+	// Be defensive around invalid or unexpected Value storage. Returning zero
+	// makes malformed storage a no-op instead of panicking in telemetry paths.
 	array := reflect.ValueOf(storage)
 	if array.Kind() != reflect.Array || array.Type().Elem() != elem {
 		return 0
@@ -295,6 +315,7 @@ func arrayLen(storage any, elem reflect.Type) int {
 }
 
 func arrayAt[T any](storage any, elem reflect.Type, i int) T {
+	// Match arrayLen's fail-closed behavior for unexpected storage.
 	array := reflect.ValueOf(storage)
 	if array.Kind() != reflect.Array || array.Type().Elem() != elem || i < 0 || i >= array.Len() {
 		var zero T
