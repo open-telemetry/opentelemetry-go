@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `HistogramReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` now samples exemplars to distribute them evenly over time. (#8306)
+- `HistogramReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` now uses a time-unbiased sampling algorithm for exemplars. (#8306)
 
 ### Fixed
 

@@ -112,7 +112,7 @@ func (t *nextTracker) advance() {
 // performance. It will compute three random numbers (the bulk of
 // computation time) for each item that becomes part of the reservoir, but
 // it does not spend any time on items that do not. In particular it has an
-// asymptotic runtime of O(k(1 + log(n/k)) where n is the number of
+// asymptotic runtime of O(k(1 + log(n/k))) where n is the number of
 // measurements offered and k is the reservoir size.
 //
 // See https://en.wikipedia.org/wiki/Reservoir_sampling for an overview of
