@@ -200,7 +200,7 @@ func TestEquivalence(t *testing.T) {
 			),
 		},
 		{
-			// Similarly like sets, maps with the same keys and values but same order are equivalent.
+			// Map equivalence sorts entries stably by key; when duplicate keys exist, the relative order of same-key entries must match.
 			attribute.Map(
 				"Map",
 				attribute.Bool("a", true),
@@ -324,7 +324,7 @@ func TestNotEquivalence(t *testing.T) {
 			attribute.Map("Map", attribute.String("other", "value")),
 		},
 		{
-			// Similarly like sets, maps with the same keys and values but different order are not equivalent.
+			// With duplicate keys, changing the relative order of same-key entries changes map equivalence (stable key sort preserves duplicates' order).
 			attribute.Map(
 				"Map",
 				attribute.Bool("a", true),
