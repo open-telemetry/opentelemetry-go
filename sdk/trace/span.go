@@ -359,7 +359,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 func deduplicateNestedAttr(attr attribute.KeyValue) attribute.KeyValue {
 	switch attr.Value.Type() {
 	case attribute.SLICE, attribute.MAP:
-		return attrdedup.KeyValue(attr, false)
+		return attrdedup.KeyValue(attr)
 	default:
 		return attr
 	}
@@ -736,7 +736,10 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
-	attrs := attrdedup.KeyValues(c.Attributes(), s.tracer.provider.allowDupKeys)
+	attrs := c.Attributes()
+	if !s.tracer.provider.allowDupKeys {
+		attrs = attrdedup.KeyValues(attrs)
+	}
 	e := Event{Name: name, Attributes: attrs, Time: c.Timestamp()}
 
 	// Discard attributes over limit.
@@ -910,7 +913,10 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		return
 	}
 
-	attrs := attrdedup.KeyValues(link.Attributes, s.tracer.provider.allowDupKeys)
+	attrs := link.Attributes
+	if !s.tracer.provider.allowDupKeys {
+		attrs = attrdedup.KeyValues(attrs)
+	}
 	l := Link{SpanContext: link.SpanContext, Attributes: attrs}
 
 	// Discard attributes over limit.

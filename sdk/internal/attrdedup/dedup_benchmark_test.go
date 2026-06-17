@@ -43,23 +43,11 @@ func BenchmarkValue(b *testing.B) {
 		},
 	}
 
-	dedupModes := []struct {
-		name                string
-		allowKeyDuplication bool
-	}{
-		{name: "WithKeyDeduplication"},
-		{name: "WithoutKeyDeduplication", allowKeyDuplication: true},
-	}
-
 	for _, value := range values {
 		b.Run(value.name, func(b *testing.B) {
-			for _, mode := range dedupModes {
-				b.Run(mode.name, func(b *testing.B) {
-					b.ReportAllocs()
-					for b.Loop() {
-						attrdedup.Value(value.value, mode.allowKeyDuplication)
-					}
-				})
+			b.ReportAllocs()
+			for b.Loop() {
+				attrdedup.Value(value.value)
 			}
 		})
 	}

@@ -203,7 +203,7 @@ func TestResolveAttributes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := resolveAttributes(tt.configAttrs, tt.rawKVs, false)
+			got := resolveAttributes(tt.configAttrs, tt.rawKVs)
 			require.Equal(t, tt.want, got)
 		})
 	}

@@ -148,7 +148,10 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		return noop.NewTracerProvider().Tracer(name, opts...)
 	}
 	c := trace.NewTracerConfig(opts...)
-	attrs := attrdedup.Set(c.InstrumentationAttributes(), p.allowDupKeys)
+	attrs := c.InstrumentationAttributes()
+	if !p.allowDupKeys {
+		attrs = attrdedup.Set(attrs)
+	}
 	if name == "" {
 		name = defaultTracerName
 	}

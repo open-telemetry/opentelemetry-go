@@ -119,7 +119,10 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 	}
 
 	cfg := log.NewLoggerConfig(opts...)
-	attrs := attrdedup.Set(cfg.InstrumentationAttributes(), p.allowDupKeys)
+	attrs := cfg.InstrumentationAttributes()
+	if !p.allowDupKeys {
+		attrs = attrdedup.Set(attrs)
+	}
 	scope := instrumentation.Scope{
 		Name:       name,
 		Version:    cfg.InstrumentationVersion(),

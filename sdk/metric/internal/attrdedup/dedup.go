@@ -30,23 +30,14 @@ type rawValue struct {
 
 // Value returns value with all map values deduplicated.
 //
-// Duplicate map keys are resolved using last-value-wins semantics. If
-// allowKeyDuplication is true, value is returned unchanged.
-func Value(value attribute.Value, allowKeyDuplication bool) attribute.Value {
-	if allowKeyDuplication {
-		return value
-	}
+// Duplicate map keys are resolved using last-value-wins semantics.
+func Value(value attribute.Value) attribute.Value {
 	value, _ = deduplicateValue(value)
 	return value
 }
 
 // KeyValue returns kv with all map values deduplicated.
-//
-// If allowKeyDuplication is true, kv is returned unchanged.
-func KeyValue(kv attribute.KeyValue, allowKeyDuplication bool) attribute.KeyValue {
-	if allowKeyDuplication {
-		return kv
-	}
+func KeyValue(kv attribute.KeyValue) attribute.KeyValue {
 	kv, _ = deduplicateKeyValue(kv)
 	return kv
 }
@@ -55,10 +46,7 @@ func KeyValue(kv attribute.KeyValue, allowKeyDuplication bool) attribute.KeyValu
 //
 // The returned slice is the original kvs slice if no value needs
 // deduplication. Top-level keys in kvs are not deduplicated.
-func KeyValues(kvs []attribute.KeyValue, allowKeyDuplication bool) []attribute.KeyValue {
-	if allowKeyDuplication {
-		return kvs
-	}
+func KeyValues(kvs []attribute.KeyValue) []attribute.KeyValue {
 	kvs, _ = deduplicateKeyValues(kvs)
 	return kvs
 }
@@ -68,8 +56,8 @@ func KeyValues(kvs []attribute.KeyValue, allowKeyDuplication bool) []attribute.K
 // The returned Set is the original set if no value needs deduplication.
 // Top-level key uniqueness remains attribute.Set's responsibility; this only
 // normalizes map attribute values.
-func Set(set attribute.Set, allowKeyDuplication bool) attribute.Set {
-	if allowKeyDuplication || set.Len() == 0 {
+func Set(set attribute.Set) attribute.Set {
+	if set.Len() == 0 {
 		return set
 	}
 

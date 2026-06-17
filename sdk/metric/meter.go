@@ -598,7 +598,13 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 	}
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	set := resolveAttributes(c.Attributes(), rawKVs, r.allowDupKeys)
+	configAttrs := c.Attributes()
+	var set attribute.Set
+	if r.allowDupKeys {
+		set = resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs)
+	} else {
+		set = resolveAttributes(configAttrs, rawKVs)
+	}
 	// Access to r.pipe.float64Measure is already guarded by a lock in pipeline.produce.
 	// TODO (#5946): Refactor pipeline and observable measures.
 	measures := r.pipe.float64Measures[oImpl.observableID]
@@ -631,7 +637,13 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 	}
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	set := resolveAttributes(c.Attributes(), rawKVs, r.allowDupKeys)
+	configAttrs := c.Attributes()
+	var set attribute.Set
+	if r.allowDupKeys {
+		set = resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs)
+	} else {
+		set = resolveAttributes(configAttrs, rawKVs)
+	}
 	// Access to r.pipe.int64Measures is already guarded b a lock in pipeline.produce.
 	// TODO (#5946): Refactor pipeline and observable measures.
 	measures := r.pipe.int64Measures[oImpl.observableID]
@@ -803,7 +815,12 @@ type int64Observer struct {
 func (o int64Observer) Observe(val int64, opts ...metric.ObserveOption) {
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	o.observe(val, resolveAttributes(c.Attributes(), rawKVs, o.allowDupKeys))
+	configAttrs := c.Attributes()
+	if o.allowDupKeys {
+		o.observe(val, resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs))
+		return
+	}
+	o.observe(val, resolveAttributes(configAttrs, rawKVs))
 }
 
 type float64Observer struct {
@@ -815,7 +832,12 @@ type float64Observer struct {
 func (o float64Observer) Observe(val float64, opts ...metric.ObserveOption) {
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	o.observe(val, resolveAttributes(c.Attributes(), rawKVs, o.allowDupKeys))
+	configAttrs := c.Attributes()
+	if o.allowDupKeys {
+		o.observe(val, resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs))
+		return
+	}
+	o.observe(val, resolveAttributes(configAttrs, rawKVs))
 }
 
 func defaultAttributes[T any](opts []T) []attribute.Key {

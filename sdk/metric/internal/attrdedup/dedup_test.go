@@ -120,23 +120,11 @@ func TestValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := Value(test.value, false)
+			got := Value(test.value)
 			if diff := cmp.Diff(test.want, got, cmpValue); diff != "" {
 				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 			}
 		})
-	}
-}
-
-func TestValueAllowKeyDuplication(t *testing.T) {
-	value := attribute.MapValue(
-		attribute.String("key", "first"),
-		attribute.String("key", "second"),
-	)
-
-	got := Value(value, true)
-	if diff := cmp.Diff(value, got, cmpValue); diff != "" {
-		t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -148,7 +136,7 @@ func TestValueNoopAllocationFree(t *testing.T) {
 	var got attribute.Value
 
 	allocs := testing.AllocsPerRun(1000, func() {
-		got = Value(value, false)
+		got = Value(value)
 	})
 	if allocs != 0 {
 		t.Fatalf("Value() allocations = %v, want 0", allocs)
@@ -167,7 +155,7 @@ func TestValueStorageShapes(t *testing.T) {
 			}
 			value := attribute.MapValue(kvs...)
 
-			got := Value(value, false)
+			got := Value(value)
 			if diff := cmp.Diff(value, got, cmpValue); diff != "" {
 				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 			}
@@ -179,7 +167,7 @@ func TestValueStorageShapes(t *testing.T) {
 			}
 			value := attribute.SliceValue(values...)
 
-			got := Value(value, false)
+			got := Value(value)
 			if diff := cmp.Diff(value, got, cmpValue); diff != "" {
 				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 			}
@@ -198,21 +186,8 @@ func TestKeyValue(t *testing.T) {
 		attribute.String("nested", "second"),
 	)
 
-	got := KeyValue(kv, false)
+	got := KeyValue(kv)
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
-		t.Fatalf("KeyValue() mismatch (-want +got):\n%s", diff)
-	}
-}
-
-func TestKeyValueAllowKeyDuplication(t *testing.T) {
-	kv := attribute.Map(
-		"map",
-		attribute.String("nested", "first"),
-		attribute.String("nested", "second"),
-	)
-
-	got := KeyValue(kv, true)
-	if diff := cmp.Diff(kv, got, cmpValue); diff != "" {
 		t.Fatalf("KeyValue() mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -223,7 +198,7 @@ func TestKeyValuesNoopReturnsInput(t *testing.T) {
 		attribute.Map("two", attribute.String("nested", "value")),
 	}
 
-	got := KeyValues(kvs, false)
+	got := KeyValues(kvs)
 	if len(got) != len(kvs) {
 		t.Fatalf("KeyValues() length = %d, want %d", len(got), len(kvs))
 	}
@@ -251,26 +226,8 @@ func TestKeyValues(t *testing.T) {
 		attribute.String("tail", "value"),
 	}
 
-	got := KeyValues(kvs, false)
+	got := KeyValues(kvs)
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
-		t.Fatalf("KeyValues() mismatch (-want +got):\n%s", diff)
-	}
-}
-
-func TestKeyValuesAllowKeyDuplication(t *testing.T) {
-	kvs := []attribute.KeyValue{
-		attribute.Map(
-			"map",
-			attribute.String("nested", "first"),
-			attribute.String("nested", "second"),
-		),
-	}
-
-	got := KeyValues(kvs, true)
-	if &got[0] != &kvs[0] {
-		t.Fatal("KeyValues() copied allowed duplicate input")
-	}
-	if diff := cmp.Diff(kvs, got, cmpValue); diff != "" {
 		t.Fatalf("KeyValues() mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -294,7 +251,7 @@ func TestSet(t *testing.T) {
 		attribute.String("z-tail", "value"),
 	)
 
-	got := Set(set, false)
+	got := Set(set)
 	if diff := cmp.Diff(want.ToSlice(), got.ToSlice(), cmpValue); diff != "" {
 		t.Fatalf("Set() mismatch (-want +got):\n%s", diff)
 	}
@@ -306,31 +263,16 @@ func TestSetNoop(t *testing.T) {
 		attribute.Map("map", attribute.String("nested", "value")),
 	)
 
-	got := Set(set, false)
+	got := Set(set)
 	if !got.Equals(&set) {
 		t.Fatal("Set() changed a no-op input")
-	}
-}
-
-func TestSetAllowKeyDuplication(t *testing.T) {
-	set := attribute.NewSet(
-		attribute.Map(
-			"map",
-			attribute.String("nested", "first"),
-			attribute.String("nested", "second"),
-		),
-	)
-
-	got := Set(set, true)
-	if !got.Equals(&set) {
-		t.Fatal("Set() changed allowed duplicate input")
 	}
 }
 
 func TestSetEmpty(t *testing.T) {
 	set := attribute.Set{}
 
-	got := Set(set, false)
+	got := Set(set)
 	if !got.Equals(&set) {
 		t.Fatal("Set() changed an empty input")
 	}
