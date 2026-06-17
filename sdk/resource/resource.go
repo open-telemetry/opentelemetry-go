@@ -214,11 +214,11 @@ func Merge(a, b *Resource) (*Resource, error) {
 
 	switch {
 	case a.schemaURL == "":
-		return newWithAttributes(b.schemaURL, combine), nil
+		return NewWithAttributes(b.schemaURL, combine...), nil
 	case b.schemaURL == "":
-		return newWithAttributes(a.schemaURL, combine), nil
+		return NewWithAttributes(a.schemaURL, combine...), nil
 	case a.schemaURL == b.schemaURL:
-		return newWithAttributes(a.schemaURL, combine), nil
+		return NewWithAttributes(a.schemaURL, combine...), nil
 	}
 	// Return the merged resource with an appropriate error. It is up to
 	// the user to decide if the returned resource can be used or not.
@@ -228,12 +228,6 @@ func Merge(a, b *Resource) (*Resource, error) {
 		a.schemaURL,
 		b.schemaURL,
 	)
-}
-
-func newWithAttributes(schemaURL string, attrs []attribute.KeyValue) *Resource {
-	resource := NewSchemaless(attrs...)
-	resource.schemaURL = schemaURL
-	return resource
 }
 
 // Empty returns an instance of Resource with no attributes. It is

@@ -240,15 +240,13 @@ var (
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	configAttrs := c.Attributes()
-	i.aggregate(ctx, val, resolveAttributes(configAttrs, rawKVs))
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	configAttrs := c.Attributes()
-	i.aggregate(ctx, val, resolveAttributes(configAttrs, rawKVs))
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *int64Inst) Enabled(context.Context) bool {
@@ -284,15 +282,13 @@ var (
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	configAttrs := c.Attributes()
-	i.aggregate(ctx, val, resolveAttributes(configAttrs, rawKVs))
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
 	c := metric.NewRecordConfig(opts)
 	rawKVs := extractRawKVs(opts)
-	configAttrs := c.Attributes()
-	i.aggregate(ctx, val, resolveAttributes(configAttrs, rawKVs))
+	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *float64Inst) Enabled(context.Context) bool {
