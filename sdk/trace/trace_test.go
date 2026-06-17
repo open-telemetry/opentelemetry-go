@@ -1527,59 +1527,39 @@ func TestNestedMapDeduplication(t *testing.T) {
 		SpanID:  trace.SpanID{1},
 	})
 
-	for _, test := range []struct {
-		name       string
-		opts       []TracerProviderOption
-		wantSignal attribute.KeyValue
-	}{
-		{
-			name:       "Default",
-			wantSignal: dedup,
-		},
-		{
-			name:       "WithAllowKeyDuplication",
-			opts:       []TracerProviderOption{WithAllowKeyDuplication()},
-			wantSignal: dup,
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			te := NewTestExporter()
-			opts := []TracerProviderOption{
-				WithSyncer(te),
-				WithSampler(AlwaysSample()),
-				WithResource(res),
-			}
-			opts = append(opts, test.opts...)
-			tp := NewTracerProvider(opts...)
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithSampler(AlwaysSample()),
+		WithResource(res),
+	)
 
-			_, span := tp.Tracer(
-				"scope",
-				trace.WithInstrumentationAttributes(dup),
-			).Start(
-				t.Context(),
-				"span0",
-				trace.WithAttributes(dup),
-			)
-			span.AddEvent("event", trace.WithAttributes(dup))
-			span.AddLink(trace.Link{
-				SpanContext: linkSC,
-				Attributes:  []attribute.KeyValue{dup},
-			})
+	_, span := tp.Tracer(
+		"scope",
+		trace.WithInstrumentationAttributes(dup),
+	).Start(
+		t.Context(),
+		"span0",
+		trace.WithAttributes(dup),
+	)
+	span.AddEvent("event", trace.WithAttributes(dup))
+	span.AddLink(trace.Link{
+		SpanContext: linkSC,
+		Attributes:  []attribute.KeyValue{dup},
+	})
 
-			got, err := endSpan(te, span)
-			require.NoError(t, err)
+	got, err := endSpan(te, span)
+	require.NoError(t, err)
 
-			assert.Equal(t, []attribute.KeyValue{test.wantSignal}, got.Attributes())
-			require.Len(t, got.Events(), 1)
-			assert.Equal(t, []attribute.KeyValue{test.wantSignal}, got.Events()[0].Attributes)
-			assert.Zero(t, got.Events()[0].DroppedAttributeCount)
-			require.Len(t, got.Links(), 1)
-			assert.Equal(t, []attribute.KeyValue{test.wantSignal}, got.Links()[0].Attributes)
-			assert.Zero(t, got.Links()[0].DroppedAttributeCount)
-			assert.Equal(t, []attribute.KeyValue{dedup}, got.Resource().Attributes())
-			assert.Equal(t, attribute.NewSet(test.wantSignal), got.InstrumentationScope().Attributes)
-		})
-	}
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Attributes())
+	require.Len(t, got.Events(), 1)
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Events()[0].Attributes)
+	assert.Zero(t, got.Events()[0].DroppedAttributeCount)
+	require.Len(t, got.Links(), 1)
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Links()[0].Attributes)
+	assert.Zero(t, got.Links()[0].DroppedAttributeCount)
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Resource().Attributes())
+	assert.Equal(t, attribute.NewSet(dedup), got.InstrumentationScope().Attributes)
 }
 
 func TestWithInstrumentationVersionAndSchema(t *testing.T) {

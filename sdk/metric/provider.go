@@ -27,7 +27,6 @@ type MeterProvider struct {
 
 	forceFlush, shutdown func(context.Context) error
 	stopped              atomic.Bool
-	allowDupKeys         bool
 }
 
 // Compile-time check MeterProvider implements metric.MeterProvider.
@@ -44,10 +43,9 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 	flush, sdown := conf.readerSignals()
 
 	mp := &MeterProvider{
-		pipes:        newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
-		forceFlush:   flush,
-		shutdown:     sdown,
-		allowDupKeys: conf.allowDupKeys,
+		pipes:      newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
+		forceFlush: flush,
+		shutdown:   sdown,
 	}
 	// Log after creation so all readers show correctly they are registered.
 	global.Info(
@@ -79,10 +77,7 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	}
 
 	c := metric.NewMeterConfig(options...)
-	attrs := c.InstrumentationAttributes()
-	if !mp.allowDupKeys {
-		attrs = attrdedup.Set(attrs)
-	}
+	attrs := attrdedup.Set(c.InstrumentationAttributes())
 	s := instrumentation.Scope{
 		Name:       name,
 		Version:    c.InstrumentationVersion(),
@@ -99,7 +94,7 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	)
 
 	return mp.meters.Lookup(s, func() *meter {
-		return newMeter(s, mp.pipes, mp.allowDupKeys)
+		return newMeter(s, mp.pipes)
 	})
 }
 

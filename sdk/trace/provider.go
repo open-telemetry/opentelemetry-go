@@ -43,9 +43,6 @@ type tracerProviderConfig struct {
 
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
-
-	// allowDupKeys disables duplicate-key removal in nested map values.
-	allowDupKeys bool
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Provider.
@@ -78,11 +75,10 @@ type TracerProvider struct {
 
 	// These fields are not protected by the lock mu. They are assumed to be
 	// immutable after creation of the TracerProvider.
-	sampler      Sampler
-	idGenerator  IDGenerator
-	spanLimits   SpanLimits
-	resource     *resource.Resource
-	allowDupKeys bool
+	sampler     Sampler
+	idGenerator IDGenerator
+	spanLimits  SpanLimits
+	resource    *resource.Resource
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -117,12 +113,11 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o = ensureValidTracerProviderConfig(o)
 
 	tp := &TracerProvider{
-		namedTracer:  make(map[instrumentation.Scope]*tracer),
-		sampler:      o.sampler,
-		idGenerator:  o.idGenerator,
-		spanLimits:   o.spanLimits,
-		resource:     o.resource,
-		allowDupKeys: o.allowDupKeys,
+		namedTracer: make(map[instrumentation.Scope]*tracer),
+		sampler:     o.sampler,
+		idGenerator: o.idGenerator,
+		spanLimits:  o.spanLimits,
+		resource:    o.resource,
 	}
 	global.Info("TracerProvider created", "config", o)
 
@@ -148,10 +143,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		return noop.NewTracerProvider().Tracer(name, opts...)
 	}
 	c := trace.NewTracerConfig(opts...)
-	attrs := c.InstrumentationAttributes()
-	if !p.allowDupKeys {
-		attrs = attrdedup.Set(attrs)
-	}
+	attrs := attrdedup.Set(c.InstrumentationAttributes())
 	if name == "" {
 		name = defaultTracerName
 	}
@@ -381,21 +373,6 @@ func WithResource(r *resource.Resource) TracerProviderOption {
 		if err != nil {
 			otel.Handle(err)
 		}
-		return cfg
-	})
-}
-
-// WithAllowKeyDuplication disables duplicate-key removal from map attribute
-// values in span, event, link, and instrumentation scope attributes exported by
-// the TracerProvider.
-//
-// By default, map attribute values are deduplicated to comply with the
-// OpenTelemetry Specification. Duplicate map keys are resolved using
-// last-value-wins semantics. Resource attributes are always deduplicated by
-// go.opentelemetry.io/otel/sdk/resource.
-func WithAllowKeyDuplication() TracerProviderOption {
-	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
-		cfg.allowDupKeys = true
 		return cfg
 	})
 }

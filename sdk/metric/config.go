@@ -23,7 +23,6 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
-	allowDupKeys     bool
 }
 
 const defaultCardinalityLimit = 2000
@@ -121,21 +120,6 @@ func WithResource(res *resource.Resource) Option {
 			otel.Handle(err)
 		}
 		return conf
-	})
-}
-
-// WithAllowKeyDuplication disables duplicate-key removal from map attribute
-// values in measurement, default, and instrumentation scope attributes exported
-// by the MeterProvider.
-//
-// By default, map attribute values are deduplicated to comply with the
-// OpenTelemetry Specification. Duplicate map keys are resolved using
-// last-value-wins semantics. Resource attributes are always deduplicated by
-// go.opentelemetry.io/otel/sdk/resource.
-func WithAllowKeyDuplication() Option {
-	return optionFunc(func(cfg config) config {
-		cfg.allowDupKeys = true
-		return cfg
 	})
 }
 

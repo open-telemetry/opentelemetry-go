@@ -270,9 +270,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 			s.addDroppedAttr(1)
 			continue
 		}
-		if !s.tracer.provider.allowDupKeys {
-			a = deduplicateNestedAttr(a)
-		}
+		a = deduplicateNestedAttr(a)
 		a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 		s.attributes = append(s.attributes, a)
 	}
@@ -333,9 +331,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 		if idx, ok := exists[a.Key]; ok {
 			// Perform all updates before dropping, even when at capacity.
-			if !s.tracer.provider.allowDupKeys {
-				a = deduplicateNestedAttr(a)
-			}
+			a = deduplicateNestedAttr(a)
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes[idx] = a
 			continue
@@ -346,9 +342,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 			// updates are checked and performed.
 			s.addDroppedAttr(1)
 		} else {
-			if !s.tracer.provider.allowDupKeys {
-				a = deduplicateNestedAttr(a)
-			}
+			a = deduplicateNestedAttr(a)
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes = append(s.attributes, a)
 			exists[a.Key] = len(s.attributes) - 1
@@ -736,10 +730,7 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
-	attrs := c.Attributes()
-	if !s.tracer.provider.allowDupKeys {
-		attrs = attrdedup.KeyValues(attrs)
-	}
+	attrs := attrdedup.KeyValues(c.Attributes())
 	e := Event{Name: name, Attributes: attrs, Time: c.Timestamp()}
 
 	// Discard attributes over limit.
@@ -913,10 +904,7 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		return
 	}
 
-	attrs := link.Attributes
-	if !s.tracer.provider.allowDupKeys {
-		attrs = attrdedup.KeyValues(attrs)
-	}
+	attrs := attrdedup.KeyValues(link.Attributes)
 	l := Link{SpanContext: link.SpanContext, Attributes: attrs}
 
 	// Discard attributes over limit.

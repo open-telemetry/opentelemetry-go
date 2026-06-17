@@ -215,10 +215,6 @@ func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) a
 	return mergeAttributes(configAttrs, rawKVs)
 }
 
-func resolveAttributesAllowingKeyDuplication(configAttrs attribute.Set, rawKVs []attribute.KeyValue) attribute.Set {
-	return mergeAttributes(configAttrs, rawKVs)
-}
-
 func mergeAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) attribute.Set {
 	if len(rawKVs) == 0 {
 		return configAttrs
@@ -234,8 +230,7 @@ func mergeAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) att
 }
 
 type int64Inst struct {
-	measures     []aggregate.Measure[int64]
-	allowDupKeys bool
+	measures []aggregate.Measure[int64]
 
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
@@ -254,10 +249,6 @@ func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption
 	c := metric.NewAddConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	configAttrs := c.Attributes()
-	if i.allowDupKeys {
-		i.aggregate(ctx, val, resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs))
-		return
-	}
 	i.aggregate(ctx, val, resolveAttributes(configAttrs, rawKVs))
 }
 
@@ -265,10 +256,6 @@ func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.Record
 	c := metric.NewRecordConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	configAttrs := c.Attributes()
-	if i.allowDupKeys {
-		i.aggregate(ctx, val, resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs))
-		return
-	}
 	i.aggregate(ctx, val, resolveAttributes(configAttrs, rawKVs))
 }
 
@@ -287,8 +274,7 @@ func (i *int64Inst) aggregate(
 }
 
 type float64Inst struct {
-	measures     []aggregate.Measure[float64]
-	allowDupKeys bool
+	measures []aggregate.Measure[float64]
 
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
@@ -307,10 +293,6 @@ func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOp
 	c := metric.NewAddConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	configAttrs := c.Attributes()
-	if i.allowDupKeys {
-		i.aggregate(ctx, val, resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs))
-		return
-	}
 	i.aggregate(ctx, val, resolveAttributes(configAttrs, rawKVs))
 }
 
@@ -318,10 +300,6 @@ func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.Re
 	c := metric.NewRecordConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	configAttrs := c.Attributes()
-	if i.allowDupKeys {
-		i.aggregate(ctx, val, resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs))
-		return
-	}
 	i.aggregate(ctx, val, resolveAttributes(configAttrs, rawKVs))
 }
 

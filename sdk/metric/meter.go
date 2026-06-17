@@ -27,9 +27,8 @@ var ErrInstrumentName = errors.New("invalid instrument name")
 type meter struct {
 	embedded.Meter
 
-	scope        instrumentation.Scope
-	pipes        pipelines
-	allowDupKeys bool
+	scope instrumentation.Scope
+	pipes pipelines
 
 	int64Insts             *cacheWithErr[instID, *int64Inst]
 	float64Insts           *cacheWithErr[instID, *float64Inst]
@@ -40,7 +39,7 @@ type meter struct {
 	float64Resolver resolver[float64]
 }
 
-func newMeter(s instrumentation.Scope, p pipelines, allowDupKeys bool) *meter {
+func newMeter(s instrumentation.Scope, p pipelines) *meter {
 	// viewCache ensures instrument conflicts, including number conflicts, this
 	// meter is asked to create are logged to the user.
 	var viewCache cache[string, instID]
@@ -59,7 +58,6 @@ func newMeter(s instrumentation.Scope, p pipelines, allowDupKeys bool) *meter {
 		float64ObservableInsts: &float64ObservableInsts,
 		int64Resolver:          newResolver[int64](p, &viewCache),
 		float64Resolver:        newResolver[float64](p, &viewCache),
-		allowDupKeys:           allowDupKeys,
 	}
 }
 
@@ -165,7 +163,7 @@ func (m *meter) int64ObservableInstrument(
 			// is not part of the pipeline.
 			insert.pipeline.addInt64Measure(inst.observableID, in)
 			for _, cback := range callbacks {
-				inst := int64Observer{measures: in, allowDupKeys: m.allowDupKeys}
+				inst := int64Observer{measures: in}
 				fn := cback
 				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
 			}
@@ -348,7 +346,7 @@ func (m *meter) float64ObservableInstrument(
 			// is not part of the pipeline.
 			insert.pipeline.addFloat64Measure(inst.observableID, in)
 			for _, cback := range callbacks {
-				inst := float64Observer{measures: in, allowDupKeys: m.allowDupKeys}
+				inst := float64Observer{measures: in}
 				fn := cback
 				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
 			}
@@ -525,7 +523,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 
 	unregs := make([]func(), len(m.pipes))
 	for ix, pipe := range m.pipes {
-		reg := newObserver(pipe, m.allowDupKeys)
+		reg := newObserver(pipe)
 		for _, inst := range validInstruments {
 			switch o := inst.(type) {
 			case int64Observable:
@@ -546,18 +544,16 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 type observer struct {
 	embedded.Observer
 
-	pipe         *pipeline
-	float64      map[observableID[float64]]struct{}
-	int64        map[observableID[int64]]struct{}
-	allowDupKeys bool
+	pipe    *pipeline
+	float64 map[observableID[float64]]struct{}
+	int64   map[observableID[int64]]struct{}
 }
 
-func newObserver(p *pipeline, allowDupKeys bool) observer {
+func newObserver(p *pipeline) observer {
 	return observer{
-		pipe:         p,
-		float64:      make(map[observableID[float64]]struct{}),
-		int64:        make(map[observableID[int64]]struct{}),
-		allowDupKeys: allowDupKeys,
+		pipe:    p,
+		float64: make(map[observableID[float64]]struct{}),
+		int64:   make(map[observableID[int64]]struct{}),
 	}
 }
 
@@ -599,12 +595,7 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	configAttrs := c.Attributes()
-	var set attribute.Set
-	if r.allowDupKeys {
-		set = resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs)
-	} else {
-		set = resolveAttributes(configAttrs, rawKVs)
-	}
+	set := resolveAttributes(configAttrs, rawKVs)
 	// Access to r.pipe.float64Measure is already guarded by a lock in pipeline.produce.
 	// TODO (#5946): Refactor pipeline and observable measures.
 	measures := r.pipe.float64Measures[oImpl.observableID]
@@ -638,12 +629,7 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	configAttrs := c.Attributes()
-	var set attribute.Set
-	if r.allowDupKeys {
-		set = resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs)
-	} else {
-		set = resolveAttributes(configAttrs, rawKVs)
-	}
+	set := resolveAttributes(configAttrs, rawKVs)
 	// Access to r.pipe.int64Measures is already guarded b a lock in pipeline.produce.
 	// TODO (#5946): Refactor pipeline and observable measures.
 	measures := r.pipe.int64Measures[oImpl.observableID]
@@ -711,7 +697,7 @@ func (p int64InstProvider) lookup(
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
 		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
-		return &int64Inst{measures: aggs, allowDupKeys: p.allowDupKeys}, err
+		return &int64Inst{measures: aggs}, err
 	})
 }
 
@@ -728,7 +714,7 @@ func (p int64InstProvider) lookupHistogram(
 		Kind:        InstrumentKindHistogram,
 	}, func() (*int64Inst, error) {
 		aggs, err := p.histogramAggs(name, cfg, allowedKeys)
-		return &int64Inst{measures: aggs, allowDupKeys: p.allowDupKeys}, err
+		return &int64Inst{measures: aggs}, err
 	})
 }
 
@@ -785,7 +771,7 @@ func (p float64InstProvider) lookup(
 		Kind:        kind,
 	}, func() (*float64Inst, error) {
 		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
-		return &float64Inst{measures: aggs, allowDupKeys: p.allowDupKeys}, err
+		return &float64Inst{measures: aggs}, err
 	})
 }
 
@@ -802,41 +788,31 @@ func (p float64InstProvider) lookupHistogram(
 		Kind:        InstrumentKindHistogram,
 	}, func() (*float64Inst, error) {
 		aggs, err := p.histogramAggs(name, cfg, allowedKeys)
-		return &float64Inst{measures: aggs, allowDupKeys: p.allowDupKeys}, err
+		return &float64Inst{measures: aggs}, err
 	})
 }
 
 type int64Observer struct {
 	embedded.Int64Observer
 	measures[int64]
-	allowDupKeys bool
 }
 
 func (o int64Observer) Observe(val int64, opts ...metric.ObserveOption) {
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	configAttrs := c.Attributes()
-	if o.allowDupKeys {
-		o.observe(val, resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs))
-		return
-	}
 	o.observe(val, resolveAttributes(configAttrs, rawKVs))
 }
 
 type float64Observer struct {
 	embedded.Float64Observer
 	measures[float64]
-	allowDupKeys bool
 }
 
 func (o float64Observer) Observe(val float64, opts ...metric.ObserveOption) {
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	configAttrs := c.Attributes()
-	if o.allowDupKeys {
-		o.observe(val, resolveAttributesAllowingKeyDuplication(configAttrs, rawKVs))
-		return
-	}
 	o.observe(val, resolveAttributes(configAttrs, rawKVs))
 }
 
