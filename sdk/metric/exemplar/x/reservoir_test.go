@@ -4,6 +4,7 @@
 package x
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -133,4 +134,31 @@ func TestResetHelperReuseSlice(t *testing.T) {
 	res := reset(dest, 1, 3)
 	assert.Len(t, res, 1)
 	assert.Equal(t, 5, cap(res))
+}
+
+func TestFixedSizeRoundRobinReservoirConcurrentSafe(t *testing.T) {
+	r := NewFixedSizeRoundRobinReservoir(2)
+	ctx := t.Context()
+	now := time.Now()
+
+	var wg sync.WaitGroup
+	const goroutines = 2
+	for i := range goroutines {
+		wg.Add(1)
+		go func(val int) {
+			defer wg.Done()
+			r.Offer(ctx, now, exemplar.NewValue[int64](int64(val)), nil)
+		}(i)
+	}
+
+	wg.Go(func() {
+		var dest []exemplar.Exemplar
+		r.Collect(&dest)
+	})
+
+	wg.Wait()
+
+	var dest []exemplar.Exemplar
+	r.Collect(&dest)
+	assert.NotEmpty(t, dest)
 }
