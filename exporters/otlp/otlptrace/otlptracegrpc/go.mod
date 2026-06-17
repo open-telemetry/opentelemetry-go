@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/cenkalti/backoff/v5 v5.0.3
+	github.com/cenkalti/backoff/v6 v6.0.1
 	github.com/go-logr/logr v1.4.3
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.44.0
