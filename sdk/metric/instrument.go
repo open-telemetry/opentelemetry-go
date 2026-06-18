@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+	"go.opentelemetry.io/otel/sdk/metric/internal/attrdedup"
 )
 
 var zeroScope instrumentation.Scope
@@ -206,9 +207,11 @@ func extractRawKVs[T any](opts []T) []attribute.KeyValue {
 }
 
 func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) attribute.Set {
+	configAttrs = attrdedup.Set(configAttrs)
 	if len(rawKVs) == 0 {
 		return configAttrs
 	}
+	rawKVs = attrdedup.KeyValues(rawKVs)
 	merged := make([]attribute.KeyValue, 0, configAttrs.Len()+len(rawKVs))
 	merged = append(merged, configAttrs.ToSlice()...)
 	// rawKVs are appended after configAttrs, meaning they will override any duplicate keys in configAttrs.

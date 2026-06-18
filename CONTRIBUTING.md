@@ -8,8 +8,10 @@ repo for information on this and other language SIGs.
 See the [public meeting
 notes](https://docs.google.com/document/d/1E5e7Ld0NuU1iVvf-42tOBpu2VBBLYnh73GJuITGJTTU/edit)
 for a summary description of past meetings. To request edit access,
-join the meeting or get in touch on
-[Slack](https://cloud-native.slack.com/archives/C01NPAXACKT).
+join the meeting or get in touch on the
+[#otel-go](https://cloud-native.slack.com/archives/C01NPAXACKT)
+channel on CNCF Slack. If you are new to the CNCF Slack community,
+you can [create an account](https://slack.cncf.io/).
 
 The meeting is open for all to join. We invite everyone to join our
 meeting, regardless of your experience level. Whether you're a

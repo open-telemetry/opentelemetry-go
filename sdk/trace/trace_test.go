@@ -1513,6 +1513,55 @@ func TestWithResource(t *testing.T) {
 	}
 }
 
+func TestMapDeduplication(t *testing.T) {
+	dup := attribute.Map(
+		"map",
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	dedup := attribute.Map("map", attribute.String("key", "second"))
+	res := resource.NewSchemaless(dup)
+
+	linkSC := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{1},
+		SpanID:  trace.SpanID{1},
+	})
+
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithSampler(AlwaysSample()),
+		WithResource(res),
+	)
+
+	_, span := tp.Tracer(
+		"scope",
+		trace.WithInstrumentationAttributes(dup),
+	).Start(
+		t.Context(),
+		"span0",
+		trace.WithAttributes(dup),
+	)
+	span.AddEvent("event", trace.WithAttributes(dup))
+	span.AddLink(trace.Link{
+		SpanContext: linkSC,
+		Attributes:  []attribute.KeyValue{dup},
+	})
+
+	got, err := endSpan(te, span)
+	require.NoError(t, err)
+
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Attributes())
+	require.Len(t, got.Events(), 1)
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Events()[0].Attributes)
+	assert.Zero(t, got.Events()[0].DroppedAttributeCount)
+	require.Len(t, got.Links(), 1)
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Links()[0].Attributes)
+	assert.Zero(t, got.Links()[0].DroppedAttributeCount)
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Resource().Attributes())
+	assert.Equal(t, attribute.NewSet(dedup), got.InstrumentationScope().Attributes)
+}
+
 func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))

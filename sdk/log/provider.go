@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/log/internal/attrdedup"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -118,11 +119,15 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 	}
 
 	cfg := log.NewLoggerConfig(opts...)
+	attrs := cfg.InstrumentationAttributes()
+	if !p.allowDupKeys {
+		attrs = attrdedup.Set(attrs)
+	}
 	scope := instrumentation.Scope{
 		Name:       name,
 		Version:    cfg.InstrumentationVersion(),
 		SchemaURL:  cfg.SchemaURL(),
-		Attributes: cfg.InstrumentationAttributes(),
+		Attributes: attrs,
 	}
 
 	p.loggersMu.Lock()
@@ -257,16 +262,20 @@ func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 	})
 }
 
-// WithAllowKeyDuplication sets whether deduplication is skipped for log attributes or other key-value collections.
+// WithAllowKeyDuplication sets whether deduplication is skipped for log record
+// and instrumentation scope key-value collections.
 //
-// By default, the key-value collections within a log record are deduplicated to comply with the OpenTelemetry Specification.
-// Deduplication means that if multiple key–value pairs with the same key are present, only a single pair
-// is retained and others are discarded.
+// By default, the key-value collections within a log record and
+// instrumentation scope are deduplicated to comply with the OpenTelemetry
+// Specification.
+// Deduplication means that if multiple key-value pairs with the same key are
+// present, only a single pair is retained and others are discarded. Resource
+// attributes are always deduplicated by go.opentelemetry.io/otel/sdk/resource.
 //
 // Disabling deduplication with this option can improve performance e.g. of adding attributes to the log record.
 //
 // Note that if you disable deduplication, you are responsible for ensuring that duplicate
-// key-value pairs within in a single collection are not emitted,
+// key-value pairs within a single collection are not emitted,
 // or that the telemetry receiver can handle such duplicates.
 func WithAllowKeyDuplication() LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
