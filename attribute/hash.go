@@ -102,15 +102,25 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		case [0]Value:
 			// No values to hash, but the type identifier is still hashed above.
 		case [1]Value:
-			h = hashValueSlice(h, vals[:])
+			h = hashValue(h, vals[0])
 		case [2]Value:
-			h = hashValueSlice(h, vals[:])
+			h = hashValue(h, vals[0])
+			h = hashValue(h, vals[1])
 		case [3]Value:
-			h = hashValueSlice(h, vals[:])
+			h = hashValue(h, vals[0])
+			h = hashValue(h, vals[1])
+			h = hashValue(h, vals[2])
 		case [4]Value:
-			h = hashValueSlice(h, vals[:])
+			h = hashValue(h, vals[0])
+			h = hashValue(h, vals[1])
+			h = hashValue(h, vals[2])
+			h = hashValue(h, vals[3])
 		case [5]Value:
-			h = hashValueSlice(h, vals[:])
+			h = hashValue(h, vals[0])
+			h = hashValue(h, vals[1])
+			h = hashValue(h, vals[2])
+			h = hashValue(h, vals[3])
+			h = hashValue(h, vals[4])
 		default:
 			rv := reflect.ValueOf(v.slice)
 			for i := 0; i < rv.Len(); i++ {
@@ -123,15 +133,40 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		case [0]KeyValue:
 			// No values to hash, but the type identifier is still hashed above.
 		case [1]KeyValue:
-			h = hashMap(h, vals[:])
+			h = h.String(string(vals[0].Key))
+			h = hashValue(h, vals[0].Value)
 		case [2]KeyValue:
-			h = hashMap(h, vals[:])
+			h = h.String(string(vals[0].Key))
+			h = hashValue(h, vals[0].Value)
+			h = h.String(string(vals[1].Key))
+			h = hashValue(h, vals[1].Value)
 		case [3]KeyValue:
-			h = hashMap(h, vals[:])
+			h = h.String(string(vals[0].Key))
+			h = hashValue(h, vals[0].Value)
+			h = h.String(string(vals[1].Key))
+			h = hashValue(h, vals[1].Value)
+			h = h.String(string(vals[2].Key))
+			h = hashValue(h, vals[2].Value)
 		case [4]KeyValue:
-			h = hashMap(h, vals[:])
+			h = h.String(string(vals[0].Key))
+			h = hashValue(h, vals[0].Value)
+			h = h.String(string(vals[1].Key))
+			h = hashValue(h, vals[1].Value)
+			h = h.String(string(vals[2].Key))
+			h = hashValue(h, vals[2].Value)
+			h = h.String(string(vals[3].Key))
+			h = hashValue(h, vals[3].Value)
 		case [5]KeyValue:
-			h = hashMap(h, vals[:])
+			h = h.String(string(vals[0].Key))
+			h = hashValue(h, vals[0].Value)
+			h = h.String(string(vals[1].Key))
+			h = hashValue(h, vals[1].Value)
+			h = h.String(string(vals[2].Key))
+			h = hashValue(h, vals[2].Value)
+			h = h.String(string(vals[3].Key))
+			h = hashValue(h, vals[3].Value)
+			h = h.String(string(vals[4].Key))
+			h = hashValue(h, vals[4].Value)
 		default:
 			rv := reflect.ValueOf(v.slice)
 			for i := 0; i < rv.Len(); i++ {
@@ -148,21 +183,6 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		val := v.AsInterface()
 		msg := fmt.Sprintf("unknown value type: %[1]v (%[1]T)", val)
 		panic(msg)
-	}
-	return h
-}
-
-func hashValueSlice(h xxhash.Hash, vals []Value) xxhash.Hash {
-	for _, v := range vals {
-		h = hashValue(h, v)
-	}
-	return h
-}
-
-func hashMap(h xxhash.Hash, vals []KeyValue) xxhash.Hash {
-	for _, kv := range vals {
-		h = h.String(string(kv.Key))
-		h = hashValue(h, kv.Value)
 	}
 	return h
 }
