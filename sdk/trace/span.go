@@ -246,10 +246,6 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 		return
 	}
 
-	if s.tracer == nil || s.tracer.provider == nil {
-		return
-	}
-
 	limit := s.tracer.provider.spanLimits.AttributeCountLimit
 	if limit == 0 {
 		// No attributes allowed.
@@ -744,9 +740,6 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 //
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
-	if s.tracer == nil || s.tracer.provider == nil {
-		return
-	}
 	c := trace.NewEventConfig(o...)
 	attrs := s.tracer.provider.dedupKeyValues(c.Attributes())
 	e := Event{Name: name, Attributes: attrs, Time: c.Timestamp()}
@@ -823,7 +816,7 @@ func (s *recordingSpan) EndTime() time.Time {
 func (s *recordingSpan) Attributes() []attribute.KeyValue {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.tracer != nil && s.tracer.provider != nil {
+	if len(s.attributes) > 0 {
 		s.tracer.provider.dedupeSpanAttrs(s)
 	}
 	return s.attributes
@@ -914,10 +907,6 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		return
 	}
 
-	if s.tracer == nil || s.tracer.provider == nil {
-		return
-	}
-
 	attrs := s.tracer.provider.dedupKeyValues(link.Attributes)
 	l := Link{SpanContext: link.SpanContext, Attributes: attrs}
 
@@ -991,9 +980,7 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.childSpanCount = s.childSpanCount
 
 	if len(s.attributes) > 0 {
-		if s.tracer != nil && s.tracer.provider != nil {
-			s.tracer.provider.dedupeSpanAttrs(s)
-		}
+		s.tracer.provider.dedupeSpanAttrs(s)
 		sd.attributes = s.attributes
 	}
 	sd.droppedAttributeCount = s.droppedAttributes

@@ -83,6 +83,8 @@ type TracerProvider struct {
 	spanLimits  SpanLimits
 	resource    *resource.Resource
 
+	// deduplication and attribute limits strategies swapped at TracerProvider construction time.
+	// Swapping these function pointers avoids checking runtime boolean flags in the hot path.
 	dedupAttr       func(attribute.KeyValue) attribute.KeyValue
 	dedupKeyValues  func([]attribute.KeyValue) []attribute.KeyValue
 	dedupSet        func(attribute.Set) attribute.Set
@@ -511,10 +513,10 @@ func WithRawSpanLimits(limits SpanLimits) TracerProviderOption {
 }
 
 // WithAllowKeyDuplication returns a TracerProviderOption that disables
-// duplicate-key removal from MAP attribute values in span, event, link,
+// duplicate-key removal from map attribute values in span, event, link,
 // and instrumentation scope attributes exported by the TracerProvider.
 //
-// By default, MAP attribute values are deduplicated to comply with the
+// By default, map attribute values are deduplicated to comply with the
 // OpenTelemetry Specification. Duplicate map keys are resolved using
 // last-value-wins semantics.
 func WithAllowKeyDuplication() TracerProviderOption {
