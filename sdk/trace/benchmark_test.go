@@ -453,16 +453,17 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 
 func BenchmarkSetAttributes(b *testing.B) {
 	tpDedup := sdktrace.NewTracerProvider()
-	defer func() { _ = tpDedup.Shutdown(context.Background()) }()
+	defer func() { _ = tpDedup.Shutdown(b.Context()) }()
 	tpNoDedup := sdktrace.NewTracerProvider(sdktrace.WithAllowKeyDuplication())
-	defer func() { _ = tpNoDedup.Shutdown(context.Background()) }()
+	defer func() { _ = tpNoDedup.Shutdown(b.Context()) }()
 
 	attrsDup := []attribute.KeyValue{
 		attribute.Bool("key1", false),
 		attribute.String("key2", "hello"),
 		attribute.Int64("key3", 123),
 		attribute.Float64("key4", 123.456),
-		attribute.Map("key5",
+		attribute.Map(
+			"key5",
 			attribute.String("inner1", "val1"),
 			attribute.String("inner2", "val2"),
 		),
@@ -499,14 +500,15 @@ func BenchmarkSetAttributes(b *testing.B) {
 
 func BenchmarkAddEvent(b *testing.B) {
 	tpDedup := sdktrace.NewTracerProvider()
-	defer func() { _ = tpDedup.Shutdown(context.Background()) }()
+	defer func() { _ = tpDedup.Shutdown(b.Context()) }()
 	tpNoDedup := sdktrace.NewTracerProvider(sdktrace.WithAllowKeyDuplication())
-	defer func() { _ = tpNoDedup.Shutdown(context.Background()) }()
+	defer func() { _ = tpNoDedup.Shutdown(b.Context()) }()
 
 	attrsDup := []attribute.KeyValue{
 		attribute.Bool("key1", false),
 		attribute.String("key2", "hello"),
-		attribute.Map("key3",
+		attribute.Map(
+			"key3",
 			attribute.String("inner1", "val1"),
 			attribute.String("inner2", "val2"),
 		),
