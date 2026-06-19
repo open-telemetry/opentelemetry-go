@@ -117,7 +117,7 @@ exporters receive a canonical attribute tree by default. The attribute value
 length limit recursively truncates string, string slice, byte slice, slice, and
 map attribute values. The body is deduplicated but not truncated.
 
-The SDK does not have have an additional definition of
+The SDK does not have an additional definition of
 [ReadableLogRecord](https://opentelemetry.io/docs/specs/otel/logs/sdk/#readablelogrecord)
 as the specification does not say that the exporters must not be able to modify
 the log records. It simply requires them to be able to read the log records.
