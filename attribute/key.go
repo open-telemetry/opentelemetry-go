@@ -10,7 +10,7 @@ type Key string
 // Bool creates a [KeyValue] with a [BOOL] value.
 //
 // If creating both a key and value at the same time, use the package-level
-// Bool function.
+// [Bool] function.
 func (k Key) Bool(v bool) KeyValue {
 	return KeyValue{
 		Key:   k,
