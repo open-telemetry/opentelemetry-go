@@ -450,3 +450,119 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkSetAttributes_DedupEnabled(b *testing.B) {
+	tp := sdktrace.NewTracerProvider()
+	b.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		_ = tp.Shutdown(context.Background())
+	})
+	tr := tp.Tracer("bench")
+	ctx := b.Context()
+
+	attrs := []attribute.KeyValue{
+		attribute.Bool("key1", false),
+		attribute.String("key2", "hello"),
+		attribute.Int64("key3", 123),
+		attribute.Float64("key4", 123.456),
+		attribute.Map(
+			"key5",
+			attribute.String("inner1", "val1"),
+			attribute.String("inner2", "val2"),
+		),
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, span := tr.Start(ctx, "span")
+		span.SetAttributes(attrs...)
+		span.End()
+	}
+}
+
+func BenchmarkSetAttributes_AllowKeyDuplication(b *testing.B) {
+	tp := sdktrace.NewTracerProvider(sdktrace.WithAllowKeyDuplication())
+	b.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		_ = tp.Shutdown(context.Background())
+	})
+	tr := tp.Tracer("bench")
+	ctx := b.Context()
+
+	attrs := []attribute.KeyValue{
+		attribute.Bool("key1", false),
+		attribute.String("key2", "hello"),
+		attribute.Int64("key3", 123),
+		attribute.Float64("key4", 123.456),
+		attribute.Map(
+			"key5",
+			attribute.String("inner1", "val1"),
+			attribute.String("inner2", "val2"),
+		),
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, span := tr.Start(ctx, "span")
+		span.SetAttributes(attrs...)
+		span.End()
+	}
+}
+
+func BenchmarkAddEvent_DedupEnabled(b *testing.B) {
+	tp := sdktrace.NewTracerProvider()
+	b.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		_ = tp.Shutdown(context.Background())
+	})
+	tr := tp.Tracer("bench")
+	ctx := b.Context()
+
+	attrs := []attribute.KeyValue{
+		attribute.Bool("key1", false),
+		attribute.String("key2", "hello"),
+		attribute.Map(
+			"key3",
+			attribute.String("inner1", "val1"),
+			attribute.String("inner2", "val2"),
+		),
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, span := tr.Start(ctx, "span")
+		span.AddEvent("event", trace.WithAttributes(attrs...))
+		span.End()
+	}
+}
+
+func BenchmarkAddEvent_AllowKeyDuplication(b *testing.B) {
+	tp := sdktrace.NewTracerProvider(sdktrace.WithAllowKeyDuplication())
+	b.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		_ = tp.Shutdown(context.Background())
+	})
+	tr := tp.Tracer("bench")
+	ctx := b.Context()
+
+	attrs := []attribute.KeyValue{
+		attribute.Bool("key1", false),
+		attribute.String("key2", "hello"),
+		attribute.Map(
+			"key3",
+			attribute.String("inner1", "val1"),
+			attribute.String("inner2", "val2"),
+		),
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, span := tr.Start(ctx, "span")
+		span.AddEvent("event", trace.WithAttributes(attrs...))
+		span.End()
+	}
+}

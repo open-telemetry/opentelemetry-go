@@ -19,7 +19,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.opentelemetry.io/otel/trace"
@@ -247,6 +246,10 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 		return
 	}
 
+	if s.tracer == nil || s.tracer.provider == nil {
+		return
+	}
+
 	limit := s.tracer.provider.spanLimits.AttributeCountLimit
 	if limit == 0 {
 		// No attributes allowed.
@@ -257,7 +260,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	// If adding these attributes could exceed the capacity of s perform a
 	// de-duplication and truncation while adding to avoid over allocation.
 	if limit > 0 && len(s.attributes)+len(attributes) > limit {
-		s.addOverCapAttrs(limit, attributes)
+		s.tracer.provider.addOverCapAttrs(s, limit, attributes)
 		return
 	}
 
@@ -270,7 +273,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 			s.addDroppedAttr(1)
 			continue
 		}
-		a = dedupAttr(a)
+		a = s.tracer.provider.dedupAttr(a)
 		a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 		s.attributes = append(s.attributes, a)
 	}
@@ -331,7 +334,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 		if idx, ok := exists[a.Key]; ok {
 			// Perform all updates before dropping, even when at capacity.
-			a = dedupAttr(a)
+			a = s.tracer.provider.dedupAttr(a)
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes[idx] = a
 			continue
@@ -342,7 +345,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 			// updates are checked and performed.
 			s.addDroppedAttr(1)
 		} else {
-			a = dedupAttr(a)
+			a = s.tracer.provider.dedupAttr(a)
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes = append(s.attributes, a)
 			exists[a.Key] = len(s.attributes) - 1
@@ -350,12 +353,24 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	}
 }
 
-func dedupAttr(attr attribute.KeyValue) attribute.KeyValue {
-	switch attr.Value.Type() {
-	case attribute.SLICE, attribute.MAP:
-		return attrdedup.KeyValue(attr)
-	default:
-		return attr
+func addOverCapAttrsNoDup(s *recordingSpan, limit int, attrs []attribute.KeyValue) {
+	allowed := limit - len(s.attributes)
+	if allowed <= 0 {
+		s.addDroppedAttr(len(attrs))
+		return
+	}
+	s.attributes = slices.Grow(s.attributes, allowed)
+	for _, a := range attrs {
+		if !a.Valid() {
+			s.addDroppedAttr(1)
+			continue
+		}
+		if len(s.attributes) >= limit {
+			s.addDroppedAttr(1)
+			continue
+		}
+		a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
+		s.attributes = append(s.attributes, a)
 	}
 }
 
@@ -729,8 +744,11 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 //
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
+	if s.tracer == nil || s.tracer.provider == nil {
+		return
+	}
 	c := trace.NewEventConfig(o...)
-	attrs := attrdedup.KeyValues(c.Attributes())
+	attrs := s.tracer.provider.dedupKeyValues(c.Attributes())
 	e := Event{Name: name, Attributes: attrs, Time: c.Timestamp()}
 
 	// Discard attributes over limit.
@@ -805,18 +823,10 @@ func (s *recordingSpan) EndTime() time.Time {
 func (s *recordingSpan) Attributes() []attribute.KeyValue {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.dedupeAttrs()
+	if s.tracer != nil && s.tracer.provider != nil {
+		s.tracer.provider.dedupeSpanAttrs(s)
+	}
 	return s.attributes
-}
-
-// dedupeAttrs deduplicates the attributes of s to fit capacity.
-//
-// This method assumes s.mu.Lock is held by the caller.
-func (s *recordingSpan) dedupeAttrs() {
-	// Do not set a capacity when creating this map. Benchmark testing has
-	// showed this to only add unused memory allocations in general use.
-	exists := make(map[attribute.Key]int, len(s.attributes))
-	s.dedupeAttrsFromRecord(exists)
 }
 
 // dedupeAttrsFromRecord deduplicates the attributes of s to fit capacity
@@ -904,7 +914,11 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		return
 	}
 
-	attrs := attrdedup.KeyValues(link.Attributes)
+	if s.tracer == nil || s.tracer.provider == nil {
+		return
+	}
+
+	attrs := s.tracer.provider.dedupKeyValues(link.Attributes)
 	l := Link{SpanContext: link.SpanContext, Attributes: attrs}
 
 	// Discard attributes over limit.
@@ -977,7 +991,9 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.childSpanCount = s.childSpanCount
 
 	if len(s.attributes) > 0 {
-		s.dedupeAttrs()
+		if s.tracer != nil && s.tracer.provider != nil {
+			s.tracer.provider.dedupeSpanAttrs(s)
+		}
 		sd.attributes = s.attributes
 	}
 	sd.droppedAttributeCount = s.droppedAttributes
