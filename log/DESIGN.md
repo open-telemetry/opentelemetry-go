@@ -228,7 +228,6 @@ Rejected alternatives:
 - [Define log-specific value types](#define-log-specific-value-types)
 - [Mix receiver types for Record](#mix-receiver-types-for-record)
 - [Add XYZ method to Logger](#add-xyz-method-to-logger)
-- [Rename KeyValue to Attr](#rename-keyvalue-to-attr)
 
 ### Logger.Enabled
 
@@ -555,33 +554,6 @@ The `Logger` does not have methods like `SetSeverity`, etc.
 as the Logs API needs to follow (be compliant with)
 the [specification](https://opentelemetry.io/docs/specs/otel/logs/api/)
 
-### Rename KeyValue to Attr
-
-There was a proposal to rename `KeyValue` to `Attr` (or `Attribute`).[^11]
-New developers may not intuitively know that `attribute.KeyValue` is an attribute in
-the OpenTelemetry parlance.
-
-During the discussion we agreed to use the existing `attribute.KeyValue` name.
-
-The type is used in multiple semantics:
-
-- as a log attribute,
-- as a map item,
-- as a log record Body.
-
-As for map item semantics, this type is a key-value pair, not an attribute.
-Naming the type as `Attr` would convey semantical meaning
-that would not be correct for a map.
-
-We expect that most of the Logs API users will be OpenTelemetry contributors.
-We plan to implement bridges for the most popular logging libraries ourselves.
-Given we will all have the context needed to disambiguate these overlapping
-names, developers' confusion should not be an issue.
-
-For bridges not developed by us,
-developers will likely look at our existing bridges for inspiration.
-Our correct use of these types will be a reference to them.
-
 [^1]: [Handle structured body and attributes](https://github.com/pellared/opentelemetry-go/pull/7)
 [^2]: Jonathan Amsterdam, [The Go Blog: Structured Logging with slog](https://go.dev/blog/slog)
 [^3]: Jonathan Amsterdam, [GopherCon Europe 2023: A Fast Structured Logging Package](https://www.youtube.com/watch?v=tC4Jt3i62ns)
@@ -592,4 +564,3 @@ Our correct use of these types will be a reference to them.
 [^8]: [log/slog: structured, leveled logging](https://github.com/golang/go/issues/56345#issuecomment-1302563756)
 [^9]: [Record with pointer receivers only](https://github.com/pellared/opentelemetry-go/pull/8)
 [^10]: [Go FAQ: Stack or heap](https://go.dev/doc/faq#stack_or_heap)
-[^11]: [Rename KeyValue to Attr discussion](https://github.com/open-telemetry/opentelemetry-go/pull/4809#discussion_r1476080093)
