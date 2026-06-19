@@ -9,3 +9,5 @@ package internal // import "go.opentelemetry.io/otel/sdk/log/internal"
 
 //go:generate gotmpl --body=../../../internal/shared/counter/counter.go.tmpl "--data={ \"pkg\": \"go.opentelemetry.io/otel/sdk/log\" }" --out=counter/counter.go
 //go:generate gotmpl --body=../../../internal/shared/counter/counter_test.go.tmpl "--data={}" --out=counter/counter_test.go
+//go:generate gotmpl --body=../../../internal/shared/attrdedup/dedup.go.tmpl "--data={}" --out=attrdedup/dedup.go
+//go:generate gotmpl --body=../../../internal/shared/attrdedup/dedup_test.go.tmpl "--data={}" --out=attrdedup/dedup_test.go

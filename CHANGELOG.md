@@ -16,6 +16,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#8453)
 - Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/zipkin`. (#8453)
 - Apply `AttributeValueLengthLimit` to `attribute.MAP` type attribute values in `go.opentelemetry.io/otel/sdk/trace`, recursively truncating contained values. (#8454)
+- Add duplicate-key removal for `attribute.MAP` values in `go.opentelemetry.io/otel/sdk/resource` using last-value-wins semantics. (#8471)
+- Add default duplicate-key removal for `attribute.MAP` values in instrumentation scope attributes in `go.opentelemetry.io/otel/sdk/log` using last-value-wins semantics. (#8471)
+- Add default duplicate-key removal for `attribute.MAP` values in span, event, link, and instrumentation scope attributes in `go.opentelemetry.io/otel/sdk/trace` using last-value-wins semantics. (#8471)
+- Add default duplicate-key removal for `attribute.MAP` values in measurement and instrumentation scope attributes in `go.opentelemetry.io/otel/sdk/metric` using last-value-wins semantics. (#8471)
+- Extend `WithAllowKeyDuplication` in `go.opentelemetry.io/otel/sdk/log` to disable duplicate-key removal in `attribute.MAP` values for instrumentation scope attributes. (#8471)
 - Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
 - Add experimental observability metrics to the BatchProcessor in `go.opentelemetry.io/otel/sdk/log`. (#7124)
 
