@@ -450,6 +450,7 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 		}
 	}
 }
+
 func BenchmarkSetAttributes(b *testing.B) {
 	for _, dedup := range []bool{true, false} {
 		dedupName := "DedupDisabled"
@@ -512,7 +513,7 @@ func BenchmarkSetAttributes(b *testing.B) {
 			})
 		}
 
-		_ = tp.Shutdown(context.Background())
+		_ = tp.Shutdown(b.Context())
 	}
 }
 
@@ -573,6 +574,6 @@ func BenchmarkAddEvent(b *testing.B) {
 			})
 		}
 
-		_ = tp.Shutdown(context.Background())
+		_ = tp.Shutdown(b.Context())
 	}
 }
