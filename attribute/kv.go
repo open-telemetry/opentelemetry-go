@@ -18,67 +18,107 @@ func (kv KeyValue) Valid() bool {
 	return kv.Key.Defined()
 }
 
-// Bool creates a KeyValue with a BOOL Value type.
+// Bool creates a [KeyValue] with a [BOOL] value.
 func Bool(k string, v bool) KeyValue {
 	return Key(k).Bool(v)
 }
 
-// BoolSlice creates a KeyValue with a BOOLSLICE Value type.
+// BoolSlice creates a [KeyValue] with a [BOOLSLICE] value.
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func BoolSlice(k string, v []bool) KeyValue {
 	return Key(k).BoolSlice(v)
 }
 
-// Int creates a KeyValue with an INT64 Value type.
+// Int creates a [KeyValue] with an [INT64] value.
 func Int(k string, v int) KeyValue {
 	return Key(k).Int(v)
 }
 
-// IntSlice creates a KeyValue with an INT64SLICE Value type.
+// IntSlice creates a [KeyValue] with an [INT64SLICE] value.
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func IntSlice(k string, v []int) KeyValue {
 	return Key(k).IntSlice(v)
 }
 
-// Int64 creates a KeyValue with an INT64 Value type.
+// Int64 creates a [KeyValue] with an [INT64] value.
 func Int64(k string, v int64) KeyValue {
 	return Key(k).Int64(v)
 }
 
-// Int64Slice creates a KeyValue with an INT64SLICE Value type.
+// Int64Slice creates a [KeyValue] with an [INT64SLICE] value.
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func Int64Slice(k string, v []int64) KeyValue {
 	return Key(k).Int64Slice(v)
 }
 
-// Float64 creates a KeyValue with a FLOAT64 Value type.
+// Float64 creates a [KeyValue] with a [FLOAT64] value.
 func Float64(k string, v float64) KeyValue {
 	return Key(k).Float64(v)
 }
 
-// Float64Slice creates a KeyValue with a FLOAT64SLICE Value type.
+// Float64Slice creates a [KeyValue] with a [FLOAT64SLICE] value.
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func Float64Slice(k string, v []float64) KeyValue {
 	return Key(k).Float64Slice(v)
 }
 
-// String creates a KeyValue with a STRING Value type.
+// String creates a [KeyValue] with a [STRING] value.
 func String(k, v string) KeyValue {
 	return Key(k).String(v)
 }
 
-// StringSlice creates a KeyValue with a STRINGSLICE Value type.
+// StringSlice creates a [KeyValue] with a [STRINGSLICE] value.
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func StringSlice(k string, v []string) KeyValue {
 	return Key(k).StringSlice(v)
 }
 
-// ByteSlice creates a KeyValue with a BYTESLICE Value type.
+// ByteSlice creates a [KeyValue] with a [BYTESLICE] value.
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func ByteSlice(k string, v []byte) KeyValue {
 	return Key(k).ByteSlice(v)
 }
 
-// Slice creates a KeyValue with a SLICE Value type.
+// Slice creates a [KeyValue] with a [SLICE] value.
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func Slice(k string, v ...Value) KeyValue {
 	return Key(k).Slice(v...)
 }
 
-// Map creates a KeyValue with a MAP Value type.
+// Map creates a [KeyValue] with a [MAP] value.
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 //
 // Users should avoid providing duplicate keys; many receivers handle maps
 // containing duplicate keys unpredictably.

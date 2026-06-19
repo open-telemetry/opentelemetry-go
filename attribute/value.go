@@ -20,10 +20,10 @@ import (
 
 //go:generate stringer -type=Type
 
-// Type describes the type of the data Value holds.
+// Type describes the kind of data a [Value] holds.
 type Type int // nolint: revive  // redefines builtin Type.
 
-// Value represents the value part in key-value pairs.
+// Value represents the value in key-value pairs.
 //
 // Note that the zero value is a valid empty value.
 type Value struct {
@@ -34,29 +34,64 @@ type Value struct {
 }
 
 const (
-	// EMPTY is used for a Value with no value set.
+	// EMPTY identifies a Value with no data.
 	EMPTY Type = iota
-	// BOOL is a boolean Type Value.
+	// BOOL identifies a Value containing a bool.
 	BOOL
-	// INT64 is a 64-bit signed integral Type Value.
+	// INT64 identifies a Value containing an int64.
 	INT64
-	// FLOAT64 is a 64-bit floating point Type Value.
+	// FLOAT64 identifies a Value containing a float64.
 	FLOAT64
-	// STRING is a string Type Value.
+	// STRING identifies a Value containing a string.
 	STRING
-	// BOOLSLICE is a slice of booleans Type Value.
+	// BOOLSLICE identifies a Value containing a []bool.
+	//
+	// Note that many observability backends are not optimized to query, index,
+	// or aggregate complex attribute values. Complex values may also carry
+	// additional performance overhead. Prefer primitive values
+	// when possible.
 	BOOLSLICE
-	// INT64SLICE is a slice of 64-bit signed integral numbers Type Value.
+	// INT64SLICE identifies a Value containing a []int64.
+	//
+	// Note that many observability backends are not optimized to query, index,
+	// or aggregate complex attribute values. Complex values may also carry
+	// additional performance overhead. Prefer primitive values
+	// when possible.
 	INT64SLICE
-	// FLOAT64SLICE is a slice of 64-bit floating point numbers Type Value.
+	// FLOAT64SLICE identifies a Value containing a []float64.
+	//
+	// Note that many observability backends are not optimized to query, index,
+	// or aggregate complex attribute values. Complex values may also carry
+	// additional performance overhead. Prefer primitive values
+	// when possible.
 	FLOAT64SLICE
-	// STRINGSLICE is a slice of strings Type Value.
+	// STRINGSLICE identifies a Value containing a []string.
+	//
+	// Note that many observability backends are not optimized to query, index,
+	// or aggregate complex attribute values. Complex values may also carry
+	// additional performance overhead. Prefer primitive values
+	// when possible.
 	STRINGSLICE
-	// BYTESLICE is a slice of bytes Type Value.
+	// BYTESLICE identifies a Value containing a []byte.
+	//
+	// Note that many observability backends are not optimized to query, index,
+	// or aggregate complex attribute values. Complex values may also carry
+	// additional performance overhead. Prefer primitive values
+	// when possible.
 	BYTESLICE
-	// SLICE is a slice of Value Type values.
+	// SLICE identifies a Value containing a []Value.
+	//
+	// Note that many observability backends are not optimized to query, index,
+	// or aggregate complex attribute values. Complex values may also carry
+	// additional performance overhead. Prefer primitive values
+	// when possible.
 	SLICE
-	// MAP is a slice of KeyValue values representing a map of heterogeneous values.
+	// MAP identifies a Value containing a []KeyValue representation of a map.
+	//
+	// Note that many observability backends are not optimized to query, index,
+	// or aggregate complex attribute values. Complex values may also carry
+	// additional performance overhead. Prefer primitive values
+	// when possible.
 	//
 	// Note that MAP values may contain duplicate keys if duplicate keys are
 	// provided when creating the value.
@@ -67,7 +102,7 @@ const (
 	INVALID = EMPTY
 )
 
-// BoolValue creates a BOOL Value.
+// BoolValue returns a [Value] containing v as a [BOOL].
 func BoolValue(v bool) Value {
 	return Value{
 		vtype:   BOOL,
@@ -75,17 +110,27 @@ func BoolValue(v bool) Value {
 	}
 }
 
-// BoolSliceValue creates a BOOLSLICE Value.
+// BoolSliceValue returns a [Value] containing v as a [BOOLSLICE].
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func BoolSliceValue(v []bool) Value {
 	return Value{vtype: BOOLSLICE, slice: attribute.SliceValue(v)}
 }
 
-// IntValue creates an INT64 Value.
+// IntValue returns a [Value] containing int64(v) as an [INT64].
 func IntValue(v int) Value {
 	return Int64Value(int64(v))
 }
 
-// IntSliceValue creates an INT64SLICE Value.
+// IntSliceValue returns a [Value] containing v as an [INT64SLICE].
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func IntSliceValue(v []int) Value {
 	val := Value{vtype: INT64SLICE}
 
@@ -111,7 +156,7 @@ func IntSliceValue(v []int) Value {
 	return val
 }
 
-// Int64Value creates an INT64 Value.
+// Int64Value returns a [Value] containing v as an [INT64].
 func Int64Value(v int64) Value {
 	return Value{
 		vtype:   INT64,
@@ -119,12 +164,17 @@ func Int64Value(v int64) Value {
 	}
 }
 
-// Int64SliceValue creates an INT64SLICE Value.
+// Int64SliceValue returns a [Value] containing v as an [INT64SLICE].
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func Int64SliceValue(v []int64) Value {
 	return Value{vtype: INT64SLICE, slice: attribute.SliceValue(v)}
 }
 
-// Float64Value creates a FLOAT64 Value.
+// Float64Value returns a [Value] containing v as a [FLOAT64].
 func Float64Value(v float64) Value {
 	return Value{
 		vtype:   FLOAT64,
@@ -132,12 +182,17 @@ func Float64Value(v float64) Value {
 	}
 }
 
-// Float64SliceValue creates a FLOAT64SLICE Value.
+// Float64SliceValue returns a [Value] containing v as a [FLOAT64SLICE].
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func Float64SliceValue(v []float64) Value {
 	return Value{vtype: FLOAT64SLICE, slice: attribute.SliceValue(v)}
 }
 
-// StringValue creates a STRING Value.
+// StringValue returns a [Value] containing v as a [STRING].
 func StringValue(v string) Value {
 	return Value{
 		vtype:    STRING,
@@ -145,12 +200,22 @@ func StringValue(v string) Value {
 	}
 }
 
-// StringSliceValue creates a STRINGSLICE Value.
+// StringSliceValue returns a [Value] containing v as a [STRINGSLICE].
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.SliceValue(v)}
 }
 
-// ByteSliceValue creates a BYTESLICE Value.
+// ByteSliceValue returns a [Value] containing v as a [BYTESLICE].
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func ByteSliceValue(v []byte) Value {
 	return Value{
 		vtype:    BYTESLICE,
@@ -158,12 +223,22 @@ func ByteSliceValue(v []byte) Value {
 	}
 }
 
-// SliceValue creates a SLICE Value.
+// SliceValue returns a [Value] containing v as a [SLICE].
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 func SliceValue(v ...Value) Value {
 	return Value{vtype: SLICE, slice: sliceValue(v)}
 }
 
-// MapValue creates a MAP Value.
+// MapValue returns a [Value] containing v as a [MAP].
+//
+// Note that many observability backends are not optimized to query, index, or
+// aggregate complex attribute values. Complex values may also carry
+// additional performance overhead. Prefer primitive values when
+// possible.
 //
 // Users should avoid providing duplicate keys; many receivers handle maps
 // containing duplicate keys unpredictably.
@@ -171,7 +246,7 @@ func MapValue(v ...KeyValue) Value {
 	return Value{vtype: MAP, slice: mapValue(v)}
 }
 
-// Type returns a type of the Value.
+// Type returns v's type.
 func (v Value) Type() Type {
 	return v.vtype
 }
