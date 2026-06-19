@@ -25,11 +25,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- ⚠️ **Breaking Change:** Use `go.opentelemetry.io/otel/attribute.Value` and `go.opentelemetry.io/otel/attribute.KeyValue` for log bodies and attributes in `go.opentelemetry.io/otel/log`, `go.opentelemetry.io/otel/log/logtest`, `go.opentelemetry.io/otel/sdk/log`, and `go.opentelemetry.io/otel/sdk/log/logtest`.
+- ⚠️ **Breaking Change:** Use `go.opentelemetry.io/otel/attribute.Value` and `go.opentelemetry.io/otel/attribute.KeyValue` for log bodies and attributes in `go.opentelemetry.io/otel/log`, `go.opentelemetry.io/otel/log/logtest`, `go.opentelemetry.io/otel/sdk/log`, and `go.opentelemetry.io/otel/sdk/log/logtest`. (#8490)
 
 ### Removed
 
-- ⚠️ **Breaking Change:** Remove `Kind`, `Value`, `KeyValue`, value and key-value constructors, and attribute conversion helpers from `go.opentelemetry.io/otel/log`.
+- ⚠️ **Breaking Change:** Remove `Kind`, `Value`, `KeyValue`, value and key-value constructors, and attribute conversion helpers from `go.opentelemetry.io/otel/log`. (#8490)
 
 ### Fixed
 
