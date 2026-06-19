@@ -452,128 +452,144 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 }
 
 func BenchmarkSetAttributes(b *testing.B) {
-	for _, dedup := range []bool{true, false} {
-		dedupName := "DedupDisabled"
-		if dedup {
-			dedupName = "DedupEnabled"
-		}
-		var tp *sdktrace.TracerProvider
-		if dedup {
-			tp = sdktrace.NewTracerProvider()
-		} else {
-			tp = sdktrace.NewTracerProvider(sdktrace.WithAllowKeyDuplication())
-		}
+	tpDedup := sdktrace.NewTracerProvider()
+	defer func() { _ = tpDedup.Shutdown(context.Background()) }()
+	tpNoDedup := sdktrace.NewTracerProvider(sdktrace.WithAllowKeyDuplication())
+	defer func() { _ = tpNoDedup.Shutdown(context.Background()) }()
 
-		for _, duplicates := range []bool{true, false} {
-			dupName := "WithoutDuplicates"
-			if duplicates {
-				dupName = "WithDuplicates"
+	attrsDup := []attribute.KeyValue{
+		attribute.Bool("key1", false),
+		attribute.String("key2", "hello"),
+		attribute.Int64("key3", 123),
+		attribute.Float64("key4", 123.456),
+		attribute.Map(
+			"key5",
+			attribute.String("inner1", "val1"),
+			attribute.String("inner2", "val2"),
+		),
+		attribute.String("key2", "hello-updated"),
+		attribute.Int64("key3", 456),
+	}
+	attrsNoDup := []attribute.KeyValue{
+		attribute.Bool("key1", false),
+		attribute.String("key2", "hello"),
+		attribute.Int64("key3", 123),
+		attribute.Float64("key4", 123.456),
+		attribute.Map(
+			"key5",
+			attribute.String("inner1", "val1"),
+			attribute.String("inner2", "val2"),
+		),
+	}
+
+	benchmarks := []struct {
+		name  string
+		tp    *sdktrace.TracerProvider
+		attrs []attribute.KeyValue
+	}{
+		{
+			name:  "DedupEnabled/WithDuplicates",
+			tp:    tpDedup,
+			attrs: attrsDup,
+		},
+		{
+			name:  "DedupEnabled/WithoutDuplicates",
+			tp:    tpDedup,
+			attrs: attrsNoDup,
+		},
+		{
+			name:  "DedupDisabled/WithDuplicates",
+			tp:    tpNoDedup,
+			attrs: attrsDup,
+		},
+		{
+			name:  "DedupDisabled/WithoutDuplicates",
+			tp:    tpNoDedup,
+			attrs: attrsNoDup,
+		},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			tr := bm.tp.Tracer("bench")
+			ctx := b.Context()
+
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				_, span := tr.Start(ctx, "span")
+				span.SetAttributes(bm.attrs...)
+				span.End()
 			}
-
-			b.Run(fmt.Sprintf("%s/%s", dedupName, dupName), func(b *testing.B) {
-				tr := tp.Tracer("bench")
-				ctx := b.Context()
-
-				var attrs []attribute.KeyValue
-				if duplicates {
-					attrs = []attribute.KeyValue{
-						attribute.Bool("key1", false),
-						attribute.String("key2", "hello"),
-						attribute.Int64("key3", 123),
-						attribute.Float64("key4", 123.456),
-						attribute.Map(
-							"key5",
-							attribute.String("inner1", "val1"),
-							attribute.String("inner2", "val2"),
-						),
-						attribute.String("key2", "hello-updated"),
-						attribute.Int64("key3", 456),
-					}
-				} else {
-					attrs = []attribute.KeyValue{
-						attribute.Bool("key1", false),
-						attribute.String("key2", "hello"),
-						attribute.Int64("key3", 123),
-						attribute.Float64("key4", 123.456),
-						attribute.Map(
-							"key5",
-							attribute.String("inner1", "val1"),
-							attribute.String("inner2", "val2"),
-						),
-					}
-				}
-
-				b.ResetTimer()
-				b.ReportAllocs()
-				for i := 0; i < b.N; i++ {
-					_, span := tr.Start(ctx, "span")
-					span.SetAttributes(attrs...)
-					span.End()
-				}
-			})
-		}
-
-		_ = tp.Shutdown(b.Context())
+		})
 	}
 }
 
 func BenchmarkAddEvent(b *testing.B) {
-	for _, dedup := range []bool{true, false} {
-		dedupName := "DedupDisabled"
-		if dedup {
-			dedupName = "DedupEnabled"
-		}
-		var tp *sdktrace.TracerProvider
-		if dedup {
-			tp = sdktrace.NewTracerProvider()
-		} else {
-			tp = sdktrace.NewTracerProvider(sdktrace.WithAllowKeyDuplication())
-		}
+	tpDedup := sdktrace.NewTracerProvider()
+	defer func() { _ = tpDedup.Shutdown(context.Background()) }()
+	tpNoDedup := sdktrace.NewTracerProvider(sdktrace.WithAllowKeyDuplication())
+	defer func() { _ = tpNoDedup.Shutdown(context.Background()) }()
 
-		for _, duplicates := range []bool{true, false} {
-			dupName := "WithoutDuplicates"
-			if duplicates {
-				dupName = "WithDuplicates"
+	attrsDup := []attribute.KeyValue{
+		attribute.Bool("key1", false),
+		attribute.String("key2", "hello"),
+		attribute.Map(
+			"key3",
+			attribute.String("inner1", "val1"),
+			attribute.String("inner2", "val2"),
+		),
+		attribute.String("key2", "hello-updated"),
+	}
+	attrsNoDup := []attribute.KeyValue{
+		attribute.Bool("key1", false),
+		attribute.String("key2", "hello"),
+		attribute.Map(
+			"key3",
+			attribute.String("inner1", "val1"),
+			attribute.String("inner2", "val2"),
+		),
+	}
+
+	benchmarks := []struct {
+		name  string
+		tp    *sdktrace.TracerProvider
+		attrs []attribute.KeyValue
+	}{
+		{
+			name:  "DedupEnabled/WithDuplicates",
+			tp:    tpDedup,
+			attrs: attrsDup,
+		},
+		{
+			name:  "DedupEnabled/WithoutDuplicates",
+			tp:    tpDedup,
+			attrs: attrsNoDup,
+		},
+		{
+			name:  "DedupDisabled/WithDuplicates",
+			tp:    tpNoDedup,
+			attrs: attrsDup,
+		},
+		{
+			name:  "DedupDisabled/WithoutDuplicates",
+			tp:    tpNoDedup,
+			attrs: attrsNoDup,
+		},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			tr := bm.tp.Tracer("bench")
+			ctx := b.Context()
+
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				_, span := tr.Start(ctx, "span")
+				span.AddEvent("event", trace.WithAttributes(bm.attrs...))
+				span.End()
 			}
-
-			b.Run(fmt.Sprintf("%s/%s", dedupName, dupName), func(b *testing.B) {
-				tr := tp.Tracer("bench")
-				ctx := b.Context()
-
-				var attrs []attribute.KeyValue
-				if duplicates {
-					attrs = []attribute.KeyValue{
-						attribute.Bool("key1", false),
-						attribute.String("key2", "hello"),
-						attribute.Map(
-							"key3",
-							attribute.String("inner1", "val1"),
-							attribute.String("inner2", "val2"),
-						),
-						attribute.String("key2", "hello-updated"),
-					}
-				} else {
-					attrs = []attribute.KeyValue{
-						attribute.Bool("key1", false),
-						attribute.String("key2", "hello"),
-						attribute.Map(
-							"key3",
-							attribute.String("inner1", "val1"),
-							attribute.String("inner2", "val2"),
-						),
-					}
-				}
-
-				b.ResetTimer()
-				b.ReportAllocs()
-				for i := 0; i < b.N; i++ {
-					_, span := tr.Start(ctx, "span")
-					span.AddEvent("event", trace.WithAttributes(attrs...))
-					span.End()
-				}
-			})
-		}
-
-		_ = tp.Shutdown(b.Context())
+		})
 	}
 }
