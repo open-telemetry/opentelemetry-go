@@ -207,6 +207,8 @@ func SliceValue(v ...Value) Value {
 //
 // Users should avoid providing duplicate keys; many receivers handle maps
 // containing duplicate keys unpredictably.
+//
+// The order of v is not preserved.
 func MapValue(v ...KeyValue) Value {
 	return Value{vtype: MAP, slice: mapValue(v)}
 }

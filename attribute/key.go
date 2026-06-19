@@ -184,6 +184,8 @@ func (k Key) Slice(v ...Value) KeyValue {
 // Users should avoid providing duplicate keys; many receivers handle maps
 // containing duplicate keys unpredictably.
 //
+// The order of v is not preserved.
+//
 // If creating both a key and value at the same time, use the package-level [Map]
 // function.
 func (k Key) Map(v ...KeyValue) KeyValue {

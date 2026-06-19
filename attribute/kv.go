@@ -122,6 +122,8 @@ func Slice(k string, v ...Value) KeyValue {
 //
 // Users should avoid providing duplicate keys; many receivers handle maps
 // containing duplicate keys unpredictably.
+//
+// The order of v is not preserved.
 func Map(k string, v ...KeyValue) KeyValue {
 	return Key(k).Map(v...)
 }
