@@ -1258,6 +1258,46 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 			want:  attribute.StringValue(""),
 		},
 		{
+			name:  "StringSlice",
+			limit: 3,
+			input: attribute.StringSliceValue([]string{"ok", "toolong"}),
+			want:  attribute.StringSliceValue([]string{"ok", "too"}),
+		},
+		{
+			name:  "NestedSliceNoTruncation",
+			limit: 10,
+			input: attribute.SliceValue(
+				attribute.StringValue("short"),
+				attribute.StringSliceValue([]string{"ok", "fine"}),
+			),
+			want: attribute.SliceValue(
+				attribute.StringValue("short"),
+				attribute.StringSliceValue([]string{"ok", "fine"}),
+			),
+		},
+		{
+			name:  "NestedMapNoTruncation",
+			limit: 10,
+			input: attribute.MapValue(
+				attribute.String("short", "ok"),
+				attribute.StringSlice("strings", []string{"ok", "fine"}),
+			),
+			want: attribute.MapValue(
+				attribute.String("short", "ok"),
+				attribute.StringSlice("strings", []string{"ok", "fine"}),
+			),
+		},
+		{
+			name:  "StringSliceInNestedSlice",
+			limit: 3,
+			input: attribute.SliceValue(
+				attribute.StringSliceValue([]string{"ok", "toolong"}),
+			),
+			want: attribute.SliceValue(
+				attribute.StringSliceValue([]string{"ok", "too"}),
+			),
+		},
+		{
 			name:  "Slice",
 			limit: 0,
 			input: attribute.SliceValue(

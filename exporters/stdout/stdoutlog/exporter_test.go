@@ -416,6 +416,22 @@ func TestValueMarshalJSON(t *testing.T) {
 			want: `{"Type":"Bytes","Value":"AQID"}`,
 		},
 		{
+			value: attribute.BoolSliceValue([]bool{true, false}),
+			want:  `{"Type":"BoolSlice","Value":[true,false]}`,
+		},
+		{
+			value: attribute.Int64SliceValue([]int64{1, 2}),
+			want:  `{"Type":"Int64Slice","Value":[1,2]}`,
+		},
+		{
+			value: attribute.Float64SliceValue([]float64{1.2, 3.4}),
+			want:  `{"Type":"Float64Slice","Value":[1.2,3.4]}`,
+		},
+		{
+			value: attribute.StringSliceValue([]string{"one", "two"}),
+			want:  `{"Type":"StringSlice","Value":["one","two"]}`,
+		},
+		{
 			value: attribute.SliceValue(
 				attribute.Value{},
 				attribute.BoolValue(true),
