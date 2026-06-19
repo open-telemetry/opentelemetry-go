@@ -46,12 +46,12 @@ func TestLoggerEmit(t *testing.T) {
 	r := log.Record{}
 	r.SetEventName("testing.name")
 	r.SetTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
-	r.SetBody(log.StringValue("testing body value"))
+	r.SetBody(attribute.StringValue("testing body value"))
 	r.SetSeverity(log.SeverityInfo)
 	r.SetSeverityText("testing text")
 	r.AddAttributes(
-		log.String("k1", "str"),
-		log.Float64("k2", 1.0),
+		attribute.String("k1", "str"),
+		attribute.Float64("k2", 1.0),
 	)
 	r.SetObservedTimestamp(time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC))
 
@@ -60,17 +60,17 @@ func TestLoggerEmit(t *testing.T) {
 
 	rWithAllowKeyDuplication := r
 	rWithAllowKeyDuplication.AddAttributes(
-		log.String("k1", "str1"),
+		attribute.String("k1", "str1"),
 	)
-	rWithAllowKeyDuplication.SetBody(log.MapValue(
-		log.Int64("1", 2),
-		log.Int64("1", 3),
+	rWithAllowKeyDuplication.SetBody(attribute.MapValue(
+		attribute.Int64("1", 2),
+		attribute.Int64("1", 3),
 	))
 
 	rWithDuplicatesInBody := r
-	rWithDuplicatesInBody.SetBody(log.MapValue(
-		log.Int64("1", 2),
-		log.Int64("1", 3),
+	rWithDuplicatesInBody.SetBody(attribute.MapValue(
+		attribute.Int64("1", 2),
+		attribute.Int64("1", 3),
 	))
 
 	contextWithSpanContext := trace.ContextWithSpanContext(
@@ -118,9 +118,9 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 3,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
 					},
 					nFront: 2,
 				},
@@ -159,9 +159,9 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 3,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
 					},
 					nFront:     2,
 					traceID:    trace.TraceID{0o1},
@@ -193,9 +193,9 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 3,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
 					},
 					nFront: 2,
 				},
@@ -224,9 +224,9 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 3,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
 					},
 					nFront: 2,
 				},
@@ -256,10 +256,10 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 5,
 					attributeCountLimit:       5,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
-						log.String("k1", "str1"),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
+						attribute.String("k1", "str1"),
 					},
 					nFront:       3,
 					allowDupKeys: true,
@@ -281,9 +281,10 @@ func TestLoggerEmit(t *testing.T) {
 				{
 					eventName: rWithDuplicatesInBody.EventName(),
 					timestamp: rWithDuplicatesInBody.Timestamp(),
-					body: log.MapValue(
-						log.Int64("1", 3),
+					body: attribute.MapValue(
+						attribute.Int64("1", 3),
 					),
+
 					severity:                  rWithDuplicatesInBody.Severity(),
 					severityText:              rWithDuplicatesInBody.SeverityText(),
 					observedTimestamp:         rWithDuplicatesInBody.ObservedTimestamp(),
@@ -291,9 +292,9 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 5,
 					attributeCountLimit:       5,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
 					},
 					nFront: 2,
 				},
@@ -320,38 +321,38 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 
 	t.Run("AddsMissing", func(t *testing.T) {
 		var in log.Record
-		in.SetBody(log.StringValue("boom"))
+		in.SetBody(attribute.StringValue("boom"))
 		in.SetSeverity(log.SeverityError)
 		in.SetErr(errors.New("boom"))
 		got := l.newRecord(t.Context(), in)
 
-		var gotAttrs []log.KeyValue
-		got.WalkAttributes(func(kv log.KeyValue) bool {
+		var gotAttrs []attribute.KeyValue
+		got.WalkAttributes(func(kv attribute.KeyValue) bool {
 			gotAttrs = append(gotAttrs, kv)
 			return true
 		})
 
 		assert.Len(t, gotAttrs, 2)
-		assert.Contains(t, gotAttrs, log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"))
-		assert.Contains(t, gotAttrs, log.String(string(semconv.ExceptionMessageKey), "boom"))
+		assert.Contains(t, gotAttrs, attribute.String(string(semconv.ExceptionTypeKey), "*errors.errorString"))
+		assert.Contains(t, gotAttrs, attribute.String(string(semconv.ExceptionMessageKey), "boom"))
 	})
 
 	t.Run("ShortCircuitsAtAttributeLimit", func(t *testing.T) {
 		var in log.Record
-		in.SetBody(log.StringValue("boom"))
+		in.SetBody(attribute.StringValue("boom"))
 		in.SetSeverity(log.SeverityError)
 		in.SetErr(errors.New("boom"))
-		in.AddAttributes(log.String("k1", "v1"))
+		in.AddAttributes(attribute.String("k1", "v1"))
 
 		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(2)), instrumentation.Scope{})
 		got := lLimited.newRecord(t.Context(), in)
 
 		var gotType, gotMessage string
-		got.WalkAttributes(func(kv log.KeyValue) bool {
+		got.WalkAttributes(func(kv attribute.KeyValue) bool {
 			switch kv.Key {
-			case string(semconv.ExceptionTypeKey):
+			case semconv.ExceptionTypeKey:
 				gotType = kv.Value.AsString()
-			case string(semconv.ExceptionMessageKey):
+			case semconv.ExceptionMessageKey:
 				gotMessage = kv.Value.AsString()
 			}
 			return true
@@ -363,19 +364,19 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 
 	t.Run("NoSlotsLeft", func(t *testing.T) {
 		var in log.Record
-		in.SetBody(log.StringValue("boom"))
+		in.SetBody(attribute.StringValue("boom"))
 		in.SetSeverity(log.SeverityError)
 		in.SetErr(errors.New("boom"))
-		in.AddAttributes(log.String("k1", "v1"))
+		in.AddAttributes(attribute.String("k1", "v1"))
 		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(1)), instrumentation.Scope{})
 		got := lLimited.newRecord(t.Context(), in)
 
 		var gotType, gotMessage string
-		got.WalkAttributes(func(kv log.KeyValue) bool {
+		got.WalkAttributes(func(kv attribute.KeyValue) bool {
 			switch kv.Key {
-			case string(semconv.ExceptionTypeKey):
+			case semconv.ExceptionTypeKey:
 				gotType = kv.Value.AsString()
-			case string(semconv.ExceptionMessageKey):
+			case semconv.ExceptionMessageKey:
 				gotMessage = kv.Value.AsString()
 			}
 			return true
@@ -448,19 +449,19 @@ func TestNewRecordSkipsExceptionWhenPresent(t *testing.T) {
 
 	t.Run("ExistingMessage", func(t *testing.T) {
 		var r log.Record
-		r.SetBody(log.StringValue("boom"))
+		r.SetBody(attribute.StringValue("boom"))
 		r.SetSeverity(log.SeverityError)
 		r.SetErr(errors.New("boom"))
-		r.AddAttributes(log.String(string(semconv.ExceptionMessageKey), "existing.message"))
+		r.AddAttributes(attribute.String(string(semconv.ExceptionMessageKey), "existing.message"))
 
 		got := l.newRecord(t.Context(), r)
 
 		var gotType, gotMessage string
-		got.WalkAttributes(func(kv log.KeyValue) bool {
+		got.WalkAttributes(func(kv attribute.KeyValue) bool {
 			switch kv.Key {
-			case string(semconv.ExceptionTypeKey):
+			case semconv.ExceptionTypeKey:
 				gotType = kv.Value.AsString()
-			case string(semconv.ExceptionMessageKey):
+			case semconv.ExceptionMessageKey:
 				gotMessage = kv.Value.AsString()
 			}
 			return true
@@ -472,19 +473,19 @@ func TestNewRecordSkipsExceptionWhenPresent(t *testing.T) {
 
 	t.Run("ExistingType", func(t *testing.T) {
 		var r log.Record
-		r.SetBody(log.StringValue("boom"))
+		r.SetBody(attribute.StringValue("boom"))
 		r.SetSeverity(log.SeverityError)
 		r.SetErr(errors.New("boom"))
-		r.AddAttributes(log.String(string(semconv.ExceptionTypeKey), "existing.type"))
+		r.AddAttributes(attribute.String(string(semconv.ExceptionTypeKey), "existing.type"))
 
 		got := l.newRecord(t.Context(), r)
 
 		var gotType, gotMessage string
-		got.WalkAttributes(func(kv log.KeyValue) bool {
+		got.WalkAttributes(func(kv attribute.KeyValue) bool {
 			switch kv.Key {
-			case string(semconv.ExceptionTypeKey):
+			case semconv.ExceptionTypeKey:
 				gotType = kv.Value.AsString()
-			case string(semconv.ExceptionMessageKey):
+			case semconv.ExceptionMessageKey:
 				gotMessage = kv.Value.AsString()
 			}
 			return true

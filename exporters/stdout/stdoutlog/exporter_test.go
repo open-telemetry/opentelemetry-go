@@ -313,15 +313,14 @@ func getRecord(now time.Time) sdklog.Record {
 		ObservedTimestamp: now,
 		Severity:          log.SeverityInfo1,
 		SeverityText:      "INFO",
-		Body:              log.StringValue("test"),
-		Attributes: []log.KeyValue{
-			// More than 5 attributes to test back slice
-			log.String("key", "value"),
-			log.String("key2", "value"),
-			log.String("key3", "value"),
-			log.String("key4", "value"),
-			log.String("key5", "value"),
-			log.Bool("bool", true),
+		Body:              attribute.StringValue("test"),
+		Attributes: []attribute.KeyValue{
+			attribute.String("key", "value"),
+			attribute.String("key2", "value"),
+			attribute.String("key3", "value"),
+			attribute.String("key4", "value"),
+			attribute.String("key5", "value"),
+			attribute.Bool("bool", true),
 		},
 		TraceID:    traceID,
 		SpanID:     spanID,
@@ -388,75 +387,75 @@ func TestExporterConcurrentSafe(t *testing.T) {
 
 func TestValueMarshalJSON(t *testing.T) {
 	testCases := []struct {
-		value log.Value
+		value attribute.Value
 		want  string
 	}{
 		{
-			value: log.Empty("test").Value,
+			value: attribute.Value{},
 			want:  `{"Type":"Empty","Value":null}`,
 		},
 		{
-			value: log.BoolValue(true),
+			value: attribute.BoolValue(true),
 			want:  `{"Type":"Bool","Value":true}`,
 		},
 		{
-			value: log.Float64Value(3.14),
+			value: attribute.Float64Value(3.14),
 			want:  `{"Type":"Float64","Value":3.14}`,
 		},
 		{
-			value: log.Int64Value(42),
+			value: attribute.Int64Value(42),
 			want:  `{"Type":"Int64","Value":42}`,
 		},
 		{
-			value: log.StringValue("hello"),
+			value: attribute.StringValue("hello"),
 			want:  `{"Type":"String","Value":"hello"}`,
 		},
 		{
-			value: log.BytesValue([]byte{1, 2, 3}),
+			value: attribute.ByteSliceValue([]byte{1, 2, 3}),
 			// The base64 encoding of []byte{1, 2, 3} is "AQID".
 			want: `{"Type":"Bytes","Value":"AQID"}`,
 		},
 		{
-			value: log.SliceValue(
-				log.Empty("empty").Value,
-				log.BoolValue(true),
-				log.Float64Value(2.2),
-				log.IntValue(3),
-				log.StringValue("4"),
-				log.BytesValue([]byte{5}),
-				log.SliceValue(
-					log.IntValue(6),
-					log.MapValue(
-						log.Int("seven", 7),
+			value: attribute.SliceValue(
+				attribute.Value{},
+				attribute.BoolValue(true),
+				attribute.Float64Value(2.2),
+				attribute.IntValue(3),
+				attribute.StringValue("4"),
+				attribute.ByteSliceValue([]byte{5}),
+				attribute.SliceValue(
+					attribute.IntValue(6),
+					attribute.MapValue(
+						attribute.Int("seven", 7),
 					),
 				),
-				log.MapValue(
-					log.Int("nine", 9),
+				attribute.MapValue(
+					attribute.Int("nine", 9),
 				),
 			),
 			want: `{"Type":"Slice","Value":[{"Type":"Empty","Value":null},{"Type":"Bool","Value":true},{"Type":"Float64","Value":2.2},{"Type":"Int64","Value":3},{"Type":"String","Value":"4"},{"Type":"Bytes","Value":"BQ=="},{"Type":"Slice","Value":[{"Type":"Int64","Value":6},{"Type":"Map","Value":[{"Key":"seven","Value":{"Type":"Int64","Value":7}}]}]},{"Type":"Map","Value":[{"Key":"nine","Value":{"Type":"Int64","Value":9}}]}]}`,
 		},
 		{
-			value: log.MapValue(
-				log.Empty("empty"),
-				log.Bool("one", true),
-				log.Float64("two", 2.2),
-				log.Int("three", 3),
-				log.String("four", "4"),
-				log.Bytes("five", []byte{5}),
-				log.Slice(
+			value: attribute.MapValue(
+				attribute.KeyValue{Key: "empty"},
+				attribute.Bool("one", true),
+				attribute.Float64("two", 2.2),
+				attribute.Int("three", 3),
+				attribute.String("four", "4"),
+				attribute.ByteSlice("five", []byte{5}),
+				attribute.Slice(
 					"six",
-					log.IntValue(6),
-					log.MapValue(
-						log.Int("seven", 7),
+					attribute.IntValue(6),
+					attribute.MapValue(
+						attribute.Int("seven", 7),
 					),
 				),
-				log.Map(
+				attribute.Map(
 					"eight",
-					log.Int("nine", 9),
+					attribute.Int("nine", 9),
 				),
 			),
-			want: `{"Type":"Map","Value":[{"Key":"empty","Value":{"Type":"Empty","Value":null}},{"Key":"one","Value":{"Type":"Bool","Value":true}},{"Key":"two","Value":{"Type":"Float64","Value":2.2}},{"Key":"three","Value":{"Type":"Int64","Value":3}},{"Key":"four","Value":{"Type":"String","Value":"4"}},{"Key":"five","Value":{"Type":"Bytes","Value":"BQ=="}},{"Key":"six","Value":{"Type":"Slice","Value":[{"Type":"Int64","Value":6},{"Type":"Map","Value":[{"Key":"seven","Value":{"Type":"Int64","Value":7}}]}]}},{"Key":"eight","Value":{"Type":"Map","Value":[{"Key":"nine","Value":{"Type":"Int64","Value":9}}]}}]}`,
+			want: `{"Type":"Map","Value":[{"Key":"eight","Value":{"Type":"Map","Value":[{"Key":"nine","Value":{"Type":"Int64","Value":9}}]}},{"Key":"empty","Value":{"Type":"Empty","Value":null}},{"Key":"five","Value":{"Type":"Bytes","Value":"BQ=="}},{"Key":"four","Value":{"Type":"String","Value":"4"}},{"Key":"one","Value":{"Type":"Bool","Value":true}},{"Key":"six","Value":{"Type":"Slice","Value":[{"Type":"Int64","Value":6},{"Type":"Map","Value":[{"Key":"seven","Value":{"Type":"Int64","Value":7}}]}]}},{"Key":"three","Value":{"Type":"Int64","Value":3}},{"Key":"two","Value":{"Type":"Float64","Value":2.2}}]}`,
 		},
 	}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -24,25 +25,25 @@ func BenchmarkLoggerEmit(b *testing.B) {
 	r := log.Record{}
 	r.SetTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
 	r.SetObservedTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
-	r.SetBody(log.StringValue("testing body value"))
+	r.SetBody(attribute.StringValue("testing body value"))
 	r.SetSeverity(log.SeverityInfo)
 	r.SetSeverityText("testing text")
 
 	r.AddAttributes(
-		log.String("k1", "str"),
-		log.Float64("k2", 1.0),
-		log.Int("k3", 2),
-		log.Bool("k4", true),
-		log.Bytes("k5", []byte{1}),
+		attribute.String("k1", "str"),
+		attribute.Float64("k2", 1.0),
+		attribute.Int("k3", 2),
+		attribute.Bool("k4", true),
+		attribute.ByteSlice("k5", []byte{1}),
 	)
 
 	r10 := r
 	r10.AddAttributes(
-		log.String("k6", "str"),
-		log.Float64("k7", 1.0),
-		log.Int("k8", 2),
-		log.Bool("k9", true),
-		log.Bytes("k10", []byte{1}),
+		attribute.String("k6", "str"),
+		attribute.Float64("k7", 1.0),
+		attribute.Int("k8", 2),
+		attribute.Bool("k9", true),
+		attribute.ByteSlice("k10", []byte{1}),
 	)
 
 	require.Equal(b, 5, r.AttributesLen())
@@ -142,8 +143,8 @@ func BenchmarkLoggerSetExceptionAttributesAndEmit(b *testing.B) {
 	b.ResetTimer()
 	for b.Loop() {
 		r := log.Record{}
-		r.AddAttributes(log.String(string(semconv.ExceptionMessageKey), err.Error()))
-		r.AddAttributes(log.String(string(semconv.ExceptionTypeKey), errorType(err)))
+		r.AddAttributes(attribute.String(string(semconv.ExceptionMessageKey), err.Error()))
+		r.AddAttributes(attribute.String(string(semconv.ExceptionTypeKey), errorType(err)))
 		logger.Emit(b.Context(), r)
 	}
 }

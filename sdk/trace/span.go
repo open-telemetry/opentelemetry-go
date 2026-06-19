@@ -353,7 +353,8 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 func dedupAttr(attr attribute.KeyValue) attribute.KeyValue {
 	switch attr.Value.Type() {
 	case attribute.SLICE, attribute.MAP:
-		return attrdedup.KeyValue(attr)
+		attr, _ = attrdedup.KeyValue(attr)
+		return attr
 	default:
 		return attr
 	}
@@ -730,7 +731,7 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
-	attrs := attrdedup.KeyValues(c.Attributes())
+	attrs, _ := attrdedup.KeyValues(c.Attributes())
 	e := Event{Name: name, Attributes: attrs, Time: c.Timestamp()}
 
 	// Discard attributes over limit.
@@ -904,7 +905,7 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		return
 	}
 
-	attrs := attrdedup.KeyValues(link.Attributes)
+	attrs, _ := attrdedup.KeyValues(link.Attributes)
 	l := Link{SpanContext: link.SpanContext, Attributes: attrs}
 
 	// Discard attributes over limit.
