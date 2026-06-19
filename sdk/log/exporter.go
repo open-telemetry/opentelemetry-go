@@ -345,9 +345,8 @@ func newMetricsExporter(exporter Exporter, inst *observ.BLP) Exporter {
 // them to the wrapped Exporter. Error returned from wrapped exporter
 // is not considered as per specification (to be measured by exporter).
 func (e *metricsExporter) Export(ctx context.Context, records []Record) error {
-	if e.inst == nil {
-		return nil
+	if e.inst != nil {
+		e.inst.Processed(ctx, int64(len(records)))
 	}
-	e.inst.Processed(ctx, int64(len(records)))
 	return e.Exporter.Export(ctx, records)
 }
