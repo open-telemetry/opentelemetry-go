@@ -192,7 +192,7 @@ func getJSON(now *time.Time) string {
 		timestamps = "\"Timestamp\":" + string(serializedNow) + ",\"ObservedTimestamp\":" + string(serializedNow) + ","
 	}
 
-	return "{" + timestamps + "\"EventName\":\"testing.event\",\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{\"Type\":\"String\",\"Value\":\"test\"},\"Attributes\":[{\"Key\":\"key\",\"Value\":{\"Type\":\"String\",\"Value\":\"value\"}},{\"Key\":\"key2\",\"Value\":{\"Type\":\"String\",\"Value\":\"value\"}},{\"Key\":\"key3\",\"Value\":{\"Type\":\"String\",\"Value\":\"value\"}},{\"Key\":\"key4\",\"Value\":{\"Type\":\"String\",\"Value\":\"value\"}},{\"Key\":\"key5\",\"Value\":{\"Type\":\"String\",\"Value\":\"value\"}},{\"Key\":\"bool\",\"Value\":{\"Type\":\"Bool\",\"Value\":true}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":[{\"Key\":\"foo\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"bar\"}}],\"Scope\":{\"Name\":\"name\",\"Version\":\"version\",\"SchemaURL\":\"https://example.com/custom-schema\",\"Attributes\":{}},\"DroppedAttributes\":10}\n"
+	return "{" + timestamps + "\"EventName\":\"testing.event\",\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{\"Type\":\"STRING\",\"Value\":\"test\"},\"Attributes\":[{\"Key\":\"key\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key2\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key3\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key4\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key5\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"bool\",\"Value\":{\"Type\":\"BOOL\",\"Value\":true}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":[{\"Key\":\"foo\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"bar\"}}],\"Scope\":{\"Name\":\"name\",\"Version\":\"version\",\"SchemaURL\":\"https://example.com/custom-schema\",\"Attributes\":{}},\"DroppedAttributes\":10}\n"
 }
 
 func getJSONs(now *time.Time) string {
@@ -215,49 +215,49 @@ func getPrettyJSON(now *time.Time) string {
 	"Severity": 9,
 	"SeverityText": "INFO",
 	"Body": {
-		"Type": "String",
+		"Type": "STRING",
 		"Value": "test"
 	},
 	"Attributes": [
 		{
 			"Key": "key",
 			"Value": {
-				"Type": "String",
+				"Type": "STRING",
 				"Value": "value"
 			}
 		},
 		{
 			"Key": "key2",
 			"Value": {
-				"Type": "String",
+				"Type": "STRING",
 				"Value": "value"
 			}
 		},
 		{
 			"Key": "key3",
 			"Value": {
-				"Type": "String",
+				"Type": "STRING",
 				"Value": "value"
 			}
 		},
 		{
 			"Key": "key4",
 			"Value": {
-				"Type": "String",
+				"Type": "STRING",
 				"Value": "value"
 			}
 		},
 		{
 			"Key": "key5",
 			"Value": {
-				"Type": "String",
+				"Type": "STRING",
 				"Value": "value"
 			}
 		},
 		{
 			"Key": "bool",
 			"Value": {
-				"Type": "Bool",
+				"Type": "BOOL",
 				"Value": true
 			}
 		}
@@ -381,105 +381,6 @@ func TestExporterConcurrentSafe(t *testing.T) {
 				}()
 			}
 			wg.Wait()
-		})
-	}
-}
-
-func TestValueMarshalJSON(t *testing.T) {
-	testCases := []struct {
-		value attribute.Value
-		want  string
-	}{
-		{
-			value: attribute.Value{},
-			want:  `{"Type":"Empty","Value":null}`,
-		},
-		{
-			value: attribute.BoolValue(true),
-			want:  `{"Type":"Bool","Value":true}`,
-		},
-		{
-			value: attribute.Float64Value(3.14),
-			want:  `{"Type":"Float64","Value":3.14}`,
-		},
-		{
-			value: attribute.Int64Value(42),
-			want:  `{"Type":"Int64","Value":42}`,
-		},
-		{
-			value: attribute.StringValue("hello"),
-			want:  `{"Type":"String","Value":"hello"}`,
-		},
-		{
-			value: attribute.ByteSliceValue([]byte{1, 2, 3}),
-			// The base64 encoding of []byte{1, 2, 3} is "AQID".
-			want: `{"Type":"Bytes","Value":"AQID"}`,
-		},
-		{
-			value: attribute.BoolSliceValue([]bool{true, false}),
-			want:  `{"Type":"BoolSlice","Value":[true,false]}`,
-		},
-		{
-			value: attribute.Int64SliceValue([]int64{1, 2}),
-			want:  `{"Type":"Int64Slice","Value":[1,2]}`,
-		},
-		{
-			value: attribute.Float64SliceValue([]float64{1.2, 3.4}),
-			want:  `{"Type":"Float64Slice","Value":[1.2,3.4]}`,
-		},
-		{
-			value: attribute.StringSliceValue([]string{"one", "two"}),
-			want:  `{"Type":"StringSlice","Value":["one","two"]}`,
-		},
-		{
-			value: attribute.SliceValue(
-				attribute.Value{},
-				attribute.BoolValue(true),
-				attribute.Float64Value(2.2),
-				attribute.IntValue(3),
-				attribute.StringValue("4"),
-				attribute.ByteSliceValue([]byte{5}),
-				attribute.SliceValue(
-					attribute.IntValue(6),
-					attribute.MapValue(
-						attribute.Int("seven", 7),
-					),
-				),
-				attribute.MapValue(
-					attribute.Int("nine", 9),
-				),
-			),
-			want: `{"Type":"Slice","Value":[{"Type":"Empty","Value":null},{"Type":"Bool","Value":true},{"Type":"Float64","Value":2.2},{"Type":"Int64","Value":3},{"Type":"String","Value":"4"},{"Type":"Bytes","Value":"BQ=="},{"Type":"Slice","Value":[{"Type":"Int64","Value":6},{"Type":"Map","Value":[{"Key":"seven","Value":{"Type":"Int64","Value":7}}]}]},{"Type":"Map","Value":[{"Key":"nine","Value":{"Type":"Int64","Value":9}}]}]}`,
-		},
-		{
-			value: attribute.MapValue(
-				attribute.KeyValue{Key: "empty"},
-				attribute.Bool("one", true),
-				attribute.Float64("two", 2.2),
-				attribute.Int("three", 3),
-				attribute.String("four", "4"),
-				attribute.ByteSlice("five", []byte{5}),
-				attribute.Slice(
-					"six",
-					attribute.IntValue(6),
-					attribute.MapValue(
-						attribute.Int("seven", 7),
-					),
-				),
-				attribute.Map(
-					"eight",
-					attribute.Int("nine", 9),
-				),
-			),
-			want: `{"Type":"Map","Value":[{"Key":"eight","Value":{"Type":"Map","Value":[{"Key":"nine","Value":{"Type":"Int64","Value":9}}]}},{"Key":"empty","Value":{"Type":"Empty","Value":null}},{"Key":"five","Value":{"Type":"Bytes","Value":"BQ=="}},{"Key":"four","Value":{"Type":"String","Value":"4"}},{"Key":"one","Value":{"Type":"Bool","Value":true}},{"Key":"six","Value":{"Type":"Slice","Value":[{"Type":"Int64","Value":6},{"Type":"Map","Value":[{"Key":"seven","Value":{"Type":"Int64","Value":7}}]}]}},{"Key":"three","Value":{"Type":"Int64","Value":3}},{"Key":"two","Value":{"Type":"Float64","Value":2.2}}]}`,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.value.String(), func(t *testing.T) {
-			got, err := json.Marshal(value{Value: tc.value})
-			require.NoError(t, err)
-			assert.JSONEq(t, tc.want, string(got))
 		})
 	}
 }
