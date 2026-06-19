@@ -45,53 +45,18 @@ const (
 	// STRING identifies a Value containing a string.
 	STRING
 	// BOOLSLICE identifies a Value containing a []bool.
-	//
-	// Note that many observability backends are not optimized to query, index,
-	// or aggregate complex attribute values. Complex values may also carry
-	// additional performance overhead. Prefer primitive values
-	// when possible.
 	BOOLSLICE
 	// INT64SLICE identifies a Value containing a []int64.
-	//
-	// Note that many observability backends are not optimized to query, index,
-	// or aggregate complex attribute values. Complex values may also carry
-	// additional performance overhead. Prefer primitive values
-	// when possible.
 	INT64SLICE
 	// FLOAT64SLICE identifies a Value containing a []float64.
-	//
-	// Note that many observability backends are not optimized to query, index,
-	// or aggregate complex attribute values. Complex values may also carry
-	// additional performance overhead. Prefer primitive values
-	// when possible.
 	FLOAT64SLICE
 	// STRINGSLICE identifies a Value containing a []string.
-	//
-	// Note that many observability backends are not optimized to query, index,
-	// or aggregate complex attribute values. Complex values may also carry
-	// additional performance overhead. Prefer primitive values
-	// when possible.
 	STRINGSLICE
 	// BYTESLICE identifies a Value containing a []byte.
-	//
-	// Note that many observability backends are not optimized to query, index,
-	// or aggregate complex attribute values. Complex values may also carry
-	// additional performance overhead. Prefer primitive values
-	// when possible.
 	BYTESLICE
 	// SLICE identifies a Value containing a []Value.
-	//
-	// Note that many observability backends are not optimized to query, index,
-	// or aggregate complex attribute values. Complex values may also carry
-	// additional performance overhead. Prefer primitive values
-	// when possible.
 	SLICE
 	// MAP identifies a Value containing a []KeyValue representation of a map.
-	//
-	// Note that many observability backends are not optimized to query, index,
-	// or aggregate complex attribute values. Complex values may also carry
-	// additional performance overhead. Prefer primitive values
-	// when possible.
 	//
 	// Note that MAP values may contain duplicate keys if duplicate keys are
 	// provided when creating the value.
