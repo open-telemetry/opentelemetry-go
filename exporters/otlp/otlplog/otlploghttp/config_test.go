@@ -554,6 +554,23 @@ func assertTLSConfig(t *testing.T, want, got setting[*tls.Config]) {
 	assert.Equal(t, want.Value.Certificates, got.Value.Certificates, "Certificates")
 }
 
+func TestWithEncoding(t *testing.T) {
+	t.Run("Default", func(t *testing.T) {
+		c := newConfig(nil)
+		assert.Equal(t, ProtoEncoding, c.encoding.Value)
+	})
+
+	t.Run("JSON", func(t *testing.T) {
+		c := newConfig([]Option{WithEncoding(JSONEncoding)})
+		assert.Equal(t, JSONEncoding, c.encoding.Value)
+	})
+
+	t.Run("Proto", func(t *testing.T) {
+		c := newConfig([]Option{WithEncoding(ProtoEncoding)})
+		assert.Equal(t, ProtoEncoding, c.encoding.Value)
+	})
+}
+
 func TestWithProxy(t *testing.T) {
 	proxy := func(*http.Request) (*url.URL, error) { return nil, nil }
 	opts := []Option{WithProxy(HTTPTransportProxyFunc(proxy))}
