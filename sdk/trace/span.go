@@ -391,7 +391,7 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 		return attr
 	case attribute.SLICE:
 		v := attr.Value.AsSlice()
-		if !slices.ContainsFunc(v, func(e attribute.Value) bool { return needsTruncation(limit, e) }) {
+		if !slices.ContainsFunc(v, func(e attribute.Value) bool { return attrnorm.NeedsTruncation(limit, e) }) {
 			return attr
 		}
 		newV := make([]attribute.Value, len(v))
@@ -401,7 +401,7 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 		return attr.Key.Slice(newV...)
 	case attribute.MAP:
 		v := attr.Value.AsMap()
-		if !slices.ContainsFunc(v, func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) }) {
+		if !slices.ContainsFunc(v, func(kv attribute.KeyValue) bool { return attrnorm.NeedsTruncation(limit, kv.Value) }) {
 			return attr
 		}
 		newV := make([]attribute.KeyValue, len(v))
@@ -441,7 +441,7 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 		}
 	case attribute.SLICE:
 		sl := v.AsSlice()
-		if !slices.ContainsFunc(sl, func(e attribute.Value) bool { return needsTruncation(limit, e) }) {
+		if !slices.ContainsFunc(sl, func(e attribute.Value) bool { return attrnorm.NeedsTruncation(limit, e) }) {
 			return v
 		}
 		newSl := make([]attribute.Value, len(sl))
@@ -451,7 +451,7 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 		return attribute.SliceValue(newSl...)
 	case attribute.MAP:
 		m := v.AsMap()
-		if !slices.ContainsFunc(m, func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) }) {
+		if !slices.ContainsFunc(m, func(kv attribute.KeyValue) bool { return attrnorm.NeedsTruncation(limit, kv.Value) }) {
 			return v
 		}
 		newM := make([]attribute.KeyValue, len(m))
@@ -466,30 +466,6 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 
 
 
-// needsTruncation reports whether v would be modified by truncateValue for the
-// given limit.
-func needsTruncation(limit int, v attribute.Value) bool {
-	switch v.Type() {
-	case attribute.STRING:
-		return attrnorm.StringNeedsTruncation(limit, v.AsString())
-	case attribute.BYTESLICE:
-		// len(v.AsString()) is identical to len(v.AsByteSlice()) but
-		// avoids memory allocation.
-		if limit >= 0 && len(v.AsString()) > limit {
-			return true
-		}
-	case attribute.STRINGSLICE:
-		return attrnorm.StringSliceNeedsTruncation(limit, v)
-	case attribute.SLICE:
-		return slices.ContainsFunc(v.AsSlice(), func(e attribute.Value) bool { return needsTruncation(limit, e) })
-	case attribute.MAP:
-		return slices.ContainsFunc(
-			v.AsMap(),
-			func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) },
-		)
-	}
-	return false
-}
 
 
 // End ends the span. This method does nothing if the span is already ended or
