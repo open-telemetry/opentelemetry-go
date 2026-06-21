@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestStringNeedsTruncation(t *testing.T) {
@@ -182,5 +184,112 @@ func TestTruncate(t *testing.T) {
 				)
 			})
 		}
+	}
+}
+
+func TestStringSliceNeedsTruncation(t *testing.T) {
+	tests := []struct {
+		name  string
+		limit int
+		value attribute.Value
+		want  bool
+	}{
+		// Empty slice: no elements to check.
+		{
+			name:  "empty",
+			limit: 0,
+			value: attribute.StringSliceValue([]string{}),
+			want:  false,
+		},
+		// One element ([1]string bucket): within limit.
+		{
+			name:  "one/ascii_under_limit",
+			limit: 5,
+			value: attribute.StringSliceValue([]string{"hello"}),
+			want:  false,
+		},
+		// One element ([1]string bucket): exceeds limit.
+		{
+			name:  "one/ascii_exceeds",
+			limit: 3,
+			value: attribute.StringSliceValue([]string{"hello"}),
+			want:  true,
+		},
+		// Two elements ([2]string bucket): both within limit.
+		{
+			name:  "two/ascii_under_limit",
+			limit: 5,
+			value: attribute.StringSliceValue([]string{"hello", "world"}),
+			want:  false,
+		},
+		// Two elements ([2]string bucket): second exceeds limit.
+		{
+			name:  "two/ascii_exceeds",
+			limit: 3,
+			value: attribute.StringSliceValue([]string{"hi", "hello"}),
+			want:  true,
+		},
+		// Three elements ([3]string bucket): all within limit.
+		{
+			name:  "three/ascii_under_limit",
+			limit: 5,
+			value: attribute.StringSliceValue([]string{"one", "two", "three"}),
+			want:  false,
+		},
+		// Three elements ([3]string bucket): middle exceeds limit.
+		{
+			name:  "three/ascii_exceeds",
+			limit: 3,
+			value: attribute.StringSliceValue([]string{"ab", "abcd", "cd"}),
+			want:  true,
+		},
+		// Four elements (reflect path): all within limit.
+		{
+			name:  "four/ascii_under_limit",
+			limit: 5,
+			value: attribute.StringSliceValue([]string{"a", "b", "c", "d"}),
+			want:  false,
+		},
+		// Four elements (reflect path): last exceeds limit.
+		{
+			name:  "four/ascii_exceeds",
+			limit: 3,
+			value: attribute.StringSliceValue([]string{"a", "b", "c", "abcd"}),
+			want:  true,
+		},
+		// Multibyte: byte length exceeds limit but rune count does not.
+		{
+			name:  "one/multibyte_under_limit",
+			limit: 3,
+			value: attribute.StringSliceValue([]string{"日本語"}), // 3 runes, 9 bytes
+			want:  false,
+		},
+		// Multibyte: rune count exceeds limit.
+		{
+			name:  "one/multibyte_exceeds",
+			limit: 2,
+			value: attribute.StringSliceValue([]string{"日本語"}), // 3 runes
+			want:  true,
+		},
+		// Invalid UTF-8: byte length exceeds limit, invalid byte would be stripped on truncation.
+		{
+			name:  "one/invalid_utf8_exceeds",
+			limit: 2,
+			value: attribute.StringSliceValue([]string{"ab\xff"}), // 3 bytes, invalid
+			want:  true,
+		},
+		// Invalid UTF-8: byte length within limit, Truncate returns string unchanged.
+		{
+			name:  "one/invalid_utf8_under_limit",
+			limit: 5,
+			value: attribute.StringSliceValue([]string{"ab\xff"}), // 3 bytes <= 5
+			want:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, StringSliceNeedsTruncation(tt.limit, tt.value))
+		})
 	}
 }

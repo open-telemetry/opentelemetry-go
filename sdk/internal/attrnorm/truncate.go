@@ -4,8 +4,12 @@
 package attrnorm
 
 import (
+	"reflect"
 	"strings"
 	"unicode/utf8"
+	"unsafe"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // StringNeedsTruncation reports whether s would be modified by Truncate for
@@ -91,4 +95,53 @@ func Truncate(limit int, s string) string {
 	}
 
 	return b.String()
+}
+
+// rawAttrValue mirrors the internal layout of attribute.Value. It is used
+// only to read the immutable backing storage of STRINGSLICE values directly,
+// avoiding the allocation incurred by returning a copy.
+type rawAttrValue struct {
+	vtype    attribute.Type
+	numeric  uint64
+	stringly string
+	slice    any
+}
+
+// attrValueSlice returns the slice backing storage of v directly from memory.
+func attrValueSlice(v attribute.Value) any {
+	return (*rawAttrValue)(
+		unsafe.Pointer(&v),
+	).slice //nolint:gosec // Read-only mirror of attribute.Value; only the immutable backing storage is read.
+}
+
+// StringSliceNeedsTruncation reports whether any element in the STRINGSLICE
+// value v would be modified by Truncate for the given limit.
+//
+// It reads the backing storage of v directly to avoid the copy allocation
+// that any public accessor incurs on the no-op path.
+func StringSliceNeedsTruncation(limit int, v attribute.Value) bool {
+	switch ss := attrValueSlice(v).(type) {
+	case [0]string:
+		return false
+	case [1]string:
+		return StringNeedsTruncation(limit, ss[0])
+	case [2]string:
+		return StringNeedsTruncation(limit, ss[0]) || StringNeedsTruncation(limit, ss[1])
+	case [3]string:
+		return StringNeedsTruncation(limit, ss[0]) || StringNeedsTruncation(limit, ss[1]) ||
+			StringNeedsTruncation(limit, ss[2])
+	default:
+		// 4+ elements are stored as a reflect-allocated [N]string array.
+		// rv.Index(i).String() reads each string directly without allocating.
+		rv := reflect.ValueOf(attrValueSlice(v))
+		if !rv.IsValid() || rv.Kind() != reflect.Array {
+			return false
+		}
+		for i := range rv.Len() {
+			if StringNeedsTruncation(limit, rv.Index(i).String()) {
+				return true
+			}
+		}
+		return false
+	}
 }
