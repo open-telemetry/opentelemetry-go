@@ -10,7 +10,6 @@ import (
 	"runtime"
 	rt "runtime/trace"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -21,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.opentelemetry.io/otel/trace"
@@ -375,14 +375,14 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 	switch attr.Value.Type() {
 	case attribute.STRING:
 		v := attr.Value.AsString()
-		return attr.Key.String(truncate(limit, v))
+		return attr.Key.String(attrnorm.Truncate(limit,v))
 	case attribute.STRINGSLICE:
 		if !stringSliceNeedsTruncation(limit, attr.Value) {
 			return attr
 		}
 		v := attr.Value.AsStringSlice()
 		for i := range v {
-			v[i] = truncate(limit, v[i])
+			v[i] = attrnorm.Truncate(limit,v[i])
 		}
 		return attr.Key.StringSlice(v)
 	case attribute.BYTESLICE:
@@ -423,14 +423,14 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 func truncateValue(limit int, v attribute.Value) attribute.Value {
 	switch v.Type() {
 	case attribute.STRING:
-		return attribute.StringValue(truncate(limit, v.AsString()))
+		return attribute.StringValue(attrnorm.Truncate(limit,v.AsString()))
 	case attribute.STRINGSLICE:
 		if !stringSliceNeedsTruncation(limit, v) {
 			return v
 		}
 		ss := v.AsStringSlice()
 		for i := range ss {
-			ss[i] = truncate(limit, ss[i])
+			ss[i] = attrnorm.Truncate(limit,ss[i])
 		}
 		return attribute.StringSliceValue(ss)
 
@@ -549,81 +549,6 @@ func needsTruncation(limit int, v attribute.Value) bool {
 	return false
 }
 
-// truncate returns a truncated version of s such that it contains less than
-// the limit number of characters. Truncation is applied by returning the limit
-// number of valid characters contained in s.
-//
-// If limit is negative, it returns the original string.
-//
-// UTF-8 is supported. When truncating, all invalid characters are dropped
-// before applying truncation.
-//
-// If s already contains less than the limit number of bytes, it is returned
-// unchanged. No invalid characters are removed.
-func truncate(limit int, s string) string {
-	// This prioritize performance in the following order based on the most
-	// common expected use-cases.
-	//
-	//  - Short values less than the default limit (128).
-	//  - Strings with valid encodings that exceed the limit.
-	//  - No limit.
-	//  - Strings with invalid encodings that exceed the limit.
-	if limit < 0 || len(s) <= limit {
-		return s
-	}
-
-	// Optimistically, assume all valid UTF-8.
-	var b strings.Builder
-	count := 0
-	for i, c := range s {
-		if c != utf8.RuneError {
-			count++
-			if count > limit {
-				return s[:i]
-			}
-			continue
-		}
-
-		_, size := utf8.DecodeRuneInString(s[i:])
-		if size == 1 {
-			// Invalid encoding.
-			b.Grow(len(s) - 1)
-			_, _ = b.WriteString(s[:i])
-			s = s[i:]
-			break
-		}
-	}
-
-	// Fast-path, no invalid input.
-	if b.Cap() == 0 {
-		return s
-	}
-
-	// Truncate while validating UTF-8.
-	for i := 0; i < len(s) && count < limit; {
-		c := s[i]
-		if c < utf8.RuneSelf {
-			// Optimization for single byte runes (common case).
-			_ = b.WriteByte(c)
-			i++
-			count++
-			continue
-		}
-
-		_, size := utf8.DecodeRuneInString(s[i:])
-		if size == 1 {
-			// We checked for all 1-byte runes above, this is a RuneError.
-			i++
-			continue
-		}
-
-		_, _ = b.WriteString(s[i : i+size])
-		i += size
-		count++
-	}
-
-	return b.String()
-}
 
 // End ends the span. This method does nothing if the span is already ended or
 // is not being recorded.
