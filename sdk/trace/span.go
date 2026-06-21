@@ -12,7 +12,6 @@ import (
 	"slices"
 	"sync"
 	"time"
-	"unicode/utf8"
 	"unsafe"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -493,12 +492,12 @@ func stringSliceNeedsTruncation(limit int, v attribute.Value) bool {
 	case [0]string:
 		return false
 	case [1]string:
-		return stringNeedsTruncation(limit, ss[0])
+		return attrnorm.StringNeedsTruncation(limit, ss[0])
 	case [2]string:
-		return stringNeedsTruncation(limit, ss[0]) || stringNeedsTruncation(limit, ss[1])
+		return attrnorm.StringNeedsTruncation(limit, ss[0]) || attrnorm.StringNeedsTruncation(limit, ss[1])
 	case [3]string:
-		return stringNeedsTruncation(limit, ss[0]) || stringNeedsTruncation(limit, ss[1]) ||
-			stringNeedsTruncation(limit, ss[2])
+		return attrnorm.StringNeedsTruncation(limit, ss[0]) || attrnorm.StringNeedsTruncation(limit, ss[1]) ||
+			attrnorm.StringNeedsTruncation(limit, ss[2])
 	default:
 		// 4+ elements are stored as a reflect-allocated [N]string array.
 		// rv.Index(i).String() reads each string directly without allocating.
@@ -507,7 +506,7 @@ func stringSliceNeedsTruncation(limit int, v attribute.Value) bool {
 			return false
 		}
 		for i := range rv.Len() {
-			if stringNeedsTruncation(limit, rv.Index(i).String()) {
+			if attrnorm.StringNeedsTruncation(limit, rv.Index(i).String()) {
 				return true
 			}
 		}
@@ -515,21 +514,13 @@ func stringSliceNeedsTruncation(limit int, v attribute.Value) bool {
 	}
 }
 
-// stringNeedsTruncation reports whether s would be modified by truncate for the
-// given limit.
-func stringNeedsTruncation(limit int, s string) bool {
-	if limit < 0 || len(s) <= limit {
-		return false
-	}
-	return utf8.RuneCountInString(s) > limit || !utf8.ValidString(s)
-}
 
 // needsTruncation reports whether v would be modified by truncateValue for the
 // given limit.
 func needsTruncation(limit int, v attribute.Value) bool {
 	switch v.Type() {
 	case attribute.STRING:
-		return stringNeedsTruncation(limit, v.AsString())
+		return attrnorm.StringNeedsTruncation(limit, v.AsString())
 	case attribute.BYTESLICE:
 		// len(v.AsString()) is identical to len(v.AsByteSlice()) but
 		// avoids memory allocation.

@@ -8,6 +8,15 @@ import (
 	"unicode/utf8"
 )
 
+// StringNeedsTruncation reports whether s would be modified by Truncate for
+// the given limit.
+func StringNeedsTruncation(limit int, s string) bool {
+	if limit < 0 || len(s) <= limit {
+		return false
+	}
+	return utf8.RuneCountInString(s) > limit || !utf8.ValidString(s)
+}
+
 // Truncate returns a truncated version of s such that it contains less than
 // the limit number of characters. Truncation is applied by returning the limit
 // number of valid characters contained in s.

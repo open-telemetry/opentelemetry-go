@@ -9,6 +9,38 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestStringNeedsTruncation(t *testing.T) {
+	tests := []struct {
+		name  string
+		limit int
+		input string
+		want  bool
+	}{
+		// Negative limit: truncation is never needed.
+		{name: "no_limit", limit: -1, input: "hello", want: false},
+		// ASCII: string is well under the limit.
+		{name: "ascii/under_limit", limit: 10, input: "hello", want: false},
+		// ASCII: string length equals the limit exactly.
+		{name: "ascii/exact_limit", limit: 5, input: "hello", want: false},
+		// ASCII: string length exceeds the limit.
+		{name: "ascii/exceeds", limit: 3, input: "hello", want: true},
+		// Multibyte: byte length exceeds limit but rune count does not.
+		{name: "multibyte/under_limit", limit: 3, input: "日本語", want: false},
+		// Multibyte: rune count exceeds limit.
+		{name: "multibyte/exceeds", limit: 2, input: "日本語", want: true},
+		// Invalid UTF-8: byte length exceeds limit, invalid byte would be stripped on truncation.
+		{name: "invalid_utf8/exceeds", limit: 2, input: "ab\xff", want: true},
+		// Invalid UTF-8: byte length within limit, Truncate returns string unchanged.
+		{name: "invalid_utf8/under_limit", limit: 5, input: "ab\xff", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, StringNeedsTruncation(tt.limit, tt.input))
+		})
+	}
+}
+
 func BenchmarkTruncate(b *testing.B) {
 	run := func(limit int, input string) func(b *testing.B) {
 		return func(b *testing.B) {
