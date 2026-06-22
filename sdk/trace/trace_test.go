@@ -718,6 +718,24 @@ func TestSpanAttributeCapacity_WithAllowKeyDuplication(t *testing.T) {
 			wantAttrs:   attrs[:3],
 			wantDropped: 4,
 		},
+		{
+			name: "already_at_capacity",
+			input: [][]attribute.KeyValue{
+				attrs[:3],
+				attrs[3:5],
+			},
+			wantAttrs:   attrs[:3],
+			wantDropped: 2,
+		},
+		{
+			name: "invalid_over_capacity",
+			input: [][]attribute.KeyValue{
+				attrs[:1],
+				{invalid, attrs[1], attrs[2]},
+			},
+			wantAttrs:   attrs[:3],
+			wantDropped: 1,
+		},
 	}
 
 	const (

@@ -459,11 +459,9 @@ var (
 		attribute.Float64("key4", 123.456),
 		attribute.Map(
 			"key5",
-			attribute.String("inner1", "val1"),
-			attribute.String("inner2", "val2"),
+			attribute.String("inner", "val1"),
+			attribute.String("inner", "val2"),
 		),
-		attribute.String("key2", "hello-updated"),
-		attribute.Int64("key3", 456),
 	}
 
 	benchAttrsNoDup = []attribute.KeyValue{
