@@ -22,6 +22,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add default duplicate-key removal for `attribute.MAP` values in measurement and instrumentation scope attributes in `go.opentelemetry.io/otel/sdk/metric` using last-value-wins semantics. (#8471)
 - Extend `WithAllowKeyDuplication` in `go.opentelemetry.io/otel/sdk/log` to disable duplicate-key removal in `attribute.MAP` values for instrumentation scope attributes. (#8471)
 - Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
+- Add `go.opentelemetry.io/otel/semconv/v1.42.0` package. (#8484)
+  The package contains semantic conventions from the `v1.42.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.42.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.41.0`.
 
 ### Changed
 
