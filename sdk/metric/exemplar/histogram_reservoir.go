@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/internal/reservoir"
 )
 
 // HistogramReservoirProvider is a provider of [HistogramReservoir].
@@ -40,7 +39,7 @@ var _ Reservoir = &HistogramReservoir{}
 // falls within a histogram bucket. The histogram bucket upper-boundaries are
 // define by bounds.
 type HistogramReservoir struct {
-	reservoir.ConcurrentSafe
+	ConcurrentSafe
 	*storage
 
 	// bounds are bucket bounds in ascending order.
