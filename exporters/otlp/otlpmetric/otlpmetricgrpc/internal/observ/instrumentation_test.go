@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	"go.opentelemetry.io/otel/semconv/v1.42.0/otelconv"
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
