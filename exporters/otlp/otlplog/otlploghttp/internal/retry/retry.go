@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cenkalti/backoff/v5"
+	"github.com/cenkalti/backoff/v6"
 )
 
 // DefaultConfig are the recommended defaults to use.
