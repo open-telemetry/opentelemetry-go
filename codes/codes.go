@@ -81,7 +81,7 @@ func (c *Code) UnmarshalJSON(b []byte) error {
 	case float64:
 		if ci, err := strconv.ParseUint(string(b), 10, 32); err == nil {
 			if ci >= maxCode {
-				return fmt.Errorf("invalid code: %q", ci)
+				return fmt.Errorf("invalid code: %d", ci)
 			}
 
 			*c = Code(ci) // nolint: gosec  // Bit size of 32 check above.
