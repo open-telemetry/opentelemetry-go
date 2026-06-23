@@ -44,7 +44,7 @@ func testSumAggregateOutput(
 }
 
 func TestNewPipeline(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, 0)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, ViewMatchingModeIndependent)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(t.Context(), &output)
@@ -70,7 +70,7 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipelineUsesResource(t *testing.T) {
 	res := resource.NewWithAttributes("noSchema", attribute.String("test", "resource"))
-	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter, 0, 0)
+	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter, 0, ViewMatchingModeIndependent)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(t.Context(), &output)
@@ -79,7 +79,7 @@ func TestPipelineUsesResource(t *testing.T) {
 }
 
 func TestPipelineConcurrentSafe(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, 0)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, ViewMatchingModeIndependent)
 	ctx := t.Context()
 	var output metricdata.ResourceMetrics
 
@@ -741,6 +741,7 @@ func TestViewMatchingModeComposable(t *testing.T) {
 		inst        Instrument
 		allowedKeys []attribute.Key
 		wantCount   int
+		wantErr     error
 		wantDesc    string
 		wantUnit    string
 	}{
@@ -802,6 +803,7 @@ func TestViewMatchingModeComposable(t *testing.T) {
 			},
 			inst:      Instrument{Name: "foo", Kind: InstrumentKindCounter},
 			wantCount: 1,
+			wantErr:   errIncompatibleAggregation,
 			wantDesc:  "fallback desc",
 		},
 		{
@@ -824,7 +826,11 @@ func TestViewMatchingModeComposable(t *testing.T) {
 			var vc cache[string, instID]
 			ins := newInserter[int64](p, &vc)
 			got, err := ins.Instrument(tt.inst, tt.allowedKeys, DefaultAggregationSelector(tt.inst.Kind))
-			require.NoError(t, err)
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
 			assert.Len(t, got, tt.wantCount)
 			if tt.wantDesc != "" || tt.wantUnit != "" {
 				cached := vc.Lookup(strings.ToLower(tt.inst.Name), func() instID { return instID{} })

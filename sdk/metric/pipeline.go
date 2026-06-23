@@ -376,26 +376,24 @@ func (i *inserter[N]) composableInstrument(
 			}
 		}
 
-		resolved := Stream{Name: name}
+		resolved := Stream{
+			Name:        name,
+			Description: inst.Description,
+			Unit:        inst.Unit,
+		}
 
 		for _, s := range groupStreams {
-			if s.Description != "" && s.Description != inst.Description {
+			if s.Description != inst.Description {
 				resolved.Description = s.Description
 				break
 			}
 		}
-		if resolved.Description == "" {
-			resolved.Description = inst.Description
-		}
 
 		for _, s := range groupStreams {
-			if s.Unit != "" && s.Unit != inst.Unit {
+			if s.Unit != inst.Unit {
 				resolved.Unit = s.Unit
 				break
 			}
-		}
-		if resolved.Unit == "" {
-			resolved.Unit = inst.Unit
 		}
 
 		for _, s := range groupStreams {
@@ -408,11 +406,7 @@ func (i *inserter[N]) composableInstrument(
 		for _, s := range groupStreams {
 			if s.Aggregation != nil {
 				if e := isAggregatorCompatible(inst.Kind, s.Aggregation); e != nil {
-					global.Error(
-						e, "not using aggregation with view",
-						"instrument", inst,
-						"aggregation", s.Aggregation,
-					)
+					err = errors.Join(err, e)
 					continue
 				}
 				resolved.Aggregation = s.Aggregation
