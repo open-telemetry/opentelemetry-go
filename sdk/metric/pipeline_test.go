@@ -794,6 +794,27 @@ func TestViewMatchingModeComposable(t *testing.T) {
 			inst:      Instrument{Name: "foo", Description: "orig desc", Unit: "1", Kind: InstrumentKindCounter},
 			wantCount: 2,
 		},
+		{
+			name: "IncompatibleAggregationIgnored",
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{Aggregation: AggregationLastValue{}}),
+				NewView(Instrument{Name: "foo"}, Stream{Description: "fallback desc"}),
+			},
+			inst:      Instrument{Name: "foo", Kind: InstrumentKindCounter},
+			wantCount: 1,
+			wantDesc:  "fallback desc",
+		},
+		{
+			name: "ExemplarReservoirProviderSelectorFirstWins",
+			views: []View{
+				NewView(
+					Instrument{Name: "foo"},
+					Stream{ExemplarReservoirProviderSelector: DefaultExemplarReservoirProviderSelector},
+				),
+			},
+			inst:      Instrument{Name: "foo", Kind: InstrumentKindCounter},
+			wantCount: 1,
+		},
 	}
 
 	for _, tt := range testcases {
