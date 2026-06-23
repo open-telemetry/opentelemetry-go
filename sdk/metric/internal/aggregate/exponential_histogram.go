@@ -412,12 +412,15 @@ func (e *expoHistogram[N]) delta(
 
 		if !e.noSum {
 			hDPts[i].Sum = val.sum.load()
+		} else {
+			hDPts[i].Sum = 0
 		}
-		if !e.noMinMax {
-			if val.minMax.set.Load() {
-				hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
-				hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
-			}
+		if !e.noMinMax && val.minMax.set.Load() {
+			hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
+			hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
+		} else {
+			hDPts[i].Min = metricdata.Extrema[N]{}
+			hDPts[i].Max = metricdata.Extrema[N]{}
 		}
 
 		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
@@ -488,12 +491,15 @@ func (e *expoHistogram[N]) cumulative(
 
 		if !e.noSum {
 			hDPts[i].Sum = val.sum.load()
+		} else {
+			hDPts[i].Sum = 0
 		}
-		if !e.noMinMax {
-			if val.minMax.set.Load() {
-				hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
-				hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
-			}
+		if !e.noMinMax && val.minMax.set.Load() {
+			hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
+			hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
+		} else {
+			hDPts[i].Min = metricdata.Extrema[N]{}
+			hDPts[i].Max = metricdata.Extrema[N]{}
 		}
 
 		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)

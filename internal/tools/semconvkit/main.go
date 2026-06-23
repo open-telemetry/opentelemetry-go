@@ -197,7 +197,7 @@ type SemanticConventions struct {
 	TagVer string
 }
 
-func (sc SemanticConventions) SemVer() string {
+func (SemanticConventions) SemVer() string {
 	return strings.TrimPrefix(*tag, "v")
 }
 

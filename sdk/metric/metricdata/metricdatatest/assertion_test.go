@@ -852,6 +852,34 @@ func TestEqualKeyValue(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "map equal",
+			a: attribute.Map(
+				"map",
+				attribute.String("b", "two"),
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+			),
+			b: attribute.Map(
+				"map",
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+				attribute.String("b", "two"),
+			),
+			want: true,
+		},
+		{
+			name: "map different value",
+			a: attribute.Map(
+				"map",
+				attribute.String("b", "two"),
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+			),
+			b: attribute.Map(
+				"map",
+				attribute.Key("a").Map(attribute.Int("nested", 2)),
+				attribute.String("b", "two"),
+			),
+			want: false,
+		},
+		{
 			name: "empty",
 			a:    attribute.KeyValue{},
 			b:    attribute.KeyValue{},

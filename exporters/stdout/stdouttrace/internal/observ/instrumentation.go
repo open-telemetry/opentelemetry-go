@@ -17,8 +17,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	"go.opentelemetry.io/otel/semconv/v1.42.0/otelconv"
 )
 
 const (
@@ -205,7 +205,7 @@ func (e ExportOp) End(success int64, err error) {
 	}
 
 	mOpt := e.inst.setOpt
-	if err != nil && exportedSpansEnable {
+	if err != nil && (exportedSpansEnable || opDurationEnable) {
 		attrs := get[attribute.KeyValue](measureAttrsPool)
 		defer put(measureAttrsPool, attrs)
 		*attrs = append(*attrs, e.inst.attrs...)
@@ -216,10 +216,11 @@ func (e ExportOp) End(success int64, err error) {
 		set := attribute.NewSet(*attrs...)
 		mOpt = metric.WithAttributeSet(set)
 
-		// Reset addOpt with new attribute set.
-		*addOpt = append((*addOpt)[:0], mOpt)
-
-		e.inst.exportedSpans.Add(e.ctx, e.nSpans-success, *addOpt...)
+		if exportedSpansEnable {
+			// Reset addOpt with new attribute set.
+			*addOpt = append((*addOpt)[:0], mOpt)
+			e.inst.exportedSpans.Add(e.ctx, e.nSpans-success, *addOpt...)
+		}
 	}
 
 	if opDurationEnable {

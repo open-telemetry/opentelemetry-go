@@ -95,6 +95,22 @@ var keyVals = []keyVal{
 			StringSliceValue([]string{"fallback"}),
 		)
 	}},
+	{name: "MapLen0", kv: func(k string) KeyValue { return Map(k) }},
+	{name: "MapLen2", kv: func(k string) KeyValue {
+		return Map(
+			k,
+			String("b", "two"),
+			Int("a", 1),
+		)
+	}},
+	{name: "MapNested", kv: func(k string) KeyValue {
+		return Map(
+			k,
+			String("nested", "map"),
+			Map("child", Float64("f", math.Inf(1)), ByteSlice("bin", []byte("bin"))),
+			Slice("slice", BoolValue(true), StringValue("tail")),
+		)
+	}},
 	{name: "EmptyValue", kv: func(k string) KeyValue { return KeyValue{Key: Key(k)} }},
 }
 
@@ -150,6 +166,57 @@ func TestHashKVs(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestHashValueMapOrdering(t *testing.T) {
+	tests := []struct {
+		name string
+		kvs  []KeyValue
+	}{
+		{
+			name: "Len4",
+			kvs: []KeyValue{
+				String("d", "4"),
+				String("a", "1"),
+				String("c", "3"),
+				String("b", "2"),
+			},
+		},
+		{
+			name: "Len5",
+			kvs: []KeyValue{
+				String("e", "5"),
+				String("a", "1"),
+				String("d", "4"),
+				String("b", "2"),
+				String("c", "3"),
+			},
+		},
+		{
+			name: "Reflect",
+			kvs: []KeyValue{
+				String("f", "6"),
+				String("a", "1"),
+				String("e", "5"),
+				String("b", "2"),
+				String("d", "4"),
+				String("c", "3"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reversed := slices.Clone(tt.kvs)
+			slices.Reverse(reversed)
+
+			got := hashValue(xxhash.New(), MapValue(tt.kvs...)).Sum64()
+			want := hashValue(xxhash.New(), MapValue(reversed...)).Sum64()
+			if got != want {
+				t.Fatalf("hashValue(MapValue(%v)) = %d, want %d", tt.kvs, got, want)
+			}
+		})
 	}
 }
 
@@ -255,6 +322,53 @@ func BenchmarkHashValueSlice(b *testing.B) {
 	}
 }
 
+func BenchmarkHashValueMap(b *testing.B) {
+	benches := []struct {
+		name string
+		v    Value
+	}{
+		{
+			name: "Len2",
+			v: MapValue(
+				Bool("two", true),
+				String("one", "one"),
+			),
+		},
+		{
+			name: "Len5",
+			v: MapValue(
+				Bool("one", true),
+				Int("two", 2),
+				String("three", "three"),
+				Float64("four", 4.5),
+				ByteSlice("five", []byte("five")),
+			),
+		},
+		{
+			name: "Len8Nested",
+			v: MapValue(
+				Bool("one", true),
+				Int("two", 2),
+				String("three", "three"),
+				Float64("four", 4.5),
+				ByteSlice("five", []byte("five")),
+				Map("six", String("nested", "map"), Int64("value", 6)),
+				Slice("seven", StringValue("nested"), BoolValue(true)),
+				StringSlice("eight", []string{"seven", "eight"}),
+			),
+		},
+	}
+
+	for _, bench := range benches {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				hashValue(xxhash.New(), bench.v).Sum64()
+			}
+		})
+	}
+}
+
 func FuzzHashKVs(f *testing.F) {
 	// Add seed inputs to ensure coverage of edge cases.
 	f.Add("", "", "", "", "", "", 0, int64(0), 0.0, false, uint8(0))
@@ -293,9 +407,9 @@ func FuzzHashKVs(f *testing.F) {
 			kvs = append(kvs, Bool(k5, b))
 		}
 
-		// Add slice types based on sliceType parameter.
+		// Add slice and composite types based on sliceType parameter.
 		if numAttrs > 5 {
-			switch sliceType % 6 {
+			switch sliceType % 7 {
 			case 0:
 				// Test BoolSlice with variable length.
 				bools := make([]bool, len(s)%5) // 0-4 elements
@@ -355,6 +469,22 @@ func FuzzHashKVs(f *testing.F) {
 					}
 				}
 				kvs = append(kvs, Slice("slice", values...))
+			case 6:
+				values := make([]KeyValue, len(s)%4) // 0-3 elements
+				for i := range values {
+					key := fmt.Sprintf("item_%d", i)
+					switch i % 4 {
+					case 0:
+						values[i] = Bool(key, (i+len(k1))%2 == 0)
+					case 1:
+						values[i] = Int(key, i+len(k2))
+					case 2:
+						values[i] = String(key, fmt.Sprintf("item_%d", i))
+					case 3:
+						values[i] = Map(key, Float64("float", fVal), ByteSlice("bin", []byte("bin")))
+					}
+				}
+				kvs = append(kvs, Map("map", values...))
 			}
 		}
 
@@ -451,6 +581,13 @@ func FuzzHashKVs(f *testing.F) {
 							newSlice[0] = StringValue("modified")
 						}
 						modifiedKvs[0] = Slice(string(modifiedKvs[0].Key), newSlice...)
+					}
+				case MAP:
+					origMap := modifiedKvs[0].Value.AsMap()
+					if len(origMap) > 0 {
+						newMap := slices.Clone(origMap)
+						newMap[0] = String(string(newMap[0].Key), "modified")
+						modifiedKvs[0] = Map(string(modifiedKvs[0].Key), newMap...)
 					}
 				case EMPTY:
 					modifiedKvs[0] = String(string(modifiedKvs[0].Key), "not_empty")
