@@ -44,7 +44,7 @@ func testSumAggregateOutput(
 }
 
 func TestNewPipeline(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, 0)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(t.Context(), &output)
@@ -70,7 +70,7 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipelineUsesResource(t *testing.T) {
 	res := resource.NewWithAttributes("noSchema", attribute.String("test", "resource"))
-	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter, 0)
+	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter, 0, 0)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(t.Context(), &output)
@@ -79,7 +79,7 @@ func TestPipelineUsesResource(t *testing.T) {
 }
 
 func TestPipelineConcurrentSafe(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, 0)
 	ctx := t.Context()
 	var output metricdata.ResourceMetrics
 
@@ -138,13 +138,13 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		}{
 			{
 				name: "NoView",
-				pipe: newPipeline(nil, reader, nil, exemplar.AlwaysOffFilter, 0),
+				pipe: newPipeline(nil, reader, nil, exemplar.AlwaysOffFilter, 0, 0),
 			},
 			{
 				name: "NoMatchingView",
 				pipe: newPipeline(nil, reader, []View{
 					NewView(Instrument{Name: "foo"}, Stream{Name: "bar"}),
-				}, exemplar.AlwaysOffFilter, 0),
+				}, exemplar.AlwaysOffFilter, 0, 0),
 			},
 		}
 
@@ -229,7 +229,7 @@ func TestLogConflictName(t *testing.T) {
 			return instID{Name: tc.existing}
 		})
 
-		i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0), &vc)
+		i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, 0), &vc)
 		i.logConflict(instID{Name: tc.name})
 
 		if tc.conflict {
@@ -271,7 +271,7 @@ func TestLogConflictSuggestView(t *testing.T) {
 	var vc cache[string, instID]
 	name := strings.ToLower(orig.Name)
 	_ = vc.Lookup(name, func() instID { return orig })
-	i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0), &vc)
+	i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, 0), &vc)
 
 	viewSuggestion := func(inst instID, stream string) string {
 		return `"NewView(Instrument{` +
@@ -376,7 +376,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	}
 
 	var vc cache[string, instID]
-	pipe := newPipeline(nil, NewManualReader(), nil, exemplar.AlwaysOffFilter, 0)
+	pipe := newPipeline(nil, NewManualReader(), nil, exemplar.AlwaysOffFilter, 0, 0)
 	i := newInserter[int64](pipe, &vc)
 
 	readerAggregation := i.readerDefaultAggregation(kind)
@@ -611,7 +611,7 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 func TestPipelineProduceErrors(t *testing.T) {
 	// Create a test pipeline with aggregations
 	pipeReader := NewManualReader()
-	pipe := newPipeline(nil, pipeReader, nil, exemplar.AlwaysOffFilter, 0)
+	pipe := newPipeline(nil, pipeReader, nil, exemplar.AlwaysOffFilter, 0, 0)
 
 	// Set up an observable with callbacks
 	var testObsID observableID[int64]
@@ -732,4 +732,152 @@ func TestPipelineProduceErrors(t *testing.T) {
 		assert.Equal(t, [3]int{3, 3, 3}, callbackCounts)
 		assert.Equal(t, 3, aggCallCount)
 	})
+}
+
+func TestViewMatchingModeComposable(t *testing.T) {
+	testcases := []struct {
+		name        string
+		views       []View
+		inst        Instrument
+		allowedKeys []attribute.Key
+		wantCount   int
+		wantDesc    string
+		wantUnit    string
+	}{
+		{
+			name: "ZeroViewsMatchAppliesDefault",
+			views: []View{
+				NewView(Instrument{Name: "other"}, Stream{Description: "other desc"}),
+			},
+			inst: Instrument{
+				Name:        "foo",
+				Description: "orig desc",
+				Unit:        "orig unit",
+				Kind:        InstrumentKindCounter,
+			},
+			wantCount: 1,
+			wantDesc:  "orig desc",
+			wantUnit:  "orig unit",
+		},
+		{
+			name: "SingleViewMatchAppliesMask",
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{Description: "view desc", Unit: "By"}),
+			},
+			inst:      Instrument{Name: "foo", Description: "orig desc", Unit: "1", Kind: InstrumentKindCounter},
+			wantCount: 1,
+			wantDesc:  "view desc",
+			wantUnit:  "By",
+		},
+		{
+			name: "MultipleViewsMergeScalarPropertiesFirstWins",
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{Description: "first desc"}),
+				NewView(Instrument{Name: "foo"}, Stream{Description: "second desc", Unit: "ms"}),
+				NewView(Instrument{Name: "foo"}, Stream{Unit: "s"}),
+			},
+			inst:      Instrument{Name: "foo", Description: "orig desc", Unit: "1", Kind: InstrumentKindCounter},
+			wantCount: 1,
+			wantDesc:  "first desc",
+			wantUnit:  "ms",
+		},
+		{
+			name: "MultipleViewsDistinctExplicitNames",
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{Name: "foo_ms", Unit: "ms"}),
+				NewView(Instrument{Name: "foo"}, Stream{Name: "foo_s", Unit: "s"}),
+				NewView(
+					Instrument{Name: "foo"},
+					Stream{Description: "common desc"},
+				), // Wildcard Name applies to both groups
+			},
+			inst:      Instrument{Name: "foo", Description: "orig desc", Unit: "1", Kind: InstrumentKindCounter},
+			wantCount: 2,
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			r := NewManualReader()
+			p := newPipeline(resource.Empty(), r, tt.views, exemplar.AlwaysOffFilter, 0, ViewMatchingModeComposable)
+			var vc cache[string, instID]
+			ins := newInserter[int64](p, &vc)
+			got, err := ins.Instrument(tt.inst, tt.allowedKeys, DefaultAggregationSelector(tt.inst.Kind))
+			require.NoError(t, err)
+			assert.Len(t, got, tt.wantCount)
+			if tt.wantDesc != "" || tt.wantUnit != "" {
+				cached := vc.Lookup(tt.inst.Name, nil)
+				if tt.wantDesc != "" {
+					assert.Equal(t, tt.wantDesc, cached.Description)
+				}
+				if tt.wantUnit != "" {
+					assert.Equal(t, tt.wantUnit, cached.Unit)
+				}
+			}
+		})
+	}
+}
+
+func TestComposeAttributeFilters(t *testing.T) {
+	testcases := []struct {
+		name       string
+		baseline   attribute.Filter
+		streams    []Stream
+		checkTrue  []attribute.KeyValue
+		checkFalse []attribute.KeyValue
+	}{
+		{
+			name:     "NilFiltersUseBaseline",
+			baseline: attribute.NewAllowKeysFilter("base", "a"),
+			streams: []Stream{
+				{Name: "s1"},
+				{Name: "s2"},
+			},
+			checkTrue:  []attribute.KeyValue{attribute.Int("base", 1), attribute.Int("a", 1)},
+			checkFalse: []attribute.KeyValue{attribute.Int("b", 1)},
+		},
+		{
+			name:     "AllowFiltersOverrideBaseline",
+			baseline: attribute.NewAllowKeysFilter("base"),
+			streams: []Stream{
+				{AttributeFilter: attribute.NewAllowKeysFilter("a", "b", "c")},
+				{AttributeFilter: attribute.NewAllowKeysFilter("b", "c", "d")},
+			},
+			checkTrue:  []attribute.KeyValue{attribute.Int("b", 1), attribute.Int("c", 1)},
+			checkFalse: []attribute.KeyValue{attribute.Int("base", 1), attribute.Int("a", 1), attribute.Int("d", 1)},
+		},
+		{
+			name:     "DenyFiltersUnion",
+			baseline: nil,
+			streams: []Stream{
+				{AttributeFilter: attribute.NewDenyKeysFilter("x")},
+				{AttributeFilter: attribute.NewDenyKeysFilter("y")},
+			},
+			checkTrue:  []attribute.KeyValue{attribute.Int("a", 1), attribute.Int("z", 1)},
+			checkFalse: []attribute.KeyValue{attribute.Int("x", 1), attribute.Int("y", 1)},
+		},
+		{
+			name:     "AllowAndDenyCombined",
+			baseline: attribute.NewAllowKeysFilter("base"),
+			streams: []Stream{
+				{AttributeFilter: attribute.NewAllowKeysFilter("a", "b", "c")},
+				{AttributeFilter: attribute.NewDenyKeysFilter("b")},
+			},
+			checkTrue:  []attribute.KeyValue{attribute.Int("a", 1), attribute.Int("c", 1)},
+			checkFalse: []attribute.KeyValue{attribute.Int("base", 1), attribute.Int("b", 1), attribute.Int("d", 1)},
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			composed := composeAttributeFilters(tt.baseline, tt.streams)
+			require.NotNil(t, composed)
+			for _, kv := range tt.checkTrue {
+				assert.Truef(t, composed(kv), "expected true for %v", kv)
+			}
+			for _, kv := range tt.checkFalse {
+				assert.Falsef(t, composed(kv), "expected false for %v", kv)
+			}
+		})
+	}
 }
