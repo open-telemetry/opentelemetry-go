@@ -207,11 +207,11 @@ func extractRawKVs[T any](opts []T) []attribute.KeyValue {
 }
 
 func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) attribute.Set {
-	configAttrs = attrdedup.Set(configAttrs)
+	configAttrs, _ = attrdedup.Set(configAttrs)
 	if len(rawKVs) == 0 {
 		return configAttrs
 	}
-	rawKVs = attrdedup.KeyValues(rawKVs)
+	rawKVs, _ = attrdedup.KeyValues(rawKVs)
 	merged := make([]attribute.KeyValue, 0, configAttrs.Len()+len(rawKVs))
 	merged = append(merged, configAttrs.ToSlice()...)
 	// rawKVs are appended after configAttrs, meaning they will override any duplicate keys in configAttrs.

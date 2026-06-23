@@ -47,7 +47,7 @@ func BenchmarkValue(b *testing.B) {
 		b.Run(value.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				attrdedup.Value(value.value)
+				_, _ = attrdedup.Value(value.value)
 			}
 		})
 	}

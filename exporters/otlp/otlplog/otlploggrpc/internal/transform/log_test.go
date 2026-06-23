@@ -31,8 +31,8 @@ var (
 	ts  = time.Date(2000, time.January, 0o1, 0, 0, 0, 0, time.FixedZone("GMT", 0))
 	obs = ts.Add(30 * time.Second)
 
-	tom   = api.String("user", "tom")
-	jerry = api.String("user", "jerry")
+	tom   = attribute.String("user", "tom")
+	jerry = attribute.String("user", "jerry")
 	// A time before unix 0.
 	negativeTs = time.Date(1969, 7, 20, 20, 17, 0, 0, time.UTC)
 
@@ -49,8 +49,8 @@ var (
 	pbSevC = lpb.SeverityNumber_SEVERITY_NUMBER_INFO
 	pbSevD = lpb.SeverityNumber_SEVERITY_NUMBER_ERROR
 
-	bodyC = api.StringValue("c")
-	bodyD = api.StringValue("d")
+	bodyC = attribute.StringValue("c")
+	bodyD = attribute.StringValue("d")
 
 	pbBodyC = &cpb.AnyValue{
 		Value: &cpb.AnyValue_StringValue{
@@ -157,7 +157,7 @@ var (
 					Severity:             sevC,
 					SeverityText:         "C",
 					Body:                 bodyC,
-					Attributes:           []api.KeyValue{tom},
+					Attributes:           []attribute.KeyValue{tom},
 					TraceID:              trace.TraceID(traceIDC),
 					SpanID:               trace.SpanID(spanIDC),
 					TraceFlags:           trace.TraceFlags(flagsC),
@@ -171,7 +171,7 @@ var (
 					Severity:             sevC,
 					SeverityText:         "C",
 					Body:                 bodyC,
-					Attributes:           []api.KeyValue{jerry},
+					Attributes:           []attribute.KeyValue{jerry},
 					TraceID:              trace.TraceID(traceIDC),
 					SpanID:               trace.SpanID(spanIDC),
 					TraceFlags:           trace.TraceFlags(flagsC),
@@ -185,7 +185,7 @@ var (
 					Severity:             sevD,
 					SeverityText:         "D",
 					Body:                 bodyD,
-					Attributes:           []api.KeyValue{tom},
+					Attributes:           []attribute.KeyValue{tom},
 					TraceID:              trace.TraceID(traceIDD),
 					SpanID:               trace.SpanID(spanIDD),
 					TraceFlags:           trace.TraceFlags(flagsD),
@@ -199,7 +199,7 @@ var (
 					Severity:             sevD,
 					SeverityText:         "D",
 					Body:                 bodyD,
-					Attributes:           []api.KeyValue{jerry},
+					Attributes:           []attribute.KeyValue{jerry},
 					TraceID:              trace.TraceID(traceIDD),
 					SpanID:               trace.SpanID(spanIDD),
 					TraceFlags:           trace.TraceFlags(flagsD),
@@ -213,7 +213,7 @@ var (
 					Severity:             sevD,
 					SeverityText:         "D",
 					Body:                 bodyD,
-					Attributes:           []api.KeyValue{jerry},
+					Attributes:           []attribute.KeyValue{jerry},
 					TraceID:              trace.TraceID(traceIDD),
 					SpanID:               trace.SpanID(spanIDD),
 					TraceFlags:           trace.TraceFlags(flagsD),

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -21,9 +22,9 @@ import (
 var now = time.Now
 
 const (
-	exceptionTypeKey       = string(semconv.ExceptionTypeKey)
-	exceptionMessageKey    = string(semconv.ExceptionMessageKey)
-	exceptionStacktraceKey = string(semconv.ExceptionStacktraceKey)
+	exceptionTypeKey       = semconv.ExceptionTypeKey
+	exceptionMessageKey    = semconv.ExceptionMessageKey
+	exceptionStacktraceKey = semconv.ExceptionStacktraceKey
 )
 
 // Compile-time check logger implements log.Logger.
@@ -119,7 +120,7 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	}
 
 	hasExceptionAttr := false
-	r.WalkAttributes(func(kv log.KeyValue) bool {
+	r.WalkAttributes(func(kv attribute.KeyValue) bool {
 		switch kv.Key {
 		case exceptionTypeKey, exceptionMessageKey, exceptionStacktraceKey:
 			hasExceptionAttr = true
@@ -136,20 +137,20 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 }
 
 func addExceptionAttrs(r *Record, err error) {
-	var attrs [2]log.KeyValue
+	var attrs [2]attribute.KeyValue
 	n := 0
 	if msg := err.Error(); msg != "" {
 		if r.attributeCountLimit > 0 && r.attributeCountLimit-r.AttributesLen() < n+1 {
 			goto flush
 		}
-		attrs[n] = log.String(exceptionMessageKey, msg)
+		attrs[n] = exceptionMessageKey.String(msg)
 		n++
 	}
 	if errType := errorType(err); errType != "" {
 		if r.attributeCountLimit > 0 && r.attributeCountLimit-r.AttributesLen() < n+1 {
 			goto flush
 		}
-		attrs[n] = log.String(exceptionTypeKey, errType)
+		attrs[n] = exceptionTypeKey.String(errType)
 		n++
 	}
 
