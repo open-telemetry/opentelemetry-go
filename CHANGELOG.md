@@ -26,6 +26,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The package contains semantic conventions from the `v1.42.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.42.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.41.0`.
 
+### Changed
+
+- ⚠️ **Breaking Change:** Use `go.opentelemetry.io/otel/attribute.Value` and `go.opentelemetry.io/otel/attribute.KeyValue` for log bodies and attributes in `go.opentelemetry.io/otel/log`, `go.opentelemetry.io/otel/log/logtest`, `go.opentelemetry.io/otel/sdk/log`, and `go.opentelemetry.io/otel/sdk/log/logtest`. (#8490)
+- Use `go.opentelemetry.io/otel/attribute.Value` JSON encoding for log bodies and attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#8490)
+
+### Removed
+
+- ⚠️ **Breaking Change:** Remove `Kind`, `Value`, `KeyValue`, value and key-value constructors, and attribute conversion helpers from `go.opentelemetry.io/otel/log`. (#8490)
+
 ### Fixed
 
 - Fix invalid error formatting for out-of-range JSON code values in `go.opentelemetry.io/otel/codes`. (#8497)

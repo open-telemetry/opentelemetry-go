@@ -18,7 +18,7 @@ import (
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 
-	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 )
 
@@ -27,10 +27,10 @@ var records []sdklog.Record
 func init() {
 	var r sdklog.Record
 	r.SetTimestamp(ts)
-	r.SetBody(log.StringValue("A"))
+	r.SetBody(attribute.StringValue("A"))
 	records = append(records, r)
 
-	r.SetBody(log.StringValue("B"))
+	r.SetBody(attribute.StringValue("B"))
 	records = append(records, r)
 }
 
