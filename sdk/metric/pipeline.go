@@ -253,7 +253,7 @@ func (i *inserter[N]) Instrument(
 			}
 		}
 		if len(matches) > 0 {
-			return i.composableInstrument(inst, matches, allowedKeys, readerAggregation)
+			return i.composableInstrument(inst, matches, readerAggregation)
 		}
 	}
 
@@ -344,7 +344,6 @@ func composeAttributeFilters(baseline attribute.Filter, streams []Stream) attrib
 func (i *inserter[N]) composableInstrument(
 	inst Instrument,
 	matches []Stream,
-	allowedKeys []attribute.Key,
 	readerAggregation Aggregation,
 ) ([]aggregate.Measure[N], error) {
 	var explicitNames []string
@@ -368,11 +367,6 @@ func (i *inserter[N]) composableInstrument(
 		err      error
 		seen     = make(map[uint64]struct{})
 	)
-
-	var baseline attribute.Filter
-	if allowedKeys != nil {
-		baseline = attribute.NewAllowKeysFilter(allowedKeys...)
-	}
 
 	for _, name := range targetNames {
 		var groupStreams []Stream
@@ -426,7 +420,7 @@ func (i *inserter[N]) composableInstrument(
 			}
 		}
 
-		resolved.AttributeFilter = composeAttributeFilters(baseline, groupStreams)
+		resolved.AttributeFilter = composeAttributeFilters(nil, groupStreams)
 
 		in, id, e := i.cachedAggregator(inst.Scope, inst.Kind, resolved, readerAggregation)
 		if e != nil {

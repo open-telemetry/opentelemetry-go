@@ -789,7 +789,7 @@ func TestViewMatchingModeComposable(t *testing.T) {
 				NewView(
 					Instrument{Name: "foo"},
 					Stream{Description: "common desc"},
-				), // Wildcard Name applies to both groups
+				), // Non-renaming view applies to each renamed stream group
 			},
 			inst:      Instrument{Name: "foo", Description: "orig desc", Unit: "1", Kind: InstrumentKindCounter},
 			wantCount: 2,
@@ -806,7 +806,7 @@ func TestViewMatchingModeComposable(t *testing.T) {
 			require.NoError(t, err)
 			assert.Len(t, got, tt.wantCount)
 			if tt.wantDesc != "" || tt.wantUnit != "" {
-				cached := vc.Lookup(tt.inst.Name, nil)
+				cached := vc.Lookup(strings.ToLower(tt.inst.Name), func() instID { return instID{} })
 				if tt.wantDesc != "" {
 					assert.Equal(t, tt.wantDesc, cached.Description)
 				}
