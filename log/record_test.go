@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -50,7 +51,7 @@ func TestRecordSeverityText(t *testing.T) {
 }
 
 func TestRecordBody(t *testing.T) {
-	body := log.StringValue("testing body value")
+	body := attribute.StringValue("testing body value")
 
 	var r log.Record
 	r.SetBody(body)
@@ -58,21 +59,21 @@ func TestRecordBody(t *testing.T) {
 }
 
 func TestRecordAttributes(t *testing.T) {
-	attrs := []log.KeyValue{
-		log.String("k1", "str"),
-		log.Float64("k2", 1.0),
-		log.Int("k3", 2),
-		log.Bool("k4", true),
-		log.Bytes("k5", []byte{1}),
-		log.Slice("k6", log.IntValue(3)),
-		log.Map("k7", log.Bool("sub1", true)),
-		log.String("k8", "str"),
-		log.Float64("k9", 1.0),
-		log.Int("k10", 2),
-		log.Bool("k11", true),
-		log.Bytes("k12", []byte{1}),
-		log.Slice("k13", log.IntValue(3)),
-		log.Map("k14", log.Bool("sub1", true)),
+	attrs := []attribute.KeyValue{
+		attribute.String("k1", "str"),
+		attribute.Float64("k2", 1.0),
+		attribute.Int("k3", 2),
+		attribute.Bool("k4", true),
+		attribute.ByteSlice("k5", []byte{1}),
+		attribute.Slice("k6", attribute.IntValue(3)),
+		attribute.Map("k7", attribute.Bool("sub1", true)),
+		attribute.String("k8", "str"),
+		attribute.Float64("k9", 1.0),
+		attribute.Int("k10", 2),
+		attribute.Bool("k11", true),
+		attribute.ByteSlice("k12", []byte{1}),
+		attribute.Slice("k13", attribute.IntValue(3)),
+		attribute.Map("k14", attribute.Bool("sub1", true)),
 		{}, // Empty.
 	}
 
@@ -82,7 +83,7 @@ func TestRecordAttributes(t *testing.T) {
 
 	t.Run("Correctness", func(t *testing.T) {
 		var i int
-		r.WalkAttributes(func(kv log.KeyValue) bool {
+		r.WalkAttributes(func(kv attribute.KeyValue) bool {
 			assert.Equal(t, attrs[i], kv)
 			i++
 			return true
@@ -92,7 +93,7 @@ func TestRecordAttributes(t *testing.T) {
 	t.Run("WalkAttributes/Filtering", func(t *testing.T) {
 		for i := 1; i <= len(attrs); i++ {
 			var j int
-			r.WalkAttributes(func(log.KeyValue) bool {
+			r.WalkAttributes(func(attribute.KeyValue) bool {
 				j++
 				return j < i
 			})
@@ -110,9 +111,9 @@ func TestRecordAllocationLimits(t *testing.T) {
 		tStamp time.Time
 		sev    log.Severity
 		text   string
-		body   log.Value
+		body   attribute.Value
 		n      int
-		attr   log.KeyValue
+		attr   attribute.KeyValue
 	)
 
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
@@ -139,19 +140,19 @@ func TestRecordAllocationLimits(t *testing.T) {
 		text = r.SeverityText()
 	}), "SeverityText")
 
-	bodyVal := log.BoolValue(true)
+	bodyVal := attribute.BoolValue(true)
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
 		var r log.Record
 		r.SetBody(bodyVal)
 		body = r.Body()
 	}), "Body")
 
-	attrVal := []log.KeyValue{log.Bool("k", true), log.Int("i", 1)}
+	attrVal := []attribute.KeyValue{attribute.Bool("k", true), attribute.Int("i", 1)}
 	assert.Equal(t, 0.0, testing.AllocsPerRun(runs, func() {
 		var r log.Record
 		r.AddAttributes(attrVal...)
 		n = r.AttributesLen()
-		r.WalkAttributes(func(kv log.KeyValue) bool {
+		r.WalkAttributes(func(kv attribute.KeyValue) bool {
 			attr = kv
 			return true
 		})
@@ -165,8 +166,8 @@ func TestRecordClone(t *testing.T) {
 	now0 := time.Now()
 	sev0 := log.SeverityInfo
 	text0 := "text"
-	val0 := log.BoolValue(true)
-	attr0 := log.Bool("0", true)
+	val0 := attribute.BoolValue(true)
+	attr0 := attribute.Bool("0", true)
 
 	r0 := log.Record{}
 	r0.SetTimestamp(now0)
@@ -180,8 +181,8 @@ func TestRecordClone(t *testing.T) {
 	now1 := now0.Add(time.Second)
 	sev1 := log.SeverityDebug
 	text1 := "string"
-	val1 := log.IntValue(1)
-	attr1 := log.Int64("1", 2)
+	val1 := attribute.IntValue(1)
+	attr1 := attribute.Int64("1", 2)
 
 	r1 := r0.Clone()
 	r1.SetTimestamp(now1)
@@ -196,10 +197,10 @@ func TestRecordClone(t *testing.T) {
 	assert.Equal(t, now0, r0.ObservedTimestamp())
 	assert.Equal(t, sev0, r0.Severity())
 	assert.Equal(t, text0, r0.SeverityText())
-	assert.True(t, val0.Equal(r0.Body()))
+	assert.Equal(t, val0, r0.Body())
 
-	var r0Attrs []log.KeyValue
-	r0.WalkAttributes(func(kv log.KeyValue) bool {
+	var r0Attrs []attribute.KeyValue
+	r0.WalkAttributes(func(kv attribute.KeyValue) bool {
 		r0Attrs = append(r0Attrs, kv)
 		return true
 	})
@@ -211,10 +212,10 @@ func TestRecordClone(t *testing.T) {
 	assert.Equal(t, now1, r1.ObservedTimestamp())
 	assert.Equal(t, sev1, r1.Severity())
 	assert.Equal(t, text1, r1.SeverityText())
-	assert.True(t, val1.Equal(r1.Body()))
+	assert.Equal(t, val1, r1.Body())
 
-	var r1Attrs []log.KeyValue
-	r1.WalkAttributes(func(kv log.KeyValue) bool {
+	var r1Attrs []attribute.KeyValue
+	r1.WalkAttributes(func(kv attribute.KeyValue) bool {
 		r1Attrs = append(r1Attrs, kv)
 		return true
 	})

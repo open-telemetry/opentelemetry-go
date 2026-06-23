@@ -4,7 +4,6 @@
 package logtest
 
 import (
-	"slices"
 	"testing"
 	"time"
 
@@ -28,11 +27,11 @@ func TestRecordFactory(t *testing.T) {
 	eventName := "testing.name"
 	severity := log.SeverityDebug
 	severityText := "DBG"
-	body := log.StringValue("Message")
-	attrs := []log.KeyValue{
-		log.Int("int", 1),
-		log.String("str", "foo"),
-		log.Float64("flt", 3.14),
+	body := attribute.StringValue("Message")
+	attrs := []attribute.KeyValue{
+		attribute.Int("int", 1),
+		attribute.String("str", "foo"),
+		attribute.Float64("flt", 3.14),
 	}
 	traceID := trace.TraceID([16]byte{1})
 	spanID := trace.SpanID([8]byte{2})
@@ -76,10 +75,10 @@ func TestRecordFactory(t *testing.T) {
 
 func TestRecordFactoryMultiple(t *testing.T) {
 	now := time.Now()
-	attrs := []log.KeyValue{
-		log.Int("int", 1),
-		log.String("str", "foo"),
-		log.Float64("flt", 3.14),
+	attrs := []attribute.KeyValue{
+		attribute.Int("int", 1),
+		attribute.String("str", "foo"),
+		attribute.Float64("flt", 3.14),
 	}
 	scope := instrumentation.Scope{
 		Name: t.Name(),
@@ -94,12 +93,12 @@ func TestRecordFactoryMultiple(t *testing.T) {
 
 	record1 := f.NewRecord()
 
-	f.Attributes = append(f.Attributes, log.Bool("added", true))
+	f.Attributes = append(f.Attributes, attribute.Bool("added", true))
 	f.DroppedAttributes = 2
 	record2 := f.NewRecord()
 
 	assert.Equal(t, now, record2.Timestamp())
-	assertAttributes(t, append(attrs, log.Bool("added", true)), record2)
+	assertAttributes(t, append(attrs, attribute.Bool("added", true)), record2)
 	assert.Equal(t, 2, record2.DroppedAttributes())
 	assert.Equal(t, scope, record2.InstrumentationScope())
 
@@ -110,22 +109,18 @@ func TestRecordFactoryMultiple(t *testing.T) {
 	assert.Equal(t, scope, record1.InstrumentationScope())
 }
 
-func assertBody(t *testing.T, want log.Value, r sdklog.Record) {
+func assertBody(t *testing.T, want attribute.Value, r sdklog.Record) {
 	t.Helper()
 	got := r.Body()
-	if !got.Equal(want) {
-		t.Errorf("Body value is not equal:\nwant: %v\ngot:  %v", want, got)
-	}
+	assert.Equal(t, want, got, "Body value is not equal")
 }
 
-func assertAttributes(t *testing.T, want []log.KeyValue, r sdklog.Record) {
+func assertAttributes(t *testing.T, want []attribute.KeyValue, r sdklog.Record) {
 	t.Helper()
-	var got []log.KeyValue
-	r.WalkAttributes(func(kv log.KeyValue) bool {
+	var got []attribute.KeyValue
+	r.WalkAttributes(func(kv attribute.KeyValue) bool {
 		got = append(got, kv)
 		return true
 	})
-	if !slices.EqualFunc(want, got, log.KeyValue.Equal) {
-		t.Errorf("Attributes are not equal:\nwant: %v\ngot:  %v", want, got)
-	}
+	assert.Equal(t, want, got, "Attributes are not equal")
 }
