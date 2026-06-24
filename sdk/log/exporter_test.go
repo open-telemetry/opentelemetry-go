@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type instruction struct {
@@ -244,7 +244,7 @@ func TestExportSync(t *testing.T) {
 				defer wg.Done()
 
 				var r Record
-				r.SetBody(log.IntValue(n))
+				r.SetBody(attribute.IntValue(n))
 
 				resp := make(chan error, 1)
 				in <- exportData{
@@ -267,12 +267,12 @@ func TestExportSync(t *testing.T) {
 
 		assert.Equal(t, goRoutines, exp.ExportN(), "Export calls")
 
-		want := make([]log.Value, goRoutines)
+		want := make([]attribute.Value, goRoutines)
 		for i := range want {
-			want[i] = log.IntValue(i)
+			want[i] = attribute.IntValue(i)
 		}
 		records := exp.Records()
-		got := make([]log.Value, len(records))
+		got := make([]attribute.Value, len(records))
 		for i := range got {
 			if assert.Len(t, records[i], 1, "number of records exported") {
 				got[i] = records[i][0].Body()
@@ -489,7 +489,7 @@ func TestBufferExporter(t *testing.T) {
 
 			ctx := t.Context()
 			records := make([]Record, 1)
-			records[0].SetBody(log.BoolValue(true))
+			records[0].SetBody(attribute.BoolValue(true))
 
 			assert.NoError(t, e.Export(ctx, records))
 
@@ -568,7 +568,7 @@ func TestBufferExporter(t *testing.T) {
 			e := newBufferExporter(exp, 2)
 
 			records := make([]Record, 1)
-			records[0].SetBody(log.BoolValue(true))
+			records[0].SetBody(attribute.BoolValue(true))
 
 			assert.True(t, e.EnqueueExport(records))
 			assert.True(t, e.EnqueueExport(records))

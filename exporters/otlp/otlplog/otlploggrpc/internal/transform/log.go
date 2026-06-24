@@ -94,13 +94,13 @@ func LogRecord(record log.Record) *lpb.LogRecord {
 		EventName:            record.EventName(),
 		SeverityNumber:       SeverityNumber(record.Severity()),
 		SeverityText:         record.SeverityText(),
-		Body:                 LogAttrValue(record.Body()),
+		Body:                 AttrValue(record.Body()),
 		Attributes:           make([]*cpb.KeyValue, 0, record.AttributesLen()),
 		Flags:                uint32(record.TraceFlags()),
 		// TODO: DroppedAttributesCount: /* ... */,
 	}
-	record.WalkAttributes(func(kv api.KeyValue) bool {
-		r.Attributes = append(r.Attributes, LogAttr(kv))
+	record.WalkAttributes(func(kv attribute.KeyValue) bool {
+		r.Attributes = append(r.Attributes, Attr(kv))
 		return true
 	})
 	if tID := record.TraceID(); tID.IsValid() {
@@ -280,85 +280,6 @@ func attrValues(vals []attribute.Value) []*cpb.AnyValue {
 		converted[i] = AttrValue(v)
 	}
 	return converted
-}
-
-// LogAttrs transforms a slice of [api.KeyValue] into OTLP key-values.
-func LogAttrs(attrs []api.KeyValue) []*cpb.KeyValue {
-	if len(attrs) == 0 {
-		return nil
-	}
-
-	out := make([]*cpb.KeyValue, 0, len(attrs))
-	for _, kv := range attrs {
-		out = append(out, LogAttr(kv))
-	}
-	return out
-}
-
-// LogAttr transforms an [api.KeyValue] into an OTLP key-value.
-func LogAttr(attr api.KeyValue) *cpb.KeyValue {
-	return &cpb.KeyValue{
-		Key:   attr.Key,
-		Value: LogAttrValue(attr.Value),
-	}
-}
-
-// LogAttrValues transforms a slice of [api.Value] into an OTLP []AnyValue.
-func LogAttrValues(vals []api.Value) []*cpb.AnyValue {
-	if len(vals) == 0 {
-		return nil
-	}
-
-	out := make([]*cpb.AnyValue, 0, len(vals))
-	for _, v := range vals {
-		out = append(out, LogAttrValue(v))
-	}
-	return out
-}
-
-// LogAttrValue transforms an [api.Value] into an OTLP AnyValue.
-func LogAttrValue(v api.Value) *cpb.AnyValue {
-	av := new(cpb.AnyValue)
-	switch v.Kind() {
-	case api.KindBool:
-		av.Value = &cpb.AnyValue_BoolValue{
-			BoolValue: v.AsBool(),
-		}
-	case api.KindInt64:
-		av.Value = &cpb.AnyValue_IntValue{
-			IntValue: v.AsInt64(),
-		}
-	case api.KindFloat64:
-		av.Value = &cpb.AnyValue_DoubleValue{
-			DoubleValue: v.AsFloat64(),
-		}
-	case api.KindString:
-		av.Value = &cpb.AnyValue_StringValue{
-			StringValue: v.AsString(),
-		}
-	case api.KindBytes:
-		av.Value = &cpb.AnyValue_BytesValue{
-			BytesValue: v.AsBytes(),
-		}
-	case api.KindSlice:
-		av.Value = &cpb.AnyValue_ArrayValue{
-			ArrayValue: &cpb.ArrayValue{
-				Values: LogAttrValues(v.AsSlice()),
-			},
-		}
-	case api.KindMap:
-		av.Value = &cpb.AnyValue_KvlistValue{
-			KvlistValue: &cpb.KeyValueList{
-				Values: LogAttrs(v.AsMap()),
-			},
-		}
-	case api.KindEmpty:
-	default:
-		av.Value = &cpb.AnyValue_StringValue{
-			StringValue: "INVALID",
-		}
-	}
-	return av
 }
 
 // SeverityNumber transforms a [log.Severity] into an OTLP SeverityNumber.
