@@ -4,7 +4,10 @@
 // Package x contains experimental SDK-level metric configuration.
 package x // import "go.opentelemetry.io/otel/sdk/metric/x"
 
-import "go.opentelemetry.io/otel/sdk/instrumentation"
+import (
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+)
 
 // MeterConfig contains SDK runtime configuration for a Meter.
 // It is returned by [MeterConfigurator] and controls whether a Meter
@@ -50,3 +53,26 @@ func (o meterEnabledOption) applyMeterConfig(c *MeterConfig) {
 // It receives the instrumentation scope and returns the runtime configuration
 // for that Meter.
 type MeterConfigurator func(instrumentation.Scope) MeterConfig
+
+type meterConfiguratorProviderOption struct {
+	// nil embed, skip guard in newConfig and prevents apply from being called
+	sdkmetric.Option
+	configurator MeterConfigurator
+}
+
+// Experimental marks this as an experimental option so the skip guard
+// in newConfig() skips calling the nil embedded apply().
+func (meterConfiguratorProviderOption) Experimental() {}
+
+func WithMeterConfigurator(fn MeterConfigurator) sdkmetric.Option {
+	return meterConfiguratorProviderOption{configurator: fn}
+}
+
+// MeterConfigurator returns the configurator as func(scope) any so
+// sdk/metric can extract it via duck-type without importing this package.
+
+func (co meterConfiguratorProviderOption) MeterConfigurator() func(instrumentation.Scope) any {
+	return func(s instrumentation.Scope) any {
+		return co.configurator(s)
+	}
+}
