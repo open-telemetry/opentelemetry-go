@@ -20,8 +20,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/log"
 )
 
 type concurrentBuffer struct {
@@ -354,7 +354,7 @@ func TestBatchProcessor(t *testing.T) {
 			t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
 			r := new(Record)
-			r.SetBody(log.BoolValue(true))
+			r.SetBody(attribute.BoolValue(true))
 			require.NoError(t, b.OnEmit(ctx, r))
 
 			assert.ErrorIs(t, b.ForceFlush(ctx), assert.AnError, "exporter error not returned")
@@ -433,7 +433,7 @@ func TestBatchProcessor(t *testing.T) {
 			t.Cleanup(func() { _ = b.Shutdown(ctx) })
 
 			r := new(Record)
-			r.SetBody(log.BoolValue(true))
+			r.SetBody(attribute.BoolValue(true))
 			_ = b.OnEmit(ctx, r)
 			t.Cleanup(func() { _ = b.Shutdown(ctx) })
 			t.Cleanup(func() { close(e.ExportTrigger) })
@@ -527,7 +527,7 @@ func TestBatchProcessor(t *testing.T) {
 
 func TestQueue(t *testing.T) {
 	var r Record
-	r.SetBody(log.BoolValue(true))
+	r.SetBody(attribute.BoolValue(true))
 
 	t.Run("newQueue", func(t *testing.T) {
 		const size = 1
@@ -543,7 +543,7 @@ func TestQueue(t *testing.T) {
 		q := newQueue(size)
 
 		var notR Record
-		notR.SetBody(log.IntValue(10))
+		notR.SetBody(attribute.IntValue(10))
 
 		assert.Equal(t, 1, q.Enqueue(notR), "incomplete batch")
 		assert.Equal(t, 1, q.len, "length")
@@ -648,7 +648,7 @@ func TestQueue(t *testing.T) {
 
 func BenchmarkBatchProcessorOnEmit(b *testing.B) {
 	r := new(Record)
-	body := log.BoolValue(true)
+	body := attribute.BoolValue(true)
 	r.SetBody(body)
 
 	rSize := unsafe.Sizeof(r) + unsafe.Sizeof(body)

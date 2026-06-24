@@ -87,9 +87,9 @@ type Record struct {
 	ObservedTimestamp time.Time
 	Severity          log.Severity
 	SeverityText      string
-	Body              log.Value
+	Body              attribute.Value
 	Error             error
-	Attributes        []log.KeyValue
+	Attributes        []attribute.KeyValue
 }
 
 // Recorder stores all received log records in-memory.
@@ -113,7 +113,7 @@ var _ log.LoggerProvider = (*Recorder)(nil)
 // Clone returns a deep copy.
 func (a Record) Clone() Record {
 	b := a
-	attrs := make([]log.KeyValue, len(a.Attributes))
+	attrs := make([]attribute.KeyValue, len(a.Attributes))
 	copy(attrs, a.Attributes)
 	b.Attributes = attrs
 	return b
@@ -206,8 +206,8 @@ func (l *logger) Emit(ctx context.Context, record log.Record) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	attrs := make([]log.KeyValue, 0, record.AttributesLen())
-	record.WalkAttributes(func(kv log.KeyValue) bool {
+	attrs := make([]attribute.KeyValue, 0, record.AttributesLen())
+	record.WalkAttributes(func(kv attribute.KeyValue) bool {
 		attrs = append(attrs, kv)
 		return true
 	})

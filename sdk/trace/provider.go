@@ -141,13 +141,20 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 		tp.dedupAttr = func(kv attribute.KeyValue) attribute.KeyValue {
 			switch kv.Value.Type() {
 			case attribute.SLICE, attribute.MAP:
-				return attrdedup.KeyValue(kv)
+				attr, _ := attrdedup.KeyValue(kv)
+				return attr
 			default:
 				return kv
 			}
 		}
-		tp.dedupKeyValues = attrdedup.KeyValues
-		tp.dedupSet = attrdedup.Set
+		tp.dedupKeyValues = func(kvs []attribute.KeyValue) []attribute.KeyValue {
+			deduped, _ := attrdedup.KeyValues(kvs)
+			return deduped
+		}
+		tp.dedupSet = func(s attribute.Set) attribute.Set {
+			deduped, _ := attrdedup.Set(s)
+			return deduped
+		}
 		tp.dedupeSpanAttrs = func(s *recordingSpan) {
 			exists := make(map[attribute.Key]int, len(s.attributes))
 			s.dedupeAttrsFromRecord(exists)

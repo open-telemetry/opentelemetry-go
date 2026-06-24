@@ -9,20 +9,20 @@ package transform
 import (
 	"testing"
 
-	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 )
 
 var (
-	logAttrBool    = log.Bool("bool", true)
-	logAttrInt     = log.Int("int", 1)
-	logAttrInt64   = log.Int64("int64", 1)
-	logAttrFloat64 = log.Float64("float64", 1)
-	logAttrString  = log.String("string", "o")
-	logAttrBytes   = log.Bytes("bytes", []byte("test"))
-	logAttrSlice   = log.Slice("slice", log.BoolValue(true))
-	logAttrMap     = log.Map("map", logAttrString)
-	logAttrEmpty   = log.Empty("empty")
+	logAttrBool    = attribute.Bool("bool", true)
+	logAttrInt     = attribute.Int("int", 1)
+	logAttrInt64   = attribute.Int64("int64", 1)
+	logAttrFloat64 = attribute.Float64("float64", 1)
+	logAttrString  = attribute.String("string", "o")
+	logAttrBytes   = attribute.ByteSlice("bytes", []byte("test"))
+	logAttrSlice   = attribute.Slice("slice", attribute.BoolValue(true))
+	logAttrMap     = attribute.Map("map", logAttrString)
+	logAttrEmpty   = attribute.KeyValue{Key: "empty"}
 
 	kvBytes = &cpb.KeyValue{
 		Key: "bytes",
@@ -57,61 +57,61 @@ var (
 func TestLogAttrs(t *testing.T) {
 	type logAttrTest struct {
 		name string
-		in   []log.KeyValue
+		in   []attribute.KeyValue
 		want []*cpb.KeyValue
 	}
 
 	for _, test := range []logAttrTest{
 		{"nil", nil, nil},
-		{"len(0)", []log.KeyValue{}, nil},
+		{"len(0)", []attribute.KeyValue{}, nil},
 		{
 			"empty",
-			[]log.KeyValue{logAttrEmpty},
+			[]attribute.KeyValue{logAttrEmpty},
 			[]*cpb.KeyValue{kvEmpty},
 		},
 		{
 			"bool",
-			[]log.KeyValue{logAttrBool},
+			[]attribute.KeyValue{logAttrBool},
 			[]*cpb.KeyValue{kvBool},
 		},
 		{
 			"int",
-			[]log.KeyValue{logAttrInt},
+			[]attribute.KeyValue{logAttrInt},
 			[]*cpb.KeyValue{kvInt},
 		},
 		{
 			"int64",
-			[]log.KeyValue{logAttrInt64},
+			[]attribute.KeyValue{logAttrInt64},
 			[]*cpb.KeyValue{kvInt64},
 		},
 		{
 			"float64",
-			[]log.KeyValue{logAttrFloat64},
+			[]attribute.KeyValue{logAttrFloat64},
 			[]*cpb.KeyValue{kvFloat64},
 		},
 		{
 			"string",
-			[]log.KeyValue{logAttrString},
+			[]attribute.KeyValue{logAttrString},
 			[]*cpb.KeyValue{kvString},
 		},
 		{
 			"bytes",
-			[]log.KeyValue{logAttrBytes},
+			[]attribute.KeyValue{logAttrBytes},
 			[]*cpb.KeyValue{kvBytes},
 		},
 		{
 			"slice",
-			[]log.KeyValue{logAttrSlice},
+			[]attribute.KeyValue{logAttrSlice},
 			[]*cpb.KeyValue{kvSlice},
 		},
 		{
 			"map",
-			[]log.KeyValue{logAttrMap},
+			[]attribute.KeyValue{logAttrMap},
 			[]*cpb.KeyValue{kvMap},
 		},
 		{
 			"all",
-			[]log.KeyValue{
+			[]attribute.KeyValue{
 				logAttrBool,
 				logAttrInt,
 				logAttrInt64,
@@ -136,7 +136,7 @@ func TestLogAttrs(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			assertKeyValueSlicesEqual(t, test.want, LogAttrs(test.in))
+			assertKeyValueSlicesEqual(t, test.want, Attrs(test.in))
 		})
 	}
 }
@@ -147,8 +147,8 @@ func TestLogAttrsPreserveDuplicateKeys(t *testing.T) {
 		{Key: "dup", Value: valStrO},
 	}
 
-	assertKeyValueSlicesEqual(t, want, LogAttrs([]log.KeyValue{
-		log.Bool("dup", true),
-		log.String("dup", "o"),
+	assertKeyValueSlicesEqual(t, want, Attrs([]attribute.KeyValue{
+		attribute.Bool("dup", true),
+		attribute.String("dup", "o"),
 	}))
 }

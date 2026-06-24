@@ -462,6 +462,8 @@ var (
 			attribute.String("inner", "val1"),
 			attribute.String("inner", "val2"),
 		),
+		attribute.String("key2", "hello-updated"),
+		attribute.Int64("key3", 456),
 	}
 
 	benchAttrsNoDup = []attribute.KeyValue{
