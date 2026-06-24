@@ -67,7 +67,7 @@ const (
 	INVALID = EMPTY
 )
 
-// BoolValue returns a [Value] containing v as a [BOOL].
+// BoolValue returns a [Value] for a bool value.
 func BoolValue(v bool) Value {
 	return Value{
 		vtype:   BOOL,
@@ -75,7 +75,7 @@ func BoolValue(v bool) Value {
 	}
 }
 
-// BoolSliceValue returns a [Value] containing v as a [BOOLSLICE].
+// BoolSliceValue returns a [Value] for a []bool value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -85,12 +85,12 @@ func BoolSliceValue(v []bool) Value {
 	return Value{vtype: BOOLSLICE, slice: attribute.SliceValue(v)}
 }
 
-// IntValue returns a [Value] containing int64(v) as an [INT64].
+// IntValue returns a [Value] for an int value.
 func IntValue(v int) Value {
 	return Int64Value(int64(v))
 }
 
-// IntSliceValue returns a [Value] containing v as an [INT64SLICE].
+// IntSliceValue returns a [Value] for a []int value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -121,7 +121,7 @@ func IntSliceValue(v []int) Value {
 	return val
 }
 
-// Int64Value returns a [Value] containing v as an [INT64].
+// Int64Value returns a [Value] for an int64 value.
 func Int64Value(v int64) Value {
 	return Value{
 		vtype:   INT64,
@@ -129,7 +129,7 @@ func Int64Value(v int64) Value {
 	}
 }
 
-// Int64SliceValue returns a [Value] containing v as an [INT64SLICE].
+// Int64SliceValue returns a [Value] for a []int64 value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -139,7 +139,7 @@ func Int64SliceValue(v []int64) Value {
 	return Value{vtype: INT64SLICE, slice: attribute.SliceValue(v)}
 }
 
-// Float64Value returns a [Value] containing v as a [FLOAT64].
+// Float64Value returns a [Value] for a float64 value.
 func Float64Value(v float64) Value {
 	return Value{
 		vtype:   FLOAT64,
@@ -147,7 +147,7 @@ func Float64Value(v float64) Value {
 	}
 }
 
-// Float64SliceValue returns a [Value] containing v as a [FLOAT64SLICE].
+// Float64SliceValue returns a [Value] for a []float64 value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -157,7 +157,7 @@ func Float64SliceValue(v []float64) Value {
 	return Value{vtype: FLOAT64SLICE, slice: attribute.SliceValue(v)}
 }
 
-// StringValue returns a [Value] containing v as a [STRING].
+// StringValue returns a [Value] for a string value.
 func StringValue(v string) Value {
 	return Value{
 		vtype:    STRING,
@@ -165,7 +165,7 @@ func StringValue(v string) Value {
 	}
 }
 
-// StringSliceValue returns a [Value] containing v as a [STRINGSLICE].
+// StringSliceValue returns a [Value] for a []string value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -175,7 +175,7 @@ func StringSliceValue(v []string) Value {
 	return Value{vtype: STRINGSLICE, slice: attribute.SliceValue(v)}
 }
 
-// ByteSliceValue returns a [Value] containing v as a [BYTESLICE].
+// ByteSliceValue returns a [Value] for a []byte value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -188,7 +188,7 @@ func ByteSliceValue(v []byte) Value {
 	}
 }
 
-// SliceValue returns a [Value] containing v as a [SLICE].
+// SliceValue returns a [Value] for a []Value value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -198,7 +198,7 @@ func SliceValue(v ...Value) Value {
 	return Value{vtype: SLICE, slice: sliceValue(v)}
 }
 
-// MapValue returns a [Value] containing v as a [MAP].
+// MapValue returns a [Value] for a []KeyValue value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
