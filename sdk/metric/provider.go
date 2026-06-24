@@ -77,7 +77,7 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	}
 
 	c := metric.NewMeterConfig(options...)
-	attrs := attrdedup.Set(c.InstrumentationAttributes())
+	attrs, _ := attrdedup.Set(c.InstrumentationAttributes())
 	s := instrumentation.Scope{
 		Name:       name,
 		Version:    c.InstrumentationVersion(),

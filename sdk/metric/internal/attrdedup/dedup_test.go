@@ -18,9 +18,10 @@ var cmpValue = cmp.AllowUnexported(attribute.Value{})
 
 func TestValue(t *testing.T) {
 	tests := []struct {
-		name  string
-		value attribute.Value
-		want  attribute.Value
+		name        string
+		value       attribute.Value
+		want        attribute.Value
+		wantChanged bool
 	}{
 		{
 			name: "unique map",
@@ -32,6 +33,7 @@ func TestValue(t *testing.T) {
 				attribute.String("one", "1"),
 				attribute.String("two", "2"),
 			),
+			wantChanged: false,
 		},
 		{
 			name: "duplicate map",
@@ -44,6 +46,7 @@ func TestValue(t *testing.T) {
 				attribute.String("one", "2"),
 				attribute.String("two", "3"),
 			),
+			wantChanged: true,
 		},
 		{
 			name: "duplicate map after prior key",
@@ -58,6 +61,7 @@ func TestValue(t *testing.T) {
 				attribute.String("b", "3"),
 				attribute.String("c", "4"),
 			),
+			wantChanged: true,
 		},
 		{
 			name: "nested map",
@@ -74,6 +78,7 @@ func TestValue(t *testing.T) {
 					attribute.String("inner", "2"),
 				),
 			),
+			wantChanged: true,
 		},
 		{
 			name: "map inside slice",
@@ -92,6 +97,7 @@ func TestValue(t *testing.T) {
 				),
 				attribute.StringValue("tail"),
 			),
+			wantChanged: true,
 		},
 		{
 			name: "unique slice",
@@ -103,6 +109,7 @@ func TestValue(t *testing.T) {
 				attribute.StringValue("one"),
 				attribute.IntValue(2),
 			),
+			wantChanged: false,
 		},
 		{
 			name: "empty and invalid keys",
@@ -115,12 +122,16 @@ func TestValue(t *testing.T) {
 				attribute.String("", "empty"),
 				attribute.String("valid", "value"),
 			),
+			wantChanged: true,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := Value(test.value)
+			got, changed := Value(test.value)
+			if changed != test.wantChanged {
+				t.Fatalf("Value() changed = %v, want %v", changed, test.wantChanged)
+			}
 			if diff := cmp.Diff(test.want, got, cmpValue); diff != "" {
 				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 			}
@@ -136,10 +147,13 @@ func TestValueNoopAllocationFree(t *testing.T) {
 	var got attribute.Value
 
 	allocs := testing.AllocsPerRun(1000, func() {
-		got = Value(value)
+		got, _ = Value(value)
 	})
 	if allocs != 0 {
 		t.Fatalf("Value() allocations = %v, want 0", allocs)
+	}
+	if _, changed := Value(value); changed {
+		t.Fatal("Value() changed a no-op input")
 	}
 	if diff := cmp.Diff(value, got, cmpValue); diff != "" {
 		t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
@@ -155,7 +169,10 @@ func TestValueStorageShapes(t *testing.T) {
 			}
 			value := attribute.MapValue(kvs...)
 
-			got := Value(value)
+			got, changed := Value(value)
+			if changed {
+				t.Fatal("Value() changed a no-op input")
+			}
 			if diff := cmp.Diff(value, got, cmpValue); diff != "" {
 				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 			}
@@ -167,7 +184,10 @@ func TestValueStorageShapes(t *testing.T) {
 			}
 			value := attribute.SliceValue(values...)
 
-			got := Value(value)
+			got, changed := Value(value)
+			if changed {
+				t.Fatal("Value() changed a no-op input")
+			}
 			if diff := cmp.Diff(value, got, cmpValue); diff != "" {
 				t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 			}
@@ -186,7 +206,10 @@ func TestKeyValue(t *testing.T) {
 		attribute.String("nested", "second"),
 	)
 
-	got := KeyValue(kv)
+	got, changed := KeyValue(kv)
+	if !changed {
+		t.Fatal("KeyValue() changed = false, want true")
+	}
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
 		t.Fatalf("KeyValue() mismatch (-want +got):\n%s", diff)
 	}
@@ -198,7 +221,10 @@ func TestKeyValuesNoopReturnsInput(t *testing.T) {
 		attribute.Map("two", attribute.String("nested", "value")),
 	}
 
-	got := KeyValues(kvs)
+	got, changed := KeyValues(kvs)
+	if changed {
+		t.Fatal("KeyValues() changed a no-op input")
+	}
 	if len(got) != len(kvs) {
 		t.Fatalf("KeyValues() length = %d, want %d", len(got), len(kvs))
 	}
@@ -226,7 +252,10 @@ func TestKeyValues(t *testing.T) {
 		attribute.String("tail", "value"),
 	}
 
-	got := KeyValues(kvs)
+	got, changed := KeyValues(kvs)
+	if !changed {
+		t.Fatal("KeyValues() changed = false, want true")
+	}
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
 		t.Fatalf("KeyValues() mismatch (-want +got):\n%s", diff)
 	}
@@ -251,7 +280,10 @@ func TestSet(t *testing.T) {
 		attribute.String("z-tail", "value"),
 	)
 
-	got := Set(set)
+	got, changed := Set(set)
+	if !changed {
+		t.Fatal("Set() changed = false, want true")
+	}
 	if diff := cmp.Diff(want.ToSlice(), got.ToSlice(), cmpValue); diff != "" {
 		t.Fatalf("Set() mismatch (-want +got):\n%s", diff)
 	}
@@ -263,7 +295,10 @@ func TestSetNoop(t *testing.T) {
 		attribute.Map("map", attribute.String("nested", "value")),
 	)
 
-	got := Set(set)
+	got, changed := Set(set)
+	if changed {
+		t.Fatal("Set() changed a no-op input")
+	}
 	if !got.Equals(&set) {
 		t.Fatal("Set() changed a no-op input")
 	}
@@ -272,7 +307,10 @@ func TestSetNoop(t *testing.T) {
 func TestSetEmpty(t *testing.T) {
 	set := attribute.Set{}
 
-	got := Set(set)
+	got, changed := Set(set)
+	if changed {
+		t.Fatal("Set() changed an empty input")
+	}
 	if !got.Equals(&set) {
 		t.Fatal("Set() changed an empty input")
 	}

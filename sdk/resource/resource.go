@@ -90,7 +90,7 @@ func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
 		return &Resource{}
 	}
 
-	attrs = attrdedup.KeyValues(attrs)
+	attrs, _ = attrdedup.KeyValues(attrs)
 
 	// Ensure attributes comply with the specification:
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/common/README.md#attribute
