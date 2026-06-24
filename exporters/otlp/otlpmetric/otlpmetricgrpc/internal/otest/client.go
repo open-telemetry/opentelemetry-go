@@ -202,7 +202,7 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 		})
 
 		t.Run("ForceFlushFlushes", func(t *testing.T) {
-			ctx := context.Background() //nolint:usetesting
+			ctx := t.Context()
 			client, collector := f(nil)
 			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
 
@@ -217,7 +217,7 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 		})
 
 		t.Run("UploadMetrics", func(t *testing.T) {
-			ctx := context.Background() //nolint:usetesting
+			ctx := t.Context()
 			client, coll := f(nil)
 
 			require.NoError(t, client.UploadMetrics(ctx, resourceMetrics))
@@ -254,7 +254,7 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 				Response: &collpb.ExportMetricsServiceResponse{},
 			}
 
-			ctx := context.Background() //nolint:usetesting
+			ctx := t.Context()
 			client, _ := f(rCh)
 
 			wantErr := internal.MetricPartialSuccessError(0, "")
@@ -269,7 +269,7 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 func testCtxErrs(factory func() func(context.Context) error) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
-		ctx, cancel := context.WithCancel(context.Background()) //nolint:usetesting
+		ctx, cancel := context.WithCancel(t.Context())
 		t.Cleanup(cancel)
 
 		t.Run("DeadlineExceeded", func(t *testing.T) {
