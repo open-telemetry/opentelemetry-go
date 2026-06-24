@@ -115,7 +115,7 @@ func TestSelfObservability(t *testing.T) {
 		{
 			name:        "error",
 			envValue:    "true",
-			endpoint:    "dns:///invalid:999999",
+			endpoint:    "passthrough:///127.0.0.1:1",
 			expectError: true,
 			wantMetrics: func(actualComponentName, addr string, port int, err error) []metricdata.Metrics {
 				baseAttrs := []attribute.KeyValue{
