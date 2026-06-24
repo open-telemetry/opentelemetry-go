@@ -45,23 +45,26 @@ type tracerProviderConfig struct {
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
 
+	// allowDupKeys disables duplicate-key removal for span, event, and link attributes when true.
 	allowDupKeys bool
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Provider.
 func (cfg tracerProviderConfig) MarshalLog() any {
 	return struct {
-		SpanProcessors  []SpanProcessor
-		SamplerType     string
-		IDGeneratorType string
-		SpanLimits      SpanLimits
-		Resource        *resource.Resource
+		SpanProcessors      []SpanProcessor
+		SamplerType         string
+		IDGeneratorType     string
+		SpanLimits          SpanLimits
+		Resource            *resource.Resource
+		AllowKeyDuplication bool
 	}{
-		SpanProcessors:  cfg.processors,
-		SamplerType:     fmt.Sprintf("%T", cfg.sampler),
-		IDGeneratorType: fmt.Sprintf("%T", cfg.idGenerator),
-		SpanLimits:      cfg.spanLimits,
-		Resource:        cfg.resource,
+		SpanProcessors:      cfg.processors,
+		SamplerType:         fmt.Sprintf("%T", cfg.sampler),
+		IDGeneratorType:     fmt.Sprintf("%T", cfg.idGenerator),
+		SpanLimits:          cfg.spanLimits,
+		Resource:            cfg.resource,
+		AllowKeyDuplication: cfg.allowDupKeys,
 	}
 }
 
