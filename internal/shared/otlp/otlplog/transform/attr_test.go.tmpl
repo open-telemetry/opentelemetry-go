@@ -33,6 +33,18 @@ var (
 		attribute.ByteSliceValue([]byte("otlp")),
 		attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),
 	)
+	attrMap = attribute.Map("map",
+		attribute.String("string", "o"),
+		attribute.Int("number", 2),
+		attribute.ByteSlice("bytes", []byte("otlp")),
+		attribute.Slice(
+			"slice",
+			attribute.BoolValue(true),
+			attribute.MapValue(attribute.String("inner", "value")),
+		),
+		attribute.Map("nested", attribute.Bool("ok", true)),
+		attribute.KeyValue{Key: "empty"},
+	)
 	attrStringSlice = attribute.StringSlice("string slice", []string{"o", "n"})
 	attrEmpty       = attribute.KeyValue{
 		Key:   attribute.Key("empty"),
@@ -61,7 +73,10 @@ var (
 			Values: []*cpb.AnyValue{valDblNOne, valDblOne},
 		},
 	}}
-	valStrO      = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "o"}}
+	valStrO     = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{StringValue: "o"}}
+	valStrValue = &cpb.AnyValue{Value: &cpb.AnyValue_StringValue{
+		StringValue: "value",
+	}}
 	valAttrBytes = &cpb.AnyValue{Value: &cpb.AnyValue_BytesValue{BytesValue: []byte("otlp")}}
 	valSlice     = &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
 		ArrayValue: &cpb.ArrayValue{
@@ -73,6 +88,37 @@ var (
 						Values: []*cpb.AnyValue{valIntTwo, {}},
 					},
 				}},
+			},
+		},
+	}}
+	valAttrMap = &cpb.AnyValue{Value: &cpb.AnyValue_KvlistValue{
+		KvlistValue: &cpb.KeyValueList{
+			Values: []*cpb.KeyValue{
+				{Key: "bytes", Value: valAttrBytes},
+				{Key: "empty", Value: &cpb.AnyValue{}},
+				{Key: "nested", Value: &cpb.AnyValue{Value: &cpb.AnyValue_KvlistValue{
+					KvlistValue: &cpb.KeyValueList{
+						Values: []*cpb.KeyValue{
+							{Key: "ok", Value: valBoolTrue},
+						},
+					},
+				}}},
+				{Key: "number", Value: valIntTwo},
+				{Key: "slice", Value: &cpb.AnyValue{Value: &cpb.AnyValue_ArrayValue{
+					ArrayValue: &cpb.ArrayValue{
+						Values: []*cpb.AnyValue{
+							valBoolTrue,
+							{Value: &cpb.AnyValue_KvlistValue{
+								KvlistValue: &cpb.KeyValueList{
+									Values: []*cpb.KeyValue{
+										{Key: "inner", Value: valStrValue},
+									},
+								},
+							}},
+						},
+					},
+				}}},
+				{Key: "string", Value: valStrO},
 			},
 		},
 	}}
@@ -94,6 +140,7 @@ var (
 	kvString       = &cpb.KeyValue{Key: "string", Value: valStrO}
 	kvAttrBytes    = &cpb.KeyValue{Key: "bytes", Value: valAttrBytes}
 	kvAttrSlice    = &cpb.KeyValue{Key: "slice", Value: valSlice}
+	kvAttrMap      = &cpb.KeyValue{Key: "map", Value: valAttrMap}
 	kvStringSlice  = &cpb.KeyValue{Key: "string slice", Value: valStrSlice}
 	kvEmpty        = &cpb.KeyValue{Key: "empty", Value: &cpb.AnyValue{}}
 )
@@ -169,6 +216,11 @@ func TestAttrTransforms(t *testing.T) {
 			[]*cpb.KeyValue{kvAttrSlice},
 		},
 		{
+			"map",
+			[]attribute.KeyValue{attrMap},
+			[]*cpb.KeyValue{kvAttrMap},
+		},
+		{
 			"string slice",
 			[]attribute.KeyValue{attrStringSlice},
 			[]*cpb.KeyValue{kvStringSlice},
@@ -187,6 +239,7 @@ func TestAttrTransforms(t *testing.T) {
 				attrString,
 				attrBytes,
 				attrSlice,
+				attrMap,
 				attrStringSlice,
 				attrEmpty,
 			},
@@ -202,6 +255,7 @@ func TestAttrTransforms(t *testing.T) {
 				kvString,
 				kvAttrBytes,
 				kvAttrSlice,
+				kvAttrMap,
 				kvStringSlice,
 				kvEmpty,
 			},
