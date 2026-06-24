@@ -220,10 +220,12 @@ func TestHashValueMapOrdering(t *testing.T) {
 	}
 }
 
-// TestHashKVsSliceLengths covers the fixed-array fast path (len 0-3) and the
-// reflective fallback (len >= 4) for every primitive slice type.
-func TestHashKVsSliceLengths(t *testing.T) {
-	var kvs []KeyValue
+// TestHashValueSliceLengths checks that hashValue hashes the type ID followed
+// by every element, in order, for each primitive slice type — across the
+// fixed-array fast path (len 0-3) and the reflective fallback (len >= 4). The
+// reference hashes are built with simple loops, so a wrong, dropped, or
+// duplicated index in the unrolled fast path fails here.
+func TestHashValueSliceLengths(t *testing.T) {
 	for n := 0; n <= 5; n++ {
 		bools := make([]bool, n)
 		ints := make([]int64, n)
@@ -235,22 +237,34 @@ func TestHashKVsSliceLengths(t *testing.T) {
 			floats[i] = float64(i) + 0.5
 			strs[i] = fmt.Sprintf("s%d", i)
 		}
-		kvs = append(
-			kvs,
-			BoolSlice("bool", bools),
-			Int64Slice("int64", ints),
-			Float64Slice("float64", floats),
-			StringSlice("string", strs),
-		)
-	}
 
-	seen := make(map[uint64]KeyValue, len(kvs))
-	for _, kv := range kvs {
-		h := hashKVs([]KeyValue{kv})
-		if prev, ok := seen[h]; ok {
-			t.Errorf("hash collision: %s and %s both hash to %d", prev.Value, kv.Value, h)
+		wantBool := xxhash.New().Uint64(boolSliceID)
+		for _, v := range bools {
+			wantBool = wantBool.Bool(v)
 		}
-		seen[h] = kv
+		wantInt := xxhash.New().Uint64(int64SliceID)
+		for _, v := range ints {
+			wantInt = wantInt.Int64(v)
+		}
+		wantFloat := xxhash.New().Uint64(float64SliceID)
+		for _, v := range floats {
+			wantFloat = wantFloat.Float64(v)
+		}
+		wantStr := xxhash.New().Uint64(stringSliceID)
+		for _, v := range strs {
+			wantStr = wantStr.String(v)
+		}
+
+		assert := func(name string, v Value, want xxhash.Hash) {
+			got := hashValue(xxhash.New(), v).Sum64()
+			if w := want.Sum64(); got != w {
+				t.Errorf("len %d %s: hashValue = %d, want %d", n, name, got, w)
+			}
+		}
+		assert("bool", BoolSliceValue(bools), wantBool)
+		assert("int64", Int64SliceValue(ints), wantInt)
+		assert("float64", Float64SliceValue(floats), wantFloat)
+		assert("string", StringSliceValue(strs), wantStr)
 	}
 }
 

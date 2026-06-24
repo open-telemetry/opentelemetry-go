@@ -74,17 +74,14 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		switch vals := v.slice.(type) {
 		case [0]bool:
 		case [1]bool:
-			for i := range vals {
-				h = h.Bool(vals[i])
-			}
+			h = h.Bool(vals[0])
 		case [2]bool:
-			for i := range vals {
-				h = h.Bool(vals[i])
-			}
+			h = h.Bool(vals[0])
+			h = h.Bool(vals[1])
 		case [3]bool:
-			for i := range vals {
-				h = h.Bool(vals[i])
-			}
+			h = h.Bool(vals[0])
+			h = h.Bool(vals[1])
+			h = h.Bool(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
 			for i := 0; i < rv.Len(); i++ {
@@ -96,17 +93,14 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		switch vals := v.slice.(type) {
 		case [0]int64:
 		case [1]int64:
-			for i := range vals {
-				h = h.Int64(vals[i])
-			}
+			h = h.Int64(vals[0])
 		case [2]int64:
-			for i := range vals {
-				h = h.Int64(vals[i])
-			}
+			h = h.Int64(vals[0])
+			h = h.Int64(vals[1])
 		case [3]int64:
-			for i := range vals {
-				h = h.Int64(vals[i])
-			}
+			h = h.Int64(vals[0])
+			h = h.Int64(vals[1])
+			h = h.Int64(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
 			for i := 0; i < rv.Len(); i++ {
@@ -118,17 +112,14 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		switch vals := v.slice.(type) {
 		case [0]float64:
 		case [1]float64:
-			for i := range vals {
-				h = h.Float64(vals[i])
-			}
+			h = h.Float64(vals[0])
 		case [2]float64:
-			for i := range vals {
-				h = h.Float64(vals[i])
-			}
+			h = h.Float64(vals[0])
+			h = h.Float64(vals[1])
 		case [3]float64:
-			for i := range vals {
-				h = h.Float64(vals[i])
-			}
+			h = h.Float64(vals[0])
+			h = h.Float64(vals[1])
+			h = h.Float64(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
 			for i := 0; i < rv.Len(); i++ {
@@ -140,17 +131,14 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		switch vals := v.slice.(type) {
 		case [0]string:
 		case [1]string:
-			for i := range vals {
-				h = h.String(vals[i])
-			}
+			h = h.String(vals[0])
 		case [2]string:
-			for i := range vals {
-				h = h.String(vals[i])
-			}
+			h = h.String(vals[0])
+			h = h.String(vals[1])
 		case [3]string:
-			for i := range vals {
-				h = h.String(vals[i])
-			}
+			h = h.String(vals[0])
+			h = h.String(vals[1])
+			h = h.String(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
 			for i := 0; i < rv.Len(); i++ {
