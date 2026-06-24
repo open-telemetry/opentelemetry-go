@@ -113,8 +113,10 @@ func TestSelfObservability(t *testing.T) {
 			},
 		},
 		{
-			name:        "error",
-			envValue:    "true",
+			name:     "error",
+			envValue: "true",
+			// Use passthrough to avoid DNS resolver delays. This test only needs a
+			// deterministic export failure to verify self-observability metrics.
 			endpoint:    "passthrough:///127.0.0.1:1",
 			expectError: true,
 			wantMetrics: func(actualComponentName, addr string, port int, err error) []metricdata.Metrics {
