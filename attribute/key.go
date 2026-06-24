@@ -7,7 +7,7 @@ package attribute // import "go.opentelemetry.io/otel/attribute"
 // allowed character set in the key depends on the use of the key.
 type Key string
 
-// Bool creates a [KeyValue] with a [BOOL] value.
+// Bool returns a [KeyValue] for a bool value.
 //
 // If creating both a key and value at the same time, use the package-level
 // [Bool] function.
@@ -18,7 +18,7 @@ func (k Key) Bool(v bool) KeyValue {
 	}
 }
 
-// BoolSlice creates a [KeyValue] with a [BOOLSLICE] value.
+// BoolSlice returns a [KeyValue] for a []bool value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -34,7 +34,7 @@ func (k Key) BoolSlice(v []bool) KeyValue {
 	}
 }
 
-// Int creates a [KeyValue] with an [INT64] value.
+// Int returns a [KeyValue] for an int value.
 //
 // If creating both a key and value at the same time, use the package-level [Int]
 // function.
@@ -45,7 +45,7 @@ func (k Key) Int(v int) KeyValue {
 	}
 }
 
-// IntSlice creates a [KeyValue] with an [INT64SLICE] value.
+// IntSlice returns a [KeyValue] for a []int value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -61,7 +61,7 @@ func (k Key) IntSlice(v []int) KeyValue {
 	}
 }
 
-// Int64 creates a [KeyValue] with an [INT64] value.
+// Int64 returns a [KeyValue] for an int64 value.
 //
 // If creating both a key and value at the same time, use the package-level
 // [Int64] function.
@@ -72,7 +72,7 @@ func (k Key) Int64(v int64) KeyValue {
 	}
 }
 
-// Int64Slice creates a [KeyValue] with an [INT64SLICE] value.
+// Int64Slice returns a [KeyValue] for a []int64 value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -88,7 +88,7 @@ func (k Key) Int64Slice(v []int64) KeyValue {
 	}
 }
 
-// Float64 creates a [KeyValue] with a [FLOAT64] value.
+// Float64 returns a [KeyValue] for a float64 value.
 //
 // If creating both a key and value at the same time, use the package-level
 // [Float64] function.
@@ -99,7 +99,7 @@ func (k Key) Float64(v float64) KeyValue {
 	}
 }
 
-// Float64Slice creates a [KeyValue] with a [FLOAT64SLICE] value.
+// Float64Slice returns a [KeyValue] for a []float64 value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -115,7 +115,7 @@ func (k Key) Float64Slice(v []float64) KeyValue {
 	}
 }
 
-// String creates a [KeyValue] with a [STRING] value.
+// String returns a [KeyValue] for a string value.
 //
 // If creating both a key and value at the same time, use the package-level
 // [String] function.
@@ -126,7 +126,7 @@ func (k Key) String(v string) KeyValue {
 	}
 }
 
-// StringSlice creates a [KeyValue] with a [STRINGSLICE] value.
+// StringSlice returns a [KeyValue] for a []string value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -142,7 +142,7 @@ func (k Key) StringSlice(v []string) KeyValue {
 	}
 }
 
-// ByteSlice creates a [KeyValue] with a [BYTESLICE] value.
+// ByteSlice returns a [KeyValue] for a []byte value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -158,7 +158,7 @@ func (k Key) ByteSlice(v []byte) KeyValue {
 	}
 }
 
-// Slice creates a [KeyValue] with a [SLICE] value.
+// Slice returns a [KeyValue] for a []Value value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -174,7 +174,7 @@ func (k Key) Slice(v ...Value) KeyValue {
 	}
 }
 
-// Map creates a [KeyValue] with a [MAP] value.
+// Map returns a [KeyValue] for a []KeyValue value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry

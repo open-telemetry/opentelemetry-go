@@ -18,12 +18,12 @@ func (kv KeyValue) Valid() bool {
 	return kv.Key.Defined()
 }
 
-// Bool creates a [KeyValue] with a [BOOL] value.
+// Bool returns a [KeyValue] for a bool value.
 func Bool(k string, v bool) KeyValue {
 	return Key(k).Bool(v)
 }
 
-// BoolSlice creates a [KeyValue] with a [BOOLSLICE] value.
+// BoolSlice returns a [KeyValue] for a []bool value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -33,12 +33,12 @@ func BoolSlice(k string, v []bool) KeyValue {
 	return Key(k).BoolSlice(v)
 }
 
-// Int creates a [KeyValue] with an [INT64] value.
+// Int returns a [KeyValue] for an int value.
 func Int(k string, v int) KeyValue {
 	return Key(k).Int(v)
 }
 
-// IntSlice creates a [KeyValue] with an [INT64SLICE] value.
+// IntSlice returns a [KeyValue] for a []int value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -48,12 +48,12 @@ func IntSlice(k string, v []int) KeyValue {
 	return Key(k).IntSlice(v)
 }
 
-// Int64 creates a [KeyValue] with an [INT64] value.
+// Int64 returns a [KeyValue] for an int64 value.
 func Int64(k string, v int64) KeyValue {
 	return Key(k).Int64(v)
 }
 
-// Int64Slice creates a [KeyValue] with an [INT64SLICE] value.
+// Int64Slice returns a [KeyValue] for a []int64 value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -63,12 +63,12 @@ func Int64Slice(k string, v []int64) KeyValue {
 	return Key(k).Int64Slice(v)
 }
 
-// Float64 creates a [KeyValue] with a [FLOAT64] value.
+// Float64 returns a [KeyValue] for a float64 value.
 func Float64(k string, v float64) KeyValue {
 	return Key(k).Float64(v)
 }
 
-// Float64Slice creates a [KeyValue] with a [FLOAT64SLICE] value.
+// Float64Slice returns a [KeyValue] for a []float64 value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -78,12 +78,12 @@ func Float64Slice(k string, v []float64) KeyValue {
 	return Key(k).Float64Slice(v)
 }
 
-// String creates a [KeyValue] with a [STRING] value.
+// String returns a [KeyValue] for a string value.
 func String(k, v string) KeyValue {
 	return Key(k).String(v)
 }
 
-// StringSlice creates a [KeyValue] with a [STRINGSLICE] value.
+// StringSlice returns a [KeyValue] for a []string value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -93,7 +93,7 @@ func StringSlice(k string, v []string) KeyValue {
 	return Key(k).StringSlice(v)
 }
 
-// ByteSlice creates a [KeyValue] with a [BYTESLICE] value.
+// ByteSlice returns a [KeyValue] for a []byte value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -103,7 +103,7 @@ func ByteSlice(k string, v []byte) KeyValue {
 	return Key(k).ByteSlice(v)
 }
 
-// Slice creates a [KeyValue] with a [SLICE] value.
+// Slice returns a [KeyValue] for a []Value value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
@@ -113,7 +113,7 @@ func Slice(k string, v ...Value) KeyValue {
 	return Key(k).Slice(v...)
 }
 
-// Map creates a [KeyValue] with a [MAP] value.
+// Map returns a [KeyValue] for a []KeyValue value.
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
