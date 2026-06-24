@@ -34,11 +34,15 @@ func BoolSlice(k string, v []bool) KeyValue {
 }
 
 // Int returns a [KeyValue] for an int value.
+//
+// It is provided as a convenience for [Int64].
 func Int(k string, v int) KeyValue {
 	return Key(k).Int(v)
 }
 
 // IntSlice returns a [KeyValue] for a []int value.
+//
+// It is provided as a convenience for [Int64Slice].
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry

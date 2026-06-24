@@ -36,6 +36,8 @@ func (k Key) BoolSlice(v []bool) KeyValue {
 
 // Int returns a [KeyValue] for an int value.
 //
+// It is provided as a convenience for [Key.Int64].
+//
 // If creating both a key and value at the same time, use the package-level [Int]
 // function.
 func (k Key) Int(v int) KeyValue {
@@ -46,6 +48,8 @@ func (k Key) Int(v int) KeyValue {
 }
 
 // IntSlice returns a [KeyValue] for a []int value.
+//
+// It is provided as a convenience for [Key.Int64Slice].
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry

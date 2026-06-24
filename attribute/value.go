@@ -86,11 +86,15 @@ func BoolSliceValue(v []bool) Value {
 }
 
 // IntValue returns a [Value] for an int value.
+//
+// It is provided as a convenience for [Int64Value].
 func IntValue(v int) Value {
 	return Int64Value(int64(v))
 }
 
 // IntSliceValue returns a [Value] for a []int value.
+//
+// It is provided as a convenience for [Int64SliceValue].
 //
 // Note that many observability backends are not optimized to query, index, or
 // aggregate complex attribute values. Complex values may also carry
