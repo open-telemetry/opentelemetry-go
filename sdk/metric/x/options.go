@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package x // import "go.opentelemetry.io/otel/sdk/metric/x"
+package x
 
 import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -30,4 +30,18 @@ func (co meterConfiguratorProviderOption) MeterConfigurator() func(instrumentati
 	return func(s instrumentation.Scope) any {
 		return co.configurator(s)
 	}
+}
+
+// MeterConfiguratorUpdater is implemented by MeterProviders that support
+// runtime configurator updates. Type-assert a MeterProvider to this interface
+// to update its configurator after construction
+type MeterConfiguratorUpdater interface {
+	SetMeterConfigurator(func(instrumentation.Scope) any)
+}
+
+// SetMeterConfigurator updates the MeterConfigurator on MeterProvider which support that operation
+func SetMeterConfigurator(meterProvider MeterConfiguratorUpdater, fn MeterConfigurator) {
+	meterProvider.SetMeterConfigurator(func(s instrumentation.Scope) any {
+		return fn(s)
+	})
 }

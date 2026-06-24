@@ -1,8 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package x contains experimental SDK-level metric configuration.
-package x // import "go.opentelemetry.io/otel/sdk/metric/x"
+package x
 
 import "go.opentelemetry.io/otel/sdk/instrumentation"
 
@@ -50,4 +49,3 @@ func (o meterEnabledOption) applyMeterConfig(c *MeterConfig) {
 // It receives the instrumentation scope and returns the runtime configuration
 // for that Meter.
 type MeterConfigurator func(instrumentation.Scope) MeterConfig
-
