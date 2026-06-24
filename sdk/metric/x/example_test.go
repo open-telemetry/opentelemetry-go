@@ -24,7 +24,7 @@ func ExampleSetMeterConfigurator() {
 	// often obtained via otel.GetMeterProvider, hiding the concrete type.
 	otel.SetMeterProvider(mp)
 
-	// Obtain the provider through the global — concrete type is opaque here.
+	// Obtain the provider through the global, concrete type is opaque here.
 	p := otel.GetMeterProvider()
 
 	// Type-assert to check if the provider supports runtime configurator updates.
