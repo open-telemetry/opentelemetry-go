@@ -71,27 +71,91 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.String(v.stringly)
 	case BOOLSLICE:
 		h = h.Uint64(boolSliceID)
-		rv := reflect.ValueOf(v.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.Bool(rv.Index(i).Bool())
+		switch vals := v.slice.(type) {
+		case [0]bool:
+		case [1]bool:
+			for _, b := range vals {
+				h = h.Bool(b)
+			}
+		case [2]bool:
+			for _, b := range vals {
+				h = h.Bool(b)
+			}
+		case [3]bool:
+			for _, b := range vals {
+				h = h.Bool(b)
+			}
+		default:
+			rv := reflect.ValueOf(v.slice)
+			for i := 0; i < rv.Len(); i++ {
+				h = h.Bool(rv.Index(i).Bool())
+			}
 		}
 	case INT64SLICE:
 		h = h.Uint64(int64SliceID)
-		rv := reflect.ValueOf(v.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.Int64(rv.Index(i).Int())
+		switch vals := v.slice.(type) {
+		case [0]int64:
+		case [1]int64:
+			for _, n := range vals {
+				h = h.Int64(n)
+			}
+		case [2]int64:
+			for _, n := range vals {
+				h = h.Int64(n)
+			}
+		case [3]int64:
+			for _, n := range vals {
+				h = h.Int64(n)
+			}
+		default:
+			rv := reflect.ValueOf(v.slice)
+			for i := 0; i < rv.Len(); i++ {
+				h = h.Int64(rv.Index(i).Int())
+			}
 		}
 	case FLOAT64SLICE:
 		h = h.Uint64(float64SliceID)
-		rv := reflect.ValueOf(v.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.Float64(rv.Index(i).Float())
+		switch vals := v.slice.(type) {
+		case [0]float64:
+		case [1]float64:
+			for _, f := range vals {
+				h = h.Float64(f)
+			}
+		case [2]float64:
+			for _, f := range vals {
+				h = h.Float64(f)
+			}
+		case [3]float64:
+			for _, f := range vals {
+				h = h.Float64(f)
+			}
+		default:
+			rv := reflect.ValueOf(v.slice)
+			for i := 0; i < rv.Len(); i++ {
+				h = h.Float64(rv.Index(i).Float())
+			}
 		}
 	case STRINGSLICE:
 		h = h.Uint64(stringSliceID)
-		rv := reflect.ValueOf(v.slice)
-		for i := 0; i < rv.Len(); i++ {
-			h = h.String(rv.Index(i).String())
+		switch vals := v.slice.(type) {
+		case [0]string:
+		case [1]string:
+			for _, s := range vals {
+				h = h.String(s)
+			}
+		case [2]string:
+			for _, s := range vals {
+				h = h.String(s)
+			}
+		case [3]string:
+			for _, s := range vals {
+				h = h.String(s)
+			}
+		default:
+			rv := reflect.ValueOf(v.slice)
+			for i := 0; i < rv.Len(); i++ {
+				h = h.String(rv.Index(i).String())
+			}
 		}
 	case BYTESLICE:
 		h = h.Uint64(byteSliceID)

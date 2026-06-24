@@ -13,6 +13,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `Map` and `MapValue` functions for new `MAP` attribute type in `go.opentelemetry.io/otel/attribute`. (#8445)
 - Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
 
+### Changed
+
+- Improve the performance of hashing `BOOLSLICE`, `INT64SLICE`, `FLOAT64SLICE`, and `STRINGSLICE` attribute values by avoiding reflection for short slices in `go.opentelemetry.io/otel/attribute`. (#8200)
+
 ### Fixed
 
 - Avoid preallocating scope attributes when they are disabled in `go.opentelemetry.io/otel/exporters/prometheus` . (#8404)
