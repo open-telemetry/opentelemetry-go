@@ -45,23 +45,26 @@ type tracerProviderConfig struct {
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
 
+	// allowDupKeys disables duplicate-key removal for span, event, and link attributes when true.
 	allowDupKeys bool
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Provider.
 func (cfg tracerProviderConfig) MarshalLog() any {
 	return struct {
-		SpanProcessors  []SpanProcessor
-		SamplerType     string
-		IDGeneratorType string
-		SpanLimits      SpanLimits
-		Resource        *resource.Resource
+		SpanProcessors      []SpanProcessor
+		SamplerType         string
+		IDGeneratorType     string
+		SpanLimits          SpanLimits
+		Resource            *resource.Resource
+		AllowKeyDuplication bool
 	}{
-		SpanProcessors:  cfg.processors,
-		SamplerType:     fmt.Sprintf("%T", cfg.sampler),
-		IDGeneratorType: fmt.Sprintf("%T", cfg.idGenerator),
-		SpanLimits:      cfg.spanLimits,
-		Resource:        cfg.resource,
+		SpanProcessors:      cfg.processors,
+		SamplerType:         fmt.Sprintf("%T", cfg.sampler),
+		IDGeneratorType:     fmt.Sprintf("%T", cfg.idGenerator),
+		SpanLimits:          cfg.spanLimits,
+		Resource:            cfg.resource,
+		AllowKeyDuplication: cfg.allowDupKeys,
 	}
 }
 
@@ -520,12 +523,13 @@ func WithRawSpanLimits(limits SpanLimits) TracerProviderOption {
 }
 
 // WithAllowKeyDuplication returns a TracerProviderOption that disables
-// duplicate-key removal from map attribute values in span, event, link,
-// and instrumentation scope attributes exported by the TracerProvider.
+// duplicate-key removal for span, event, and link attributes, as well as
+// attribute.MAP values, exported by the TracerProvider.
 //
-// By default, map attribute values are deduplicated to comply with the
-// OpenTelemetry Specification. Duplicate map keys are resolved using
-// last-value-wins semantics.
+// By default, duplicate keys are removed to comply with the OpenTelemetry
+// Specification, using last-value-wins semantics.
+//
+// Note: Resource attributes are always deduplicated regardless of this option.
 func WithAllowKeyDuplication() TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
 		cfg.allowDupKeys = true
