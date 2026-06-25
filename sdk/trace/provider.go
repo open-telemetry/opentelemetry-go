@@ -522,14 +522,21 @@ func WithRawSpanLimits(limits SpanLimits) TracerProviderOption {
 	})
 }
 
-// WithAllowKeyDuplication returns a TracerProviderOption that disables
-// duplicate-key removal for span, event, and link attributes, as well as
-// attribute.MAP values, exported by the TracerProvider.
+// WithAllowKeyDuplication sets whether deduplication is skipped for span, event,
+// link, and instrumentation scope key-value collections.
 //
-// By default, duplicate keys are removed to comply with the OpenTelemetry
-// Specification, using last-value-wins semantics.
+// By default, the key-value collections within a span, event, link, and
+// instrumentation scope are deduplicated to comply with the OpenTelemetry
+// Specification.
+// Deduplication means that if multiple key-value pairs with the same key are
+// present, only a single pair is retained and others are discarded. Resource
+// attributes are always deduplicated by go.opentelemetry.io/otel/sdk/resource.
 //
-// Note: Resource attributes are always deduplicated regardless of this option.
+// Disabling deduplication with this option can improve performance e.g. of adding attributes to spans.
+//
+// Note that if you disable deduplication, you are responsible for ensuring that duplicate
+// key-value pairs within a single collection are not emitted,
+// or that the telemetry receiver can handle such duplicates.
 func WithAllowKeyDuplication() TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
 		cfg.allowDupKeys = true
