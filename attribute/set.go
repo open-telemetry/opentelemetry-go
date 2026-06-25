@@ -418,6 +418,8 @@ func (l *Set) String() string {
 
 	n := l.Len()
 	var b strings.Builder
+	// Estimate 16 bytes per attribute for the key, separators, and a small value.
+	b.Grow(len("{}") + n*16)
 	_ = b.WriteByte('{')
 	for i := range n {
 		if i > 0 {
