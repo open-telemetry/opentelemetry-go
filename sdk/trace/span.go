@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 	"unicode/utf8"
+	"unsafe"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -377,6 +378,9 @@ func truncateAttr(limit int, attr attribute.KeyValue) attribute.KeyValue {
 		v := attr.Value.AsString()
 		return attr.Key.String(truncate(limit, v))
 	case attribute.STRINGSLICE:
+		if !stringSliceNeedsTruncation(limit, attr.Value) {
+			return attr
+		}
 		v := attr.Value.AsStringSlice()
 		for i := range v {
 			v[i] = truncate(limit, v[i])
@@ -422,6 +426,9 @@ func truncateValue(limit int, v attribute.Value) attribute.Value {
 	case attribute.STRING:
 		return attribute.StringValue(truncate(limit, v.AsString()))
 	case attribute.STRINGSLICE:
+		if !stringSliceNeedsTruncation(limit, v) {
+			return v
+		}
 		ss := v.AsStringSlice()
 		for i := range ss {
 			ss[i] = truncate(limit, ss[i])
@@ -482,11 +489,7 @@ func needsTruncation(limit int, v attribute.Value) bool {
 			return true
 		}
 	case attribute.STRINGSLICE:
-		for _, s := range v.AsStringSlice() {
-			if stringNeedsTruncation(limit, s) {
-				return true
-			}
-		}
+		return stringSliceNeedsTruncation(limit, v)
 	case attribute.SLICE:
 		return slices.ContainsFunc(v.AsSlice(), func(e attribute.Value) bool { return needsTruncation(limit, e) })
 	case attribute.MAP:
@@ -496,6 +499,52 @@ func needsTruncation(limit int, v attribute.Value) bool {
 		)
 	}
 	return false
+}
+
+// rawAttrValue mirrors the internal layout of attribute.Value. It is used
+// only to read the immutable backing storage of STRINGSLICE values directly,
+// avoiding the allocation incurred by returning a copy.
+type rawAttrValue struct {
+	vtype    attribute.Type
+	numeric  uint64
+	stringly string
+	slice    any
+}
+
+// attrValueSlice returns the slice backing storage of v directly from memory.
+func attrValueSlice(v attribute.Value) any {
+	return (*rawAttrValue)(unsafe.Pointer(&v)).slice //nolint:gosec // Read-only mirror of attribute.Value; only the immutable backing storage is read.
+}
+
+// stringSliceNeedsTruncation reports whether any element in the STRINGSLICE
+// value v would be modified by truncate for the given limit.
+//
+// It reads the backing storage of v directly to avoid the copy allocation
+// that any public accessor incurs on the no-op path.
+func stringSliceNeedsTruncation(limit int, v attribute.Value) bool {
+	switch ss := attrValueSlice(v).(type) {
+	case [0]string:
+		return false
+	case [1]string:
+		return stringNeedsTruncation(limit, ss[0])
+	case [2]string:
+		return stringNeedsTruncation(limit, ss[0]) || stringNeedsTruncation(limit, ss[1])
+	case [3]string:
+		return stringNeedsTruncation(limit, ss[0]) || stringNeedsTruncation(limit, ss[1]) || stringNeedsTruncation(limit, ss[2])
+	default:
+		// 4+ elements are stored as a reflect-allocated [N]string array.
+		// rv.Index(i).String() reads each string directly without allocating.
+		rv := reflect.ValueOf(attrValueSlice(v))
+		if !rv.IsValid() || rv.Kind() != reflect.Array {
+			return false
+		}
+		for i := range rv.Len() {
+			if stringNeedsTruncation(limit, rv.Index(i).String()) {
+				return true
+			}
+		}
+		return false
+	}
 }
 
 // truncate returns a truncated version of s such that it contains less than
