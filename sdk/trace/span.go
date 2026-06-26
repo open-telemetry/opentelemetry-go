@@ -513,7 +513,9 @@ type rawAttrValue struct {
 
 // attrValueSlice returns the slice backing storage of v directly from memory.
 func attrValueSlice(v attribute.Value) any {
-	return (*rawAttrValue)(unsafe.Pointer(&v)).slice //nolint:gosec // Read-only mirror of attribute.Value; only the immutable backing storage is read.
+	return (*rawAttrValue)(
+		unsafe.Pointer(&v),
+	).slice //nolint:gosec // Read-only mirror of attribute.Value; only the immutable backing storage is read.
 }
 
 // stringSliceNeedsTruncation reports whether any element in the STRINGSLICE
@@ -530,7 +532,8 @@ func stringSliceNeedsTruncation(limit int, v attribute.Value) bool {
 	case [2]string:
 		return stringNeedsTruncation(limit, ss[0]) || stringNeedsTruncation(limit, ss[1])
 	case [3]string:
-		return stringNeedsTruncation(limit, ss[0]) || stringNeedsTruncation(limit, ss[1]) || stringNeedsTruncation(limit, ss[2])
+		return stringNeedsTruncation(limit, ss[0]) || stringNeedsTruncation(limit, ss[1]) ||
+			stringNeedsTruncation(limit, ss[2])
 	default:
 		// 4+ elements are stored as a reflect-allocated [N]string array.
 		// rv.Index(i).String() reads each string directly without allocating.
