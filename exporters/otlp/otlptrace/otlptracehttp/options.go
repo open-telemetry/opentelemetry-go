@@ -148,6 +148,16 @@ func WithMaxRequestSize(size int) Option {
 	return wrappedOption{otlpconfig.WithMaxRequestSize(size)}
 }
 
+// WithMaxResponseBodySize sets the maximum size, in bytes, of the response body
+// (after decompression) that the exporter will read.
+//
+// If size is less than or equal to zero, no response body size limit is applied.
+// Disabling the limit is not recommended because it can lead to excessive
+// resource consumption or abuse.
+func WithMaxResponseBodySize(size int64) Option {
+	return wrappedOption{otlpconfig.WithMaxResponseBodySize(size)}
+}
+
 // WithRetry configures the retry policy for transient errors that may occurs
 // when exporting traces. An exponential back-off algorithm is used to ensure
 // endpoints are not overwhelmed with retries. If unset, the default retry
