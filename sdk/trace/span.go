@@ -537,7 +537,7 @@ func stringSliceNeedsTruncation(limit int, v attribute.Value) bool {
 	default:
 		// 4+ elements are stored as a reflect-allocated [N]string array.
 		// rv.Index(i).String() reads each string directly without allocating.
-		rv := reflect.ValueOf(attrValueSlice(v))
+		rv := reflect.ValueOf(ss)
 		if !rv.IsValid() || rv.Kind() != reflect.Array {
 			return false
 		}
