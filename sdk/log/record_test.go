@@ -5,6 +5,7 @@ package log
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -21,6 +22,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
+
+func valueEqual(a, b attribute.Value) bool {
+	return reflect.DeepEqual(a, b)
+}
+
+func keyValueEqual(a, b attribute.KeyValue) bool {
+	return a.Key == b.Key && valueEqual(a.Value, b.Value)
+}
 
 func TestRecordEventName(t *testing.T) {
 	const text = "testing text"
@@ -62,133 +71,135 @@ func TestRecordBody(t *testing.T) {
 	testcases := []struct {
 		name            string
 		allowDuplicates bool
-		body            log.Value
-		want            log.Value
+		body            attribute.Value
+		want            attribute.Value
 	}{
 		{
 			name: "boolean value",
-			body: log.BoolValue(true),
-			want: log.BoolValue(true),
+			body: attribute.BoolValue(true),
+			want: attribute.BoolValue(true),
 		},
 		{
 			name: "slice",
-			body: log.SliceValue(log.BoolValue(true), log.BoolValue(false)),
-			want: log.SliceValue(log.BoolValue(true), log.BoolValue(false)),
+			body: attribute.SliceValue(attribute.BoolValue(true), attribute.BoolValue(false)),
+			want: attribute.SliceValue(attribute.BoolValue(true), attribute.BoolValue(false)),
 		},
 		{
 			name: "map",
-			body: log.MapValue(
-				log.Bool("0", true),
-				log.Int64("1", 2), // This should be removed
-				log.Float64("2", 3.0),
-				log.String("3", "forth"),
-				log.Slice("4", log.Int64Value(1)),
-				log.Map("5", log.Int("key", 2)),
-				log.Bytes("6", []byte("six")),
-				log.Int64("1", 3),
+			body: attribute.MapValue(
+				attribute.Bool("0", true),
+				attribute.Int64("1", 2),
+				attribute.Float64("2", 3.0),
+				attribute.String("3", "forth"),
+				attribute.Slice("4", attribute.Int64Value(1)),
+				attribute.Map("5", attribute.Int("key", 2)),
+				attribute.ByteSlice("6", []byte("six")),
+				attribute.Int64("1", 3),
 			),
-			want: log.MapValue(
-				log.Bool("0", true),
-				log.Float64("2", 3.0),
-				log.String("3", "forth"),
-				log.Slice("4", log.Int64Value(1)),
-				log.Map("5", log.Int("key", 2)),
-				log.Bytes("6", []byte("six")),
-				log.Int64("1", 3),
+			want: attribute.MapValue(
+				attribute.Bool("0", true),
+				attribute.Float64("2", 3.0),
+				attribute.String("3", "forth"),
+				attribute.Slice("4", attribute.Int64Value(1)),
+				attribute.Map("5", attribute.Int("key", 2)),
+				attribute.ByteSlice("6", []byte("six")),
+				attribute.Int64("1", 3),
 			),
 		},
 		{
 			name: "nested map",
-			body: log.MapValue(
-				log.Map(
+			body: attribute.MapValue(
+				attribute.Map(
 					"key",
-					log.Int64("key", 1),
-					log.Int64("key", 2),
+					attribute.Int64("key", 1),
+					attribute.Int64("key", 2),
 				),
 			),
-			want: log.MapValue(
-				log.Map(
+
+			want: attribute.MapValue(
+				attribute.Map(
 					"key",
-					log.Int64("key", 2),
+					attribute.Int64("key", 2),
 				),
 			),
 		},
 		{
 			name:            "map - allow duplicates",
 			allowDuplicates: true,
-			body: log.MapValue(
-				log.Int64("1", 2),
-				log.Int64("1", 3),
+			body: attribute.MapValue(
+				attribute.Int64("1", 2),
+				attribute.Int64("1", 3),
 			),
-			want: log.MapValue(
-				log.Int64("1", 2),
-				log.Int64("1", 3),
+			want: attribute.MapValue(
+				attribute.Int64("1", 2),
+				attribute.Int64("1", 3),
 			),
 		},
 		{
 			name: "slice with nested deduplication",
-			body: log.SliceValue(
-				log.MapValue(log.String("key", "value1"), log.String("key", "value2")),
-				log.StringValue("normal"),
-				log.SliceValue(
-					log.MapValue(log.String("nested", "val1"), log.String("nested", "val2")),
+			body: attribute.SliceValue(
+				attribute.MapValue(attribute.String("key", "value1"), attribute.String("key", "value2")),
+				attribute.StringValue("normal"),
+				attribute.SliceValue(
+					attribute.MapValue(attribute.String("nested", "val1"), attribute.String("nested", "val2")),
 				),
 			),
-			want: log.SliceValue(
-				log.MapValue(log.String("key", "value2")),
-				log.StringValue("normal"),
-				log.SliceValue(
-					log.MapValue(log.String("nested", "val2")),
+			want: attribute.SliceValue(
+				attribute.MapValue(attribute.String("key", "value2")),
+				attribute.StringValue("normal"),
+				attribute.SliceValue(
+					attribute.MapValue(attribute.String("nested", "val2")),
 				),
 			),
 		},
 		{
 			name: "empty slice",
-			body: log.SliceValue(),
-			want: log.SliceValue(),
+			body: attribute.SliceValue(),
+			want: attribute.SliceValue(),
 		},
 		{
 			name: "empty map",
-			body: log.MapValue(),
-			want: log.MapValue(),
+			body: attribute.MapValue(),
+			want: attribute.MapValue(),
 		},
 		{
 			name: "single key map",
-			body: log.MapValue(log.String("single", "value")),
-			want: log.MapValue(log.String("single", "value")),
+			body: attribute.MapValue(attribute.String("single", "value")),
+			want: attribute.MapValue(attribute.String("single", "value")),
 		},
 		{
 			name: "slice with no deduplication needed",
-			body: log.SliceValue(
-				log.StringValue("value1"),
-				log.StringValue("value2"),
-				log.MapValue(log.String("unique1", "val1")),
-				log.MapValue(log.String("unique2", "val2")),
+			body: attribute.SliceValue(
+				attribute.StringValue("value1"),
+				attribute.StringValue("value2"),
+				attribute.MapValue(attribute.String("unique1", "val1")),
+				attribute.MapValue(attribute.String("unique2", "val2")),
 			),
-			want: log.SliceValue(
-				log.StringValue("value1"),
-				log.StringValue("value2"),
-				log.MapValue(log.String("unique1", "val1")),
-				log.MapValue(log.String("unique2", "val2")),
+			want: attribute.SliceValue(
+				attribute.StringValue("value1"),
+				attribute.StringValue("value2"),
+				attribute.MapValue(attribute.String("unique1", "val1")),
+				attribute.MapValue(attribute.String("unique2", "val2")),
 			),
 		},
 		{
 			name: "deeply nested slice and map structure",
-			body: log.SliceValue(
-				log.MapValue(
-					log.String("outer", "value"),
-					log.Slice(
+			body: attribute.SliceValue(
+				attribute.MapValue(
+					attribute.String("outer", "value"),
+					attribute.Slice(
 						"inner_slice",
-						log.MapValue(log.String("deep", "value1"), log.String("deep", "value2")),
+						attribute.MapValue(attribute.String("deep", "value1"), attribute.String("deep", "value2")),
 					),
 				),
 			),
-			want: log.SliceValue(
-				log.MapValue(
-					log.String("outer", "value"),
-					log.Slice(
+
+			want: attribute.SliceValue(
+				attribute.MapValue(
+					attribute.String("outer", "value"),
+					attribute.Slice(
 						"inner_slice",
-						log.MapValue(log.String("deep", "value2")),
+						attribute.MapValue(attribute.String("deep", "value2")),
 					),
 				),
 			),
@@ -196,204 +207,214 @@ func TestRecordBody(t *testing.T) {
 		{
 			name:            "slice with duplicates allowed",
 			allowDuplicates: true,
-			body: log.SliceValue(
-				log.MapValue(log.String("key", "value1"), log.String("key", "value2")),
+			body: attribute.SliceValue(
+				attribute.MapValue(attribute.String("key", "value1"), attribute.String("key", "value2")),
 			),
-			want: log.SliceValue(
-				log.MapValue(log.String("key", "value1"), log.String("key", "value2")),
+
+			want: attribute.SliceValue(
+				attribute.MapValue(attribute.String("key", "value1"), attribute.String("key", "value2")),
 			),
 		},
 		{
 			name: "string value",
-			body: log.StringValue("test"),
-			want: log.StringValue("test"),
+			body: attribute.StringValue("test"),
+			want: attribute.StringValue("test"),
 		},
 		{
 			name: "boolean value without deduplication",
-			body: log.BoolValue(true),
-			want: log.BoolValue(true),
+			body: attribute.BoolValue(true),
+			want: attribute.BoolValue(true),
 		},
 		{
 			name: "integer value",
-			body: log.Int64Value(42),
-			want: log.Int64Value(42),
+			body: attribute.Int64Value(42),
+			want: attribute.Int64Value(42),
 		},
 		{
 			name: "float value",
-			body: log.Float64Value(3.14),
-			want: log.Float64Value(3.14),
+			body: attribute.Float64Value(3.14),
+			want: attribute.Float64Value(3.14),
 		},
 		{
 			name: "bytes value",
-			body: log.BytesValue([]byte("test")),
-			want: log.BytesValue([]byte("test")),
+			body: attribute.ByteSliceValue([]byte("test")),
+			want: attribute.ByteSliceValue([]byte("test")),
 		},
 		{
 			name: "empty slice",
-			body: log.SliceValue(),
-			want: log.SliceValue(),
+			body: attribute.SliceValue(),
+			want: attribute.SliceValue(),
 		},
 		{
 			name: "slice without nested deduplication",
-			body: log.SliceValue(log.StringValue("test"), log.BoolValue(true)),
-			want: log.SliceValue(log.StringValue("test"), log.BoolValue(true)),
+			body: attribute.SliceValue(attribute.StringValue("test"), attribute.BoolValue(true)),
+			want: attribute.SliceValue(attribute.StringValue("test"), attribute.BoolValue(true)),
 		},
 		{
 			name: "slice with nested deduplication needed",
-			body: log.SliceValue(log.MapValue(log.String("key", "value1"), log.String("key", "value2"))),
-			want: log.SliceValue(log.MapValue(log.String("key", "value2"))),
+			body: attribute.SliceValue(
+				attribute.MapValue(attribute.String("key", "value1"), attribute.String("key", "value2")),
+			),
+			want: attribute.SliceValue(attribute.MapValue(attribute.String("key", "value2"))),
 		},
 		{
 			name: "empty map",
-			body: log.MapValue(),
-			want: log.MapValue(),
+			body: attribute.MapValue(),
+			want: attribute.MapValue(),
 		},
 		{
 			name: "single key map",
-			body: log.MapValue(log.String("key", "value")),
-			want: log.MapValue(log.String("key", "value")),
+			body: attribute.MapValue(attribute.String("key", "value")),
+			want: attribute.MapValue(attribute.String("key", "value")),
 		},
 		{
 			name: "map with duplicate keys",
-			body: log.MapValue(log.String("key", "value1"), log.String("key", "value2")),
-			want: log.MapValue(log.String("key", "value2")),
+			body: attribute.MapValue(attribute.String("key", "value1"), attribute.String("key", "value2")),
+			want: attribute.MapValue(attribute.String("key", "value2")),
 		},
 		{
 			name: "map without duplicates",
-			body: log.MapValue(log.String("key1", "value1"), log.String("key2", "value2")),
-			want: log.MapValue(log.String("key1", "value1"), log.String("key2", "value2")),
+			body: attribute.MapValue(attribute.String("key1", "value1"), attribute.String("key2", "value2")),
+			want: attribute.MapValue(attribute.String("key1", "value1"), attribute.String("key2", "value2")),
 		},
 		{
 			name: "map with nested slice deduplication",
-			body: log.MapValue(
-				log.Slice("slice", log.MapValue(log.String("nested", "val1"), log.String("nested", "val2"))),
+			body: attribute.MapValue(
+				attribute.Slice(
+					"slice",
+					attribute.MapValue(attribute.String("nested", "val1"), attribute.String("nested", "val2")),
+				),
 			),
-			want: log.MapValue(
-				log.Slice("slice", log.MapValue(log.String("nested", "val2"))),
+
+			want: attribute.MapValue(
+				attribute.Slice("slice", attribute.MapValue(attribute.String("nested", "val2"))),
 			),
 		},
 		{
 			name: "deeply nested structure with deduplication",
-			body: log.SliceValue(
-				log.MapValue(
-					log.Map(
+			body: attribute.SliceValue(
+				attribute.MapValue(
+					attribute.Map(
 						"nested",
-						log.String("key", "value1"),
-						log.String("key", "value2"),
+						attribute.String("key", "value1"),
+						attribute.String("key", "value2"),
 					),
 				),
 			),
-			want: log.SliceValue(
-				log.MapValue(
-					log.Map(
+
+			want: attribute.SliceValue(
+				attribute.MapValue(
+					attribute.Map(
 						"nested",
-						log.String("key", "value2"),
+						attribute.String("key", "value2"),
 					),
 				),
 			),
 		},
 		{
 			name: "deeply nested structure without deduplication",
-			body: log.SliceValue(
-				log.MapValue(
-					log.Map(
+			body: attribute.SliceValue(
+				attribute.MapValue(
+					attribute.Map(
 						"nested",
-						log.String("key1", "value1"),
-						log.String("key2", "value2"),
+						attribute.String("key1", "value1"),
+						attribute.String("key2", "value2"),
 					),
 				),
 			),
-			want: log.SliceValue(
-				log.MapValue(
-					log.Map(
+
+			want: attribute.SliceValue(
+				attribute.MapValue(
+					attribute.Map(
 						"nested",
-						log.String("key1", "value1"),
-						log.String("key2", "value2"),
+						attribute.String("key1", "value1"),
+						attribute.String("key2", "value2"),
 					),
 				),
 			),
 		},
 		{
 			name: "string value for collection deduplication",
-			body: log.StringValue("test"),
-			want: log.StringValue("test"),
+			body: attribute.StringValue("test"),
+			want: attribute.StringValue("test"),
 		},
 		{
 			name: "boolean value for collection deduplication",
-			body: log.BoolValue(true),
-			want: log.BoolValue(true),
+			body: attribute.BoolValue(true),
+			want: attribute.BoolValue(true),
 		},
 		{
 			name: "empty slice for collection deduplication",
-			body: log.SliceValue(),
-			want: log.SliceValue(),
+			body: attribute.SliceValue(),
+			want: attribute.SliceValue(),
 		},
 		{
 			name: "slice without nested deduplication for collection testing",
-			body: log.SliceValue(log.StringValue("test"), log.BoolValue(true)),
-			want: log.SliceValue(log.StringValue("test"), log.BoolValue(true)),
+			body: attribute.SliceValue(attribute.StringValue("test"), attribute.BoolValue(true)),
+			want: attribute.SliceValue(attribute.StringValue("test"), attribute.BoolValue(true)),
 		},
 		{
 			name: "slice with nested map requiring deduplication",
-			body: log.SliceValue(
-				log.MapValue(log.String("key", "value1"), log.String("key", "value2")),
-				log.StringValue("normal"),
+			body: attribute.SliceValue(
+				attribute.MapValue(attribute.String("key", "value1"), attribute.String("key", "value2")),
+				attribute.StringValue("normal"),
 			),
-			want: log.SliceValue(
-				log.MapValue(log.String("key", "value2")),
-				log.StringValue("normal"),
+			want: attribute.SliceValue(
+				attribute.MapValue(attribute.String("key", "value2")),
+				attribute.StringValue("normal"),
 			),
 		},
 		{
 			name: "deeply nested slice with map deduplication",
-			body: log.SliceValue(
-				log.SliceValue(
-					log.MapValue(log.String("deep", "value1"), log.String("deep", "value2")),
+			body: attribute.SliceValue(
+				attribute.SliceValue(
+					attribute.MapValue(attribute.String("deep", "value1"), attribute.String("deep", "value2")),
 				),
 			),
-			want: log.SliceValue(
-				log.SliceValue(
-					log.MapValue(log.String("deep", "value2")),
+
+			want: attribute.SliceValue(
+				attribute.SliceValue(
+					attribute.MapValue(attribute.String("deep", "value2")),
 				),
 			),
 		},
 		{
 			name: "empty map for collection deduplication",
-			body: log.MapValue(),
-			want: log.MapValue(),
+			body: attribute.MapValue(),
+			want: attribute.MapValue(),
 		},
 		{
 			name: "map with nested slice containing duplicates",
-			body: log.MapValue(
-				log.String("outer", "value"),
-				log.Slice(
+			body: attribute.MapValue(
+				attribute.String("outer", "value"),
+				attribute.Slice(
 					"nested_slice",
-					log.MapValue(log.String("inner", "val1"), log.String("inner", "val2")),
+					attribute.MapValue(attribute.String("inner", "val1"), attribute.String("inner", "val2")),
 				),
 			),
-			want: log.MapValue(
-				log.String("outer", "value"),
-				log.Slice(
+			want: attribute.MapValue(
+				attribute.String("outer", "value"),
+				attribute.Slice(
 					"nested_slice",
-					log.MapValue(log.String("inner", "val2")),
+					attribute.MapValue(attribute.String("inner", "val2")),
 				),
 			),
 		},
 		{
 			name: "map with key duplication and nested value deduplication",
-			body: log.MapValue(
-				log.String("key1", "value1"),
-				log.String("key1", "value2"), // key dedup
-				log.Slice(
+			body: attribute.MapValue(
+				attribute.String("key1", "value1"),
+				attribute.String("key1", "value2"),
+				attribute.Slice(
 					"slice",
-					log.MapValue(log.String("nested", "val1"), log.String("nested", "val2")), // nested value dedup
+					attribute.MapValue(attribute.String("nested", "val1"), attribute.String("nested", "val2")),
 				),
 			),
-			want: log.MapValue(
-				log.String("key1", "value2"),
-				log.Slice(
+			want: attribute.MapValue(
+				attribute.String("key1", "value2"),
+				attribute.Slice(
 					"slice",
-					log.MapValue(log.String("nested", "val2")),
+					attribute.MapValue(attribute.String("nested", "val2")),
 				),
 			),
 		},
@@ -404,7 +425,7 @@ func TestRecordBody(t *testing.T) {
 			r.allowDupKeys = tc.allowDuplicates
 			r.SetBody(tc.body)
 			got := r.Body()
-			if !got.Equal(tc.want) {
+			if !valueEqual(got, tc.want) {
 				t.Errorf("r.Body() = %v, want %v", got, tc.want)
 			}
 		})
@@ -412,14 +433,14 @@ func TestRecordBody(t *testing.T) {
 }
 
 func TestRecordAttributes(t *testing.T) {
-	attrs := []log.KeyValue{
-		log.Bool("0", true),
-		log.Int64("1", 2),
-		log.Float64("2", 3.0),
-		log.String("3", "forth"),
-		log.Slice("4", log.Int64Value(1)),
-		log.Map("5", log.Int("key", 2)),
-		log.Bytes("6", []byte("six")),
+	attrs := []attribute.KeyValue{
+		attribute.Bool("0", true),
+		attribute.Int64("1", 2),
+		attribute.Float64("2", 3.0),
+		attribute.String("3", "forth"),
+		attribute.Slice("4", attribute.Int64Value(1)),
+		attribute.Map("5", attribute.Int("key", 2)),
+		attribute.ByteSlice("6", []byte("six")),
 	}
 	r := new(Record)
 	r.attributeValueLengthLimit = -1
@@ -431,7 +452,7 @@ func TestRecordAttributes(t *testing.T) {
 
 	for n := range attrs {
 		var i int
-		r.WalkAttributes(func(log.KeyValue) bool {
+		r.WalkAttributes(func(attribute.KeyValue) bool {
 			i++
 			return i <= n
 		})
@@ -439,8 +460,8 @@ func TestRecordAttributes(t *testing.T) {
 	}
 
 	var i int
-	r.WalkAttributes(func(kv log.KeyValue) bool {
-		assert.Truef(t, kv.Equal(attrs[i]), "%d: %v != %v", i, kv, attrs[i])
+	r.WalkAttributes(func(kv attribute.KeyValue) bool {
+		assert.Truef(t, keyValueEqual(kv, attrs[i]), "%d: %v != %v", i, kv, attrs[i])
 		i++
 		return true
 	})
@@ -490,8 +511,8 @@ func TestRecordClone(t *testing.T) {
 	now0 := time.Now()
 	sev0 := log.SeverityInfo
 	text0 := "text"
-	val0 := log.BoolValue(true)
-	attr0 := log.Bool("0", true)
+	val0 := attribute.BoolValue(true)
+	attr0 := attribute.Bool("0", true)
 	traceID0 := trace.TraceID([16]byte{1})
 	spanID0 := trace.SpanID([8]byte{1})
 	flag0 := trace.FlagsSampled
@@ -510,8 +531,8 @@ func TestRecordClone(t *testing.T) {
 	now1 := now0.Add(time.Second)
 	sev1 := log.SeverityDebug
 	text1 := "string"
-	val1 := log.IntValue(1)
-	attr1 := log.Int64("1", 2)
+	val1 := attribute.IntValue(1)
+	attr1 := attribute.Int64("1", 2)
 	traceID1 := trace.TraceID([16]byte{2})
 	spanID1 := trace.SpanID([8]byte{2})
 	flag1 := trace.TraceFlags(2)
@@ -531,24 +552,24 @@ func TestRecordClone(t *testing.T) {
 	assert.Equal(t, now0, r0.ObservedTimestamp())
 	assert.Equal(t, sev0, r0.Severity())
 	assert.Equal(t, text0, r0.SeverityText())
-	assert.True(t, val0.Equal(r0.Body()))
+	assert.Equal(t, val0, r0.Body())
 	assert.Equal(t, traceID0, r0.TraceID())
 	assert.Equal(t, spanID0, r0.SpanID())
 	assert.Equal(t, flag0, r0.TraceFlags())
-	r0.WalkAttributes(func(kv log.KeyValue) bool {
-		return assert.Truef(t, kv.Equal(attr0), "%v != %v", kv, attr0)
+	r0.WalkAttributes(func(kv attribute.KeyValue) bool {
+		return assert.Truef(t, keyValueEqual(kv, attr0), "%v != %v", kv, attr0)
 	})
 
 	assert.Equal(t, now1, r1.Timestamp())
 	assert.Equal(t, now1, r1.ObservedTimestamp())
 	assert.Equal(t, sev1, r1.Severity())
 	assert.Equal(t, text1, r1.SeverityText())
-	assert.True(t, val1.Equal(r1.Body()))
+	assert.Equal(t, val1, r1.Body())
 	assert.Equal(t, traceID1, r1.TraceID())
 	assert.Equal(t, spanID1, r1.SpanID())
 	assert.Equal(t, flag1, r1.TraceFlags())
-	r1.WalkAttributes(func(kv log.KeyValue) bool {
-		return assert.Truef(t, kv.Equal(attr1), "%v != %v", kv, attr1)
+	r1.WalkAttributes(func(kv attribute.KeyValue) bool {
+		return assert.Truef(t, keyValueEqual(kv, attr1), "%v != %v", kv, attr1)
 	})
 }
 
@@ -563,8 +584,8 @@ func TestRecordDroppedAttributes(t *testing.T) {
 		r := new(Record)
 		r.attributeCountLimit = 1
 
-		attrs := make([]log.KeyValue, i)
-		attrs[0] = log.Bool("only key different then the rest", true)
+		attrs := make([]attribute.KeyValue, i)
+		attrs[0] = attribute.Bool("only key different then the rest", true)
 
 		r.AddAttributes(attrs...)
 		// Deduplication doesn't count as dropped.
@@ -598,105 +619,104 @@ func TestRecordDroppedAttributes(t *testing.T) {
 func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 	testcases := []struct {
 		name  string
-		attrs []log.KeyValue
-		want  []log.KeyValue
+		attrs []attribute.KeyValue
+		want  []attribute.KeyValue
 	}{
 		{
 			name:  "EmptyKey",
-			attrs: make([]log.KeyValue, 10),
-			want:  make([]log.KeyValue, 10),
+			attrs: make([]attribute.KeyValue, 10),
+			want:  make([]attribute.KeyValue, 10),
 		},
 		{
 			name: "MapKey",
-			attrs: []log.KeyValue{
-				log.Map("key", log.Int("key", 5), log.Int("key", 10)),
+			attrs: []attribute.KeyValue{
+				attribute.Map("key", attribute.Int("key", 5), attribute.Int("key", 10)),
 			},
-			want: []log.KeyValue{
-				log.Map("key", log.Int("key", 5), log.Int("key", 10)),
+			want: []attribute.KeyValue{
+				attribute.Map("key", attribute.Int("key", 5), attribute.Int("key", 10)),
 			},
 		},
 		{
 			name: "NonEmptyKey",
-			attrs: []log.KeyValue{
-				log.Bool("key", true),
-				log.Int64("key", 1),
-				log.Bool("key", false),
-				log.Float64("key", 2.),
-				log.String("key", "3"),
-				log.Slice("key", log.Int64Value(4)),
-				log.Map("key", log.Int("key", 5)),
-				log.Bytes("key", []byte("six")),
-				log.Bool("key", false),
+			attrs: []attribute.KeyValue{
+				attribute.Bool("key", true),
+				attribute.Int64("key", 1),
+				attribute.Bool("key", false),
+				attribute.Float64("key", 2.),
+				attribute.String("key", "3"),
+				attribute.Slice("key", attribute.Int64Value(4)),
+				attribute.Map("key", attribute.Int("key", 5)),
+				attribute.ByteSlice("key", []byte("six")),
+				attribute.Bool("key", false),
 			},
-			want: []log.KeyValue{
-				log.Bool("key", true),
-				log.Int64("key", 1),
-				log.Bool("key", false),
-				log.Float64("key", 2.),
-				log.String("key", "3"),
-				log.Slice("key", log.Int64Value(4)),
-				log.Map("key", log.Int("key", 5)),
-				log.Bytes("key", []byte("six")),
-				log.Bool("key", false),
+			want: []attribute.KeyValue{
+				attribute.Bool("key", true),
+				attribute.Int64("key", 1),
+				attribute.Bool("key", false),
+				attribute.Float64("key", 2.),
+				attribute.String("key", "3"),
+				attribute.Slice("key", attribute.Int64Value(4)),
+				attribute.Map("key", attribute.Int("key", 5)),
+				attribute.ByteSlice("key", []byte("six")),
+				attribute.Bool("key", false),
 			},
 		},
 		{
 			name: "Multiple",
-			attrs: []log.KeyValue{
-				log.Bool("a", true),
-				log.Int64("b", 1),
-				log.Bool("a", false),
-				log.Float64("c", 2.),
-				log.String("b", "3"),
-				log.Slice("d", log.Int64Value(4)),
-				log.Map("a", log.Int("key", 5)),
-				log.Bytes("d", []byte("six")),
-				log.Bool("e", true),
-				log.Int("f", 1),
-				log.Int("f", 2),
-				log.Int("f", 3),
-				log.Float64("b", 0.0),
-				log.Float64("b", 0.0),
-				log.String("g", "G"),
-				log.String("h", "H"),
-				log.String("g", "GG"),
-				log.Bool("a", false),
+			attrs: []attribute.KeyValue{
+				attribute.Bool("a", true),
+				attribute.Int64("b", 1),
+				attribute.Bool("a", false),
+				attribute.Float64("c", 2.),
+				attribute.String("b", "3"),
+				attribute.Slice("d", attribute.Int64Value(4)),
+				attribute.Map("a", attribute.Int("key", 5)),
+				attribute.ByteSlice("d", []byte("six")),
+				attribute.Bool("e", true),
+				attribute.Int("f", 1),
+				attribute.Int("f", 2),
+				attribute.Int("f", 3),
+				attribute.Float64("b", 0.0),
+				attribute.Float64("b", 0.0),
+				attribute.String("g", "G"),
+				attribute.String("h", "H"),
+				attribute.String("g", "GG"),
+				attribute.Bool("a", false),
 			},
-			want: []log.KeyValue{
-				// Order is important here.
-				log.Bool("a", true),
-				log.Int64("b", 1),
-				log.Bool("a", false),
-				log.Float64("c", 2.),
-				log.String("b", "3"),
-				log.Slice("d", log.Int64Value(4)),
-				log.Map("a", log.Int("key", 5)),
-				log.Bytes("d", []byte("six")),
-				log.Bool("e", true),
-				log.Int("f", 1),
-				log.Int("f", 2),
-				log.Int("f", 3),
-				log.Float64("b", 0.0),
-				log.Float64("b", 0.0),
-				log.String("g", "G"),
-				log.String("h", "H"),
-				log.String("g", "GG"),
-				log.Bool("a", false),
+			want: []attribute.KeyValue{
+				attribute.Bool("a", true),
+				attribute.Int64("b", 1),
+				attribute.Bool("a", false),
+				attribute.Float64("c", 2.),
+				attribute.String("b", "3"),
+				attribute.Slice("d", attribute.Int64Value(4)),
+				attribute.Map("a", attribute.Int("key", 5)),
+				attribute.ByteSlice("d", []byte("six")),
+				attribute.Bool("e", true),
+				attribute.Int("f", 1),
+				attribute.Int("f", 2),
+				attribute.Int("f", 3),
+				attribute.Float64("b", 0.0),
+				attribute.Float64("b", 0.0),
+				attribute.String("g", "G"),
+				attribute.String("h", "H"),
+				attribute.String("g", "GG"),
+				attribute.Bool("a", false),
 			},
 		},
 		{
 			name: "NoDuplicate",
-			attrs: func() []log.KeyValue {
-				out := make([]log.KeyValue, attributesInlineCount*2)
+			attrs: func() []attribute.KeyValue {
+				out := make([]attribute.KeyValue, attributesInlineCount*2)
 				for i := range out {
-					out[i] = log.Bool(strconv.Itoa(i), true)
+					out[i] = attribute.Bool(strconv.Itoa(i), true)
 				}
 				return out
 			}(),
-			want: func() []log.KeyValue {
-				out := make([]log.KeyValue, attributesInlineCount*2)
+			want: func() []attribute.KeyValue {
+				out := make([]attribute.KeyValue, attributesInlineCount*2)
 				for i := range out {
-					out[i] = log.Bool(strconv.Itoa(i), true)
+					out[i] = attribute.Bool(strconv.Itoa(i), true)
 				}
 				return out
 			}(),
@@ -704,14 +724,14 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			validate := func(t *testing.T, r *Record, want []log.KeyValue) {
+			validate := func(t *testing.T, r *Record, want []attribute.KeyValue) {
 				t.Helper()
 
 				var i int
-				r.WalkAttributes(func(kv log.KeyValue) bool {
+				r.WalkAttributes(func(kv attribute.KeyValue) bool {
 					if assert.Lessf(t, i, len(want), "additional: %v", kv) {
 						want := want[i]
-						assert.Truef(t, kv.Equal(want), "%d: want %v, got %v", i, want, kv)
+						assert.Truef(t, keyValueEqual(kv, want), "%d: want %v, got %v", i, want, kv)
 					}
 					i++
 					return true
@@ -750,120 +770,119 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 func TestRecordAttrDeduplication(t *testing.T) {
 	testcases := []struct {
 		name  string
-		attrs []log.KeyValue
-		want  []log.KeyValue
+		attrs []attribute.KeyValue
+		want  []attribute.KeyValue
 	}{
 		{
 			name:  "EmptyKey",
-			attrs: make([]log.KeyValue, 10),
-			want:  make([]log.KeyValue, 1),
+			attrs: make([]attribute.KeyValue, 10),
+			want:  make([]attribute.KeyValue, 1),
 		},
 		{
 			name: "NonEmptyKey",
-			attrs: []log.KeyValue{
-				log.Bool("key", true),
-				log.Int64("key", 1),
-				log.Bool("key", false),
-				log.Float64("key", 2.),
-				log.String("key", "3"),
-				log.Slice("key", log.Int64Value(4)),
-				log.Map("key", log.Int("key", 5)),
-				log.Bytes("key", []byte("six")),
-				log.Bool("key", false),
+			attrs: []attribute.KeyValue{
+				attribute.Bool("key", true),
+				attribute.Int64("key", 1),
+				attribute.Bool("key", false),
+				attribute.Float64("key", 2.),
+				attribute.String("key", "3"),
+				attribute.Slice("key", attribute.Int64Value(4)),
+				attribute.Map("key", attribute.Int("key", 5)),
+				attribute.ByteSlice("key", []byte("six")),
+				attribute.Bool("key", false),
 			},
-			want: []log.KeyValue{
-				log.Bool("key", false),
+			want: []attribute.KeyValue{
+				attribute.Bool("key", false),
 			},
 		},
 		{
 			name: "Multiple",
-			attrs: []log.KeyValue{
-				log.Bool("a", true),
-				log.Int64("b", 1),
-				log.Bool("a", false),
-				log.Float64("c", 2.),
-				log.String("b", "3"),
-				log.Slice("d", log.Int64Value(4)),
-				log.Map("a", log.Int("key", 5)),
-				log.Bytes("d", []byte("six")),
-				log.Bool("e", true),
-				log.Int("f", 1),
-				log.Int("f", 2),
-				log.Int("f", 3),
-				log.Float64("b", 0.0),
-				log.Float64("b", 0.0),
-				log.String("g", "G"),
-				log.String("h", "H"),
-				log.String("g", "GG"),
-				log.Bool("a", false),
+			attrs: []attribute.KeyValue{
+				attribute.Bool("a", true),
+				attribute.Int64("b", 1),
+				attribute.Bool("a", false),
+				attribute.Float64("c", 2.),
+				attribute.String("b", "3"),
+				attribute.Slice("d", attribute.Int64Value(4)),
+				attribute.Map("a", attribute.Int("key", 5)),
+				attribute.ByteSlice("d", []byte("six")),
+				attribute.Bool("e", true),
+				attribute.Int("f", 1),
+				attribute.Int("f", 2),
+				attribute.Int("f", 3),
+				attribute.Float64("b", 0.0),
+				attribute.Float64("b", 0.0),
+				attribute.String("g", "G"),
+				attribute.String("h", "H"),
+				attribute.String("g", "GG"),
+				attribute.Bool("a", false),
 			},
-			want: []log.KeyValue{
-				// Order is important here.
-				log.Bool("a", false),
-				log.Float64("b", 0.0),
-				log.Float64("c", 2.),
-				log.Bytes("d", []byte("six")),
-				log.Bool("e", true),
-				log.Int("f", 3),
-				log.String("g", "GG"),
-				log.String("h", "H"),
+			want: []attribute.KeyValue{
+				attribute.Bool("a", false),
+				attribute.Float64("b", 0.0),
+				attribute.Float64("c", 2.),
+				attribute.ByteSlice("d", []byte("six")),
+				attribute.Bool("e", true),
+				attribute.Int("f", 3),
+				attribute.String("g", "GG"),
+				attribute.String("h", "H"),
 			},
 		},
 		{
 			name: "NoDuplicate",
-			attrs: func() []log.KeyValue {
-				out := make([]log.KeyValue, attributesInlineCount*2)
+			attrs: func() []attribute.KeyValue {
+				out := make([]attribute.KeyValue, attributesInlineCount*2)
 				for i := range out {
-					out[i] = log.Bool(strconv.Itoa(i), true)
+					out[i] = attribute.Bool(strconv.Itoa(i), true)
 				}
 				return out
 			}(),
-			want: func() []log.KeyValue {
-				out := make([]log.KeyValue, attributesInlineCount*2)
+			want: func() []attribute.KeyValue {
+				out := make([]attribute.KeyValue, attributesInlineCount*2)
 				for i := range out {
-					out[i] = log.Bool(strconv.Itoa(i), true)
+					out[i] = attribute.Bool(strconv.Itoa(i), true)
 				}
 				return out
 			}(),
 		},
 		{
 			name: "AttributeWithDuplicateKeys",
-			attrs: []log.KeyValue{
-				log.String("duplicate", "first"),
-				log.String("unique", "value"),
-				log.String("duplicate", "second"),
+			attrs: []attribute.KeyValue{
+				attribute.String("duplicate", "first"),
+				attribute.String("unique", "value"),
+				attribute.String("duplicate", "second"),
 			},
-			want: []log.KeyValue{
-				log.String("duplicate", "second"),
-				log.String("unique", "value"),
+			want: []attribute.KeyValue{
+				attribute.String("duplicate", "second"),
+				attribute.String("unique", "value"),
 			},
 		},
 		{
 			name: "ManyDuplicateKeys",
-			attrs: []log.KeyValue{
-				log.String("key", "value1"),
-				log.String("key", "value2"),
-				log.String("key", "value3"),
-				log.String("key", "value4"),
-				log.String("key", "value5"),
+			attrs: []attribute.KeyValue{
+				attribute.String("key", "value1"),
+				attribute.String("key", "value2"),
+				attribute.String("key", "value3"),
+				attribute.String("key", "value4"),
+				attribute.String("key", "value5"),
 			},
-			want: []log.KeyValue{
-				log.String("key", "value5"),
+			want: []attribute.KeyValue{
+				attribute.String("key", "value5"),
 			},
 		},
 		{
 			name: "InterleavedDuplicates",
-			attrs: []log.KeyValue{
-				log.String("a", "a1"),
-				log.String("b", "b1"),
-				log.String("a", "a2"),
-				log.String("c", "c1"),
-				log.String("b", "b2"),
+			attrs: []attribute.KeyValue{
+				attribute.String("a", "a1"),
+				attribute.String("b", "b1"),
+				attribute.String("a", "a2"),
+				attribute.String("c", "c1"),
+				attribute.String("b", "b2"),
 			},
-			want: []log.KeyValue{
-				log.String("a", "a2"),
-				log.String("b", "b2"),
-				log.String("c", "c1"),
+			want: []attribute.KeyValue{
+				attribute.String("a", "a2"),
+				attribute.String("b", "b2"),
+				attribute.String("c", "c1"),
 			},
 		},
 	}
@@ -874,10 +893,10 @@ func TestRecordAttrDeduplication(t *testing.T) {
 				t.Helper()
 
 				var i int
-				r.WalkAttributes(func(kv log.KeyValue) bool {
+				r.WalkAttributes(func(kv attribute.KeyValue) bool {
 					if assert.Lessf(t, i, len(tc.want), "additional: %v", kv) {
 						want := tc.want[i]
-						assert.Truef(t, kv.Equal(want), "%d: want %v, got %v", i, want, kv)
+						assert.Truef(t, keyValueEqual(kv, want), "%d: want %v, got %v", i, want, kv)
 					}
 					i++
 					return true
@@ -913,164 +932,170 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 	testcases := []struct {
 		name             string
 		limit            int
-		input, want      log.Value
+		input, want      attribute.Value
 		wantDroppedAttrs int
 	}{
 		{
 			// No de-duplication
 			name: "Slice",
-			input: log.SliceValue(
-				log.BoolValue(true),
-				log.BoolValue(true),
-				log.Float64Value(1.3),
-				log.Float64Value(1.3),
-				log.Int64Value(43),
-				log.Int64Value(43),
-				log.BytesValue([]byte("hello")),
-				log.BytesValue([]byte("hello")),
-				log.StringValue("foo"),
-				log.StringValue("foo"),
-				log.SliceValue(log.StringValue("baz")),
-				log.SliceValue(log.StringValue("baz")),
-				log.MapValue(log.String("a", "qux")),
-				log.MapValue(log.String("a", "qux")),
+			input: attribute.SliceValue(
+				attribute.BoolValue(true),
+				attribute.BoolValue(true),
+				attribute.Float64Value(1.3),
+				attribute.Float64Value(1.3),
+				attribute.Int64Value(43),
+				attribute.Int64Value(43),
+				attribute.ByteSliceValue([]byte("hello")),
+				attribute.ByteSliceValue([]byte("hello")),
+				attribute.StringValue("foo"),
+				attribute.StringValue("foo"),
+				attribute.SliceValue(attribute.StringValue("baz")),
+				attribute.SliceValue(attribute.StringValue("baz")),
+				attribute.MapValue(attribute.String("a", "qux")),
+				attribute.MapValue(attribute.String("a", "qux")),
 			),
-			want: log.SliceValue(
-				log.BoolValue(true),
-				log.BoolValue(true),
-				log.Float64Value(1.3),
-				log.Float64Value(1.3),
-				log.Int64Value(43),
-				log.Int64Value(43),
-				log.BytesValue([]byte("hello")),
-				log.BytesValue([]byte("hello")),
-				log.StringValue("foo"),
-				log.StringValue("foo"),
-				log.SliceValue(log.StringValue("baz")),
-				log.SliceValue(log.StringValue("baz")),
-				log.MapValue(log.String("a", "qux")),
-				log.MapValue(log.String("a", "qux")),
+			want: attribute.SliceValue(
+				attribute.BoolValue(true),
+				attribute.BoolValue(true),
+				attribute.Float64Value(1.3),
+				attribute.Float64Value(1.3),
+				attribute.Int64Value(43),
+				attribute.Int64Value(43),
+				attribute.ByteSliceValue([]byte("hello")),
+				attribute.ByteSliceValue([]byte("hello")),
+				attribute.StringValue("foo"),
+				attribute.StringValue("foo"),
+				attribute.SliceValue(attribute.StringValue("baz")),
+				attribute.SliceValue(attribute.StringValue("baz")),
+				attribute.MapValue(attribute.String("a", "qux")),
+				attribute.MapValue(attribute.String("a", "qux")),
 			),
 		},
 		{
 			name: "Map",
-			input: log.MapValue(
-				log.Bool("a", true),
-				log.Int64("b", 1),
-				log.Bool("a", false),
-				log.Float64("c", 2.),
-				log.String("b", "3"),
-				log.Slice("d", log.Int64Value(4)),
-				log.Map("a", log.Int("key", 5)),
-				log.Bytes("d", []byte("six")),
-				log.Bool("e", true),
-				log.Int("f", 1),
-				log.Int("f", 2),
-				log.Int("f", 3),
-				log.Float64("b", 0.0),
-				log.Float64("b", 0.0),
-				log.String("g", "G"),
-				log.String("h", "H"),
-				log.String("g", "GG"),
-				log.Bool("a", false),
+			input: attribute.MapValue(
+				attribute.Bool("a", true),
+				attribute.Int64("b", 1),
+				attribute.Bool("a", false),
+				attribute.Float64("c", 2.),
+				attribute.String("b", "3"),
+				attribute.Slice("d", attribute.Int64Value(4)),
+				attribute.Map("a", attribute.Int("key", 5)),
+				attribute.ByteSlice("d", []byte("six")),
+				attribute.Bool("e", true),
+				attribute.Int("f", 1),
+				attribute.Int("f", 2),
+				attribute.Int("f", 3),
+				attribute.Float64("b", 0.0),
+				attribute.Float64("b", 0.0),
+				attribute.String("g", "G"),
+				attribute.String("h", "H"),
+				attribute.String("g", "GG"),
+				attribute.Bool("a", false),
 			),
-			want: log.MapValue(
-				// Order is important here.
-				log.Bool("a", false),
-				log.Float64("b", 0.0),
-				log.Float64("c", 2.),
-				log.Bytes("d", []byte("six")),
-				log.Bool("e", true),
-				log.Int("f", 3),
-				log.String("g", "GG"),
-				log.String("h", "H"),
+			want: attribute.MapValue(
+
+				attribute.Bool("a", false),
+				attribute.Float64("b", 0.0),
+				attribute.Float64("c", 2.),
+				attribute.ByteSlice("d", []byte("six")),
+				attribute.Bool("e", true),
+				attribute.Int("f", 3),
+				attribute.String("g", "GG"),
+				attribute.String("h", "H"),
 			),
 			wantDroppedAttrs: 0, // Deduplication doesn't count as dropped
 		},
 		{
 			name:             "EmptyMap",
-			input:            log.MapValue(),
-			want:             log.MapValue(),
+			input:            attribute.MapValue(),
+			want:             attribute.MapValue(),
 			wantDroppedAttrs: 0,
 		},
 		{
 			name:             "SingleKeyMap",
-			input:            log.MapValue(log.String("key1", "value1")),
-			want:             log.MapValue(log.String("key1", "value1")),
+			input:            attribute.MapValue(attribute.String("key1", "value1")),
+			want:             attribute.MapValue(attribute.String("key1", "value1")),
 			wantDroppedAttrs: 0,
 		},
 		{
 			name:             "EmptySlice",
-			input:            log.SliceValue(),
-			want:             log.SliceValue(),
+			input:            attribute.SliceValue(),
+			want:             attribute.SliceValue(),
 			wantDroppedAttrs: 0,
 		},
 		{
 			name: "SliceWithNestedDedup",
-			input: log.SliceValue(
-				log.MapValue(log.String("key", "value1"), log.String("key", "value2")),
-				log.StringValue("normal"),
+			input: attribute.SliceValue(
+				attribute.MapValue(attribute.String("key", "value1"), attribute.String("key", "value2")),
+				attribute.StringValue("normal"),
 			),
-			want: log.SliceValue(
-				log.MapValue(log.String("key", "value2")),
-				log.StringValue("normal"),
+			want: attribute.SliceValue(
+				attribute.MapValue(attribute.String("key", "value2")),
+				attribute.StringValue("normal"),
 			),
 			wantDroppedAttrs: 0, // Nested deduplication doesn't count as dropped
 		},
 		{
 			name: "NestedSliceInMap",
-			input: log.MapValue(
-				log.Slice(
+			input: attribute.MapValue(
+				attribute.Slice(
 					"slice_key",
-					log.MapValue(log.String("nested", "value1"), log.String("nested", "value2")),
+					attribute.MapValue(attribute.String("nested", "value1"), attribute.String("nested", "value2")),
 				),
 			),
-			want: log.MapValue(
-				log.Slice(
+
+			want: attribute.MapValue(
+				attribute.Slice(
 					"slice_key",
-					log.MapValue(log.String("nested", "value2")),
+					attribute.MapValue(attribute.String("nested", "value2")),
 				),
 			),
+
 			wantDroppedAttrs: 0, // Nested deduplication doesn't count as dropped
 		},
 		{
 			name: "DeeplyNestedStructure",
-			input: log.MapValue(
-				log.Map(
+			input: attribute.MapValue(
+				attribute.Map(
 					"level1",
-					log.Map(
+					attribute.Map(
 						"level2",
-						log.Slice(
+						attribute.Slice(
 							"level3",
-							log.MapValue(log.String("deep", "value1"), log.String("deep", "value2")),
+							attribute.MapValue(attribute.String("deep", "value1"), attribute.String("deep", "value2")),
 						),
 					),
 				),
 			),
-			want: log.MapValue(
-				log.Map(
+
+			want: attribute.MapValue(
+				attribute.Map(
 					"level1",
-					log.Map(
+					attribute.Map(
 						"level2",
-						log.Slice(
+						attribute.Slice(
 							"level3",
-							log.MapValue(log.String("deep", "value2")),
+							attribute.MapValue(attribute.String("deep", "value2")),
 						),
 					),
 				),
 			),
+
 			wantDroppedAttrs: 0, // Deeply nested deduplication doesn't count as dropped
 		},
 		{
 			name: "NestedMapWithoutDuplicateKeys",
-			input: log.SliceValue(log.MapValue(
-				log.String("key1", "value1"),
-				log.String("key2", "value2"),
+			input: attribute.SliceValue(attribute.MapValue(
+				attribute.String("key1", "value1"),
+				attribute.String("key2", "value2"),
 			)),
-			want: log.SliceValue(log.MapValue(
-				log.String("key1", "value1"),
-				log.String("key2", "value2"),
+
+			want: attribute.SliceValue(attribute.MapValue(
+				attribute.String("key1", "value1"),
+				attribute.String("key2", "value2"),
 			)),
+
 			wantDroppedAttrs: 0,
 		},
 	}
@@ -1078,18 +1103,18 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			const key = "key"
-			kv := log.KeyValue{Key: key, Value: tc.input}
+			kv := attribute.KeyValue{Key: key, Value: tc.input}
 			r := Record{attributeValueLengthLimit: -1}
 
 			t.Run("AddAttributes", func(t *testing.T) {
 				r.AddAttributes(kv)
-				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+				assertKV(t, r, attribute.KeyValue{Key: key, Value: tc.want})
 				assert.Equal(t, tc.wantDroppedAttrs, r.DroppedAttributes())
 			})
 
 			t.Run("SetAttributes", func(t *testing.T) {
 				r.SetAttributes(kv)
-				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+				assertKV(t, r, attribute.KeyValue{Key: key, Value: tc.want})
 				assert.Equal(t, tc.wantDroppedAttrs, r.DroppedAttributes())
 			})
 		})
@@ -1108,7 +1133,7 @@ func TestDeduplicationBehavior(t *testing.T) {
 		name                string
 		attributeCountLimit int
 		allowDupKeys        bool
-		attrs               []log.KeyValue
+		attrs               []attribute.KeyValue
 		wantKeyValueDropped bool
 		wantAttrDropped     bool
 		wantDroppedCount    int
@@ -1116,7 +1141,7 @@ func TestDeduplicationBehavior(t *testing.T) {
 	}{
 		{
 			name:                "Duplicate keys only",
-			attrs:               []log.KeyValue{log.String("key", "v1"), log.String("key", "v2")},
+			attrs:               []attribute.KeyValue{attribute.String("key", "v1"), attribute.String("key", "v2")},
 			wantKeyValueDropped: true,
 			wantDroppedCount:    0, // Deduplication doesn't count
 			wantAttributeCount:  1,
@@ -1124,19 +1149,23 @@ func TestDeduplicationBehavior(t *testing.T) {
 		{
 			name:                "Limit exceeded only",
 			attributeCountLimit: 2,
-			attrs:               []log.KeyValue{log.String("a", "v1"), log.String("b", "v2"), log.String("c", "v3")},
-			wantAttrDropped:     true,
-			wantDroppedCount:    1,
-			wantAttributeCount:  2,
+			attrs: []attribute.KeyValue{
+				attribute.String("a", "v1"),
+				attribute.String("b", "v2"),
+				attribute.String("c", "v3"),
+			},
+			wantAttrDropped:    true,
+			wantDroppedCount:   1,
+			wantAttributeCount: 2,
 		},
 		{
 			name:                "Both duplicates and limit",
 			attributeCountLimit: 2,
-			attrs: []log.KeyValue{
-				log.String("a", "v1"),
-				log.String("a", "v2"),
-				log.String("b", "v3"),
-				log.String("c", "v4"),
+			attrs: []attribute.KeyValue{
+				attribute.String("a", "v1"),
+				attribute.String("a", "v2"),
+				attribute.String("b", "v3"),
+				attribute.String("c", "v4"),
 			},
 			wantKeyValueDropped: true,
 			wantAttrDropped:     true,
@@ -1146,15 +1175,15 @@ func TestDeduplicationBehavior(t *testing.T) {
 		{
 			name:                "allowDupKeys=true",
 			allowDupKeys:        true,
-			attrs:               []log.KeyValue{log.String("key", "v1"), log.String("key", "v2")},
+			attrs:               []attribute.KeyValue{attribute.String("key", "v1"), attribute.String("key", "v2")},
 			wantKeyValueDropped: false,
 			wantDroppedCount:    0,
 			wantAttributeCount:  2,
 		},
 		{
 			name: "Nested map duplicates",
-			attrs: []log.KeyValue{
-				log.Map("outer", log.String("nested", "v1"), log.String("nested", "v2")),
+			attrs: []attribute.KeyValue{
+				attribute.Map("outer", attribute.String("nested", "v1"), attribute.String("nested", "v2")),
 			},
 			wantKeyValueDropped: true,
 			wantDroppedCount:    0,
@@ -1190,138 +1219,178 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 	testcases := []struct {
 		name        string
 		limit       int
-		input, want log.Value
+		input, want attribute.Value
 	}{
 		{
 			name:  "Empty",
 			limit: 0,
-			input: log.Value{},
-			want:  log.Value{},
+			input: attribute.Value{},
+			want:  attribute.Value{},
 		},
 		{
 			name:  "Bool",
 			limit: 0,
-			input: log.BoolValue(true),
-			want:  log.BoolValue(true),
+			input: attribute.BoolValue(true),
+			want:  attribute.BoolValue(true),
 		},
 		{
 			name:  "Float64",
 			limit: 0,
-			input: log.Float64Value(1.3),
-			want:  log.Float64Value(1.3),
+			input: attribute.Float64Value(1.3),
+			want:  attribute.Float64Value(1.3),
 		},
 		{
 			name:  "Int64",
 			limit: 0,
-			input: log.Int64Value(43),
-			want:  log.Int64Value(43),
+			input: attribute.Int64Value(43),
+			want:  attribute.Int64Value(43),
 		},
 		{
 			name:  "Bytes",
 			limit: 0,
-			input: log.BytesValue([]byte("foo")),
-			want:  log.BytesValue([]byte("")),
+			input: attribute.ByteSliceValue([]byte("foo")),
+			want:  attribute.ByteSliceValue([]byte("")),
 		},
 		{
 			name:  "String",
 			limit: 0,
-			input: log.StringValue("foo"),
-			want:  log.StringValue(""),
+			input: attribute.StringValue("foo"),
+			want:  attribute.StringValue(""),
+		},
+		{
+			name:  "StringSlice",
+			limit: 3,
+			input: attribute.StringSliceValue([]string{"ok", "toolong"}),
+			want:  attribute.StringSliceValue([]string{"ok", "too"}),
+		},
+		{
+			name:  "NestedSliceNoTruncation",
+			limit: 10,
+			input: attribute.SliceValue(
+				attribute.StringValue("short"),
+				attribute.StringSliceValue([]string{"ok", "fine"}),
+			),
+			want: attribute.SliceValue(
+				attribute.StringValue("short"),
+				attribute.StringSliceValue([]string{"ok", "fine"}),
+			),
+		},
+		{
+			name:  "NestedMapNoTruncation",
+			limit: 10,
+			input: attribute.MapValue(
+				attribute.String("short", "ok"),
+				attribute.StringSlice("strings", []string{"ok", "fine"}),
+			),
+			want: attribute.MapValue(
+				attribute.String("short", "ok"),
+				attribute.StringSlice("strings", []string{"ok", "fine"}),
+			),
+		},
+		{
+			name:  "StringSliceInNestedSlice",
+			limit: 3,
+			input: attribute.SliceValue(
+				attribute.StringSliceValue([]string{"ok", "toolong"}),
+			),
+			want: attribute.SliceValue(
+				attribute.StringSliceValue([]string{"ok", "too"}),
+			),
 		},
 		{
 			name:  "Slice",
 			limit: 0,
-			input: log.SliceValue(
-				log.BoolValue(true),
-				log.Float64Value(1.3),
-				log.Int64Value(43),
-				log.BytesValue([]byte("hello")),
-				log.StringValue("foo"),
-				log.StringValue("bar"),
-				log.SliceValue(log.StringValue("baz")),
-				log.MapValue(log.String("a", "qux")),
+			input: attribute.SliceValue(
+				attribute.BoolValue(true),
+				attribute.Float64Value(1.3),
+				attribute.Int64Value(43),
+				attribute.ByteSliceValue([]byte("hello")),
+				attribute.StringValue("foo"),
+				attribute.StringValue("bar"),
+				attribute.SliceValue(attribute.StringValue("baz")),
+				attribute.MapValue(attribute.String("a", "qux")),
 			),
-			want: log.SliceValue(
-				log.BoolValue(true),
-				log.Float64Value(1.3),
-				log.Int64Value(43),
-				log.BytesValue([]byte("")),
-				log.StringValue(""),
-				log.StringValue(""),
-				log.SliceValue(log.StringValue("")),
-				log.MapValue(log.String("a", "")),
+			want: attribute.SliceValue(
+				attribute.BoolValue(true),
+				attribute.Float64Value(1.3),
+				attribute.Int64Value(43),
+				attribute.ByteSliceValue([]byte("")),
+				attribute.StringValue(""),
+				attribute.StringValue(""),
+				attribute.SliceValue(attribute.StringValue("")),
+				attribute.MapValue(attribute.String("a", "")),
 			),
 		},
 		{
 			name:  "Map",
 			limit: 0,
-			input: log.MapValue(
-				log.Bool("0", true),
-				log.Float64("1", 1.3),
-				log.Int64("2", 43),
-				log.Bytes("3", []byte("hello")),
-				log.String("4", "foo"),
-				log.String("5", "bar"),
-				log.Slice("6", log.StringValue("baz")),
-				log.Map("7", log.String("a", "qux")),
+			input: attribute.MapValue(
+				attribute.Bool("0", true),
+				attribute.Float64("1", 1.3),
+				attribute.Int64("2", 43),
+				attribute.ByteSlice("3", []byte("hello")),
+				attribute.String("4", "foo"),
+				attribute.String("5", "bar"),
+				attribute.Slice("6", attribute.StringValue("baz")),
+				attribute.Map("7", attribute.String("a", "qux")),
 			),
-			want: log.MapValue(
-				log.Bool("0", true),
-				log.Float64("1", 1.3),
-				log.Int64("2", 43),
-				log.Bytes("3", []byte("")),
-				log.String("4", ""),
-				log.String("5", ""),
-				log.Slice("6", log.StringValue("")),
-				log.Map("7", log.String("a", "")),
+			want: attribute.MapValue(
+				attribute.Bool("0", true),
+				attribute.Float64("1", 1.3),
+				attribute.Int64("2", 43),
+				attribute.ByteSlice("3", []byte("")),
+				attribute.String("4", ""),
+				attribute.String("5", ""),
+				attribute.Slice("6", attribute.StringValue("")),
+				attribute.Map("7", attribute.String("a", "")),
 			),
 		},
 		{
 			name:  "LongStringTruncated",
 			limit: 5,
-			input: log.StringValue("This is a very long string that should be truncated"),
-			want:  log.StringValue("This "),
+			input: attribute.StringValue("This is a very long string that should be truncated"),
+			want:  attribute.StringValue("This "),
 		},
 		{
 			name:  "LongBytesTruncated",
 			limit: 5,
-			input: log.BytesValue([]byte("This is a very long byte array")),
-			want:  log.BytesValue([]byte("This ")),
+			input: attribute.ByteSliceValue([]byte("This is a very long byte array")),
+			want:  attribute.ByteSliceValue([]byte("This ")),
 		},
 		{
 			name:  "TruncationInNestedMap",
 			limit: 3,
-			input: log.MapValue(
-				log.String("short", "ok"),
-				log.String("long", "toolong"),
+			input: attribute.MapValue(
+				attribute.String("short", "ok"),
+				attribute.String("long", "toolong"),
 			),
-			want: log.MapValue(
-				log.String("short", "ok"),
-				log.String("long", "too"),
+			want: attribute.MapValue(
+				attribute.String("short", "ok"),
+				attribute.String("long", "too"),
 			),
 		},
 		{
 			name:  "TruncationInNestedSlice",
 			limit: 4,
-			input: log.SliceValue(
-				log.StringValue("good"),
-				log.StringValue("toolong"),
+			input: attribute.SliceValue(
+				attribute.StringValue("good"),
+				attribute.StringValue("toolong"),
 			),
-			want: log.SliceValue(
-				log.StringValue("good"),
-				log.StringValue("tool"),
+			want: attribute.SliceValue(
+				attribute.StringValue("good"),
+				attribute.StringValue("tool"),
 			),
 		},
 		{
 			name:  "TruncationInNestedSliceOfBytes",
 			limit: 4,
-			input: log.SliceValue(
-				log.BytesValue([]byte("good")),
-				log.BytesValue([]byte("toolong")),
+			input: attribute.SliceValue(
+				attribute.ByteSliceValue([]byte("good")),
+				attribute.ByteSliceValue([]byte("toolong")),
 			),
-			want: log.SliceValue(
-				log.BytesValue([]byte("good")),
-				log.BytesValue([]byte("tool")),
+			want: attribute.SliceValue(
+				attribute.ByteSliceValue([]byte("good")),
+				attribute.ByteSliceValue([]byte("tool")),
 			),
 		},
 	}
@@ -1329,33 +1398,33 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			const key = "key"
-			kv := log.KeyValue{Key: key, Value: tc.input}
+			kv := attribute.KeyValue{Key: key, Value: tc.input}
 			r := Record{attributeValueLengthLimit: tc.limit}
 
 			t.Run("AddAttributes", func(t *testing.T) {
 				r.AddAttributes(kv)
-				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+				assertKV(t, r, attribute.KeyValue{Key: key, Value: tc.want})
 			})
 
 			t.Run("SetAttributes", func(t *testing.T) {
 				r.SetAttributes(kv)
-				assertKV(t, r, log.KeyValue{Key: key, Value: tc.want})
+				assertKV(t, r, attribute.KeyValue{Key: key, Value: tc.want})
 			})
 		})
 	}
 }
 
-func assertKV(t *testing.T, r Record, kv log.KeyValue) {
+func assertKV(t *testing.T, r Record, kv attribute.KeyValue) {
 	t.Helper()
 
-	var kvs []log.KeyValue
-	r.WalkAttributes(func(kv log.KeyValue) bool {
+	var kvs []attribute.KeyValue
+	r.WalkAttributes(func(kv attribute.KeyValue) bool {
 		kvs = append(kvs, kv)
 		return true
 	})
 
 	require.Len(t, kvs, 1)
-	assert.Truef(t, kv.Equal(kvs[0]), "%s != %s", kv, kvs[0])
+	assert.Truef(t, keyValueEqual(kv, kvs[0]), "%s != %s", kv, kvs[0])
 }
 
 func TestTruncate(t *testing.T) {
@@ -1481,14 +1550,14 @@ func TestTruncate(t *testing.T) {
 }
 
 func TestRecordAddAttributesDoesNotMutateInput(t *testing.T) {
-	attrs := []log.KeyValue{
-		log.String("attr1", "very long value that will be truncated"),
-		log.String("attr2", "another very long value that will be truncated"),
-		log.String("attr3", "yet another very long value that will be truncated"),
-		log.String("attr4", "more very long value that will be truncated"),
-		log.String("attr5", "extra very long value that will be truncated"),
-		log.String("attr6", "additional very long value that will be truncated"),
-		log.String("attr7", "more additional very long value that will be truncated"),
+	attrs := []attribute.KeyValue{
+		attribute.String("attr1", "very long value that will be truncated"),
+		attribute.String("attr2", "another very long value that will be truncated"),
+		attribute.String("attr3", "yet another very long value that will be truncated"),
+		attribute.String("attr4", "more very long value that will be truncated"),
+		attribute.String("attr5", "extra very long value that will be truncated"),
+		attribute.String("attr6", "additional very long value that will be truncated"),
+		attribute.String("attr7", "more additional very long value that will be truncated"),
 	}
 
 	originalValues := make([]string, len(attrs))
@@ -1513,44 +1582,44 @@ func TestRecordAddAttributesDoesNotMutateInput(t *testing.T) {
 	}
 
 	// Verify that the record has the truncated values
-	var gotAttrs []log.KeyValue
-	r.WalkAttributes(func(kv log.KeyValue) bool {
+	var gotAttrs []attribute.KeyValue
+	r.WalkAttributes(func(kv attribute.KeyValue) bool {
 		gotAttrs = append(gotAttrs, kv)
 		return true
 	})
-	wantAttr := []log.KeyValue{
-		log.String("attr1", "very long value that"),
-		log.String("attr2", "another very long va"),
-		log.String("attr3", "yet another very lon"),
-		log.String("attr4", "more very long value"),
-		log.String("attr5", "extra very long valu"),
-		log.String("attr6", "additional very long"),
-		log.String("attr7", "more additional very"),
+	wantAttr := []attribute.KeyValue{
+		attribute.String("attr1", "very long value that"),
+		attribute.String("attr2", "another very long va"),
+		attribute.String("attr3", "yet another very lon"),
+		attribute.String("attr4", "more very long value"),
+		attribute.String("attr5", "extra very long valu"),
+		attribute.String("attr6", "additional very long"),
+		attribute.String("attr7", "more additional very"),
 	}
-	if !slices.EqualFunc(gotAttrs, wantAttr, func(a, b log.KeyValue) bool { return a.Equal(b) }) {
+	if !slices.EqualFunc(gotAttrs, wantAttr, keyValueEqual) {
 		t.Errorf("Attributes do not match.\ngot:\n%v\nwant:\n%v", printKVs(gotAttrs), printKVs(wantAttr))
 	}
 }
 
 func TestRecordMethodsInputConcurrentSafe(t *testing.T) {
-	nestedSlice := log.Slice(
+	nestedSlice := attribute.Slice(
 		"nested_slice",
-		log.SliceValue(log.StringValue("nested_inner1"), log.StringValue("nested_inner2")),
-		log.StringValue("nested_outer"),
+		attribute.SliceValue(attribute.StringValue("nested_inner1"), attribute.StringValue("nested_inner2")),
+		attribute.StringValue("nested_outer"),
 	)
 
-	nestedMap := log.Map(
+	nestedMap := attribute.Map(
 		"nested_map",
-		log.String("nested_key1", "nested_value1"),
-		log.Map("nested_map", log.String("nested_inner_key", "nested_inner_value")),
-		log.String("nested_key1", "duplicate"), // This will trigger dedup.
+		attribute.String("nested_key1", "nested_value1"),
+		attribute.Map("nested_map", attribute.String("nested_inner_key", "nested_inner_value")),
+		attribute.String("nested_key1", "duplicate"),
 	)
 
-	dedupAttributes := []log.KeyValue{
-		log.String("dedup_key1", "dedup_value1"),
-		log.String("dedup_key2", "dedup_value2"),
-		log.String("dedup_key1", "duplicate"),    // This will trigger the dedup.
-		log.String("dedup_key3", "dedup_value3"), // This will trigger attr count limit.
+	dedupAttributes := []attribute.KeyValue{
+		attribute.String("dedup_key1", "dedup_value1"),
+		attribute.String("dedup_key2", "dedup_value2"),
+		attribute.String("dedup_key1", "duplicate"),
+		attribute.String("dedup_key3", "dedup_value3"),
 	}
 
 	var wg sync.WaitGroup
@@ -1567,35 +1636,35 @@ func TestRecordMethodsInputConcurrentSafe(t *testing.T) {
 			r.AddAttributes(dedupAttributes...)
 			r.SetBody(nestedMap.Value)
 
-			var gotAttrs []log.KeyValue
-			r.WalkAttributes(func(kv log.KeyValue) bool {
+			var gotAttrs []attribute.KeyValue
+			r.WalkAttributes(func(kv attribute.KeyValue) bool {
 				gotAttrs = append(gotAttrs, kv)
 				return true
 			})
-			wantAttr := []log.KeyValue{
-				log.Slice(
+			wantAttr := []attribute.KeyValue{
+				attribute.Slice(
 					"nested_slice",
-					log.SliceValue(log.StringValue("nested_inn"), log.StringValue("nested_inn")),
-					log.StringValue("nested_out"),
+					attribute.SliceValue(attribute.StringValue("nested_inn"), attribute.StringValue("nested_inn")),
+					attribute.StringValue("nested_out"),
 				),
-				log.Map(
+				attribute.Map(
 					"nested_map",
-					log.String("nested_key1", "duplicate"),
-					log.Map("nested_map", log.String("nested_inner_key", "nested_inn")),
+					attribute.String("nested_key1", "duplicate"),
+					attribute.Map("nested_map", attribute.String("nested_inner_key", "nested_inn")),
 				),
-				log.String("dedup_key1", "duplicate"),
-				log.String("dedup_key2", "dedup_valu"),
+				attribute.String("dedup_key1", "duplicate"),
+				attribute.String("dedup_key2", "dedup_valu"),
 			}
-			if !slices.EqualFunc(gotAttrs, wantAttr, func(a, b log.KeyValue) bool { return a.Equal(b) }) {
+			if !slices.EqualFunc(gotAttrs, wantAttr, keyValueEqual) {
 				t.Errorf("Attributes do not match.\ngot:\n%v\nwant:\n%v", printKVs(gotAttrs), printKVs(wantAttr))
 			}
 
 			gotBody := r.Body()
-			wantBody := log.MapValue(
-				log.String("nested_key1", "duplicate"),
-				log.Map("nested_map", log.String("nested_inner_key", "nested_inner_value")),
+			wantBody := attribute.MapValue(
+				attribute.String("nested_key1", "duplicate"),
+				attribute.Map("nested_map", attribute.String("nested_inner_key", "nested_inner_value")),
 			)
-			if !gotBody.Equal(wantBody) {
+			if !valueEqual(gotBody, wantBody) {
 				t.Errorf("Body does not match.\ngot:\n%v\nwant:\n%v", gotBody, wantBody)
 			}
 		})
@@ -1604,7 +1673,7 @@ func TestRecordMethodsInputConcurrentSafe(t *testing.T) {
 	wg.Wait()
 }
 
-func printKVs(kvs []log.KeyValue) string {
+func printKVs(kvs []attribute.KeyValue) string {
 	var sb strings.Builder
 	for _, kv := range kvs {
 		_, _ = fmt.Fprintf(&sb, "%s: %s\n", kv.Key, kv.Value)
@@ -1647,7 +1716,7 @@ func BenchmarkWalkAttributes(b *testing.B) {
 			record := &Record{}
 			for i := 0; i < tt.attrCount; i++ {
 				record.SetAttributes(
-					log.String(fmt.Sprintf("key-%d", tt.attrCount), "value"),
+					attribute.String(fmt.Sprintf("key-%d", tt.attrCount), "value"),
 				)
 			}
 
@@ -1655,7 +1724,7 @@ func BenchmarkWalkAttributes(b *testing.B) {
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
-				record.WalkAttributes(func(log.KeyValue) bool {
+				record.WalkAttributes(func(attribute.KeyValue) bool {
 					return true
 				})
 			}
@@ -1665,64 +1734,64 @@ func BenchmarkWalkAttributes(b *testing.B) {
 
 func BenchmarkAddAttributes(b *testing.B) {
 	// Simple attribute (no deduplication or limits).
-	singleKV := log.String("key", "value")
+	singleKV := attribute.String("key", "value")
 
 	// Attributes with no duplicates.
-	uniqueAttrs := []log.KeyValue{
-		log.String("key1", "value1"),
-		log.String("key2", "value2"),
-		log.String("key3", "value3"),
-		log.String("key4", "value4"),
-		log.String("key5", "value5"),
+	uniqueAttrs := []attribute.KeyValue{
+		attribute.String("key1", "value1"),
+		attribute.String("key2", "value2"),
+		attribute.String("key3", "value3"),
+		attribute.String("key4", "value4"),
+		attribute.String("key5", "value5"),
 	}
 
 	// Attributes with duplicates that trigger deduplication.
-	dupAttrs := []log.KeyValue{
-		log.String("key1", "value1"),
-		log.String("key2", "value2"),
-		log.String("key1", "duplicate1"), // duplicate key
-		log.String("key3", "value3"),
-		log.String("key2", "duplicate2"), // duplicate key
+	dupAttrs := []attribute.KeyValue{
+		attribute.String("key1", "value1"),
+		attribute.String("key2", "value2"),
+		attribute.String("key1", "duplicate1"),
+		attribute.String("key3", "value3"),
+		attribute.String("key2", "duplicate2"),
 	}
 
 	// Large number of attributes to trigger count limits.
-	manyAttrs := make([]log.KeyValue, 20)
+	manyAttrs := make([]attribute.KeyValue, 20)
 	for i := range manyAttrs {
-		manyAttrs[i] = log.String(fmt.Sprintf("key%d", i), "value")
+		manyAttrs[i] = attribute.String(fmt.Sprintf("key%d", i), "value")
 	}
 
 	// Attributes with long values to trigger value length limits.
-	longValueAttrs := []log.KeyValue{
-		log.String("short", "short"),
-		log.String("long1", strings.Repeat("a", 50)),
-		log.String("long2", strings.Repeat("b", 100)),
+	longValueAttrs := []attribute.KeyValue{
+		attribute.String("short", "short"),
+		attribute.String("long1", strings.Repeat("a", 50)),
+		attribute.String("long2", strings.Repeat("b", 100)),
 	}
 
 	// Attributes with nested maps that have duplicates (triggers recursive deduplication).
-	nestedDupAttrs := []log.KeyValue{
-		log.String("simple", "value"),
-		log.Map(
+	nestedDupAttrs := []attribute.KeyValue{
+		attribute.String("simple", "value"),
+		attribute.Map(
 			"map1",
-			log.String("inner1", "value1"),
-			log.String("inner2", "value2"),
-			log.String("inner1", "duplicate"), // duplicate in nested map
+			attribute.String("inner1", "value1"),
+			attribute.String("inner2", "value2"),
+			attribute.String("inner1", "duplicate"),
 		),
-		log.Map(
+		attribute.Map(
 			"map2",
-			log.String("key", "original"),
-			log.Map(
+			attribute.String("key", "original"),
+			attribute.Map(
 				"deeply_nested",
-				log.String("deep1", "value1"),
-				log.String("deep2", "value2"),
-				log.String("deep1", "duplicate_deep"), // duplicate in deeply nested map
+				attribute.String("deep1", "value1"),
+				attribute.String("deep2", "value2"),
+				attribute.String("deep1", "duplicate_deep"),
 			),
-			log.String("key", "overwrite"), // duplicate key at this level
+			attribute.String("key", "overwrite"),
 		),
-		log.Slice(
+		attribute.Slice(
 			"slice_with_maps",
-			log.MapValue(
-				log.String("slice_key", "value1"),
-				log.String("slice_key", "duplicate"), // duplicate in slice element
+			attribute.MapValue(
+				attribute.String("slice_key", "value1"),
+				attribute.String("slice_key", "duplicate"),
 			),
 		),
 	}
@@ -1902,64 +1971,64 @@ func BenchmarkAddAttributes(b *testing.B) {
 
 func BenchmarkSetAttributes(b *testing.B) {
 	// Simple attribute (no deduplication or limits).
-	singleKV := log.String("key", "value")
+	singleKV := attribute.String("key", "value")
 
 	// Attributes with no duplicates.
-	uniqueAttrs := []log.KeyValue{
-		log.String("key1", "value1"),
-		log.String("key2", "value2"),
-		log.String("key3", "value3"),
-		log.String("key4", "value4"),
-		log.String("key5", "value5"),
+	uniqueAttrs := []attribute.KeyValue{
+		attribute.String("key1", "value1"),
+		attribute.String("key2", "value2"),
+		attribute.String("key3", "value3"),
+		attribute.String("key4", "value4"),
+		attribute.String("key5", "value5"),
 	}
 
 	// Attributes with duplicates that trigger deduplication.
-	dupAttrs := []log.KeyValue{
-		log.String("key1", "value1"),
-		log.String("key2", "value2"),
-		log.String("key1", "duplicate1"), // duplicate key
-		log.String("key3", "value3"),
-		log.String("key2", "duplicate2"), // duplicate key
+	dupAttrs := []attribute.KeyValue{
+		attribute.String("key1", "value1"),
+		attribute.String("key2", "value2"),
+		attribute.String("key1", "duplicate1"),
+		attribute.String("key3", "value3"),
+		attribute.String("key2", "duplicate2"),
 	}
 
 	// Large number of attributes to trigger count limits.
-	manyAttrs := make([]log.KeyValue, 20)
+	manyAttrs := make([]attribute.KeyValue, 20)
 	for i := range manyAttrs {
-		manyAttrs[i] = log.String(fmt.Sprintf("key%d", i), "value")
+		manyAttrs[i] = attribute.String(fmt.Sprintf("key%d", i), "value")
 	}
 
 	// Attributes with long values to trigger value length limits.
-	longValueAttrs := []log.KeyValue{
-		log.String("short", "short"),
-		log.String("long1", strings.Repeat("a", 50)),
-		log.String("long2", strings.Repeat("b", 100)),
+	longValueAttrs := []attribute.KeyValue{
+		attribute.String("short", "short"),
+		attribute.String("long1", strings.Repeat("a", 50)),
+		attribute.String("long2", strings.Repeat("b", 100)),
 	}
 
 	// Attributes with nested maps that have duplicates (triggers recursive deduplication).
-	nestedDupAttrs := []log.KeyValue{
-		log.String("simple", "value"),
-		log.Map(
+	nestedDupAttrs := []attribute.KeyValue{
+		attribute.String("simple", "value"),
+		attribute.Map(
 			"map1",
-			log.String("inner1", "value1"),
-			log.String("inner2", "value2"),
-			log.String("inner1", "duplicate"), // duplicate in nested map
+			attribute.String("inner1", "value1"),
+			attribute.String("inner2", "value2"),
+			attribute.String("inner1", "duplicate"),
 		),
-		log.Map(
+		attribute.Map(
 			"map2",
-			log.String("key", "original"),
-			log.Map(
+			attribute.String("key", "original"),
+			attribute.Map(
 				"deeply_nested",
-				log.String("deep1", "value1"),
-				log.String("deep2", "value2"),
-				log.String("deep1", "duplicate_deep"), // duplicate in deeply nested map
+				attribute.String("deep1", "value1"),
+				attribute.String("deep2", "value2"),
+				attribute.String("deep1", "duplicate_deep"),
 			),
-			log.String("key", "overwrite"), // duplicate key at this level
+			attribute.String("key", "overwrite"),
 		),
-		log.Slice(
+		attribute.Slice(
 			"slice_with_maps",
-			log.MapValue(
-				log.String("slice_key", "value1"),
-				log.String("slice_key", "duplicate"), // duplicate in slice element
+			attribute.MapValue(
+				attribute.String("slice_key", "value1"),
+				attribute.String("slice_key", "duplicate"),
 			),
 		),
 	}
@@ -2144,8 +2213,8 @@ func BenchmarkSetAttributes(b *testing.B) {
 			records[i].attributeCountLimit = -1
 			// Pre-populate with existing attributes
 			records[i].AddAttributes(
-				log.String("existing1", "value1"),
-				log.String("existing2", "value2"),
+				attribute.String("existing1", "value1"),
+				attribute.String("existing2", "value2"),
 			)
 		}
 		b.ResetTimer()
@@ -2158,50 +2227,50 @@ func BenchmarkSetAttributes(b *testing.B) {
 
 func BenchmarkSetBody(b *testing.B) {
 	// Simple value (no deduplication or limits).
-	simpleValue := log.StringValue("simple string value")
+	simpleValue := attribute.StringValue("simple string value")
 
 	// Map with unique keys (no deduplication needed).
-	uniqueMapValue := log.MapValue(
-		log.Bool("bool_key", true),
-		log.Float64("float_key", 3.14),
-		log.String("string_key", "value"),
-		log.Slice("slice_key", log.Int64Value(1), log.Int64Value(2)),
-		log.Map("nested_key", log.Int("inner", 42)),
-		log.Bytes("bytes_key", []byte("data")),
+	uniqueMapValue := attribute.MapValue(
+		attribute.Bool("bool_key", true),
+		attribute.Float64("float_key", 3.14),
+		attribute.String("string_key", "value"),
+		attribute.Slice("slice_key", attribute.Int64Value(1), attribute.Int64Value(2)),
+		attribute.Map("nested_key", attribute.Int("inner", 42)),
+		attribute.ByteSlice("bytes_key", []byte("data")),
 	)
 
 	// Map with duplicate keys (triggers deduplication).
-	dupMapValue := log.MapValue(
-		log.String("key1", "value1"),
-		log.String("key2", "value2"),
-		log.String("key1", "duplicate1"), // duplicate key
-		log.String("key3", "value3"),
-		log.String("key2", "duplicate2"), // duplicate key
+	dupMapValue := attribute.MapValue(
+		attribute.String("key1", "value1"),
+		attribute.String("key2", "value2"),
+		attribute.String("key1", "duplicate1"),
+		attribute.String("key3", "value3"),
+		attribute.String("key2", "duplicate2"),
 	)
 
 	// Nested map with duplicates.
-	nestedDupMapValue := log.MapValue(
-		log.String("outer1", "value1"),
-		log.Map(
+	nestedDupMapValue := attribute.MapValue(
+		attribute.String("outer1", "value1"),
+		attribute.Map(
 			"nested",
-			log.String("inner1", "value1"),
-			log.String("inner2", "value2"),
-			log.String("inner1", "duplicate"), // duplicate in nested map
+			attribute.String("inner1", "value1"),
+			attribute.String("inner2", "value2"),
+			attribute.String("inner1", "duplicate"),
 		),
-		log.Slice(
+		attribute.Slice(
 			"slice_with_maps",
-			log.MapValue(
-				log.String("slice_key", "value1"),
-				log.String("slice_key", "duplicate"), // duplicate in slice element
+			attribute.MapValue(
+				attribute.String("slice_key", "value1"),
+				attribute.String("slice_key", "duplicate"),
 			),
 		),
 	)
 
 	// Map with long string values (triggers value length limits).
-	longValueMapValue := log.MapValue(
-		log.String("short", "short"),
-		log.String("long1", strings.Repeat("a", 50)),
-		log.String("long2", strings.Repeat("b", 100)),
+	longValueMapValue := attribute.MapValue(
+		attribute.String("short", "short"),
+		attribute.String("long1", strings.Repeat("a", 50)),
+		attribute.String("long2", strings.Repeat("b", 100)),
 	)
 
 	// Setting a simple string value with no limits applied.
