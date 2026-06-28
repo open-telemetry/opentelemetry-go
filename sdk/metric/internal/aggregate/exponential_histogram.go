@@ -37,6 +37,8 @@ type expoHistogramDataPoint[N int64 | float64] struct {
 	noMinMax bool
 	noSum    bool
 
+	mu sync.Mutex
+
 	scale atomic.Int32
 
 	posBuckets expoBuckets
@@ -50,31 +52,40 @@ func newExpoHistogramDataPoint[N int64 | float64](
 	maxSize int,
 	maxScale int32,
 	noMinMax, noSum bool,
+	newRes func(attribute.Set) FilteredExemplarReservoir[N],
+	startTime time.Time,
 ) *expoHistogramDataPoint[N] { // nolint:revive // we need this control flag
 	dp := &expoHistogramDataPoint[N]{
 		attrs:     attrs,
 		maxSize:   maxSize,
 		noMinMax:  noMinMax,
 		noSum:     noSum,
-		startTime: now(),
+		startTime: startTime,
 	}
 	dp.scale.Store(maxScale)
+	if newRes != nil {
+		dp.res = newRes(attrs)
+		_, isDrop := dp.res.(*dropRes[N])
+		dp.dropExemplars = isDrop
+	}
 	return dp
 }
 
 // record adds a new measurement to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramDataPoint[N]) record(v N) {
-	if !p.noMinMax {
-		p.minMax.Update(v)
-	}
-	if !p.noSum {
-		p.sum.add(v)
-	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	absV := math.Abs(float64(v))
 
 	if float64(absV) == 0.0 {
 		p.zeroCount.Add(1)
+		if !p.noMinMax {
+			p.minMax.Update(v)
+		}
+		if !p.noSum {
+			p.sum.add(v)
+		}
 		return
 	}
 
@@ -103,6 +114,12 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 		bin = p.getBin(absV)
 	}
 
+	if !p.noMinMax {
+		p.minMax.Update(v)
+	}
+	if !p.noSum {
+		p.sum.add(v)
+	}
 	bucket.record(bin)
 }
 
@@ -159,19 +176,19 @@ func (p *expoHistogramDataPoint[N]) scaleChange(bin, startBin int32, length int)
 		return 0
 	}
 
-	low := int(startBin)
-	high := int(bin)
+	low := int64(startBin)
+	high := int64(bin)
 	if startBin >= bin {
-		low = int(bin)
-		high = int(startBin) + length - 1
+		low = int64(bin)
+		high = int64(startBin) + int64(length) - 1
 	}
 
 	var count int32
-	for high-low >= p.maxSize {
+	for high-low >= int64(p.maxSize) {
 		low >>= 1
 		high >>= 1
 		count++
-		if count > expoMaxScale-expoMinScale {
+		if count > int32(expoMaxScale-expoMinScale) {
 			return count
 		}
 	}
@@ -191,9 +208,13 @@ type expoBuckets struct {
 // record increments the count for the given bin, and expands the buckets if needed.
 // Size changes must be done before calling this function.
 func (b *expoBuckets) record(bin int32) {
+	b.recordCount(bin, 1)
+}
+
+func (b *expoBuckets) recordCount(bin int32, count uint64) {
 	if len(b.counts) == 0 {
 		b.counts = make([]atomic.Uint64, 1)
-		b.counts[0].Store(1)
+		b.counts[0].Store(count)
 		b.startBin = bin
 		return
 	}
@@ -202,7 +223,7 @@ func (b *expoBuckets) record(bin int32) {
 
 	// if the new bin is inside the current range
 	if bin >= b.startBin && int(bin) <= endBin {
-		b.counts[bin-b.startBin].Add(1)
+		b.counts[bin-b.startBin].Add(count)
 		return
 	}
 	// if the new bin is before the current start add spaces to the counts
@@ -227,7 +248,7 @@ func (b *expoBuckets) record(bin int32) {
 			b.counts[i].Store(0)
 		}
 		b.startBin = bin
-		b.counts[0].Store(1)
+		b.counts[0].Store(count)
 		return
 	}
 	// if the new is after the end add spaces to the end
@@ -237,13 +258,144 @@ func (b *expoBuckets) record(bin int32) {
 			for i := endBin + 1 - int(b.startBin); i < len(b.counts); i++ {
 				b.counts[i].Store(0)
 			}
-			b.counts[bin-b.startBin].Store(1)
+			b.counts[bin-b.startBin].Store(count)
 			return
 		}
 
 		end := make([]atomic.Uint64, int(bin-b.startBin)-len(b.counts)+1)
 		b.counts = append(b.counts, end...)
-		b.counts[bin-b.startBin].Store(1)
+		b.counts[bin-b.startBin].Store(count)
+	}
+}
+
+func (b *expoBuckets) merge(other *expoBuckets) {
+	if len(other.counts) == 0 {
+		return
+	}
+	for i := range other.counts {
+		c := other.counts[i].Load()
+		if c > 0 {
+			b.recordCount(other.startBin+int32(i), c)
+		}
+	}
+}
+
+func (p *expoHistogramDataPoint[N]) merge(other *expoHistogramDataPoint[N]) {
+	// Caller must ensure other is quiescent (no concurrent record/merge), as merge reads and mutates other.
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	pStartScale := p.scale.Load()
+	oStartScale := other.scale.Load()
+
+	targetScale := min(pStartScale, oStartScale)
+	pAlignShift := pStartScale - targetScale
+	oAlignShift := oStartScale - targetScale
+
+	var d int32
+	if len(p.posBuckets.counts) > 0 && len(other.posBuckets.counts) > 0 {
+		pMinBin := p.posBuckets.startBin >> pAlignShift
+		oMinBin := other.posBuckets.startBin >> oAlignShift
+		pMaxBin := (p.posBuckets.startBin + int32(len(p.posBuckets.counts)) - 1) >> pAlignShift         // nolint: gosec // length fits in int32
+		oMaxBin := (other.posBuckets.startBin + int32(len(other.posBuckets.counts)) - 1) >> oAlignShift // nolint: gosec // length fits in int32
+
+		minBin := min(pMinBin, oMinBin)
+		maxBin := max(pMaxBin, oMaxBin)
+		delta := p.scaleChange(maxBin, minBin, 1)
+		if delta > d {
+			d = delta
+		}
+	}
+	if len(p.negBuckets.counts) > 0 && len(other.negBuckets.counts) > 0 {
+		pMinBin := p.negBuckets.startBin >> pAlignShift
+		oMinBin := other.negBuckets.startBin >> oAlignShift
+		pMaxBin := (p.negBuckets.startBin + int32(len(p.negBuckets.counts)) - 1) >> pAlignShift         // nolint: gosec // length fits in int32
+		oMaxBin := (other.negBuckets.startBin + int32(len(other.negBuckets.counts)) - 1) >> oAlignShift // nolint: gosec // length fits in int32
+
+		minBin := min(pMinBin, oMinBin)
+		maxBin := max(pMaxBin, oMaxBin)
+		delta := p.scaleChange(maxBin, minBin, 1)
+		if delta > d {
+			d = delta
+		}
+	}
+
+	pDownscale := pAlignShift + d
+	if pDownscale > 0 {
+		p.scale.Add(-pDownscale)
+		p.posBuckets.downscale(pDownscale)
+		p.negBuckets.downscale(pDownscale)
+	}
+
+	oDownscale := oAlignShift + d
+	if oDownscale > 0 {
+		other.scale.Add(-oDownscale)
+		other.posBuckets.downscale(oDownscale)
+		other.negBuckets.downscale(oDownscale)
+	}
+
+	p.posBuckets.merge(&other.posBuckets)
+	p.negBuckets.merge(&other.negBuckets)
+
+	if !p.noSum {
+		p.sum.add(other.sum.load())
+	}
+	if !p.noMinMax {
+		if other.minMax.set.Load() {
+			p.minMax.Update(other.minMax.minimum.Load())
+			p.minMax.Update(other.minMax.maximum.Load())
+		}
+	}
+	p.zeroCount.Add(other.zeroCount.Load())
+}
+
+func (p *expoHistogramDataPoint[N]) uploadTo(
+	dest *metricdata.ExponentialHistogramDataPoint[N],
+	startTime, endTime time.Time,
+) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	dest.Attributes = p.attrs
+	dest.StartTime = startTime
+	dest.Time = endTime
+	dest.Count = p.count()
+	dest.Scale = p.scale.Load()
+	dest.ZeroCount = p.zeroCount.Load()
+	dest.ZeroThreshold = 0.0
+
+	dest.PositiveBucket.Offset = p.posBuckets.startBin
+	dest.PositiveBucket.Counts = reset(
+		dest.PositiveBucket.Counts,
+		len(p.posBuckets.counts),
+		len(p.posBuckets.counts),
+	)
+	for j := range p.posBuckets.counts {
+		dest.PositiveBucket.Counts[j] = p.posBuckets.counts[j].Load()
+	}
+
+	dest.NegativeBucket.Offset = p.negBuckets.startBin
+	dest.NegativeBucket.Counts = reset(
+		dest.NegativeBucket.Counts,
+		len(p.negBuckets.counts),
+		len(p.negBuckets.counts),
+	)
+	for j := range p.negBuckets.counts {
+		dest.NegativeBucket.Counts[j] = p.negBuckets.counts[j].Load()
+	}
+
+	if !p.noSum {
+		dest.Sum = p.sum.load()
+	} else {
+		var zero N
+		dest.Sum = zero
+	}
+	if !p.noMinMax && p.minMax.set.Load() {
+		dest.Min = metricdata.NewExtrema(p.minMax.minimum.Load())
+		dest.Max = metricdata.NewExtrema(p.minMax.maximum.Load())
+	} else {
+		dest.Min = metricdata.Extrema[N]{}
+		dest.Max = metricdata.Extrema[N]{}
 	}
 }
 
@@ -289,46 +441,46 @@ func (b *expoBuckets) count() uint64 {
 	return total
 }
 
-// newExponentialHistogram returns an Aggregator that summarizes a set of
-// measurements as an exponential histogram. Each histogram is scoped by attributes
-// and the aggregation cycle the measurements were made in.
-func newExponentialHistogram[N int64 | float64](
+// newDeltaExpoHistogram returns an Aggregator that summarizes a set of
+// measurements as a delta exponential histogram.
+func newDeltaExpoHistogram[N int64 | float64](
 	maxSize, maxScale int32,
 	noMinMax, noSum bool,
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
-) *expoHistogram[N] {
-	return &expoHistogram[N]{
+) *deltaExpoHistogram[N] {
+	return &deltaExpoHistogram[N]{
 		noSum:    noSum,
 		noMinMax: noMinMax,
 		maxSize:  int(maxSize),
 		maxScale: maxScale,
 
 		newRes: r,
-		limit:  newLimiter[expoHistogramDataPoint[N]](limit),
-		values: make(map[attribute.Distinct]*expoHistogramDataPoint[N]),
+		hotColdValMap: [2]limitedSyncMap[*expoHistogramDataPoint[N]]{
+			{aggLimit: limit},
+			{aggLimit: limit},
+		},
 
 		start: now(),
 	}
 }
 
-// expoHistogram summarizes a set of measurements as an histogram with exponentially
+// deltaExpoHistogram summarizes a set of measurements as an histogram with exponentially
 // defined buckets.
-type expoHistogram[N int64 | float64] struct {
+type deltaExpoHistogram[N int64 | float64] struct {
 	noSum    bool
 	noMinMax bool
 	maxSize  int
 	maxScale int32
 
-	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	limit    limiter[expoHistogramDataPoint[N]]
-	values   map[attribute.Distinct]*expoHistogramDataPoint[N]
-	valuesMu sync.Mutex
+	newRes        func(attribute.Set) FilteredExemplarReservoir[N]
+	hcwg          hotColdWaitGroup
+	hotColdValMap [2]limitedSyncMap[*expoHistogramDataPoint[N]]
 
 	start time.Time
 }
 
-func (e *expoHistogram[N]) measure(
+func (e *deltaExpoHistogram[N]) measure(
 	ctx context.Context,
 	value N,
 	fltrAttr attribute.Set,
@@ -339,33 +491,21 @@ func (e *expoHistogram[N]) measure(
 		return
 	}
 
-	e.valuesMu.Lock()
-	defer e.valuesMu.Unlock()
+	hotIdx := e.hcwg.start()
+	defer e.hcwg.done(hotIdx)
 
-	v, ok := e.values[fltrAttr.Equivalent()]
-	if !ok {
-		fltrAttr = e.limit.Attributes(fltrAttr, e.values)
-		// If we overflowed, make sure we add to the existing overflow series
-		// if it already exists.
-		v, ok = e.values[fltrAttr.Equivalent()]
-		if !ok {
-			v = newExpoHistogramDataPoint[N](fltrAttr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
-			r := e.newRes(fltrAttr)
-			_, isDrop := r.(*dropRes[N])
-			v.res = r
-			v.dropExemplars = isDrop
+	v := e.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) *expoHistogramDataPoint[N] {
+		return newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, e.newRes, now())
+	})
 
-			e.values[fltrAttr.Equivalent()] = v
-		}
-	}
 	v.record(value)
 	if !v.dropExemplars {
 		v.res.Offer(ctx, value, droppedAttr)
 	}
 }
 
-func (e *expoHistogram[N]) delta(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+func (e *deltaExpoHistogram[N]) collect(
+	dest *metricdata.Aggregation, // nolint:gocritic // dest is an interface pointer used to avoid allocations
 ) int {
 	t := now()
 
@@ -374,70 +514,174 @@ func (e *expoHistogram[N]) delta(
 	h, _ := (*dest).(metricdata.ExponentialHistogram[N])
 	h.Temporality = metricdata.DeltaTemporality
 
-	e.valuesMu.Lock()
-	defer e.valuesMu.Unlock()
+	coldIdx := e.hcwg.swapHotAndWait()
 
-	n := len(e.values)
+	n := e.hotColdValMap[coldIdx].Len()
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	for _, val := range e.values {
-		hDPts[i].Attributes = val.attrs
-		hDPts[i].StartTime = e.start
-		hDPts[i].Time = t
-		hDPts[i].Count = val.count()
-		hDPts[i].Scale = val.scale.Load()
-		hDPts[i].ZeroCount = val.zeroCount.Load()
-		hDPts[i].ZeroThreshold = 0.0
+	e.hotColdValMap[coldIdx].Range(func(_, value any) bool {
+		val := value.(*expoHistogramDataPoint[N])
 
-		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
-		hDPts[i].PositiveBucket.Counts = reset(
-			hDPts[i].PositiveBucket.Counts,
-			len(val.posBuckets.counts),
-			len(val.posBuckets.counts),
-		)
-		for j := range val.posBuckets.counts {
-			hDPts[i].PositiveBucket.Counts[j] = val.posBuckets.counts[j].Load()
-		}
+		val.uploadTo(&hDPts[i], e.start, t)
 
-		hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
-		hDPts[i].NegativeBucket.Counts = reset(
-			hDPts[i].NegativeBucket.Counts,
-			len(val.negBuckets.counts),
-			len(val.negBuckets.counts),
-		)
-		for j := range val.negBuckets.counts {
-			hDPts[i].NegativeBucket.Counts[j] = val.negBuckets.counts[j].Load()
-		}
-
-		if !e.noSum {
-			hDPts[i].Sum = val.sum.load()
+		if val.res != nil {
+			collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
 		} else {
-			hDPts[i].Sum = 0
+			hDPts[i].Exemplars = hDPts[i].Exemplars[:0]
 		}
-		if !e.noMinMax && val.minMax.set.Load() {
-			hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
-			hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
-		} else {
-			hDPts[i].Min = metricdata.Extrema[N]{}
-			hDPts[i].Max = metricdata.Extrema[N]{}
-		}
-
-		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
 
 		i++
-	}
-	// Unused attribute sets do not report.
-	clear(e.values)
+		return true
+	})
 
 	e.start = t
+	e.hotColdValMap[coldIdx].Clear()
+
 	h.DataPoints = hDPts
 	*dest = h
 	return n
 }
 
-func (e *expoHistogram[N]) cumulative(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+// newCumulativeExpoHistogram returns an Aggregator that summarizes a set of
+// measurements as a cumulative exponential histogram.
+// It returns the measure and collect functions directly, hiding the underlying
+// implementation (double-buffered or locked) from the caller.
+func newCumulativeExpoHistogram[N int64 | float64](
+	maxSize, maxScale int32,
+	noMinMax, noSum bool,
+	limit int,
+	r func(attribute.Set) FilteredExemplarReservoir[N],
+) (func(context.Context, N, attribute.Set, []attribute.KeyValue), func(*metricdata.Aggregation) int) {
+	if maxSize <= 2 {
+		h := &lockedCumulativeExpoHistogram[N]{
+			noSum:    noSum,
+			noMinMax: noMinMax,
+			maxSize:  int(maxSize),
+			maxScale: maxScale,
+			newRes:   r,
+			values:   limitedSyncMap[*expoHistogramDataPoint[N]]{aggLimit: limit},
+			start:    now(),
+		}
+		return h.measure, h.collect
+	}
+
+	h := &doubleBufferedCumulativeExpoHistogram[N]{
+		noSum:    noSum,
+		noMinMax: noMinMax,
+		maxSize:  int(maxSize),
+		maxScale: maxScale,
+		newRes:   r,
+		values:   limitedSyncMap[*doubleBufferedCumulativePoint[N]]{aggLimit: limit},
+		start:    now(),
+	}
+	return h.measure, h.collect
+}
+
+// doubleBufferedCumulativePoint is the high-performance double-buffered
+// implementation of a single cumulative series. It uses two active points
+// (hot/cold) and one persistent cumulative point.
+type doubleBufferedCumulativePoint[N int64 | float64] struct {
+	wg         hotColdWaitGroup
+	points     [2]*expoHistogramDataPoint[N]
+	cumulative *expoHistogramDataPoint[N]
+
+	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
+	maxSize  int
+	maxScale int32
+	noMinMax bool
+	noSum    bool
+}
+
+func (cp *doubleBufferedCumulativePoint[N]) measure(ctx context.Context, value N, droppedAttr []attribute.KeyValue) {
+	hotIdx := cp.wg.start()
+	defer cp.wg.done(hotIdx)
+	v := cp.points[hotIdx]
+	v.record(value)
+	if !v.dropExemplars {
+		v.res.Offer(ctx, value, droppedAttr)
+	}
+}
+
+func (cp *doubleBufferedCumulativePoint[N]) collect(
+	dp *metricdata.ExponentialHistogramDataPoint[N],
+	t, defaultStartTime time.Time,
+) {
+	val := cp.cumulative
+	coldIdx := cp.wg.swapHotAndWait()
+	delta := cp.points[coldIdx]
+
+	val.merge(delta)
+
+	// Replace the cold delta point and its reservoir
+	cp.points[coldIdx] = newExpoHistogramDataPoint[N](
+		delta.attrs,
+		cp.maxSize,
+		cp.maxScale,
+		cp.noMinMax,
+		cp.noSum,
+		cp.newRes,
+		t,
+	)
+
+	startTime := defaultStartTime
+	if x.PerSeriesStartTimestamps.Enabled() {
+		startTime = val.startTime
+	}
+
+	val.uploadTo(dp, startTime, t)
+
+	if delta.res != nil {
+		collectExemplars(&dp.Exemplars, delta.res.Collect)
+	} else {
+		dp.Exemplars = dp.Exemplars[:0]
+	}
+}
+
+// doubleBufferedCumulativeExpoHistogram summarizes a set of measurements as a cumulative
+// exponential histogram using double-buffering for high performance.
+type doubleBufferedCumulativeExpoHistogram[N int64 | float64] struct {
+	noSum    bool
+	noMinMax bool
+	maxSize  int
+	maxScale int32
+
+	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+	values limitedSyncMap[*doubleBufferedCumulativePoint[N]]
+	start  time.Time
+}
+
+func (e *doubleBufferedCumulativeExpoHistogram[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+) {
+	// Ignore NaN and infinity.
+	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
+		return
+	}
+
+	vp := e.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) *doubleBufferedCumulativePoint[N] {
+		n := now()
+		cp := &doubleBufferedCumulativePoint[N]{
+			maxSize:  e.maxSize,
+			maxScale: e.maxScale,
+			noMinMax: e.noMinMax,
+			noSum:    e.noSum,
+			newRes:   e.newRes,
+		}
+		cp.cumulative = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, nil, n)
+		cp.points[0] = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, e.newRes, n)
+		cp.points[1] = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, e.newRes, n)
+		return cp
+	})
+
+	vp.measure(ctx, value, droppedAttr)
+}
+
+func (e *doubleBufferedCumulativeExpoHistogram[N]) collect(
+	dest *metricdata.Aggregation, // nolint:gocritic // dest is an interface pointer used to avoid allocations
 ) int {
 	t := now()
 
@@ -446,72 +690,115 @@ func (e *expoHistogram[N]) cumulative(
 	h, _ := (*dest).(metricdata.ExponentialHistogram[N])
 	h.Temporality = metricdata.CumulativeTemporality
 
-	e.valuesMu.Lock()
-	defer e.valuesMu.Unlock()
+	n := e.values.Len()
+	hDPts := reset(h.DataPoints, n, n)
 
-	n := len(e.values)
+	var i int
+	e.values.Range(func(_, value any) bool {
+		cp := value.(*doubleBufferedCumulativePoint[N])
+
+		if i >= len(hDPts) {
+			hDPts = append(hDPts, metricdata.ExponentialHistogramDataPoint[N]{})
+		}
+		dp := &hDPts[i]
+
+		cp.collect(dp, t, e.start)
+
+		i++
+		return true
+	})
+
+	// TODO (#3006): This will use an unbounded amount of memory if there
+	// are unbounded number of attribute sets being aggregated. Attribute
+	// sets that become "stale" need to be forgotten so this will not
+	// overload the system.
+
+	h.DataPoints = hDPts
+	*dest = h
+	return len(hDPts)
+}
+
+// lockedCumulativeExpoHistogram summarizes a set of measurements as a cumulative
+// exponential histogram using a simple locked implementation. This is used when
+// maxSize <= 2 to avoid scale underflow issues during merge.
+type lockedCumulativeExpoHistogram[N int64 | float64] struct {
+	noSum    bool
+	noMinMax bool
+	maxSize  int
+	maxScale int32
+
+	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+	values limitedSyncMap[*expoHistogramDataPoint[N]]
+	start  time.Time
+}
+
+func (e *lockedCumulativeExpoHistogram[N]) measure(
+	ctx context.Context,
+	value N,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
+) {
+	// Ignore NaN and infinity.
+	if math.IsInf(float64(value), 0) || math.IsNaN(float64(value)) {
+		return
+	}
+
+	vp := e.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) *expoHistogramDataPoint[N] {
+		return newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, e.newRes, now())
+	})
+	vp.record(value)
+	if !vp.dropExemplars {
+		vp.res.Offer(ctx, value, droppedAttr)
+	}
+}
+
+func (e *lockedCumulativeExpoHistogram[N]) collect(
+	dest *metricdata.Aggregation, // nolint:gocritic // dest is an interface pointer used to avoid allocations
+) int {
+	t := now()
+
+	// If *dest is not a metricdata.ExponentialHistogram, memory reuse is missed.
+	// In that case, use the zero-value h and hope for better alignment next cycle.
+	h, _ := (*dest).(metricdata.ExponentialHistogram[N])
+	h.Temporality = metricdata.CumulativeTemporality
+
+	n := e.values.Len()
 	hDPts := reset(h.DataPoints, n, n)
 
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
 	var i int
-	for _, val := range e.values {
-		hDPts[i].Attributes = val.attrs
+	e.values.Range(func(_, value any) bool {
+		val := value.(*expoHistogramDataPoint[N])
+
+		if i >= len(hDPts) {
+			hDPts = append(hDPts, metricdata.ExponentialHistogramDataPoint[N]{})
+		}
+		dp := &hDPts[i]
 
 		startTime := e.start
 		if perSeriesStartTimeEnabled {
 			startTime = val.startTime
 		}
-		hDPts[i].StartTime = startTime
-		hDPts[i].Time = t
-		hDPts[i].Count = val.count()
-		hDPts[i].Scale = val.scale.Load()
-		hDPts[i].ZeroCount = val.zeroCount.Load()
-		hDPts[i].ZeroThreshold = 0.0
 
-		hDPts[i].PositiveBucket.Offset = val.posBuckets.startBin
-		hDPts[i].PositiveBucket.Counts = reset(
-			hDPts[i].PositiveBucket.Counts,
-			len(val.posBuckets.counts),
-			len(val.posBuckets.counts),
-		)
-		for j := range val.posBuckets.counts {
-			hDPts[i].PositiveBucket.Counts[j] = val.posBuckets.counts[j].Load()
-		}
+		val.uploadTo(dp, startTime, t)
 
-		hDPts[i].NegativeBucket.Offset = val.negBuckets.startBin
-		hDPts[i].NegativeBucket.Counts = reset(
-			hDPts[i].NegativeBucket.Counts,
-			len(val.negBuckets.counts),
-			len(val.negBuckets.counts),
-		)
-		for j := range val.negBuckets.counts {
-			hDPts[i].NegativeBucket.Counts[j] = val.negBuckets.counts[j].Load()
-		}
-
-		if !e.noSum {
-			hDPts[i].Sum = val.sum.load()
+		if val.res != nil {
+			collectExemplars(&dp.Exemplars, val.res.Collect)
 		} else {
-			hDPts[i].Sum = 0
+			dp.Exemplars = dp.Exemplars[:0]
 		}
-		if !e.noMinMax && val.minMax.set.Load() {
-			hDPts[i].Min = metricdata.NewExtrema(val.minMax.minimum.Load())
-			hDPts[i].Max = metricdata.NewExtrema(val.minMax.maximum.Load())
-		} else {
-			hDPts[i].Min = metricdata.Extrema[N]{}
-			hDPts[i].Max = metricdata.Extrema[N]{}
-		}
-
-		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
 
 		i++
-		// TODO (#3006): This will use an unbounded amount of memory if there
-		// are unbounded number of attribute sets being aggregated. Attribute
-		// sets that become "stale" need to be forgotten so this will not
-		// overload the system.
-	}
+		return true
+	})
+
+	// TODO (#3006): This will use an unbounded amount of memory if there
+	// are unbounded number of attribute sets being aggregated. Attribute
+	// sets that become "stale" need to be forgotten so this will not
+	// overload the system.
 
 	h.DataPoints = hDPts
 	*dest = h
-	return n
+	return len(hDPts)
 }
