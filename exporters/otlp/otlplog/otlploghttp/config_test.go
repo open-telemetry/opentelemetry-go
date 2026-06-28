@@ -514,6 +514,9 @@ func TestNewConfig(t *testing.T) {
 			if !tc.want.maxRequestSize.Set {
 				tc.want.maxRequestSize = newSetting(64 * 1024 * 1024)
 			}
+			if !tc.want.encoding.Set {
+				tc.want.encoding = newSetting(ProtoEncoding)
+			}
 
 			// Do not compare pointer values.
 			assertTLSConfig(t, tc.want.tlsCfg, c.tlsCfg)

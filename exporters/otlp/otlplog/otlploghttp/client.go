@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -248,7 +249,13 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 			}
 
 			var respProto collogpb.ExportLogsServiceResponse
-			switch resp.Header.Get("Content-Type") {
+			// Parse media type so parameters (e.g. charset=utf-8) do not prevent
+			// partial-success response handling.
+			mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+			if err != nil {
+				return nil
+			}
+			switch mediaType {
 			case contentTypeProto:
 				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
 					return err

@@ -1264,6 +1264,64 @@ func TestRequestBodySizeLimit(t *testing.T) {
 	assert.Equal(t, 0, calls, "oversized request must fail before sending")
 }
 
+func TestPartialSuccessContentTypeWithParameters(t *testing.T) {
+	// Ensure Content-Type parameters (e.g. charset) do not prevent parsing
+	// partial-success responses for either encoding.
+	const n, msg = 2, "bad data"
+	respMsg := &collogpb.ExportLogsServiceResponse{
+		PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+			RejectedLogRecords: n,
+			ErrorMessage:       msg,
+		},
+	}
+
+	tests := []struct {
+		name         string
+		encoding     Encoding
+		contentType  string
+		marshal      func(proto.Message) ([]byte, error)
+	}{
+		{
+			name:        "proto with charset",
+			encoding:    ProtoEncoding,
+			contentType: "application/x-protobuf; charset=utf-8",
+			marshal:     proto.Marshal,
+		},
+		{
+			name:        "json with charset",
+			encoding:    JSONEncoding,
+			contentType: "application/json; charset=utf-8",
+			marshal:     protojson.Marshal,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			body, err := tc.marshal(respMsg)
+			require.NoError(t, err)
+
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", tc.contentType)
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write(body)
+			}))
+			t.Cleanup(srv.Close)
+
+			opts := []Option{
+				WithEndpoint(srv.Listener.Addr().String()),
+				WithInsecure(),
+				WithEncoding(tc.encoding),
+				WithRetry(RetryConfig{Enabled: false}),
+			}
+			cfg := newConfig(opts)
+			c, err := newHTTPClient(t.Context(), cfg)
+			require.NoError(t, err)
+
+			err = c.UploadLogs(t.Context(), resourceLogs)
+			assert.ErrorIs(t, err, internal.PartialSuccess{})
+		})
+	}
+}
+
 func BenchmarkExporterExportLogs(b *testing.B) {
 	const n = 10
 
