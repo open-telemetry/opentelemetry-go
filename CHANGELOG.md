@@ -30,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - ⚠️ **Breaking Change:** Use `go.opentelemetry.io/otel/attribute.Value` and `go.opentelemetry.io/otel/attribute.KeyValue` for log bodies and attributes in `go.opentelemetry.io/otel/log`, `go.opentelemetry.io/otel/log/logtest`, `go.opentelemetry.io/otel/sdk/log`, and `go.opentelemetry.io/otel/sdk/log/logtest`. (#8490)
 - Use `go.opentelemetry.io/otel/attribute.Value` JSON encoding for log bodies and attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#8490)
+- Improve the performance of hashing `BOOLSLICE`, `INT64SLICE`, `FLOAT64SLICE`, and `STRINGSLICE` attribute values by avoiding reflection for short slices in `go.opentelemetry.io/otel/attribute`. (#8511)
 
 ### Removed
 
