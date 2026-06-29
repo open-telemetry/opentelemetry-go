@@ -13,8 +13,8 @@ require (
 	go.opentelemetry.io/build-tools/gotmpl v0.30.0
 	go.opentelemetry.io/build-tools/multimod v0.30.0
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
-	golang.org/x/tools v0.46.0
-	golang.org/x/vuln v1.4.0
+	golang.org/x/tools v0.47.0
+	golang.org/x/vuln v1.5.0
 )
 
 require (
@@ -226,7 +226,7 @@ require (
 	go-simpler.org/musttag v0.14.0 // indirect
 	go-simpler.org/sloglint v0.12.0 // indirect
 	go.augendre.info/arangolint v0.4.0 // indirect
-	go.augendre.info/fatcontext v0.9.0 // indirect
+	go.augendre.info/fatcontext v0.10.0 // indirect
 	go.opentelemetry.io/build-tools v0.30.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.28.0 // indirect
@@ -237,7 +237,7 @@ require (
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260623180514-3eaace186e0a // indirect
+	golang.org/x/telemetry v0.0.0-20260626140120-b709645a9e92 // indirect
 	golang.org/x/text v0.38.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
