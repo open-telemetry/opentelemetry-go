@@ -45,7 +45,7 @@ type tracerProviderConfig struct {
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
 
-	// allowDupKeys disables duplicate-key removal for span, event, and link attributes when true.
+	// allowDupKeys disables duplicate-key removal for span, event, link, and instrumentation scope attributes (including within attribute.MAP values) when true.
 	allowDupKeys bool
 }
 

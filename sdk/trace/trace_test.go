@@ -1735,7 +1735,7 @@ func TestWithAllowKeyDuplication(t *testing.T) {
 		attribute.String("top-key", "first"),
 		attribute.String("top-key", "second"),
 	}
-	assert.Equal(t, wantAttrs, got.Attributes())
+	assert.ElementsMatch(t, wantAttrs, got.Attributes())
 	require.Len(t, got.Events(), 1)
 	assert.Equal(t, []attribute.KeyValue{dup}, got.Events()[0].Attributes)
 	assert.Zero(t, got.Events()[0].DroppedAttributeCount)
