@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
-	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log/internal/counter"
@@ -710,7 +709,7 @@ func TestBatchProcessorMetricsDisabled(t *testing.T) {
 	ctx := t.Context()
 
 	r := new(Record)
-	r.SetBody(log.BoolValue(true))
+	r.SetBody(attribute.BoolValue(true))
 	require.NoError(t, bp.OnEmit(ctx, r))
 	require.NoError(t, bp.ForceFlush(ctx))
 
@@ -759,7 +758,7 @@ func TestBatchProcessorMetrics(t *testing.T) {
 	ctx := t.Context()
 
 	r := new(Record)
-	r.SetBody(log.BoolValue(true))
+	r.SetBody(attribute.BoolValue(true))
 	require.NoError(t, bp.OnEmit(ctx, r))
 	require.Eventually(t, func() bool {
 		return e.ExportN() > 0
