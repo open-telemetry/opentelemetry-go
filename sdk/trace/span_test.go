@@ -357,6 +357,102 @@ func TestTruncateAttr(t *testing.T) {
 				attribute.StringValue("ab"),
 			),
 		},
+		// MAP cases
+		{
+			limit: -1,
+			attr:  attribute.Map(key, attribute.String("value", "value")),
+			want:  attribute.Map(key, attribute.String("value", "value")),
+		},
+		{
+			limit: 0,
+			attr:  attribute.Map(key, attribute.Bool("ok", true), attribute.String("value", "value")),
+			want:  attribute.Map(key, attribute.Bool("ok", true), attribute.String("value", "")),
+		},
+		{
+			limit: 5,
+			attr: attribute.Map(
+				key,
+				attribute.String("short", "value"),
+				attribute.String("long", "toolong"),
+			),
+			want: attribute.Map(
+				key,
+				attribute.String("short", "value"),
+				attribute.String("long", "toolo"),
+			),
+		},
+		{
+			// STRINGSLICE within MAP: each string element is truncated.
+			limit: 2,
+			attr:  attribute.Map(key, attribute.StringSlice("strings", []string{"abc", "de"})),
+			want:  attribute.Map(key, attribute.StringSlice("strings", []string{"ab", "de"})),
+		},
+		{
+			// BYTESLICE within MAP: each byte slice is truncated.
+			limit: 2,
+			attr:  attribute.Map(key, attribute.ByteSlice("bytes", []byte{1, 2, 3})),
+			want:  attribute.Map(key, attribute.ByteSlice("bytes", []byte{1, 2})),
+		},
+		{
+			// Nested MAP: recursive truncation.
+			limit: 1,
+			attr:  attribute.Map(key, attribute.Map("map", attribute.String("nested", "value"))),
+			want:  attribute.Map(key, attribute.Map("map", attribute.String("nested", "v"))),
+		},
+		{
+			// SLICE within MAP: recursive truncation.
+			limit: 2,
+			attr: attribute.Map(
+				key,
+				attribute.Slice(
+					"slice",
+					attribute.StringValue("abc"),
+					attribute.MapValue(attribute.String("nested", "abc")),
+				),
+			),
+			want: attribute.Map(
+				key,
+				attribute.Slice(
+					"slice",
+					attribute.StringValue("ab"),
+					attribute.MapValue(attribute.String("nested", "ab")),
+				),
+			),
+		},
+		{
+			// MAP within SLICE: recursive truncation.
+			limit: 2,
+			attr:  attribute.Slice(key, attribute.MapValue(attribute.String("nested", "value"))),
+			want:  attribute.Slice(key, attribute.MapValue(attribute.String("nested", "va"))),
+		},
+		{
+			// Multi-byte string whose byte length exceeds the limit but rune count
+			// does not: must not be truncated.
+			limit: 3,
+			attr:  attribute.Map(key, attribute.String("string", "日本語")), // 3 runes, 9 bytes
+			want:  attribute.Map(key, attribute.String("string", "日本語")),
+		},
+		{
+			// MAP with invalid UTF-8 where rune count equals the limit:
+			// invalid byte is dropped.
+			limit: 2,
+			attr:  attribute.Map(key, attribute.String("string", "日\x80")), // 2 runes, 4 bytes
+			want:  attribute.Map(key, attribute.String("string", "日")),
+		},
+		{
+			// Duplicate MAP entries are truncated but not dropped.
+			limit: 2,
+			attr: attribute.Map(
+				key,
+				attribute.String("dup", "abc"),
+				attribute.String("dup", "de"),
+			),
+			want: attribute.Map(
+				key,
+				attribute.String("dup", "ab"),
+				attribute.String("dup", "de"),
+			),
+		},
 	}
 
 	for _, test := range tests {

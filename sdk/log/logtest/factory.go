@@ -9,6 +9,7 @@ import (
 	"time"
 	"unsafe"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
@@ -27,8 +28,8 @@ type RecordFactory struct {
 	ObservedTimestamp time.Time
 	Severity          log.Severity
 	SeverityText      string
-	Body              log.Value
-	Attributes        []log.KeyValue
+	Body              attribute.Value
+	Attributes        []attribute.KeyValue
 	TraceID           trace.TraceID
 	SpanID            trace.SpanID
 	TraceFlags        trace.TraceFlags
