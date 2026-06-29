@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/observ"
 	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 )
 
 // Default periodic reader timing.
