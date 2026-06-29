@@ -185,6 +185,46 @@ func TestEndToEnd(t *testing.T) {
 				ExpectedHeaders: customProxyHeader,
 			},
 		},
+		{
+			name: "with protobuf request encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingProtobuf),
+			},
+		},
+		{
+			name: "with JSON request encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingJSON),
+			},
+		},
+		{
+			name: "with JSON collector response encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingJSON),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "application/json",
+			},
+		},
+		{
+			name: "with JSON collector response encoding and partial success",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingJSON),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "application/json",
+				Partial: &coltracepb.ExportTracePartialSuccess{
+					RejectedSpans: 1,
+					ErrorMessage:  "missing required attribute aaa",
+				},
+			},
+		},
+		{
+			name: "with the collector responding unsupported content type",
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "text/plain",
+			},
+		},
 	}
 
 	for _, tc := range tests {
