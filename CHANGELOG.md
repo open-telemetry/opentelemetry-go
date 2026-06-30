@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `WithoutPanicRecording` TracerProvider option in `go.opentelemetry.io/otel/sdk/trace` to disable exception event recording for panics.
 - Add `Map` and `MapValue` functions for new `MAP` attribute type in `go.opentelemetry.io/otel/attribute`. (#8445)
 - Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#8453)
 - Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlplog`. (#8453)

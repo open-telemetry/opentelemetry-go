@@ -1620,6 +1620,24 @@ func TestSpanCapturesPanic(t *testing.T) {
 	}, spans[0].Events()[0].Attributes)
 }
 
+func TestSpanWithoutPanicRecording(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()), WithoutPanicRecording())
+	_, span := tp.Tracer("CatchPanic").Start(
+		t.Context(),
+		"span",
+	)
+
+	f := func() {
+		defer span.End()
+		panic(errors.New("error message"))
+	}
+	require.PanicsWithError(t, "error message", f)
+	spans := te.Spans()
+	require.Len(t, spans, 1)
+	assert.Empty(t, spans[0].Events())
+}
+
 func TestSpanCapturesPanicWithStackTrace(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
