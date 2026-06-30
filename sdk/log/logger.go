@@ -89,6 +89,10 @@ func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool 
 
 func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	sc := trace.SpanContextFromContext(ctx)
+	var depthLimit int
+	if l.provider.attributeValueDepthLimitSet {
+		depthLimit = l.provider.attributeValueDepthLimit
+	}
 
 	newRecord := Record{
 		eventName:         r.EventName(),
@@ -101,11 +105,13 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		spanID:     sc.SpanID(),
 		traceFlags: sc.TraceFlags(),
 
-		resource:                  l.provider.resource,
-		scope:                     &l.instrumentationScope,
-		attributeValueLengthLimit: l.provider.attributeValueLengthLimit,
-		attributeCountLimit:       l.provider.attributeCountLimit,
-		allowDupKeys:              l.provider.allowDupKeys,
+		resource:                    l.provider.resource,
+		scope:                       &l.instrumentationScope,
+		attributeValueLengthLimit:   l.provider.attributeValueLengthLimit,
+		attributeValueDepthLimit:    depthLimit,
+		attributeValueDepthLimitSet: l.provider.attributeValueDepthLimitSet,
+		attributeCountLimit:         l.provider.attributeCountLimit,
+		allowDupKeys:                l.provider.allowDupKeys,
 	}
 	if l.recCntIncr != nil {
 		l.recCntIncr(ctx)

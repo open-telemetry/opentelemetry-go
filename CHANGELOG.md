@@ -22,6 +22,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add default duplicate-key removal for `attribute.MAP` values in measurement and instrumentation scope attributes in `go.opentelemetry.io/otel/sdk/metric` using last-value-wins semantics. (#8471)
 - Extend `WithAllowKeyDuplication` in `go.opentelemetry.io/otel/sdk/log` to disable duplicate-key removal in `attribute.MAP` values for instrumentation scope attributes. (#8471)
 - Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
+- Add `WithAttributeValueDepthLimit`, `DefaultAttributeValueDepthLimit`, and `SpanLimits.AttributeValueDepthLimit` in `go.opentelemetry.io/otel/sdk/trace` to configure nested attribute value depth.
+- Add `WithAttributeValueDepthLimit` in `go.opentelemetry.io/otel/sdk/metric` to configure nested attribute value depth for resource and instrumentation scope attributes.
+- Add `WithAttributeValueDepthLimit` in `go.opentelemetry.io/otel/sdk/log` to configure nested depth for log record, resource, and instrumentation scope attributes.
 - Add `go.opentelemetry.io/otel/semconv/v1.42.0` package. (#8484)
   The package contains semantic conventions from the `v1.42.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.42.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.41.0`.
@@ -49,6 +52,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix off-by-one error in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar`, which prevented the first exemplar after the reservoir is filled from being sampled. (#8309)
 - Fix histogram datapoint reuse in `go.opentelemetry.io/otel/sdk/metric` aggregation to avoid leaking stale sum/min/max values when they are disabled in subsequent collections. (#8403)
 - Prevent zero-hash collapse to empty set in `go.opentelemetry.io/otel/attribute` when computed hash is zero for non-empty input. (#8402)
+- Limit recursive normalization of nested `attribute.Value` and `attribute.KeyValue` structures to depth 64 by default in `go.opentelemetry.io/otel/sdk/trace`, log record, resource, and instrumentation scope attributes in `go.opentelemetry.io/otel/sdk/log`, and resource and instrumentation scope attributes in `go.opentelemetry.io/otel/sdk/metric`.
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

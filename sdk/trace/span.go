@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 	"go.opentelemetry.io/otel/trace"
@@ -270,7 +270,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 			s.addDroppedAttr(1)
 			continue
 		}
-		a = dedupAttr(a)
+		a = dedupAttr(a, s.tracer.provider.spanLimits.AttributeValueDepthLimit)
 		a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 		s.attributes = append(s.attributes, a)
 	}
@@ -331,7 +331,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 		if idx, ok := exists[a.Key]; ok {
 			// Perform all updates before dropping, even when at capacity.
-			a = dedupAttr(a)
+			a = dedupAttr(a, s.tracer.provider.spanLimits.AttributeValueDepthLimit)
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes[idx] = a
 			continue
@@ -342,7 +342,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 			// updates are checked and performed.
 			s.addDroppedAttr(1)
 		} else {
-			a = dedupAttr(a)
+			a = dedupAttr(a, s.tracer.provider.spanLimits.AttributeValueDepthLimit)
 			a = truncateAttr(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
 			s.attributes = append(s.attributes, a)
 			exists[a.Key] = len(s.attributes) - 1
@@ -350,10 +350,10 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	}
 }
 
-func dedupAttr(attr attribute.KeyValue) attribute.KeyValue {
+func dedupAttr(attr attribute.KeyValue, depthLimit int) attribute.KeyValue {
 	switch attr.Value.Type() {
 	case attribute.SLICE, attribute.MAP:
-		attr, _ = attrdedup.KeyValue(attr)
+		attr, _ = attrnorm.KeyValueWithDepthLimit(attr, depthLimit)
 		return attr
 	default:
 		return attr
@@ -731,7 +731,7 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
-	attrs, _ := attrdedup.KeyValues(c.Attributes())
+	attrs, _ := attrnorm.KeyValuesWithDepthLimit(c.Attributes(), s.tracer.provider.spanLimits.AttributeValueDepthLimit)
 	e := Event{Name: name, Attributes: attrs, Time: c.Timestamp()}
 
 	// Discard attributes over limit.
@@ -905,7 +905,7 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		return
 	}
 
-	attrs, _ := attrdedup.KeyValues(link.Attributes)
+	attrs, _ := attrnorm.KeyValuesWithDepthLimit(link.Attributes, s.tracer.provider.spanLimits.AttributeValueDepthLimit)
 	l := Link{SpanContext: link.SpanContext, Attributes: attrs}
 
 	// Discard attributes over limit.

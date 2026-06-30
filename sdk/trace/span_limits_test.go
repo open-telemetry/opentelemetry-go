@@ -30,12 +30,18 @@ func TestSettingSpanLimits(t *testing.T) {
 	limits := func(n int) *SpanLimits {
 		lims := NewSpanLimits()
 		lims.AttributeValueLengthLimit = n
+		lims.AttributeValueDepthLimit = n
 		lims.AttributeCountLimit = n
 		lims.EventCountLimit = n
 		lims.LinkCountLimit = n
 		lims.AttributePerEventCountLimit = n
 		lims.AttributePerLinkCountLimit = n
 		return &lims
+	}
+	envWant := func(n int) SpanLimits {
+		lims := *limits(n)
+		lims.AttributeValueDepthLimit = DefaultAttributeValueDepthLimit
+		return lims
 	}
 
 	tests := []struct {
@@ -52,7 +58,7 @@ func TestSettingSpanLimits(t *testing.T) {
 		{
 			name: "env",
 			env:  envLimits("42"),
-			want: *limits(42),
+			want: envWant(42),
 		},
 		{
 			name: "opt",
@@ -91,7 +97,7 @@ func TestSettingSpanLimits(t *testing.T) {
 			// negative values to signal this than this value is expected to
 			// pass through.
 			env:  envLimits("-1"),
-			want: *limits(-1),
+			want: envWant(-1),
 		},
 		{
 			name: "opt(unlimited)",
@@ -125,6 +131,26 @@ func TestSettingSpanLimits(t *testing.T) {
 			assert.Equal(t, test.want, NewTracerProvider(opts...).spanLimits)
 		})
 	}
+}
+
+func TestAttributeValueDepthLimitOptionPrecedence(t *testing.T) {
+	limits := NewSpanLimits()
+	limits.AttributeValueDepthLimit = 7
+
+	assert.Equal(t, 3, NewTracerProvider(
+		WithRawSpanLimits(limits),
+		WithAttributeValueDepthLimit(3),
+	).spanLimits.AttributeValueDepthLimit)
+
+	assert.Equal(t, 7, NewTracerProvider(
+		WithAttributeValueDepthLimit(3),
+		WithRawSpanLimits(limits),
+	).spanLimits.AttributeValueDepthLimit)
+
+	limits.AttributeValueDepthLimit = 0
+	assert.Equal(t, DefaultAttributeValueDepthLimit, NewTracerProvider(
+		WithSpanLimits(limits),
+	).spanLimits.AttributeValueDepthLimit)
 }
 
 type recorder []ReadOnlySpan

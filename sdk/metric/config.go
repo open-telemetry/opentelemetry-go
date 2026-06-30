@@ -18,14 +18,19 @@ import (
 
 // config contains configuration options for a MeterProvider.
 type config struct {
-	res              *resource.Resource
-	readers          []Reader
-	views            []View
-	exemplarFilter   exemplar.Filter
-	cardinalityLimit int
+	res                         *resource.Resource
+	readers                     []Reader
+	views                       []View
+	exemplarFilter              exemplar.Filter
+	cardinalityLimit            int
+	attributeValueDepthLimit    int
+	attributeValueDepthLimitSet bool
 }
 
-const defaultCardinalityLimit = 2000
+const (
+	defaultCardinalityLimit         = 2000
+	defaultAttributeValueDepthLimit = 64
+)
 
 // readerSignals returns a force-flush and shutdown function for a
 // MeterProvider to call in their respective options. All Readers c contains
@@ -77,9 +82,10 @@ type experimentalOption interface {
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
 	conf := config{
-		res:              resource.Default(),
-		exemplarFilter:   exemplar.TraceBasedFilter,
-		cardinalityLimit: cardinalityLimitFromEnv(),
+		res:                      resource.Default(),
+		exemplarFilter:           exemplar.TraceBasedFilter,
+		cardinalityLimit:         cardinalityLimitFromEnv(),
+		attributeValueDepthLimit: defaultAttributeValueDepthLimit,
 	}
 	for _, o := range meterProviderOptionsFromEnv() {
 		conf = o.apply(conf)
@@ -90,6 +96,7 @@ func newConfig(options []Option) config {
 		}
 		conf = o.apply(conf)
 	}
+	conf.res = resourceWithDepthLimit(conf.res, conf.attributeValueDepthLimit)
 	return conf
 }
 
@@ -185,6 +192,26 @@ func WithCardinalityLimit(limit int) Option {
 	// can also be used to set this value.
 	return optionFunc(func(cfg config) config {
 		cfg.cardinalityLimit = limit
+		return cfg
+	})
+}
+
+// WithAttributeValueDepthLimit sets the maximum allowed depth for nested
+// attribute values in resource and instrumentation scope attributes processed
+// by a MeterProvider. Measurement attributes are not limited by this option.
+//
+// Any slice or map value exceeding this depth will be replaced with an empty
+// value.
+//
+// Setting this to zero means only scalar values are allowed.
+//
+// Setting this to a negative value means no limit is applied.
+//
+// By default, 64 will be used.
+func WithAttributeValueDepthLimit(limit int) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.attributeValueDepthLimit = limit
+		cfg.attributeValueDepthLimitSet = true
 		return cfg
 	})
 }

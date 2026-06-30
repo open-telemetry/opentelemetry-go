@@ -18,7 +18,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/metric/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestMeterConcurrentSafe(*testing.T) {
@@ -125,6 +127,108 @@ func TestMeterProviderReturnsNoopMeterAfterShutdown(t *testing.T) {
 	m = mp.Meter("")
 	_, ok = m.(noop.Meter)
 	assert.Truef(t, ok, "Meter from shutdown MeterProvider is not NoOp: %T", m)
+}
+
+func metricDepthLimitInputAttr(key string) attribute.KeyValue {
+	return attribute.Map(
+		key,
+		attribute.Map(
+			"level1",
+			attribute.Map("over", attribute.String("leaf", "value")),
+		),
+	)
+}
+
+func metricDepthLimitWantAttr(key string) attribute.KeyValue {
+	return attribute.Map(
+		key,
+		attribute.Map(
+			"level1",
+			attribute.KeyValue{Key: "over"},
+		),
+	)
+}
+
+func TestMeterProviderAttributeValueDepthLimit(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(
+		WithReader(reader),
+		WithAttributeValueDepthLimit(2),
+		WithResource(resource.NewSchemaless(metricDepthLimitInputAttr("resource"))),
+	)
+	meter := mp.Meter("scope", api.WithInstrumentationAttributes(metricDepthLimitInputAttr("scope")))
+	counter, err := meter.Int64Counter("counter")
+	require.NoError(t, err)
+
+	counter.Add(t.Context(), 1, api.WithAttributes(metricDepthLimitInputAttr("measurement")))
+	counter.Add(t.Context(), 1, x.WithUnsafeAttributes(metricDepthLimitInputAttr("unsafe")))
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	assert.Equal(t, []attribute.KeyValue{metricDepthLimitWantAttr("resource")}, rm.Resource.Attributes())
+	require.Len(t, rm.ScopeMetrics, 1)
+	assert.Equal(t, attribute.NewSet(metricDepthLimitWantAttr("scope")), rm.ScopeMetrics[0].Scope.Attributes)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 2)
+	gotAttrs := []attribute.Set{sum.DataPoints[0].Attributes, sum.DataPoints[1].Attributes}
+	assert.Contains(t, gotAttrs, attribute.NewSet(metricDepthLimitInputAttr("measurement")))
+	assert.Contains(t, gotAttrs, attribute.NewSet(metricDepthLimitInputAttr("unsafe")))
+}
+
+func TestMeterProviderAttributeValueDepthLimitZeroAndNegative(t *testing.T) {
+	t.Run("Zero", func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(reader),
+			WithAttributeValueDepthLimit(0),
+			WithResource(resource.NewSchemaless(metricDepthLimitInputAttr("resource"))),
+		)
+		meter := mp.Meter("scope", api.WithInstrumentationAttributes(metricDepthLimitInputAttr("scope")))
+		counter, err := meter.Int64Counter("counter")
+		require.NoError(t, err)
+
+		counter.Add(t.Context(), 1, api.WithAttributes(metricDepthLimitInputAttr("measurement")))
+
+		var rm metricdata.ResourceMetrics
+		require.NoError(t, reader.Collect(t.Context(), &rm))
+		assert.Equal(t, []attribute.KeyValue{{Key: "resource"}}, rm.Resource.Attributes())
+		require.Len(t, rm.ScopeMetrics, 1)
+		assert.Equal(t, attribute.NewSet(attribute.KeyValue{Key: "scope"}), rm.ScopeMetrics[0].Scope.Attributes)
+		sum := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+		assert.Equal(t, attribute.NewSet(metricDepthLimitInputAttr("measurement")), sum.DataPoints[0].Attributes)
+	})
+
+	t.Run("Negative", func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(reader),
+			WithAttributeValueDepthLimit(-1),
+			WithResource(resource.NewSchemaless(metricDepthLimitInputAttr("resource"))),
+		)
+		meter := mp.Meter("scope", api.WithInstrumentationAttributes(metricDepthLimitInputAttr("scope")))
+		counter, err := meter.Int64Counter("counter")
+		require.NoError(t, err)
+
+		counter.Add(t.Context(), 1)
+
+		var rm metricdata.ResourceMetrics
+		require.NoError(t, reader.Collect(t.Context(), &rm))
+		assert.Equal(t, []attribute.KeyValue{metricDepthLimitInputAttr("resource")}, rm.Resource.Attributes())
+		require.Len(t, rm.ScopeMetrics, 1)
+		assert.Equal(t, attribute.NewSet(metricDepthLimitInputAttr("scope")), rm.ScopeMetrics[0].Scope.Attributes)
+	})
+}
+
+func TestMeterProviderAttributeValueDepthLimitOptionPrecedence(t *testing.T) {
+	cfg := newConfig([]Option{
+		WithAttributeValueDepthLimit(7),
+		WithAttributeValueDepthLimit(3),
+	})
+	assert.Equal(t, 3, cfg.attributeValueDepthLimit)
+	assert.True(t, cfg.attributeValueDepthLimitSet)
 }
 
 func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {

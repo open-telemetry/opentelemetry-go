@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/log/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -117,8 +117,10 @@ type Record struct {
 	// scope is the Scope that the Logger was created with.
 	scope *instrumentation.Scope
 
-	attributeValueLengthLimit int
-	attributeCountLimit       int
+	attributeValueLengthLimit   int
+	attributeValueDepthLimit    int
+	attributeValueDepthLimitSet bool
+	attributeCountLimit         int
 
 	// specifies whether we should deduplicate any key value collections or not
 	allowDupKeys bool
@@ -195,7 +197,7 @@ func (r *Record) Body() attribute.Value {
 // SetBody sets the body of the log record.
 func (r *Record) SetBody(v attribute.Value) {
 	if !r.allowDupKeys {
-		r.body, _ = attrdedup.Value(v)
+		r.body, _ = attrnorm.ValueDedup(v)
 	} else {
 		r.body = v
 	}
@@ -471,15 +473,26 @@ func (r *Record) Clone() Record {
 }
 
 func (r *Record) applyAttrLimitsAndDedup(attr attribute.KeyValue) attribute.KeyValue {
+	depthLimit := r.attrValueDepthLimit()
 	if !r.allowDupKeys {
 		var changed bool
-		attr, changed = attrdedup.KeyValue(attr)
+		attr, _ = attrnorm.KeyValueLimitDepth(attr, depthLimit)
+		attr, changed = attrnorm.KeyValueDedup(attr)
 		if changed {
 			logKeyValuePairDropped()
 		}
+	} else {
+		attr, _ = attrnorm.KeyValueLimitDepth(attr, depthLimit)
 	}
 	attr.Value = truncateValue(r.attributeValueLengthLimit, attr.Value)
 	return attr
+}
+
+func (r *Record) attrValueDepthLimit() int {
+	if r.attributeValueDepthLimitSet || r.attributeValueDepthLimit != 0 {
+		return r.attributeValueDepthLimit
+	}
+	return defaultAttrValDepthLim
 }
 
 // truncateValue returns a truncated version of v. Only string, string slice,

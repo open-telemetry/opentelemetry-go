@@ -151,15 +151,19 @@ func TestValueWithDepthLimit(t *testing.T) {
 			name:  "below limit",
 			limit: 3,
 			value: attribute.MapValue(
-				attribute.Map("level1",
-					attribute.Map("level2",
+				attribute.Map(
+					"level1",
+					attribute.Map(
+						"level2",
 						attribute.String("leaf", "value"),
 					),
 				),
 			),
 			want: attribute.MapValue(
-				attribute.Map("level1",
-					attribute.Map("level2",
+				attribute.Map(
+					"level1",
+					attribute.Map(
+						"level2",
 						attribute.String("leaf", "value"),
 					),
 				),
@@ -169,12 +173,14 @@ func TestValueWithDepthLimit(t *testing.T) {
 			name:  "at limit",
 			limit: 2,
 			value: attribute.MapValue(
-				attribute.Map("level1",
+				attribute.Map(
+					"level1",
 					attribute.String("leaf", "value"),
 				),
 			),
 			want: attribute.MapValue(
-				attribute.Map("level1",
+				attribute.Map(
+					"level1",
 					attribute.String("leaf", "value"),
 				),
 			),
@@ -183,14 +189,17 @@ func TestValueWithDepthLimit(t *testing.T) {
 			name:  "map over limit",
 			limit: 2,
 			value: attribute.MapValue(
-				attribute.Map("level1",
-					attribute.Map("level2",
+				attribute.Map(
+					"level1",
+					attribute.Map(
+						"level2",
 						attribute.Map("over", attribute.String("leaf", "value")),
 					),
 				),
 			),
 			want: attribute.MapValue(
-				attribute.Map("level1",
+				attribute.Map(
+					"level1",
 					attribute.KeyValue{Key: "level2"},
 				),
 			),
@@ -227,18 +236,24 @@ func TestValueWithDepthLimit(t *testing.T) {
 			name:  "negative disables depth limit",
 			limit: -1,
 			value: attribute.MapValue(
-				attribute.Map("level1",
-					attribute.Map("level2",
-						attribute.Map("level3",
+				attribute.Map(
+					"level1",
+					attribute.Map(
+						"level2",
+						attribute.Map(
+							"level3",
 							attribute.String("leaf", "value"),
 						),
 					),
 				),
 			),
 			want: attribute.MapValue(
-				attribute.Map("level1",
-					attribute.Map("level2",
-						attribute.Map("level3",
+				attribute.Map(
+					"level1",
+					attribute.Map(
+						"level2",
+						attribute.Map(
+							"level3",
 							attribute.String("leaf", "value"),
 						),
 					),
@@ -360,13 +375,15 @@ func TestKeyValueDedup(t *testing.T) {
 func TestKeyValueWithDepthLimit(t *testing.T) {
 	kv := attribute.Map(
 		"map",
-		attribute.Map("level1",
+		attribute.Map(
+			"level1",
 			attribute.Map("over", attribute.String("leaf", "value")),
 		),
 	)
 	want := attribute.Map(
 		"map",
-		attribute.Map("level1",
+		attribute.Map(
+			"level1",
 			attribute.KeyValue{Key: "over"},
 		),
 	)
@@ -431,7 +448,8 @@ func TestKeyValuesWithDepthLimit(t *testing.T) {
 		attribute.String("top", "value"),
 		attribute.Map(
 			"map",
-			attribute.Map("level1",
+			attribute.Map(
+				"level1",
 				attribute.Map("over", attribute.String("leaf", "value")),
 			),
 		),
@@ -441,7 +459,8 @@ func TestKeyValuesWithDepthLimit(t *testing.T) {
 		attribute.String("top", "value"),
 		attribute.Map(
 			"map",
-			attribute.Map("level1",
+			attribute.Map(
+				"level1",
 				attribute.KeyValue{Key: "over"},
 			),
 		),
@@ -490,7 +509,8 @@ func TestSetWithDepthLimit(t *testing.T) {
 		attribute.String("a-top", "value"),
 		attribute.Map(
 			"m-map",
-			attribute.Map("level1",
+			attribute.Map(
+				"level1",
 				attribute.Map("over", attribute.String("leaf", "value")),
 			),
 		),
@@ -500,7 +520,8 @@ func TestSetWithDepthLimit(t *testing.T) {
 		attribute.String("a-top", "value"),
 		attribute.Map(
 			"m-map",
-			attribute.Map("level1",
+			attribute.Map(
+				"level1",
 				attribute.KeyValue{Key: "over"},
 			),
 		),
