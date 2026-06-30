@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Support `http/json` encoding in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8199)
 - Add `Map` and `MapValue` functions for new `MAP` attribute type in `go.opentelemetry.io/otel/attribute`. (#8445)
 - Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#8453)
 - Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlplog`. (#8453)
@@ -101,7 +102,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- ⚠️ **Breaking Change:** `go.opentelemetry.io/otel/sdk/metric` now applies a default cardinality limit of 2000 to comply with the Metrics SDK specification recommendation.
+- âš ï¸ **Breaking Change:** `go.opentelemetry.io/otel/sdk/metric` now applies a default cardinality limit of 2000 to comply with the Metrics SDK specification recommendation.
   New attribute sets are dropped when the cardinality limit is reached. The measurement of these sets are aggregated into a special attribute set containing `attribute.Bool("otel.metric.overflow", true)`.
   This can break users who relied on the previous unlimited default.
   Set `WithCardinalityLimit(0)` or the deprecated `OTEL_GO_X_CARDINALITY_LIMIT=0` environment variable to preserve unlimited cardinality.
@@ -303,13 +304,13 @@ The next release will require at least [Go 1.25].
 - Rename the `OTEL_GO_X_SELF_OBSERVABILITY` environment variable to `OTEL_GO_X_OBSERVABILITY` in `go.opentelemetry.io/otel/sdk/trace`, `go.opentelemetry.io/otel/sdk/log`, and `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#7302)
 - Improve performance of histogram `Record` in `go.opentelemetry.io/otel/sdk/metric` when min and max are disabled using `NoMinMax`. (#7306)
 - Improve error handling for dropped data during translation by using `prometheus.NewInvalidMetric` in `go.opentelemetry.io/otel/exporters/prometheus`.
-  ⚠️ **Breaking Change:** Previously, these cases were only logged and scrapes succeeded.
+  âš ï¸ **Breaking Change:** Previously, these cases were only logged and scrapes succeeded.
   Now, when translation would drop data (e.g., invalid label/value), the exporter emits a `NewInvalidMetric`, and Prometheus scrapes **fail with HTTP 500** by default.
   To preserve the prior behavior (scrapes succeed while errors are logged), configure your Prometheus HTTP handler with: `promhttp.HandlerOpts{ ErrorHandling: promhttp.ContinueOnError }`. (#7363)
 - Replace fnv hash with xxhash in `go.opentelemetry.io/otel/attribute` for better performance. (#7371)
 - The default `TranslationStrategy` in `go.opentelemetry.io/exporters/prometheus` is changed from `otlptranslator.NoUTF8EscapingWithSuffixes` to `otlptranslator.UnderscoreEscapingWithSuffixes`. (#7421)
 - Improve performance of concurrent measurements in `go.opentelemetry.io/otel/sdk/metric`. (#7427)
-- Include W3C TraceFlags (bits 0–7) in the OTLP `Span.Flags` field in `go.opentelemetry.io/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/exporters/otlp/otlptrace/otlptracegrpc`. (#7438)
+- Include W3C TraceFlags (bits 0â€“7) in the OTLP `Span.Flags` field in `go.opentelemetry.io/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/exporters/otlp/otlptrace/otlptracegrpc`. (#7438)
 - The `ErrorType` function in `go.opentelemetry.io/otel/semconv/v1.37.0` now handles custom error types.
   If an error implements an `ErrorType() string` method, the return value of that method will be used as the error type. (#7442)
 
@@ -510,7 +511,7 @@ The next release will require at least [Go 1.24].
 
 ### Changed
 
-- ⚠️ Update `github.com/prometheus/client_golang` to `v1.21.1`, which changes the `NameValidationScheme` to `UTF8Validation`.
+- âš ï¸ Update `github.com/prometheus/client_golang` to `v1.21.1`, which changes the `NameValidationScheme` to `UTF8Validation`.
   This allows metrics names to keep original delimiters (e.g. `.`), rather than replacing with underscores.
   This can be reverted by setting `github.com/prometheus/common/model.NameValidationScheme` to `LegacyValidation` in `github.com/prometheus/common/model`. (#6433)
 - Initialize map with `len(keys)` in `NewAllowKeysFilter` and `NewDenyKeysFilter` to avoid unnecessary allocations in `go.opentelemetry.io/otel/attribute`. (#6455)
@@ -1997,7 +1998,7 @@ of the `"go.opentelemetry.io/otel/bridge/opentracing".BridgeTracer` type. (#2911
 
 ## [1.6.0/0.28.0] - 2022-03-23
 
-### ⚠️ Notice ⚠️
+### âš ï¸ Notice âš ï¸
 
 This update is a breaking change of the unstable Metrics API.
 Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be modified.
@@ -2126,7 +2127,7 @@ Code instrumented with the `go.opentelemetry.io/otel/metric` will need to be mod
 
 ## [1.3.0] - 2021-12-10
 
-### ⚠️ Notice ⚠️
+### âš ï¸ Notice âš ï¸
 
 We have updated the project minimum supported Go version to 1.16
 
