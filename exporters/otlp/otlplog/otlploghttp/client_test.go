@@ -1294,6 +1294,33 @@ func TestRetryAfterUsesSeconds(t *testing.T) {
 	assert.Equal(t, 10*time.Second, throttle)
 }
 
+// TestWithEndpointURLNoPathUsesRootPath verifies that a pathless endpoint URL (scheme and host only, no path component)
+// passed to WithEndpointURL is normalized to the root path ("/") rather than falling back to the default OTLP logs path
+// ("/v1/logs").
+func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+	require.Empty(t, u.Path)
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	// srv.URL has no path component, e.g. "http://127.0.0.1:port".
+	exp, err := New(ctx, WithEndpointURL(srv.URL), WithRetry(RetryConfig{Enabled: false}))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+	require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+
+	assert.Equal(t, "/", gotPath,
+		"a pathless endpoint URL must target the root path, not the default logs path")
+}
+
 type roundTripperFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
