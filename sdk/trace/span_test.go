@@ -463,6 +463,113 @@ func TestTruncateAttr(t *testing.T) {
 	}
 }
 
+func TestStringSliceNeedsTruncation(t *testing.T) {
+	tests := []struct {
+		name  string
+		limit int
+		value attribute.Value
+		want  bool
+	}{
+		// Empty slice, no elements to exceed the limit.
+		{
+			name:  "empty",
+			limit: 0,
+			value: attribute.StringSliceValue([]string{}),
+			want:  false,
+		},
+		// Single element within limit.
+		{
+			name:  "one/fits",
+			limit: 5,
+			value: attribute.StringSliceValue([]string{"hello"}),
+			want:  false,
+		},
+		// Single element exceeds limit.
+		{
+			name:  "one/exceeds",
+			limit: 3,
+			value: attribute.StringSliceValue([]string{"hello"}),
+			want:  true,
+		},
+		// Two elements, both fit.
+		{
+			name:  "two/fits",
+			limit: 5,
+			value: attribute.StringSliceValue([]string{"hello", "world"}),
+			want:  false,
+		},
+		// Two elements, second exceeds limit.
+		{
+			name:  "two/second-exceeds",
+			limit: 3,
+			value: attribute.StringSliceValue([]string{"hi", "hello"}),
+			want:  true,
+		},
+		// Three elements, all fit.
+		{
+			name:  "three/fits",
+			limit: 5,
+			value: attribute.StringSliceValue([]string{"one", "two", "three"}),
+			want:  false,
+		},
+		// Three elements, middle exceeds limit.
+		{
+			name:  "three/middle-exceeds",
+			limit: 3,
+			value: attribute.StringSliceValue([]string{"ab", "abcd", "cd"}),
+			want:  true,
+		},
+		// Four elements (reflect path), all fit.
+		{
+			name:  "four/fits",
+			limit: 5,
+			value: attribute.StringSliceValue([]string{"a", "b", "c", "d"}),
+			want:  false,
+		},
+		// Four elements (reflect path), last exceeds limit.
+		{
+			name:  "four/last-exceeds",
+			limit: 3,
+			value: attribute.StringSliceValue([]string{"a", "b", "c", "abcd"}),
+			want:  true,
+		},
+		// Multi-byte runes: byte length exceeds limit but rune count does not.
+		{
+			name:  "multibyte/rune-count-fits",
+			limit: 3,
+			value: attribute.StringSliceValue([]string{"日本語"}), // 3 runes, 9 bytes
+			want:  false,
+		},
+		// Multi-byte runes: rune count exceeds limit.
+		{
+			name:  "multibyte/rune-count-exceeds",
+			limit: 2,
+			value: attribute.StringSliceValue([]string{"日本語"}), // 3 runes
+			want:  true,
+		},
+		// Invalid UTF-8: byte length exceeds limit, invalid byte would be stripped.
+		{
+			name:  "invalid-utf8/exceeds",
+			limit: 2,
+			value: attribute.StringSliceValue([]string{"ab\xff"}), // 3 bytes, invalid
+			want:  true,
+		},
+		// Invalid UTF-8: byte length within limit, returned unchanged by truncate.
+		{
+			name:  "invalid-utf8/fits",
+			limit: 5,
+			value: attribute.StringSliceValue([]string{"ab\xff"}), // 3 bytes <= 5
+			want:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, stringSliceNeedsTruncation(tt.limit, tt.value))
+		})
+	}
+}
+
 func TestTruncate(t *testing.T) {
 	type group struct {
 		limit    int
