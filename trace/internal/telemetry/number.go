@@ -5,6 +5,7 @@ package telemetry // import "go.opentelemetry.io/otel/trace/internal/telemetry"
 
 import (
 	"encoding/json"
+	"math"
 	"strconv"
 )
 
@@ -62,6 +63,50 @@ func (i *protoUint64) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		*i = protoUint64(parsedUint)
+	}
+	return nil
+}
+
+// protoFloat64 represents the protobuf JSON encoding of doubles.
+type protoFloat64 float64
+
+// Float64 returns the protoFloat64 as a float64.
+func (f *protoFloat64) Float64() float64 { return float64(*f) }
+
+// MarshalJSON encodes finite values as JSON numbers and non-finite values as
+// strings as required by protobuf JSON.
+func (f protoFloat64) MarshalJSON() ([]byte, error) {
+	v := float64(f)
+	switch {
+	case math.IsNaN(v):
+		return json.Marshal("NaN")
+	case math.IsInf(v, 1):
+		return json.Marshal("Infinity")
+	case math.IsInf(v, -1):
+		return json.Marshal("-Infinity")
+	default:
+		return json.Marshal(v)
+	}
+}
+
+// UnmarshalJSON decodes both JSON numbers and protobuf JSON strings.
+func (f *protoFloat64) UnmarshalJSON(data []byte) error {
+	if data[0] == '"' {
+		var str string
+		if err := json.Unmarshal(data, &str); err != nil {
+			return err
+		}
+		parsedFloat, err := strconv.ParseFloat(str, 64)
+		if err != nil {
+			return err
+		}
+		*f = protoFloat64(parsedFloat)
+	} else {
+		var parsedFloat float64
+		if err := json.Unmarshal(data, &parsedFloat); err != nil {
+			return err
+		}
+		*f = protoFloat64(parsedFloat)
 	}
 	return nil
 }
