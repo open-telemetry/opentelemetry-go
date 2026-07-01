@@ -219,13 +219,18 @@ func (l *hotColdWaitGroup) swapHotAndWait() uint64 {
 	return hotIdx
 }
 
+type cardinalityState struct {
+	limit int
+	count atomic.Int64
+	mux   sync.Mutex
+}
+
 // limitedSyncMap is a sync.Map which enforces the aggregation limit on
 // attribute sets and provides a Len() function.
 type limitedSyncMap[V any] struct {
 	sync.Map
-	aggLimit int
-	len      int
-	lenMux   sync.Mutex
+	state *cardinalityState
+	len   int // local len for this map
 }
 
 func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) V) V {
@@ -240,8 +245,8 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue fun
 		return actual.(V)
 	}
 	// Slow path: add a new attribute set.
-	m.lenMux.Lock()
-	defer m.lenMux.Unlock()
+	m.state.mux.Lock()
+	defer m.state.mux.Unlock()
 
 	// re-fetch now that we hold the lock to ensure we don't use the overflow
 	// set unless we are sure the attribute set isn't being written
@@ -251,25 +256,146 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue fun
 		return actual.(V)
 	}
 
-	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
+	if m.state.limit > 0 && m.state.count.Load() >= int64(m.state.limit-1) {
 		fltrAttr = overflowSet
 	}
 	actual, loaded = m.LoadOrStore(fltrAttr.Equivalent(), newValue(fltrAttr))
 	if !loaded {
+		m.state.count.Add(1)
 		m.len++
 	}
 	return actual.(V)
 }
 
 func (m *limitedSyncMap[V]) Clear() {
-	m.lenMux.Lock()
-	defer m.lenMux.Unlock()
+	m.state.mux.Lock()
+	defer m.state.mux.Unlock()
+	m.state.count.Add(-int64(m.len))
 	m.len = 0
 	m.Map.Clear()
 }
 
 func (m *limitedSyncMap[V]) Len() int {
-	m.lenMux.Lock()
-	defer m.lenMux.Unlock()
+	m.state.mux.Lock()
+	defer m.state.mux.Unlock()
 	return m.len
+}
+
+func (m *limitedSyncMap[V]) LoadByDistinct(d attribute.Distinct) (V, bool) {
+	val, ok := m.Load(d)
+	if !ok {
+		var zero V
+		return zero, false
+	}
+	return val.(V), true
+}
+
+func (m *limitedSyncMap[V]) Range(f func(key any, value V) bool) {
+	m.Map.Range(func(k, v any) bool {
+		return f(k, v.(V))
+	})
+}
+
+// HotColdSyncMap manages two limitedSyncMaps for hot/cold swapping.
+type HotColdSyncMap[V any] struct {
+	hcwg          hotColdWaitGroup
+	hotColdValMap [2]limitedSyncMap[V]
+	state         *cardinalityState
+}
+
+// NewHotColdSyncMap returns a new HotColdSyncMap.
+func NewHotColdSyncMap[V any](limit int) *HotColdSyncMap[V] {
+	state := &cardinalityState{limit: limit}
+	return &HotColdSyncMap[V]{
+		state: state,
+		hotColdValMap: [2]limitedSyncMap[V]{
+			{state: state},
+			{state: state},
+		},
+	}
+}
+
+// WriteUnbound executes write for the value associated with fltrAttr in the current hot map.
+// It ensures the write is completed before the reader can swap and collect the value.
+func (m *HotColdSyncMap[V]) WriteUnbound(fltrAttr attribute.Set, newValue func(attribute.Set) V, write func(V)) {
+	hotIdx := m.hcwg.start()
+	defer m.hcwg.done(hotIdx)
+	val := m.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, newValue)
+	write(val)
+}
+
+// LoadOrStoreBound looks up a value in both maps, or stores it in the current hot map.
+func (m *HotColdSyncMap[V]) LoadOrStoreBound(fltrAttr attribute.Set, newValue func(attribute.Set) V) V {
+	d := fltrAttr.Equivalent()
+
+	startedAndHot := m.hcwg.startedCountAndHotIdx.Load()
+	hotIdx := startedAndHot >> 63
+	coldIdx := 1 - hotIdx
+
+	// Check hot map
+	if actual, loaded := m.hotColdValMap[hotIdx].LoadByDistinct(d); loaded {
+		return actual
+	}
+
+	// Check cold map
+	if actual, loaded := m.hotColdValMap[coldIdx].LoadByDistinct(d); loaded {
+		return actual
+	}
+
+	// Cache miss: take lock and create in HOT map
+	m.state.mux.Lock()
+	defer m.state.mux.Unlock()
+
+	// Double check hot map
+	if actual, loaded := m.hotColdValMap[hotIdx].LoadByDistinct(d); loaded {
+		return actual
+	}
+	// Double check cold map
+	if actual, loaded := m.hotColdValMap[coldIdx].LoadByDistinct(d); loaded {
+		return actual
+	}
+
+	// Handle limit
+	if m.state.limit > 0 && m.state.count.Load() >= int64(m.state.limit-1) {
+		fltrAttr = overflowSet
+		d = fltrAttr.Equivalent()
+		if actual, loaded := m.hotColdValMap[hotIdx].LoadByDistinct(d); loaded {
+			return actual
+		}
+	}
+
+	val := newValue(fltrAttr)
+	m.hotColdValMap[hotIdx].Store(d, val)
+	if fltrAttr != overflowSet {
+		m.state.count.Add(1)
+		m.hotColdValMap[hotIdx].len++
+	}
+	return val
+}
+
+// SwapHotAndWait swaps the hot and cold maps and waits for active writers to finish.
+func (m *HotColdSyncMap[V]) SwapHotAndWait() uint64 {
+	return m.hcwg.swapHotAndWait()
+}
+
+// Range calls f sequentially for each key and value present in the specified map.
+func (m *HotColdSyncMap[V]) Range(readIdx uint64, f func(key any, value V) bool) {
+	m.hotColdValMap[readIdx].Range(f)
+}
+
+// Delete deletes the value for a key from the specified map and decrements cardinality.
+func (m *HotColdSyncMap[V]) Delete(readIdx uint64, key any) {
+	m.hotColdValMap[readIdx].Delete(key)
+	m.state.count.Add(-1)
+	m.hotColdValMap[readIdx].len--
+}
+
+// Len returns the length of the specified map.
+func (m *HotColdSyncMap[V]) Len(readIdx uint64) int {
+	return m.hotColdValMap[readIdx].Len()
+}
+
+// Clear clears the specified map.
+func (m *HotColdSyncMap[V]) Clear(readIdx uint64) {
+	m.hotColdValMap[readIdx].Clear()
 }

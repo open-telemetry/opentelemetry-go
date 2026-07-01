@@ -170,8 +170,8 @@ func newDeltaHistogram[N int64 | float64](
 		bounds:   b,
 		newRes:   r,
 		hotColdValMap: [2]limitedSyncMap[*histogramPoint[N]]{
-			{aggLimit: limit},
-			{aggLimit: limit},
+			{state: &cardinalityState{limit: limit}},
+			{state: &cardinalityState{limit: limit}},
 		},
 	}
 }
@@ -198,9 +198,7 @@ func (s *deltaHistogram[N]) collect(
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	s.hotColdValMap[readIdx].Range(func(_, value any) bool {
-		val := value.(*histogramPoint[N])
-
+	s.hotColdValMap[readIdx].Range(func(_ any, val *histogramPoint[N]) bool {
 		count := val.loadCountsInto(&hDPts[i].BucketCounts)
 		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = s.start
@@ -279,7 +277,7 @@ func newCumulativeHistogram[N int64 | float64](
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		values:   limitedSyncMap[*hotColdHistogramPoint[N]]{aggLimit: limit},
+		values:   limitedSyncMap[*hotColdHistogramPoint[N]]{state: &cardinalityState{limit: limit}},
 	}
 }
 
@@ -365,9 +363,7 @@ func (s *cumulativeHistogram[N]) collect(
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
 	var i int
-	s.values.Range(func(_, value any) bool {
-		val := value.(*hotColdHistogramPoint[N])
-
+	s.values.Range(func(_ any, val *hotColdHistogramPoint[N]) bool {
 		startTime := s.start
 		if perSeriesStartTimeEnabled {
 			startTime = val.startTime
