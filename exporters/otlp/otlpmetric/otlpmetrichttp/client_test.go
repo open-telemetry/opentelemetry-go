@@ -826,6 +826,38 @@ func TestRetryAfterUsesSeconds(t *testing.T) {
 	assert.Equal(t, 10*time.Second, throttle)
 }
 
+// TestWithEndpointURLNoPathUsesDefaultPath verifies that a pathless endpoint
+// URL (scheme and host only, no path component) passed to WithEndpointURL
+// resolves to the default OTLP metrics path ("/v1/metrics").
+//
+// This behavior is intentionally contrasted with the otlploghttp exporter,
+// whose WithEndpointURL does NOT apply the default logs path ("/v1/logs") for
+// a pathless endpoint URL. See the sibling test
+// TestWithEndpointURLNoPathUsesDefaultPath in the otlploghttp and
+// otlptracehttp packages for the cross-signal comparison.
+func TestWithEndpointURLNoPathUsesDefaultPath(t *testing.T) {
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+	require.Empty(t, u.Path)
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	// srv.URL has no path component, e.g. "http://127.0.0.1:port".
+	exp, err := New(ctx, WithEndpointURL(srv.URL), WithRetry(RetryConfig{Enabled: false}))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+	require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+	assert.Equal(t, oconf.DefaultMetricsPath, gotPath,
+		"a pathless endpoint URL must fall back to the default metrics path")
+}
+
 type roundTripperFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {

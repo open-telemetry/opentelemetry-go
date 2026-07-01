@@ -1294,6 +1294,51 @@ func TestRetryAfterUsesSeconds(t *testing.T) {
 	assert.Equal(t, 10*time.Second, throttle)
 }
 
+// TestWithEndpointURLNoPathUsesDefaultPath documents that a pathless endpoint
+// URL (scheme and host only, no path component) passed to WithEndpointURL is
+// NOT rewritten to use the default OTLP logs path ("/v1/logs"): the request is
+// sent to "/" instead.
+//
+// This is inconsistent with the otlpmetrichttp and otlptracehttp exporters,
+// whose WithEndpointURL fall back to their default path ("/v1/metrics" and
+// "/v1/traces") for a pathless endpoint URL. See the sibling test
+// TestWithEndpointURLNoPathUsesDefaultPath in those packages for the
+// comparison.
+//
+// The root cause is that WithEndpointURL sets the path to an explicitly-set
+// but empty setting (u.Path == "" with Set == true), so the defaultPath
+// fallback in newConfig is skipped. If this inconsistency is fixed upstream,
+// this test should be updated to assert that gotPath == defaultPath.
+func TestWithEndpointURLNoPathUsesDefaultPath(t *testing.T) {
+	var gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+	require.Empty(t, u.Path)
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	// srv.URL has no path component, e.g. "http://127.0.0.1:port".
+	exp, err := New(ctx, WithEndpointURL(srv.URL), WithRetry(RetryConfig{Enabled: false}))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+	require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+
+	// Inconsistency: unlike otlpmetrichttp and otlptracehttp, the default logs
+	// path is not applied for a pathless endpoint URL, so the request hits "/"
+	// rather than defaultPath ("/v1/logs"). In production this surfaces as a
+	// 404 Not Found from collectors that only serve the OTLP logs path.
+	assert.Equal(t, "/", gotPath,
+		"a pathless endpoint URL currently does NOT fall back to the default logs path")
+	assert.NotEqual(t, defaultPath, gotPath,
+		"documents the inconsistency with otlpmetrichttp/otlptracehttp")
+}
+
 type roundTripperFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
