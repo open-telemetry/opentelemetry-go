@@ -39,31 +39,20 @@
 //
 // The following environment variables are used by this package.
 //
-// OTEL_METRIC_EXPORT_INTERVAL (default: `60000`) and
-// OTEL_METRIC_EXPORT_TIMEOUT (default: `30000`) -
-// configure [NewPeriodicReader]. The values are interpreted as milliseconds.
+// OTEL_METRIC_EXPORT_INTERVAL (default: 60000) and
+// OTEL_METRIC_EXPORT_TIMEOUT (default: 30000) -
+// configure [NewPeriodicReader] when [WithInterval] or [WithTimeout] are not
+// used. The values are interpreted as milliseconds.
 //
-// OTEL_METRICS_EXEMPLAR_FILTER (default: `trace_based`) -
-// configures the exemplar filter used by [NewMeterProvider]. Supported values
-// are `always_on`, `always_off`, and `trace_based`.
-//
-// OTEL_GO_X_CARDINALITY_LIMIT (default: `2000`) -
-// for backward compatibility, configures the global cardinality limit used by
-// [NewMeterProvider]. Zero or negative values disable the limit.
+// OTEL_METRICS_EXEMPLAR_FILTER (default: trace_based) -
+// configures the exemplar filter used by [NewMeterProvider] when
+// [WithExemplarFilter] is not used. Supported values are always_on,
+// always_off, and trace_based.
 //
 // Resource-related environment variables, including OTEL_RESOURCE_ATTRIBUTES
-// and OTEL_SERVICE_NAME, are documented in the
-// `go.opentelemetry.io/otel/sdk/resource` package and are applied when this
-// package uses the default resource or [WithResource].
-//
-// See [go.opentelemetry.io/otel/sdk/internal/x] for information about
-// shared experimental SDK environment variables used by the metric SDK,
-// including OTEL_GO_X_OBSERVABILITY, OTEL_GO_X_SELF_OBSERVABILITY, and
-// OTEL_GO_X_PER_SERIES_START_TIMESTAMPS.
-//
-// See [go.opentelemetry.io/otel/sdk/metric/internal/x] for information about
-// experimental metric-specific environment variables, including
-// OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE.
+// and OTEL_SERVICE_NAME, are documented in
+// [go.opentelemetry.io/otel/sdk/resource] and are applied when this package
+// uses the default resource or [WithResource].
 //
 // To avoid leaking memory, the SDK returns the same instrument for calls to
 // create new instruments with the same Name, Unit, and Description.
@@ -113,4 +102,7 @@
 //
 // See [go.opentelemetry.io/otel/metric] for more information about
 // the metric API.
+//
+// See [go.opentelemetry.io/otel/sdk/metric/internal/x] for information about
+// the experimental features.
 package metric // import "go.opentelemetry.io/otel/sdk/metric"

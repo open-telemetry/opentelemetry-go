@@ -34,26 +34,27 @@ at a single endpoint their origin is decipherable.
 
 The following environment variables are used by this package.
 
-OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT (default: `128`) and
+OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT (default: 128) and
 OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT (default: unlimited) -
 configure [NewLoggerProvider] when [WithAttributeCountLimit] or
 [WithAttributeValueLengthLimit] are not used.
 
-OTEL_BLRP_MAX_QUEUE_SIZE (default: `2048`),
-OTEL_BLRP_SCHEDULE_DELAY (default: `1000`),
-OTEL_BLRP_EXPORT_TIMEOUT (default: `30000`), and
-OTEL_BLRP_MAX_EXPORT_BATCH_SIZE (default: `512`) -
-configure [NewBatchProcessor]. The duration values are interpreted as
-milliseconds.
+OTEL_BLRP_MAX_QUEUE_SIZE (default: 2048),
+OTEL_BLRP_SCHEDULE_DELAY (default: 1000),
+OTEL_BLRP_EXPORT_TIMEOUT (default: 30000), and
+OTEL_BLRP_MAX_EXPORT_BATCH_SIZE (default: 512) -
+configure [NewBatchProcessor] when [WithMaxQueueSize],
+[WithExportInterval], [WithExportTimeout], or [WithExportMaxBatchSize] are
+not used. The duration values are interpreted as milliseconds.
 
 Resource-related environment variables, including OTEL_RESOURCE_ATTRIBUTES and
-OTEL_SERVICE_NAME, are documented in the `go.opentelemetry.io/otel/sdk/resource`
-package and are applied when this package uses the default resource or
+OTEL_SERVICE_NAME, are documented in
+[go.opentelemetry.io/otel/sdk/resource] and are applied when this package uses
+the default resource or
 [WithResource].
 
 See [go.opentelemetry.io/otel/sdk/log/internal/x] for information about
-experimental log SDK environment variables, including
-OTEL_GO_X_OBSERVABILITY and OTEL_GO_X_SELF_OBSERVABILITY.
+the experimental features.
 
 See [go.opentelemetry.io/otel/log] for more information about
 the OpenTelemetry Logs API.

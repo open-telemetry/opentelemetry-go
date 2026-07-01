@@ -17,14 +17,11 @@
 //
 // OTEL_RESOURCE_ATTRIBUTES -
 // comma delimited key/value pairs used to describe the entity producing
-// telemetry (e.g. `<key1>=<value1>,<key2>=<value2>,...`).
+// telemetry (for example, key1=value1,key2=value2,...).
 //
 // OTEL_SERVICE_NAME -
-// sets the `service.name` resource attribute. If `service.name` is also set in
+// sets the service.name resource attribute. If service.name is also set in
 // OTEL_RESOURCE_ATTRIBUTES, OTEL_SERVICE_NAME takes precedence.
-//
-// See [go.opentelemetry.io/otel/sdk/internal/x] for information about the
-// experimental OTEL_GO_X_RESOURCE environment variable.
 //
 // While this package provides a stable API,
 // the attributes added by resource detectors may change.
