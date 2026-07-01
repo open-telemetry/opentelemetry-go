@@ -4,6 +4,8 @@
 package tracetransform
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -58,17 +60,20 @@ func TestSpanKind(t *testing.T) {
 }
 
 func TestNilSpanEvent(t *testing.T) {
-	assert.Nil(t, spanEvents(nil))
+	arena := NewArena(16)
+	assert.Nil(t, spanEvents(nil, arena))
 }
 
 func TestEmptySpanEvent(t *testing.T) {
-	assert.Nil(t, spanEvents([]tracesdk.Event{}))
+	arena := NewArena(16)
+	assert.Nil(t, spanEvents([]tracesdk.Event{}, arena))
 }
 
 func TestSpanEvent(t *testing.T) {
 	attrs := []attribute.KeyValue{attribute.Int("one", 1), attribute.Int("two", 2)}
 	eventTime := time.Date(2020, 5, 20, 0, 0, 0, 0, time.UTC)
 	negativeEventTime := time.Date(1969, 7, 20, 20, 17, 0, 0, time.UTC)
+	arena := NewArena(16)
 	got := spanEvents([]tracesdk.Event{
 		{
 			Name:       "test 1",
@@ -87,7 +92,7 @@ func TestSpanEvent(t *testing.T) {
 			Time:                  negativeEventTime,
 			DroppedAttributeCount: 2,
 		},
-	})
+	}, arena)
 	if !assert.Len(t, got, 3) {
 		return
 	}
@@ -98,7 +103,7 @@ func TestSpanEvent(t *testing.T) {
 		t,
 		&tracepb.Span_Event{
 			Name:                   "test 2",
-			Attributes:             KeyValues(attrs),
+			Attributes:             KeyValues(attrs, arena),
 			TimeUnixNano:           eventTimestamp,
 			DroppedAttributesCount: 2,
 		},
@@ -106,17 +111,24 @@ func TestSpanEvent(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		&tracepb.Span_Event{Name: "test 3", Attributes: KeyValues(attrs), TimeUnixNano: 0, DroppedAttributesCount: 2},
+		&tracepb.Span_Event{
+			Name:                   "test 3",
+			Attributes:             KeyValues(attrs, arena),
+			TimeUnixNano:           0,
+			DroppedAttributesCount: 2,
+		},
 		got[2],
 	)
 }
 
 func TestNilLinks(t *testing.T) {
-	assert.Nil(t, links(nil))
+	arena := NewArena(16)
+	assert.Nil(t, links(nil, arena))
 }
 
 func TestEmptyLinks(t *testing.T) {
-	assert.Nil(t, links([]tracesdk.Link{}))
+	arena := NewArena(16)
+	assert.Nil(t, links([]tracesdk.Link{}, arena))
 }
 
 func TestLinks(t *testing.T) {
@@ -131,7 +143,8 @@ func TestLinks(t *testing.T) {
 			DroppedAttributeCount: 3,
 		},
 	}
-	got := links(l)
+	arena := NewArena(16)
+	got := links(l, arena)
 
 	// Make sure we get the same number back first.
 	if !assert.Len(t, got, 2) {
@@ -148,7 +161,7 @@ func TestLinks(t *testing.T) {
 	assert.Equal(t, expected, got[0])
 
 	// Do not test Attributes directly, just that the return value goes to the correct field.
-	expected.Attributes = KeyValues(attrs)
+	expected.Attributes = KeyValues(attrs, arena)
 	assert.Equal(t, expected, got[1])
 
 	// Changes to our links should not change the produced links.
@@ -248,7 +261,9 @@ func TestSpanAndLinkExportLower8Bits(t *testing.T) {
 		Parent: trace.NewSpanContext(trace.SpanContextConfig{}),
 		Name:   "flags-test",
 	}
-	rss := Spans(tracetest.SpanStubs{spanData}.Snapshots())
+
+	arena := NewArena(16)
+	rss := Spans(tracetest.SpanStubs{spanData}.Snapshots(), arena)
 	require.Len(t, rss, 1)
 	scopeSpans := rss[0].GetScopeSpans()
 	require.Len(t, scopeSpans, 1)
@@ -261,22 +276,25 @@ func TestSpanAndLinkExportLower8Bits(t *testing.T) {
 	l := []tracesdk.Link{
 		{SpanContext: trace.NewSpanContext(trace.SpanContextConfig{TraceFlags: 0x01})},
 	}
-	gotLinks := links(l)
+	gotLinks := links(l, arena)
 	require.Len(t, gotLinks, 1)
 	assert.Equal(t, uint32(0x01), gotLinks[0].Flags&0xff)
 	assert.Equal(t, uint32(0x100), gotLinks[0].Flags&0x300)
 }
 
 func TestNilSpan(t *testing.T) {
-	assert.Nil(t, span(nil))
+	arena := NewArena(16)
+	assert.Nil(t, span(nil, arena))
 }
 
 func TestNilSpanData(t *testing.T) {
-	assert.Nil(t, Spans(nil))
+	arena := NewArena(16)
+	assert.Nil(t, Spans(nil, arena))
 }
 
 func TestEmptySpanData(t *testing.T) {
-	assert.Nil(t, Spans(nil))
+	arena := NewArena(16)
+	assert.Nil(t, Spans(nil, arena))
 }
 
 func TestSpanData(t *testing.T) {
@@ -375,6 +393,7 @@ func TestSpanData(t *testing.T) {
 		},
 	}
 
+	arena := NewArena(16)
 	// Not checking resource as the underlying map of our Resource makes
 	// ordering impossible to guarantee on the output. The Resource
 	// transform function has unit tests that should suffice.
@@ -392,23 +411,23 @@ func TestSpanData(t *testing.T) {
 		StartTimeUnixNano:      uint64(startTime.UnixNano()),
 		EndTimeUnixNano:        uint64(endTime.UnixNano()),
 		Status:                 status(spanData.Status.Code, spanData.Status.Description),
-		Events:                 spanEvents(spanData.Events),
-		Links:                  links(spanData.Links),
-		Attributes:             KeyValues(spanData.Attributes),
+		Events:                 spanEvents(spanData.Events, arena),
+		Links:                  links(spanData.Links, arena),
+		Attributes:             KeyValues(spanData.Attributes, arena),
 		DroppedAttributesCount: 1,
 		DroppedEventsCount:     2,
 		DroppedLinksCount:      3,
 	}
 
-	got := Spans(tracetest.SpanStubs{spanData}.Snapshots())
+	got := Spans(tracetest.SpanStubs{spanData}.Snapshots(), arena)
 	require.Len(t, got, 1)
 
-	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource))
+	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource, arena))
 	assert.Equal(t, got[0].SchemaUrl, spanData.Resource.SchemaURL())
 	scopeSpans := got[0].GetScopeSpans()
 	require.Len(t, scopeSpans, 1)
 	assert.Equal(t, scopeSpans[0].SchemaUrl, spanData.InstrumentationScope.SchemaURL)
-	assert.Equal(t, scopeSpans[0].GetScope(), InstrumentationScope(spanData.InstrumentationScope))
+	assert.Equal(t, scopeSpans[0].GetScope(), InstrumentationScope(spanData.InstrumentationScope, arena))
 	require.Len(t, scopeSpans[0].Spans, 1)
 	actualSpan := scopeSpans[0].Spans[0]
 
@@ -419,9 +438,10 @@ func TestSpanData(t *testing.T) {
 
 // Empty parent span ID should be treated as root span.
 func TestRootSpanData(t *testing.T) {
+	arena := NewArena(16)
 	sd := Spans(tracetest.SpanStubs{
 		{},
-	}.Snapshots())
+	}.Snapshots(), arena)
 	require.Len(t, sd, 1)
 	rs := sd[0]
 	scopeSpans := rs.GetScopeSpans()
@@ -433,39 +453,62 @@ func TestRootSpanData(t *testing.T) {
 }
 
 func TestSpanDataNilResource(t *testing.T) {
+	arena := NewArena(16)
 	assert.NotPanics(t, func() {
 		Spans(tracetest.SpanStubs{
 			{},
-		}.Snapshots())
+		}.Snapshots(), arena)
 	})
 }
 
 func BenchmarkSpans(b *testing.B) {
-	records := []tracesdk.ReadOnlySpan{
-		tracetest.SpanStub{
-			Attributes: []attribute.KeyValue{
-				attribute.String("a", "b"),
-				attribute.String("b", "b"),
-				attribute.String("c", "b"),
-				attribute.String("d", "b"),
-			},
-			Links: []tracesdk.Link{
-				{},
-				{},
-				{},
-				{},
-				{},
-			},
-		}.Snapshot(),
-	}
+	for _, spansCount := range []int{1, 32, 128, 512} {
+		b.Run(fmt.Sprintf("%d spans", spansCount), func(b *testing.B) {
+			var records []tracesdk.ReadOnlySpan
+			arenaPool := sync.Pool{
+				New: func() any { return NewArena(512) },
+			}
 
-	b.ResetTimer()
-	b.ReportAllocs()
-	b.RunParallel(func(pb *testing.PB) {
-		var out []*tracepb.ResourceSpans
-		for pb.Next() {
-			out = Spans(records)
-		}
-		_ = out
-	})
+			for range spansCount {
+				records = append(records, generateSpan())
+			}
+
+			b.ResetTimer()
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				var out []*tracepb.ResourceSpans
+				for pb.Next() {
+					a := arenaPool.Get().(*Arena)
+					out = Spans(records, a)
+					a.Reset()
+					arenaPool.Put(a)
+				}
+				_ = out
+			})
+		})
+	}
+}
+
+func generateSpan() tracesdk.ReadOnlySpan {
+	return tracetest.SpanStub{
+		Attributes: []attribute.KeyValue{
+			attribute.Bool("a", true),
+			attribute.Int64("b", 1),
+			attribute.Float64("c", 0.123),
+			attribute.String("d", "b"),
+			attribute.String("e", "b"),
+			attribute.String("f", "b"),
+			attribute.String("g", "b"),
+		},
+		Events: []tracesdk.Event{
+			{
+				Attributes: []attribute.KeyValue{
+					attribute.String("e", "5"),
+				},
+			},
+		},
+		Links: []tracesdk.Link{
+			{},
+		},
+	}.Snapshot()
 }
