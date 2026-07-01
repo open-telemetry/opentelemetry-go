@@ -230,10 +230,9 @@ func TestAttributes(t *testing.T) {
 			},
 		},
 	} {
-		arena := NewArena(16) // use arena but without reset
+		arena := NewArena(16)
 		got := KeyValues(test.attrs, arena)
 		if !assert.Len(t, got, len(test.expected)) {
-			arena.Reset()
 			continue
 		}
 		for i, actual := range got {
@@ -250,7 +249,6 @@ func TestAttributes(t *testing.T) {
 			}
 			assert.Equal(t, test.expected[i], actual)
 		}
-		arena.Reset()
 	}
 }
 

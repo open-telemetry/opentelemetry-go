@@ -355,13 +355,14 @@ func TestExporterWithArena(t *testing.T) {
 		_, span := tr.Start(ctx, "AlwaysSample")
 		sc := span.SpanContext()
 
+		traceIDStr := sc.TraceID().String()
 		spanIDStr := sc.SpanID().String()
 		testKvs := []attribute.KeyValue{
 			attribute.Int("Int"+spanIDStr, int(sc.SpanID()[0])),
 			attribute.Int64("Int64"+spanIDStr, int64(sc.SpanID()[1])),
 			attribute.Float64("Float64"+spanIDStr, 2.22*float64(sc.SpanID()[2])),
 			attribute.Bool("Bool"+spanIDStr, sc.SpanID()[3]%2 == 0),
-			attribute.String("String"+spanIDStr, "test"+spanIDStr),
+			attribute.String("String"+traceIDStr, "test"+spanIDStr),
 			{Key: attribute.Key("Empty" + spanIDStr)},
 			attribute.Slice(
 				"Slice"+spanIDStr,
@@ -403,7 +404,8 @@ func TestExporterWithArena(t *testing.T) {
 	rss := mc.getSpans()
 	require.Len(t, rss, spanCount, "resource span count: got %d, want %d", len(rss), spanCount)
 
-	generateExpected := func(spanID trace.SpanID) map[string]*commonpb.KeyValue {
+	generateExpected := func(traceID trace.TraceID, spanID trace.SpanID) map[string]*commonpb.KeyValue {
+		traceIDStr := traceID.String()
 		spanIDStr := spanID.String()
 		kvs := []*commonpb.KeyValue{
 			{
@@ -439,7 +441,7 @@ func TestExporterWithArena(t *testing.T) {
 				},
 			},
 			{
-				Key: "String" + spanIDStr,
+				Key: "String" + traceIDStr,
 				Value: &commonpb.AnyValue{
 					Value: &commonpb.AnyValue_StringValue{
 						StringValue: "test" + spanIDStr,
@@ -507,10 +509,15 @@ func TestExporterWithArena(t *testing.T) {
 	}
 
 	for _, rs := range rss {
-		var spanID trace.SpanID
+		var (
+			traceID trace.TraceID
+			spanID  trace.SpanID
+		)
+		assert.Len(t, rs.TraceId, len(traceID))
+		copy(traceID[:], rs.TraceId)
 		assert.Len(t, rs.SpanId, len(spanID))
 		copy(spanID[:], rs.SpanId)
-		expected := generateExpected(spanID)
+		expected := generateExpected(traceID, spanID)
 		assert.Len(t, rs.Attributes, len(expected))
 		for _, actual := range rs.Attributes {
 			expKV, ok := expected[actual.Key]

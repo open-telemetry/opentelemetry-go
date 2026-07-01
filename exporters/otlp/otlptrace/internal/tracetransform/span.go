@@ -17,10 +17,13 @@ import (
 
 // Spans transforms a slice of OpenTelemetry spans into a slice of OTLP
 // ResourceSpans.
-func Spans(sdl []tracesdk.ReadOnlySpan, arena *Arena) []*tracepb.ResourceSpans {
+func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 	if len(sdl) == 0 {
 		return nil
 	}
+
+	// we can't reset/pool arena since some async-clients can process spans after UploadTraces returns
+	arena := NewArena(len(sdl))
 
 	rsm := make(map[attribute.Distinct]*tracepb.ResourceSpans)
 

@@ -5,7 +5,6 @@ package tracetransform
 
 import (
 	"fmt"
-	"sync"
 	"testing"
 	"time"
 
@@ -263,7 +262,7 @@ func TestSpanAndLinkExportLower8Bits(t *testing.T) {
 	}
 
 	arena := NewArena(16)
-	rss := Spans(tracetest.SpanStubs{spanData}.Snapshots(), arena)
+	rss := Spans(tracetest.SpanStubs{spanData}.Snapshots())
 	require.Len(t, rss, 1)
 	scopeSpans := rss[0].GetScopeSpans()
 	require.Len(t, scopeSpans, 1)
@@ -288,13 +287,11 @@ func TestNilSpan(t *testing.T) {
 }
 
 func TestNilSpanData(t *testing.T) {
-	arena := NewArena(16)
-	assert.Nil(t, Spans(nil, arena))
+	assert.Nil(t, Spans(nil))
 }
 
 func TestEmptySpanData(t *testing.T) {
-	arena := NewArena(16)
-	assert.Nil(t, Spans(nil, arena))
+	assert.Nil(t, Spans(nil))
 }
 
 func TestSpanData(t *testing.T) {
@@ -419,7 +416,7 @@ func TestSpanData(t *testing.T) {
 		DroppedLinksCount:      3,
 	}
 
-	got := Spans(tracetest.SpanStubs{spanData}.Snapshots(), arena)
+	got := Spans(tracetest.SpanStubs{spanData}.Snapshots())
 	require.Len(t, got, 1)
 
 	assert.Equal(t, got[0].GetResource(), Resource(spanData.Resource, arena))
@@ -438,10 +435,9 @@ func TestSpanData(t *testing.T) {
 
 // Empty parent span ID should be treated as root span.
 func TestRootSpanData(t *testing.T) {
-	arena := NewArena(16)
 	sd := Spans(tracetest.SpanStubs{
 		{},
-	}.Snapshots(), arena)
+	}.Snapshots())
 	require.Len(t, sd, 1)
 	rs := sd[0]
 	scopeSpans := rs.GetScopeSpans()
@@ -453,11 +449,10 @@ func TestRootSpanData(t *testing.T) {
 }
 
 func TestSpanDataNilResource(t *testing.T) {
-	arena := NewArena(16)
 	assert.NotPanics(t, func() {
 		Spans(tracetest.SpanStubs{
 			{},
-		}.Snapshots(), arena)
+		}.Snapshots())
 	})
 }
 
@@ -465,10 +460,6 @@ func BenchmarkSpans(b *testing.B) {
 	for _, spansCount := range []int{1, 32, 128, 512} {
 		b.Run(fmt.Sprintf("%d spans", spansCount), func(b *testing.B) {
 			var records []tracesdk.ReadOnlySpan
-			arenaPool := sync.Pool{
-				New: func() any { return NewArena(512) },
-			}
-
 			for range spansCount {
 				records = append(records, generateSpan())
 			}
@@ -478,10 +469,7 @@ func BenchmarkSpans(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				var out []*tracepb.ResourceSpans
 				for pb.Next() {
-					a := arenaPool.Get().(*Arena)
-					out = Spans(records, a)
-					a.Reset()
-					arenaPool.Put(a)
+					out = Spans(records)
 				}
 				_ = out
 			})
