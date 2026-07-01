@@ -43,6 +43,8 @@ type tracerProviderConfig struct {
 
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
+
+	tracerConfigurator TracerConfigurator
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Provider.
@@ -72,6 +74,10 @@ type TracerProvider struct {
 	spanProcessors atomic.Pointer[spanProcessorStates]
 
 	isShutdown atomic.Bool
+
+	// tracerConfigurator is protected by mu. It may be updated by
+	// UpdateTracerConfigurator.
+	tracerConfigurator TracerConfigurator
 
 	// These fields are not protected by the lock mu. They are assumed to be
 	// immutable after creation of the TracerProvider.
@@ -104,6 +110,10 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o = applyTracerProviderEnvConfigs(o)
 
 	for _, opt := range opts {
+		if tco, ok := opt.(tracerConfiguratorOption); ok {
+			o.tracerConfigurator = tco.TracerConfigurator()
+			continue
+		}
 		if _, ok := opt.(experimentalOption); ok {
 			continue
 		}
@@ -113,11 +123,12 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o = ensureValidTracerProviderConfig(o)
 
 	tp := &TracerProvider{
-		namedTracer: make(map[instrumentation.Scope]*tracer),
-		sampler:     o.sampler,
-		idGenerator: o.idGenerator,
-		spanLimits:  o.spanLimits,
-		resource:    o.resource,
+		namedTracer:        make(map[instrumentation.Scope]*tracer),
+		sampler:            o.sampler,
+		idGenerator:        o.idGenerator,
+		spanLimits:         o.spanLimits,
+		resource:           o.resource,
+		tracerConfigurator: o.tracerConfigurator,
 	}
 	global.Info("TracerProvider created", "config", o)
 
@@ -128,6 +139,17 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	tp.spanProcessors.Store(&spss)
 
 	return tp
+}
+
+func resolveTracerConfig(configurator TracerConfigurator, scope instrumentation.Scope) bool {
+	if configurator == nil {
+		return true
+	}
+	config := configurator(scope)
+	if config == nil {
+		return true
+	}
+	return config.Enabled()
 }
 
 // Tracer returns a Tracer with the given name and options. If a Tracer for
@@ -168,6 +190,8 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 				provider:             p,
 				instrumentationScope: is,
 			}
+			enabled := resolveTracerConfig(p.tracerConfigurator, is)
+			t.setEnabled(enabled)
 
 			var err error
 			t.inst, err = observ.NewTracer()
@@ -320,6 +344,30 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 
 func (p *TracerProvider) getSpanProcessors() spanProcessorStates {
 	return *p.spanProcessors.Load()
+}
+
+// UpdateTracerConfigurator updates the TracerProvider's TracerConfigurator and
+// applies the new configuration to all outstanding Tracers.
+//
+// This is an experimental feature. Passing a nil configurator clears any
+// configured TracerConfigurator and restores the default enabled state for all
+// Tracers. This method is a no-op after Shutdown has been called.
+func (p *TracerProvider) UpdateTracerConfigurator(configurator TracerConfigurator) {
+	if p.isShutdown.Load() {
+		return
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.isShutdown.Load() {
+		return
+	}
+
+	p.tracerConfigurator = configurator
+	for _, tr := range p.namedTracer {
+		tr.setEnabled(resolveTracerConfig(configurator, tr.instrumentationScope))
+	}
 }
 
 // TracerProviderOption configures a TracerProvider.
