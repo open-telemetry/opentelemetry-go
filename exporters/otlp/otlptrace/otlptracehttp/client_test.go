@@ -928,9 +928,12 @@ func TestClientInstrumentationStaleStatusCode(t *testing.T) {
 // passed to WithEndpointURL is normalized to the root path ("/") rather than falling back to the default OTLP traces
 // path ("/v1/traces").
 func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
-	var gotPath string
+	pathCh := make(chan string, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.Path
+		select {
+		case pathCh <- r.URL.Path:
+		default:
+		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	t.Cleanup(srv.Close)
@@ -951,8 +954,13 @@ func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, exporter.Shutdown(ctx)) })
 
 	require.NoError(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
-	assert.Equal(t, "/", gotPath,
-		"a pathless endpoint URL must target the root path, not the default traces path")
+	select {
+	case gotPath := <-pathCh:
+		assert.Equal(t, "/", gotPath,
+			"a pathless endpoint URL must target the root path, not the default traces path")
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for export request")
+	}
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)
