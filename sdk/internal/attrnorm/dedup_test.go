@@ -186,6 +186,70 @@ func TestValueWithDepthLimit(t *testing.T) {
 			),
 		},
 		{
+			name:  "multi-entry map below limit",
+			limit: 2,
+			value: attribute.MapValue(
+				attribute.String("first", "value"),
+				attribute.Map(
+					"nested",
+					attribute.String("leaf", "value"),
+				),
+				attribute.String("tail", "value"),
+			),
+			want: attribute.MapValue(
+				attribute.String("first", "value"),
+				attribute.Map(
+					"nested",
+					attribute.String("leaf", "value"),
+				),
+				attribute.String("tail", "value"),
+			),
+		},
+		{
+			name:  "deduplicate multi-entry map",
+			limit: 2,
+			value: attribute.MapValue(
+				attribute.String("duplicate", "first"),
+				attribute.String("duplicate", "second"),
+				attribute.String("tail", "value"),
+			),
+			want: attribute.MapValue(
+				attribute.String("duplicate", "second"),
+				attribute.String("tail", "value"),
+			),
+			wantChanged: true,
+		},
+		{
+			name:  "deduplicate multi-entry map after prior key",
+			limit: 2,
+			value: attribute.MapValue(
+				attribute.String("first", "value"),
+				attribute.String("middle", "first"),
+				attribute.String("middle", "second"),
+				attribute.String("tail", "value"),
+			),
+			want: attribute.MapValue(
+				attribute.String("first", "value"),
+				attribute.String("middle", "second"),
+				attribute.String("tail", "value"),
+			),
+			wantChanged: true,
+		},
+		{
+			name:  "slice below limit",
+			limit: 2,
+			value: attribute.SliceValue(
+				attribute.StringValue("first"),
+				attribute.SliceValue(attribute.StringValue("nested")),
+				attribute.StringValue("tail"),
+			),
+			want: attribute.SliceValue(
+				attribute.StringValue("first"),
+				attribute.SliceValue(attribute.StringValue("nested")),
+				attribute.StringValue("tail"),
+			),
+		},
+		{
 			name:  "map over limit",
 			limit: 2,
 			value: attribute.MapValue(
@@ -215,6 +279,21 @@ func TestValueWithDepthLimit(t *testing.T) {
 			want: attribute.SliceValue(
 				attribute.Value{},
 				attribute.StringValue("leaf"),
+			),
+			wantChanged: true,
+		},
+		{
+			name:  "slice over limit after scalar",
+			limit: 1,
+			value: attribute.SliceValue(
+				attribute.StringValue("first"),
+				attribute.SliceValue(attribute.StringValue("over")),
+				attribute.StringValue("tail"),
+			),
+			want: attribute.SliceValue(
+				attribute.StringValue("first"),
+				attribute.Value{},
+				attribute.StringValue("tail"),
 			),
 			wantChanged: true,
 		},
@@ -270,6 +349,102 @@ func TestValueWithDepthLimit(t *testing.T) {
 			}
 			if diff := cmp.Diff(test.want, got, cmpValue); diff != "" {
 				t.Fatalf("ValueWithDepthLimit() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestValueLimitDepth(t *testing.T) {
+	tests := []struct {
+		name        string
+		limit       int
+		value       attribute.Value
+		want        attribute.Value
+		wantChanged bool
+	}{
+		{
+			name:        "scalar",
+			limit:       1,
+			value:       attribute.StringValue("value"),
+			want:        attribute.StringValue("value"),
+			wantChanged: false,
+		},
+		{
+			name:  "slice below limit",
+			limit: 2,
+			value: attribute.SliceValue(
+				attribute.StringValue("first"),
+				attribute.SliceValue(attribute.StringValue("nested")),
+				attribute.StringValue("tail"),
+			),
+			want: attribute.SliceValue(
+				attribute.StringValue("first"),
+				attribute.SliceValue(attribute.StringValue("nested")),
+				attribute.StringValue("tail"),
+			),
+			wantChanged: false,
+		},
+		{
+			name:  "map below limit",
+			limit: 2,
+			value: attribute.MapValue(
+				attribute.String("first", "value"),
+				attribute.Map(
+					"nested",
+					attribute.String("leaf", "value"),
+				),
+				attribute.String("tail", "value"),
+			),
+			want: attribute.MapValue(
+				attribute.String("first", "value"),
+				attribute.Map(
+					"nested",
+					attribute.String("leaf", "value"),
+				),
+				attribute.String("tail", "value"),
+			),
+			wantChanged: false,
+		},
+		{
+			name:  "map over limit after prior key",
+			limit: 1,
+			value: attribute.MapValue(
+				attribute.String("first", "value"),
+				attribute.Map("middle", attribute.String("leaf", "value")),
+				attribute.String("tail", "value"),
+			),
+			want: attribute.MapValue(
+				attribute.String("first", "value"),
+				attribute.KeyValue{Key: "middle"},
+				attribute.String("tail", "value"),
+			),
+			wantChanged: true,
+		},
+		{
+			name:  "slice over limit",
+			limit: 1,
+			value: attribute.SliceValue(
+				attribute.StringValue("first"),
+				attribute.SliceValue(attribute.StringValue("nested")),
+				attribute.StringValue("tail"),
+			),
+			want: attribute.SliceValue(
+				attribute.StringValue("first"),
+				attribute.Value{},
+				attribute.StringValue("tail"),
+			),
+			wantChanged: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, changed := ValueLimitDepth(test.value, test.limit)
+			if changed != test.wantChanged {
+				t.Fatalf("ValueLimitDepth() changed = %v, want %v", changed, test.wantChanged)
+			}
+			if diff := cmp.Diff(test.want, got, cmpValue); diff != "" {
+				t.Fatalf("ValueLimitDepth() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -397,6 +572,29 @@ func TestKeyValueWithDepthLimit(t *testing.T) {
 	}
 }
 
+func TestKeyValueLimitDepth(t *testing.T) {
+	kv := attribute.Map(
+		"map",
+		attribute.String("dup", "first"),
+		attribute.String("dup", "second"),
+		attribute.Map("over", attribute.String("leaf", "value")),
+	)
+	want := attribute.Map(
+		"map",
+		attribute.String("dup", "first"),
+		attribute.String("dup", "second"),
+		attribute.KeyValue{Key: "over"},
+	)
+
+	got, changed := KeyValueLimitDepth(kv, 1)
+	if !changed {
+		t.Fatal("KeyValueLimitDepth() changed = false, want true")
+	}
+	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
+		t.Fatalf("KeyValueLimitDepth() mismatch (-want +got):\n%s", diff)
+	}
+}
+
 func TestKeyValuesNoopReturnsInput(t *testing.T) {
 	kvs := []attribute.KeyValue{
 		attribute.String("one", "1"),
@@ -476,6 +674,68 @@ func TestKeyValuesWithDepthLimit(t *testing.T) {
 	}
 }
 
+func TestKeyValuesDepthLimitNoopReturnsInput(t *testing.T) {
+	kvs := []attribute.KeyValue{
+		attribute.String("one", "1"),
+		attribute.Map("two", attribute.String("nested", "value")),
+	}
+	tests := []struct {
+		name string
+		fn   func([]attribute.KeyValue, int) ([]attribute.KeyValue, bool)
+	}{
+		{
+			name: "KeyValuesWithDepthLimit",
+			fn:   KeyValuesWithDepthLimit,
+		},
+		{
+			name: "KeyValuesLimitDepth",
+			fn:   KeyValuesLimitDepth,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, changed := test.fn(kvs, 2)
+			if changed {
+				t.Fatalf("%s() changed a no-op input", test.name)
+			}
+			if len(got) != len(kvs) {
+				t.Fatalf("%s() length = %d, want %d", test.name, len(got), len(kvs))
+			}
+			if &got[0] != &kvs[0] {
+				t.Fatalf("%s() copied a no-op input", test.name)
+			}
+		})
+	}
+}
+
+func TestKeyValuesLimitDepth(t *testing.T) {
+	kvs := []attribute.KeyValue{
+		attribute.String("top", "value"),
+		attribute.Map(
+			"map",
+			attribute.Map("over", attribute.String("leaf", "value")),
+		),
+		attribute.String("tail", "value"),
+	}
+	want := []attribute.KeyValue{
+		attribute.String("top", "value"),
+		attribute.Map(
+			"map",
+			attribute.KeyValue{Key: "over"},
+		),
+		attribute.String("tail", "value"),
+	}
+
+	got, changed := KeyValuesLimitDepth(kvs, 1)
+	if !changed {
+		t.Fatal("KeyValuesLimitDepth() changed = false, want true")
+	}
+	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
+		t.Fatalf("KeyValuesLimitDepth() mismatch (-want +got):\n%s", diff)
+	}
+}
+
 func TestSetDedup(t *testing.T) {
 	set := attribute.NewSet(
 		attribute.String("a-top", "value"),
@@ -537,6 +797,65 @@ func TestSetWithDepthLimit(t *testing.T) {
 	}
 }
 
+func TestSetLimitDepth(t *testing.T) {
+	set := attribute.NewSet(
+		attribute.String("a-top", "value"),
+		attribute.Map(
+			"m-map",
+			attribute.Map("over", attribute.String("leaf", "value")),
+		),
+		attribute.String("z-tail", "value"),
+	)
+	want := attribute.NewSet(
+		attribute.String("a-top", "value"),
+		attribute.Map(
+			"m-map",
+			attribute.KeyValue{Key: "over"},
+		),
+		attribute.String("z-tail", "value"),
+	)
+
+	got, changed := SetLimitDepth(set, 1)
+	if !changed {
+		t.Fatal("SetLimitDepth() changed = false, want true")
+	}
+	if diff := cmp.Diff(want.ToSlice(), got.ToSlice(), cmpValue); diff != "" {
+		t.Fatalf("SetLimitDepth() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestSetDepthLimitNoop(t *testing.T) {
+	set := attribute.NewSet(
+		attribute.String("top", "value"),
+		attribute.Map("map", attribute.String("nested", "value")),
+	)
+	tests := []struct {
+		name string
+		fn   func(attribute.Set, int) (attribute.Set, bool)
+	}{
+		{
+			name: "SetWithDepthLimit",
+			fn:   SetWithDepthLimit,
+		},
+		{
+			name: "SetLimitDepth",
+			fn:   SetLimitDepth,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, changed := test.fn(set, 2)
+			if changed {
+				t.Fatalf("%s() changed a no-op input", test.name)
+			}
+			if !got.Equals(&set) {
+				t.Fatalf("%s() changed a no-op input", test.name)
+			}
+		})
+	}
+}
+
 func TestSetDedupNoop(t *testing.T) {
 	set := attribute.NewSet(
 		attribute.String("top", "value"),
@@ -561,6 +880,35 @@ func TestSetDedupEmpty(t *testing.T) {
 	}
 	if !got.Equals(&set) {
 		t.Fatal("SetDedup() changed an empty input")
+	}
+}
+
+func TestSetDepthLimitEmpty(t *testing.T) {
+	set := attribute.Set{}
+	tests := []struct {
+		name string
+		fn   func(attribute.Set, int) (attribute.Set, bool)
+	}{
+		{
+			name: "SetWithDepthLimit",
+			fn:   SetWithDepthLimit,
+		},
+		{
+			name: "SetLimitDepth",
+			fn:   SetLimitDepth,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, changed := test.fn(set, 1)
+			if changed {
+				t.Fatalf("%s() changed an empty input", test.name)
+			}
+			if !got.Equals(&set) {
+				t.Fatalf("%s() changed an empty input", test.name)
+			}
+		})
 	}
 }
 
