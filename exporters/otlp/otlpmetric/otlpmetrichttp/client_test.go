@@ -827,8 +827,8 @@ func TestRetryAfterUsesSeconds(t *testing.T) {
 }
 
 // TestWithEndpointURLNoPathUsesRootPath verifies that a pathless endpoint URL (scheme and host only, no path component)
-// passed to WithEndpointURL is normalized to the root path ("/") rather than falling back to the default OTLP metrics path
-// ("/v1/metrics").
+// passed to WithEndpointURL is normalized to the root path ("/") rather than falling back to the default OTLP metrics
+// path ("/v1/metrics").
 func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
 	pathCh := make(chan string, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
