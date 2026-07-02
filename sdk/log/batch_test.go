@@ -313,6 +313,7 @@ func TestBatchProcessor(t *testing.T) {
 			t.Cleanup(func() {
 				releaseBlockedExport()
 				synctest.Wait()
+				//nolint:usetesting // t.Context() is canceled before Cleanup is called.
 				_ = b.Shutdown(context.Background())
 			})
 
@@ -759,6 +760,7 @@ func BenchmarkBatchProcessorExport(b *testing.B) {
 		WithExportInterval(time.Hour),
 		WithExportTimeout(time.Hour),
 	)
+	//nolint:usetesting // b.Context() is canceled before Cleanup is called.
 	b.Cleanup(func() { _ = bp.Shutdown(context.Background()) })
 
 	r := new(Record)
