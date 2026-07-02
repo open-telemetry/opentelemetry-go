@@ -143,6 +143,8 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 	done = make(chan struct{})
 
 	ticker := time.NewTicker(interval)
+	// We cannot simply reuse a single buffer because the exporter is asynchronous.
+	// We use a sync.Pool to reuse buffers only after the exporter has finished with them.
 	bufPtr := b.pool.Get().(*[]Record)
 	go func() {
 		defer close(done)
@@ -170,6 +172,9 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 			if b.exporter.Ready() {
 				currentBufPtr := bufPtr
 				qLen = b.q.TryDequeue(*currentBufPtr, func(r []Record) bool {
+					if len(r) == 0 {
+						return false
+					}
 					ok := b.exporter.EnqueueExport(r, func(_ []Record) {
 						// Clear the full buffer (not just r) before pooling it to avoid retaining
 						// stale records in the tail when a later dequeue exports a smaller batch.
@@ -177,6 +182,8 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 						b.pool.Put(currentBufPtr)
 					})
 					if ok {
+						// We must use a new buffer because the exporter is asynchronous
+						// and may still be reading from the current one.
 						bufPtr = b.pool.Get().(*[]Record)
 					}
 					return ok
