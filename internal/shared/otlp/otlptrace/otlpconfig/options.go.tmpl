@@ -59,8 +59,8 @@ type (
 {{ if .isHTTP }}
 		MaxResponseBodySize int64
 {{ end }}
-		Timeout        time.Duration
-		URLPath        string
+		Timeout time.Duration
+		URLPath string
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -92,11 +92,11 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:        DefaultTracesPath,
 			Compression:    NoCompression,
-			MaxRequestSize:      DefaultMaxRequestSize,
+			MaxRequestSize: DefaultMaxRequestSize,
 {{ if .isHTTP }}
 			MaxResponseBodySize: DefaultMaxResponseBodySize,
 {{ end }}
-			Timeout:        DefaultTimeout,
+			Timeout: DefaultTimeout,
 		},
 		RetryConfig: retry.DefaultConfig,
 	}
@@ -368,7 +368,6 @@ func WithMaxRequestSize(size int) GenericOption {
 		return cfg
 	})
 }
-
 {{ if .isHTTP }}
 func WithMaxResponseBodySize(size int64) HTTPOption {
 	return NewHTTPOption(func(cfg Config) Config {
@@ -377,7 +376,6 @@ func WithMaxResponseBodySize(size int64) HTTPOption {
 	})
 }
 {{ end }}
-
 func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Traces.Proxy = pf
