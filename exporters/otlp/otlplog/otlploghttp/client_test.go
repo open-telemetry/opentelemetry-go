@@ -1300,10 +1300,7 @@ func TestRetryAfterUsesSeconds(t *testing.T) {
 func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
 	pathCh := make(chan string, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case pathCh <- r.URL.Path:
-		default:
-		}
+		pathCh <- r.URL.Path
 		w.WriteHeader(http.StatusOK)
 	}))
 	t.Cleanup(srv.Close)
