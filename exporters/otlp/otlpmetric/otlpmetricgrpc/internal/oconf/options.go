@@ -60,8 +60,8 @@ type (
 		Compression    Compression
 		MaxRequestSize int
 
-		Timeout        time.Duration
-		URLPath        string
+		Timeout time.Duration
+		URLPath string
 
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
@@ -96,9 +96,9 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:        DefaultMetricsPath,
 			Compression:    NoCompression,
-			MaxRequestSize:      DefaultMaxRequestSize,
+			MaxRequestSize: DefaultMaxRequestSize,
 
-			Timeout:        DefaultTimeout,
+			Timeout: DefaultTimeout,
 
 			TemporalitySelector: metric.DefaultTemporalitySelector,
 			AggregationSelector: metric.DefaultAggregationSelector,
@@ -369,8 +369,6 @@ func WithMaxRequestSize(size int) GenericOption {
 		return cfg
 	})
 }
-
-
 
 func WithTemporalitySelector(selector metric.TemporalitySelector) GenericOption {
 	return newGenericOption(func(cfg Config) Config {

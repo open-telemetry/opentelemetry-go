@@ -53,8 +53,8 @@ type (
 		Compression    Compression
 		MaxRequestSize int
 
-		Timeout        time.Duration
-		URLPath        string
+		Timeout time.Duration
+		URLPath string
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -86,9 +86,9 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:        DefaultTracesPath,
 			Compression:    NoCompression,
-			MaxRequestSize:      DefaultMaxRequestSize,
+			MaxRequestSize: DefaultMaxRequestSize,
 
-			Timeout:        DefaultTimeout,
+			Timeout: DefaultTimeout,
 		},
 		RetryConfig: retry.DefaultConfig,
 	}
@@ -360,8 +360,6 @@ func WithMaxRequestSize(size int) GenericOption {
 		return cfg
 	})
 }
-
-
 
 func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {

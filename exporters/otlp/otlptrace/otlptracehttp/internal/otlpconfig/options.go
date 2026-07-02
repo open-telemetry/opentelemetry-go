@@ -36,7 +36,7 @@ const (
 	DefaultMaxRequestSize int = 64 * 1024 * 1024
 
 	// DefaultMaxResponseBodySize is the default maximum size of an OTLP/HTTP
-	// response body, including after decompression.
+	// response body, after decompression.
 	DefaultMaxResponseBodySize int64 = 4 * 1024 * 1024
 
 	// DefaultTimeout is a default max waiting time for the backend to process
@@ -59,8 +59,8 @@ type (
 
 		MaxResponseBodySize int64
 
-		Timeout        time.Duration
-		URLPath        string
+		Timeout time.Duration
+		URLPath string
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -92,11 +92,11 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:        DefaultTracesPath,
 			Compression:    NoCompression,
-			MaxRequestSize:      DefaultMaxRequestSize,
+			MaxRequestSize: DefaultMaxRequestSize,
 
 			MaxResponseBodySize: DefaultMaxResponseBodySize,
 
-			Timeout:        DefaultTimeout,
+			Timeout: DefaultTimeout,
 		},
 		RetryConfig: retry.DefaultConfig,
 	}
@@ -369,14 +369,12 @@ func WithMaxRequestSize(size int) GenericOption {
 	})
 }
 
-
 func WithMaxResponseBodySize(size int64) HTTPOption {
 	return NewHTTPOption(func(cfg Config) Config {
 		cfg.Traces.MaxResponseBodySize = size
 		return cfg
 	})
 }
-
 
 func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
