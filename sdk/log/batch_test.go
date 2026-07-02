@@ -288,6 +288,65 @@ func TestBatchProcessor(t *testing.T) {
 		assert.Equal(t, 3, e.ExportN())
 	})
 
+	t.Run("ExportedRecordsStableUntilExportReturns", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			releaseExport := make(chan struct{})
+			releaseBlockedExport := sync.OnceFunc(func() {
+				close(releaseExport)
+			})
+
+			exported := make(chan []Record, 1)
+			exporter := &blockingRecordExporter{
+				ExportFunc: func(_ context.Context, records []Record) error {
+					exported <- records
+					<-releaseExport
+					return nil
+				},
+			}
+
+			b := NewBatchProcessor(
+				exporter,
+				WithMaxQueueSize(10),
+				WithExportMaxBatchSize(1),
+				WithExportInterval(time.Hour),
+			)
+			t.Cleanup(func() {
+				releaseBlockedExport()
+				_ = b.Shutdown(t.Context())
+			})
+
+			r := Record{}
+			r.SetBody(attribute.StringValue("test-message"))
+			assert.NoError(t, b.OnEmit(t.Context(), &r))
+			synctest.Wait()
+
+			var captured []Record
+			select {
+			case captured = <-exported:
+			default:
+				require.Fail(t, "exporter did not receive records")
+			}
+			if assert.NotEmpty(t, captured) {
+				assert.Equal(t, "test-message", captured[0].Body().AsString())
+			}
+
+			// If the BatchProcessor reuses or clears the exported buffer before
+			// Export returns, this later export attempt can mutate captured.
+			r2 := Record{}
+			r2.SetBody(attribute.StringValue("another-message"))
+			assert.NoError(t, b.OnEmit(t.Context(), &r2))
+			synctest.Wait()
+
+			if assert.NotEmpty(t, captured) {
+				assert.Equal(t, "test-message", captured[0].Body().AsString())
+			}
+
+			releaseBlockedExport()
+			synctest.Wait()
+			assert.NoError(t, b.Shutdown(t.Context()))
+		})
+	})
+
 	t.Run("Shutdown", func(t *testing.T) {
 		t.Run("Error", func(t *testing.T) {
 			e := newTestExporter(assert.AnError)
@@ -688,82 +747,6 @@ func (e *blockingRecordExporter) Export(ctx context.Context, records []Record) e
 
 func (*blockingRecordExporter) Shutdown(context.Context) error   { return nil }
 func (*blockingRecordExporter) ForceFlush(context.Context) error { return nil }
-
-func TestBatchProcessorExportBufferLifetime(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		exportDone := make(chan struct{})
-
-		// Safe cleanup to guarantee exportDone is closed to prevent hangs during Shutdown()
-		defer func() {
-			select {
-			case <-exportDone:
-			default:
-				close(exportDone)
-			}
-		}()
-
-		var capturedRecords []Record
-		var mu sync.Mutex
-
-		exporter := &blockingRecordExporter{
-			ExportFunc: func(_ context.Context, records []Record) error {
-				mu.Lock()
-				capturedRecords = records
-				mu.Unlock()
-				<-exportDone
-				return nil
-			},
-		}
-
-		b := NewBatchProcessor(
-			exporter,
-			WithMaxQueueSize(10),
-			WithExportMaxBatchSize(1),
-			WithExportInterval(time.Hour), // Large interval to prevent ticker noise
-		)
-
-		// Emit 1 record to trigger immediate batch export (batch size is 1).
-		r := Record{}
-		r.SetBody(attribute.StringValue("test-message"))
-		assert.NoError(t, b.OnEmit(t.Context(), &r))
-
-		// Wait for all goroutines to settle. The export goroutine will be
-		// blocked inside ExportFunc holding the records.
-		synctest.Wait()
-
-		// Verify the records are intact while the exporter is blocked.
-		mu.Lock()
-		if assert.NotEmpty(t, capturedRecords) {
-			assert.Equal(t, "test-message", capturedRecords[0].Body().AsString(),
-				"records mutated while exporter is blocked")
-		}
-		mu.Unlock()
-
-		// Emit another record to trigger further poll loop activity.
-		// This won't be exported yet since the previous export is blocked.
-		r2 := Record{}
-		r2.SetBody(attribute.StringValue("another-message"))
-		assert.NoError(t, b.OnEmit(t.Context(), &r2))
-
-		// Wait for all goroutines to settle again. The poll loop should
-		// have processed the trigger without mutating the blocked export's
-		// records.
-		synctest.Wait()
-
-		// Verify records are STILL intact.
-		mu.Lock()
-		if assert.NotEmpty(t, capturedRecords) {
-			assert.Equal(t, "test-message", capturedRecords[0].Body().AsString(),
-				"records slice mutated by poll loop activity")
-		}
-		mu.Unlock()
-
-		// Complete the export and shut down cleanly.
-		close(exportDone)
-		synctest.Wait()
-		_ = b.Shutdown(t.Context())
-	})
-}
 
 func BenchmarkBatchProcessorExport(b *testing.B) {
 	bp := NewBatchProcessor(
