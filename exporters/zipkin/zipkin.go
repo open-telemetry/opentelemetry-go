@@ -201,12 +201,10 @@ func (e *Exporter) errf(format string, args ...any) error {
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Exporter.
-func (e *Exporter) MarshalLog() any {
+func (*Exporter) MarshalLog() any {
 	return struct {
 		Type string
-		URL  string
 	}{
 		Type: "zipkin",
-		URL:  e.url,
 	}
 }

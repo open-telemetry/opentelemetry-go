@@ -10,6 +10,7 @@ ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} 
 
 GO = go
 TIMEOUT = 60
+GO_VERSION := $(shell awk '/^go [0-9]/ {print $$2; exit}' go.mod)
 
 # User to run as in docker images.
 DOCKER_USER=$(shell id -u):$(shell id -g)
@@ -127,7 +128,7 @@ vanity-import-fix: $(PORTO)
 # Generate go.work file for local development.
 .PHONY: go-work
 go-work: $(CROSSLINK)
-	$(CROSSLINK) work --root=$(shell pwd) --go=1.22.7
+	$(CROSSLINK) work --root=$(shell pwd) --go=$(GO_VERSION)
 
 # Build
 

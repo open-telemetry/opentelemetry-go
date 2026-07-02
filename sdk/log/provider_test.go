@@ -250,6 +250,52 @@ func TestWithResource(t *testing.T) {
 	}
 }
 
+func TestMapDeduplication(t *testing.T) {
+	dup := attribute.Map(
+		"map",
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	dedup := attribute.Map("map", attribute.String("key", "second"))
+
+	res := resource.NewSchemaless(dup)
+
+	t.Run("Resource", func(t *testing.T) {
+		got := newProviderConfig([]LoggerProviderOption{WithResource(res)}).resource
+		assert.Equal(t, []attribute.KeyValue{dedup}, got.Attributes())
+	})
+
+	t.Run("ResourceAlwaysDeduplicates", func(t *testing.T) {
+		got := newProviderConfig([]LoggerProviderOption{
+			WithResource(res),
+			WithAllowKeyDuplication(),
+		}).resource
+		assert.Equal(t, []attribute.KeyValue{dedup}, got.Attributes())
+	})
+
+	t.Run("Scope", func(t *testing.T) {
+		p := newProcessor("processor")
+		lp := NewLoggerProvider(WithProcessor(p))
+		l := lp.Logger("scope", log.WithInstrumentationAttributes(dup))
+
+		l.Emit(t.Context(), log.Record{})
+
+		require.Len(t, p.records, 1)
+		assert.Equal(t, attribute.NewSet(dedup), p.records[0].InstrumentationScope().Attributes)
+	})
+
+	t.Run("ScopeWithAllowKeyDuplication", func(t *testing.T) {
+		p := newProcessor("processor")
+		lp := NewLoggerProvider(WithProcessor(p), WithAllowKeyDuplication())
+		l := lp.Logger("scope", log.WithInstrumentationAttributes(dup))
+
+		l.Emit(t.Context(), log.Record{})
+
+		require.Len(t, p.records, 1)
+		assert.Equal(t, attribute.NewSet(dup), p.records[0].InstrumentationScope().Attributes)
+	})
+}
+
 func TestLoggerProviderConcurrentSafe(t *testing.T) {
 	const goRoutineN = 10
 

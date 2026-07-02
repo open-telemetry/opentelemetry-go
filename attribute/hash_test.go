@@ -25,8 +25,14 @@ type keyVal struct {
 var keyVals = []keyVal{
 	{name: "BoolTrue", kv: func(k string) KeyValue { return Bool(k, true) }},
 	{name: "BoolFalse", kv: func(k string) KeyValue { return Bool(k, false) }},
+	{name: "BoolSliceLen0", kv: func(k string) KeyValue { return BoolSlice(k, []bool{}) }},
+	{name: "BoolSliceLen1", kv: func(k string) KeyValue { return BoolSlice(k, []bool{true}) }},
 	{name: "BoolSliceLen2", kv: func(k string) KeyValue { return BoolSlice(k, []bool{false, true}) }},
 	{name: "BoolSliceLen3", kv: func(k string) KeyValue { return BoolSlice(k, []bool{true, true, false}) }},
+	{
+		name: "BoolSliceLen5",
+		kv:   func(k string) KeyValue { return BoolSlice(k, []bool{true, false, true, true, false}) },
+	},
 	{name: "IntNegative", kv: func(k string) KeyValue { return Int(k, -1278) }},
 	{name: "IntZero", kv: func(k string) KeyValue { return Int(k, 0) }}, // Should be different than false above.
 	{name: "IntSliceLen5", kv: func(k string) KeyValue { return IntSlice(k, []int{3, 23, 21, -8, 0}) }},
@@ -38,6 +44,9 @@ var keyVals = []keyVal{
 	{name: "Int64", kv: func(k string) KeyValue { return Int64(k, 29369) }},
 	{name: "Int64SliceLen4", kv: func(k string) KeyValue { return Int64Slice(k, []int64{3826, -38, -29, -1}) }},
 	{name: "Int64SliceWithZero", kv: func(k string) KeyValue { return Int64Slice(k, []int64{8, -328, 29, 0}) }},
+	{name: "Int64SliceLen0", kv: func(k string) KeyValue { return Int64Slice(k, []int64{}) }},
+	{name: "Int64SliceLen2", kv: func(k string) KeyValue { return Int64Slice(k, []int64{7, -7}) }},
+	{name: "Int64SliceLen3", kv: func(k string) KeyValue { return Int64Slice(k, []int64{11, -22, 33}) }},
 	{name: "Float64", kv: func(k string) KeyValue { return Float64(k, -0.3812381) }},
 	{name: "Float64Large", kv: func(k string) KeyValue { return Float64(k, 1e32) }},
 	{
@@ -48,10 +57,20 @@ var keyVals = []keyVal{
 		name: "Float64SliceLarge",
 		kv:   func(k string) KeyValue { return Float64Slice(k, []float64{-13e8, -32.8, 4., 1e28}) },
 	},
+	{name: "Float64SliceLen0", kv: func(k string) KeyValue { return Float64Slice(k, []float64{}) }},
+	{name: "Float64SliceLen1", kv: func(k string) KeyValue { return Float64Slice(k, []float64{3.14}) }},
+	{name: "Float64SliceLen2", kv: func(k string) KeyValue { return Float64Slice(k, []float64{0.15, -2.5}) }},
+	{name: "Float64SliceLen3", kv: func(k string) KeyValue { return Float64Slice(k, []float64{1.5, -2.5, 3.5}) }},
 	{name: "StringFoo", kv: func(k string) KeyValue { return String(k, "foo") }},
 	{name: "StringBar", kv: func(k string) KeyValue { return String(k, "bar") }},
+	{name: "StringSliceLen0", kv: func(k string) KeyValue { return StringSlice(k, []string{}) }},
+	{name: "StringSliceLen2", kv: func(k string) KeyValue { return StringSlice(k, []string{"alpha", "beta"}) }},
 	{name: "StringSliceLen3", kv: func(k string) KeyValue { return StringSlice(k, []string{"foo", "bar", "baz"}) }},
 	{name: "StringSliceLooksLikeIntSlice", kv: func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) }},
+	{
+		name: "StringSliceLen5",
+		kv:   func(k string) KeyValue { return StringSlice(k, []string{"a", "bb", "ccc", "dddd", "eeeee"}) },
+	},
 	{name: "ByteSliceFoo", kv: func(k string) KeyValue { return ByteSlice(k, []byte("foo")) }},
 	{name: "ByteSliceLooksLikeIntSlice", kv: func(k string) KeyValue { return ByteSlice(k, []byte("[]i1")) }},
 	{name: "SliceLen0", kv: func(k string) KeyValue { return Slice(k) }},
@@ -93,6 +112,22 @@ var keyVals = []keyVal{
 			IntValue(6),
 			StringValue("tail"),
 			StringSliceValue([]string{"fallback"}),
+		)
+	}},
+	{name: "MapLen0", kv: func(k string) KeyValue { return Map(k) }},
+	{name: "MapLen2", kv: func(k string) KeyValue {
+		return Map(
+			k,
+			String("b", "two"),
+			Int("a", 1),
+		)
+	}},
+	{name: "MapNested", kv: func(k string) KeyValue {
+		return Map(
+			k,
+			String("nested", "map"),
+			Map("child", Float64("f", math.Inf(1)), ByteSlice("bin", []byte("bin"))),
+			Slice("slice", BoolValue(true), StringValue("tail")),
 		)
 	}},
 	{name: "EmptyValue", kv: func(k string) KeyValue { return KeyValue{Key: Key(k)} }},
@@ -150,6 +185,57 @@ func TestHashKVs(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestHashValueMapOrdering(t *testing.T) {
+	tests := []struct {
+		name string
+		kvs  []KeyValue
+	}{
+		{
+			name: "Len4",
+			kvs: []KeyValue{
+				String("d", "4"),
+				String("a", "1"),
+				String("c", "3"),
+				String("b", "2"),
+			},
+		},
+		{
+			name: "Len5",
+			kvs: []KeyValue{
+				String("e", "5"),
+				String("a", "1"),
+				String("d", "4"),
+				String("b", "2"),
+				String("c", "3"),
+			},
+		},
+		{
+			name: "Reflect",
+			kvs: []KeyValue{
+				String("f", "6"),
+				String("a", "1"),
+				String("e", "5"),
+				String("b", "2"),
+				String("d", "4"),
+				String("c", "3"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reversed := slices.Clone(tt.kvs)
+			slices.Reverse(reversed)
+
+			got := hashValue(xxhash.New(), MapValue(tt.kvs...)).Sum64()
+			want := hashValue(xxhash.New(), MapValue(reversed...)).Sum64()
+			if got != want {
+				t.Fatalf("hashValue(MapValue(%v)) = %d, want %d", tt.kvs, got, want)
+			}
+		})
 	}
 }
 
@@ -255,6 +341,53 @@ func BenchmarkHashValueSlice(b *testing.B) {
 	}
 }
 
+func BenchmarkHashValueMap(b *testing.B) {
+	benches := []struct {
+		name string
+		v    Value
+	}{
+		{
+			name: "Len2",
+			v: MapValue(
+				Bool("two", true),
+				String("one", "one"),
+			),
+		},
+		{
+			name: "Len5",
+			v: MapValue(
+				Bool("one", true),
+				Int("two", 2),
+				String("three", "three"),
+				Float64("four", 4.5),
+				ByteSlice("five", []byte("five")),
+			),
+		},
+		{
+			name: "Len8Nested",
+			v: MapValue(
+				Bool("one", true),
+				Int("two", 2),
+				String("three", "three"),
+				Float64("four", 4.5),
+				ByteSlice("five", []byte("five")),
+				Map("six", String("nested", "map"), Int64("value", 6)),
+				Slice("seven", StringValue("nested"), BoolValue(true)),
+				StringSlice("eight", []string{"seven", "eight"}),
+			),
+		},
+	}
+
+	for _, bench := range benches {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				hashValue(xxhash.New(), bench.v).Sum64()
+			}
+		})
+	}
+}
+
 func FuzzHashKVs(f *testing.F) {
 	// Add seed inputs to ensure coverage of edge cases.
 	f.Add("", "", "", "", "", "", 0, int64(0), 0.0, false, uint8(0))
@@ -293,9 +426,9 @@ func FuzzHashKVs(f *testing.F) {
 			kvs = append(kvs, Bool(k5, b))
 		}
 
-		// Add slice types based on sliceType parameter.
+		// Add slice and composite types based on sliceType parameter.
 		if numAttrs > 5 {
-			switch sliceType % 6 {
+			switch sliceType % 7 {
 			case 0:
 				// Test BoolSlice with variable length.
 				bools := make([]bool, len(s)%5) // 0-4 elements
@@ -355,6 +488,22 @@ func FuzzHashKVs(f *testing.F) {
 					}
 				}
 				kvs = append(kvs, Slice("slice", values...))
+			case 6:
+				values := make([]KeyValue, len(s)%4) // 0-3 elements
+				for i := range values {
+					key := fmt.Sprintf("item_%d", i)
+					switch i % 4 {
+					case 0:
+						values[i] = Bool(key, (i+len(k1))%2 == 0)
+					case 1:
+						values[i] = Int(key, i+len(k2))
+					case 2:
+						values[i] = String(key, fmt.Sprintf("item_%d", i))
+					case 3:
+						values[i] = Map(key, Float64("float", fVal), ByteSlice("bin", []byte("bin")))
+					}
+				}
+				kvs = append(kvs, Map("map", values...))
 			}
 		}
 
@@ -451,6 +600,13 @@ func FuzzHashKVs(f *testing.F) {
 							newSlice[0] = StringValue("modified")
 						}
 						modifiedKvs[0] = Slice(string(modifiedKvs[0].Key), newSlice...)
+					}
+				case MAP:
+					origMap := modifiedKvs[0].Value.AsMap()
+					if len(origMap) > 0 {
+						newMap := slices.Clone(origMap)
+						newMap[0] = String(string(newMap[0].Key), "modified")
+						modifiedKvs[0] = Map(string(modifiedKvs[0].Key), newMap...)
 					}
 				case EMPTY:
 					modifiedKvs[0] = String(string(modifiedKvs[0].Key), "not_empty")
