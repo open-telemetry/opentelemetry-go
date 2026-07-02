@@ -164,7 +164,7 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 }
 
 func (p *LoggerProvider) attrValueDepthLimit() int {
-	if p.attributeValueDepthLimitSet || p.attributeValueDepthLimit != 0 {
+	if p.attributeValueDepthLimit != 0 {
 		return p.attributeValueDepthLimit
 	}
 	return defaultAttrValDepthLim
@@ -285,7 +285,7 @@ func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 }
 
 // WithAttributeValueDepthLimit sets the maximum allowed depth for nested
-// attribute values. Any slice or map value at or beyond this depth will be
+// attribute values. Any slice or map value beyond this depth will be
 // replaced with an empty value.
 //
 // This limit applies to log record and instrumentation scope attributes

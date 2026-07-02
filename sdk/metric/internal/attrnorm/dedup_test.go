@@ -370,28 +370,28 @@ func TestValueDepthLimitSpecCases(t *testing.T) {
 		wantChanged bool
 	}{
 		{
-			name:        "scalar preserved at limit zero",
+			name:        "raw limit zero preserves scalar",
 			limit:       0,
 			value:       attribute.StringValue("value"),
 			want:        attribute.StringValue("value"),
 			wantChanged: false,
 		},
 		{
-			name:        "top-level slice replaced at limit zero",
+			name:        "raw limit zero replaces top-level heterogeneous array",
 			limit:       0,
 			value:       attribute.SliceValue(attribute.StringValue("value")),
 			want:        attribute.Value{},
 			wantChanged: true,
 		},
 		{
-			name:        "top-level map replaced at limit zero",
+			name:        "raw limit zero replaces top-level map",
 			limit:       0,
 			value:       attribute.MapValue(attribute.String("key", "value")),
 			want:        attribute.Value{},
 			wantChanged: true,
 		},
 		{
-			name:  "limit one preserves top-level slice and replaces nested collections",
+			name:  "limit one preserves top-level heterogeneous array and replaces nested collections",
 			limit: 1,
 			value: attribute.SliceValue(
 				attribute.StringValue("scalar"),
@@ -401,6 +401,19 @@ func TestValueDepthLimitSpecCases(t *testing.T) {
 			want: attribute.SliceValue(
 				attribute.StringValue("scalar"),
 				attribute.Value{},
+				attribute.Value{},
+			),
+			wantChanged: true,
+		},
+		{
+			name:  "limit one replaces nested homogeneous array in heterogeneous array",
+			limit: 1,
+			value: attribute.SliceValue(
+				attribute.StringValue("scalar"),
+				attribute.StringSliceValue([]string{"nested"}),
+			),
+			want: attribute.SliceValue(
+				attribute.StringValue("scalar"),
 				attribute.Value{},
 			),
 			wantChanged: true,
@@ -423,7 +436,7 @@ func TestValueDepthLimitSpecCases(t *testing.T) {
 			wantChanged: true,
 		},
 		{
-			name:  "nested slice at depth equal to limit replaced",
+			name:  "nested heterogeneous array beyond limit replaced",
 			limit: 2,
 			value: attribute.SliceValue(
 				attribute.SliceValue(

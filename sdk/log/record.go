@@ -489,7 +489,7 @@ func (r *Record) applyAttrLimitsAndDedup(attr attribute.KeyValue) attribute.KeyV
 }
 
 func (r *Record) attrValueDepthLimit() int {
-	if r.attributeValueDepthLimitSet || r.attributeValueDepthLimit != 0 {
+	if r.attributeValueDepthLimit != 0 {
 		return r.attributeValueDepthLimit
 	}
 	return defaultAttrValDepthLim

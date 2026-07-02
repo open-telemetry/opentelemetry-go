@@ -91,7 +91,7 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	sc := trace.SpanContextFromContext(ctx)
 	var depthLimit int
 	if l.provider.attributeValueDepthLimitSet {
-		depthLimit = l.provider.attributeValueDepthLimit
+		depthLimit = l.provider.attrValueDepthLimit()
 	}
 
 	newRecord := Record{

@@ -71,6 +71,13 @@ func TestSettingSpanLimits(t *testing.T) {
 			want:   *limits(42),
 		},
 		{
+			name:   "raw-opt-zero-depth",
+			rawOpt: limits(0),
+			want: SpanLimits{
+				AttributeValueDepthLimit: DefaultAttributeValueDepthLimit,
+			},
+		},
+		{
 			name: "opt-override",
 			env:  envLimits("-2"),
 			// Option take priority.

@@ -483,7 +483,7 @@ func TestRecordAttributeValueDepthLimit(t *testing.T) {
 		assertKV(t, r, logDepthLimitInputAttr("attr"))
 	})
 
-	t.Run("Zero", func(t *testing.T) {
+	t.Run("ZeroDefault", func(t *testing.T) {
 		r := Record{
 			attributeValueLengthLimit:   -1,
 			attributeValueDepthLimit:    0,
@@ -497,7 +497,7 @@ func TestRecordAttributeValueDepthLimit(t *testing.T) {
 			return true
 		})
 		want := []attribute.KeyValue{
-			{Key: "attr"},
+			logDepthLimitInputAttr("attr"),
 			attribute.String("scalar", "ok"),
 		}
 		assert.ElementsMatch(t, want, got)

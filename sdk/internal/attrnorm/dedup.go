@@ -47,20 +47,20 @@ func ValueDedup(value attribute.Value) (attribute.Value, bool) {
 // slice and map values limited to depth levels.
 //
 // Duplicate map keys are resolved using last-value-wins semantics. When a
-// slice or map value is at or beyond a non-negative depth limit, that value is
+// slice or map value would exceed a non-negative depth limit, that value is
 // replaced by an empty value. A negative depth limit disables depth limiting.
 func ValueWithDepthLimit(value attribute.Value, depthLimit int) (attribute.Value, bool) {
-	return valueDedupWithDepthLimit(value, depthLimit, 0)
+	return valueDedupWithDepthLimit(value, depthLimit, 1)
 }
 
 // ValueLimitDepth returns value with all slice and map values limited to depth
 // levels. Map keys are not deduplicated.
 //
-// When a slice or map value is at or beyond a non-negative depth limit, that
+// When a slice or map value would exceed a non-negative depth limit, that
 // value is replaced by an empty value. A negative depth limit disables depth
 // limiting.
 func ValueLimitDepth(value attribute.Value, depthLimit int) (attribute.Value, bool) {
-	return valueLimitDepth(value, depthLimit, 0)
+	return valueLimitDepth(value, depthLimit, 1)
 }
 
 func valueDedupWithDepthLimit(value attribute.Value, depthLimit, depth int) (attribute.Value, bool) {
@@ -102,13 +102,13 @@ func KeyValueDedup(kv attribute.KeyValue) (attribute.KeyValue, bool) {
 // KeyValueWithDepthLimit returns kv with all map values deduplicated and all
 // slice and map values limited to depth levels.
 func KeyValueWithDepthLimit(kv attribute.KeyValue, depthLimit int) (attribute.KeyValue, bool) {
-	return keyValueDedupWithDepthLimit(kv, depthLimit, 0)
+	return keyValueDedupWithDepthLimit(kv, depthLimit, 1)
 }
 
 // KeyValueLimitDepth returns kv with all slice and map values limited to depth
 // levels. Map keys are not deduplicated.
 func KeyValueLimitDepth(kv attribute.KeyValue, depthLimit int) (attribute.KeyValue, bool) {
-	return keyValueLimitDepth(kv, depthLimit, 0)
+	return keyValueLimitDepth(kv, depthLimit, 1)
 }
 
 func keyValueDedupWithDepthLimit(kv attribute.KeyValue, depthLimit, depth int) (attribute.KeyValue, bool) {
@@ -168,7 +168,7 @@ func KeyValuesWithDepthLimit(kvs []attribute.KeyValue, depthLimit int) ([]attrib
 	// place as the scan continues.
 	var normalized []attribute.KeyValue
 	for i, kv := range kvs {
-		kv, changed := keyValueDedupWithDepthLimit(kv, depthLimit, 0)
+		kv, changed := keyValueDedupWithDepthLimit(kv, depthLimit, 1)
 		if normalized != nil {
 			normalized[i] = kv
 			continue
@@ -195,7 +195,7 @@ func KeyValuesLimitDepth(kvs []attribute.KeyValue, depthLimit int) ([]attribute.
 	// place as the scan continues.
 	var normalized []attribute.KeyValue
 	for i, kv := range kvs {
-		kv, changed := keyValueLimitDepth(kv, depthLimit, 0)
+		kv, changed := keyValueLimitDepth(kv, depthLimit, 1)
 		if normalized != nil {
 			normalized[i] = kv
 			continue
@@ -268,7 +268,7 @@ func SetWithDepthLimit(set attribute.Set, depthLimit int) (attribute.Set, bool) 
 	var normalized []attribute.KeyValue
 	for i := range set.Len() {
 		kv, _ := set.Get(i)
-		kv, changed := keyValueDedupWithDepthLimit(kv, depthLimit, 0)
+		kv, changed := keyValueDedupWithDepthLimit(kv, depthLimit, 1)
 		if normalized != nil {
 			normalized = append(normalized, kv)
 			continue
@@ -303,7 +303,7 @@ func SetLimitDepth(set attribute.Set, depthLimit int) (attribute.Set, bool) {
 	var normalized []attribute.KeyValue
 	for i := range set.Len() {
 		kv, _ := set.Get(i)
-		kv, changed := keyValueLimitDepth(kv, depthLimit, 0)
+		kv, changed := keyValueLimitDepth(kv, depthLimit, 1)
 		if normalized != nil {
 			normalized = append(normalized, kv)
 			continue
@@ -558,7 +558,7 @@ func mapValueLimitDepth(value attribute.Value, depthLimit, depth int) (attribute
 }
 
 func exceedsDepthLimit(depthLimit, depth int) bool {
-	return depthLimit >= 0 && depth >= depthLimit
+	return depthLimit >= 0 && depth > depthLimit
 }
 
 func valueStorage(value attribute.Value) any {
