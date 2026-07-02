@@ -313,7 +313,7 @@ func TestBatchProcessor(t *testing.T) {
 			t.Cleanup(func() {
 				releaseBlockedExport()
 				synctest.Wait()
-				_ = b.Shutdown(t.Context())
+				_ = b.Shutdown(context.Background())
 			})
 
 			r := Record{}
