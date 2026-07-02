@@ -47,7 +47,7 @@ func ValueDedup(value attribute.Value) (attribute.Value, bool) {
 // slice and map values limited to depth levels.
 //
 // Duplicate map keys are resolved using last-value-wins semantics. When a
-// slice or map value would exceed a non-negative depth limit, that value is
+// slice or map value is at or beyond a non-negative depth limit, that value is
 // replaced by an empty value. A negative depth limit disables depth limiting.
 func ValueWithDepthLimit(value attribute.Value, depthLimit int) (attribute.Value, bool) {
 	return valueDedupWithDepthLimit(value, depthLimit, 0)
@@ -56,7 +56,7 @@ func ValueWithDepthLimit(value attribute.Value, depthLimit int) (attribute.Value
 // ValueLimitDepth returns value with all slice and map values limited to depth
 // levels. Map keys are not deduplicated.
 //
-// When a slice or map value would exceed a non-negative depth limit, that
+// When a slice or map value is at or beyond a non-negative depth limit, that
 // value is replaced by an empty value. A negative depth limit disables depth
 // limiting.
 func ValueLimitDepth(value attribute.Value, depthLimit int) (attribute.Value, bool) {
@@ -65,6 +65,8 @@ func ValueLimitDepth(value attribute.Value, depthLimit int) (attribute.Value, bo
 
 func valueDedupWithDepthLimit(value attribute.Value, depthLimit, depth int) (attribute.Value, bool) {
 	switch value.Type() {
+	case attribute.BOOLSLICE, attribute.INT64SLICE, attribute.FLOAT64SLICE, attribute.STRINGSLICE, attribute.BYTESLICE:
+		return primitiveSliceValueLimitDepth(value, depthLimit, depth)
 	case attribute.SLICE:
 		return sliceValueDedupWithDepthLimit(value, depthLimit, depth)
 	case attribute.MAP:
@@ -76,6 +78,8 @@ func valueDedupWithDepthLimit(value attribute.Value, depthLimit, depth int) (att
 
 func valueLimitDepth(value attribute.Value, depthLimit, depth int) (attribute.Value, bool) {
 	switch value.Type() {
+	case attribute.BOOLSLICE, attribute.INT64SLICE, attribute.FLOAT64SLICE, attribute.STRINGSLICE, attribute.BYTESLICE:
+		return primitiveSliceValueLimitDepth(value, depthLimit, depth)
 	case attribute.SLICE:
 		return sliceValueLimitDepth(value, depthLimit, depth)
 	case attribute.MAP:
@@ -350,6 +354,13 @@ func sliceValueDedup(value attribute.Value) (attribute.Value, bool) {
 		return value, false
 	}
 	return attribute.SliceValue(normalized...), true
+}
+
+func primitiveSliceValueLimitDepth(value attribute.Value, depthLimit, depth int) (attribute.Value, bool) {
+	if !exceedsDepthLimit(depthLimit, depth) {
+		return value, false
+	}
+	return attribute.Value{}, true
 }
 
 func sliceValueDedupWithDepthLimit(value attribute.Value, depthLimit, depth int) (attribute.Value, bool) {

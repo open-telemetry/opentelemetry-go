@@ -48,7 +48,7 @@ type SpanLimits struct {
 	AttributeValueLengthLimit int
 
 	// AttributeValueDepthLimit is the maximum allowed depth for nested
-	// attribute values. Any slice or map value exceeding this depth will be
+	// attribute values. Any slice or map value at or beyond this depth will be
 	// replaced with an empty value.
 	//
 	// Setting this to zero means only scalar values are allowed.

@@ -413,7 +413,7 @@ func WithSampler(s Sampler) TracerProviderOption {
 }
 
 // WithAttributeValueDepthLimit sets the maximum allowed depth for nested
-// attribute values. Any slice or map value exceeding this depth will be
+// attribute values. Any slice or map value at or beyond this depth will be
 // replaced with an empty value.
 //
 // This limit applies to span, event, link, instrumentation scope, and resource

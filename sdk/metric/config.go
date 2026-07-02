@@ -200,8 +200,8 @@ func WithCardinalityLimit(limit int) Option {
 // attribute values in resource and instrumentation scope attributes processed
 // by a MeterProvider. Measurement attributes are not limited by this option.
 //
-// Any slice or map value exceeding this depth will be replaced with an empty
-// value.
+// Any slice or map value at or beyond this depth will be replaced with an
+// empty value.
 //
 // Setting this to zero means only scalar values are allowed.
 //

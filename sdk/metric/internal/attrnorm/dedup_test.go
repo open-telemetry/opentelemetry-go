@@ -305,9 +305,16 @@ func TestValueWithDepthLimit(t *testing.T) {
 			wantChanged: false,
 		},
 		{
-			name:        "zero replaces collection",
+			name:        "zero replaces slice",
 			limit:       0,
 			value:       attribute.SliceValue(attribute.StringValue("leaf")),
+			want:        attribute.Value{},
+			wantChanged: true,
+		},
+		{
+			name:        "zero replaces map",
+			limit:       0,
+			value:       attribute.MapValue(attribute.String("leaf", "value")),
 			want:        attribute.Value{},
 			wantChanged: true,
 		},
@@ -349,6 +356,227 @@ func TestValueWithDepthLimit(t *testing.T) {
 			}
 			if diff := cmp.Diff(test.want, got, cmpValue); diff != "" {
 				t.Fatalf("ValueWithDepthLimit() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestValueDepthLimitSpecCases(t *testing.T) {
+	tests := []struct {
+		name        string
+		limit       int
+		value       attribute.Value
+		want        attribute.Value
+		wantChanged bool
+	}{
+		{
+			name:        "scalar preserved at limit zero",
+			limit:       0,
+			value:       attribute.StringValue("value"),
+			want:        attribute.StringValue("value"),
+			wantChanged: false,
+		},
+		{
+			name:        "top-level slice replaced at limit zero",
+			limit:       0,
+			value:       attribute.SliceValue(attribute.StringValue("value")),
+			want:        attribute.Value{},
+			wantChanged: true,
+		},
+		{
+			name:        "top-level map replaced at limit zero",
+			limit:       0,
+			value:       attribute.MapValue(attribute.String("key", "value")),
+			want:        attribute.Value{},
+			wantChanged: true,
+		},
+		{
+			name:  "limit one preserves top-level slice and replaces nested collections",
+			limit: 1,
+			value: attribute.SliceValue(
+				attribute.StringValue("scalar"),
+				attribute.SliceValue(attribute.StringValue("nested")),
+				attribute.MapValue(attribute.String("nested", "value")),
+			),
+			want: attribute.SliceValue(
+				attribute.StringValue("scalar"),
+				attribute.Value{},
+				attribute.Value{},
+			),
+			wantChanged: true,
+		},
+		{
+			name:  "limit one preserves top-level map and replaces nested collections",
+			limit: 1,
+			value: attribute.MapValue(
+				attribute.Slice("array", attribute.StringValue("nested")),
+				attribute.Map("map", attribute.String("nested", "value")),
+				attribute.StringSlice("primitive-array", []string{"nested"}),
+				attribute.String("scalar", "value"),
+			),
+			want: attribute.MapValue(
+				attribute.KeyValue{Key: "array"},
+				attribute.KeyValue{Key: "map"},
+				attribute.KeyValue{Key: "primitive-array"},
+				attribute.String("scalar", "value"),
+			),
+			wantChanged: true,
+		},
+		{
+			name:  "nested slice at depth equal to limit replaced",
+			limit: 2,
+			value: attribute.SliceValue(
+				attribute.SliceValue(
+					attribute.SliceValue(attribute.StringValue("over")),
+				),
+			),
+			want: attribute.SliceValue(
+				attribute.SliceValue(
+					attribute.Value{},
+				),
+			),
+			wantChanged: true,
+		},
+		{
+			name:  "negative limit preserves nested collections",
+			limit: -1,
+			value: attribute.MapValue(
+				attribute.Map(
+					"level1",
+					attribute.Slice(
+						"level2",
+						attribute.MapValue(attribute.String("leaf", "value")),
+					),
+				),
+			),
+			want: attribute.MapValue(
+				attribute.Map(
+					"level1",
+					attribute.Slice(
+						"level2",
+						attribute.MapValue(attribute.String("leaf", "value")),
+					),
+				),
+			),
+			wantChanged: false,
+		},
+		{
+			name:  "otherwise value is unchanged",
+			limit: 2,
+			value: attribute.MapValue(
+				attribute.Map(
+					"level1",
+					attribute.String("leaf", "value"),
+				),
+			),
+			want: attribute.MapValue(
+				attribute.Map(
+					"level1",
+					attribute.String("leaf", "value"),
+				),
+			),
+			wantChanged: false,
+		},
+	}
+
+	fns := []struct {
+		name string
+		fn   func(attribute.Value, int) (attribute.Value, bool)
+	}{
+		{
+			name: "ValueWithDepthLimit",
+			fn:   ValueWithDepthLimit,
+		},
+		{
+			name: "ValueLimitDepth",
+			fn:   ValueLimitDepth,
+		},
+	}
+
+	for _, fn := range fns {
+		t.Run(fn.name, func(t *testing.T) {
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					got, changed := fn.fn(test.value, test.limit)
+					if changed != test.wantChanged {
+						t.Fatalf("%s() changed = %v, want %v", fn.name, changed, test.wantChanged)
+					}
+					if diff := cmp.Diff(test.want, got, cmpValue); diff != "" {
+						t.Fatalf("%s() mismatch (-want +got):\n%s", fn.name, diff)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestValueDepthLimitPrimitiveSliceTypes(t *testing.T) {
+	tests := []struct {
+		name  string
+		value attribute.Value
+		want  attribute.Value
+	}{
+		{
+			name:  "bool",
+			value: attribute.BoolSliceValue([]bool{true}),
+			want:  attribute.Value{},
+		},
+		{
+			name:  "int64",
+			value: attribute.Int64SliceValue([]int64{1}),
+			want:  attribute.Value{},
+		},
+		{
+			name:  "float64",
+			value: attribute.Float64SliceValue([]float64{1}),
+			want:  attribute.Value{},
+		},
+		{
+			name:  "string",
+			value: attribute.StringSliceValue([]string{"value"}),
+			want:  attribute.Value{},
+		},
+		{
+			name:  "bytes",
+			value: attribute.ByteSliceValue([]byte("value")),
+			want:  attribute.Value{},
+		},
+	}
+
+	fns := []struct {
+		name string
+		fn   func(attribute.Value, int) (attribute.Value, bool)
+	}{
+		{
+			name: "ValueWithDepthLimit",
+			fn:   ValueWithDepthLimit,
+		},
+		{
+			name: "ValueLimitDepth",
+			fn:   ValueLimitDepth,
+		},
+	}
+
+	for _, fn := range fns {
+		t.Run(fn.name, func(t *testing.T) {
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					got, changed := fn.fn(test.value, 0)
+					if !changed {
+						t.Fatalf("%s() changed = false, want true", fn.name)
+					}
+					if diff := cmp.Diff(test.want, got, cmpValue); diff != "" {
+						t.Fatalf("%s() limit 0 mismatch (-want +got):\n%s", fn.name, diff)
+					}
+
+					got, changed = fn.fn(test.value, 1)
+					if changed {
+						t.Fatalf("%s() changed = true, want false", fn.name)
+					}
+					if diff := cmp.Diff(test.value, got, cmpValue); diff != "" {
+						t.Fatalf("%s() limit 1 mismatch (-want +got):\n%s", fn.name, diff)
+					}
+				})
 			}
 		})
 	}
