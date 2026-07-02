@@ -643,6 +643,136 @@ func TestSpanSetAttributes(t *testing.T) {
 	}
 }
 
+func TestSpanAttributeCapacity_WithAllowKeyDuplication(t *testing.T) {
+	attrs := []attribute.KeyValue{
+		attribute.Bool("key1", true),
+		attribute.String("key1", "value1"),
+		attribute.Int64("key1", 1),
+		attribute.Float64("key2", 2.0),
+		attribute.String("key2", "value2"),
+	}
+	invalid := attribute.KeyValue{}
+
+	tests := []struct {
+		name        string
+		input       [][]attribute.KeyValue
+		wantAttrs   []attribute.KeyValue
+		wantDropped int
+	}{
+		{
+			name: "under_capacity",
+			input: [][]attribute.KeyValue{
+				attrs[:2],
+			},
+			wantAttrs:   attrs[:2],
+			wantDropped: 0,
+		},
+		{
+			name: "at_capacity",
+			input: [][]attribute.KeyValue{
+				attrs[:3],
+			},
+			wantAttrs:   attrs[:3],
+			wantDropped: 0,
+		},
+		{
+			name: "over_capacity",
+			input: [][]attribute.KeyValue{
+				attrs,
+			},
+			wantAttrs:   attrs[:3],
+			wantDropped: 2,
+		},
+		{
+			name: "split_over_capacity",
+			input: [][]attribute.KeyValue{
+				attrs[:2],
+				attrs[2:],
+			},
+			wantAttrs:   attrs[:3],
+			wantDropped: 2,
+		},
+		{
+			name: "invalid",
+			input: [][]attribute.KeyValue{
+				{invalid, invalid},
+			},
+			wantAttrs:   []attribute.KeyValue{},
+			wantDropped: 2,
+		},
+		{
+			name: "split_invalid",
+			input: [][]attribute.KeyValue{
+				{invalid},
+				{invalid},
+			},
+			wantAttrs:   []attribute.KeyValue{},
+			wantDropped: 2,
+		},
+		{
+			name: "valid_at_capacity:invalid",
+			input: [][]attribute.KeyValue{
+				attrs[:3],
+				{invalid, invalid, invalid, invalid},
+			},
+			wantAttrs:   attrs[:3],
+			wantDropped: 4,
+		},
+		{
+			name: "already_at_capacity",
+			input: [][]attribute.KeyValue{
+				attrs[:3],
+				attrs[3:5],
+			},
+			wantAttrs:   attrs[:3],
+			wantDropped: 2,
+		},
+		{
+			name: "invalid_over_capacity",
+			input: [][]attribute.KeyValue{
+				attrs[:1],
+				{invalid, attrs[1], attrs[2]},
+			},
+			wantAttrs:   attrs[:3],
+			wantDropped: 1,
+		},
+	}
+
+	const (
+		capacity = 3
+		instName = "TestSpanAttributeCapacity_WithAllowKeyDuplication"
+		spanName = "test span"
+	)
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			te := NewTestExporter()
+			sl := NewSpanLimits()
+			sl.AttributeCountLimit = capacity
+			tp := NewTracerProvider(WithSyncer(te), WithSpanLimits(sl), WithAllowKeyDuplication())
+			_, span := tp.Tracer(instName).Start(t.Context(), spanName)
+			for _, a := range test.input {
+				span.SetAttributes(a...)
+			}
+			span.End()
+
+			require.Implements(t, (*ReadOnlySpan)(nil), span)
+			roSpan := span.(ReadOnlySpan)
+
+			// Ensure the span itself is valid.
+			assert.ElementsMatch(t, test.wantAttrs, roSpan.Attributes(), "expected attributes")
+			assert.Equal(t, test.wantDropped, roSpan.DroppedAttributes(), "dropped attributes")
+
+			snap, ok := te.GetSpan(spanName)
+			require.Truef(t, ok, "span %s not exported", spanName)
+
+			// Ensure the exported span snapshot is valid.
+			assert.ElementsMatch(t, test.wantAttrs, snap.Attributes(), "expected attributes")
+			assert.Equal(t, test.wantDropped, snap.DroppedAttributes(), "dropped attributes")
+		})
+	}
+}
+
 func TestEvents(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
@@ -1560,6 +1690,61 @@ func TestMapDeduplication(t *testing.T) {
 	assert.Zero(t, got.Links()[0].DroppedAttributeCount)
 	assert.Equal(t, []attribute.KeyValue{dedup}, got.Resource().Attributes())
 	assert.Equal(t, attribute.NewSet(dedup), got.InstrumentationScope().Attributes)
+}
+
+func TestWithAllowKeyDuplication(t *testing.T) {
+	dup := attribute.Map(
+		"map",
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	res := resource.NewSchemaless(dup)
+
+	linkSC := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{1},
+		SpanID:  trace.SpanID{1},
+	})
+
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithSampler(AlwaysSample()),
+		WithResource(res),
+		WithAllowKeyDuplication(),
+	)
+
+	_, span := tp.Tracer(
+		"scope",
+		trace.WithInstrumentationAttributes(dup),
+	).Start(
+		t.Context(),
+		"span0",
+		trace.WithAttributes(dup, attribute.String("top-key", "first"), attribute.String("top-key", "second")),
+	)
+	span.AddEvent("event", trace.WithAttributes(dup))
+	span.AddLink(trace.Link{
+		SpanContext: linkSC,
+		Attributes:  []attribute.KeyValue{dup},
+	})
+
+	got, err := endSpan(te, span)
+	require.NoError(t, err)
+
+	wantAttrs := []attribute.KeyValue{
+		dup,
+		attribute.String("top-key", "first"),
+		attribute.String("top-key", "second"),
+	}
+	assert.ElementsMatch(t, wantAttrs, got.Attributes())
+	require.Len(t, got.Events(), 1)
+	assert.Equal(t, []attribute.KeyValue{dup}, got.Events()[0].Attributes)
+	assert.Zero(t, got.Events()[0].DroppedAttributeCount)
+	require.Len(t, got.Links(), 1)
+	assert.Equal(t, []attribute.KeyValue{dup}, got.Links()[0].Attributes)
+	assert.Zero(t, got.Links()[0].DroppedAttributeCount)
+	dedup := attribute.Map("map", attribute.String("key", "second"))
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Resource().Attributes())
+	assert.Equal(t, attribute.NewSet(dup), got.InstrumentationScope().Attributes)
 }
 
 func TestWithInstrumentationVersionAndSchema(t *testing.T) {
