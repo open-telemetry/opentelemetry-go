@@ -1317,9 +1317,9 @@ func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
 
 	require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
 
-   got, ok := <-pathCh
-   require.True(t, "request was not received")
-   assert.Equal(t, "/", got, "a pathless endpoint URL must target the root path, not the default logs path")
+	got, ok := <-pathCh
+	require.True(t, ok, "request was not received")
+	assert.Equal(t, "/", got, "a pathless endpoint URL must target the root path, not the default logs path")
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)

@@ -930,10 +930,7 @@ func TestClientInstrumentationStaleStatusCode(t *testing.T) {
 func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
 	pathCh := make(chan string, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case pathCh <- r.URL.Path:
-		default:
-		}
+		pathCh <- r.URL.Path
 		w.WriteHeader(http.StatusOK)
 	}))
 	t.Cleanup(srv.Close)
@@ -954,13 +951,10 @@ func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, exporter.Shutdown(ctx)) })
 
 	require.NoError(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
-	select {
-	case gotPath := <-pathCh:
-		assert.Equal(t, "/", gotPath,
-			"a pathless endpoint URL must target the root path, not the default traces path")
-	case <-time.After(time.Second):
-		t.Fatal("timed out waiting for export request")
-	}
+
+	got, ok := <-pathCh
+	require.True(t, ok, "request was not received")
+	assert.Equal(t, "/", got, "a pathless endpoint URL must target the root path, not the default traces path")
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)
