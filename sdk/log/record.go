@@ -117,10 +117,9 @@ type Record struct {
 	// scope is the Scope that the Logger was created with.
 	scope *instrumentation.Scope
 
-	attributeValueLengthLimit   int
-	attributeValueDepthLimit    int
-	attributeValueDepthLimitSet bool
-	attributeCountLimit         int
+	attributeValueLengthLimit int
+	attributeValueDepthLimit  int
+	attributeCountLimit       int
 
 	// specifies whether we should deduplicate any key value collections or not
 	allowDupKeys bool

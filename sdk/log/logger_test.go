@@ -116,6 +116,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         r.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 3,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -157,6 +158,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         r.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 3,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -191,6 +193,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         r.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 3,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -222,6 +225,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         nowDate,
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 3,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -254,6 +258,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         rWithAllowKeyDuplication.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 5,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       5,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -290,6 +295,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         rWithDuplicatesInBody.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 5,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       5,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{

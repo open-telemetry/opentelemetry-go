@@ -29,13 +29,12 @@ const (
 )
 
 type providerConfig struct {
-	resource           *resource.Resource
-	processors         []Processor
-	attrCntLim         setting[int]
-	attrValLenLim      setting[int]
-	attrValDepthLim    setting[int]
-	attrValDepthLimSet bool
-	allowDupKeys       setting[bool]
+	resource        *resource.Resource
+	processors      []Processor
+	attrCntLim      setting[int]
+	attrValLenLim   setting[int]
+	attrValDepthLim setting[int]
+	allowDupKeys    setting[bool]
 }
 
 type experimentalOption interface {
@@ -65,7 +64,6 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 		fallback[int](defaultAttrValLenLim),
 	)
 
-	c.attrValDepthLimSet = c.attrValDepthLim.Set
 	c.attrValDepthLim = c.attrValDepthLim.Resolve(
 		fallback[int](defaultAttrValDepthLim),
 	)
@@ -78,13 +76,12 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 type LoggerProvider struct {
 	embedded.LoggerProvider
 
-	resource                    *resource.Resource
-	processors                  []Processor
-	attributeCountLimit         int
-	attributeValueLengthLimit   int
-	attributeValueDepthLimit    int
-	attributeValueDepthLimitSet bool
-	allowDupKeys                bool
+	resource                  *resource.Resource
+	processors                []Processor
+	attributeCountLimit       int
+	attributeValueLengthLimit int
+	attributeValueDepthLimit  int
+	allowDupKeys              bool
 
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
@@ -106,13 +103,12 @@ var _ log.LoggerProvider = (*LoggerProvider)(nil)
 func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 	cfg := newProviderConfig(opts)
 	return &LoggerProvider{
-		resource:                    cfg.resource,
-		processors:                  cfg.processors,
-		attributeCountLimit:         cfg.attrCntLim.Value,
-		attributeValueLengthLimit:   cfg.attrValLenLim.Value,
-		attributeValueDepthLimit:    cfg.attrValDepthLim.Value,
-		attributeValueDepthLimitSet: cfg.attrValDepthLimSet,
-		allowDupKeys:                cfg.allowDupKeys.Value,
+		resource:                  cfg.resource,
+		processors:                cfg.processors,
+		attributeCountLimit:       cfg.attrCntLim.Value,
+		attributeValueLengthLimit: cfg.attrValLenLim.Value,
+		attributeValueDepthLimit:  cfg.attrValDepthLim.Value,
+		allowDupKeys:              cfg.allowDupKeys.Value,
 	}
 }
 

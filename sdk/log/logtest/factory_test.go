@@ -18,7 +18,22 @@ import (
 )
 
 func TestRecordFactoryEmpty(t *testing.T) {
-	assert.Equal(t, sdklog.Record{}, RecordFactory{}.NewRecord())
+	var zero sdklog.Record
+	got := RecordFactory{}.NewRecord()
+
+	assert.Equal(t, zero.EventName(), got.EventName())
+	assert.Equal(t, zero.Timestamp(), got.Timestamp())
+	assert.Equal(t, zero.ObservedTimestamp(), got.ObservedTimestamp())
+	assert.Equal(t, zero.Severity(), got.Severity())
+	assert.Equal(t, zero.SeverityText(), got.SeverityText())
+	assertBody(t, zero.Body(), got)
+	assertAttributes(t, nil, got)
+	assert.Equal(t, zero.DroppedAttributes(), got.DroppedAttributes())
+	assert.Equal(t, zero.TraceID(), got.TraceID())
+	assert.Equal(t, zero.SpanID(), got.SpanID())
+	assert.Equal(t, zero.TraceFlags(), got.TraceFlags())
+	assert.Equal(t, zero.InstrumentationScope(), got.InstrumentationScope())
+	assert.Equal(t, zero.Resource(), got.Resource())
 }
 
 func TestRecordFactory(t *testing.T) {
@@ -107,6 +122,23 @@ func TestRecordFactoryMultiple(t *testing.T) {
 	assertAttributes(t, attrs, record1)
 	assert.Equal(t, 1, record1.DroppedAttributes())
 	assert.Equal(t, scope, record1.InstrumentationScope())
+}
+
+func TestRecordFactoryDisablesAttributeValueDepthLimit(t *testing.T) {
+	attr := attribute.KeyValue{Key: "attr", Value: nestedValue(70)}
+
+	r := RecordFactory{}.NewRecord()
+	r.AddAttributes(attr)
+
+	assertAttributes(t, []attribute.KeyValue{attr}, r)
+}
+
+func nestedValue(depth int) attribute.Value {
+	v := attribute.IntValue(1)
+	for range depth {
+		v = attribute.MapValue(attribute.KeyValue{Key: "level", Value: v})
+	}
+	return v
 }
 
 func assertBody(t *testing.T, want attribute.Value, r sdklog.Record) {

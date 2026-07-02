@@ -455,9 +455,8 @@ func logDepthLimitWantAttr(key string) attribute.KeyValue {
 func TestRecordAttributeValueDepthLimit(t *testing.T) {
 	t.Run("AddAttributes", func(t *testing.T) {
 		r := Record{
-			attributeValueLengthLimit:   -1,
-			attributeValueDepthLimit:    2,
-			attributeValueDepthLimitSet: true,
+			attributeValueLengthLimit: -1,
+			attributeValueDepthLimit:  2,
 		}
 		r.AddAttributes(logDepthLimitInputAttr("attr"))
 		assertKV(t, r, logDepthLimitWantAttr("attr"))
@@ -465,9 +464,8 @@ func TestRecordAttributeValueDepthLimit(t *testing.T) {
 
 	t.Run("SetAttributes", func(t *testing.T) {
 		r := Record{
-			attributeValueLengthLimit:   -1,
-			attributeValueDepthLimit:    2,
-			attributeValueDepthLimitSet: true,
+			attributeValueLengthLimit: -1,
+			attributeValueDepthLimit:  2,
 		}
 		r.SetAttributes(logDepthLimitInputAttr("attr"))
 		assertKV(t, r, logDepthLimitWantAttr("attr"))
@@ -475,9 +473,8 @@ func TestRecordAttributeValueDepthLimit(t *testing.T) {
 
 	t.Run("Negative", func(t *testing.T) {
 		r := Record{
-			attributeValueLengthLimit:   -1,
-			attributeValueDepthLimit:    -1,
-			attributeValueDepthLimitSet: true,
+			attributeValueLengthLimit: -1,
+			attributeValueDepthLimit:  -1,
 		}
 		r.AddAttributes(logDepthLimitInputAttr("attr"))
 		assertKV(t, r, logDepthLimitInputAttr("attr"))
@@ -485,9 +482,8 @@ func TestRecordAttributeValueDepthLimit(t *testing.T) {
 
 	t.Run("ZeroDefault", func(t *testing.T) {
 		r := Record{
-			attributeValueLengthLimit:   -1,
-			attributeValueDepthLimit:    0,
-			attributeValueDepthLimitSet: true,
+			attributeValueLengthLimit: -1,
+			attributeValueDepthLimit:  0,
 		}
 		r.AddAttributes(logDepthLimitInputAttr("attr"), attribute.String("scalar", "ok"))
 
@@ -517,10 +513,9 @@ func TestRecordAttributeValueDepthLimit(t *testing.T) {
 			attribute.KeyValue{Key: "over"},
 		)
 		r := Record{
-			attributeValueLengthLimit:   -1,
-			attributeValueDepthLimit:    1,
-			attributeValueDepthLimitSet: true,
-			allowDupKeys:                true,
+			attributeValueLengthLimit: -1,
+			attributeValueDepthLimit:  1,
+			allowDupKeys:              true,
 		}
 		r.AddAttributes(dup)
 		assertKV(t, r, want)
@@ -530,8 +525,7 @@ func TestRecordAttributeValueDepthLimit(t *testing.T) {
 func TestRecordBodyAttributeValueDepthLimitNotApplied(t *testing.T) {
 	t.Run("DeduplicatesWithoutDepthLimit", func(t *testing.T) {
 		r := Record{
-			attributeValueDepthLimit:    2,
-			attributeValueDepthLimitSet: true,
+			attributeValueDepthLimit: 2,
 		}
 		r.SetBody(logDepthLimitInputAttr("body").Value)
 		assert.True(t, valueEqual(logDepthLimitInputAttr("body").Value, r.Body()))
@@ -549,9 +543,8 @@ func TestRecordBodyAttributeValueDepthLimitNotApplied(t *testing.T) {
 			attribute.Map("over", attribute.String("leaf", "value")),
 		)
 		r := Record{
-			attributeValueDepthLimit:    1,
-			attributeValueDepthLimitSet: true,
-			allowDupKeys:                true,
+			attributeValueDepthLimit: 1,
+			allowDupKeys:             true,
 		}
 		r.SetBody(body)
 		assert.True(t, valueEqual(want, r.Body()))
@@ -559,8 +552,7 @@ func TestRecordBodyAttributeValueDepthLimitNotApplied(t *testing.T) {
 
 	t.Run("Zero", func(t *testing.T) {
 		r := Record{
-			attributeValueDepthLimit:    0,
-			attributeValueDepthLimitSet: true,
+			attributeValueDepthLimit: 0,
 		}
 		body := attribute.SliceValue(attribute.StringValue("body"))
 		r.SetBody(body)

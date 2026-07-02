@@ -50,10 +50,7 @@ func (f RecordFactory) NewRecord() sdklog.Record {
 	// Set to unlimited so attributes are set exactly.
 	set(r, "attributeCountLimit", -1)
 	set(r, "attributeValueLengthLimit", -1)
-	if len(f.Attributes) != 0 {
-		set(r, "attributeValueDepthLimit", -1)
-		set(r, "attributeValueDepthLimitSet", true)
-	}
+	set(r, "attributeValueDepthLimit", -1)
 
 	r.SetEventName(f.EventName)
 	r.SetTimestamp(f.Timestamp)
