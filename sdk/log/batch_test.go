@@ -312,6 +312,7 @@ func TestBatchProcessor(t *testing.T) {
 			)
 			t.Cleanup(func() {
 				releaseBlockedExport()
+				synctest.Wait()
 				_ = b.Shutdown(t.Context())
 			})
 
@@ -320,14 +321,15 @@ func TestBatchProcessor(t *testing.T) {
 			assert.NoError(t, b.OnEmit(t.Context(), &r))
 			synctest.Wait()
 
-			var captured []Record
-			select {
-			case captured = <-exported:
-			default:
-				require.Fail(t, "exporter did not receive records")
-			}
+			captured, ok := <-exported
+			require.True(t, ok, "exporter did not receive records")
 			if assert.NotEmpty(t, captured) {
-				assert.Equal(t, "test-message", captured[0].Body().AsString())
+				assert.Equal(
+					t,
+					"test-message",
+					captured[0].Body().AsString(),
+					"captured record body differs from the emitted record",
+				)
 			}
 
 			// If the BatchProcessor reuses or clears the exported buffer before
@@ -338,12 +340,13 @@ func TestBatchProcessor(t *testing.T) {
 			synctest.Wait()
 
 			if assert.NotEmpty(t, captured) {
-				assert.Equal(t, "test-message", captured[0].Body().AsString())
+				assert.Equal(
+					t,
+					"test-message",
+					captured[0].Body().AsString(),
+					"captured record body was mutated before Export returned",
+				)
 			}
-
-			releaseBlockedExport()
-			synctest.Wait()
-			assert.NoError(t, b.Shutdown(t.Context()))
 		})
 	})
 
