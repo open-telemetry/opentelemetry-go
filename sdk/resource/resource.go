@@ -11,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/internal/x"
 )
 
@@ -90,7 +90,7 @@ func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
 		return &Resource{}
 	}
 
-	attrs, _ = attrdedup.KeyValues(attrs)
+	attrs, _ = attrnorm.KeyValuesDedup(attrs)
 
 	// Ensure attributes comply with the specification:
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/common/README.md#attribute

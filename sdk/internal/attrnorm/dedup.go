@@ -5,7 +5,7 @@
 // source: internal/shared/attrdedup/dedup.go.tmpl
 
 // Package attrnorm normalizes attribute values.
-package attrnorm
+package attrnorm // import "go.opentelemetry.io/otel/sdk/internal/attrnorm"
 
 import (
 	"reflect"

@@ -10,6 +10,10 @@ const (
 	// attribute value length, unlimited.
 	DefaultAttributeValueLengthLimit = -1
 
+	// DefaultAttributeValueDepthLimit is the default maximum allowed depth for
+	// nested attribute values.
+	DefaultAttributeValueDepthLimit = 64
+
 	// DefaultAttributeCountLimit is the default maximum number of attributes
 	// a span can have.
 	DefaultAttributeCountLimit = 128
@@ -42,6 +46,15 @@ type SpanLimits struct {
 	//
 	// Setting this to a negative value means no limit is applied.
 	AttributeValueLengthLimit int
+
+	// AttributeValueDepthLimit is the maximum allowed depth for nested
+	// attribute values. Any slice or map value at or beyond this depth will be
+	// replaced with an empty value.
+	//
+	// Setting this to zero means only scalar values are allowed.
+	//
+	// Setting this to a negative value means no limit is applied.
+	AttributeValueDepthLimit int
 
 	// AttributeCountLimit is the maximum allowed span attribute count. Any
 	// attribute added to a span once this limit is reached will be dropped.
@@ -94,6 +107,8 @@ type SpanLimits struct {
 // • AttributeValueLengthLimit: OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT
 // (default: unlimited)
 //
+// • AttributeValueDepthLimit: (default: 64)
+//
 // • AttributeCountLimit: OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT (default: 128)
 //
 // • EventCountLimit: OTEL_SPAN_EVENT_COUNT_LIMIT (default: 128)
@@ -107,6 +122,7 @@ type SpanLimits struct {
 func NewSpanLimits() SpanLimits {
 	return SpanLimits{
 		AttributeValueLengthLimit:   env.SpanAttributeValueLength(DefaultAttributeValueLengthLimit),
+		AttributeValueDepthLimit:    DefaultAttributeValueDepthLimit,
 		AttributeCountLimit:         env.SpanAttributeCount(DefaultAttributeCountLimit),
 		EventCountLimit:             env.SpanEventCount(DefaultEventCountLimit),
 		LinkCountLimit:              env.SpanLinkCount(DefaultLinkCountLimit),

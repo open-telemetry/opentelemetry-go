@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	"go.opentelemetry.io/otel/trace"
@@ -143,7 +143,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		return noop.NewTracerProvider().Tracer(name, opts...)
 	}
 	c := trace.NewTracerConfig(opts...)
-	attrs, _ := attrdedup.Set(c.InstrumentationAttributes())
+	attrs, _ := attrnorm.SetWithDepthLimit(c.InstrumentationAttributes(), p.spanLimits.AttributeValueDepthLimit)
 	if name == "" {
 		name = defaultTracerName
 	}
@@ -412,6 +412,28 @@ func WithSampler(s Sampler) TracerProviderOption {
 	})
 }
 
+// WithAttributeValueDepthLimit sets the maximum allowed depth for nested
+// attribute values. Any slice or map value at or beyond this depth will be
+// replaced with an empty value.
+//
+// This limit applies to span, event, link, and instrumentation scope
+// attributes processed by this TracerProvider.
+//
+// Setting this to zero means the default limit is used.
+//
+// Setting this to a negative value means no limit is applied.
+//
+// By default, 64 will be used.
+func WithAttributeValueDepthLimit(limit int) TracerProviderOption {
+	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
+		if limit == 0 {
+			limit = DefaultAttributeValueDepthLimit
+		}
+		cfg.spanLimits.AttributeValueDepthLimit = limit
+		return cfg
+	})
+}
+
 // WithSpanLimits returns a TracerProviderOption that configures a
 // TracerProvider to use the SpanLimits sl. These SpanLimits bound any Span
 // created by a Tracer from the TracerProvider.
@@ -430,6 +452,9 @@ func WithSampler(s Sampler) TracerProviderOption {
 func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 	if sl.AttributeValueLengthLimit <= 0 {
 		sl.AttributeValueLengthLimit = DefaultAttributeValueLengthLimit
+	}
+	if sl.AttributeValueDepthLimit <= 0 {
+		sl.AttributeValueDepthLimit = DefaultAttributeValueDepthLimit
 	}
 	if sl.AttributeCountLimit <= 0 {
 		sl.AttributeCountLimit = DefaultAttributeCountLimit
