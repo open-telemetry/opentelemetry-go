@@ -315,7 +315,8 @@ func TestUnmarshalAcceptsBothHexCases(t *testing.T) {
 			require.NoError(t, UnmarshalExportTraceServiceRequest([]byte(input), &req))
 
 			s := req.ResourceSpans[0].ScopeSpans[0].Spans[0]
-			assert.Equal(t,
+			assert.Equal(
+				t,
 				[]byte{0x5B, 0x8E, 0xFF, 0xF7, 0x98, 0x03, 0x81, 0x03, 0xD2, 0x69, 0xB6, 0x33, 0x81, 0x3F, 0xC6, 0x0C},
 				s.TraceId,
 			)
@@ -526,7 +527,8 @@ func TestRoundTrip(t *testing.T) {
 	require.NotEmpty(t, rs.Resource.EntityRefs)
 	assert.Equal(t, "http://example.com", rs.Resource.EntityRefs[0].SchemaUrl)
 	assert.Equal(t, "service.instance", rs.Resource.EntityRefs[0].Type)
-	assert.Equal(t,
+	assert.Equal(
+		t,
 		[]string{"service.instance.id", "service.name", "service.namespace"},
 		rs.Resource.EntityRefs[0].IdKeys,
 	)
