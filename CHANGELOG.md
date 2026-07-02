@@ -28,7 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Optimize `go.opentelemetry.io/otel/sdk/log` to use `sync.Pool` for recycling record buffers in the batch log processor, reducing reducing bytes allocated during batch export handoff.
+- Optimize `go.opentelemetry.io/otel/sdk/log` to use `sync.Pool` for recycling record buffers in the batch log processor, reducing bytes allocated during batch export handoff. (#8415)
 - ⚠️ **Breaking Change:** Use `go.opentelemetry.io/otel/attribute.Value` and `go.opentelemetry.io/otel/attribute.KeyValue` for log bodies and attributes in `go.opentelemetry.io/otel/log`, `go.opentelemetry.io/otel/log/logtest`, `go.opentelemetry.io/otel/sdk/log`, and `go.opentelemetry.io/otel/sdk/log/logtest`. (#8490)
 - Use `go.opentelemetry.io/otel/attribute.Value` JSON encoding for log bodies and attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#8490)
 - Improve the performance of hashing `BOOLSLICE`, `INT64SLICE`, `FLOAT64SLICE`, and `STRINGSLICE` attribute values by avoiding reflection for short slices in `go.opentelemetry.io/otel/attribute`. (#8511)
@@ -50,8 +50,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix off-by-one error in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar`, which prevented the first exemplar after the reservoir is filled from being sampled. (#8309)
 - Fix histogram datapoint reuse in `go.opentelemetry.io/otel/sdk/metric` aggregation to avoid leaking stale sum/min/max values when they are disabled in subsequent collections. (#8403)
 - Prevent zero-hash collapse to empty set in `go.opentelemetry.io/otel/attribute` when computed hash is zero for non-empty input. (#8402)
-
-
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
