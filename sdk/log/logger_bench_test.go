@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
@@ -74,7 +75,13 @@ func BenchmarkLoggerEmitObservability(b *testing.B) {
 	orig := otel.GetMeterProvider()
 	b.Cleanup(func() { otel.SetMeterProvider(orig) })
 	reader := metric.NewManualReader()
-	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	dropBLPMetrics := metric.NewView(
+		metric.Instrument{
+			Scope: instrumentation.Scope{Name: observ.ScopeName},
+		},
+		metric.Stream{Aggregation: metric.AggregationDrop{}},
+	)
+	mp := metric.NewMeterProvider(metric.WithReader(reader), metric.WithView(dropBLPMetrics))
 	otel.SetMeterProvider(mp)
 
 	run := func(logger *logger) func(b *testing.B) {
