@@ -171,6 +171,8 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 				currentBufPtr := bufPtr
 				qLen = b.q.TryDequeue(*currentBufPtr, func(r []Record) bool {
 					ok := b.exporter.EnqueueExport(r, func(_ []Record) {
+						// Clear the full buffer (not just r) before pooling it to avoid retaining
+						// stale records in the tail when a later dequeue exports a smaller batch.
 						clear(*currentBufPtr)
 						b.pool.Put(currentBufPtr)
 					})

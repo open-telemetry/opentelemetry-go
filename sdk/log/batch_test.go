@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 	"unsafe"
 
@@ -689,97 +690,79 @@ func (*blockingRecordExporter) Shutdown(context.Context) error   { return nil }
 func (*blockingRecordExporter) ForceFlush(context.Context) error { return nil }
 
 func TestBatchProcessorExportBufferLifetime(t *testing.T) {
-	exportDone := make(chan struct{})
-	exporterStarted := make(chan struct{})
+	synctest.Test(t, func(t *testing.T) {
+		exportDone := make(chan struct{})
 
-	// Safe cleanup to guarantee exportDone is closed to prevent hangs during Shutdown()
-	defer func() {
-		select {
-		case <-exportDone:
-		default:
-			close(exportDone)
-		}
-	}()
-
-	var capturedRecords []Record
-	var mu sync.Mutex
-	var startOnce sync.Once
-
-	exporter := &blockingRecordExporter{
-		ExportFunc: func(_ context.Context, records []Record) error {
-			mu.Lock()
-			capturedRecords = records
-			mu.Unlock()
-			startOnce.Do(func() {
-				close(exporterStarted)
-			})
-			<-exportDone
-			return nil
-		},
-	}
-
-	b := NewBatchProcessor(
-		exporter,
-		WithMaxQueueSize(10),
-		WithExportMaxBatchSize(1),
-		WithExportInterval(time.Hour), // Large interval to prevent ticker noise
-	)
-	t.Cleanup(func() { _ = b.Shutdown(t.Context()) })
-
-	// Emit 1 record to trigger immediate batch export (batch size is 1)
-	r := Record{}
-	r.SetBody(attribute.StringValue("test-message"))
-	assert.NoError(t, b.OnEmit(t.Context(), &r))
-
-	// Wait for the exporter to start processing
-	select {
-	case <-exporterStarted:
-	case <-time.After(10 * time.Second):
-		t.Fatal("exporter did not start in time")
-	}
-
-	// Read and assert that the record remains completely intact while blocked.
-	// We read concurrently to let the race detector (go test -race) catch any
-	// concurrent mutation/clear by the poll loop.
-	stopAssert := make(chan struct{})
-	doneAssert := make(chan struct{})
-	go func() {
-		defer close(doneAssert)
-		for {
+		// Safe cleanup to guarantee exportDone is closed to prevent hangs during Shutdown()
+		defer func() {
 			select {
-			case <-stopAssert:
-				return
+			case <-exportDone:
 			default:
-				mu.Lock()
-				recs := capturedRecords
-				mu.Unlock()
-				if len(recs) > 0 {
-					if recs[0].Body().AsString() != "test-message" {
-						t.Errorf(
-							"records slice mutated prematurely: expected body 'test-message', got %q",
-							recs[0].Body().AsString(),
-						)
-					}
-				}
-				time.Sleep(time.Microsecond)
+				close(exportDone)
 			}
+		}()
+
+		var capturedRecords []Record
+		var mu sync.Mutex
+
+		exporter := &blockingRecordExporter{
+			ExportFunc: func(_ context.Context, records []Record) error {
+				mu.Lock()
+				capturedRecords = records
+				mu.Unlock()
+				<-exportDone
+				return nil
+			},
 		}
-	}()
 
-	// Emit another record to trigger further poll loop activity (won't be exported yet since export buffer size is 1)
-	r2 := Record{}
-	r2.SetBody(attribute.StringValue("another-message"))
-	assert.NoError(t, b.OnEmit(t.Context(), &r2))
+		b := NewBatchProcessor(
+			exporter,
+			WithMaxQueueSize(10),
+			WithExportMaxBatchSize(1),
+			WithExportInterval(time.Hour), // Large interval to prevent ticker noise
+		)
 
-	// Let the assert goroutine run for a short duration
-	time.Sleep(10 * time.Millisecond)
+		// Emit 1 record to trigger immediate batch export (batch size is 1).
+		r := Record{}
+		r.SetBody(attribute.StringValue("test-message"))
+		assert.NoError(t, b.OnEmit(t.Context(), &r))
 
-	// Stop the asserting loop first before unblocking the export, avoiding races with clearRecords
-	close(stopAssert)
-	<-doneAssert
+		// Wait for all goroutines to settle. The export goroutine will be
+		// blocked inside ExportFunc holding the records.
+		synctest.Wait()
 
-	// Complete the export
-	close(exportDone)
+		// Verify the records are intact while the exporter is blocked.
+		mu.Lock()
+		if assert.NotEmpty(t, capturedRecords) {
+			assert.Equal(t, "test-message", capturedRecords[0].Body().AsString(),
+				"records mutated while exporter is blocked")
+		}
+		mu.Unlock()
+
+		// Emit another record to trigger further poll loop activity.
+		// This won't be exported yet since the previous export is blocked.
+		r2 := Record{}
+		r2.SetBody(attribute.StringValue("another-message"))
+		assert.NoError(t, b.OnEmit(t.Context(), &r2))
+
+		// Wait for all goroutines to settle again. The poll loop should
+		// have processed the trigger without mutating the blocked export's
+		// records.
+		synctest.Wait()
+
+		// Verify records are STILL intact.
+		mu.Lock()
+		if assert.NotEmpty(t, capturedRecords) {
+			assert.Equal(t, "test-message", capturedRecords[0].Body().AsString(),
+				"records slice mutated by poll loop activity")
+		}
+		mu.Unlock()
+
+		// Complete the export and shut down cleanly.
+		close(exportDone)
+		synctest.Wait()
+		_ = b.Shutdown(t.Context())
+	})
 }
 
 func BenchmarkBatchProcessorExport(b *testing.B) {
