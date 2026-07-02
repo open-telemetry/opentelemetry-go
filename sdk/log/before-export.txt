@@ -1,0 +1,6 @@
+goos: darwin
+goarch: arm64
+pkg: go.opentelemetry.io/otel/sdk/log
+cpu: Apple M1
+BenchmarkBatchProcessorExport-8   	signal: interrupt
+FAIL	go.opentelemetry.io/otel/sdk/log	2.306s

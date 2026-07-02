@@ -728,7 +728,7 @@ func TestBatchProcessorExportBufferLifetime(t *testing.T) {
 
 	// Emit 1 record to trigger immediate batch export (batch size is 1)
 	r := Record{}
-	r.SetBody(log.StringValue("test-message"))
+	r.SetBody(attribute.StringValue("test-message"))
 	assert.NoError(t, b.OnEmit(t.Context(), &r))
 
 	// Wait for the exporter to start processing
@@ -768,7 +768,7 @@ func TestBatchProcessorExportBufferLifetime(t *testing.T) {
 
 	// Emit another record to trigger further poll loop activity (won't be exported yet since export buffer size is 1)
 	r2 := Record{}
-	r2.SetBody(log.StringValue("another-message"))
+	r2.SetBody(attribute.StringValue("another-message"))
 	assert.NoError(t, b.OnEmit(t.Context(), &r2))
 
 	// Let the assert goroutine run for a short duration
@@ -793,7 +793,7 @@ func BenchmarkBatchProcessorExport(b *testing.B) {
 	b.Cleanup(func() { _ = bp.Shutdown(b.Context()) })
 
 	r := new(Record)
-	r.SetBody(log.BoolValue(true))
+	r.SetBody(attribute.BoolValue(true))
 	ctx := b.Context()
 
 	b.ResetTimer()
