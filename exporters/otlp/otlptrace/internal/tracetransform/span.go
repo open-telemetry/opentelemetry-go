@@ -100,8 +100,8 @@ func span(sd tracesdk.ReadOnlySpan, arena *Arena) *tracepb.Span {
 
 	sdStatus := sd.Status()
 	s := &tracepb.Span{
-		TraceId:                tid[:],
-		SpanId:                 sid[:],
+		TraceId:                arena.allocTraceID(tid),
+		SpanId:                 arena.allocSpanID(sid),
 		TraceState:             spanContext.TraceState().String(),
 		Status:                 status(sdStatus.Code, sdStatus.Description),
 		StartTimeUnixNano:      uint64(max(0, sd.StartTime().UnixNano())), // nolint:gosec // Overflow checked.
@@ -118,7 +118,7 @@ func span(sd tracesdk.ReadOnlySpan, arena *Arena) *tracepb.Span {
 
 	sdParent := sd.Parent()
 	if psid := sdParent.SpanID(); psid.IsValid() {
-		s.ParentSpanId = psid[:]
+		s.ParentSpanId = arena.allocSpanID(psid)
 	}
 	s.Flags = buildSpanFlagsWith(spanContext.TraceFlags(), sdParent)
 
@@ -169,8 +169,8 @@ func links(links []tracesdk.Link, arena *Arena) []*tracepb.Span_Link {
 		flags := buildSpanFlagsWith(otLink.SpanContext.TraceFlags(), otLink.SpanContext)
 
 		sl = append(sl, &tracepb.Span_Link{
-			TraceId:                tid[:],
-			SpanId:                 sid[:],
+			TraceId:                arena.allocTraceID(tid),
+			SpanId:                 arena.allocSpanID(sid),
 			Attributes:             KeyValues(otLink.Attributes, arena),
 			DroppedAttributesCount: clampUint32(otLink.DroppedAttributeCount),
 			Flags:                  flags,

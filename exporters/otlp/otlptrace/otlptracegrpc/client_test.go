@@ -352,7 +352,8 @@ func TestExporterWithArena(t *testing.T) {
 	const spanCount = 2048
 
 	for range spanCount {
-		_, span := tr.Start(ctx, "AlwaysSample")
+		ctxWithSpan, span := tr.Start(ctx, "AlwaysSample")
+		ctx = ctxWithSpan
 		sc := span.SpanContext()
 
 		traceIDStr := sc.TraceID().String()
