@@ -133,6 +133,19 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 			},
 		},
 		{
+			name: "ZeroAttributeValueDepthLimitOption",
+			options: []LoggerProviderOption{
+				WithAttributeValueDepthLimit(0),
+			},
+			want: &LoggerProvider{
+				resource:                    resource.Default(),
+				attributeCountLimit:         defaultAttrCntLim,
+				attributeValueLengthLimit:   defaultAttrValLenLim,
+				attributeValueDepthLimit:    defaultAttrValDepthLim,
+				attributeValueDepthLimitSet: true,
+			},
+		},
+		{
 			name: "Environment",
 			envars: map[string]string{
 				envarAttrCntLim:    strconv.Itoa(attrCntLim),
@@ -332,6 +345,30 @@ func TestLoggerProviderAttributeValueDepthLimit(t *testing.T) {
 	assert.Equal(t, []attribute.KeyValue{logDepthLimitInputAttr("resource")}, got.Resource().Attributes())
 	assert.Equal(t, attribute.NewSet(logDepthLimitWantAttr("scope")), got.InstrumentationScope().Attributes)
 	assert.Equal(t, []attribute.KeyValue{logDepthLimitWantAttr("attr")}, recordAttributes(got))
+	assert.True(t, valueEqual(logDepthLimitInputAttr("body").Value, got.Body()))
+}
+
+func TestLoggerProviderAttributeValueDepthLimitZeroDefault(t *testing.T) {
+	p := newProcessor("processor")
+	lp := NewLoggerProvider(
+		WithProcessor(p),
+		WithAttributeValueDepthLimit(0),
+		WithResource(resource.Empty()),
+	)
+	l := lp.Logger("scope", log.WithInstrumentationAttributes(logDepthLimitInputAttr("scope")))
+
+	var in log.Record
+	in.SetBody(logDepthLimitInputAttr("body").Value)
+	in.AddAttributes(logDepthLimitInputAttr("attr"), attribute.String("scalar", "ok"))
+	l.Emit(t.Context(), in)
+
+	require.Len(t, p.records, 1)
+	got := p.records[0]
+	assert.Equal(t, attribute.NewSet(logDepthLimitInputAttr("scope")), got.InstrumentationScope().Attributes)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		logDepthLimitInputAttr("attr"),
+		attribute.String("scalar", "ok"),
+	}, recordAttributes(got))
 	assert.True(t, valueEqual(logDepthLimitInputAttr("body").Value, got.Body()))
 }
 

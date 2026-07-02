@@ -1658,7 +1658,7 @@ func TestAttributeValueDepthLimitNegativeUnlimited(t *testing.T) {
 	assert.Equal(t, []attribute.KeyValue{depthLimitInputAttr("span")}, got.Attributes())
 }
 
-func TestAttributeValueDepthLimitZero(t *testing.T) {
+func TestAttributeValueDepthLimitZeroDefault(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(
 		WithSyncer(te),
@@ -1672,7 +1672,7 @@ func TestAttributeValueDepthLimitZero(t *testing.T) {
 	got, err := endSpan(te, span)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		{Key: "span"},
+		depthLimitInputAttr("span"),
 		attribute.String("scalar", "ok"),
 	}, got.Attributes())
 }

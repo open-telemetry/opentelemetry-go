@@ -147,6 +147,10 @@ func TestAttributeValueDepthLimitOptionPrecedence(t *testing.T) {
 		WithRawSpanLimits(limits),
 	).spanLimits.AttributeValueDepthLimit)
 
+	assert.Equal(t, DefaultAttributeValueDepthLimit, NewTracerProvider(
+		WithAttributeValueDepthLimit(0),
+	).spanLimits.AttributeValueDepthLimit)
+
 	limits.AttributeValueDepthLimit = 0
 	assert.Equal(t, DefaultAttributeValueDepthLimit, NewTracerProvider(
 		WithSpanLimits(limits),

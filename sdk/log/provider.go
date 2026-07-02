@@ -291,13 +291,16 @@ func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 // This limit applies to log record and instrumentation scope attributes
 // processed by this LoggerProvider.
 //
-// Setting this to zero means only scalar values are allowed.
+// Setting this to zero means the default limit is used.
 //
 // Setting this to a negative value means no limit is applied.
 //
 // By default, 64 will be used.
 func WithAttributeValueDepthLimit(limit int) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
+		if limit == 0 {
+			limit = defaultAttrValDepthLim
+		}
 		cfg.attrValDepthLim = newSetting(limit)
 		return cfg
 	})

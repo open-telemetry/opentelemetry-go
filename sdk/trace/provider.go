@@ -419,13 +419,16 @@ func WithSampler(s Sampler) TracerProviderOption {
 // This limit applies to span, event, link, and instrumentation scope
 // attributes processed by this TracerProvider.
 //
-// Setting this to zero means only scalar values are allowed.
+// Setting this to zero means the default limit is used.
 //
 // Setting this to a negative value means no limit is applied.
 //
 // By default, 64 will be used.
 func WithAttributeValueDepthLimit(limit int) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
+		if limit == 0 {
+			limit = DefaultAttributeValueDepthLimit
+		}
 		cfg.spanLimits.AttributeValueDepthLimit = limit
 		return cfg
 	})
