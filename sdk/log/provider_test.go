@@ -329,7 +329,7 @@ func TestLoggerProviderAttributeValueDepthLimit(t *testing.T) {
 
 	require.Len(t, p.records, 1)
 	got := p.records[0]
-	assert.Equal(t, []attribute.KeyValue{logDepthLimitWantAttr("resource")}, got.Resource().Attributes())
+	assert.Equal(t, []attribute.KeyValue{logDepthLimitInputAttr("resource")}, got.Resource().Attributes())
 	assert.Equal(t, attribute.NewSet(logDepthLimitWantAttr("scope")), got.InstrumentationScope().Attributes)
 	assert.Equal(t, []attribute.KeyValue{logDepthLimitWantAttr("attr")}, recordAttributes(got))
 	assert.True(t, valueEqual(logDepthLimitInputAttr("body").Value, got.Body()))

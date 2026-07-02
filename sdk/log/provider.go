@@ -70,8 +70,6 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 		fallback[int](defaultAttrValDepthLim),
 	)
 
-	c.resource = resourceWithDepthLimit(c.resource, c.attrValDepthLim.Value)
-
 	return c
 }
 
@@ -290,8 +288,8 @@ func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 // attribute values. Any slice or map value at or beyond this depth will be
 // replaced with an empty value.
 //
-// This limit applies to log record attributes, instrumentation scope
-// attributes, and resource attributes processed by this LoggerProvider.
+// This limit applies to log record and instrumentation scope attributes
+// processed by this LoggerProvider.
 //
 // Setting this to zero means only scalar values are allowed.
 //
@@ -325,12 +323,4 @@ func WithAllowKeyDuplication() LoggerProviderOption {
 		cfg.allowDupKeys = newSetting(true)
 		return cfg
 	})
-}
-
-func resourceWithDepthLimit(r *resource.Resource, depthLimit int) *resource.Resource {
-	attrs, changed := attrnorm.SetWithDepthLimit(*r.Set(), depthLimit)
-	if !changed {
-		return r
-	}
-	return resource.NewWithAttributes(r.SchemaURL(), attrs.ToSlice()...)
 }

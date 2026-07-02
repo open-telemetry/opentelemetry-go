@@ -13,7 +13,6 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // MeterProvider handles the creation and coordination of Meters. All Meters
@@ -26,10 +25,8 @@ type MeterProvider struct {
 	pipes  pipelines
 	meters cache[instrumentation.Scope, *meter]
 
-	forceFlush, shutdown        func(context.Context) error
-	attributeValueDepthLimit    int
-	attributeValueDepthLimitSet bool
-	stopped                     atomic.Bool
+	forceFlush, shutdown func(context.Context) error
+	stopped              atomic.Bool
 }
 
 // Compile-time check MeterProvider implements metric.MeterProvider.
@@ -53,10 +50,8 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 			conf.exemplarFilter,
 			conf.cardinalityLimit,
 		),
-		forceFlush:                  flush,
-		shutdown:                    sdown,
-		attributeValueDepthLimit:    conf.attributeValueDepthLimit,
-		attributeValueDepthLimitSet: conf.attributeValueDepthLimitSet,
+		forceFlush: flush,
+		shutdown:   sdown,
 	}
 	// Log after creation so all readers show correctly they are registered.
 	global.Info(
@@ -88,7 +83,7 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	}
 
 	c := metric.NewMeterConfig(options...)
-	attrs, _ := attrnorm.SetWithDepthLimit(c.InstrumentationAttributes(), mp.attrValueDepthLimit())
+	attrs, _ := attrnorm.SetDedup(c.InstrumentationAttributes())
 	s := instrumentation.Scope{
 		Name:       name,
 		Version:    c.InstrumentationVersion(),
@@ -157,19 +152,4 @@ func (mp *MeterProvider) Shutdown(ctx context.Context) error {
 		return mp.shutdown(ctx)
 	}
 	return nil
-}
-
-func (mp *MeterProvider) attrValueDepthLimit() int {
-	if mp.attributeValueDepthLimitSet || mp.attributeValueDepthLimit != 0 {
-		return mp.attributeValueDepthLimit
-	}
-	return defaultAttributeValueDepthLimit
-}
-
-func resourceWithDepthLimit(r *resource.Resource, depthLimit int) *resource.Resource {
-	attrs, changed := attrnorm.SetWithDepthLimit(*r.Set(), depthLimit)
-	if !changed {
-		return r
-	}
-	return resource.NewWithAttributes(r.SchemaURL(), attrs.ToSlice()...)
 }

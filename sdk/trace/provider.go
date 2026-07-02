@@ -416,7 +416,7 @@ func WithSampler(s Sampler) TracerProviderOption {
 // attribute values. Any slice or map value at or beyond this depth will be
 // replaced with an empty value.
 //
-// This limit applies to span, event, link, instrumentation scope, and resource
+// This limit applies to span, event, link, and instrumentation scope
 // attributes processed by this TracerProvider.
 //
 // Setting this to zero means only scalar values are allowed.
@@ -530,14 +530,5 @@ func ensureValidTracerProviderConfig(cfg tracerProviderConfig) tracerProviderCon
 	if cfg.resource == nil {
 		cfg.resource = resource.Default()
 	}
-	cfg.resource = resourceWithDepthLimit(cfg.resource, cfg.spanLimits.AttributeValueDepthLimit)
 	return cfg
-}
-
-func resourceWithDepthLimit(r *resource.Resource, depthLimit int) *resource.Resource {
-	attrs, changed := attrnorm.SetWithDepthLimit(*r.Set(), depthLimit)
-	if !changed {
-		return r
-	}
-	return resource.NewWithAttributes(r.SchemaURL(), attrs.ToSlice()...)
 }

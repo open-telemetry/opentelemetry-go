@@ -1638,7 +1638,7 @@ func TestAttributeValueDepthLimit(t *testing.T) {
 	assert.Equal(t, []attribute.KeyValue{depthLimitWantAttr("event")}, got.Events()[0].Attributes)
 	require.Len(t, got.Links(), 1)
 	assert.Equal(t, []attribute.KeyValue{depthLimitWantAttr("link")}, got.Links()[0].Attributes)
-	assert.Equal(t, []attribute.KeyValue{depthLimitWantAttr("resource")}, got.Resource().Attributes())
+	assert.Equal(t, []attribute.KeyValue{depthLimitInputAttr("resource")}, got.Resource().Attributes())
 	assert.Equal(t, attribute.NewSet(depthLimitWantAttr("scope")), got.InstrumentationScope().Attributes)
 }
 
