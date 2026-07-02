@@ -759,7 +759,7 @@ func BenchmarkBatchProcessorExport(b *testing.B) {
 		WithExportInterval(time.Hour),
 		WithExportTimeout(time.Hour),
 	)
-	b.Cleanup(func() { _ = bp.Shutdown(b.Context()) })
+	b.Cleanup(func() { _ = bp.Shutdown(context.Background()) })
 
 	r := new(Record)
 	r.SetBody(attribute.BoolValue(true))
