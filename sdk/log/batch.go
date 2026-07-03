@@ -6,6 +6,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"context"
 	"errors"
+	"math"
 	"slices"
 	"sync"
 	"sync/atomic"
@@ -181,7 +182,7 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 
 			if d := b.q.Dropped(); d > 0 {
 				if b.inst != nil {
-					b.inst.ProcessedQueueFull(ctx, int64(d)) //nolint: gosec
+					b.inst.ProcessedQueueFull(ctx, int64(min(math.MaxInt64, d))) // nolint:gosec
 				}
 				global.Warn("dropped log records", "dropped", d)
 			}
@@ -250,7 +251,11 @@ func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 	case <-b.pollDone:
 	case <-ctx.Done():
 		// Out of time.
-		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
+		var instErr error
+		if b.inst != nil {
+			instErr = b.inst.Shutdown()
+		}
+		return errors.Join(ctx.Err(), instErr, b.exporter.Shutdown(ctx))
 	}
 
 	// Flush remaining queued before exporter shutdown.
