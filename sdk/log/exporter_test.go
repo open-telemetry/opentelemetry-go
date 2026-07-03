@@ -594,6 +594,10 @@ func TestBufferExporter(t *testing.T) {
 				exp := newTestExporter(nil)
 				t.Cleanup(exp.Stop)
 				e := newBufferExporter(exp, 1)
+				t.Cleanup(func() {
+					//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+					require.NoError(t, e.Shutdown(context.Background()))
+				})
 
 				released := make(chan []Record, 1)
 				release := func(r []Record) {
@@ -616,6 +620,10 @@ func TestBufferExporter(t *testing.T) {
 				exp := newTestExporter(nil)
 				t.Cleanup(exp.Stop)
 				e := newBufferExporter(exp, 1)
+				t.Cleanup(func() {
+					//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+					require.NoError(t, e.Shutdown(context.Background()))
+				})
 
 				released := false
 				release := func([]Record) {
@@ -631,7 +639,7 @@ func TestBufferExporter(t *testing.T) {
 				t.Cleanup(exp.Stop)
 				e := newBufferExporter(exp, 1)
 
-				_ = e.Shutdown(t.Context())
+				require.NoError(t, e.Shutdown(t.Context()))
 
 				released := false
 				release := func([]Record) {

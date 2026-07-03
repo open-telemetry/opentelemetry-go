@@ -314,7 +314,7 @@ func TestBatchProcessor(t *testing.T) {
 				releaseBlockedExport()
 				synctest.Wait()
 				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
-				_ = b.Shutdown(context.Background())
+				assert.NoError(t, b.Shutdown(context.Background()))
 			})
 
 			r := Record{}
