@@ -16,36 +16,21 @@ jobs:
     strategy:
       matrix:
         go-version: ["1.26.0", "1.25.0"]
-        include:
-          - goos: aix
-            goarch: ppc64
-          - goos: darwin
-            goarch: amd64
-          - goos: darwin
-            goarch: arm64
-          - goos: js
-            goarch: wasm
-          - goos: linux
-            goarch: "386"
-          - goos: linux
-            goarch: amd64
-          - goos: linux
-            goarch: arm64
-          - goos: linux
-            goarch: ppc64le
-          - goos: linux
-            goarch: riscv64
-          - goos: linux
-            goarch: arm
-            goarm: "7"
-          - goos: linux
-            goarch: s390x
-          - goos: windows
-            goarch: "386"
-          - goos: windows
-            goarch: amd64
-          - goos: windows
-            goarch: arm64
+        platform:
+          - {goos: aix, goarch: ppc64}
+          - {goos: darwin, goarch: amd64}
+          - {goos: darwin, goarch: arm64}
+          - {goos: js, goarch: wasm}
+          - {goos: linux, goarch: "386"}
+          - {goos: linux, goarch: amd64}
+          - {goos: linux, goarch: arm64}
+          - {goos: linux, goarch: ppc64le}
+          - {goos: linux, goarch: riscv64}
+          - {goos: linux, goarch: arm, goarm: "7"}
+          - {goos: linux, goarch: s390x}
+          - {goos: windows, goarch: "386"}
+          - {goos: windows, goarch: amd64}
+          - {goos: windows, goarch: arm64}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -58,9 +43,9 @@ jobs:
           cache-dependency-path: "**/go.sum"
       - name: Build
         env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          GOARM: ${{ matrix.goarm }}
+          GOOS: ${{ matrix.platform.goos }}
+          GOARCH: ${{ matrix.platform.goarch }}
+          GOARM: ${{ matrix.platform.goarm }}
         run: make build
 
   test-cross-build:
