@@ -761,7 +761,7 @@ func BenchmarkBatchProcessorExport(b *testing.B) {
 		WithExportTimeout(time.Hour),
 	)
 	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	b.Cleanup(func() { _ = bp.Shutdown(context.Background()) })
+	b.Cleanup(func() { assert.NoError(b, bp.Shutdown(context.Background())) })
 
 	r := new(Record)
 	r.SetBody(attribute.BoolValue(true))
