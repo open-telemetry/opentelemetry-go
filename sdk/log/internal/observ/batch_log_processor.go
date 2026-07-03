@@ -91,6 +91,7 @@ func NewBLP(id int64, qLen func() int64, qMax int64) (*BLP, error) {
 
 	processed, err := otelconv.NewSDKProcessorLogProcessed(meter)
 	if err != nil {
+		_ = reg.Unregister()
 		return nil, fmt.Errorf("failed to create BLP processed logs metric: %w", err)
 	}
 
