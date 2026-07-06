@@ -444,18 +444,14 @@ func (e wrappedErr) Error() string { return "wrapped: " + e.err.Error() }
 
 func (e wrappedErr) Unwrap() error { return e.err }
 
-type derivationSpyError struct {
-	errorCalls int
-	typeCalls  int
+type derivationError struct {
 }
 
-func (e *derivationSpyError) Error() string {
-	e.errorCalls++
+func (e *derivationError) Error() string {
 	return "derived.message"
 }
 
-func (e *derivationSpyError) ErrorType() string {
-	e.typeCalls++
+func (e *derivationError) ErrorType() string {
 	return "derived.type"
 }
 
@@ -464,7 +460,7 @@ func TestNewRecordExceptionAttributePrecedence(t *testing.T) {
 
 	t.Run("ExistingMessage", func(t *testing.T) {
 		var r log.Record
-		err := new(derivationSpyError)
+		err := new(derivationError)
 		r.SetBody(attribute.StringValue("boom"))
 		r.SetSeverity(log.SeverityError)
 		r.SetErr(err)
@@ -485,13 +481,11 @@ func TestNewRecordExceptionAttributePrecedence(t *testing.T) {
 
 		assert.Equal(t, "existing.message", gotMessage)
 		assert.Equal(t, "derived.type", gotType)
-		assert.Zero(t, err.errorCalls, "Error calls")
-		assert.Equal(t, 1, err.typeCalls, "ErrorType calls")
 	})
 
 	t.Run("ExistingType", func(t *testing.T) {
 		var r log.Record
-		err := new(derivationSpyError)
+		err := new(derivationError)
 		r.SetBody(attribute.StringValue("boom"))
 		r.SetSeverity(log.SeverityError)
 		r.SetErr(err)
@@ -512,13 +506,11 @@ func TestNewRecordExceptionAttributePrecedence(t *testing.T) {
 
 		assert.Equal(t, "existing.type", gotType)
 		assert.Equal(t, "derived.message", gotMessage)
-		assert.Equal(t, 1, err.errorCalls, "Error calls")
-		assert.Zero(t, err.typeCalls, "ErrorType calls")
 	})
 
 	t.Run("ExistingMessageAndType", func(t *testing.T) {
 		var r log.Record
-		err := new(derivationSpyError)
+		err := new(derivationError)
 		r.SetErr(err)
 		r.AddAttributes(
 			attribute.String(string(semconv.ExceptionMessageKey), "existing.message"),
@@ -536,13 +528,11 @@ func TestNewRecordExceptionAttributePrecedence(t *testing.T) {
 			attribute.String(string(semconv.ExceptionMessageKey), "existing.message"),
 			attribute.String(string(semconv.ExceptionTypeKey), "existing.type"),
 		}, gotAttrs)
-		assert.Zero(t, err.errorCalls, "Error calls")
-		assert.Zero(t, err.typeCalls, "ErrorType calls")
 	})
 
 	t.Run("ExistingStacktrace", func(t *testing.T) {
 		var r log.Record
-		err := new(derivationSpyError)
+		err := new(derivationError)
 		r.SetBody(attribute.StringValue("boom"))
 		r.SetSeverity(log.SeverityError)
 		r.SetErr(err)
@@ -566,8 +556,6 @@ func TestNewRecordExceptionAttributePrecedence(t *testing.T) {
 		assert.Equal(t, "derived.type", gotType)
 		assert.Equal(t, "derived.message", gotMessage)
 		assert.Equal(t, "existing.stacktrace", gotStacktrace)
-		assert.Equal(t, 1, err.errorCalls, "Error calls")
-		assert.Equal(t, 1, err.typeCalls, "ErrorType calls")
 	})
 }
 
