@@ -50,6 +50,9 @@ type Logger interface {
 	// state, but may return false if valid reasons in particular circumstances
 	// exist (e.g. performance, correctness).
 	//
+	// Callers should invoke Enabled for each Record they intend to emit because
+	// the enabled state may change over time.
+	//
 	// The param should not be held by the implementation. A copy should be
 	// made if the param needs to be held after the call returns.
 	//
