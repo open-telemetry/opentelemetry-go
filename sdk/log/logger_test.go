@@ -444,14 +444,13 @@ func (e wrappedErr) Error() string { return "wrapped: " + e.err.Error() }
 
 func (e wrappedErr) Unwrap() error { return e.err }
 
-type derivationError struct {
-}
+type derivationError struct{}
 
-func (e *derivationError) Error() string {
+func (*derivationError) Error() string {
 	return "derived.message"
 }
 
-func (e *derivationError) ErrorType() string {
+func (*derivationError) ErrorType() string {
 	return "derived.type"
 }
 
