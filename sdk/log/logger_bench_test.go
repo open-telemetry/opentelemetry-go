@@ -149,6 +149,20 @@ func BenchmarkLoggerSetExceptionAttributesAndEmit(b *testing.B) {
 	}
 }
 
+func BenchmarkLoggerSetErrWithExceptionMessageAndEmit(b *testing.B) {
+	logger := newTestLogger(b)
+	err := errors.New("boom")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		r := log.Record{}
+		r.SetErr(err)
+		r.AddAttributes(attribute.String(string(semconv.ExceptionMessageKey), err.Error()))
+		logger.Emit(b.Context(), r)
+	}
+}
+
 func newTestLogger(t testing.TB) log.Logger {
 	provider := NewLoggerProvider(
 		WithProcessor(newFltrProcessor("0", false)),

@@ -22,9 +22,8 @@ import (
 var now = time.Now
 
 const (
-	exceptionTypeKey       = semconv.ExceptionTypeKey
-	exceptionMessageKey    = semconv.ExceptionMessageKey
-	exceptionStacktraceKey = semconv.ExceptionStacktraceKey
+	exceptionTypeKey    = semconv.ExceptionTypeKey
+	exceptionMessageKey = semconv.ExceptionMessageKey
 )
 
 // Compile-time check logger implements log.Logger.
@@ -39,6 +38,11 @@ type logger struct {
 	// recCntIncr increments the count of log records created. It will be nil
 	// if observability is disabled.
 	recCntIncr func(context.Context)
+}
+
+type exceptionAttrPresence struct {
+	message       bool
+	exceptionType bool
 }
 
 func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
@@ -119,39 +123,45 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		newRecord.observedTimestamp = now()
 	}
 
-	hasExceptionAttr := false
+	var exceptionAttrs exceptionAttrPresence
 	r.WalkAttributes(func(kv attribute.KeyValue) bool {
 		switch kv.Key {
-		case exceptionTypeKey, exceptionMessageKey, exceptionStacktraceKey:
-			hasExceptionAttr = true
+		case exceptionMessageKey:
+			exceptionAttrs.message = true
+		case exceptionTypeKey:
+			exceptionAttrs.exceptionType = true
 		}
 		newRecord.AddAttributes(kv)
 		return true
 	})
 
-	if err := r.Err(); err != nil && !hasExceptionAttr {
-		addExceptionAttrs(&newRecord, err)
+	if err := r.Err(); err != nil {
+		addExceptionAttrs(&newRecord, err, exceptionAttrs)
 	}
 
 	return newRecord
 }
 
-func addExceptionAttrs(r *Record, err error) {
+func addExceptionAttrs(r *Record, err error, present exceptionAttrPresence) {
 	var attrs [2]attribute.KeyValue
 	n := 0
-	if msg := err.Error(); msg != "" {
-		if r.attributeCountLimit > 0 && r.attributeCountLimit-r.AttributesLen() < n+1 {
-			goto flush
+	if !present.message {
+		if msg := err.Error(); msg != "" {
+			if r.attributeCountLimit > 0 && r.attributeCountLimit-r.AttributesLen() < n+1 {
+				goto flush
+			}
+			attrs[n] = exceptionMessageKey.String(msg)
+			n++
 		}
-		attrs[n] = exceptionMessageKey.String(msg)
-		n++
 	}
-	if errType := errorType(err); errType != "" {
-		if r.attributeCountLimit > 0 && r.attributeCountLimit-r.AttributesLen() < n+1 {
-			goto flush
+	if !present.exceptionType {
+		if errType := errorType(err); errType != "" {
+			if r.attributeCountLimit > 0 && r.attributeCountLimit-r.AttributesLen() < n+1 {
+				goto flush
+			}
+			attrs[n] = exceptionTypeKey.String(errType)
+			n++
 		}
-		attrs[n] = exceptionTypeKey.String(errType)
-		n++
 	}
 
 flush:
