@@ -518,15 +518,19 @@ func TestNewRecordExceptionAttributePrecedence(t *testing.T) {
 
 		got := l.newRecord(t.Context(), r)
 
-		var gotAttrs []attribute.KeyValue
+		var gotType, gotMessage string
 		got.WalkAttributes(func(kv attribute.KeyValue) bool {
-			gotAttrs = append(gotAttrs, kv)
+			switch kv.Key {
+			case semconv.ExceptionTypeKey:
+				gotType = kv.Value.AsString()
+			case semconv.ExceptionMessageKey:
+				gotMessage = kv.Value.AsString()
+			}
 			return true
 		})
-		assert.ElementsMatch(t, []attribute.KeyValue{
-			attribute.String(string(semconv.ExceptionMessageKey), "existing.message"),
-			attribute.String(string(semconv.ExceptionTypeKey), "existing.type"),
-		}, gotAttrs)
+
+		assert.Equal(t, "existing.message", gotMessage)
+		assert.Equal(t, "existing.type", gotType)
 	})
 
 	t.Run("ExistingStacktrace", func(t *testing.T) {
