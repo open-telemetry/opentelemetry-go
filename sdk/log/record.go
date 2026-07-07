@@ -119,9 +119,6 @@ type Record struct {
 
 	attributeValueLengthLimit int
 	attributeCountLimit       int
-	// zeroAttributeCountLimit distinguishes an active zero limit from an
-	// unconfigured zero-value Record.
-	zeroAttributeCountLimit bool
 
 	// specifies whether we should deduplicate any key value collections or not
 	allowDupKeys bool
@@ -374,21 +371,17 @@ func (r *Record) SetAttributes(attrs ...attribute.KeyValue) {
 
 // head returns the attributes r can retain along with the number dropped.
 func (r *Record) head(kvs []attribute.KeyValue) (out []attribute.KeyValue, dropped int) {
-	if r.attributeCountLimit > 0 {
-		if len(kvs) > r.attributeCountLimit {
-			return kvs[:r.attributeCountLimit], len(kvs) - r.attributeCountLimit
-		}
+	if r.attributeCountLimit < 0 || len(kvs) <= r.attributeCountLimit {
 		return kvs, 0
 	}
-	if r.attributeCountLimit == 0 && r.zeroAttributeCountLimit {
+	if r.attributeCountLimit == 0 {
 		return nil, len(kvs)
 	}
-	return kvs, 0
+	return kvs[:r.attributeCountLimit], len(kvs) - r.attributeCountLimit
 }
 
 func (r *Record) hasAttributeCountLimit() bool {
-	return r.attributeCountLimit > 0 ||
-		(r.attributeCountLimit == 0 && r.zeroAttributeCountLimit)
+	return r.attributeCountLimit >= 0
 }
 
 // dedup deduplicates kvs front-to-back with the last value saved.

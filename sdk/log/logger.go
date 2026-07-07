@@ -105,7 +105,6 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		scope:                     &l.instrumentationScope,
 		attributeValueLengthLimit: l.provider.attributeValueLengthLimit,
 		attributeCountLimit:       l.provider.attributeCountLimit,
-		zeroAttributeCountLimit:   l.provider.attributeCountLimit == 0,
 		allowDupKeys:              l.provider.allowDupKeys,
 	}
 	if l.recCntIncr != nil {
