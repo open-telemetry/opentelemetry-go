@@ -35,6 +35,10 @@ jobs:
       contents: write # required for pushing to gh-pages branch
     name: Benchmarks
     runs-on: oracle-bare-metal-64cpu-1024gb-x86-64-ubuntu-24
+    env:
+      TMPDIR: ${{ runner.temp }}
+      TMP: ${{ runner.temp }}
+      TEMP: ${{ runner.temp }}
     strategy:
       matrix:
         shard: ${{ fromJson(needs.sharding-benchmark.outputs.shards) }}
@@ -62,3 +66,13 @@ jobs:
           # The benchtime is adjusted to 500 ms to speed up the benchmark time.
           # Per https://github.com/open-telemetry/community/issues/2331#issuecomment-2356403352
           run: GOMAXPROCS=4 make benchmark/${{matrix.shard}} ARGS=-benchtime=500ms
+      - name: Clean up benchmark temporary files
+        if: always()
+        run: |
+          rm -rf \
+            /tmp/codspeed_introspected_go \
+            /tmp/codspeed_introspected_node \
+            /tmp/go-build* \
+            /tmp/profile.*.out \
+            /tmp/.tmp* \
+            /tmp/tmp.*
