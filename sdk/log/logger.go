@@ -133,15 +133,24 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		return true
 	})
 
-	if err := r.Err(); err != nil {
+	// Avoid inspecting the error for attributes when the caller has
+	// already supplied the attributes.
+	if err := r.Err(); err != nil && !(hasExceptionMessage && hasExceptionType) {
 		// Derive missing exception attributes by default, as required by the
 		// Logs SDK specification. Attribute limits may constrain generation,
 		// so stop once there is no capacity for another attribute.
 		var attrs [2]attribute.KeyValue
 		n := 0
+
+		// Derived attributes are buffered until flush, so the current attribute
+		// count stays unchanged while missing values are prepared.
+		remaining := newRecord.attributeCountLimit
+		if remaining > 0 {
+			remaining -= newRecord.AttributesLen()
+		}
 		if !hasExceptionMessage {
 			if msg := err.Error(); msg != "" {
-				if newRecord.attributeCountLimit > 0 && newRecord.attributeCountLimit-newRecord.AttributesLen() < n+1 {
+				if newRecord.attributeCountLimit > 0 && remaining < n+1 {
 					goto flush
 				}
 				attrs[n] = exceptionMessageKey.String(msg)
@@ -150,7 +159,7 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		}
 		if !hasExceptionType {
 			if errType := errorType(err); errType != "" {
-				if newRecord.attributeCountLimit > 0 && newRecord.attributeCountLimit-newRecord.AttributesLen() < n+1 {
+				if newRecord.attributeCountLimit > 0 && remaining < n+1 {
 					goto flush
 				}
 				attrs[n] = exceptionTypeKey.String(errType)
