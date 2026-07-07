@@ -751,25 +751,3 @@ func (e *blockingRecordExporter) Export(ctx context.Context, records []Record) e
 
 func (*blockingRecordExporter) Shutdown(context.Context) error   { return nil }
 func (*blockingRecordExporter) ForceFlush(context.Context) error { return nil }
-
-func BenchmarkBatchProcessorExport(b *testing.B) {
-	bp := NewBatchProcessor(
-		defaultNoopExporter,
-		WithMaxQueueSize(b.N+1),
-		WithExportMaxBatchSize(100),
-		WithExportInterval(time.Hour),
-		WithExportTimeout(time.Hour),
-	)
-	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	b.Cleanup(func() { assert.NoError(b, bp.Shutdown(context.Background())) })
-
-	r := new(Record)
-	r.SetBody(attribute.BoolValue(true))
-	ctx := b.Context()
-
-	b.ResetTimer()
-	b.ReportAllocs()
-	for range b.N {
-		_ = bp.OnEmit(ctx, r)
-	}
-}
