@@ -166,6 +166,19 @@ func (testSampler) Description() string {
 	return "testSampler"
 }
 
+type attributeSampler []attribute.KeyValue
+
+func (s attributeSampler) ShouldSample(SamplingParameters) SamplingResult {
+	return SamplingResult{
+		Decision:   RecordAndSample,
+		Attributes: []attribute.KeyValue(s),
+	}
+}
+
+func (attributeSampler) Description() string {
+	return "attributeSampler"
+}
+
 func TestSetName(t *testing.T) {
 	tp := NewTracerProvider()
 
@@ -1560,6 +1573,108 @@ func TestMapDeduplication(t *testing.T) {
 	assert.Zero(t, got.Links()[0].DroppedAttributeCount)
 	assert.Equal(t, []attribute.KeyValue{dedup}, got.Resource().Attributes())
 	assert.Equal(t, attribute.NewSet(dedup), got.InstrumentationScope().Attributes)
+}
+
+func depthLimitInputAttr(key string) attribute.KeyValue {
+	return attribute.Map(
+		key,
+		attribute.Map(
+			"level1",
+			attribute.Map("over", attribute.String("leaf", "value")),
+		),
+	)
+}
+
+func depthLimitWantAttr(key string) attribute.KeyValue {
+	return attribute.Map(
+		key,
+		attribute.Map(
+			"level1",
+			attribute.KeyValue{Key: "over"},
+		),
+	)
+}
+
+func TestAttributeValueDepthLimit(t *testing.T) {
+	linkSC := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{1},
+		SpanID:  trace.SpanID{1},
+	})
+
+	te := NewTestExporter()
+	limits := NewSpanLimits()
+	limits.AttributeValueDepthLimit = 2
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithSampler(attributeSampler{depthLimitInputAttr("sampler")}),
+		WithRawSpanLimits(limits),
+		WithResource(resource.NewSchemaless(depthLimitInputAttr("resource"))),
+	)
+
+	_, span := tp.Tracer(
+		"scope",
+		trace.WithInstrumentationAttributes(depthLimitInputAttr("scope")),
+	).Start(
+		t.Context(),
+		"span0",
+		trace.WithAttributes(depthLimitInputAttr("start")),
+	)
+	span.SetAttributes(depthLimitInputAttr("span"))
+	span.AddEvent("event", trace.WithAttributes(depthLimitInputAttr("event")))
+	span.AddLink(trace.Link{
+		SpanContext: linkSC,
+		Attributes:  []attribute.KeyValue{depthLimitInputAttr("link")},
+	})
+
+	got, err := endSpan(te, span)
+	require.NoError(t, err)
+
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		depthLimitWantAttr("sampler"),
+		depthLimitWantAttr("start"),
+		depthLimitWantAttr("span"),
+	}, got.Attributes())
+	require.Len(t, got.Events(), 1)
+	assert.Equal(t, []attribute.KeyValue{depthLimitWantAttr("event")}, got.Events()[0].Attributes)
+	require.Len(t, got.Links(), 1)
+	assert.Equal(t, []attribute.KeyValue{depthLimitWantAttr("link")}, got.Links()[0].Attributes)
+	assert.Equal(t, []attribute.KeyValue{depthLimitInputAttr("resource")}, got.Resource().Attributes())
+	assert.Equal(t, attribute.NewSet(depthLimitWantAttr("scope")), got.InstrumentationScope().Attributes)
+}
+
+func TestAttributeValueDepthLimitNegativeUnlimited(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithAttributeValueDepthLimit(-1),
+		WithResource(resource.Empty()),
+	)
+
+	_, span := tp.Tracer("scope").Start(t.Context(), "span0")
+	span.SetAttributes(depthLimitInputAttr("span"))
+
+	got, err := endSpan(te, span)
+	require.NoError(t, err)
+	assert.Equal(t, []attribute.KeyValue{depthLimitInputAttr("span")}, got.Attributes())
+}
+
+func TestAttributeValueDepthLimitZeroDefault(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithAttributeValueDepthLimit(0),
+		WithResource(resource.Empty()),
+	)
+
+	_, span := tp.Tracer("scope").Start(t.Context(), "span0")
+	span.SetAttributes(depthLimitInputAttr("span"), attribute.String("scalar", "ok"))
+
+	got, err := endSpan(te, span)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		depthLimitInputAttr("span"),
+		attribute.String("scalar", "ok"),
+	}, got.Attributes())
 }
 
 func TestWithInstrumentationVersionAndSchema(t *testing.T) {

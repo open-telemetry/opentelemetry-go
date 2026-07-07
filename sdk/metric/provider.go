@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
 )
 
 // MeterProvider handles the creation and coordination of Meters. All Meters
@@ -43,7 +43,13 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 	flush, sdown := conf.readerSignals()
 
 	mp := &MeterProvider{
-		pipes:      newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
+		pipes: newPipelines(
+			conf.res,
+			conf.readers,
+			conf.views,
+			conf.exemplarFilter,
+			conf.cardinalityLimit,
+		),
 		forceFlush: flush,
 		shutdown:   sdown,
 	}
@@ -77,7 +83,7 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	}
 
 	c := metric.NewMeterConfig(options...)
-	attrs, _ := attrdedup.Set(c.InstrumentationAttributes())
+	attrs, _ := attrnorm.SetDedup(c.InstrumentationAttributes())
 	s := instrumentation.Scope{
 		Name:       name,
 		Version:    c.InstrumentationVersion(),

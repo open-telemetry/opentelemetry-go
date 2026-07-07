@@ -15,24 +15,26 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/log/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const (
-	defaultAttrCntLim    = 128
-	defaultAttrValLenLim = -1
+	defaultAttrCntLim      = 128
+	defaultAttrValLenLim   = -1
+	defaultAttrValDepthLim = 64
 
 	envarAttrCntLim    = "OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT"
 	envarAttrValLenLim = "OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT"
 )
 
 type providerConfig struct {
-	resource      *resource.Resource
-	processors    []Processor
-	attrCntLim    setting[int]
-	attrValLenLim setting[int]
-	allowDupKeys  setting[bool]
+	resource        *resource.Resource
+	processors      []Processor
+	attrCntLim      setting[int]
+	attrValLenLim   setting[int]
+	attrValDepthLim setting[int]
+	allowDupKeys    setting[bool]
 }
 
 type experimentalOption interface {
@@ -62,6 +64,10 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 		fallback[int](defaultAttrValLenLim),
 	)
 
+	c.attrValDepthLim = c.attrValDepthLim.Resolve(
+		fallback[int](defaultAttrValDepthLim),
+	)
+
 	return c
 }
 
@@ -74,6 +80,7 @@ type LoggerProvider struct {
 	processors                []Processor
 	attributeCountLimit       int
 	attributeValueLengthLimit int
+	attributeValueDepthLimit  int
 	allowDupKeys              bool
 
 	loggersMu sync.Mutex
@@ -100,6 +107,7 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 		processors:                cfg.processors,
 		attributeCountLimit:       cfg.attrCntLim.Value,
 		attributeValueLengthLimit: cfg.attrValLenLim.Value,
+		attributeValueDepthLimit:  cfg.attrValDepthLim.Value,
 		allowDupKeys:              cfg.allowDupKeys.Value,
 	}
 }
@@ -120,8 +128,11 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 
 	cfg := log.NewLoggerConfig(opts...)
 	attrs := cfg.InstrumentationAttributes()
+	depthLimit := p.attrValueDepthLimit()
 	if !p.allowDupKeys {
-		attrs, _ = attrdedup.Set(attrs)
+		attrs, _ = attrnorm.SetWithDepthLimit(attrs, depthLimit)
+	} else {
+		attrs, _ = attrnorm.SetLimitDepth(attrs, depthLimit)
 	}
 	scope := instrumentation.Scope{
 		Name:       name,
@@ -146,6 +157,13 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 	}
 
 	return l
+}
+
+func (p *LoggerProvider) attrValueDepthLimit() int {
+	if p.attributeValueDepthLimit != 0 {
+		return p.attributeValueDepthLimit
+	}
+	return defaultAttrValDepthLim
 }
 
 // Shutdown shuts down the provider and all processors.
@@ -258,6 +276,28 @@ func WithAttributeCountLimit(limit int) LoggerProviderOption {
 func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.attrValLenLim = newSetting(limit)
+		return cfg
+	})
+}
+
+// WithAttributeValueDepthLimit sets the maximum allowed depth for nested
+// attribute values. Any slice or map value beyond this depth will be
+// replaced with an empty value.
+//
+// This limit applies to log record and instrumentation scope attributes
+// processed by this LoggerProvider.
+//
+// Setting this to zero means the default limit is used.
+//
+// Setting this to a negative value means no limit is applied.
+//
+// By default, 64 will be used.
+func WithAttributeValueDepthLimit(limit int) LoggerProviderOption {
+	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
+		if limit == 0 {
+			limit = defaultAttrValDepthLim
+		}
+		cfg.attrValDepthLim = newSetting(limit)
 		return cfg
 	})
 }

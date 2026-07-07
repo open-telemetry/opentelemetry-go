@@ -19,6 +19,7 @@ import (
 	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestMeterConcurrentSafe(*testing.T) {
@@ -125,6 +126,47 @@ func TestMeterProviderReturnsNoopMeterAfterShutdown(t *testing.T) {
 	m = mp.Meter("")
 	_, ok = m.(noop.Meter)
 	assert.Truef(t, ok, "Meter from shutdown MeterProvider is not NoOp: %T", m)
+}
+
+func metricDeeplyNestedMapAttr(key string) attribute.KeyValue {
+	const depthBeyondDefaultLimit = 65
+
+	value := attribute.StringValue("value")
+	for i := depthBeyondDefaultLimit - 1; i >= 0; i-- {
+		value = attribute.MapValue(attribute.KeyValue{
+			Key:   attribute.Key(fmt.Sprintf("level%d", i)),
+			Value: value,
+		})
+	}
+	return attribute.KeyValue{Key: attribute.Key(key), Value: value}
+}
+
+func TestMeterProviderAttributeLimitsExempt(t *testing.T) {
+	reader := NewManualReader()
+	resAttr := metricDeeplyNestedMapAttr("resource")
+	scopeAttr := metricDeeplyNestedMapAttr("scope")
+	measurementAttr := metricDeeplyNestedMapAttr("measurement")
+	mp := NewMeterProvider(
+		WithReader(reader),
+		WithResource(resource.NewSchemaless(resAttr)),
+	)
+	meter := mp.Meter("scope", api.WithInstrumentationAttributes(scopeAttr))
+	counter, err := meter.Int64Counter("counter")
+	require.NoError(t, err)
+
+	counter.Add(t.Context(), 1, api.WithAttributes(measurementAttr))
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	assert.Equal(t, []attribute.KeyValue{resAttr}, rm.Resource.Attributes())
+	require.Len(t, rm.ScopeMetrics, 1)
+	assert.Equal(t, attribute.NewSet(scopeAttr), rm.ScopeMetrics[0].Scope.Attributes)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 1)
+	assert.Equal(t, attribute.NewSet(measurementAttr), sum.DataPoints[0].Attributes)
 }
 
 func TestMeterProviderMixingOnRegisterErrors(t *testing.T) {
