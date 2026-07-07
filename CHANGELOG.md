@@ -41,7 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Clarify that `Float64Histogram` and `Int64Histogram` `Record` methods expect non-negative values in `go.opentelemetry.io/otel/metric`.
+- Clarify that `Float64Histogram` and `Int64Histogram` `Record` methods expect non-negative values in `go.opentelemetry.io/otel/metric`. (#8574)
 - Clarify in `go.opentelemetry.io/otel/log` that `Logger.Enabled` should be checked for every log emission because its result may change over time. (#8565)
 - Fix invalid error formatting for out-of-range JSON code values in `go.opentelemetry.io/otel/codes`. (#8497)
 - Avoid preallocating scope attributes when they are disabled in `go.opentelemetry.io/otel/exporters/prometheus` . (#8404)
