@@ -78,38 +78,6 @@ func TestLoggerEmit(t *testing.T) {
 
 	attrLimitResource := resource.NewSchemaless(attribute.String("key", "value"))
 	attrLimitScope := instrumentation.Scope{Name: "scope"}
-	zeroAttrLimitRecord := Record{
-		eventName:                 rWithErr.EventName(),
-		timestamp:                 rWithErr.Timestamp(),
-		body:                      rWithErr.Body(),
-		severity:                  rWithErr.Severity(),
-		severityText:              rWithErr.SeverityText(),
-		observedTimestamp:         rWithErr.ObservedTimestamp(),
-		resource:                  attrLimitResource,
-		attributeValueLengthLimit: defaultAttrValLenLim,
-		attributeCountLimit:       0,
-		scope:                     &attrLimitScope,
-		dropped:                   2,
-	}
-	unlimitedAttrRecord := Record{
-		eventName:                 rWithErr.EventName(),
-		timestamp:                 rWithErr.Timestamp(),
-		body:                      rWithErr.Body(),
-		severity:                  rWithErr.Severity(),
-		severityText:              rWithErr.SeverityText(),
-		observedTimestamp:         rWithErr.ObservedTimestamp(),
-		resource:                  attrLimitResource,
-		attributeValueLengthLimit: defaultAttrValLenLim,
-		attributeCountLimit:       -1,
-		scope:                     &attrLimitScope,
-		front: [attributesInlineCount]attribute.KeyValue{
-			attribute.String("k1", "str"),
-			attribute.Float64("k2", 1.0),
-			exceptionMessageKey.String("boom"),
-			exceptionTypeKey.String("*errors.errorString"),
-		},
-		nFront: 4,
-	}
 
 	contextWithSpanContext := trace.ContextWithSpanContext(
 		t.Context(),
@@ -179,9 +147,23 @@ func TestLoggerEmit(t *testing.T) {
 					WithResource(attrLimitResource),
 				), attrLimitScope)
 			},
-			ctx:             t.Context(),
-			record:          rWithErr,
-			expectedRecords: []Record{zeroAttrLimitRecord},
+			ctx:    t.Context(),
+			record: rWithErr,
+			expectedRecords: []Record{
+				{
+					eventName:                 rWithErr.EventName(),
+					timestamp:                 rWithErr.Timestamp(),
+					body:                      rWithErr.Body(),
+					severity:                  rWithErr.Severity(),
+					severityText:              rWithErr.SeverityText(),
+					observedTimestamp:         rWithErr.ObservedTimestamp(),
+					resource:                  attrLimitResource,
+					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeCountLimit:       0,
+					scope:                     &attrLimitScope,
+					dropped:                   2,
+				},
+			},
 		},
 		{
 			name: "ZeroAttributeCountLimitEnvironment",
@@ -194,9 +176,23 @@ func TestLoggerEmit(t *testing.T) {
 					WithResource(attrLimitResource),
 				), attrLimitScope)
 			},
-			ctx:             t.Context(),
-			record:          rWithErr,
-			expectedRecords: []Record{zeroAttrLimitRecord},
+			ctx:    t.Context(),
+			record: rWithErr,
+			expectedRecords: []Record{
+				{
+					eventName:                 rWithErr.EventName(),
+					timestamp:                 rWithErr.Timestamp(),
+					body:                      rWithErr.Body(),
+					severity:                  rWithErr.Severity(),
+					severityText:              rWithErr.SeverityText(),
+					observedTimestamp:         rWithErr.ObservedTimestamp(),
+					resource:                  attrLimitResource,
+					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeCountLimit:       0,
+					scope:                     &attrLimitScope,
+					dropped:                   2,
+				},
+			},
 		},
 		{
 			name: "NegativeAttributeCountLimit",
@@ -209,9 +205,29 @@ func TestLoggerEmit(t *testing.T) {
 					WithResource(attrLimitResource),
 				), attrLimitScope)
 			},
-			ctx:             t.Context(),
-			record:          rWithErr,
-			expectedRecords: []Record{unlimitedAttrRecord},
+			ctx:    t.Context(),
+			record: rWithErr,
+			expectedRecords: []Record{
+				{
+					eventName:                 rWithErr.EventName(),
+					timestamp:                 rWithErr.Timestamp(),
+					body:                      rWithErr.Body(),
+					severity:                  rWithErr.Severity(),
+					severityText:              rWithErr.SeverityText(),
+					observedTimestamp:         rWithErr.ObservedTimestamp(),
+					resource:                  attrLimitResource,
+					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeCountLimit:       -1,
+					scope:                     &attrLimitScope,
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
+						exceptionMessageKey.String("boom"),
+						exceptionTypeKey.String("*errors.errorString"),
+					},
+					nFront: 4,
+				},
+			},
 		},
 		{
 			name: "WithProcessorsWithError",
