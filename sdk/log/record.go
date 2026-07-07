@@ -119,6 +119,9 @@ type Record struct {
 
 	attributeValueLengthLimit int
 	attributeCountLimit       int
+	// zeroAttributeCountLimit distinguishes an active zero limit from an
+	// unconfigured zero-value Record.
+	zeroAttributeCountLimit bool
 
 	// specifies whether we should deduplicate any key value collections or not
 	allowDupKeys bool
@@ -230,7 +233,7 @@ func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 			}
 		}
 
-		attrs, drop := head(attrs, r.attributeCountLimit)
+		attrs, drop := r.head(attrs)
 		r.addDropped(drop)
 
 		r.addAttrs(attrs)
@@ -288,7 +291,7 @@ func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 		}
 	}
 
-	if r.attributeCountLimit > 0 && n+len(attrs) > r.attributeCountLimit {
+	if r.hasAttributeCountLimit() && n+len(attrs) > r.attributeCountLimit {
 		// Truncate the now unique attributes to comply with limit.
 		//
 		// Do not use head(attrs, r.attributeCountLimit - n) here. If
@@ -352,7 +355,7 @@ func (r *Record) SetAttributes(attrs ...attribute.KeyValue) {
 		}
 	}
 
-	attrs, drop = head(attrs, r.attributeCountLimit)
+	attrs, drop = r.head(attrs)
 	r.addDropped(drop)
 
 	r.nFront = 0
@@ -369,13 +372,23 @@ func (r *Record) SetAttributes(attrs ...attribute.KeyValue) {
 	}
 }
 
-// head returns the first n values of kvs along with the number of elements
-// dropped. If n is less than or equal to zero, kvs is returned with 0.
-func head(kvs []attribute.KeyValue, n int) (out []attribute.KeyValue, dropped int) {
-	if n > 0 && len(kvs) > n {
-		return kvs[:n], len(kvs) - n
+// head returns the attributes r can retain along with the number dropped.
+func (r *Record) head(kvs []attribute.KeyValue) (out []attribute.KeyValue, dropped int) {
+	if r.attributeCountLimit > 0 {
+		if len(kvs) > r.attributeCountLimit {
+			return kvs[:r.attributeCountLimit], len(kvs) - r.attributeCountLimit
+		}
+		return kvs, 0
+	}
+	if r.attributeCountLimit == 0 && r.zeroAttributeCountLimit {
+		return nil, len(kvs)
 	}
 	return kvs, 0
+}
+
+func (r *Record) hasAttributeCountLimit() bool {
+	return r.attributeCountLimit > 0 ||
+		(r.attributeCountLimit == 0 && r.zeroAttributeCountLimit)
 }
 
 // dedup deduplicates kvs front-to-back with the last value saved.

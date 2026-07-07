@@ -387,6 +387,73 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 	})
 }
 
+func TestNewRecordAttributeCountLimit(t *testing.T) {
+	attrs := []attribute.KeyValue{
+		attribute.String("one", "1"),
+		attribute.String("two", "2"),
+	}
+
+	tests := []struct {
+		name     string
+		provider func(*testing.T) *LoggerProvider
+	}{
+		{
+			name: "ZeroOption",
+			provider: func(*testing.T) *LoggerProvider {
+				return NewLoggerProvider(WithAttributeCountLimit(0))
+			},
+		},
+		{
+			name: "ZeroEnvironment",
+			provider: func(t *testing.T) *LoggerProvider {
+				t.Setenv(envarAttrCntLim, "0")
+				return NewLoggerProvider()
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := newLogger(tt.provider(t), instrumentation.Scope{})
+
+			var in log.Record
+			in.AddAttributes(attrs...)
+			got := l.newRecord(t.Context(), in)
+			assert.Zero(t, got.AttributesLen())
+			assert.Equal(t, len(attrs), got.DroppedAttributes())
+
+			got.AddAttributes(attrs...)
+			assert.Zero(t, got.AttributesLen())
+			assert.Equal(t, 2*len(attrs), got.DroppedAttributes())
+
+			got.SetAttributes(attrs...)
+			assert.Zero(t, got.AttributesLen())
+			assert.Equal(t, len(attrs), got.DroppedAttributes())
+			assert.Nil(t, got.back, "dropped attributes retained")
+
+			var withErr log.Record
+			withErr.SetErr(errors.New("boom"))
+			got = l.newRecord(t.Context(), withErr)
+			assert.Zero(t, got.AttributesLen())
+		})
+	}
+
+	t.Run("NegativeIsUnlimited", func(t *testing.T) {
+		l := newLogger(
+			NewLoggerProvider(WithAttributeCountLimit(-1)),
+			instrumentation.Scope{},
+		)
+
+		var in log.Record
+		in.AddAttributes(attrs...)
+		in.SetErr(errors.New("boom"))
+		got := l.newRecord(t.Context(), in)
+
+		assert.Equal(t, len(attrs)+2, got.AttributesLen())
+		assert.Zero(t, got.DroppedAttributes())
+	})
+}
+
 func TestErrorType(t *testing.T) {
 	t.Run("UsesErrorTypeMethod", func(t *testing.T) {
 		err := errWithType{msg: "boom", typ: "custom.type"}
