@@ -36,7 +36,8 @@ type Logger interface {
 	//
 	// This is useful for users that want to know if a [Record]
 	// will be processed or dropped before they perform complex operations to
-	// construct the [Record].
+	// construct the [Record]. Callers should invoke Enabled before each call
+	// to [Logger.Emit] because the enabled state may change over time.
 	//
 	// The passed param is likely to be a partial record information being
 	// provided (e.g a param with only the Severity set).
