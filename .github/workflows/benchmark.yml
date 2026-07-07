@@ -35,14 +35,19 @@ jobs:
       contents: write # required for pushing to gh-pages branch
     name: Benchmarks
     runs-on: oracle-bare-metal-64cpu-1024gb-x86-64-ubuntu-24
+    container:
+      image: ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b
     strategy:
       matrix:
         shard: ${{ fromJson(needs.sharding-benchmark.outputs.shards) }}
     steps:
+      # The benchmark container does not have the build toolchain preinstalled.
+      - name: Install make, build-essential, and git
+        run: |
+          apt-get update
+          apt-get install -y make build-essential git ca-certificates
+          rm -rf /var/lib/apt/lists/*
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      # Bare metal uses Ubuntu 24.04, which does not have `make` and `build-essential`.
-      - name: Install make and build-essential
-        run: sudo apt-get update && sudo apt-get install -y make build-essential
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
