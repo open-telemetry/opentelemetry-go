@@ -135,7 +135,7 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 
 	// Avoid inspecting the error for attributes when the caller has
 	// already supplied the attributes.
-	if err := r.Err(); err != nil && !(hasExceptionMessage && hasExceptionType) {
+	if err := r.Err(); err != nil && (!hasExceptionMessage || !hasExceptionType) {
 		// Derive missing exception attributes by default, as required by the
 		// Logs SDK specification. Attribute limits may constrain generation,
 		// so stop once there is no capacity for another attribute.
