@@ -158,6 +158,8 @@ type Float64Histogram interface {
 
 	// Record adds an additional value to the distribution.
 	//
+	// The value is expected to be non-negative.
+	//
 	// Use the WithAttributeSet (or, if performance is not a concern,
 	// the WithAttributes) option to include measurement attributes.
 	//
