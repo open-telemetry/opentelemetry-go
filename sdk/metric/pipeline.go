@@ -208,36 +208,28 @@ func (p *pipeline) runCallbacksSequential(ctx context.Context) error {
 }
 
 func (p *pipeline) runCallbacksParallel(ctx context.Context) error {
-	var (
-		mu  sync.Mutex
-		err error
-		wg  sync.WaitGroup
-	)
-	// submit sends c to a pool worker. produce holds p's lock for the whole
-	// batch and stop takes that lock before tearing the pool down, so
-	// workers are never cancelled mid-dispatch and these sends cannot deadlock
-	// against shutdown.
-	submit := func(c func(context.Context) error) {
-		wg.Add(1)
-		p.pool.jobs <- func() {
-			defer wg.Done()
-			if e := c(ctx); e != nil {
-				mu.Lock()
-				err = errors.Join(err, e)
-				mu.Unlock()
-			}
-		}
-	}
+	pool := p.pool
+	// produce holds p's lock for the whole batch and stop takes that lock before
+	// tearing the pool down, so only one produce call ever uses the pool at a
+	// time; that is what makes reusing batch/err/ctx safe. ctx is published to
+	// workers by the channel sends below (send happens-before receive) and so
+	// needs no mutex; mu guards only err, which workers join concurrently.
+	pool.ctx = ctx
 
 	for _, c := range p.callbacks {
-		submit(c)
+		pool.batch.Add(1)
+		pool.jobs <- c
 	}
 	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
-		submit(e.Value.(multiCallback))
+		pool.batch.Add(1)
+		pool.jobs <- e.Value.(multiCallback)
 	}
-	wg.Wait()
+	pool.batch.Wait()
 
-	return err
+	// Workers are done (batch.Wait returned); release the batch context and take
+	// the joined error so the pool retains neither between collections.
+	pool.ctx = nil
+	return pool.takeErr()
 }
 
 // stop tears down this pipeline's resources on shutdown. It stops the callback
@@ -258,22 +250,33 @@ func (p *pipeline) stop() {
 // observable callbacks during collection. Workers are started once and reused
 // across collections, avoiding per-collection goroutine churn.
 type callbackPool struct {
-	jobs   chan func()
+	jobs   chan func(context.Context) error
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
+
+	// batch, err, and ctx coordinate one produce call's callbacks and are reused
+	// across produce calls to avoid per-call allocation. This is safe because
+	// produce holds the pipeline lock for the whole batch, so only one produce
+	// call ever uses them at a time. mu guards err, which workers join into
+	// concurrently. ctx is published to workers by the job-channel send (send
+	// happens-before receive) and so needs no mutex.
+	batch sync.WaitGroup
+	mu    sync.Mutex
+	err   error
+	ctx   context.Context
 }
 
 // newCallbackPool starts worker goroutines that block waiting for jobs until
 // stop is called.
 func newCallbackPool(workers int) *callbackPool {
 	ctx, cancel := context.WithCancel(context.Background())
-	p := &callbackPool{jobs: make(chan func()), cancel: cancel}
+	p := &callbackPool{jobs: make(chan func(context.Context) error), cancel: cancel}
 	for range workers {
 		p.wg.Go(func() {
 			for {
 				select {
-				case job := <-p.jobs:
-					job()
+				case cb := <-p.jobs:
+					p.runJob(cb)
 				case <-ctx.Done():
 					return
 				}
@@ -281,6 +284,26 @@ func newCallbackPool(workers int) *callbackPool {
 		})
 	}
 	return p
+}
+
+func (p *callbackPool) runJob(cb func(context.Context) error) {
+	defer p.batch.Done()
+	if e := cb(p.ctx); e != nil {
+		p.mu.Lock()
+		p.err = errors.Join(p.err, e)
+		p.mu.Unlock()
+	}
+}
+
+// takeErr returns the joined error of the just-completed batch and clears it so
+// the next batch starts clean and the pool does not retain it. Call only after
+// batch.Wait has returned, when no worker is touching err.
+func (p *callbackPool) takeErr() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	err := p.err
+	p.err = nil
+	return err
 }
 
 func (p *callbackPool) stop() {
