@@ -145,9 +145,9 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		// Derived attributes are buffered until flush, so the current attribute
 		// count stays unchanged while missing values are prepared.
 		hasLimit := newRecord.hasAttributeCountLimit()
-		remaining := newRecord.attributeCountLimit
+		var remaining int
 		if hasLimit {
-			remaining -= newRecord.AttributesLen()
+			remaining = newRecord.attributeCountLimit - newRecord.AttributesLen()
 		}
 		if !hasExceptionMessage {
 			if msg := err.Error(); msg != "" {
