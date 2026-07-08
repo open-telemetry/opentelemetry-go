@@ -42,7 +42,7 @@ jobs:
         shard: ${{ fromJson(needs.sharding-benchmark.outputs.shards) }}
     steps:
       # The benchmark container does not have the build toolchain preinstalled.
-      - name: Install make, build-essential, and git
+      - name: Install prerequisites
         run: |
           apt-get update
           apt-get install -y make build-essential git ca-certificates curl
