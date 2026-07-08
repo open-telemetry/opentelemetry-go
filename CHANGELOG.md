@@ -33,7 +33,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve the performance of hashing `BOOLSLICE`, `INT64SLICE`, `FLOAT64SLICE`, and `STRINGSLICE` attribute values by avoiding reflection for short slices in `go.opentelemetry.io/otel/attribute`. (#8511)
 - ⚠️ **Breaking Change:** `WithEndpointURL` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` no longer appends the default signal path for an endpoint URL without path, making the behavior consistent with `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. It is now also consistent with setting the endpoint via `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`. If the URL has no path component, `/` (e.g. the root path) is now appended. Use `WithEndpointURL(url.JoinPath(endpoint, "/v1/metrics"))` to keep the previous behavior. (#8538)
 - ⚠️ **Breaking Change:** `WithEndpointURL` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` no longer appends the default signal path for an endpoint URL without path, making the behavior consistent with `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. It is now also consistent with setting the endpoint via `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`. If the URL has no path component, `/` (e.g. the root path) is now appended. Use `WithEndpointURL(url.JoinPath(endpoint, "/v1/traces"))` to keep the previous behavior. (#8538)
-- Stop existing `Logger` instances from invoking processors after `LoggerProvider` shutdown and clarify the `Processor` lifecycle contract in `go.opentelemetry.io/otel/sdk/log`. (#8578)
 
 ### Removed
 
@@ -55,6 +54,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix off-by-one error in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar`, which prevented the first exemplar after the reservoir is filled from being sampled. (#8309)
 - Fix histogram datapoint reuse in `go.opentelemetry.io/otel/sdk/metric` aggregation to avoid leaking stale sum/min/max values when they are disabled in subsequent collections. (#8403)
 - Prevent zero-hash collapse to empty set in `go.opentelemetry.io/otel/attribute` when computed hash is zero for non-empty input. (#8402)
+- Stop existing `Logger` instances from invoking processors after `LoggerProvider` shutdown and clarify the `Processor` lifecycle contract in `go.opentelemetry.io/otel/sdk/log`. (#8578)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
