@@ -768,6 +768,48 @@ func TestLoggerEnabledAfterProviderShutdown(t *testing.T) {
 	assert.Len(t, proc.params, 1)
 }
 
+type blockingEnabledProcessor struct {
+	*processor
+	started chan struct{}
+	release chan struct{}
+}
+
+func (p *blockingEnabledProcessor) Enabled(context.Context, EnabledParameters) bool {
+	close(p.started)
+	<-p.release
+	return false
+}
+
+func TestLoggerEnabledShutdownConcurrentSafe(t *testing.T) {
+	first := &blockingEnabledProcessor{
+		processor: newProcessor("first"),
+		started:   make(chan struct{}),
+		release:   make(chan struct{}),
+	}
+	second := newFltrProcessor("second", true)
+	provider := NewLoggerProvider(
+		WithProcessor(first),
+		WithProcessor(second),
+	)
+	logger := provider.Logger("logger")
+	ctx := t.Context()
+
+	enabledDone := make(chan bool)
+	go func() {
+		enabledDone <- logger.Enabled(ctx, log.EnabledParameters{})
+	}()
+
+	<-first.started
+	shutdownErr := provider.Shutdown(ctx)
+	close(first.release)
+	enabled := <-enabledDone
+
+	require.NoError(t, shutdownErr)
+	assert.False(t, enabled)
+	assert.Equal(t, 1, second.shutdownCalls)
+	assert.Empty(t, second.params, "Enabled called after processor shutdown")
+}
+
 func TestLoggerObservability(t *testing.T) {
 	testCases := []struct {
 		name               string

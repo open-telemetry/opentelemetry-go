@@ -91,6 +91,11 @@ func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool 
 	}
 
 	for _, processor := range l.provider.processors {
+		// Re-check before each processor so Shutdown can stop an in-flight
+		// pipeline before the next Enabled call.
+		if l.provider.stopped.Load() {
+			return false
+		}
 		if processor.Enabled(ctx, p) {
 			// At least one Processor will process the Record.
 			return true
