@@ -18,7 +18,7 @@ import (
 type Processor interface {
 	// Enabled reports whether the Processor will process for the given context
 	// and param.
-	// Enabled is called synchronously and should not block or panic.
+	// Enabled is called synchronously and should not block.
 	//
 	// The param contains a subset of the information that will be available
 	// in the Record passed to OnEmit, as defined by EnabledParameters.
@@ -45,7 +45,7 @@ type Processor interface {
 	Enabled(ctx context.Context, param EnabledParameters) bool
 
 	// OnEmit is called when a Record is emitted. It is called synchronously and
-	// should not block indefinitely or panic.
+	// should not block indefinitely.
 	//
 	// OnEmit will be called independent of Enabled. Implementations need to
 	// validate the arguments themselves before processing.
