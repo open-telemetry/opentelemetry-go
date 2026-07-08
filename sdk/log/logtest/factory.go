@@ -37,9 +37,7 @@ type RecordFactory struct {
 	Resource             *resource.Resource
 	InstrumentationScope *instrumentation.Scope
 
-	DroppedAttributes         int
-	AttributeValueLengthLimit int
-	AttributeCountLimit       int
+	DroppedAttributes int
 }
 
 // NewRecord returns a [sdklog.Record] configured from the values of f.
@@ -47,7 +45,8 @@ func (f RecordFactory) NewRecord() sdklog.Record {
 	// r needs to be addressable for set() below.
 	r := new(sdklog.Record)
 
-	// Set to unlimited so attributes are set exactly.
+	// Set to unlimited so attributes are set exactly and later test mutations
+	// do not inherit the zero-value Record's truncation behavior.
 	set(r, "attributeCountLimit", -1)
 	set(r, "attributeValueLengthLimit", -1)
 
@@ -65,8 +64,6 @@ func (f RecordFactory) NewRecord() sdklog.Record {
 	set(r, "resource", f.Resource)
 	set(r, "scope", f.InstrumentationScope)
 	set(r, "dropped", f.DroppedAttributes)
-	set(r, "attributeCountLimit", f.AttributeCountLimit)
-	set(r, "attributeValueLengthLimit", f.AttributeValueLengthLimit)
 
 	return *r
 }
