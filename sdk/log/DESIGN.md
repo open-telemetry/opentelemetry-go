@@ -106,8 +106,18 @@ is defined as `Record` struct in [record.go](record.go).
 
 The `Record` is designed similarly to [`log.Record`](https://pkg.go.dev/go.opentelemetry.io/otel/log#Record)
 in order to reduce the number of heap allocations when processing attributes.
+The log body and attributes use `attribute.Value` and `attribute.KeyValue`
+from `go.opentelemetry.io/otel/attribute`, matching the API representation and
+avoiding an SDK-specific value tree.
 
-The SDK does not have have an additional definition of
+Top-level duplicate attributes are handled with last-value-wins semantics
+unless `WithAllowKeyDuplication` is configured. Nested `attribute.MAP` values
+use the same semantics for duplicate map keys, including the body value, so
+exporters receive a canonical attribute tree by default. The attribute value
+length limit recursively truncates string, string slice, byte slice, slice, and
+map attribute values. The body is deduplicated but not truncated.
+
+The SDK does not have an additional definition of
 [ReadableLogRecord](https://opentelemetry.io/docs/specs/otel/logs/sdk/#readablelogrecord)
 as the specification does not say that the exporters must not be able to modify
 the log records. It simply requires them to be able to read the log records.

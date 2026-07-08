@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	logapi "go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/log"
 )
@@ -133,8 +133,8 @@ func (*EventNameProcessor) Enabled(context.Context, log.EnabledParameters) bool 
 // OnEmit sets the EventName on log records having an "otel.event.name" string attribute.
 // The original attribute is not removed.
 func (*EventNameProcessor) OnEmit(_ context.Context, record *log.Record) error {
-	record.WalkAttributes(func(kv logapi.KeyValue) bool {
-		if kv.Key == "otel.event.name" && kv.Value.Kind() == logapi.KindString {
+	record.WalkAttributes(func(kv attribute.KeyValue) bool {
+		if kv.Key == "otel.event.name" && kv.Value.Type() == attribute.STRING {
 			record.SetEventName(kv.Value.AsString())
 		}
 		return true
@@ -181,9 +181,10 @@ func (*RedactTokensProcessor) Enabled(context.Context, log.EnabledParameters) bo
 // OnEmit redacts values from attributes containing "token" in the key
 // by replacing them with a REDACTED value.
 func (*RedactTokensProcessor) OnEmit(_ context.Context, record *log.Record) error {
-	record.WalkAttributes(func(kv logapi.KeyValue) bool {
-		if strings.Contains(strings.ToLower(kv.Key), "token") {
-			record.AddAttributes(logapi.String(kv.Key, "REDACTED"))
+	record.WalkAttributes(func(kv attribute.KeyValue) bool {
+		key := string(kv.Key)
+		if strings.Contains(strings.ToLower(key), "token") {
+			record.AddAttributes(attribute.String(key, "REDACTED"))
 		}
 		return true
 	})

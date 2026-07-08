@@ -93,6 +93,11 @@ func WithEndpoint(endpoint string) Option {
 //
 // If an invalid URL is provided, the default value will be kept.
 //
+// The path of the provided URL is used as-is; with one exception: if the URL has
+// no path, it is normalized to the root path ("/"). The default traces path
+// ("/v1/traces") is not appended automatically. Use WithEndpoint if you want
+// that behavior, or pass a URL that includes that path.
+//
 // By default, if an environment variable is not set, and this option is not
 // passed, "localhost:4318" will be used.
 //
