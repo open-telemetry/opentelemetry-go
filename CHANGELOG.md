@@ -38,9 +38,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - ⚠️ **Breaking Change:** Remove `Kind`, `Value`, `KeyValue`, value and key-value constructors, and attribute conversion helpers from `go.opentelemetry.io/otel/log`. (#8490)
+- ⚠️ **Breaking Change:** Remove the `AttributeValueLengthLimit` and `AttributeCountLimit` fields from `RecordFactory` in `go.opentelemetry.io/otel/sdk/log/logtest`; records produced by the factory now keep attribute limits disabled so test code can append exact attributes. (#8556)
 
 ### Fixed
 
+- Make `WithAttributeCountLimit(0)` and `OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT=0` discard all log record attributes in `go.opentelemetry.io/otel/sdk/log`. (#8570)
 - Clarify in `go.opentelemetry.io/otel/log` that `Logger.Enabled` should be checked for every log emission because its result may change over time. (#8565)
 - Fix invalid error formatting for out-of-range JSON code values in `go.opentelemetry.io/otel/codes`. (#8497)
 - Avoid preallocating scope attributes when they are disabled in `go.opentelemetry.io/otel/exporters/prometheus` . (#8404)
