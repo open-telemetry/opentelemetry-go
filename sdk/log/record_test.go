@@ -444,6 +444,7 @@ func TestRecordAttributes(t *testing.T) {
 	}
 	r := new(Record)
 	r.attributeValueLengthLimit = -1
+	r.attributeCountLimit = -1
 	r.SetAttributes(attrs...)
 	r.SetAttributes(attrs[:2]...) // Overwrite existing.
 	r.AddAttributes(attrs[2:]...)
@@ -518,6 +519,7 @@ func TestRecordClone(t *testing.T) {
 	flag0 := trace.FlagsSampled
 
 	r0 := new(Record)
+	r0.attributeCountLimit = -1
 	r0.SetTimestamp(now0)
 	r0.SetObservedTimestamp(now0)
 	r0.SetSeverity(sev0)
@@ -556,6 +558,7 @@ func TestRecordClone(t *testing.T) {
 	assert.Equal(t, traceID0, r0.TraceID())
 	assert.Equal(t, spanID0, r0.SpanID())
 	assert.Equal(t, flag0, r0.TraceFlags())
+	assert.Equal(t, 1, r0.AttributesLen())
 	r0.WalkAttributes(func(kv attribute.KeyValue) bool {
 		return assert.Truef(t, keyValueEqual(kv, attr0), "%v != %v", kv, attr0)
 	})
@@ -568,6 +571,7 @@ func TestRecordClone(t *testing.T) {
 	assert.Equal(t, traceID1, r1.TraceID())
 	assert.Equal(t, spanID1, r1.SpanID())
 	assert.Equal(t, flag1, r1.TraceFlags())
+	assert.Equal(t, 1, r1.AttributesLen())
 	r1.WalkAttributes(func(kv attribute.KeyValue) bool {
 		return assert.Truef(t, keyValueEqual(kv, attr1), "%v != %v", kv, attr1)
 	})
@@ -614,6 +618,23 @@ func TestRecordDroppedAttributes(t *testing.T) {
 		}
 		assert.Equalf(t, wantDropped, r.DroppedAttributes(), "%d: SetAttributes", i)
 	}
+}
+
+func TestRecordZeroAttributeCountLimit(t *testing.T) {
+	attrs := []attribute.KeyValue{
+		attribute.String("one", "1"),
+		attribute.String("two", "2"),
+	}
+	r := Record{attributeValueLengthLimit: -1}
+
+	r.AddAttributes(attrs...)
+	assert.Zero(t, r.AttributesLen())
+	assert.Equal(t, len(attrs), r.DroppedAttributes())
+
+	r.SetAttributes(attrs...)
+	assert.Zero(t, r.AttributesLen())
+	assert.Equal(t, len(attrs), r.DroppedAttributes())
+	assert.Nil(t, r.back, "dropped attributes retained")
 }
 
 func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
@@ -736,12 +757,14 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 					i++
 					return true
 				})
+				assert.Equal(t, len(want), i)
 			}
 
 			t.Run("SetAttributes", func(t *testing.T) {
 				r := new(Record)
 				r.allowDupKeys = true
 				r.attributeValueLengthLimit = -1
+				r.attributeCountLimit = -1
 				r.SetAttributes(tc.attrs...)
 				validate(t, r, tc.want)
 			})
@@ -750,6 +773,7 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 				r := new(Record)
 				r.allowDupKeys = true
 				r.attributeValueLengthLimit = -1
+				r.attributeCountLimit = -1
 				r.AddAttributes(tc.attrs...)
 				validate(t, r, tc.want)
 			})
@@ -758,6 +782,7 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 				r := new(Record)
 				r.allowDupKeys = true
 				r.attributeValueLengthLimit = -1
+				r.attributeCountLimit = -1
 				r.AddAttributes(tc.attrs...)
 				r.AddAttributes(tc.attrs...)
 				want := append(tc.want, tc.want...)
@@ -901,11 +926,13 @@ func TestRecordAttrDeduplication(t *testing.T) {
 					i++
 					return true
 				})
+				assert.Equal(t, len(tc.want), i)
 			}
 
 			t.Run("SetAttributes", func(t *testing.T) {
 				r := new(Record)
 				r.attributeValueLengthLimit = -1
+				r.attributeCountLimit = -1
 				r.SetAttributes(tc.attrs...)
 				validate(t, r)
 			})
@@ -913,6 +940,7 @@ func TestRecordAttrDeduplication(t *testing.T) {
 			t.Run("AddAttributes/Empty", func(t *testing.T) {
 				r := new(Record)
 				r.attributeValueLengthLimit = -1
+				r.attributeCountLimit = -1
 				r.AddAttributes(tc.attrs...)
 				validate(t, r)
 			})
@@ -920,6 +948,7 @@ func TestRecordAttrDeduplication(t *testing.T) {
 			t.Run("AddAttributes/Duplicates", func(t *testing.T) {
 				r := new(Record)
 				r.attributeValueLengthLimit = -1
+				r.attributeCountLimit = -1
 				r.AddAttributes(tc.attrs...)
 				r.AddAttributes(tc.attrs...)
 				validate(t, r)
@@ -1104,7 +1133,10 @@ func TestApplyAttrLimitsDeduplication(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			const key = "key"
 			kv := attribute.KeyValue{Key: key, Value: tc.input}
-			r := Record{attributeValueLengthLimit: -1}
+			r := Record{
+				attributeValueLengthLimit: -1,
+				attributeCountLimit:       -1,
+			}
 
 			t.Run("AddAttributes", func(t *testing.T) {
 				r.AddAttributes(kv)
@@ -1141,6 +1173,7 @@ func TestDeduplicationBehavior(t *testing.T) {
 	}{
 		{
 			name:                "Duplicate keys only",
+			attributeCountLimit: -1,
 			attrs:               []attribute.KeyValue{attribute.String("key", "v1"), attribute.String("key", "v2")},
 			wantKeyValueDropped: true,
 			wantDroppedCount:    0, // Deduplication doesn't count
@@ -1174,6 +1207,7 @@ func TestDeduplicationBehavior(t *testing.T) {
 		},
 		{
 			name:                "allowDupKeys=true",
+			attributeCountLimit: -1,
 			allowDupKeys:        true,
 			attrs:               []attribute.KeyValue{attribute.String("key", "v1"), attribute.String("key", "v2")},
 			wantKeyValueDropped: false,
@@ -1181,7 +1215,8 @@ func TestDeduplicationBehavior(t *testing.T) {
 			wantAttributeCount:  2,
 		},
 		{
-			name: "Nested map duplicates",
+			name:                "Nested map duplicates",
+			attributeCountLimit: -1,
 			attrs: []attribute.KeyValue{
 				attribute.Map("outer", attribute.String("nested", "v1"), attribute.String("nested", "v2")),
 			},
@@ -1399,7 +1434,10 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			const key = "key"
 			kv := attribute.KeyValue{Key: key, Value: tc.input}
-			r := Record{attributeValueLengthLimit: tc.limit}
+			r := Record{
+				attributeValueLengthLimit: tc.limit,
+				attributeCountLimit:       -1,
+			}
 
 			t.Run("AddAttributes", func(t *testing.T) {
 				r.AddAttributes(kv)
@@ -1713,7 +1751,7 @@ func BenchmarkWalkAttributes(b *testing.B) {
 		{attrCount: 1000},
 	} {
 		b.Run(fmt.Sprintf("%d attributes", tt.attrCount), func(b *testing.B) {
-			record := &Record{}
+			record := &Record{attributeCountLimit: -1}
 			for i := 0; i < tt.attrCount; i++ {
 				record.SetAttributes(
 					attribute.String(fmt.Sprintf("key-%d", tt.attrCount), "value"),
