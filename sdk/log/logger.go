@@ -118,7 +118,7 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		newRecord.observedTimestamp = now()
 	}
 
-	// User-provided exception attributes must take precedence. Track message
+	// User-provided exception attributes MUST take precedence. Track message
 	// and type independently so a supplied value suppresses only its own
 	// derivation.
 	var hasExceptionMessage, hasExceptionType bool
