@@ -431,6 +431,20 @@ func TestLoggerEmit(t *testing.T) {
 	}
 }
 
+func TestLoggerEmitAfterProviderShutdown(t *testing.T) {
+	proc := newProcessor("processor")
+	provider := NewLoggerProvider(WithProcessor(proc))
+	logger := provider.Logger("logger")
+
+	logger.Emit(t.Context(), log.Record{})
+	require.Len(t, proc.records, 1)
+
+	require.NoError(t, provider.Shutdown(t.Context()))
+	logger.Emit(t.Context(), log.Record{})
+
+	assert.Len(t, proc.records, 1)
+}
+
 func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
@@ -697,6 +711,19 @@ func TestLoggerEnabled(t *testing.T) {
 			assert.Equal(t, tc.expectedP2Params, p2WithDisabled.params)
 		})
 	}
+}
+
+func TestLoggerEnabledAfterProviderShutdown(t *testing.T) {
+	proc := newFltrProcessor("processor", true)
+	provider := NewLoggerProvider(WithProcessor(proc))
+	logger := provider.Logger("logger")
+
+	require.True(t, logger.Enabled(t.Context(), log.EnabledParameters{}))
+	require.Len(t, proc.params, 1)
+
+	require.NoError(t, provider.Shutdown(t.Context()))
+	assert.False(t, logger.Enabled(t.Context(), log.EnabledParameters{}))
+	assert.Len(t, proc.params, 1)
 }
 
 func TestLoggerObservability(t *testing.T) {

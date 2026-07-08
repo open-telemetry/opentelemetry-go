@@ -18,6 +18,7 @@ import (
 type Processor interface {
 	// Enabled reports whether the Processor will process for the given context
 	// and param.
+	// Enabled is called synchronously and should not block or panic.
 	//
 	// The param contains a subset of the information that will be available
 	// in the Record passed to OnEmit, as defined by EnabledParameters.
@@ -46,7 +47,8 @@ type Processor interface {
 	// concurrently.
 	Enabled(ctx context.Context, param EnabledParameters) bool
 
-	// OnEmit is called when a Record is emitted.
+	// OnEmit is called when a Record is emitted. It is called synchronously and
+	// should not block or panic.
 	//
 	// OnEmit will be called independent of Enabled. Implementations need to
 	// validate the arguments themselves before processing.
@@ -73,18 +75,22 @@ type Processor interface {
 	// resources held by the Processor (and any underlying Exporter) should be
 	// done in this call.
 	//
+	// Shutdown must include the effects of ForceFlush.
+	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
-	//
-	// After Shutdown is called, calls to OnEmit, Shutdown, or ForceFlush
-	// should perform no operation and return nil error.
 	Shutdown(ctx context.Context) error
 
-	// ForceFlush exports log records to the configured Exporter that have not yet
-	// been exported.
+	// ForceFlush should complete any processing tasks for Records passed to
+	// OnEmit prior to the call as soon as possible, preferably before returning.
 	//
-	// The deadline or cancellation of the passed context must be honored. An
-	// appropriate error should be returned in these situations.
+	// If the Processor has an associated Exporter, ForceFlush should export all
+	// Records that have not yet been exported and then invoke
+	// [Exporter.ForceFlush].
+	//
+	// The deadline or cancellation of the passed context must be honored and
+	// takes priority over completing all pending work. An appropriate error
+	// should be returned in these situations.
 	ForceFlush(ctx context.Context) error
 }
 
