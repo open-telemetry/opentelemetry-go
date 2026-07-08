@@ -122,41 +122,51 @@ func TestParallelCallbacksRecordObservations(t *testing.T) {
 	assert.Equal(t, int64(42), got["multi"])
 }
 
-// TestParallelCallbacksJoinErrors ensures errors from callbacks executed in
-// parallel are all propagated.
-func TestParallelCallbacksJoinErrors(t *testing.T) {
-	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
+// TestCallbacksJoinErrors ensures errors from every callback are propagated,
+// whether callbacks run sequentially (the default) or in parallel. Both the
+// single-instrument and multi-instrument callback paths return an error so each
+// join site is exercised in each mode.
+func TestCallbacksJoinErrors(t *testing.T) {
+	for _, parallel := range []bool{false, true} {
+		name := "Sequential"
+		value := "false"
+		if parallel {
+			name, value = "Parallel", "true"
+		}
+		t.Run(name, func(t *testing.T) {
+			// Set explicitly in both modes so an ambient value does not decide
+			// which path runs.
+			t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", value)
 
-	reader := metric.NewManualReader()
-	mp := metric.NewMeterProvider(metric.WithReader(reader))
-	t.Cleanup(func() { _ = mp.Shutdown(t.Context()) })
-	m := mp.Meter("test")
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+			t.Cleanup(func() { _ = mp.Shutdown(t.Context()) })
+			m := mp.Meter("test")
 
-	errA := errors.New("callback A failed")
-	errB := errors.New("callback B failed")
+			errSingle := errors.New("single-instrument callback failed")
+			errMulti := errors.New("multi-instrument callback failed")
 
-	gA, err := m.Int64ObservableGauge("gA")
-	require.NoError(t, err)
-	gB, err := m.Int64ObservableGauge("gB")
-	require.NoError(t, err)
+			_, err := m.Int64ObservableCounter("single",
+				mapi.WithInt64Callback(func(_ context.Context, o mapi.Int64Observer) error {
+					o.Observe(1)
+					return errSingle
+				}))
+			require.NoError(t, err)
 
-	// RegisterCallback is a no-op without at least one valid instrument, so each
-	// error-returning callback is associated with a distinct observable.
-	_, err = m.RegisterCallback(func(_ context.Context, o mapi.Observer) error {
-		o.ObserveInt64(gA, 1)
-		return errA
-	}, gA)
-	require.NoError(t, err)
-	_, err = m.RegisterCallback(func(_ context.Context, o mapi.Observer) error {
-		o.ObserveInt64(gB, 1)
-		return errB
-	}, gB)
-	require.NoError(t, err)
+			gauge, err := m.Int64ObservableGauge("multi")
+			require.NoError(t, err)
+			_, err = m.RegisterCallback(func(_ context.Context, o mapi.Observer) error {
+				o.ObserveInt64(gauge, 1)
+				return errMulti
+			}, gauge)
+			require.NoError(t, err)
 
-	var rm metricdata.ResourceMetrics
-	err = reader.Collect(t.Context(), &rm)
-	assert.ErrorIs(t, err, errA)
-	assert.ErrorIs(t, err, errB)
+			var rm metricdata.ResourceMetrics
+			err = reader.Collect(t.Context(), &rm)
+			assert.ErrorIs(t, err, errSingle)
+			assert.ErrorIs(t, err, errMulti)
+		})
+	}
 }
 
 // TestParallelCallbacksMoreCallbacksThanWorkers exercises the job-queueing path
