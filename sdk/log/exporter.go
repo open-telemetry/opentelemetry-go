@@ -46,7 +46,7 @@ type Exporter interface {
 	// not invoke processors and therefore will not result in calls to
 	// exporters.
 	//
-	// Shutdown may be called concurrently with itself or with other methods.
+	// Shutdown may be called concurrently with other methods.
 	Shutdown(ctx context.Context) error
 
 	// ForceFlush exports log records to the configured Exporter that have not yet
