@@ -445,6 +445,48 @@ func TestLoggerEmitAfterProviderShutdown(t *testing.T) {
 	assert.Len(t, proc.records, 1)
 }
 
+type blockingOnEmitProcessor struct {
+	*processor
+	started chan struct{}
+	release chan struct{}
+}
+
+func (p *blockingOnEmitProcessor) OnEmit(context.Context, *Record) error {
+	close(p.started)
+	<-p.release
+	return nil
+}
+
+func TestLoggerEmitShutdownConcurrentSafe(t *testing.T) {
+	first := &blockingOnEmitProcessor{
+		processor: newProcessor("first"),
+		started:   make(chan struct{}),
+		release:   make(chan struct{}),
+	}
+	second := newProcessor("second")
+	provider := NewLoggerProvider(
+		WithProcessor(first),
+		WithProcessor(second),
+	)
+	logger := provider.Logger("logger")
+	ctx := t.Context()
+
+	emitDone := make(chan struct{})
+	go func() {
+		defer close(emitDone)
+		logger.Emit(ctx, log.Record{})
+	}()
+
+	<-first.started
+	shutdownErr := provider.Shutdown(ctx)
+	close(first.release)
+	<-emitDone
+
+	require.NoError(t, shutdownErr)
+	assert.Equal(t, 1, second.shutdownCalls)
+	assert.Empty(t, second.records, "OnEmit called after processor shutdown")
+}
+
 func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 

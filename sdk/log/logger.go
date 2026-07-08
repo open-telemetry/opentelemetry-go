@@ -62,6 +62,11 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 
 	newRecord := l.newRecord(ctx, r)
 	for _, p := range l.provider.processors {
+		// Re-check before each processor so Shutdown can stop an in-flight
+		// pipeline before the next OnEmit call.
+		if l.provider.stopped.Load() {
+			return
+		}
 		if err := p.OnEmit(ctx, &newRecord); err != nil {
 			otel.Handle(err)
 		}
