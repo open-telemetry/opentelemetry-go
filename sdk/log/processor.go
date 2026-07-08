@@ -42,9 +42,6 @@ type Processor interface {
 	//
 	// The SDK's Logger.Enabled returns false if all the registered processors
 	// return false. Otherwise, it returns true.
-	//
-	// Implementations of this method need to be safe for a user to call
-	// concurrently.
 	Enabled(ctx context.Context, param EnabledParameters) bool
 
 	// OnEmit is called when a Record is emitted. It is called synchronously and
