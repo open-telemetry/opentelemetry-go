@@ -221,13 +221,17 @@ func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 	case <-b.pollDone:
 	case <-ctx.Done():
 		// Out of time.
-		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
+		return errors.Join(ctx.Err(), forceFlushAndShutdown(ctx, b.exporter))
 	}
 
 	// Flush remaining queued before exporter shutdown.
 	err := b.exporter.Export(ctx, b.q.Flush())
-	err = errors.Join(err, b.exporter.ForceFlush(ctx))
-	return errors.Join(err, b.exporter.Shutdown(ctx))
+	return errors.Join(err, forceFlushAndShutdown(ctx, b.exporter))
+}
+
+func forceFlushAndShutdown(ctx context.Context, exporter Exporter) error {
+	err := exporter.ForceFlush(ctx)
+	return errors.Join(err, exporter.Shutdown(ctx))
 }
 
 var errPartialFlush = errors.New("partial flush: export buffer full")
