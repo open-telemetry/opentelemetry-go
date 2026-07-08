@@ -62,7 +62,9 @@ func TestNoInvalidObservableHistogramTypes(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() || filepath.Base(path) != "metric.go" || !strings.HasSuffix(filepath.Base(filepath.Dir(path)), "conv") {
+		if d.IsDir() ||
+			filepath.Base(path) != "metric.go" ||
+			!strings.HasSuffix(filepath.Base(filepath.Dir(path)), "conv") {
 			return nil
 		}
 
@@ -83,7 +85,7 @@ func TestNoInvalidObservableHistogramTypes(t *testing.T) {
 	}
 }
 
-func writeGoFile(t *testing.T, dir, pkg, src string) {
+func writeGoFile(t *testing.T, dir, _, src string) {
 	t.Helper()
 
 	if err := os.MkdirAll(dir, 0o755); err != nil {

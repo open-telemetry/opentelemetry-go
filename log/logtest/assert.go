@@ -5,11 +5,12 @@ package logtest // import "go.opentelemetry.io/otel/log/logtest"
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // TestingT reports failure messages.
@@ -31,8 +32,9 @@ func AssertEqual[T Recording | Record](t TestingT, want, got T, opts ...AssertOp
 
 	cmpOpts := []cmp.Option{
 		cmp.Comparer(func(x, y context.Context) bool { return x == y }), // Compare context.
+		cmp.Comparer(func(x, y attribute.Value) bool { return reflect.DeepEqual(x, y) }),
 		cmpopts.SortSlices(
-			func(a, b log.KeyValue) bool { return a.Key < b.Key },
+			func(a, b attribute.KeyValue) bool { return a.Key < b.Key },
 		), // Unordered compare of the key values.
 		cmpopts.EquateErrors(),
 		cmpopts.EquateEmpty(), // Empty and nil collections are equal.
