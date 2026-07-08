@@ -142,8 +142,14 @@ func (mp *MeterProvider) Shutdown(ctx context.Context) error {
 	// See https://go.dev/ref/mem#atomic and https://pkg.go.dev/sync/atomic.
 
 	mp.stopped.Store(true)
+	var err error
 	if mp.shutdown != nil {
-		return mp.shutdown(ctx)
+		err = mp.shutdown(ctx)
 	}
-	return nil
+	// Tear down each pipeline's resources, e.g. observable-callback worker
+	// pools, so their goroutines do not leak.
+	for _, p := range mp.pipes {
+		p.stop()
+	}
+	return err
 }
