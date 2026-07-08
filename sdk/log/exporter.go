@@ -41,6 +41,11 @@ type Exporter interface {
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
 	//
+	// Note that after the first [LoggerProvider.Shutdown] call, subsequent
+	// calls to the provider as well as loggers created by the provider will
+	// not invoke processors and therefore will not result in calls to
+	// exporters.
+	//
 	// Shutdown may be called concurrently with itself or with other methods.
 	Shutdown(ctx context.Context) error
 
