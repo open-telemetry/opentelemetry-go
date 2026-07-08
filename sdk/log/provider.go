@@ -150,8 +150,8 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 
 // Shutdown shuts down the provider and all processors.
 //
-// After Shutdown returns, calls to Loggers created by the provider will not
-// invoke processors.
+// After Shutdown returns, subsequent calls to Loggers created by the provider
+// will not invoke processors.
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
