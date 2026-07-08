@@ -18,6 +18,8 @@ import (
 type Exporter interface {
 	// Export transmits log records to a receiver.
 	//
+	// Export should not block indefinitely.
+	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
 	//

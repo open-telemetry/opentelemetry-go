@@ -45,7 +45,7 @@ type Processor interface {
 	Enabled(ctx context.Context, param EnabledParameters) bool
 
 	// OnEmit is called when a Record is emitted. It is called synchronously and
-	// should not block or panic.
+	// should not block indefinitely or panic.
 	//
 	// OnEmit will be called independent of Enabled. Implementations need to
 	// validate the arguments themselves before processing.
