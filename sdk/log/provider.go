@@ -171,10 +171,6 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
-	if p.stopped.Load() {
-		return nil
-	}
-
 	var err error
 	for _, processor := range p.processors {
 		// Re-check before each processor so Shutdown can stop an in-flight

@@ -80,10 +80,6 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 // processed, true will be returned by default. A value of false will only be
 // returned if it can be positively verified that no Processor will process.
 func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool {
-	if l.provider.stopped.Load() {
-		return false
-	}
-
 	p := EnabledParameters{
 		InstrumentationScope: l.instrumentationScope,
 		Severity:             param.Severity,
