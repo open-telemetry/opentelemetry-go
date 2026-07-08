@@ -6,6 +6,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 import (
 	"bytes"
 	"context"
+	"errors"
 	stdlog "log"
 	"slices"
 	"strconv"
@@ -27,6 +28,26 @@ import (
 type concurrentBuffer struct {
 	b bytes.Buffer
 	m sync.Mutex
+}
+
+type shutdownExporter struct {
+	calls                             []string
+	exportErr, forceFlushErr, stopErr error
+}
+
+func (e *shutdownExporter) Export(context.Context, []Record) error {
+	e.calls = append(e.calls, "Export")
+	return e.exportErr
+}
+
+func (e *shutdownExporter) ForceFlush(context.Context) error {
+	e.calls = append(e.calls, "ForceFlush")
+	return e.forceFlushErr
+}
+
+func (e *shutdownExporter) Shutdown(context.Context) error {
+	e.calls = append(e.calls, "Shutdown")
+	return e.stopErr
 }
 
 func (b *concurrentBuffer) Write(p []byte) (n int, err error) {
@@ -292,7 +313,37 @@ func TestBatchProcessor(t *testing.T) {
 			e := newTestExporter(assert.AnError)
 			b := NewBatchProcessor(e)
 			assert.ErrorIs(t, b.Shutdown(ctx), assert.AnError, "exporter error not returned")
+			assert.Equal(t, 1, e.ForceFlushN(), "exporter ForceFlush calls")
+			assert.Equal(t, 1, e.ShutdownN(), "exporter Shutdown calls")
 			assert.NoError(t, b.Shutdown(ctx))
+		})
+
+		t.Run("FlushesBeforeShutdown", func(t *testing.T) {
+			exportErr := errors.New("export")
+			forceFlushErr := errors.New("force flush")
+			shutdownErr := errors.New("shutdown")
+			e := &shutdownExporter{
+				exportErr:     exportErr,
+				forceFlushErr: forceFlushErr,
+				stopErr:       shutdownErr,
+			}
+			b := NewBatchProcessor(
+				e,
+				WithMaxQueueSize(2),
+				WithExportMaxBatchSize(2),
+				WithExportInterval(time.Hour),
+				WithExportTimeout(time.Hour),
+			)
+			require.NoError(t, b.OnEmit(ctx, new(Record)))
+
+			err := b.Shutdown(ctx)
+			assert.ErrorIs(t, err, exportErr)
+			assert.ErrorIs(t, err, forceFlushErr)
+			assert.ErrorIs(t, err, shutdownErr)
+			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.calls)
+
+			require.NoError(t, b.Shutdown(ctx))
+			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.calls)
 		})
 
 		t.Run("Multiple", func(t *testing.T) {
@@ -303,6 +354,7 @@ func TestBatchProcessor(t *testing.T) {
 			for range shutdowns {
 				assert.NoError(t, b.Shutdown(ctx))
 			}
+			assert.Equal(t, 1, e.ForceFlushN(), "exporter ForceFlush calls")
 			assert.Equal(t, 1, e.ShutdownN(), "exporter Shutdown calls")
 		})
 
@@ -322,9 +374,10 @@ func TestBatchProcessor(t *testing.T) {
 
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 			assert.NoError(t, b.Shutdown(ctx))
+			assert.Equal(t, 1, e.ForceFlushN(), "ForceFlush not called by Shutdown")
 
 			assert.NoError(t, b.ForceFlush(ctx))
-			assert.Equal(t, 0, e.ForceFlushN(), "ForceFlush called after shutdown")
+			assert.Equal(t, 1, e.ForceFlushN(), "ForceFlush called after shutdown")
 		})
 
 		t.Run("CanceledContext", func(t *testing.T) {

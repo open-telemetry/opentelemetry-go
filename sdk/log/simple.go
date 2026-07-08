@@ -5,6 +5,7 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -80,13 +81,14 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) (err error) {
 	return s.exporter.Export(ctx, *records)
 }
 
-// Shutdown shuts down the exporter.
+// Shutdown flushes and shuts down the exporter.
 func (s *SimpleProcessor) Shutdown(ctx context.Context) error {
 	if s.exporter == nil {
 		return nil
 	}
 
-	return s.exporter.Shutdown(ctx)
+	err := s.exporter.ForceFlush(ctx)
+	return errors.Join(err, s.exporter.Shutdown(ctx))
 }
 
 // ForceFlush flushes the exporter.
