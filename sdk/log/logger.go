@@ -144,13 +144,14 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 
 		// Derived attributes are buffered until flush, so the current attribute
 		// count stays unchanged while missing values are prepared.
+		hasLimit := newRecord.hasAttributeCountLimit()
 		remaining := newRecord.attributeCountLimit
-		if remaining > 0 {
+		if hasLimit {
 			remaining -= newRecord.AttributesLen()
 		}
 		if !hasExceptionMessage {
 			if msg := err.Error(); msg != "" {
-				if newRecord.attributeCountLimit > 0 && remaining < n+1 {
+				if hasLimit && remaining <= n {
 					goto flush
 				}
 				attrs[n] = exceptionMessageKey.String(msg)
@@ -159,7 +160,7 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		}
 		if !hasExceptionType {
 			if errType := errorType(err); errType != "" {
-				if newRecord.attributeCountLimit > 0 && remaining < n+1 {
+				if hasLimit && remaining <= n {
 					goto flush
 				}
 				attrs[n] = exceptionTypeKey.String(errType)

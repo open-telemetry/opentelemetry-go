@@ -41,6 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Make `WithAttributeCountLimit(0)` and `OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT=0` discard all log record attributes in `go.opentelemetry.io/otel/sdk/log`. (#8570)
 - Preserve user-provided exception attributes while independently deriving missing exception message and type attributes in `go.opentelemetry.io/otel/sdk/log`. (#8566)
 - Clarify in `go.opentelemetry.io/otel/log` that `Logger.Enabled` should be checked for every log emission because its result may change over time. (#8565)
 - Fix invalid error formatting for out-of-range JSON code values in `go.opentelemetry.io/otel/codes`. (#8497)
