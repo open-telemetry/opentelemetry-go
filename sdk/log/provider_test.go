@@ -447,6 +447,48 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 	})
 }
 
+type blockingForceFlushProcessor struct {
+	*processor
+	started chan struct{}
+	release chan struct{}
+}
+
+func (p *blockingForceFlushProcessor) ForceFlush(context.Context) error {
+	p.forceFlushCalls++
+	close(p.started)
+	<-p.release
+	return p.Err
+}
+
+func TestLoggerProviderForceFlushShutdownConcurrentSafe(t *testing.T) {
+	first := &blockingForceFlushProcessor{
+		processor: newProcessor("first"),
+		started:   make(chan struct{}),
+		release:   make(chan struct{}),
+	}
+	second := newProcessor("second")
+	provider := NewLoggerProvider(
+		WithProcessor(first),
+		WithProcessor(second),
+	)
+	ctx := t.Context()
+
+	flushDone := make(chan error)
+	go func() {
+		flushDone <- provider.ForceFlush(ctx)
+	}()
+
+	<-first.started
+	shutdownErr := provider.Shutdown(ctx)
+	close(first.release)
+	flushErr := <-flushDone
+
+	require.NoError(t, shutdownErr)
+	require.NoError(t, flushErr)
+	assert.Equal(t, 1, second.shutdownCalls)
+	assert.Zero(t, second.forceFlushCalls, "ForceFlush called after processor shutdown")
+}
+
 func BenchmarkLoggerProviderLogger(b *testing.B) {
 	p := NewLoggerProvider()
 	names := make([]string, b.N)

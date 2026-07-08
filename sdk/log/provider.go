@@ -176,8 +176,13 @@ func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
 	}
 
 	var err error
-	for _, p := range p.processors {
-		err = errors.Join(err, p.ForceFlush(ctx))
+	for _, processor := range p.processors {
+		// Re-check before each processor so Shutdown can stop an in-flight
+		// pipeline before the next ForceFlush call.
+		if p.stopped.Load() {
+			return err
+		}
+		err = errors.Join(err, processor.ForceFlush(ctx))
 	}
 	return err
 }
