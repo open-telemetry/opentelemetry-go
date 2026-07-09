@@ -140,14 +140,14 @@ func addExceptionAttrs(r *Record, err error) {
 	var attrs [2]attribute.KeyValue
 	n := 0
 	if msg := err.Error(); msg != "" {
-		if r.attributeCountLimit > 0 && r.attributeCountLimit-r.AttributesLen() < n+1 {
+		if r.hasAttributeCountLimit() && r.attributeCountLimit-r.AttributesLen() <= n {
 			goto flush
 		}
 		attrs[n] = exceptionMessageKey.String(msg)
 		n++
 	}
 	if errType := errorType(err); errType != "" {
-		if r.attributeCountLimit > 0 && r.attributeCountLimit-r.AttributesLen() < n+1 {
+		if r.hasAttributeCountLimit() && r.attributeCountLimit-r.AttributesLen() <= n {
 			goto flush
 		}
 		attrs[n] = exceptionTypeKey.String(errType)
