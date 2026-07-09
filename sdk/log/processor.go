@@ -47,7 +47,7 @@ type Processor interface {
 
 	// OnEmit is called when a Record is emitted.
 	//
-	// OnEmit is called synchronously and should not block indefinitely.
+	// OnEmit is called synchronously and should not block.
 	//
 	// OnEmit will be called independent of Enabled. Implementations need to
 	// validate the arguments themselves before processing.
