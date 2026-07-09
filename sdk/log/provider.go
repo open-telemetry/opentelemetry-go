@@ -275,10 +275,10 @@ func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 // Disabling deduplication with this option can improve performance e.g. of
 // adding attributes to the log record.
 //
-// Many receivers handle duplicate keys unpredictably. If you disable
-// deduplication, you are responsible for ensuring that duplicate key-value
-// pairs within a single collection are not emitted, or that the telemetry
-// receiver can handle such duplicates.
+// Receivers may handle duplicate keys unpredictably. If you disable
+// deduplication, you are responsible for ensuring that duplicate keys within a
+// single collection are not emitted, or that the telemetry receiver can handle
+// such duplicates.
 func WithAllowKeyDuplication() LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.allowDupKeys = newSetting(true)
