@@ -3,7 +3,7 @@
 
 // Package internal provides internal functionality for the otlploggrpc
 // package.
-package internal // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
+package internal
 
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/observ/target.go.tmpl "--data={ \"pkg\": \"observ\", \"pkg_path\": \"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ\" }" --out=observ/target.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/observ/target_test.go.tmpl "--data={ \"pkg\": \"observ\" }" --out=observ/target_test.go

@@ -4,7 +4,7 @@
 // Package migration provides interfaces and functions that are useful for
 // providing a cooperation of the OpenTelemetry tracers with the
 // OpenTracing API.
-package migration // import "go.opentelemetry.io/otel/bridge/opentracing/migration"
+package migration
 
 import (
 	"context"

@@ -3,7 +3,7 @@
 
 // Package observ provides experimental observability instrumentation
 // for the prometheus exporter.
-package observ // import "go.opentelemetry.io/otel/exporters/prometheus/internal/observ"
+package observ
 
 import (
 	"context"
