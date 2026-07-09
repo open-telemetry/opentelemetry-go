@@ -272,11 +272,13 @@ func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 // present, only a single pair is retained and others are discarded. Resource
 // attributes are always deduplicated by go.opentelemetry.io/otel/sdk/resource.
 //
-// Disabling deduplication with this option can improve performance e.g. of adding attributes to the log record.
+// Disabling deduplication with this option can improve performance e.g. of
+// adding attributes to the log record.
 //
-// Note that if you disable deduplication, you are responsible for ensuring that duplicate
-// key-value pairs within a single collection are not emitted,
-// or that the telemetry receiver can handle such duplicates.
+// Many receivers handle duplicate keys unpredictably. If you disable
+// deduplication, you are responsible for ensuring that duplicate key-value
+// pairs within a single collection are not emitted, or that the telemetry
+// receiver can handle such duplicates.
 func WithAllowKeyDuplication() LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.allowDupKeys = newSetting(true)
