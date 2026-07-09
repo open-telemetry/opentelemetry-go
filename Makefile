@@ -19,8 +19,8 @@ DEPENDENCIES_DOCKERFILE=./dependencies.Dockerfile
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate toolchain-check license-check misspell go-mod-tidy golangci-lint-fix verify-readmes verify-mods test-default
-ci: generate toolchain-check license-check lint vanity-import-check verify-readmes verify-mods build test-default check-clean-work-tree test-coverage
+precommit: generate toolchain-check license-check misspell go-mod-tidy modernize golangci-lint-fix verify-readmes verify-mods test-default
+ci: generate toolchain-check license-check lint verify-readmes verify-mods build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -51,6 +51,9 @@ $(TOOLS)/verifyreadmes: $(VERIFYREADMES_FILES)
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
 $(TOOLS)/golangci-lint: PACKAGE=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
+MODERNIZE = $(TOOLS)/modernize
+$(TOOLS)/modernize: PACKAGE=golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize
+
 MISSPELL = $(TOOLS)/misspell
 $(TOOLS)/misspell: PACKAGE=github.com/client9/misspell/cmd/misspell
 
@@ -59,9 +62,6 @@ $(TOOLS)/gocovmerge: PACKAGE=github.com/wadey/gocovmerge
 
 STRINGER = $(TOOLS)/stringer
 $(TOOLS)/stringer: PACKAGE=golang.org/x/tools/cmd/stringer
-
-PORTO = $(TOOLS)/porto
-$(TOOLS)/porto: PACKAGE=github.com/jcchavezs/porto/cmd/porto
 
 GOTMPL = $(TOOLS)/gotmpl
 $(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
@@ -111,7 +111,7 @@ $(CODESPELL): PACKAGE=codespell
 # Generate
 
 .PHONY: generate
-generate: go-generate vanity-import-fix
+generate: go-generate
 
 .PHONY: go-generate
 go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
@@ -120,10 +120,6 @@ go-generate/%: $(STRINGER) $(GOTMPL)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
-
-.PHONY: vanity-import-fix
-vanity-import-fix: $(PORTO)
-	@$(PORTO) --include-internal -w .
 
 # Generate go.work file for local development.
 .PHONY: go-work
@@ -213,6 +209,14 @@ golangci-lint/%: $(GOLANGCI_LINT)
 		&& cd $(DIR) \
 		&& $(GOLANGCI_LINT) run --allow-serial-runners $(ARGS)
 
+.PHONY: modernize
+modernize: $(ALL_GO_MOD_DIRS:%=modernize/%)
+modernize/%: DIR=$*
+modernize/%: $(MODERNIZE)
+	@echo "modernize in $(DIR)" \
+		&& cd $(DIR) \
+		&& $(MODERNIZE) -fix ./...
+
 .PHONY: crosslink
 crosslink: $(CROSSLINK)
 	@echo "Updating intra-repository dependencies in all go modules" \
@@ -228,10 +232,6 @@ go-mod-tidy/%: crosslink
 
 .PHONY: lint
 lint: misspell go-mod-tidy golangci-lint
-
-.PHONY: vanity-import-check
-vanity-import-check: $(PORTO)
-	@$(PORTO) --include-internal -l . || ( echo "(run: make vanity-import-fix)"; exit 1 )
 
 .PHONY: misspell
 misspell: $(MISSPELL)
