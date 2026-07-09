@@ -62,9 +62,10 @@ Implementation requirements:
 - The [specification requires](https://opentelemetry.io/docs/specs/otel/logs/api/#concurrency-requirements)
   the method to be safe to be called concurrently.
 
-- If the passed name is empty, the method should retain it as the
-  instrumentation scope name, return a working logger, and report the invalid
-  value, as specified by the [Logs SDK specification](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logger-creation).
+- If the passed name is empty, this should be reported as invalid as specified
+  by the [Logs SDK specification](https://opentelemetry.io/docs/specs/otel/logs/sdk/#logger-creation).
+  The method should still use it as the instrumentation scope name and return
+  a working logger.
 
 `Logger` can be extended by adding new `LoggerOption` options
 and adding new exported fields to the `LoggerConfig` struct.
