@@ -633,7 +633,7 @@ type spanLimits struct {
 	Events int
 	// EventAttrs is the number of allowed attributes for a span event.
 	//
-	// The is resolved from the environment variable value for the
+	// This is resolved from the environment variable value for the
 	// OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT key, or 128 is used if that is not set.
 	EventAttrs int
 	// Links is the number of allowed Links for a span.
