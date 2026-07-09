@@ -71,6 +71,19 @@ func newExpoHistogramDataPoint[N int64 | float64](
 	return dp
 }
 
+func (p *expoHistogramDataPoint[N]) reset(startTime time.Time, maxScale int32) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.scale.Store(maxScale)
+	p.posBuckets.clear()
+	p.negBuckets.clear()
+	p.zeroCount.Store(0)
+	p.sum.reset()
+	p.minMax.reset()
+	p.startTime = startTime
+}
+
 // record adds a new measurement to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramDataPoint[N]) record(v N) {
 	p.mu.Lock()
@@ -203,6 +216,14 @@ func (p *expoHistogramDataPoint[N]) count() uint64 {
 type expoBuckets struct {
 	startBin int32
 	counts   []atomic.Uint64
+}
+
+func (b *expoBuckets) clear() {
+	for i := range b.counts {
+		b.counts[i].Store(0)
+	}
+	b.counts = b.counts[:0]
+	b.startBin = 0
 }
 
 // record increments the count for the given bin, and expands the buckets if needed.
@@ -598,8 +619,8 @@ func (cp *doubleBufferedCumulativePoint[N]) measure(ctx context.Context, value N
 	defer cp.wg.done(hotIdx)
 	v := cp.points[hotIdx]
 	v.record(value)
-	if !v.dropExemplars {
-		v.res.Offer(ctx, value, droppedAttr)
+	if cp.cumulative.res != nil && !cp.cumulative.dropExemplars {
+		cp.cumulative.res.Offer(ctx, value, droppedAttr)
 	}
 }
 
@@ -613,16 +634,8 @@ func (cp *doubleBufferedCumulativePoint[N]) collect(
 
 	val.merge(delta)
 
-	// Replace the cold delta point and its reservoir
-	cp.points[coldIdx] = newExpoHistogramDataPoint[N](
-		delta.attrs,
-		cp.maxSize,
-		cp.maxScale,
-		cp.noMinMax,
-		cp.noSum,
-		cp.newRes,
-		t,
-	)
+	// Reset the quiescent cold point for reuse without allocation.
+	delta.reset(t, cp.maxScale)
 
 	startTime := defaultStartTime
 	if x.PerSeriesStartTimestamps.Enabled() {
@@ -631,8 +644,8 @@ func (cp *doubleBufferedCumulativePoint[N]) collect(
 
 	val.uploadTo(dp, startTime, t)
 
-	if delta.res != nil {
-		collectExemplars(&dp.Exemplars, delta.res.Collect)
+	if val.res != nil && !val.dropExemplars {
+		collectExemplars(&dp.Exemplars, val.res.Collect)
 	} else {
 		dp.Exemplars = dp.Exemplars[:0]
 	}
@@ -671,9 +684,9 @@ func (e *doubleBufferedCumulativeExpoHistogram[N]) measure(
 			noSum:    e.noSum,
 			newRes:   e.newRes,
 		}
-		cp.cumulative = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, nil, n)
-		cp.points[0] = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, e.newRes, n)
-		cp.points[1] = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, e.newRes, n)
+		cp.cumulative = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, e.newRes, n)
+		cp.points[0] = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, nil, n)
+		cp.points[1] = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, nil, n)
 		return cp
 	})
 

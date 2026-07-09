@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/internal/x"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -1542,4 +1543,33 @@ func TestExponentialHistogramNoMinMax(t *testing.T) {
 	assert.False(t, defined, "Min should be invalid when noMinMax is true")
 	_, defined = ehCumul.DataPoints[0].Max.Value()
 	assert.False(t, defined, "Max should be invalid when noMinMax is true")
+}
+
+func TestExponentialHistogramCumulativeExemplarPreservedAcrossCollections(t *testing.T) {
+	ctx := t.Context()
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	factory := func(attribute.Set) FilteredExemplarReservoir[int64] {
+		return NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, exemplar.NewFixedSizeReservoir(1))
+	}
+
+	measure, collect := newCumulativeExpoHistogram[int64](4, 20, false, false, 0, factory)
+	measure(ctx, 42, alice, []attribute.KeyValue{attribute.String("trace_id", "123")})
+
+	var dest metricdata.Aggregation
+
+	// First collection: exemplar should be reported.
+	collect(&dest)
+	eh := dest.(metricdata.ExponentialHistogram[int64])
+	require.Len(t, eh.DataPoints, 1)
+	require.Len(t, eh.DataPoints[0].Exemplars, 1)
+	assert.Equal(t, int64(42), eh.DataPoints[0].Exemplars[0].Value)
+
+	// Second collection without new measurements: the exemplar should STILL be reported
+	// because cumulative series preserve their reservoir state across collections.
+	collect(&dest)
+	eh = dest.(metricdata.ExponentialHistogram[int64])
+	require.Len(t, eh.DataPoints, 1)
+	require.Len(t, eh.DataPoints[0].Exemplars, 1)
+	assert.Equal(t, int64(42), eh.DataPoints[0].Exemplars[0].Value)
 }

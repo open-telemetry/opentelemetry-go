@@ -142,6 +142,10 @@ func (s *atomicMinMax[N]) Update(val N) {
 	}
 }
 
+func (s *atomicMinMax[N]) reset() {
+	s.set.Store(false)
+}
+
 // hotColdWaitGroup is a synchronization primitive which enables lockless
 // writes for concurrent writers and enables a reader to acquire exclusive
 // access to a snapshot of state including only completed operations.
