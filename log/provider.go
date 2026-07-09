@@ -24,8 +24,8 @@ type LoggerProvider interface {
 	// commonly, this means a bridge will need to accept this value from its
 	// users.
 	//
-	// An empty name is invalid. Implementations should retain it as the
-	// instrumentation scope name and report the invalid value.
+	// An empty name is invalid. Implementations should retain the empty value as the
+	// instrumentation scope name, return a working Logger, and report the invalid value.
 	//
 	// The version of the packages using a bridge can be critical information
 	// to include when logging. The bridge should accept this version
