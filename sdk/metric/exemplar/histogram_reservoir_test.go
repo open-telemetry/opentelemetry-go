@@ -32,33 +32,50 @@ func TestHistogramReservoirConcurrentSafe(t *testing.T) {
 }
 
 func TestHistogramReservoirTimeUnbiased(t *testing.T) {
-	bounds := []float64{10}
+	// A single bucket (-Inf, 100] so all offered measurements fall into it.
+	bounds := []float64{100}
 	r := NewHistogramReservoir(bounds)
 
 	const (
-		N = 100   // Items per run
+		N = 10    // Items offered per run
 		M = 20000 // Number of runs
 	)
 
-	var sum float64
+	var counts [N]int
 	var dest []Exemplar
 
 	for range M {
-		for j := 1; j <= N; j++ {
-			val := 10.0 * float64(j) / float64(N)
-			r.Offer(t.Context(), staticTime, NewValue(val), nil)
+		for j := range N {
+			r.Offer(t.Context(), staticTime, NewValue(int64(j)), nil)
 		}
 		r.Collect(&dest)
 		require.Len(t, dest, 1)
-		sum += dest[0].Value.Float64()
+		pos := int(dest[0].Value.Int64())
+		require.GreaterOrEqual(t, pos, 0)
+		require.Less(t, pos, N)
+		counts[pos]++
 		dest = dest[:0]
 	}
 
-	mean := sum / float64(M)
-	expectedMean := 5.0 * float64(N+1) / float64(N)
+	// Chi-square goodness-of-fit test against the discrete uniform distribution.
+	// Expected frequency for each position under uniform sampling: E = M / N.
+	expected := float64(M) / float64(N)
+	var chiSquare float64
+	for _, count := range counts {
+		diff := float64(count) - expected
+		chiSquare += (diff * diff) / expected
+	}
 
-	// Standard deviation of the discrete uniform distribution is approx 2.88.
-	// Standard error of the mean for M=20000 is 2.88 / sqrt(20000) approx 0.02.
-	// A delta of 0.1 is approx 5 standard errors, which makes flakiness extremely unlikely.
-	assert.InDelta(t, expectedMean, mean, 0.1)
+	// With N=10 categories (df = N-1 = 9), the critical value of Chi-square at
+	// alpha = 0.00006 is 35.0. This prevents test flakiness while rejecting
+	// non-uniform sampling distributions (such as symmetric U-shaped or skewed
+	// distributions).
+	assert.Less(
+		t,
+		chiSquare,
+		35.0,
+		"Chi-square goodness-of-fit statistic %v exceeds critical value 35.0 (df=%d) for uniform distribution",
+		chiSquare,
+		N-1,
+	)
 }
