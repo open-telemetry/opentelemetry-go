@@ -38,6 +38,11 @@ const (
 	// DefaultMaxRequestSize is the default maximum size of a serialized export
 	// request, before compression.
 	DefaultMaxRequestSize int = 64 * 1024 * 1024
+
+	// DefaultMaxResponseBodySize is the default maximum size of an OTLP/HTTP
+	// response body, after decompression.
+	DefaultMaxResponseBodySize int64 = 4 * 1024 * 1024
+
 	// DefaultBackoff is a default base backoff time used in the
 	// exponential backoff strategy.
 	DefaultBackoff time.Duration = 300 * time.Millisecond
@@ -58,8 +63,11 @@ type (
 		Headers        map[string]string
 		Compression    Compression
 		MaxRequestSize int
-		Timeout        time.Duration
-		URLPath        string
+
+		MaxResponseBodySize int64
+
+		Timeout time.Duration
+		URLPath string
 
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
@@ -95,7 +103,10 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			URLPath:        DefaultMetricsPath,
 			Compression:    NoCompression,
 			MaxRequestSize: DefaultMaxRequestSize,
-			Timeout:        DefaultTimeout,
+
+			MaxResponseBodySize: DefaultMaxResponseBodySize,
+
+			Timeout: DefaultTimeout,
 
 			TemporalitySelector: metric.DefaultTemporalitySelector,
 			AggregationSelector: metric.DefaultAggregationSelector,
@@ -368,6 +379,13 @@ func WithTimeout(duration time.Duration) GenericOption {
 func WithMaxRequestSize(size int) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.MaxRequestSize = size
+		return cfg
+	})
+}
+
+func WithMaxResponseBodySize(size int64) HTTPOption {
+	return NewHTTPOption(func(cfg Config) Config {
+		cfg.Metrics.MaxResponseBodySize = size
 		return cfg
 	})
 }

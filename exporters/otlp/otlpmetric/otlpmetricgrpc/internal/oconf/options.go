@@ -38,6 +38,7 @@ const (
 	// DefaultMaxRequestSize is the default maximum size of a serialized export
 	// request, before compression.
 	DefaultMaxRequestSize int = 64 * 1024 * 1024
+
 	// DefaultBackoff is a default base backoff time used in the
 	// exponential backoff strategy.
 	DefaultBackoff time.Duration = 300 * time.Millisecond
@@ -58,8 +59,9 @@ type (
 		Headers        map[string]string
 		Compression    Compression
 		MaxRequestSize int
-		Timeout        time.Duration
-		URLPath        string
+
+		Timeout time.Duration
+		URLPath string
 
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
@@ -95,7 +97,8 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			URLPath:        DefaultMetricsPath,
 			Compression:    NoCompression,
 			MaxRequestSize: DefaultMaxRequestSize,
-			Timeout:        DefaultTimeout,
+
+			Timeout: DefaultTimeout,
 
 			TemporalitySelector: metric.DefaultTemporalitySelector,
 			AggregationSelector: metric.DefaultAggregationSelector,

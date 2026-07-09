@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -46,13 +47,6 @@ func newNoopClient() *client {
 var exporterN atomic.Int64
 
 var errInsecureEndpointWithTLS = errors.New("insecure HTTP endpoint cannot use TLS client configuration")
-
-// maxResponseBodySize is the maximum number of bytes to read from a response
-// body. It is set to 4 MiB per the OTLP specification recommendation to
-// mitigate excessive memory usage caused by a misconfigured or malicious
-// server. If exceeded, the response is treated as a not-retryable error.
-// This is a variable to allow tests to override it.
-var maxResponseBodySize int64 = 4 * 1024 * 1024
 
 // nextExporterID returns the next unique ID for an exporter.
 func nextExporterID() int64 {
@@ -110,12 +104,18 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	}
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
+	maxResponseBodySize := defaultMaxResponseBodySize
+	if cfg.maxResponseBodySize.Set {
+		maxResponseBodySize = cfg.maxResponseBodySize.Value
+	}
+
 	c := &httpClient{
-		compression:    cfg.compression.Value,
-		maxRequestSize: cfg.maxRequestSize.Value,
-		req:            req,
-		requestFunc:    cfg.retryCfg.Value.RequestFunc(evaluate),
-		client:         hc,
+		compression:         cfg.compression.Value,
+		maxRequestSize:      cfg.maxRequestSize.Value,
+		maxResponseBodySize: maxResponseBodySize,
+		req:                 req,
+		requestFunc:         cfg.retryCfg.Value.RequestFunc(evaluate),
+		client:              hc,
 	}
 
 	id := nextExporterID()
@@ -126,11 +126,12 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 
 type httpClient struct {
 	// req is cloned for every upload the client makes.
-	req            *http.Request
-	compression    Compression
-	maxRequestSize int
-	requestFunc    retry.RequestFunc
-	client         *http.Client
+	req                 *http.Request
+	compression         Compression
+	maxRequestSize      int
+	maxResponseBodySize int64
+	requestFunc         retry.RequestFunc
+	client              *http.Client
 
 	inst *observ.Instrumentation
 }
@@ -214,11 +215,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-				var maxBytesErr *http.MaxBytesError
-				if errors.As(err, &maxBytesErr) {
-					return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-				}
+			if err := copyResponseBody(&respData, resp.Body, c.maxResponseBodySize); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
@@ -249,11 +246,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-			var maxBytesErr *http.MaxBytesError
-			if errors.As(err, &maxBytesErr) {
-				return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-			}
+		if err := copyResponseBody(&respData, resp.Body, c.maxResponseBodySize); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
@@ -347,6 +340,35 @@ type request struct {
 func (r *request) reset(ctx context.Context) {
 	r.Body = r.bodyReader()
 	r.Request = r.WithContext(ctx)
+}
+
+type responseBodyTooLargeError struct {
+	limit int64
+}
+
+func (e responseBodyTooLargeError) Error() string {
+	return fmt.Sprintf("response body too large: exceeded %d bytes", e.limit)
+}
+
+func copyResponseBody(dst io.Writer, src io.ReadCloser, maxSize int64) error {
+	if maxSize <= 0 || maxSize == math.MaxInt64 {
+		_, err := io.Copy(dst, src)
+		return err
+	}
+
+	if _, err := io.Copy(dst, io.LimitReader(src, maxSize)); err != nil {
+		return err
+	}
+
+	var extra [1]byte
+	n, err := src.Read(extra[:])
+	if err != nil && err != io.EOF {
+		return err
+	}
+	if n > 0 {
+		return responseBodyTooLargeError{limit: maxSize}
+	}
+	return nil
 }
 
 // retryableError represents a request failure that can be retried.
