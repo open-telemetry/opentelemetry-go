@@ -4,10 +4,13 @@
 package metric_test // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"runtime"
+	"runtime/pprof"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -201,16 +204,27 @@ func TestParallelCallbacksMoreCallbacksThanWorkers(t *testing.T) {
 	assert.Len(t, rm.ScopeMetrics[0].Metrics, n)
 }
 
+// countPoolWorkers reports how many callback-pool worker goroutines are live,
+// counted by symbol in a goroutine profile so unrelated GC, timer, and
+// test-runner goroutines cannot skew the result like a NumGoroutine() delta.
+func countPoolWorkers(t *testing.T) int {
+	t.Helper()
+	var buf bytes.Buffer
+	require.NoError(t, pprof.Lookup("goroutine").WriteTo(&buf, 2))
+	// Fragile if a closure is added ahead of the worker (func1 -> func2), but
+	// worth it: the pre-shutdown assertion below then fails loudly instead of
+	// silently counting zero.
+	return strings.Count(buf.String(), "newCallbackPool.func1")
+}
+
 // TestParallelCallbacksShutdownStopsWorkers verifies, without reaching into
-// unexported state, that enabling the feature starts worker goroutines and that
-// Shutdown tears every one of them down. A leaked worker would keep the
-// goroutine count above the pre-construction baseline.
+// unexported state, that enabling the feature starts one worker per GOMAXPROCS
+// and that Shutdown tears every one of them down.
 func TestParallelCallbacksShutdownStopsWorkers(t *testing.T) {
 	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
 
-	// ManualReader is passive, so the only goroutines the provider starts are
-	// the callback-pool workers. Capture the baseline before construction.
-	baseline := runtime.NumGoroutine()
+	// The pool is sized to GOMAXPROCS at construction time.
+	workers := runtime.GOMAXPROCS(0)
 
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
@@ -225,26 +239,23 @@ func TestParallelCallbacksShutdownStopsWorkers(t *testing.T) {
 	var rm metricdata.ResourceMetrics
 	require.NoError(t, reader.Collect(t.Context(), &rm))
 
-	// Workers are live and parked between collections, so the count is above the
-	// baseline. This proves the pool was actually started.
-	assert.Greater(t, runtime.NumGoroutine(), baseline,
-		"enabling the feature should start worker goroutines")
+	// Workers are parked between collections; this proves the pool started them.
+	require.Equal(t, workers, countPoolWorkers(t),
+		"enabling the feature should start GOMAXPROCS worker goroutines")
 
 	require.NoError(t, mp.Shutdown(t.Context()))
 
-	// After shutdown every worker must have exited, returning to the baseline.
-	// Poll in this goroutine (rather than via a helper that would spawn its own
-	// goroutine and skew the count) to absorb the brief window between a worker
-	// signaling done and the runtime reaping it.
-	var got int
+	// Shutdown joins the workers, so all have returned. Retry briefly only to
+	// absorb the lag between a worker returning and leaving the profile.
+	var live int
 	for range 100 {
-		got = runtime.NumGoroutine()
-		if got <= baseline {
+		live = countPoolWorkers(t)
+		if live == 0 {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	assert.LessOrEqual(t, got, baseline, "Shutdown must stop all worker goroutines")
+	assert.Zero(t, live, "Shutdown must stop all worker goroutines")
 }
 
 // TestParallelCallbacksShutdownIdempotent ensures shutting the provider down is idempotent.
