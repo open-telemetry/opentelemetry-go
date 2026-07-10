@@ -43,10 +43,12 @@ type Exporter interface {
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
 	//
-	// Note that after the first [LoggerProvider.Shutdown] call, subsequent
-	// calls to the provider as well as loggers created by the provider will
-	// not invoke processors and therefore will not result in calls to
-	// exporters.
+	// The SDK's built-in Processors invoke an Exporter's ForceFlush before its
+	// Shutdown. When managed by a [LoggerProvider], each built-in Processor
+	// invokes Shutdown on its associated Exporter at most once.
+	//
+	// Sharing an Exporter among multiple Processors requires the user to
+	// coordinate its lifecycle.
 	//
 	// Shutdown may be called concurrently with other methods.
 	Shutdown(ctx context.Context) error
@@ -295,15 +297,15 @@ func (e *bufferExporter) ForceFlush(ctx context.Context) error {
 		if errors.Is(err, errStopped) {
 			return nil
 		}
-		return err
+		return errors.Join(err, e.Exporter.ForceFlush(ctx))
 	}
 
 	select {
-	case <-resp:
+	case err = <-resp:
 	case <-ctx.Done():
-		return ctx.Err()
+		err = ctx.Err()
 	}
-	return e.Exporter.ForceFlush(ctx)
+	return errors.Join(err, e.Exporter.ForceFlush(ctx))
 }
 
 // Shutdown shuts down e.

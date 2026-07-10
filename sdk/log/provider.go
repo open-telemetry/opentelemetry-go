@@ -79,7 +79,9 @@ type LoggerProvider struct {
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
 
-	stopped atomic.Bool
+	stopped         atomic.Bool
+	processorCallMu sync.Mutex
+	processorCalls  sync.WaitGroup
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
@@ -102,6 +104,36 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 		attributeValueLengthLimit: cfg.attrValLenLim.Value,
 		allowDupKeys:              cfg.allowDupKeys.Value,
 	}
+}
+
+// beginProcessorCall admits processor work that Shutdown needs to wait for.
+func (p *LoggerProvider) beginProcessorCall() bool {
+	if p.stopped.Load() {
+		return false
+	}
+
+	p.processorCallMu.Lock()
+	defer p.processorCallMu.Unlock()
+	if p.stopped.Load() {
+		return false
+	}
+	p.processorCalls.Add(1)
+	return true
+}
+
+func (p *LoggerProvider) endProcessorCall() {
+	p.processorCalls.Done()
+}
+
+// stop closes admission. The mutex ensures no call to Add can race with Wait.
+func (p *LoggerProvider) stop() bool {
+	if p.stopped.Load() {
+		return false
+	}
+
+	p.processorCallMu.Lock()
+	defer p.processorCallMu.Unlock()
+	return !p.stopped.Swap(true)
 }
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
@@ -148,21 +180,34 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 	return l
 }
 
-// Shutdown shuts down the provider and all processors.
+// Shutdown shuts down the provider and all processors in the order they were
+// registered.
 //
-// After the first Shutdown call, subsequent calls to the provider as well as
-// loggers created by the provider will not invoke processors.
+// Shutdown first prevents new processor calls and waits for in-flight Enabled,
+// OnEmit, and ForceFlush calls to complete. It then invokes each processor's
+// Shutdown once. Processor Shutdown is therefore not called concurrently with
+// any processor method, including itself.
+//
+// Shutdown waits for in-flight processor calls to complete even if ctx is
+// canceled. The canceled context is then passed to the processors.
+//
+// After the first call to Shutdown, subsequent calls to the provider and its
+// loggers will not invoke processors. Other concurrent and subsequent Shutdown
+// calls return nil without invoking processors.
+//
+// Shutdown must not be called from a Processor's Enabled, OnEmit, or ForceFlush
+// method.
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
-	stopped := p.stopped.Swap(true)
-	if stopped {
+	if !p.stop() {
 		return nil
 	}
+	p.processorCalls.Wait()
 
 	var err error
-	for _, p := range p.processors {
-		err = errors.Join(err, p.Shutdown(ctx))
+	for _, processor := range p.processors {
+		err = errors.Join(err, processor.Shutdown(ctx))
 	}
 	return err
 }
@@ -171,13 +216,13 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
+	if !p.beginProcessorCall() {
+		return nil
+	}
+	defer p.endProcessorCall()
+
 	var err error
 	for _, processor := range p.processors {
-		// Re-check before each processor so Shutdown can stop an in-flight
-		// pipeline before the next ForceFlush call.
-		if p.stopped.Load() {
-			return err
-		}
 		err = errors.Join(err, processor.ForceFlush(ctx))
 	}
 	return err
@@ -218,6 +263,11 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 //
 // The SDK invokes the processors sequentially in the same order as they were
 // registered.
+//
+// The LoggerProvider assumes exclusive ownership of the Processor's lifecycle.
+// Registering the same Processor with multiple LoggerProviders or multiple
+// times with the same LoggerProvider is not supported and may result in
+// concurrent or repeated calls to Shutdown.
 //
 // For production, use [NewBatchProcessor] to batch log records before they are exported.
 // For testing and debugging, use [NewSimpleProcessor] to synchronously export log records.

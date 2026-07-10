@@ -60,16 +60,19 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 	}
 
 	newRecord := l.newRecord(ctx, r)
-	for _, p := range l.provider.processors {
-		// Re-check before each processor so Shutdown can stop an in-flight
-		// pipeline before the next OnEmit call.
-		if l.provider.stopped.Load() {
+	for _, processor := range l.provider.processors {
+		if !l.provider.beginProcessorCall() {
 			return
 		}
-		if err := p.OnEmit(ctx, &newRecord); err != nil {
+		if err := l.onEmit(ctx, processor, &newRecord); err != nil {
 			otel.Handle(err)
 		}
 	}
+}
+
+func (l *logger) onEmit(ctx context.Context, processor Processor, r *Record) error {
+	defer l.provider.endProcessorCall()
+	return processor.OnEmit(ctx, r)
 }
 
 // Enabled returns true if at least one Processor held by the LoggerProvider
@@ -86,18 +89,21 @@ func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool 
 	}
 
 	for _, processor := range l.provider.processors {
-		// Re-check before each processor so Shutdown can stop an in-flight
-		// pipeline before the next Enabled call.
-		if l.provider.stopped.Load() {
+		if !l.provider.beginProcessorCall() {
 			return false
 		}
-		if processor.Enabled(ctx, p) {
+		if l.enabled(ctx, processor, p) {
 			// At least one Processor will process the Record.
 			return true
 		}
 	}
 	// No Processor will process the record.
 	return false
+}
+
+func (l *logger) enabled(ctx context.Context, processor Processor, p EnabledParameters) bool {
+	defer l.provider.endProcessorCall()
+	return processor.Enabled(ctx, p)
 }
 
 func (l *logger) newRecord(ctx context.Context, r log.Record) Record {

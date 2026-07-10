@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -68,6 +69,68 @@ type fltrProcessor struct {
 
 	enabled bool
 	params  []EnabledParameters
+}
+
+type shutdownOrderProcessor struct {
+	*processor
+	order *[]string
+}
+
+type shutdownContextProcessor struct {
+	*processor
+
+	mu             sync.Mutex
+	active         bool
+	overlap        bool
+	contextErr     error
+	emitStarted    chan struct{}
+	emitRelease    chan struct{}
+	shutdownCalled chan struct{}
+}
+
+func newShutdownContextProcessor() *shutdownContextProcessor {
+	return &shutdownContextProcessor{
+		processor:      newProcessor(""),
+		emitStarted:    make(chan struct{}),
+		emitRelease:    make(chan struct{}),
+		shutdownCalled: make(chan struct{}),
+	}
+}
+
+func (p *shutdownContextProcessor) OnEmit(ctx context.Context, r *Record) error {
+	p.mu.Lock()
+	p.active = true
+	close(p.emitStarted)
+	p.mu.Unlock()
+
+	<-p.emitRelease
+	err := p.processor.OnEmit(ctx, r)
+
+	p.mu.Lock()
+	p.active = false
+	p.mu.Unlock()
+	return err
+}
+
+func (p *shutdownContextProcessor) Shutdown(ctx context.Context) error {
+	p.mu.Lock()
+	p.overlap = p.active
+	p.contextErr = ctx.Err()
+	p.mu.Unlock()
+	close(p.shutdownCalled)
+	return p.processor.Shutdown(ctx)
+}
+
+func (p *shutdownContextProcessor) result() (overlap bool, contextErr error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.overlap, p.contextErr
+}
+
+func (p *shutdownOrderProcessor) Shutdown(context.Context) error {
+	p.shutdownCalls++
+	*p.order = append(*p.order, p.Name)
+	return p.Err
 }
 
 func newFltrProcessor(name string, enabled bool) *fltrProcessor {
@@ -398,6 +461,26 @@ func TestLoggerProviderShutdown(t *testing.T) {
 
 		require.NoError(t, p.Shutdown(ctx))
 		assert.Equal(t, 1, proc.shutdownCalls, "processor Shutdown called multiple times")
+		assert.Zero(t, proc.forceFlushCalls, "processor ForceFlush called by provider Shutdown")
+	})
+
+	t.Run("RegistrationOrder", func(t *testing.T) {
+		var order []string
+		first := &shutdownOrderProcessor{
+			processor: newProcessor("first"),
+			order:     &order,
+		}
+		second := &shutdownOrderProcessor{
+			processor: newProcessor("second"),
+			order:     &order,
+		}
+		provider := NewLoggerProvider(
+			WithProcessor(first),
+			WithProcessor(second),
+		)
+
+		require.NoError(t, provider.Shutdown(t.Context()))
+		assert.Equal(t, []string{"first", "second"}, order)
 	})
 
 	t.Run("Error", func(t *testing.T) {
@@ -408,6 +491,143 @@ func TestLoggerProviderShutdown(t *testing.T) {
 		ctx := t.Context()
 		assert.ErrorIs(t, p.Shutdown(ctx), assert.AnError, "processor error not returned")
 	})
+}
+
+func TestLoggerProviderShutdownWaitsForAdmittedProcessorCallConcurrentSafe(t *testing.T) {
+	proc := newShutdownContextProcessor()
+	provider := NewLoggerProvider(WithProcessor(proc))
+
+	require.True(t, provider.beginProcessorCall())
+	callEnded := false
+	defer func() {
+		if !callEnded {
+			provider.endProcessorCall()
+		}
+	}()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	shutdownDone := make(chan error, 1)
+	go func() {
+		shutdownDone <- provider.Shutdown(ctx)
+	}()
+
+	require.Eventually(t, provider.stopped.Load, time.Second, time.Microsecond)
+	assert.False(t, provider.beginProcessorCall(), "processor call admitted after Shutdown")
+	select {
+	case err := <-shutdownDone:
+		require.NoError(t, err)
+		t.Fatal("Shutdown returned before the admitted processor call started")
+	default:
+	}
+
+	emitDone := make(chan error, 1)
+	emitReleased := false
+	defer func() {
+		if !emitReleased {
+			close(proc.emitRelease)
+		}
+	}()
+	go func() {
+		emitDone <- proc.OnEmit(t.Context(), new(Record))
+	}()
+	<-proc.emitStarted
+	select {
+	case <-proc.shutdownCalled:
+		t.Fatal("processor Shutdown called while OnEmit was active")
+	default:
+	}
+	close(proc.emitRelease)
+	emitReleased = true
+	require.NoError(t, <-emitDone)
+	select {
+	case <-proc.shutdownCalled:
+		t.Fatal("processor Shutdown called before the admitted call ended")
+	default:
+	}
+	provider.endProcessorCall()
+	callEnded = true
+
+	require.NoError(t, <-shutdownDone)
+	assert.Len(t, proc.records, 1)
+	assert.Equal(t, 1, proc.shutdownCalls)
+	overlap, contextErr := proc.result()
+	assert.False(t, overlap)
+	assert.ErrorIs(t, contextErr, context.Canceled)
+}
+
+type shutdownDetectingProcessor struct {
+	processor
+
+	mu      sync.Mutex
+	running bool
+	calls   int
+	overlap bool
+	started chan struct{}
+	release chan struct{}
+}
+
+func newShutdownDetectingProcessor() *shutdownDetectingProcessor {
+	return &shutdownDetectingProcessor{
+		started: make(chan struct{}),
+		release: make(chan struct{}),
+	}
+}
+
+func (p *shutdownDetectingProcessor) Shutdown(context.Context) error {
+	p.mu.Lock()
+	p.calls++
+	if p.running {
+		p.overlap = true
+	}
+	p.running = true
+	if p.calls == 1 {
+		close(p.started)
+	}
+	p.mu.Unlock()
+
+	<-p.release
+
+	p.mu.Lock()
+	p.running = false
+	p.mu.Unlock()
+	return nil
+}
+
+func (p *shutdownDetectingProcessor) result() (calls int, overlap bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.calls, p.overlap
+}
+
+func TestLoggerProviderShutdownOnceConcurrentSafe(t *testing.T) {
+	proc := newShutdownDetectingProcessor()
+	provider := NewLoggerProvider(WithProcessor(proc))
+	ctx := t.Context()
+
+	const shutdowns = 100
+	shutdownDone := make(chan error, shutdowns)
+	for range shutdowns {
+		go func() {
+			shutdownDone <- provider.Shutdown(ctx)
+		}()
+	}
+
+	<-proc.started
+	for range shutdowns - 1 {
+		require.NoError(t, <-shutdownDone)
+	}
+	close(proc.release)
+	require.NoError(t, <-shutdownDone)
+
+	for range shutdowns {
+		require.NoError(t, provider.Shutdown(ctx))
+	}
+
+	calls, overlap := proc.result()
+	assert.Equal(t, 1, calls)
+	assert.False(t, overlap)
 }
 
 func TestLoggerProviderForceFlush(t *testing.T) {
@@ -449,14 +669,43 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 
 type blockingForceFlushProcessor struct {
 	*processor
-	started chan struct{}
-	release chan struct{}
+	started  chan struct{}
+	release  chan struct{}
+	finished chan struct{}
+	overlap  bool
 }
 
 func (p *blockingForceFlushProcessor) ForceFlush(context.Context) error {
 	p.forceFlushCalls++
 	close(p.started)
 	<-p.release
+	close(p.finished)
+	return p.Err
+}
+
+func (p *blockingForceFlushProcessor) Shutdown(ctx context.Context) error {
+	select {
+	case <-p.finished:
+	default:
+		p.overlap = true
+	}
+	return p.processor.Shutdown(ctx)
+}
+
+type orderedForceFlushProcessor struct {
+	*processor
+	calls []string
+}
+
+func (p *orderedForceFlushProcessor) ForceFlush(context.Context) error {
+	p.forceFlushCalls++
+	p.calls = append(p.calls, "ForceFlush")
+	return p.Err
+}
+
+func (p *orderedForceFlushProcessor) Shutdown(context.Context) error {
+	p.shutdownCalls++
+	p.calls = append(p.calls, "Shutdown")
 	return p.Err
 }
 
@@ -465,8 +714,9 @@ func TestLoggerProviderForceFlushShutdownConcurrentSafe(t *testing.T) {
 		processor: newProcessor("first"),
 		started:   make(chan struct{}),
 		release:   make(chan struct{}),
+		finished:  make(chan struct{}),
 	}
-	second := newProcessor("second")
+	second := &orderedForceFlushProcessor{processor: newProcessor("second")}
 	provider := NewLoggerProvider(
 		WithProcessor(first),
 		WithProcessor(second),
@@ -479,14 +729,31 @@ func TestLoggerProviderForceFlushShutdownConcurrentSafe(t *testing.T) {
 	}()
 
 	<-first.started
-	shutdownErr := provider.Shutdown(ctx)
+	shutdownDone := make(chan error, 1)
+	go func() {
+		shutdownDone <- provider.Shutdown(ctx)
+	}()
+	require.Eventually(t, provider.stopped.Load, time.Second, time.Microsecond)
+	select {
+	case err := <-shutdownDone:
+		close(first.release)
+		<-flushDone
+		require.NoError(t, err)
+		t.Fatal("Shutdown returned before ForceFlush completed")
+	default:
+	}
+
 	close(first.release)
 	flushErr := <-flushDone
+	shutdownErr := <-shutdownDone
 
 	require.NoError(t, shutdownErr)
 	require.NoError(t, flushErr)
+	assert.False(t, first.overlap)
+	assert.Equal(t, 1, first.shutdownCalls)
 	assert.Equal(t, 1, second.shutdownCalls)
-	assert.Zero(t, second.forceFlushCalls, "ForceFlush called after processor shutdown")
+	assert.Equal(t, 1, second.forceFlushCalls)
+	assert.Equal(t, []string{"ForceFlush", "Shutdown"}, second.calls)
 }
 
 func BenchmarkLoggerProviderLogger(b *testing.B) {

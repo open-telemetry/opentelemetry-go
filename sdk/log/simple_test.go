@@ -18,6 +18,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	apilog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -90,9 +91,12 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 func TestSimpleProcessorShutdown(t *testing.T) {
 	t.Run("FlushesBeforeShutdown", func(t *testing.T) {
 		e := new(exporter)
-		s := log.NewSimpleProcessor(e)
+		provider := log.NewLoggerProvider(
+			log.WithProcessor(log.NewSimpleProcessor(e)),
+		)
 
-		require.NoError(t, s.Shutdown(t.Context()))
+		require.NoError(t, provider.Shutdown(t.Context()))
+		require.NoError(t, provider.Shutdown(t.Context()))
 		assert.Equal(t, []string{"ForceFlush", "Shutdown"}, e.calls)
 	})
 
@@ -103,9 +107,11 @@ func TestSimpleProcessorShutdown(t *testing.T) {
 			forceFlushErr: forceFlushErr,
 			shutdownErr:   shutdownErr,
 		}
-		s := log.NewSimpleProcessor(e)
+		provider := log.NewLoggerProvider(
+			log.WithProcessor(log.NewSimpleProcessor(e)),
+		)
 
-		err := s.Shutdown(t.Context())
+		err := provider.Shutdown(t.Context())
 		assert.ErrorIs(t, err, forceFlushErr)
 		assert.ErrorIs(t, err, shutdownErr)
 		assert.Equal(t, []string{"ForceFlush", "Shutdown"}, e.calls)
@@ -152,25 +158,32 @@ func TestSimpleProcessorEmpty(t *testing.T) {
 func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 	const goRoutineN = 10
 
-	var wg sync.WaitGroup
-	wg.Add(goRoutineN)
-
-	r := new(log.Record)
-	r.SetSeverityText("test")
+	r := apilog.Record{}
+	r.SetBody(attribute.StringValue("test"))
 	ctx := t.Context()
-	e := &writerExporter{new(strings.Builder)}
-	s := log.NewSimpleProcessor(e)
-	for range goRoutineN {
-		go func() {
-			defer wg.Done()
+	buf := new(strings.Builder)
+	e := &writerExporter{buf}
+	provider := log.NewLoggerProvider(
+		log.WithProcessor(log.NewSimpleProcessor(e)),
+	)
+	logger := provider.Logger("test")
 
-			_ = s.OnEmit(ctx, r)
-			_ = s.Shutdown(ctx)
-			_ = s.ForceFlush(ctx)
-		}()
+	var wg sync.WaitGroup
+	flushErrs := make(chan error, goRoutineN)
+	for range goRoutineN {
+		wg.Go(func() {
+			logger.Emit(ctx, r)
+			flushErrs <- provider.ForceFlush(ctx)
+		})
+	}
+	wg.Wait()
+	close(flushErrs)
+	for err := range flushErrs {
+		require.NoError(t, err)
 	}
 
-	wg.Wait()
+	require.NoError(t, provider.Shutdown(ctx))
+	assert.Equal(t, strings.Repeat("test", goRoutineN), buf.String())
 }
 
 func BenchmarkSimpleProcessorOnEmit(b *testing.B) {

@@ -447,14 +447,26 @@ func TestLoggerEmitAfterProviderShutdown(t *testing.T) {
 
 type blockingOnEmitProcessor struct {
 	*processor
-	started chan struct{}
-	release chan struct{}
+	started  chan struct{}
+	release  chan struct{}
+	finished chan struct{}
+	overlap  bool
 }
 
 func (p *blockingOnEmitProcessor) OnEmit(context.Context, *Record) error {
 	close(p.started)
 	<-p.release
+	close(p.finished)
 	return nil
+}
+
+func (p *blockingOnEmitProcessor) Shutdown(ctx context.Context) error {
+	select {
+	case <-p.finished:
+	default:
+		p.overlap = true
+	}
+	return p.processor.Shutdown(ctx)
 }
 
 func TestLoggerEmitShutdownConcurrentSafe(t *testing.T) {
@@ -462,6 +474,7 @@ func TestLoggerEmitShutdownConcurrentSafe(t *testing.T) {
 		processor: newProcessor("first"),
 		started:   make(chan struct{}),
 		release:   make(chan struct{}),
+		finished:  make(chan struct{}),
 	}
 	second := newProcessor("second")
 	provider := NewLoggerProvider(
@@ -478,11 +491,27 @@ func TestLoggerEmitShutdownConcurrentSafe(t *testing.T) {
 	}()
 
 	<-first.started
-	shutdownErr := provider.Shutdown(ctx)
+	shutdownDone := make(chan error, 1)
+	go func() {
+		shutdownDone <- provider.Shutdown(ctx)
+	}()
+	require.Eventually(t, provider.stopped.Load, time.Second, time.Microsecond)
+	select {
+	case err := <-shutdownDone:
+		close(first.release)
+		<-emitDone
+		require.NoError(t, err)
+		t.Fatal("Shutdown returned before OnEmit completed")
+	default:
+	}
+
 	close(first.release)
 	<-emitDone
+	shutdownErr := <-shutdownDone
 
 	require.NoError(t, shutdownErr)
+	assert.False(t, first.overlap)
+	assert.Equal(t, 1, first.shutdownCalls)
 	assert.Equal(t, 1, second.shutdownCalls)
 	assert.Empty(t, second.records, "OnEmit called after processor shutdown")
 }
@@ -804,14 +833,26 @@ func TestLoggerEnabledAfterProviderShutdown(t *testing.T) {
 
 type blockingEnabledProcessor struct {
 	*processor
-	started chan struct{}
-	release chan struct{}
+	started  chan struct{}
+	release  chan struct{}
+	finished chan struct{}
+	overlap  bool
 }
 
 func (p *blockingEnabledProcessor) Enabled(context.Context, EnabledParameters) bool {
 	close(p.started)
 	<-p.release
+	close(p.finished)
 	return false
+}
+
+func (p *blockingEnabledProcessor) Shutdown(ctx context.Context) error {
+	select {
+	case <-p.finished:
+	default:
+		p.overlap = true
+	}
+	return p.processor.Shutdown(ctx)
 }
 
 func TestLoggerEnabledShutdownConcurrentSafe(t *testing.T) {
@@ -819,6 +860,7 @@ func TestLoggerEnabledShutdownConcurrentSafe(t *testing.T) {
 		processor: newProcessor("first"),
 		started:   make(chan struct{}),
 		release:   make(chan struct{}),
+		finished:  make(chan struct{}),
 	}
 	second := newFltrProcessor("second", true)
 	provider := NewLoggerProvider(
@@ -834,12 +876,28 @@ func TestLoggerEnabledShutdownConcurrentSafe(t *testing.T) {
 	}()
 
 	<-first.started
-	shutdownErr := provider.Shutdown(ctx)
+	shutdownDone := make(chan error, 1)
+	go func() {
+		shutdownDone <- provider.Shutdown(ctx)
+	}()
+	require.Eventually(t, provider.stopped.Load, time.Second, time.Microsecond)
+	select {
+	case err := <-shutdownDone:
+		close(first.release)
+		<-enabledDone
+		require.NoError(t, err)
+		t.Fatal("Shutdown returned before Enabled completed")
+	default:
+	}
+
 	close(first.release)
 	enabled := <-enabledDone
+	shutdownErr := <-shutdownDone
 
 	require.NoError(t, shutdownErr)
 	assert.False(t, enabled)
+	assert.False(t, first.overlap)
+	assert.Equal(t, 1, first.shutdownCalls)
 	assert.Equal(t, 1, second.shutdownCalls)
 	assert.Empty(t, second.params, "Enabled called after processor shutdown")
 }

@@ -335,14 +335,15 @@ func TestBatchProcessor(t *testing.T) {
 				WithExportTimeout(time.Hour),
 			)
 			require.NoError(t, b.OnEmit(ctx, new(Record)))
+			provider := NewLoggerProvider(WithProcessor(b))
 
-			err := b.Shutdown(ctx)
+			err := provider.Shutdown(ctx)
 			assert.ErrorIs(t, err, exportErr)
 			assert.ErrorIs(t, err, forceFlushErr)
 			assert.ErrorIs(t, err, shutdownErr)
 			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.calls)
 
-			require.NoError(t, b.Shutdown(ctx))
+			require.NoError(t, provider.Shutdown(ctx))
 			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.calls)
 		})
 
@@ -381,9 +382,7 @@ func TestBatchProcessor(t *testing.T) {
 		})
 
 		t.Run("CanceledContext", func(t *testing.T) {
-			e := newTestExporter(nil)
-			e.ExportTrigger = make(chan struct{})
-			t.Cleanup(func() { close(e.ExportTrigger) })
+			e := new(shutdownExporter)
 			b := NewBatchProcessor(e)
 
 			ctx := t.Context()
@@ -391,6 +390,7 @@ func TestBatchProcessor(t *testing.T) {
 			cancel()
 
 			assert.ErrorIs(t, b.Shutdown(c), context.Canceled)
+			assert.Equal(t, []string{"ForceFlush", "Shutdown"}, e.calls)
 		})
 	})
 

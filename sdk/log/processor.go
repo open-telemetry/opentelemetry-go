@@ -12,9 +12,24 @@ import (
 
 // Processor handles the processing of log records.
 //
-// Any of the Processor's methods may be called concurrently with itself
-// or with other methods. It is the responsibility of the Processor to manage
-// this concurrency.
+// Enabled, OnEmit, and ForceFlush may be called concurrently with themselves
+// or each other. It is the responsibility of the Processor to manage this
+// concurrency.
+//
+// A Processor must be registered only once and with a single
+// [LoggerProvider]. Registering the same Processor with multiple providers or
+// multiple times with the same provider is not supported.
+//
+// For each Processor registered with a [LoggerProvider], the provider calls
+// Shutdown at most once. Before doing so, it prevents new Enabled, OnEmit, and
+// ForceFlush calls to the Processor and waits for any in-flight calls to
+// complete. Shutdown is therefore not called concurrently with any Processor
+// method, including itself.
+//
+// Callers that use a Processor directly are responsible for providing the same
+// lifecycle coordination. Processor implementations are not required to
+// tolerate repeated calls to Shutdown or calls to Shutdown that are concurrent
+// with another method.
 type Processor interface {
 	// Enabled reports whether the Processor will process for the given context
 	// and param.
