@@ -47,24 +47,29 @@ type tracerProviderConfig struct {
 
 	// allowDupKeys disables duplicate-key removal for span, event, link, and instrumentation scope attributes (including within attribute.MAP values) when true.
 	allowDupKeys bool
+
+	// panicRecordingDisabled disables recording exception events from panics.
+	panicRecordingDisabled bool
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Provider.
 func (cfg tracerProviderConfig) MarshalLog() any {
 	return struct {
-		SpanProcessors      []SpanProcessor
-		SamplerType         string
-		IDGeneratorType     string
-		SpanLimits          SpanLimits
-		Resource            *resource.Resource
-		AllowKeyDuplication bool
+		SpanProcessors         []SpanProcessor
+		SamplerType            string
+		IDGeneratorType        string
+		SpanLimits             SpanLimits
+		Resource               *resource.Resource
+		AllowKeyDuplication    bool
+		PanicRecordingDisabled bool
 	}{
-		SpanProcessors:      cfg.processors,
-		SamplerType:         fmt.Sprintf("%T", cfg.sampler),
-		IDGeneratorType:     fmt.Sprintf("%T", cfg.idGenerator),
-		SpanLimits:          cfg.spanLimits,
-		Resource:            cfg.resource,
-		AllowKeyDuplication: cfg.allowDupKeys,
+		SpanProcessors:         cfg.processors,
+		SamplerType:            fmt.Sprintf("%T", cfg.sampler),
+		IDGeneratorType:        fmt.Sprintf("%T", cfg.idGenerator),
+		SpanLimits:             cfg.spanLimits,
+		Resource:               cfg.resource,
+		AllowKeyDuplication:    cfg.allowDupKeys,
+		PanicRecordingDisabled: cfg.panicRecordingDisabled,
 	}
 }
 
@@ -81,10 +86,11 @@ type TracerProvider struct {
 
 	// These fields are not protected by the lock mu. They are assumed to be
 	// immutable after creation of the TracerProvider.
-	sampler     Sampler
-	idGenerator IDGenerator
-	spanLimits  SpanLimits
-	resource    *resource.Resource
+	sampler                Sampler
+	idGenerator            IDGenerator
+	spanLimits             SpanLimits
+	resource               *resource.Resource
+	panicRecordingDisabled bool
 
 	// deduplication and attribute limits strategies swapped at TracerProvider construction time.
 	// Swapping these function pointers avoids checking runtime boolean flags in the hot path.
@@ -127,11 +133,12 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o = ensureValidTracerProviderConfig(o)
 
 	tp := &TracerProvider{
-		namedTracer: make(map[instrumentation.Scope]*tracer),
-		sampler:     o.sampler,
-		idGenerator: o.idGenerator,
-		spanLimits:  o.spanLimits,
-		resource:    o.resource,
+		namedTracer:            make(map[instrumentation.Scope]*tracer),
+		sampler:                o.sampler,
+		idGenerator:            o.idGenerator,
+		spanLimits:             o.spanLimits,
+		resource:               o.resource,
+		panicRecordingDisabled: o.panicRecordingDisabled,
 	}
 
 	if o.allowDupKeys {
@@ -403,6 +410,16 @@ func WithBatcher(e SpanExporter, opts ...BatchSpanProcessorOption) TracerProvide
 func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
 		cfg.processors = append(cfg.processors, sp)
+		return cfg
+	})
+}
+
+// WithoutPanicRecording configures the TracerProvider to not record exception
+// events when a Span is ended while panicking. The panic continues to
+// propagate, and the span is ended without adding the event.
+func WithoutPanicRecording() TracerProviderOption {
+	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
+		cfg.panicRecordingDisabled = true
 		return cfg
 	})
 }
