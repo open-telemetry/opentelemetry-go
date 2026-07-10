@@ -223,8 +223,13 @@ func countPoolWorkers(t *testing.T) int {
 func TestParallelCallbacksShutdownStopsWorkers(t *testing.T) {
 	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
 
-	// The pool is sized to GOMAXPROCS at construction time.
-	workers := runtime.GOMAXPROCS(0)
+	// Pin GOMAXPROCS so the pool size is fixed and the count is deterministic.
+	// Reading runtime.GOMAXPROCS(0) would be fragile: Go 1.25 can adjust it over
+	// the process lifetime, so the value read here need not match the one the
+	// pool used at construction. Setting it explicitly also disables those
+	// automatic updates.
+	const workers = 3
+	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(workers))
 
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
