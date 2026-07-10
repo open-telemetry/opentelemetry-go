@@ -49,9 +49,9 @@ type Exporter interface {
 	// The SDK's built-in Processors invoke an Exporter's ForceFlush before its
 	// Shutdown. When managed by a [LoggerProvider], each built-in Processor
 	// invokes Shutdown on its associated Exporter at most once. The context used
-	// during LoggerProvider shutdown preserves values from the caller but is
-	// detached from its cancellation and deadline so cleanup can continue after
-	// [LoggerProvider.Shutdown] returns.
+	// during LoggerProvider shutdown preserves values from the
+	// [LoggerProvider.Shutdown] call that starts cleanup but is detached from its
+	// cancellation and deadline so cleanup can continue after that call returns.
 	//
 	// Sharing an Exporter among multiple Processors requires the user to
 	// coordinate its lifecycle.

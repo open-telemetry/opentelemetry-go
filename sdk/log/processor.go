@@ -24,9 +24,10 @@ import (
 // Shutdown at most once. Before doing so, it stops admitting new operations
 // that invoke the Processor's Enabled, OnEmit, or ForceFlush methods and waits
 // for admitted operations to complete. Shutdown is therefore not called
-// concurrently with any Processor method, including itself. If the context
-// passed to [LoggerProvider.Shutdown] is canceled, processor cleanup continues
-// in the background after LoggerProvider.Shutdown returns.
+// concurrently with any Processor method, including itself. Cancellation of a
+// [LoggerProvider.Shutdown] call stops only that call's wait. Processor cleanup
+// continues in the background, and another LoggerProvider.Shutdown call can
+// wait for the cleanup result.
 //
 // Callers that use a Processor directly are responsible for providing the same
 // lifecycle coordination. Processor implementations are not required to
@@ -100,13 +101,13 @@ type Processor interface {
 	// appropriate error should be returned in these situations.
 	//
 	// A LoggerProvider invokes Shutdown with a context that preserves values
-	// from the context passed to [LoggerProvider.Shutdown] but is detached from
-	// its cancellation and deadline. This allows cleanup to continue after the
-	// LoggerProvider.Shutdown call returns.
+	// from the context passed to the [LoggerProvider.Shutdown] call that starts
+	// cleanup but is detached from its cancellation and deadline. This allows
+	// cleanup to continue after that LoggerProvider.Shutdown call returns.
 	//
-	// Note that after the first [LoggerProvider.Shutdown] call, subsequent
-	// calls to the provider as well as loggers created by the provider will
-	// not invoke processors.
+	// After shutdown starts, ForceFlush and methods on Loggers created by the
+	// provider will not invoke Processors. Later LoggerProvider.Shutdown calls
+	// wait for the shared cleanup without invoking Processor.Shutdown again.
 	Shutdown(ctx context.Context) error
 
 	// ForceFlush should complete any processing tasks for Records passed to

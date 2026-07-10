@@ -343,7 +343,10 @@ func TestBatchProcessor(t *testing.T) {
 			assert.ErrorIs(t, err, shutdownErr)
 			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.calls)
 
-			require.NoError(t, provider.Shutdown(ctx))
+			err = provider.Shutdown(ctx)
+			assert.ErrorIs(t, err, exportErr)
+			assert.ErrorIs(t, err, forceFlushErr)
+			assert.ErrorIs(t, err, shutdownErr)
 			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.calls)
 		})
 
