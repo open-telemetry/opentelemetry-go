@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `WithoutPanicRecording` TracerProvider option in `go.opentelemetry.io/otel/sdk/trace` to disable exception event recording for panics. (#8532)
 - Add `Map` and `MapValue` functions for new `MAP` attribute type in `go.opentelemetry.io/otel/attribute`. (#8445)
 - Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#8453)
 - Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlplog`. (#8453)
@@ -42,7 +43,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Clarify in `go.opentelemetry.io/otel/log` that `LoggerProvider` implementations should retain an empty `Logger` name instead of replacing it with a default. (#8587)
+- Clarify that `Float64Histogram` and `Int64Histogram` `Record` methods expect non-negative values in `go.opentelemetry.io/otel/metric`. (#8574)
 - Make `WithAttributeCountLimit(0)` and `OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT=0` discard all log record attributes in `go.opentelemetry.io/otel/sdk/log`. (#8570)
+- Preserve user-provided exception attributes while independently deriving missing exception message and type attributes in `go.opentelemetry.io/otel/sdk/log`. (#8566)
 - Clarify in `go.opentelemetry.io/otel/log` that `Logger.Enabled` should be checked for every log emission because its result may change over time. (#8565)
 - Fix invalid error formatting for out-of-range JSON code values in `go.opentelemetry.io/otel/codes`. (#8497)
 - Avoid preallocating scope attributes when they are disabled in `go.opentelemetry.io/otel/exporters/prometheus` . (#8404)
