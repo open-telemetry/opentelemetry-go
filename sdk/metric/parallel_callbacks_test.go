@@ -217,9 +217,9 @@ func countPoolWorkers(t *testing.T) int {
 	return strings.Count(buf.String(), "newCallbackPool.func1")
 }
 
-// TestParallelCallbacksShutdownStopsWorkers verifies, without reaching into
-// unexported state, that enabling the feature starts one worker per GOMAXPROCS
-// and that Shutdown tears every one of them down.
+// TestParallelCallbacksShutdownStopsWorkers verifies that enabling the feature
+// starts one worker per GOMAXPROCS and that Shutdown tears every one of them
+// down, counting workers by their symbol in a goroutine profile.
 func TestParallelCallbacksShutdownStopsWorkers(t *testing.T) {
 	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
 
