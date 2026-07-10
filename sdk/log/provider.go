@@ -197,12 +197,12 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 // registered.
 //
 // Shutdown first prevents new processor calls and waits for in-flight Enabled,
-// OnEmit, and ForceFlush calls to complete. If they complete before ctx is
-// canceled, Shutdown invokes each processor's Shutdown once. Processor
-// Shutdown is therefore not called concurrently with any processor method,
-// including itself.
+// OnEmit, and ForceFlush calls to complete. If completion and ctx cancellation
+// are both ready to be observed, completion takes priority. Shutdown then
+// invokes each processor's Shutdown once. Processor Shutdown is therefore not
+// called concurrently with any processor method, including itself.
 //
-// If ctx cancellation is observed before in-flight processor calls complete,
+// If ctx cancellation is observed while in-flight processor calls remain,
 // Shutdown returns ctx.Err() without invoking processor Shutdown.
 //
 // After the first call to Shutdown, subsequent calls to the provider and its
@@ -220,11 +220,8 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-done:
-		// All admitted work has ended.
+	if err := waitForProcessorCalls(ctx, done); err != nil {
+		return err
 	}
 
 	var err error
@@ -232,6 +229,22 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 		err = errors.Join(err, processor.Shutdown(ctx))
 	}
 	return err
+}
+
+// waitForProcessorCalls waits for admitted calls to end. Completion takes
+// priority when it races with context cancellation.
+func waitForProcessorCalls(ctx context.Context, done <-chan struct{}) error {
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		select {
+		case <-done:
+			return nil
+		default:
+			return ctx.Err()
+		}
+	}
 }
 
 // ForceFlush flushes all processors.

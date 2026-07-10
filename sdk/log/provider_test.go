@@ -557,6 +557,16 @@ func TestLoggerProviderShutdownWaitsForAdmittedProcessorCallConcurrentSafe(t *te
 }
 
 func TestLoggerProviderShutdownHonorsContext(t *testing.T) {
+	t.Run("DrainedTakesPriority", func(t *testing.T) {
+		proc := newProcessor("")
+		provider := NewLoggerProvider(WithProcessor(proc))
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+
+		require.NoError(t, provider.Shutdown(ctx))
+		assert.Equal(t, 1, proc.shutdownCalls)
+	})
+
 	t.Run("CanceledWhileWaiting", func(t *testing.T) {
 		first := &blockingForceFlushProcessor{
 			processor: newProcessor("first"),
@@ -610,6 +620,49 @@ func TestLoggerProviderShutdownHonorsContext(t *testing.T) {
 		assert.Zero(t, first.shutdownCalls)
 		assert.Zero(t, second.shutdownCalls)
 	})
+}
+
+func TestWaitForProcessorCalls(t *testing.T) {
+	done := make(chan struct{})
+	close(done)
+	pending := make(chan struct{})
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	tests := []struct {
+		name    string
+		ctx     context.Context
+		done    <-chan struct{}
+		wantErr error
+	}{
+		{
+			name: "Done",
+			ctx:  t.Context(),
+			done: done,
+		},
+		{
+			name:    "Canceled",
+			ctx:     canceled,
+			done:    pending,
+			wantErr: context.Canceled,
+		},
+		{
+			name: "DoneTakesPriority",
+			ctx:  canceled,
+			done: done,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := waitForProcessorCalls(test.ctx, test.done)
+			if test.wantErr != nil {
+				assert.ErrorIs(t, err, test.wantErr)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 type shutdownDetectingProcessor struct {
