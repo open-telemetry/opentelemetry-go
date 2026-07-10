@@ -5,6 +5,7 @@ package metric // import "go.opentelemetry.io/otel/sdk/metric"
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/global"
@@ -146,10 +147,21 @@ func (mp *MeterProvider) Shutdown(ctx context.Context) error {
 	if mp.shutdown != nil {
 		err = mp.shutdown(ctx)
 	}
-	// Tear down each pipeline's resources, e.g. observable-callback worker
-	// pools, so their goroutines do not leak.
-	for _, p := range mp.pipes {
-		p.stop()
+	// Tear down each pipeline's resources (e.g. callback worker pools) off this
+	// goroutine so an in-flight, uninterruptible collection holding the pipeline
+	// lock cannot block Shutdown past ctx. Teardown still finishes in the background.
+	done := make(chan struct{})
+	go func() {
+		for _, p := range mp.pipes {
+			p.stop()
+		}
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-ctx.Done():
+		err = errors.Join(err, ctx.Err())
 	}
+
 	return err
 }
