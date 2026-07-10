@@ -261,7 +261,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	}
 
 	// Otherwise, add without deduplication. When attributes are read they
-	// will be deduplicated, optimizing the operation.
+	// will be deduplicated (unless key duplication is allowed), optimizing the operation.
 	s.attributes = slices.Grow(s.attributes, len(attributes))
 	for _, a := range attributes {
 		if !a.Valid() {
