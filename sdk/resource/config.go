@@ -38,6 +38,19 @@ func (d detectAttributes) Detect(context.Context) (*Resource, error) {
 	return NewSchemaless(d.attributes...), nil
 }
 
+// WithEntities adds entities to the configured Resource.
+func WithEntities(entities ...*Entity) Option {
+	return WithDetectors(detectEntities{entities: entities})
+}
+
+type detectEntities struct {
+	entities []*Entity
+}
+
+func (d detectEntities) Detect(context.Context) (*Resource, error) {
+	return NewWithEntities("", d.entities...), nil
+}
+
 // WithDetectors adds detectors to be evaluated for the configured resource.
 func WithDetectors(detectors ...Detector) Option {
 	return detectorsOption{detectors: detectors}

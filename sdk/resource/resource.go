@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -33,6 +34,11 @@ import (
 type Resource struct {
 	attrs     attribute.Set
 	schemaURL string
+	entities  *entityHolder
+}
+
+type entityHolder struct {
+	entities []*Entity
 }
 
 // Compile-time check that the Resource remains comparable.
@@ -78,6 +84,30 @@ func NewWithAttributes(schemaURL string, attrs ...attribute.KeyValue) *Resource 
 	resource := NewSchemaless(attrs...)
 	resource.schemaURL = schemaURL
 	return resource
+}
+
+// NewWithEntities creates a resource from entities and associates the resource
+// with schemaURL. Duplicate Entity types are resolved using the specification
+// entity merge algorithm.
+func NewWithEntities(schemaURL string, entities ...*Entity) *Resource {
+	merged := mergeEntities(nil, entities)
+	attrs := make([]attribute.KeyValue, 0)
+	for _, e := range merged {
+		attrs = append(attrs, e.Attributes()...)
+	}
+	s, _ := attribute.NewSetWithFiltered(attrs, func(kv attribute.KeyValue) bool {
+		return kv.Valid()
+	})
+	derivedSchema, _ := mergeEntitySchemaURL(merged, "", schemaURL)
+	var holder *entityHolder
+	if len(merged) > 0 {
+		holder = &entityHolder{entities: merged}
+	}
+	return &Resource{
+		attrs:     s,
+		schemaURL: derivedSchema,
+		entities:  holder,
+	}
 }
 
 // NewSchemaless creates a resource from attrs. If attrs contains duplicate
@@ -146,6 +176,37 @@ func (r *Resource) SchemaURL() string {
 	return r.schemaURL
 }
 
+// Entities returns the entities associated with this Resource.
+// There is no guaranteed ordering of the returned entities.
+func (r *Resource) Entities() []*Entity {
+	if r == nil || r.entities == nil {
+		return nil
+	}
+	out := make([]*Entity, len(r.entities.entities))
+	copy(out, r.entities.entities)
+	return out
+}
+
+// UnassociatedAttributes returns attributes of the Resource that are not associated
+// with any Entity in the Resource.
+func (r *Resource) UnassociatedAttributes() []attribute.KeyValue {
+	if r == nil {
+		return nil
+	}
+	entities := r.Entities()
+	if len(entities) == 0 {
+		return r.Attributes()
+	}
+	all := r.Attributes()
+	raw := make([]attribute.KeyValue, 0, len(all))
+	for _, kv := range all {
+		if e, _ := findEntityHoldingKey(entities, kv.Key); e == nil {
+			raw = append(raw, kv)
+		}
+	}
+	return raw
+}
+
 // Iter returns an iterator of the Resource attributes.
 // This is ideal to use if you do not want a copy of the attributes.
 func (r *Resource) Iter() attribute.Iterator {
@@ -167,7 +228,21 @@ func (r *Resource) Equal(o *Resource) bool {
 	if o == nil {
 		o = Empty()
 	}
-	return r.Equivalent() == o.Equivalent()
+	if r.Equivalent() != o.Equivalent() {
+		return false
+	}
+	rEnts := r.Entities()
+	oEnts := o.Entities()
+	if len(rEnts) != len(oEnts) {
+		return false
+	}
+	for _, re := range rEnts {
+		found := slices.ContainsFunc(oEnts, re.Equal)
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 // Merge creates a new [Resource] by merging a and b.
@@ -204,30 +279,63 @@ func Merge(a, b *Resource) (*Resource, error) {
 		return a, nil
 	}
 
-	// Note: 'b' attributes will overwrite 'a' with last-value-wins in attribute.Key()
-	// Meaning this is equivalent to: append(a.Attributes(), b.Attributes()...)
-	mi := attribute.NewMergeIterator(b.Set(), a.Set())
-	combine := make([]attribute.KeyValue, 0, a.Len()+b.Len())
-	for mi.Next() {
-		combine = append(combine, mi.Attribute())
+	aEnts := a.Entities()
+	bEnts := b.Entities()
+	if len(aEnts) == 0 && len(bEnts) == 0 {
+		mi := attribute.NewMergeIterator(b.Set(), a.Set())
+		combine := make([]attribute.KeyValue, 0, a.Len()+b.Len())
+		for mi.Next() {
+			combine = append(combine, mi.Attribute())
+		}
+
+		switch {
+		case a.schemaURL == "":
+			return NewWithAttributes(b.schemaURL, combine...), nil
+		case b.schemaURL == "":
+			return NewWithAttributes(a.schemaURL, combine...), nil
+		case a.schemaURL == b.schemaURL:
+			return NewWithAttributes(a.schemaURL, combine...), nil
+		}
+		return NewSchemaless(combine...), fmt.Errorf(
+			"%w: %s and %s",
+			ErrSchemaURLConflict,
+			a.schemaURL,
+			b.schemaURL,
+		)
 	}
 
-	switch {
-	case a.schemaURL == "":
-		return NewWithAttributes(b.schemaURL, combine...), nil
-	case b.schemaURL == "":
-		return NewWithAttributes(a.schemaURL, combine...), nil
-	case a.schemaURL == b.schemaURL:
-		return NewWithAttributes(a.schemaURL, combine...), nil
-	}
-	// Return the merged resource with an appropriate error. It is up to
-	// the user to decide if the returned resource can be used or not.
-	return NewSchemaless(combine...), fmt.Errorf(
-		"%w: %s and %s",
-		ErrSchemaURLConflict,
-		a.schemaURL,
-		b.schemaURL,
+	entities := mergeEntities(aEnts, bEnts)
+	rawAttrs, entities := mergeRawAttributesAndConflicts(
+		a.UnassociatedAttributes(),
+		b.UnassociatedAttributes(),
+		entities,
 	)
+	schemaURL, schemaErr := mergeEntitySchemaURL(entities, a.schemaURL, b.schemaURL)
+
+	combine := make([]attribute.KeyValue, 0, len(rawAttrs))
+	for _, e := range entities {
+		combine = append(combine, e.Attributes()...)
+	}
+	combine = append(combine, rawAttrs...)
+
+	s, _ := attribute.NewSetWithFiltered(combine, func(kv attribute.KeyValue) bool {
+		return kv.Valid()
+	})
+
+	var holder *entityHolder
+	if len(entities) > 0 {
+		holder = &entityHolder{entities: entities}
+	}
+	res := &Resource{
+		attrs:     s,
+		schemaURL: schemaURL,
+		entities:  holder,
+	}
+
+	if schemaErr != nil {
+		return res, fmt.Errorf("%w: %s and %s", schemaErr, a.schemaURL, b.schemaURL)
+	}
+	return res, nil
 }
 
 // Empty returns an instance of Resource with no attributes. It is
