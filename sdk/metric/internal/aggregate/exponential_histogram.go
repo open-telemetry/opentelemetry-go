@@ -234,7 +234,11 @@ func (b *expoBuckets) record(bin int32) {
 
 func (b *expoBuckets) recordCount(bin int32, count uint64) {
 	if len(b.counts) == 0 {
-		b.counts = make([]atomic.Uint64, 1)
+		if cap(b.counts) > 0 {
+			b.counts = b.counts[:1]
+		} else {
+			b.counts = make([]atomic.Uint64, 1)
+		}
 		b.counts[0].Store(count)
 		b.startBin = bin
 		return
