@@ -197,51 +197,63 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 // registered.
 //
 // Shutdown first stops admitting new operations that invoke processor Enabled,
-// OnEmit, or ForceFlush methods and waits for admitted operations to complete.
-// If completion and ctx cancellation are both ready to be observed, completion
-// takes priority. Shutdown then invokes each processor's Shutdown once.
-// Processor Shutdown is therefore not called concurrently with any processor
-// method, including itself.
+// OnEmit, or ForceFlush methods. It then starts a background cleanup that waits
+// for admitted operations to complete before invoking each processor's Shutdown
+// once. Processor Shutdown is therefore not called concurrently with any
+// processor method, including itself.
 //
-// If ctx cancellation is observed while admitted processor operations remain,
-// Shutdown returns ctx.Err() without invoking processor Shutdown.
+// Shutdown waits for the cleanup to finish or for ctx to be canceled. The ctx
+// cancellation and deadline bound how long Shutdown waits, not how long the
+// cleanup runs. The cleanup continues after Shutdown returns. Context values
+// from ctx are preserved and passed to each processor, but its cancellation and
+// deadline are not. If cleanup and ctx cancellation are both ready to be
+// observed, cleanup takes priority.
+//
+// If ctx is canceled before cleanup finishes, Shutdown returns ctx.Err(). Any
+// processor errors produced after that return cannot be reported to the caller.
 //
 // After the first call to Shutdown, subsequent calls to the provider and its
 // loggers will not invoke processors. Other concurrent and subsequent Shutdown
-// calls return nil without invoking processors, including when the first call
-// returns an error due to context cancellation.
+// calls return nil without invoking processors, including while the background
+// cleanup is still running.
 //
 // Shutdown must not be called from a Processor's Enabled, OnEmit, or ForceFlush
 // method.
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
-	done, stopped := p.stop()
+	operationsDone, stopped := p.stop()
 	if !stopped {
 		return nil
 	}
 
-	if err := waitForProcessorOperations(ctx, done); err != nil {
-		return err
-	}
+	// Buffer the result so cleanup can finish if ctx is canceled first.
+	done := make(chan error, 1)
+	shutdownCtx := context.WithoutCancel(ctx)
+	go func() {
+		// stop serializes with admission, so this closes only after all
+		// operations admitted before stop have ended.
+		<-operationsDone
+		var err error
+		for _, processor := range p.processors {
+			err = errors.Join(err, processor.Shutdown(shutdownCtx))
+		}
+		done <- err
+	}()
 
-	var err error
-	for _, processor := range p.processors {
-		err = errors.Join(err, processor.Shutdown(ctx))
-	}
-	return err
+	return waitForShutdown(ctx, done)
 }
 
-// waitForProcessorOperations waits for admitted operations to end. Completion
-// takes priority when it races with context cancellation.
-func waitForProcessorOperations(ctx context.Context, done <-chan struct{}) error {
+// waitForShutdown waits for cleanup to end. Completion takes priority when it
+// races with context cancellation.
+func waitForShutdown(ctx context.Context, done <-chan error) error {
 	select {
-	case <-done:
-		return nil
+	case err := <-done:
+		return err
 	case <-ctx.Done():
 		select {
-		case <-done:
-			return nil
+		case err := <-done:
+			return err
 		default:
 			return ctx.Err()
 		}

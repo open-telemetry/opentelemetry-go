@@ -79,14 +79,21 @@ type shutdownOrderProcessor struct {
 type shutdownContextProcessor struct {
 	*processor
 
-	mu             sync.Mutex
-	active         bool
-	overlap        bool
-	contextErr     error
-	emitStarted    chan struct{}
-	emitRelease    chan struct{}
-	shutdownCalled chan struct{}
+	mu                 sync.Mutex
+	active             bool
+	overlap            bool
+	contextErr         error
+	contextHasDeadline bool
+	contextDoneNil     bool
+	contextValue       string
+	emitStarted        chan struct{}
+	emitRelease        chan struct{}
+	shutdownCalled     chan struct{}
 }
+
+type shutdownContextKey struct{}
+
+const shutdownContextValue = "shutdown context value"
 
 func newShutdownContextProcessor() *shutdownContextProcessor {
 	return &shutdownContextProcessor{
@@ -116,15 +123,30 @@ func (p *shutdownContextProcessor) Shutdown(ctx context.Context) error {
 	p.mu.Lock()
 	p.overlap = p.active
 	p.contextErr = ctx.Err()
+	_, p.contextHasDeadline = ctx.Deadline()
+	p.contextDoneNil = ctx.Done() == nil
+	p.contextValue, _ = ctx.Value(shutdownContextKey{}).(string)
 	p.mu.Unlock()
+	err := p.processor.Shutdown(ctx)
 	close(p.shutdownCalled)
-	return p.processor.Shutdown(ctx)
+	return err
 }
 
 func (p *shutdownContextProcessor) result() (overlap bool, contextErr error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.overlap, p.contextErr
+}
+
+func (p *shutdownContextProcessor) contextResult() (
+	hasDeadline bool,
+	doneNil bool,
+	value string,
+	err error,
+) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.contextHasDeadline, p.contextDoneNil, p.contextValue, p.contextErr
 }
 
 func (p *shutdownOrderProcessor) Shutdown(context.Context) error {
@@ -556,44 +578,28 @@ func TestLoggerProviderShutdownWaitsForAdmittedProcessorOperationConcurrentSafe(
 	assert.NoError(t, contextErr)
 }
 
-func TestLoggerProviderShutdownHonorsContext(t *testing.T) {
-	t.Run("DrainedTakesPriority", func(t *testing.T) {
-		proc := newProcessor("")
-		provider := NewLoggerProvider(WithProcessor(proc))
-		ctx, cancel := context.WithCancel(t.Context())
-		cancel()
-
-		require.NoError(t, provider.Shutdown(ctx))
-		assert.Equal(t, 1, proc.shutdownCalls)
-	})
-
+func TestLoggerProviderShutdownHonorsContextConcurrentSafe(t *testing.T) {
 	t.Run("CanceledWhileWaiting", func(t *testing.T) {
-		first := &blockingForceFlushProcessor{
-			processor: newProcessor("first"),
-			started:   make(chan struct{}),
-			release:   make(chan struct{}),
-			finished:  make(chan struct{}),
-		}
-		second := &orderedForceFlushProcessor{processor: newProcessor("second")}
-		provider := NewLoggerProvider(
-			WithProcessor(first),
-			WithProcessor(second),
-		)
+		proc := newShutdownContextProcessor()
+		provider := NewLoggerProvider(WithProcessor(proc))
+		logger := provider.Logger("test")
 
-		flushDone := make(chan error, 1)
+		emitDone := make(chan struct{})
 		go func() {
-			flushDone <- provider.ForceFlush(t.Context())
+			logger.Emit(t.Context(), log.Record{})
+			close(emitDone)
 		}()
-		<-first.started
+		<-proc.emitStarted
 
-		released := false
+		emitReleased := false
 		defer func() {
-			if !released {
-				close(first.release)
+			if !emitReleased {
+				close(proc.emitRelease)
 			}
 		}()
 
-		ctx, cancel := context.WithCancel(t.Context())
+		valueCtx := context.WithValue(t.Context(), shutdownContextKey{}, shutdownContextValue)
+		ctx, cancel := context.WithTimeout(valueCtx, time.Hour)
 		shutdownDone := make(chan error, 1)
 		go func() {
 			shutdownDone <- provider.Shutdown(ctx)
@@ -607,38 +613,117 @@ func TestLoggerProviderShutdownHonorsContext(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Fatal("Shutdown did not honor context cancellation")
 		}
-		assert.Zero(t, first.shutdownCalls)
-		assert.Zero(t, second.shutdownCalls)
+		select {
+		case <-proc.shutdownCalled:
+			t.Fatal("processor Shutdown called before admitted operation ended")
+		default:
+		}
+
+		close(proc.emitRelease)
+		emitReleased = true
+		select {
+		case <-emitDone:
+		case <-time.After(time.Second):
+			t.Fatal("Emit did not finish")
+		}
+		select {
+		case <-proc.shutdownCalled:
+		case <-time.After(time.Second):
+			t.Fatal("processor Shutdown was abandoned after context cancellation")
+		}
+		assert.Equal(t, 1, proc.shutdownCalls)
+		hasDeadline, doneNil, value, contextErr := proc.contextResult()
+		assert.NoError(t, contextErr)
+		assert.False(t, hasDeadline)
+		assert.True(t, doneNil)
+		assert.Equal(t, shutdownContextValue, value)
+
+		require.NoError(t, provider.Shutdown(t.Context()))
+		assert.Equal(t, 1, proc.shutdownCalls)
+	})
+
+	t.Run("CanceledDuringProcessorShutdown", func(t *testing.T) {
+		first := newShutdownDetectingProcessor()
+		second := newShutdownContextProcessor()
+		provider := NewLoggerProvider(
+			WithProcessor(first),
+			WithProcessor(second),
+		)
+
+		valueCtx := context.WithValue(t.Context(), shutdownContextKey{}, shutdownContextValue)
+		ctx, cancel := context.WithCancel(valueCtx)
+		shutdownDone := make(chan error, 1)
+		go func() {
+			shutdownDone <- provider.Shutdown(ctx)
+		}()
+		<-first.started
+
+		released := false
+		defer func() {
+			if !released {
+				close(first.release)
+			}
+		}()
+
+		cancel()
+		select {
+		case err := <-shutdownDone:
+			assert.ErrorIs(t, err, context.Canceled)
+		case <-time.After(time.Second):
+			t.Fatal("Shutdown did not honor context cancellation")
+		}
+		select {
+		case <-second.shutdownCalled:
+			t.Fatal("second processor Shutdown called while first was active")
+		default:
+		}
 
 		close(first.release)
 		released = true
-		require.NoError(t, <-flushDone)
-		assert.Equal(t, 1, second.forceFlushCalls)
-		assert.Equal(t, []string{"ForceFlush"}, second.calls)
+		select {
+		case <-second.shutdownCalled:
+		case <-time.After(time.Second):
+			t.Fatal("processor shutdown sequence was abandoned after context cancellation")
+		}
 
-		require.NoError(t, provider.Shutdown(t.Context()))
-		assert.Zero(t, first.shutdownCalls)
-		assert.Zero(t, second.shutdownCalls)
+		calls, overlap := first.result()
+		assert.Equal(t, 1, calls)
+		assert.False(t, overlap)
+		assert.Equal(t, 1, second.shutdownCalls)
+		hasDeadline, doneNil, value, contextErr := second.contextResult()
+		assert.NoError(t, contextErr)
+		assert.False(t, hasDeadline)
+		assert.True(t, doneNil)
+		assert.Equal(t, shutdownContextValue, value)
 	})
 }
 
-func TestWaitForProcessorOperations(t *testing.T) {
-	done := make(chan struct{})
-	close(done)
-	pending := make(chan struct{})
+func TestWaitForShutdown(t *testing.T) {
+	done := func(err error) <-chan error {
+		result := make(chan error, 1)
+		result <- err
+		return result
+	}
+	pending := make(chan error)
 	canceled, cancel := context.WithCancel(t.Context())
 	cancel()
 
 	tests := []struct {
 		name    string
 		ctx     context.Context
-		done    <-chan struct{}
+		done    <-chan error
 		wantErr error
 	}{
 		{
 			name: "Done",
 			ctx:  t.Context(),
-			done: done,
+			done: done(nil),
+		},
+		{
+			name:    "Error",
+			ctx:     t.Context(),
+			done:    done(assert.AnError),
+			wantErr: assert.AnError,
 		},
 		{
 			name:    "Canceled",
@@ -649,13 +734,13 @@ func TestWaitForProcessorOperations(t *testing.T) {
 		{
 			name: "DoneTakesPriority",
 			ctx:  canceled,
-			done: done,
+			done: done(nil),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := waitForProcessorOperations(test.ctx, test.done)
+			err := waitForShutdown(test.ctx, test.done)
 			if test.wantErr != nil {
 				assert.ErrorIs(t, err, test.wantErr)
 			} else {

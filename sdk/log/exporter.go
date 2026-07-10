@@ -40,12 +40,18 @@ type Exporter interface {
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.
 	//
+	// Shutdown should not block indefinitely, including when ctx has no
+	// deadline.
+	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
 	//
 	// The SDK's built-in Processors invoke an Exporter's ForceFlush before its
 	// Shutdown. When managed by a [LoggerProvider], each built-in Processor
-	// invokes Shutdown on its associated Exporter at most once.
+	// invokes Shutdown on its associated Exporter at most once. The context used
+	// during LoggerProvider shutdown preserves values from the caller but is
+	// detached from its cancellation and deadline so cleanup can continue after
+	// [LoggerProvider.Shutdown] returns.
 	//
 	// Sharing an Exporter among multiple Processors requires the user to
 	// coordinate its lifecycle.

@@ -24,7 +24,9 @@ import (
 // Shutdown at most once. Before doing so, it stops admitting new operations
 // that invoke the Processor's Enabled, OnEmit, or ForceFlush methods and waits
 // for admitted operations to complete. Shutdown is therefore not called
-// concurrently with any Processor method, including itself.
+// concurrently with any Processor method, including itself. If the context
+// passed to [LoggerProvider.Shutdown] is canceled, processor cleanup continues
+// in the background after LoggerProvider.Shutdown returns.
 //
 // Callers that use a Processor directly are responsible for providing the same
 // lifecycle coordination. Processor implementations are not required to
@@ -91,8 +93,16 @@ type Processor interface {
 	//
 	// Shutdown must include the effects of ForceFlush.
 	//
+	// Shutdown should not block indefinitely, including when ctx has no
+	// deadline.
+	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
+	//
+	// A LoggerProvider invokes Shutdown with a context that preserves values
+	// from the context passed to [LoggerProvider.Shutdown] but is detached from
+	// its cancellation and deadline. This allows cleanup to continue after the
+	// LoggerProvider.Shutdown call returns.
 	//
 	// Note that after the first [LoggerProvider.Shutdown] call, subsequent
 	// calls to the provider as well as loggers created by the provider will
