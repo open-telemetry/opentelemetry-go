@@ -22,9 +22,8 @@ import (
 var now = time.Now
 
 const (
-	exceptionTypeKey       = semconv.ExceptionTypeKey
-	exceptionMessageKey    = semconv.ExceptionMessageKey
-	exceptionStacktraceKey = semconv.ExceptionStacktraceKey
+	exceptionTypeKey    = semconv.ExceptionTypeKey
+	exceptionMessageKey = semconv.ExceptionMessageKey
 )
 
 // Compile-time check logger implements log.Logger.
@@ -133,45 +132,63 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		newRecord.observedTimestamp = now()
 	}
 
-	hasExceptionAttr := false
+	// User-provided exception attributes MUST take precedence. Track message
+	// and type independently so a supplied value suppresses only its own
+	// derivation.
+	var hasExceptionMessage, hasExceptionType bool
 	r.WalkAttributes(func(kv attribute.KeyValue) bool {
 		switch kv.Key {
-		case exceptionTypeKey, exceptionMessageKey, exceptionStacktraceKey:
-			hasExceptionAttr = true
+		case exceptionMessageKey:
+			hasExceptionMessage = true
+		case exceptionTypeKey:
+			hasExceptionType = true
 		}
 		newRecord.AddAttributes(kv)
 		return true
 	})
 
-	if err := r.Err(); err != nil && !hasExceptionAttr {
-		addExceptionAttrs(&newRecord, err)
+	// Avoid inspecting the error for attributes when the caller has
+	// already supplied the attributes.
+	if err := r.Err(); err != nil && (!hasExceptionMessage || !hasExceptionType) {
+		// Derive missing exception attributes by default, as required by the
+		// Logs SDK specification. Attribute limits may constrain generation,
+		// so stop once there is no capacity for another attribute.
+		var attrs [2]attribute.KeyValue
+		n := 0
+
+		// Derived attributes are buffered until flush, so the current attribute
+		// count stays unchanged while missing values are prepared.
+		hasLimit := newRecord.hasAttributeCountLimit()
+		var remaining int
+		if hasLimit {
+			remaining = newRecord.attributeCountLimit - newRecord.AttributesLen()
+		}
+		if !hasExceptionMessage {
+			if msg := err.Error(); msg != "" {
+				if hasLimit && remaining <= n {
+					goto flush
+				}
+				attrs[n] = exceptionMessageKey.String(msg)
+				n++
+			}
+		}
+		if !hasExceptionType {
+			if errType := errorType(err); errType != "" {
+				if hasLimit && remaining <= n {
+					goto flush
+				}
+				attrs[n] = exceptionTypeKey.String(errType)
+				n++
+			}
+		}
+
+	flush:
+		if n > 0 {
+			newRecord.addAttrs(attrs[:n])
+		}
 	}
 
 	return newRecord
-}
-
-func addExceptionAttrs(r *Record, err error) {
-	var attrs [2]attribute.KeyValue
-	n := 0
-	if msg := err.Error(); msg != "" {
-		if r.hasAttributeCountLimit() && r.attributeCountLimit-r.AttributesLen() <= n {
-			goto flush
-		}
-		attrs[n] = exceptionMessageKey.String(msg)
-		n++
-	}
-	if errType := errorType(err); errType != "" {
-		if r.hasAttributeCountLimit() && r.attributeCountLimit-r.AttributesLen() <= n {
-			goto flush
-		}
-		attrs[n] = exceptionTypeKey.String(errType)
-		n++
-	}
-
-flush:
-	if n > 0 {
-		r.addAttrs(attrs[:n])
-	}
 }
 
 func errorType(err error) string {
