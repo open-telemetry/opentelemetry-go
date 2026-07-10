@@ -221,12 +221,10 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 	}
 
 	select {
-	case <-done:
-		if err := ctx.Err(); err != nil {
-			return err
-		}
 	case <-ctx.Done():
 		return ctx.Err()
+	case <-done:
+		// All admitted work has ended.
 	}
 
 	var err error
