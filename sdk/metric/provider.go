@@ -147,21 +147,11 @@ func (mp *MeterProvider) Shutdown(ctx context.Context) error {
 	if mp.shutdown != nil {
 		err = mp.shutdown(ctx)
 	}
-	// Tear down each pipeline's resources (e.g. callback worker pools) off this
-	// goroutine so an in-flight, uninterruptible collection holding the pipeline
-	// lock cannot block Shutdown past ctx. Teardown still finishes in the background.
-	done := make(chan struct{})
-	go func() {
-		for _, p := range mp.pipes {
-			p.stop()
-		}
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-ctx.Done():
-		err = errors.Join(err, ctx.Err())
+	// Tear down each pipeline's resources. stop honors ctx and returns its error
+	// if it gave up, so an in-flight collection cannot block Shutdown past the
+	// caller's deadline.
+	for _, p := range mp.pipes {
+		err = errors.Join(err, p.stop(ctx))
 	}
-
 	return err
 }

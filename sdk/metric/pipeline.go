@@ -232,17 +232,42 @@ func (p *pipeline) runCallbacksParallel(ctx context.Context) error {
 	return pool.takeErr()
 }
 
-// stop tears down this pipeline's resources on shutdown. It stops the callback
-// worker pool, if any, serializing with produce via p's lock so it never
-// cancels workers while a batch of callbacks is being dispatched, and releasing
-// the lock before waiting on the workers to exit.
-func (p *pipeline) stop() {
-	p.Lock()
-	pool := p.pool
-	p.pool = nil
-	p.Unlock()
-	if pool != nil {
-		pool.stop()
+// stop tears down this pipeline's resources on shutdown.
+func (p *pipeline) stop(ctx context.Context) error {
+	// TryLock guards against an already-canceled ctx. If it succeeds, no
+	// collection is running, so teardown is fast and completes regardless of
+	// ctx. Racing ctx here instead would report failure on a clean shutdown
+	// whose ctx just happened to be already done.
+	if p.TryLock() {
+		pool := p.pool
+		p.pool = nil
+		// Unlock before pool.stop waits on the workers so a concurrent produce
+		// is not blocked while they exit.
+		p.Unlock()
+		if pool != nil {
+			pool.stop()
+		}
+		return nil
+	}
+	// A collection holds the lock and cannot be interrupted. Wait for it on a
+	// separate goroutine so stop can return once ctx is done; the goroutine still
+	// finishes teardown after the collection releases the lock.
+	done := make(chan struct{})
+	go func() {
+		p.Lock()
+		pool := p.pool
+		p.pool = nil
+		p.Unlock()
+		if pool != nil {
+			pool.stop()
+		}
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
