@@ -60,19 +60,17 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 	}
 
 	newRecord := l.newRecord(ctx, r)
-	for _, processor := range l.provider.processors {
-		if !l.provider.beginProcessorCall() {
-			return
-		}
-		if err := l.onEmit(ctx, processor, &newRecord); err != nil {
+	processors := l.provider.processors
+	if len(processors) == 0 || !l.provider.beginProcessorOperation() {
+		return
+	}
+	defer l.provider.endProcessorOperation()
+
+	for _, processor := range processors {
+		if err := processor.OnEmit(ctx, &newRecord); err != nil {
 			otel.Handle(err)
 		}
 	}
-}
-
-func (l *logger) onEmit(ctx context.Context, processor Processor, r *Record) error {
-	defer l.provider.endProcessorCall()
-	return processor.OnEmit(ctx, r)
 }
 
 // Enabled returns true if at least one Processor held by the LoggerProvider
@@ -88,22 +86,20 @@ func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool 
 		EventName:            param.EventName,
 	}
 
-	for _, processor := range l.provider.processors {
-		if !l.provider.beginProcessorCall() {
-			return false
-		}
-		if l.enabled(ctx, processor, p) {
+	processors := l.provider.processors
+	if len(processors) == 0 || !l.provider.beginProcessorOperation() {
+		return false
+	}
+	defer l.provider.endProcessorOperation()
+
+	for _, processor := range processors {
+		if processor.Enabled(ctx, p) {
 			// At least one Processor will process the Record.
 			return true
 		}
 	}
 	// No Processor will process the record.
 	return false
-}
-
-func (l *logger) enabled(ctx context.Context, processor Processor, p EnabledParameters) bool {
-	defer l.provider.endProcessorCall()
-	return processor.Enabled(ctx, p)
 }
 
 func (l *logger) newRecord(ctx context.Context, r log.Record) Record {

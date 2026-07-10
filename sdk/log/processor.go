@@ -21,10 +21,10 @@ import (
 // multiple times with the same provider is not supported.
 //
 // For each Processor registered with a [LoggerProvider], the provider calls
-// Shutdown at most once. Before doing so, it prevents new Enabled, OnEmit, and
-// ForceFlush calls to the Processor and waits for any in-flight calls to
-// complete. Shutdown is therefore not called concurrently with any Processor
-// method, including itself.
+// Shutdown at most once. Before doing so, it stops admitting new operations
+// that invoke the Processor's Enabled, OnEmit, or ForceFlush methods and waits
+// for admitted operations to complete. Shutdown is therefore not called
+// concurrently with any Processor method, including itself.
 //
 // Callers that use a Processor directly are responsible for providing the same
 // lifecycle coordination. Processor implementations are not required to

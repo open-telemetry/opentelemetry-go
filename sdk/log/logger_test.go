@@ -513,7 +513,7 @@ func TestLoggerEmitShutdownConcurrentSafe(t *testing.T) {
 	assert.False(t, first.overlap)
 	assert.Equal(t, 1, first.shutdownCalls)
 	assert.Equal(t, 1, second.shutdownCalls)
-	assert.Empty(t, second.records, "OnEmit called after processor shutdown")
+	assert.Len(t, second.records, 1, "OnEmit not called by admitted Emit")
 }
 
 func TestNewRecordAddsExceptionAttrs(t *testing.T) {
@@ -895,11 +895,11 @@ func TestLoggerEnabledShutdownConcurrentSafe(t *testing.T) {
 	shutdownErr := <-shutdownDone
 
 	require.NoError(t, shutdownErr)
-	assert.False(t, enabled)
+	assert.True(t, enabled)
 	assert.False(t, first.overlap)
 	assert.Equal(t, 1, first.shutdownCalls)
 	assert.Equal(t, 1, second.shutdownCalls)
-	assert.Empty(t, second.params, "Enabled called after processor shutdown")
+	assert.Len(t, second.params, 1, "Enabled not called by admitted operation")
 }
 
 func TestLoggerObservability(t *testing.T) {

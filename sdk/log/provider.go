@@ -79,11 +79,11 @@ type LoggerProvider struct {
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
 
-	stopped           atomic.Bool
-	processorCallMu   sync.Mutex
-	processorCalls    atomic.Int64
-	processorDone     chan struct{}
-	processorDoneOnce sync.Once
+	stopped                     atomic.Bool
+	processorOperationMu        sync.Mutex
+	processorOperations         atomic.Int64
+	processorOperationsDone     chan struct{}
+	processorOperationsDoneOnce sync.Once
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
@@ -108,45 +108,45 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 	}
 }
 
-// beginProcessorCall admits processor work that Shutdown needs to wait for.
-func (p *LoggerProvider) beginProcessorCall() bool {
+// beginProcessorOperation admits processor work that Shutdown needs to wait for.
+func (p *LoggerProvider) beginProcessorOperation() bool {
 	if p.stopped.Load() {
 		return false
 	}
 
-	p.processorCallMu.Lock()
-	defer p.processorCallMu.Unlock()
+	p.processorOperationMu.Lock()
+	defer p.processorOperationMu.Unlock()
 	if p.stopped.Load() {
 		return false
 	}
-	p.processorCalls.Add(1)
+	p.processorOperations.Add(1)
 	return true
 }
 
-func (p *LoggerProvider) endProcessorCall() {
-	if p.processorCalls.Add(-1) == 0 && p.stopped.Load() {
-		p.processorDoneOnce.Do(func() { close(p.processorDone) })
+func (p *LoggerProvider) endProcessorOperation() {
+	if p.processorOperations.Add(-1) == 0 && p.stopped.Load() {
+		p.processorOperationsDoneOnce.Do(func() { close(p.processorOperationsDone) })
 	}
 }
 
-// stop closes admission and returns a channel closed when admitted calls end.
+// stop closes admission and returns a channel closed when admitted operations end.
 func (p *LoggerProvider) stop() (<-chan struct{}, bool) {
 	if p.stopped.Load() {
 		return nil, false
 	}
 
-	p.processorCallMu.Lock()
-	defer p.processorCallMu.Unlock()
+	p.processorOperationMu.Lock()
+	defer p.processorOperationMu.Unlock()
 	if p.stopped.Load() {
 		return nil, false
 	}
 
-	p.processorDone = make(chan struct{})
+	p.processorOperationsDone = make(chan struct{})
 	p.stopped.Store(true)
-	if p.processorCalls.Load() == 0 {
-		p.processorDoneOnce.Do(func() { close(p.processorDone) })
+	if p.processorOperations.Load() == 0 {
+		p.processorOperationsDoneOnce.Do(func() { close(p.processorOperationsDone) })
 	}
-	return p.processorDone, true
+	return p.processorOperationsDone, true
 }
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
@@ -196,13 +196,14 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 // Shutdown shuts down the provider and all processors in the order they were
 // registered.
 //
-// Shutdown first prevents new processor calls and waits for in-flight Enabled,
-// OnEmit, and ForceFlush calls to complete. If completion and ctx cancellation
-// are both ready to be observed, completion takes priority. Shutdown then
-// invokes each processor's Shutdown once. Processor Shutdown is therefore not
-// called concurrently with any processor method, including itself.
+// Shutdown first stops admitting new operations that invoke processor Enabled,
+// OnEmit, or ForceFlush methods and waits for admitted operations to complete.
+// If completion and ctx cancellation are both ready to be observed, completion
+// takes priority. Shutdown then invokes each processor's Shutdown once.
+// Processor Shutdown is therefore not called concurrently with any processor
+// method, including itself.
 //
-// If ctx cancellation is observed while in-flight processor calls remain,
+// If ctx cancellation is observed while admitted processor operations remain,
 // Shutdown returns ctx.Err() without invoking processor Shutdown.
 //
 // After the first call to Shutdown, subsequent calls to the provider and its
@@ -220,7 +221,7 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
-	if err := waitForProcessorCalls(ctx, done); err != nil {
+	if err := waitForProcessorOperations(ctx, done); err != nil {
 		return err
 	}
 
@@ -231,9 +232,9 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 	return err
 }
 
-// waitForProcessorCalls waits for admitted calls to end. Completion takes
-// priority when it races with context cancellation.
-func waitForProcessorCalls(ctx context.Context, done <-chan struct{}) error {
+// waitForProcessorOperations waits for admitted operations to end. Completion
+// takes priority when it races with context cancellation.
+func waitForProcessorOperations(ctx context.Context, done <-chan struct{}) error {
 	select {
 	case <-done:
 		return nil
@@ -251,10 +252,10 @@ func waitForProcessorCalls(ctx context.Context, done <-chan struct{}) error {
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
-	if !p.beginProcessorCall() {
+	if !p.beginProcessorOperation() {
 		return nil
 	}
-	defer p.endProcessorCall()
+	defer p.endProcessorOperation()
 
 	var err error
 	for _, processor := range p.processors {

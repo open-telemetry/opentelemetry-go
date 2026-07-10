@@ -493,15 +493,15 @@ func TestLoggerProviderShutdown(t *testing.T) {
 	})
 }
 
-func TestLoggerProviderShutdownWaitsForAdmittedProcessorCallConcurrentSafe(t *testing.T) {
+func TestLoggerProviderShutdownWaitsForAdmittedProcessorOperationConcurrentSafe(t *testing.T) {
 	proc := newShutdownContextProcessor()
 	provider := NewLoggerProvider(WithProcessor(proc))
 
-	require.True(t, provider.beginProcessorCall())
-	callEnded := false
+	require.True(t, provider.beginProcessorOperation())
+	operationEnded := false
 	defer func() {
-		if !callEnded {
-			provider.endProcessorCall()
+		if !operationEnded {
+			provider.endProcessorOperation()
 		}
 	}()
 
@@ -513,11 +513,11 @@ func TestLoggerProviderShutdownWaitsForAdmittedProcessorCallConcurrentSafe(t *te
 	}()
 
 	require.Eventually(t, provider.stopped.Load, time.Second, time.Microsecond)
-	assert.False(t, provider.beginProcessorCall(), "processor call admitted after Shutdown")
+	assert.False(t, provider.beginProcessorOperation(), "processor operation admitted after Shutdown")
 	select {
 	case err := <-shutdownDone:
 		require.NoError(t, err)
-		t.Fatal("Shutdown returned before the admitted processor call started")
+		t.Fatal("Shutdown returned before the admitted processor operation started")
 	default:
 	}
 
@@ -542,11 +542,11 @@ func TestLoggerProviderShutdownWaitsForAdmittedProcessorCallConcurrentSafe(t *te
 	require.NoError(t, <-emitDone)
 	select {
 	case <-proc.shutdownCalled:
-		t.Fatal("processor Shutdown called before the admitted call ended")
+		t.Fatal("processor Shutdown called before the admitted operation ended")
 	default:
 	}
-	provider.endProcessorCall()
-	callEnded = true
+	provider.endProcessorOperation()
+	operationEnded = true
 
 	require.NoError(t, <-shutdownDone)
 	assert.Len(t, proc.records, 1)
@@ -622,7 +622,7 @@ func TestLoggerProviderShutdownHonorsContext(t *testing.T) {
 	})
 }
 
-func TestWaitForProcessorCalls(t *testing.T) {
+func TestWaitForProcessorOperations(t *testing.T) {
 	done := make(chan struct{})
 	close(done)
 	pending := make(chan struct{})
@@ -655,7 +655,7 @@ func TestWaitForProcessorCalls(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := waitForProcessorCalls(test.ctx, test.done)
+			err := waitForProcessorOperations(test.ctx, test.done)
 			if test.wantErr != nil {
 				assert.ErrorIs(t, err, test.wantErr)
 			} else {
