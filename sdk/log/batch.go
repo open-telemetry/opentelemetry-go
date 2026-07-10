@@ -209,6 +209,9 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 }
 
 // Shutdown flushes queued log records and shuts down the decorated exporter.
+// If ctx is canceled, it returns without waiting for in-progress exports. Any
+// remaining buffered exports are discarded, and the decorated exporter is shut
+// down after the export worker stops.
 func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 	if b.stopped.Swap(true) || b.q == nil {
 		return nil

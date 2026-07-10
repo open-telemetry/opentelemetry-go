@@ -382,7 +382,8 @@ func TestBufferExporter(t *testing.T) {
 
 			trigger := make(chan struct{})
 			exp.ExportTrigger = trigger
-			t.Cleanup(func() { close(trigger) })
+			release := sync.OnceFunc(func() { close(trigger) })
+			t.Cleanup(release)
 			e := newBufferExporter(exp, 1)
 
 			// Make sure there is something to flush.
@@ -393,7 +394,11 @@ func TestBufferExporter(t *testing.T) {
 
 			err := e.Shutdown(ctx)
 			assert.ErrorIs(t, err, context.Canceled)
-			assert.ErrorIs(t, err, assert.AnError)
+			assert.Zero(t, exp.ShutdownN(), "Shutdown called before export worker stopped")
+			release()
+			require.Eventually(t, func() bool {
+				return exp.ShutdownN() == 1
+			}, time.Second, time.Microsecond, "exporter was not shut down")
 		})
 
 		t.Run("Error", func(t *testing.T) {
@@ -617,6 +622,7 @@ func TestBatchProcessorDoesNotExportAfterExporterShutdown(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	assert.ErrorIs(t, processor.Shutdown(ctx), context.Canceled)
+	assert.Zero(t, exporter.ShutdownN(), "Shutdown called before export worker stopped")
 
 	release()
 	select {
@@ -625,4 +631,7 @@ func TestBatchProcessorDoesNotExportAfterExporterShutdown(t *testing.T) {
 		t.Fatal("export worker did not stop")
 	}
 	assert.Equal(t, 1, exporter.ExportN())
+	require.Eventually(t, func() bool {
+		return exporter.ShutdownN() == 1
+	}, time.Second, time.Microsecond, "exporter was not shut down")
 }

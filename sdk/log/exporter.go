@@ -331,9 +331,10 @@ func (e *bufferExporter) ForceFlush(ctx context.Context) error {
 
 // Shutdown shuts down e.
 //
-// Buffered exports are flushed before this returns unless ctx is canceled. If
-// ctx is canceled, any export already in progress may overlap Exporter.Shutdown
-// and all remaining buffered exports are discarded.
+// Buffered exports are flushed before this returns unless ctx is canceled. On
+// cancellation, the export worker is signaled to discard exports it has not
+// started and this returns without waiting for it. Exporter.Shutdown is called
+// after the worker stops.
 //
 // After Shutdown returns, EnqueueExport returns true without enqueueing and Export
 // returns nil without exporting.
@@ -342,15 +343,21 @@ func (e *bufferExporter) Shutdown(ctx context.Context) error {
 		return nil
 	}
 	e.inputMu.Lock()
-	defer e.inputMu.Unlock()
-
 	// No more sends will be made.
 	close(e.input)
+	e.inputMu.Unlock()
+
+	wait := make(chan error, 1)
+	go func() {
+		<-e.done
+		wait <- e.Exporter.Shutdown(ctx)
+	}()
+
 	select {
-	case <-e.done:
+	case err := <-wait:
+		return err
 	case <-ctx.Done():
 		close(e.abort)
-		return errors.Join(ctx.Err(), e.Exporter.Shutdown(ctx))
+		return ctx.Err()
 	}
-	return e.Exporter.Shutdown(ctx)
 }
