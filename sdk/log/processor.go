@@ -94,9 +94,6 @@ type Processor interface {
 	//
 	// Shutdown must include the effects of ForceFlush.
 	//
-	// Shutdown should not block indefinitely, including when ctx has no
-	// deadline.
-	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
 	//
