@@ -213,7 +213,7 @@ func TestExportSync(t *testing.T) {
 		in := make(chan exportData, 1)
 		exp := newTestExporter(assert.AnError)
 		t.Cleanup(exp.Stop)
-		done := exportSync(in, exp)
+		done := exportSync(in, exp, nil)
 
 		var wg sync.WaitGroup
 		wg.Go(func() {
@@ -234,7 +234,7 @@ func TestExportSync(t *testing.T) {
 		in := make(chan exportData, 1)
 		exp := newTestExporter(assert.AnError)
 		t.Cleanup(exp.Stop)
-		done := exportSync(in, exp)
+		done := exportSync(in, exp, nil)
 
 		const goRoutines = 10
 		var wg sync.WaitGroup
@@ -588,4 +588,120 @@ func TestBufferExporter(t *testing.T) {
 			assert.True(t, e.EnqueueExport(make([]Record, 1)))
 		})
 	})
+}
+
+type shutdownOrderingExporter struct {
+	exportStarted       chan struct{}
+	exportRelease       chan struct{}
+	exportDone          chan struct{}
+	exportedAfterStop   chan struct{}
+	exportedAfterStopMu sync.Once
+	exportN             atomic.Int32
+	stopped             atomic.Bool
+}
+
+func newShutdownOrderingExporter() *shutdownOrderingExporter {
+	return &shutdownOrderingExporter{
+		exportStarted:     make(chan struct{}),
+		exportRelease:     make(chan struct{}),
+		exportDone:        make(chan struct{}),
+		exportedAfterStop: make(chan struct{}),
+	}
+}
+
+func (e *shutdownOrderingExporter) Export(ctx context.Context, _ []Record) error {
+	n := e.exportN.Add(1)
+	if e.stopped.Load() {
+		e.exportedAfterStopMu.Do(func() { close(e.exportedAfterStop) })
+	}
+	if n == 1 {
+		close(e.exportStarted)
+		defer close(e.exportDone)
+		select {
+		case <-e.exportRelease:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
+func (e *shutdownOrderingExporter) Shutdown(context.Context) error {
+	e.stopped.Store(true)
+	return nil
+}
+
+func (*shutdownOrderingExporter) ForceFlush(context.Context) error { return nil }
+
+type doneObservedContext struct {
+	context.Context
+	doneObserved chan struct{}
+	once         sync.Once
+}
+
+func (c *doneObservedContext) Done() <-chan struct{} {
+	c.once.Do(func() { close(c.doneObserved) })
+	return c.Context.Done()
+}
+
+func TestBatchProcessorDoesNotExportAfterExporterShutdown(t *testing.T) {
+	exporter := newShutdownOrderingExporter()
+	processor := NewBatchProcessor(
+		exporter,
+		WithMaxQueueSize(2),
+		WithExportMaxBatchSize(1),
+		WithExportBufferSize(2),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+
+	released := false
+	defer func() {
+		if !released {
+			close(exporter.exportRelease)
+		}
+	}()
+
+	require.NoError(t, processor.OnEmit(t.Context(), new(Record)))
+	select {
+	case <-exporter.exportStarted:
+	case <-time.After(time.Second):
+		t.Fatal("first export did not start")
+	}
+	require.NoError(t, processor.OnEmit(t.Context(), new(Record)))
+
+	// Once ForceFlush observes Done, it has moved the second record into the
+	// export buffer and is waiting behind the blocked first export.
+	baseCtx, cancel := context.WithCancel(t.Context())
+	ctx := &doneObservedContext{
+		Context:      baseCtx,
+		doneObserved: make(chan struct{}),
+	}
+	flushDone := make(chan error, 1)
+	go func() { flushDone <- processor.ForceFlush(ctx) }()
+	select {
+	case <-ctx.doneObserved:
+	case <-time.After(time.Second):
+		t.Fatal("force flush did not reach the export buffer")
+	}
+	cancel()
+	assert.ErrorIs(t, <-flushDone, context.Canceled)
+
+	assert.ErrorIs(t, processor.Shutdown(ctx), context.Canceled)
+	assert.True(t, exporter.stopped.Load())
+
+	close(exporter.exportRelease)
+	released = true
+	select {
+	case <-exporter.exportDone:
+	case <-time.After(time.Second):
+		t.Fatal("first export did not complete")
+	}
+
+	select {
+	case <-exporter.exportedAfterStop:
+		t.Fatal("Export called after exporter Shutdown")
+	case <-time.After(100 * time.Millisecond):
+	}
+	assert.Equal(t, int32(1), exporter.exportN.Load())
 }
