@@ -335,7 +335,7 @@ func (e *bufferExporter) ForceFlush(ctx context.Context) error {
 // ctx is canceled, any export already in progress may overlap Exporter.Shutdown
 // and all remaining buffered exports are discarded.
 //
-// After this is called, EnqueueExport returns true without enqueueing and Export
+// After Shutdown returns, EnqueueExport returns true without enqueueing and Export
 // returns nil without exporting.
 func (e *bufferExporter) Shutdown(ctx context.Context) error {
 	if e.stopped.Swap(true) {
