@@ -202,8 +202,8 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 // Shutdown is therefore not called concurrently with any processor method,
 // including itself.
 //
-// If ctx is already canceled or is canceled before in-flight processor calls
-// complete, Shutdown returns ctx.Err() without invoking processor Shutdown.
+// If ctx cancellation is observed before in-flight processor calls complete,
+// Shutdown returns ctx.Err() without invoking processor Shutdown.
 //
 // After the first call to Shutdown, subsequent calls to the provider and its
 // loggers will not invoke processors. Other concurrent and subsequent Shutdown

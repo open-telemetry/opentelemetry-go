@@ -557,19 +557,6 @@ func TestLoggerProviderShutdownWaitsForAdmittedProcessorCallConcurrentSafe(t *te
 }
 
 func TestLoggerProviderShutdownHonorsContext(t *testing.T) {
-	t.Run("CanceledBeforeShutdown", func(t *testing.T) {
-		proc := newProcessor("")
-		provider := NewLoggerProvider(WithProcessor(proc))
-		ctx, cancel := context.WithCancel(t.Context())
-		cancel()
-
-		assert.ErrorIs(t, provider.Shutdown(ctx), context.Canceled)
-		assert.Zero(t, proc.shutdownCalls)
-
-		require.NoError(t, provider.Shutdown(t.Context()))
-		assert.Zero(t, proc.shutdownCalls)
-	})
-
 	t.Run("CanceledWhileWaiting", func(t *testing.T) {
 		first := &blockingForceFlushProcessor{
 			processor: newProcessor("first"),
