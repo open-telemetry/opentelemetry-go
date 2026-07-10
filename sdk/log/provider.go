@@ -79,9 +79,11 @@ type LoggerProvider struct {
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
 
-	stopped         atomic.Bool
-	processorCallMu sync.Mutex
-	processorCalls  sync.WaitGroup
+	stopped           atomic.Bool
+	processorCallMu   sync.Mutex
+	processorCalls    atomic.Int64
+	processorDone     chan struct{}
+	processorDoneOnce sync.Once
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
@@ -122,18 +124,29 @@ func (p *LoggerProvider) beginProcessorCall() bool {
 }
 
 func (p *LoggerProvider) endProcessorCall() {
-	p.processorCalls.Done()
+	if p.processorCalls.Add(-1) == 0 && p.stopped.Load() {
+		p.processorDoneOnce.Do(func() { close(p.processorDone) })
+	}
 }
 
-// stop closes admission. The mutex ensures no call to Add can race with Wait.
-func (p *LoggerProvider) stop() bool {
+// stop closes admission and returns a channel closed when admitted calls end.
+func (p *LoggerProvider) stop() (<-chan struct{}, bool) {
 	if p.stopped.Load() {
-		return false
+		return nil, false
 	}
 
 	p.processorCallMu.Lock()
 	defer p.processorCallMu.Unlock()
-	return !p.stopped.Swap(true)
+	if p.stopped.Load() {
+		return nil, false
+	}
+
+	p.processorDone = make(chan struct{})
+	p.stopped.Store(true)
+	if p.processorCalls.Load() == 0 {
+		p.processorDoneOnce.Do(func() { close(p.processorDone) })
+	}
+	return p.processorDone, true
 }
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
@@ -184,26 +197,37 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 // registered.
 //
 // Shutdown first prevents new processor calls and waits for in-flight Enabled,
-// OnEmit, and ForceFlush calls to complete. It then invokes each processor's
-// Shutdown once. Processor Shutdown is therefore not called concurrently with
-// any processor method, including itself.
+// OnEmit, and ForceFlush calls to complete. If they complete before ctx is
+// canceled, Shutdown invokes each processor's Shutdown once. Processor
+// Shutdown is therefore not called concurrently with any processor method,
+// including itself.
 //
-// Shutdown waits for in-flight processor calls to complete even if ctx is
-// canceled. The canceled context is then passed to the processors.
+// If ctx is already canceled or is canceled before in-flight processor calls
+// complete, Shutdown returns ctx.Err() without invoking processor Shutdown.
 //
 // After the first call to Shutdown, subsequent calls to the provider and its
 // loggers will not invoke processors. Other concurrent and subsequent Shutdown
-// calls return nil without invoking processors.
+// calls return nil without invoking processors, including when the first call
+// returns an error due to context cancellation.
 //
 // Shutdown must not be called from a Processor's Enabled, OnEmit, or ForceFlush
 // method.
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
-	if !p.stop() {
+	done, stopped := p.stop()
+	if !stopped {
 		return nil
 	}
-	p.processorCalls.Wait()
+
+	select {
+	case <-done:
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 
 	var err error
 	for _, processor := range p.processors {

@@ -505,8 +505,7 @@ func TestLoggerProviderShutdownWaitsForAdmittedProcessorCallConcurrentSafe(t *te
 		}
 	}()
 
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
+	ctx := t.Context()
 
 	shutdownDone := make(chan error, 1)
 	go func() {
@@ -554,7 +553,76 @@ func TestLoggerProviderShutdownWaitsForAdmittedProcessorCallConcurrentSafe(t *te
 	assert.Equal(t, 1, proc.shutdownCalls)
 	overlap, contextErr := proc.result()
 	assert.False(t, overlap)
-	assert.ErrorIs(t, contextErr, context.Canceled)
+	assert.NoError(t, contextErr)
+}
+
+func TestLoggerProviderShutdownHonorsContext(t *testing.T) {
+	t.Run("CanceledBeforeShutdown", func(t *testing.T) {
+		proc := newProcessor("")
+		provider := NewLoggerProvider(WithProcessor(proc))
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+
+		assert.ErrorIs(t, provider.Shutdown(ctx), context.Canceled)
+		assert.Zero(t, proc.shutdownCalls)
+
+		require.NoError(t, provider.Shutdown(t.Context()))
+		assert.Zero(t, proc.shutdownCalls)
+	})
+
+	t.Run("CanceledWhileWaiting", func(t *testing.T) {
+		first := &blockingForceFlushProcessor{
+			processor: newProcessor("first"),
+			started:   make(chan struct{}),
+			release:   make(chan struct{}),
+			finished:  make(chan struct{}),
+		}
+		second := &orderedForceFlushProcessor{processor: newProcessor("second")}
+		provider := NewLoggerProvider(
+			WithProcessor(first),
+			WithProcessor(second),
+		)
+
+		flushDone := make(chan error, 1)
+		go func() {
+			flushDone <- provider.ForceFlush(t.Context())
+		}()
+		<-first.started
+
+		released := false
+		defer func() {
+			if !released {
+				close(first.release)
+			}
+		}()
+
+		ctx, cancel := context.WithCancel(t.Context())
+		shutdownDone := make(chan error, 1)
+		go func() {
+			shutdownDone <- provider.Shutdown(ctx)
+		}()
+		require.Eventually(t, provider.stopped.Load, time.Second, time.Microsecond)
+		cancel()
+
+		select {
+		case err := <-shutdownDone:
+			assert.ErrorIs(t, err, context.Canceled)
+		case <-time.After(time.Second):
+			t.Fatal("Shutdown did not honor context cancellation")
+		}
+		assert.Zero(t, first.shutdownCalls)
+		assert.Zero(t, second.shutdownCalls)
+
+		close(first.release)
+		released = true
+		require.NoError(t, <-flushDone)
+		assert.Equal(t, 1, second.forceFlushCalls)
+		assert.Equal(t, []string{"ForceFlush"}, second.calls)
+
+		require.NoError(t, provider.Shutdown(t.Context()))
+		assert.Zero(t, first.shutdownCalls)
+		assert.Zero(t, second.shutdownCalls)
+	})
 }
 
 type shutdownDetectingProcessor struct {
