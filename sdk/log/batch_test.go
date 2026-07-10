@@ -30,26 +30,6 @@ type concurrentBuffer struct {
 	m sync.Mutex
 }
 
-type shutdownExporter struct {
-	calls                             []string
-	exportErr, forceFlushErr, stopErr error
-}
-
-func (e *shutdownExporter) Export(context.Context, []Record) error {
-	e.calls = append(e.calls, "Export")
-	return e.exportErr
-}
-
-func (e *shutdownExporter) ForceFlush(context.Context) error {
-	e.calls = append(e.calls, "ForceFlush")
-	return e.forceFlushErr
-}
-
-func (e *shutdownExporter) Shutdown(context.Context) error {
-	e.calls = append(e.calls, "Shutdown")
-	return e.stopErr
-}
-
 func (b *concurrentBuffer) Write(p []byte) (n int, err error) {
 	b.m.Lock()
 	defer b.m.Unlock()
@@ -322,11 +302,11 @@ func TestBatchProcessor(t *testing.T) {
 			exportErr := errors.New("export")
 			forceFlushErr := errors.New("force flush")
 			shutdownErr := errors.New("shutdown")
-			e := &shutdownExporter{
-				exportErr:     exportErr,
-				forceFlushErr: forceFlushErr,
-				stopErr:       shutdownErr,
-			}
+			e := newTestExporter(nil)
+			t.Cleanup(e.Stop)
+			e.ExportErr = exportErr
+			e.ForceFlushErr = forceFlushErr
+			e.ShutdownErr = shutdownErr
 			b := NewBatchProcessor(
 				e,
 				WithMaxQueueSize(2),
@@ -341,13 +321,13 @@ func TestBatchProcessor(t *testing.T) {
 			assert.ErrorIs(t, err, exportErr)
 			assert.ErrorIs(t, err, forceFlushErr)
 			assert.ErrorIs(t, err, shutdownErr)
-			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.calls)
+			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.Calls())
 
 			err = provider.Shutdown(ctx)
 			assert.ErrorIs(t, err, exportErr)
 			assert.ErrorIs(t, err, forceFlushErr)
 			assert.ErrorIs(t, err, shutdownErr)
-			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.calls)
+			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.Calls())
 		})
 
 		t.Run("Multiple", func(t *testing.T) {
@@ -385,7 +365,8 @@ func TestBatchProcessor(t *testing.T) {
 		})
 
 		t.Run("CanceledContext", func(t *testing.T) {
-			e := new(shutdownExporter)
+			e := newTestExporter(nil)
+			t.Cleanup(e.Stop)
 			b := NewBatchProcessor(e)
 
 			ctx := t.Context()
@@ -393,7 +374,7 @@ func TestBatchProcessor(t *testing.T) {
 			cancel()
 
 			assert.ErrorIs(t, b.Shutdown(c), context.Canceled)
-			assert.Equal(t, []string{"ForceFlush", "Shutdown"}, e.calls)
+			assert.Equal(t, []string{"ForceFlush", "Shutdown"}, e.Calls())
 		})
 	})
 
