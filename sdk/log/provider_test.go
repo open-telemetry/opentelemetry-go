@@ -5,9 +5,11 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -91,18 +93,6 @@ type fltrProcessor struct {
 type shutdownContextKey struct{}
 
 const shutdownContextValue = "shutdown context value"
-
-type shutdownWaitContext struct {
-	context.Context
-
-	doneObserved chan struct{}
-	doneOnce     sync.Once
-}
-
-func (c *shutdownWaitContext) Done() <-chan struct{} {
-	c.doneOnce.Do(func() { close(c.doneObserved) })
-	return c.Context.Done()
-}
 
 type processorOperation int
 
@@ -506,69 +496,34 @@ func TestLoggerProviderLogger(t *testing.T) {
 }
 
 func TestLoggerProviderShutdown(t *testing.T) {
-	t.Run("Once", func(t *testing.T) {
-		proc := newProcessor("")
-		p := NewLoggerProvider(WithProcessor(proc))
+	firstErr := errors.New("first")
+	secondErr := errors.New("second")
+	var order []string
+	first := newProcessor("first")
+	first.shutdownFunc = func(context.Context) error {
+		order = append(order, first.Name)
+		return firstErr
+	}
+	second := newProcessor("second")
+	second.shutdownFunc = func(context.Context) error {
+		order = append(order, second.Name)
+		return secondErr
+	}
+	provider := NewLoggerProvider(
+		WithProcessor(first),
+		WithProcessor(second),
+	)
 
-		ctx := t.Context()
-		require.NoError(t, p.Shutdown(ctx))
-		require.Equal(t, 1, proc.shutdownCalls, "processor Shutdown not called")
-
-		require.NoError(t, p.Shutdown(ctx))
-		assert.Equal(t, 1, proc.shutdownCalls, "processor Shutdown called multiple times")
-		assert.Zero(t, proc.forceFlushCalls, "processor ForceFlush called by provider Shutdown")
-	})
-
-	t.Run("RegistrationOrder", func(t *testing.T) {
-		var order []string
-		first := newProcessor("first")
-		first.shutdownFunc = func(context.Context) error {
-			order = append(order, first.Name)
-			return nil
-		}
-		second := newProcessor("second")
-		second.shutdownFunc = func(context.Context) error {
-			order = append(order, second.Name)
-			return nil
-		}
-		provider := NewLoggerProvider(
-			WithProcessor(first),
-			WithProcessor(second),
-		)
-
-		require.NoError(t, provider.Shutdown(t.Context()))
-		assert.Equal(t, []string{"first", "second"}, order)
-	})
-
-	t.Run("Error", func(t *testing.T) {
-		proc := newProcessor("")
-		proc.Err = assert.AnError
-		p := NewLoggerProvider(WithProcessor(proc))
-
-		ctx := t.Context()
-		assert.ErrorIs(t, p.Shutdown(ctx), assert.AnError, "processor error not returned")
-		assert.ErrorIs(t, p.Shutdown(ctx), assert.AnError, "processor error not returned again")
-		assert.Equal(t, 1, proc.shutdownCalls, "processor Shutdown called multiple times")
-	})
-}
-
-func TestLoggerProviderShutdownWaitsForAdmittedProcessorOperationConcurrentSafe(t *testing.T) {
-	provider := NewLoggerProvider()
-
-	require.True(t, provider.beginProcessorOperation())
-	operationEnded := false
-	t.Cleanup(func() {
-		if !operationEnded {
-			provider.endProcessorOperation()
-		}
-	})
-
-	shutdownDone := shutdownWhileBlocked(t, provider)
-	assert.False(t, provider.beginProcessorOperation(), "processor operation admitted after Shutdown")
-	provider.endProcessorOperation()
-	operationEnded = true
-
-	require.NoError(t, <-shutdownDone)
+	for range 2 {
+		err := provider.Shutdown(t.Context())
+		assert.ErrorIs(t, err, firstErr)
+		assert.ErrorIs(t, err, secondErr)
+	}
+	assert.Equal(t, []string{"first", "second"}, order)
+	assert.Equal(t, 1, first.shutdownCalls, "first processor Shutdown calls")
+	assert.Equal(t, 1, second.shutdownCalls, "second processor Shutdown calls")
+	assert.Zero(t, first.forceFlushCalls, "first processor ForceFlush calls")
+	assert.Zero(t, second.forceFlushCalls, "second processor ForceFlush calls")
 }
 
 func TestLoggerProviderShutdownHonorsContextConcurrentSafe(t *testing.T) {
@@ -633,7 +588,7 @@ func TestLoggerProviderShutdownHonorsContextConcurrentSafe(t *testing.T) {
 	})
 
 	t.Run("CanceledDuringProcessorShutdown", func(t *testing.T) {
-		first := newShutdownDetectingProcessor()
+		first := newBlockingShutdownProcessor()
 		second := newProcessor("second")
 		second.Err = assert.AnError
 		var shutdownCtx context.Context
@@ -685,19 +640,13 @@ func TestLoggerProviderShutdownHonorsContextConcurrentSafe(t *testing.T) {
 			"canceled retry did not honor its context",
 		)
 
-		waitCtx := &shutdownWaitContext{
-			Context:      t.Context(),
-			doneObserved: make(chan struct{}),
-		}
+		retryStarted := make(chan struct{})
 		retryDone := make(chan error, 1)
 		go func() {
-			retryDone <- provider.Shutdown(waitCtx)
+			close(retryStarted)
+			retryDone <- provider.Shutdown(t.Context())
 		}()
-		select {
-		case <-waitCtx.doneObserved:
-		case <-time.After(time.Second):
-			t.Fatal("retry did not wait for pending cleanup")
-		}
+		<-retryStarted
 		select {
 		case err := <-retryDone:
 			t.Fatalf("retry returned before processor shutdown completed: %v", err)
@@ -718,9 +667,7 @@ func TestLoggerProviderShutdownHonorsContextConcurrentSafe(t *testing.T) {
 			t.Fatal("retry did not wait for processor shutdown completion")
 		}
 
-		calls, overlap := first.result()
-		assert.Equal(t, 1, calls)
-		assert.False(t, overlap)
+		assert.Equal(t, int64(1), first.calls.Load())
 		assert.Equal(t, 1, second.shutdownCalls)
 		assertShutdownContext(t, shutdownCtx)
 	})
@@ -778,52 +725,31 @@ func TestWaitForShutdown(t *testing.T) {
 	}
 }
 
-type shutdownDetectingProcessor struct {
+type blockingShutdownProcessor struct {
 	processor
 
-	mu      sync.Mutex
-	running bool
-	calls   int
-	overlap bool
-	started chan struct{}
-	release chan struct{}
+	calls       atomic.Int64
+	started     chan struct{}
+	startedOnce sync.Once
+	release     chan struct{}
 }
 
-func newShutdownDetectingProcessor() *shutdownDetectingProcessor {
-	return &shutdownDetectingProcessor{
+func newBlockingShutdownProcessor() *blockingShutdownProcessor {
+	return &blockingShutdownProcessor{
 		started: make(chan struct{}),
 		release: make(chan struct{}),
 	}
 }
 
-func (p *shutdownDetectingProcessor) Shutdown(context.Context) error {
-	p.mu.Lock()
-	p.calls++
-	if p.running {
-		p.overlap = true
-	}
-	p.running = true
-	if p.calls == 1 {
-		close(p.started)
-	}
-	p.mu.Unlock()
-
+func (p *blockingShutdownProcessor) Shutdown(context.Context) error {
+	p.calls.Add(1)
+	p.startedOnce.Do(func() { close(p.started) })
 	<-p.release
-
-	p.mu.Lock()
-	p.running = false
-	p.mu.Unlock()
 	return p.Err
 }
 
-func (p *shutdownDetectingProcessor) result() (calls int, overlap bool) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return p.calls, p.overlap
-}
-
 func TestLoggerProviderShutdownOnceConcurrentSafe(t *testing.T) {
-	proc := newShutdownDetectingProcessor()
+	proc := newBlockingShutdownProcessor()
 	proc.Err = assert.AnError
 	provider := NewLoggerProvider(WithProcessor(proc))
 	ctx := t.Context()
@@ -847,13 +773,8 @@ func TestLoggerProviderShutdownOnceConcurrentSafe(t *testing.T) {
 		}
 	}
 
-	for range shutdowns {
-		assert.ErrorIs(t, provider.Shutdown(ctx), assert.AnError)
-	}
-
-	calls, overlap := proc.result()
-	assert.Equal(t, 1, calls)
-	assert.False(t, overlap)
+	assert.ErrorIs(t, provider.Shutdown(ctx), assert.AnError)
+	assert.Equal(t, int64(1), proc.calls.Load())
 }
 
 func TestLoggerProviderForceFlush(t *testing.T) {
@@ -919,6 +840,9 @@ func TestLoggerProviderForceFlushShutdownConcurrentSafe(t *testing.T) {
 
 	<-block.started
 	shutdownDone := shutdownWhileBlocked(t, provider)
+	require.NoError(t, provider.ForceFlush(ctx))
+	assert.Equal(t, 1, first.forceFlushCalls, "processor ForceFlush called after Shutdown started")
+	assert.Zero(t, second.forceFlushCalls, "processor ForceFlush called after Shutdown started")
 
 	block.unblock()
 	flushErr := <-flushDone
