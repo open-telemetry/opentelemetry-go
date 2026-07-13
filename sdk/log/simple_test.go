@@ -34,7 +34,6 @@ type exporter struct {
 	calls   []string
 
 	exportCalled     bool
-	shutdownCalled   bool
 	forceFlushCalled bool
 	shutdownErr      error
 	forceFlushErr    error
@@ -48,7 +47,6 @@ func (e *exporter) Export(_ context.Context, r []log.Record) error {
 
 func (e *exporter) Shutdown(context.Context) error {
 	e.calls = append(e.calls, "Shutdown")
-	e.shutdownCalled = true
 	return e.shutdownErr
 }
 
