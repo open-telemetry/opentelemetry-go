@@ -239,6 +239,10 @@ func benchmarkAtomicMinMax[N int64 | float64](b *testing.B) {
 	})
 }
 
+func loadOrStore[V any](m *limitedSyncMap[V], attr attribute.Set, newValue func(attribute.Set) V) V {
+	return m.LoadOrStoreAttr(newLazyFilteredAttributes(attr, nil), newValue)
+}
+
 func TestLimitedSyncMapLimit(t *testing.T) {
 	m := limitedSyncMap[any]{aggLimit: 3}
 	newValue := func(attribute.Set) any { return new(int) }
@@ -249,21 +253,21 @@ func TestLimitedSyncMapLimit(t *testing.T) {
 	attr4 := attribute.NewSet(attribute.String("key", "4"))
 
 	// Add first (normal)
-	v1 := m.LoadOrStoreAttr(attr1, newValue)
+	v1 := loadOrStore(&m, attr1, newValue)
 	assert.Equal(t, 1, m.Len())
 
 	// Add second (normal)
-	v2 := m.LoadOrStoreAttr(attr2, newValue)
+	v2 := loadOrStore(&m, attr2, newValue)
 	assert.Equal(t, 2, m.Len())
 
 	// Add third (overflow)
-	v3 := m.LoadOrStoreAttr(attr3, newValue)
+	v3 := loadOrStore(&m, attr3, newValue)
 	assert.Equal(t, 3, m.Len()) // Overflow counts as the 3rd entry
 	assert.NotSame(t, v1, v3)
 	assert.NotSame(t, v2, v3)
 
 	// Add fourth (overflow) - should return same overflow value
-	v4 := m.LoadOrStoreAttr(attr4, newValue)
+	v4 := loadOrStore(&m, attr4, newValue)
 	assert.Same(t, v3, v4)
 
 	// Clear the map. Should be able to add new keys up to limit again.
@@ -275,20 +279,20 @@ func TestLimitedSyncMapLimit(t *testing.T) {
 	attr7 := attribute.NewSet(attribute.String("key", "7"))
 	attr8 := attribute.NewSet(attribute.String("key", "8"))
 
-	v5 := m.LoadOrStoreAttr(attr5, newValue)
+	v5 := loadOrStore(&m, attr5, newValue)
 	assert.Equal(t, 1, m.Len())
 
-	v6 := m.LoadOrStoreAttr(attr6, newValue)
+	v6 := loadOrStore(&m, attr6, newValue)
 	assert.Equal(t, 2, m.Len())
 
 	assert.NotSame(t, v5, v6, "Different keys should return different values")
 
-	v7 := m.LoadOrStoreAttr(attr7, newValue)
+	v7 := loadOrStore(&m, attr7, newValue)
 	assert.Equal(t, 3, m.Len()) // Overflow counts as 3rd entry
 	assert.NotSame(t, v5, v7, "Overflow should be different from normal values")
 	assert.NotSame(t, v6, v7, "Overflow should be different from normal values")
 
-	v8 := m.LoadOrStoreAttr(attr8, newValue)
+	v8 := loadOrStore(&m, attr8, newValue)
 	assert.Same(t, v7, v8, "Subsequent keys should return same overflow value")
 }
 
@@ -301,7 +305,7 @@ func TestLimitedSyncMapConcurrentSafe(t *testing.T) {
 	// 100 routines trying to read/write the same key
 	for range 100 {
 		wg.Go(func() {
-			m.LoadOrStoreAttr(attr, newValue)
+			loadOrStore(&m, attr, newValue)
 		})
 	}
 	wg.Wait()
@@ -324,12 +328,35 @@ func TestLimitedSyncMapConcurrentSafe(t *testing.T) {
 	for _, a := range attrs {
 		attrCopy := a
 		wg2.Go(func() {
-			m.LoadOrStoreAttr(attrCopy, newValue)
+			loadOrStore(&m, attrCopy, newValue)
 		})
 	}
 	wg2.Wait()
 	// Map should be at limit (5)
 	assert.Equal(t, 5, m.Len())
+}
+
+func TestLimitedSyncMap_LoadOrStoreLazy(t *testing.T) {
+	var m limitedSyncMap[string]
+	orig := attribute.NewSet(attribute.String("k1", "v1"), attribute.String("k2", "v2"))
+	filter := func(kv attribute.KeyValue) bool { return kv.Key == "k1" }
+	lazy := newLazyFilteredAttributes(orig, filter)
+
+	newCalls := 0
+	val := m.LoadOrStoreAttr(lazy, func(attribute.Set) string {
+		newCalls++
+		return "stored_value"
+	})
+	assert.Equal(t, "stored_value", val)
+	assert.Equal(t, 1, newCalls)
+
+	// Second access should hit hot path
+	val2 := m.LoadOrStoreAttr(lazy, func(attribute.Set) string {
+		newCalls++
+		return "should_not_call"
+	})
+	assert.Equal(t, "stored_value", val2)
+	assert.Equal(t, 1, newCalls)
 }
 
 func BenchmarkSyncMap(b *testing.B) {
@@ -340,7 +367,7 @@ func BenchmarkSyncMap(b *testing.B) {
 		m := limitedSyncMap[any]{aggLimit: 10}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			m.LoadOrStoreAttr(attr, newValue)
+			loadOrStore(&m, attr, newValue)
 		}
 	})
 
@@ -349,7 +376,7 @@ func BenchmarkSyncMap(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			m.Clear()
-			m.LoadOrStoreAttr(attr, newValue)
+			loadOrStore(&m, attr, newValue)
 		}
 	})
 

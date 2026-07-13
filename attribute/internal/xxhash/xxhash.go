@@ -13,15 +13,17 @@ import (
 
 // Hash wraps xxhash.Digest to provide an API friendly for hashing attribute values.
 type Hash struct {
-	d *xxhash.Digest
+	d xxhash.Digest
 }
 
-// New returns a new initialized xxHash64 hasher.
-func New() Hash {
-	return Hash{d: xxhash.New()}
+// New returns a new initialized xxHash64 hasher pointer.
+func New() *Hash {
+	var d xxhash.Digest
+	d.Reset()
+	return &Hash{d: d}
 }
 
-func (h Hash) Uint64(val uint64) Hash {
+func (h *Hash) Uint64(val uint64) *Hash {
 	var buf [8]byte
 	binary.LittleEndian.PutUint64(buf[:], val)
 	// errors from Write are always nil for xxhash
@@ -33,22 +35,22 @@ func (h Hash) Uint64(val uint64) Hash {
 	return h
 }
 
-func (h Hash) Bool(val bool) Hash { // nolint:revive // This is a hashing function.
+func (h *Hash) Bool(val bool) *Hash { // nolint:revive // This is a hashing function.
 	if val {
 		return h.Uint64(1)
 	}
 	return h.Uint64(0)
 }
 
-func (h Hash) Float64(val float64) Hash {
+func (h *Hash) Float64(val float64) *Hash {
 	return h.Uint64(math.Float64bits(val))
 }
 
-func (h Hash) Int64(val int64) Hash {
+func (h *Hash) Int64(val int64) *Hash {
 	return h.Uint64(uint64(val)) // nolint:gosec // Overflow doesn't matter since we are hashing.
 }
 
-func (h Hash) String(val string) Hash {
+func (h *Hash) String(val string) *Hash {
 	// errors from WriteString are always nil for xxhash
 	// if it returns an err then panic
 	_, err := h.d.WriteString(val)
@@ -59,6 +61,6 @@ func (h Hash) String(val string) Hash {
 }
 
 // Sum64 returns the current hash value.
-func (h Hash) Sum64() uint64 {
+func (h *Hash) Sum64() uint64 {
 	return h.d.Sum64()
 }
