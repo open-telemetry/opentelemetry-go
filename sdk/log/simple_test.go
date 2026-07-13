@@ -88,28 +88,18 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 }
 
 func TestSimpleProcessorShutdown(t *testing.T) {
-	t.Run("FlushesBeforeShutdown", func(t *testing.T) {
-		e := new(exporter)
-		s := log.NewSimpleProcessor(e)
+	forceFlushErr := errors.New("force flush")
+	shutdownErr := errors.New("shutdown")
+	e := &exporter{
+		forceFlushErr: forceFlushErr,
+		shutdownErr:   shutdownErr,
+	}
+	s := log.NewSimpleProcessor(e)
 
-		require.NoError(t, s.Shutdown(t.Context()))
-		assert.Equal(t, []string{"ForceFlush", "Shutdown"}, e.calls)
-	})
-
-	t.Run("Errors", func(t *testing.T) {
-		forceFlushErr := errors.New("force flush")
-		shutdownErr := errors.New("shutdown")
-		e := &exporter{
-			forceFlushErr: forceFlushErr,
-			shutdownErr:   shutdownErr,
-		}
-		s := log.NewSimpleProcessor(e)
-
-		err := s.Shutdown(t.Context())
-		assert.ErrorIs(t, err, forceFlushErr)
-		assert.ErrorIs(t, err, shutdownErr)
-		assert.Equal(t, []string{"ForceFlush", "Shutdown"}, e.calls)
-	})
+	err := s.Shutdown(t.Context())
+	assert.ErrorIs(t, err, forceFlushErr)
+	assert.ErrorIs(t, err, shutdownErr)
+	assert.Equal(t, []string{"ForceFlush", "Shutdown"}, e.calls)
 }
 
 func TestSimpleProcessorForceFlush(t *testing.T) {

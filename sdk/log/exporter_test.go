@@ -28,6 +28,8 @@ type instruction struct {
 type testExporter struct {
 	// Err is the error returned by all methods of the testExporter.
 	Err error
+	// Method-specific errors take precedence over Err when set.
+	ExportErr, ShutdownErr, ForceFlushErr error
 	// ExportTrigger is read from prior to returning from the Export method if
 	// non-nil.
 	ExportTrigger chan struct{}
@@ -39,6 +41,8 @@ type testExporter struct {
 	inputMu sync.Mutex
 	input   chan instruction
 	done    chan struct{}
+	callsMu sync.Mutex
+	calls   []string
 }
 
 func newTestExporter(err error) *testExporter {
@@ -78,6 +82,7 @@ func (e *testExporter) Records() [][]Record {
 }
 
 func (e *testExporter) Export(ctx context.Context, r []Record) error {
+	e.recordCall("Export")
 	e.exportN.Add(1)
 	if e.ExportTrigger != nil {
 		select {
@@ -91,7 +96,7 @@ func (e *testExporter) Export(ctx context.Context, r []Record) error {
 	if !e.stopped.Load() {
 		e.input <- instruction{Record: &r}
 	}
-	return e.Err
+	return e.methodError(e.ExportErr)
 }
 
 func (e *testExporter) ExportN() int {
@@ -110,8 +115,9 @@ func (e *testExporter) Stop() {
 }
 
 func (e *testExporter) Shutdown(context.Context) error {
+	e.recordCall("Shutdown")
 	e.shutdownN.Add(1)
-	return e.Err
+	return e.methodError(e.ShutdownErr)
 }
 
 func (e *testExporter) ShutdownN() int {
@@ -119,12 +125,32 @@ func (e *testExporter) ShutdownN() int {
 }
 
 func (e *testExporter) ForceFlush(context.Context) error {
+	e.recordCall("ForceFlush")
 	e.forceFlushN.Add(1)
-	return e.Err
+	return e.methodError(e.ForceFlushErr)
 }
 
 func (e *testExporter) ForceFlushN() int {
 	return int(e.forceFlushN.Load())
+}
+
+func (e *testExporter) methodError(err error) error {
+	if err != nil {
+		return err
+	}
+	return e.Err
+}
+
+func (e *testExporter) recordCall(name string) {
+	e.callsMu.Lock()
+	defer e.callsMu.Unlock()
+	e.calls = append(e.calls, name)
+}
+
+func (e *testExporter) Calls() []string {
+	e.callsMu.Lock()
+	defer e.callsMu.Unlock()
+	return slices.Clone(e.calls)
 }
 
 func TestChunker(t *testing.T) {
@@ -319,6 +345,27 @@ func TestTimeoutExporter(t *testing.T) {
 	})
 }
 
+func newBlockedBufferExporter(t *testing.T) (*bufferExporter, *testExporter) {
+	t.Helper()
+
+	exp := newTestExporter(nil)
+	exp.ForceFlushErr = assert.AnError
+	trigger := make(chan struct{})
+	exp.ExportTrigger = trigger
+	e := newBufferExporter(exp, 1)
+	t.Cleanup(func() {
+		close(trigger)
+		_ = e.Shutdown(t.Context())
+		exp.Stop()
+	})
+
+	require.True(t, e.EnqueueExport(make([]Record, 1)))
+	require.Eventually(t, func() bool {
+		return exp.ExportN() > 0
+	}, 2*time.Second, time.Microsecond)
+	return e, exp
+}
+
 func TestBufferExporter(t *testing.T) {
 	t.Run("ConcurrentSafe", func(t *testing.T) {
 		const goRoutines = 10
@@ -427,22 +474,9 @@ func TestBufferExporter(t *testing.T) {
 
 		t.Run("ContextCancelled", func(t *testing.T) {
 			t.Run("WhileDraining", func(t *testing.T) {
-				exp := newTestExporter(assert.AnError)
-				trigger := make(chan struct{})
-				exp.ExportTrigger = trigger
-				e := newBufferExporter(exp, 1)
-				t.Cleanup(func() {
-					close(trigger)
-					_ = e.Shutdown(t.Context())
-					exp.Stop()
-				})
+				e, exp := newBlockedBufferExporter(t)
 
 				ctx, cancel := context.WithCancel(t.Context())
-				require.True(t, e.EnqueueExport(make([]Record, 1)))
-				require.Eventually(t, func() bool {
-					return exp.ExportN() > 0
-				}, 2*time.Second, time.Microsecond)
-
 				got := make(chan error, 1)
 				go func() { got <- e.ForceFlush(ctx) }()
 				require.Eventually(t, func() bool {
@@ -457,22 +491,8 @@ func TestBufferExporter(t *testing.T) {
 			})
 
 			t.Run("BeforeEnqueue", func(t *testing.T) {
-				exp := newTestExporter(assert.AnError)
-				trigger := make(chan struct{})
-				exp.ExportTrigger = trigger
-				e := newBufferExporter(exp, 1)
-				t.Cleanup(func() {
-					close(trigger)
-					_ = e.Shutdown(t.Context())
-					exp.Stop()
-				})
-
-				records := make([]Record, 1)
-				require.True(t, e.EnqueueExport(records))
-				require.Eventually(t, func() bool {
-					return exp.ExportN() > 0
-				}, 2*time.Second, time.Microsecond)
-				require.True(t, e.EnqueueExport(records))
+				e, exp := newBlockedBufferExporter(t)
+				require.True(t, e.EnqueueExport(make([]Record, 1)))
 
 				ctx, cancel := context.WithCancel(t.Context())
 				cancel()
