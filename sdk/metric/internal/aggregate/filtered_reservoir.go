@@ -22,7 +22,10 @@ type FilteredExemplarReservoir[N int64 | float64] interface {
 	// The passed ctx needs to contain any baggage or span that were active
 	// when the measurement was made. This information may be used by the
 	// Reservoir in making a sampling decision.
-	Offer(ctx context.Context, val N, attr []attribute.KeyValue)
+	//
+	// The lazy parameter provides filtered attribute details when sampled,
+	// allowing dropped attributes to be computed only if the measurement is sampled.
+	Offer(ctx context.Context, val N, lazy lazyFilteredAttributes)
 	// Collect returns all the held exemplars in the reservoir.
 	Collect(dest *[]exemplar.Exemplar)
 }
@@ -52,10 +55,14 @@ func NewFilteredExemplarReservoir[N int64 | float64](
 	}
 }
 
-func (f *filteredExemplarReservoir[N]) Offer(ctx context.Context, val N, attr []attribute.KeyValue) {
+func (f *filteredExemplarReservoir[N]) Offer(ctx context.Context, val N, lazy lazyFilteredAttributes) {
 	if f.filter(ctx) {
 		// only record the current time if we are sampling this measurement.
 		ts := time.Now()
+		var attr []attribute.KeyValue
+		if lazy.HasDroppedAttributes() {
+			attr = lazy.Dropped()
+		}
 		if !f.concurrentSafe {
 			f.reservoirMux.Lock()
 			defer f.reservoirMux.Unlock()

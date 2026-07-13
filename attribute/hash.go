@@ -33,28 +33,62 @@ const (
 	emptyID        uint64 = 7305809155345288421 // "__empty_" (little endian)
 )
 
-// hashKVs returns a new xxHash64 hash of kvs.
-func hashKVs(kvs []KeyValue) uint64 {
-	h := xxhash.New()
-	for _, kv := range kvs {
-		h = hashKV(h, kv)
+// Hasher computes an authoritative Distinct hash incrementally
+// for a sequence of KeyValue attributes.
+// The zero value of Hasher is safe to use.
+type Hasher struct {
+	h     xxhash.Hash
+	count int
+	init  bool
+}
+
+// NewHasher returns a new Hasher.
+func NewHasher() Hasher {
+	return Hasher{h: *xxhash.New(), init: true}
+}
+
+// Write adds a KeyValue attribute to the hash computation.
+// Attributes written to Hasher must be sorted by key and deduplicated
+// for the returned Distinct to match Set.Equivalent().
+func (h *Hasher) Write(kv KeyValue) {
+	if !h.init {
+		h.h = *xxhash.New()
+		h.init = true
 	}
-	sum := h.Sum64()
+	hashKV(&h.h, kv)
+	h.count++
+}
+
+// Distinct returns the authoritative Distinct value corresponding to the written attributes.
+func (h *Hasher) Distinct() Distinct {
+	if h.count == 0 {
+		return emptySet.Equivalent()
+	}
+	sum := h.h.Sum64()
 	// Remap 0 to a non-zero value for non-empty input because hash == 0 is a reserved sentinel (treated as empty/invalid).
 	const remappedZeroHash uint64 = 1
-	if sum == 0 && len(kvs) > 0 {
-		return remappedZeroHash
+	if sum == 0 {
+		sum = remappedZeroHash
 	}
-	return sum
+	return Distinct{hash: sum}
+}
+
+// hashKVs returns a new xxHash64 hash of kvs.
+func hashKVs(kvs []KeyValue) uint64 {
+	h := NewHasher()
+	for _, kv := range kvs {
+		h.Write(kv)
+	}
+	return h.Distinct().hash
 }
 
 // hashKV returns the xxHash64 hash of kv with h as the base.
-func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
-	h = h.String(string(kv.Key))
+func hashKV(h *xxhash.Hash, kv KeyValue) *xxhash.Hash {
+	h.String(string(kv.Key))
 	return hashValue(h, kv.Value)
 }
 
-func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
+func hashValue(h *xxhash.Hash, v Value) *xxhash.Hash {
 	switch v.Type() {
 	case BOOL:
 		h = h.Uint64(boolID)
