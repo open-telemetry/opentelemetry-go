@@ -230,6 +230,7 @@ type limitedSyncMap[V any] struct {
 	aggLimit int
 	len      int
 	lenMux   sync.Mutex
+	overflow atomic.Bool
 }
 
 // LoadOrStoreAttr performs lookup using lazy.Distinct() on the hot path without
@@ -242,11 +243,13 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes, newValu
 	if loaded {
 		return actual.(V)
 	}
-	// If the overflow set exists, assume we have already overflowed and don't
-	// bother with the slow path below.
-	actual, loaded = m.Load(overflowSet.Equivalent())
-	if loaded {
-		return actual.(V)
+	// If aggregation overflow has already happened due to exceeding the limit,
+	// any new attribute set will be aggregated into the overflow set.
+	if m.aggLimit > 0 && m.overflow.Load() {
+		actual, loaded = m.Load(overflowSet.Equivalent())
+		if loaded {
+			return actual.(V)
+		}
 	}
 	// Slow path: add a new attribute set.
 	m.lenMux.Lock()
@@ -264,6 +267,7 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes, newValu
 	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
 		fltrAttr = overflowSet
 		distinct = overflowSet.Equivalent()
+		m.overflow.Store(true)
 	} else {
 		fltrAttr = lazy.Set()
 	}
@@ -277,6 +281,7 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes, newValu
 func (m *limitedSyncMap[V]) Clear() {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
+	m.overflow.Store(false)
 	m.len = 0
 	m.Map.Clear()
 }
