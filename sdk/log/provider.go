@@ -79,10 +79,9 @@ type LoggerProvider struct {
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
 
-	stopped              atomic.Bool
-	processorOperationMu sync.Mutex
-	processorOperations  sync.WaitGroup
-	shutdownState        *shutdownState
+	shutdownState             atomic.Pointer[shutdownState]
+	processorAdmissionMu      sync.Mutex
+	activeProcessorOperations sync.WaitGroup
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
@@ -124,7 +123,7 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 		global.Warn("Invalid Logger name.", "name", name)
 	}
 
-	if p.stopped.Load() {
+	if p.shutdownStarted() {
 		return noop.NewLoggerProvider().Logger(name, opts...)
 	}
 
@@ -185,7 +184,7 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
-	state := p.initShutdown(ctx)
+	state := p.beginShutdown(ctx)
 	return state.wait(ctx)
 }
 
@@ -207,37 +206,39 @@ func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
 
 // beginProcessorOperation admits processor work that Shutdown needs to wait for.
 func (p *LoggerProvider) beginProcessorOperation() bool {
-	if p.stopped.Load() {
+	if p.shutdownStarted() {
 		return false
 	}
 
-	p.processorOperationMu.Lock()
-	defer p.processorOperationMu.Unlock()
-	if p.stopped.Load() {
+	p.processorAdmissionMu.Lock()
+	defer p.processorAdmissionMu.Unlock()
+	if p.shutdownStarted() {
 		return false
 	}
-	p.processorOperations.Add(1)
+	p.activeProcessorOperations.Add(1)
 	return true
 }
 
 func (p *LoggerProvider) endProcessorOperation() {
-	p.processorOperations.Done()
+	p.activeProcessorOperations.Done()
 }
 
-// initShutdown closes processor-operation admission, starts processor cleanup
+func (p *LoggerProvider) shutdownStarted() bool {
+	return p.shutdownState.Load() != nil
+}
+
+// beginShutdown closes processor-operation admission, starts processor cleanup
 // once, and returns the shared shutdown state to all callers.
-func (p *LoggerProvider) initShutdown(ctx context.Context) *shutdownState {
-	p.processorOperationMu.Lock()
-	if p.stopped.Load() {
-		state := p.shutdownState
-		p.processorOperationMu.Unlock()
+func (p *LoggerProvider) beginShutdown(ctx context.Context) *shutdownState {
+	p.processorAdmissionMu.Lock()
+	if state := p.shutdownState.Load(); state != nil {
+		p.processorAdmissionMu.Unlock()
 		return state
 	}
 
 	state := &shutdownState{done: make(chan struct{})}
-	p.shutdownState = state
-	p.stopped.Store(true)
-	p.processorOperationMu.Unlock()
+	p.shutdownState.Store(state)
+	p.processorAdmissionMu.Unlock()
 
 	shutdownCtx := context.WithoutCancel(ctx)
 	go func() {
@@ -247,9 +248,9 @@ func (p *LoggerProvider) initShutdown(ctx context.Context) *shutdownState {
 }
 
 func (p *LoggerProvider) shutdownProcessors(ctx context.Context) error {
-	// initShutdown stops admission before cleanup starts, so every Add happens
+	// beginShutdown stops admission before cleanup starts, so every Add happens
 	// before Wait.
-	p.processorOperations.Wait()
+	p.activeProcessorOperations.Wait()
 	var err error
 	for _, processor := range p.processors {
 		err = errors.Join(err, processor.Shutdown(ctx))

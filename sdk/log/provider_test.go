@@ -159,7 +159,7 @@ func shutdownWhileBlocked(t *testing.T, provider *LoggerProvider) <-chan error {
 	t.Helper()
 	done := make(chan error, 1)
 	go func() { done <- provider.Shutdown(t.Context()) }()
-	require.Eventually(t, provider.stopped.Load, time.Second, time.Microsecond)
+	require.Eventually(t, provider.shutdownStarted, time.Second, time.Microsecond)
 	select {
 	case err := <-done:
 		require.NoError(t, err)
@@ -554,7 +554,7 @@ func TestLoggerProviderShutdownHonorsContextConcurrentSafe(t *testing.T) {
 		go func() {
 			shutdownDone <- provider.Shutdown(ctx)
 		}()
-		require.Eventually(t, provider.stopped.Load, time.Second, time.Microsecond)
+		require.Eventually(t, provider.shutdownStarted, time.Second, time.Microsecond)
 		cancel()
 
 		select {

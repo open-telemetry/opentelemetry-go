@@ -55,7 +55,7 @@ func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
-	if l.provider.stopped.Load() {
+	if l.provider.shutdownStarted() {
 		return
 	}
 
