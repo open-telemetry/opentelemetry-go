@@ -577,11 +577,10 @@ func truncate(limit int, s string) string {
 // End ends the span. This method does nothing if the span is already ended or
 // is not being recorded.
 //
-// The only SpanEndOption currently supported are [trace.WithTimestamp], and
-// [trace.WithStackTrace].
-//
-// If this method is called while panicking an error event is added to the
-// Span before ending it and the panic is continued.
+// The only supported SpanEndOptions are [trace.WithTimestamp] and [trace.WithStackTrace].
+// If this method is called while panicking and panic recording is not disabled
+// on the TracerProvider, an error event is added to the Span before ending it
+// and the panic is continued.
 func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	// Do not start by checking if the span is being recorded which requires
 	// acquiring a lock. Make a minimal check that the span is not nil.
@@ -601,23 +600,25 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 
 	config := trace.NewSpanEndConfig(options...)
-	if recovered := recover(); recovered != nil {
-		// Record but don't stop the panic.
-		defer panic(recovered)
-		opts := []trace.EventOption{
-			trace.WithAttributes(
-				semconv.ExceptionType(typeStr(recovered)),
-				semconv.ExceptionMessage(fmt.Sprint(recovered)),
-			),
-		}
+	if !s.tracer.provider.panicRecordingDisabled {
+		if recovered := recover(); recovered != nil {
+			// Record but don't stop the panic.
+			defer panic(recovered)
+			opts := []trace.EventOption{
+				trace.WithAttributes(
+					semconv.ExceptionType(typeStr(recovered)),
+					semconv.ExceptionMessage(fmt.Sprint(recovered)),
+				),
+			}
 
-		if config.StackTrace() {
-			opts = append(opts, trace.WithAttributes(
-				semconv.ExceptionStacktrace(recordStackTrace()),
-			))
-		}
+			if config.StackTrace() {
+				opts = append(opts, trace.WithAttributes(
+					semconv.ExceptionStacktrace(recordStackTrace()),
+				))
+			}
 
-		s.addEvent(semconv.ExceptionEventName, opts...)
+			s.addEvent(semconv.ExceptionEventName, opts...)
+		}
 	}
 
 	if s.executionTracerTaskEnd != nil {
