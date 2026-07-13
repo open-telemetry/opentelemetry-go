@@ -116,44 +116,6 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 	}
 }
 
-// beginProcessorOperation admits processor work that Shutdown needs to wait for.
-func (p *LoggerProvider) beginProcessorOperation() bool {
-	if p.stopped.Load() {
-		return false
-	}
-
-	p.processorOperationMu.Lock()
-	defer p.processorOperationMu.Unlock()
-	if p.stopped.Load() {
-		return false
-	}
-	p.processorOperations.Add(1)
-	return true
-}
-
-func (p *LoggerProvider) endProcessorOperation() {
-	if p.processorOperations.Add(-1) == 0 && p.stopped.Load() {
-		p.processorOperationsDoneOnce.Do(func() { close(p.processorOperationsDone) })
-	}
-}
-
-// stop closes admission and returns the shared shutdown state.
-func (p *LoggerProvider) stop() (<-chan struct{}, *shutdownState, bool) {
-	p.processorOperationMu.Lock()
-	defer p.processorOperationMu.Unlock()
-	if p.stopped.Load() {
-		return nil, p.shutdownState, false
-	}
-
-	p.processorOperationsDone = make(chan struct{})
-	p.shutdownState = &shutdownState{done: make(chan struct{})}
-	p.stopped.Store(true)
-	if p.processorOperations.Load() == 0 {
-		p.processorOperationsDoneOnce.Do(func() { close(p.processorOperationsDone) })
-	}
-	return p.processorOperationsDone, p.shutdownState, true
-}
-
 // Logger returns a new [log.Logger] with the provided name and configuration.
 //
 // If p is shut down, a [noop.Logger] instance is returned.
@@ -225,39 +187,8 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
-	operationsDone, state, start := p.stop()
-	if start {
-		shutdownCtx := context.WithoutCancel(ctx)
-		go func() {
-			// stop serializes with admission, so this closes only after all
-			// operations admitted before stop have ended.
-			<-operationsDone
-			var err error
-			for _, processor := range p.processors {
-				err = errors.Join(err, processor.Shutdown(shutdownCtx))
-			}
-			state.err = err
-			close(state.done)
-		}()
-	}
-
+	state := p.initShutdown(ctx)
 	return waitForShutdown(ctx, state)
-}
-
-// waitForShutdown waits for cleanup to end. Completion takes priority when it
-// races with context cancellation.
-func waitForShutdown(ctx context.Context, state *shutdownState) error {
-	select {
-	case <-state.done:
-		return state.err
-	case <-ctx.Done():
-		select {
-		case <-state.done:
-			return state.err
-		default:
-			return ctx.Err()
-		}
-	}
 }
 
 // ForceFlush flushes all processors.
@@ -274,6 +205,83 @@ func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
 		err = errors.Join(err, processor.ForceFlush(ctx))
 	}
 	return err
+}
+
+// beginProcessorOperation admits processor work that Shutdown needs to wait for.
+func (p *LoggerProvider) beginProcessorOperation() bool {
+	if p.stopped.Load() {
+		return false
+	}
+
+	p.processorOperationMu.Lock()
+	defer p.processorOperationMu.Unlock()
+	if p.stopped.Load() {
+		return false
+	}
+	p.processorOperations.Add(1)
+	return true
+}
+
+func (p *LoggerProvider) endProcessorOperation() {
+	if p.processorOperations.Add(-1) == 0 && p.stopped.Load() {
+		p.processorOperationsDoneOnce.Do(func() { close(p.processorOperationsDone) })
+	}
+}
+
+// initShutdown closes processor-operation admission, starts processor cleanup
+// once, and returns the shared shutdown state to all callers.
+func (p *LoggerProvider) initShutdown(ctx context.Context) *shutdownState {
+	p.processorOperationMu.Lock()
+	if p.stopped.Load() {
+		state := p.shutdownState
+		p.processorOperationMu.Unlock()
+		return state
+	}
+
+	operationsDone := make(chan struct{})
+	state := &shutdownState{done: make(chan struct{})}
+	p.processorOperationsDone = operationsDone
+	p.shutdownState = state
+	p.stopped.Store(true)
+	if p.processorOperations.Load() == 0 {
+		p.processorOperationsDoneOnce.Do(func() { close(operationsDone) })
+	}
+	p.processorOperationMu.Unlock()
+
+	go p.shutdownProcessors(context.WithoutCancel(ctx), operationsDone, state)
+	return state
+}
+
+func (p *LoggerProvider) shutdownProcessors(
+	ctx context.Context,
+	operationsDone <-chan struct{},
+	state *shutdownState,
+) {
+	// initShutdown serializes with admission, so this closes only after all
+	// operations admitted before shutdown have ended.
+	<-operationsDone
+	var err error
+	for _, processor := range p.processors {
+		err = errors.Join(err, processor.Shutdown(ctx))
+	}
+	state.err = err
+	close(state.done)
+}
+
+// waitForShutdown waits for cleanup to end. Completion takes priority when it
+// races with context cancellation.
+func waitForShutdown(ctx context.Context, state *shutdownState) error {
+	select {
+	case <-state.done:
+		return state.err
+	case <-ctx.Done():
+		select {
+		case <-state.done:
+			return state.err
+		default:
+			return ctx.Err()
+		}
+	}
 }
 
 // LoggerProviderOption applies a configuration option value to a LoggerProvider.
