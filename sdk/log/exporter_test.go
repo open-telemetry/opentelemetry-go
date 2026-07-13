@@ -426,30 +426,61 @@ func TestBufferExporter(t *testing.T) {
 		})
 
 		t.Run("ContextCancelled", func(t *testing.T) {
-			exp := newTestExporter(nil)
-			t.Cleanup(exp.Stop)
+			t.Run("WhileDraining", func(t *testing.T) {
+				exp := newTestExporter(assert.AnError)
+				trigger := make(chan struct{})
+				exp.ExportTrigger = trigger
+				e := newBufferExporter(exp, 1)
+				t.Cleanup(func() {
+					close(trigger)
+					_ = e.Shutdown(t.Context())
+					exp.Stop()
+				})
 
-			trigger := make(chan struct{})
-			exp.ExportTrigger = trigger
-			t.Cleanup(func() { close(trigger) })
-			e := newBufferExporter(exp, 1)
+				ctx, cancel := context.WithCancel(t.Context())
+				require.True(t, e.EnqueueExport(make([]Record, 1)))
+				require.Eventually(t, func() bool {
+					return exp.ExportN() > 0
+				}, 2*time.Second, time.Microsecond)
 
-			ctx, cancel := context.WithCancel(t.Context())
-			require.True(t, e.EnqueueExport(make([]Record, 1)))
+				got := make(chan error, 1)
+				go func() { got <- e.ForceFlush(ctx) }()
+				require.Eventually(t, func() bool {
+					return len(e.input) == 1
+				}, 2*time.Second, time.Microsecond)
+				cancel()
 
-			got := make(chan error, 1)
-			go func() { got <- e.ForceFlush(ctx) }()
-			require.Eventually(t, func() bool {
-				return exp.ExportN() > 0
-			}, 2*time.Second, time.Microsecond)
-			cancel() // Canceled before export response.
-			err := <-got
-			assert.ErrorIs(t, err, context.Canceled, "enqueued")
-			_ = e.Shutdown(ctx)
+				err := <-got
+				assert.ErrorIs(t, err, context.Canceled)
+				assert.ErrorIs(t, err, assert.AnError)
+				assert.Equal(t, 1, exp.ForceFlushN())
+			})
 
-			// Zero length buffer
-			e = newBufferExporter(exp, 0)
-			assert.ErrorIs(t, e.ForceFlush(ctx), context.Canceled, "not enqueued")
+			t.Run("BeforeEnqueue", func(t *testing.T) {
+				exp := newTestExporter(assert.AnError)
+				trigger := make(chan struct{})
+				exp.ExportTrigger = trigger
+				e := newBufferExporter(exp, 1)
+				t.Cleanup(func() {
+					close(trigger)
+					_ = e.Shutdown(t.Context())
+					exp.Stop()
+				})
+
+				records := make([]Record, 1)
+				require.True(t, e.EnqueueExport(records))
+				require.Eventually(t, func() bool {
+					return exp.ExportN() > 0
+				}, 2*time.Second, time.Microsecond)
+				require.True(t, e.EnqueueExport(records))
+
+				ctx, cancel := context.WithCancel(t.Context())
+				cancel()
+				err := e.ForceFlush(ctx)
+				assert.ErrorIs(t, err, context.Canceled)
+				assert.ErrorIs(t, err, assert.AnError)
+				assert.Equal(t, 1, exp.ForceFlushN())
+			})
 		})
 
 		t.Run("Error", func(t *testing.T) {
