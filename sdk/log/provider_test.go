@@ -673,10 +673,10 @@ func TestLoggerProviderShutdownHonorsContextConcurrentSafe(t *testing.T) {
 	})
 }
 
-func TestWaitForShutdown(t *testing.T) {
+func TestShutdownStateWait(t *testing.T) {
 	done := func(err error) *shutdownState {
-		state := &shutdownState{done: make(chan struct{}), err: err}
-		close(state.done)
+		state := &shutdownState{done: make(chan struct{})}
+		state.complete(err)
 		return state
 	}
 	pending := &shutdownState{done: make(chan struct{})}
@@ -715,7 +715,7 @@ func TestWaitForShutdown(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := waitForShutdown(test.ctx, test.state)
+			err := test.state.wait(test.ctx)
 			if test.wantErr != nil {
 				assert.ErrorIs(t, err, test.wantErr)
 			} else {
