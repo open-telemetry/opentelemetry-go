@@ -358,10 +358,11 @@ func TestBatchProcessor(t *testing.T) {
 		t.Run("CanceledContext", func(t *testing.T) {
 			e := newTestExporter(nil)
 			t.Cleanup(e.Stop)
-			b := NewBatchProcessor(e)
-			// Prevent the poll loop from winning the shutdown select so this
-			// deterministically exercises the canceled-context cleanup path.
-			b.pollDone = make(chan struct{})
+			b := NewBatchProcessor(
+				e,
+				WithExportInterval(time.Hour),
+				WithExportTimeout(time.Hour),
+			)
 
 			ctx := t.Context()
 			c, cancel := context.WithCancel(ctx)

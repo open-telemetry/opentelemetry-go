@@ -349,16 +349,22 @@ func newBlockedBufferExporter(t *testing.T) (*bufferExporter, *testExporter) {
 	t.Helper()
 
 	exp := newTestExporter(nil)
+	// Make the underlying ForceFlush call observable in the returned error.
 	exp.ForceFlushErr = assert.AnError
+	// Keep the export worker busy so tests can cancel ForceFlush either while
+	// its request is buffered or before that request can be enqueued.
 	trigger := make(chan struct{})
 	exp.ExportTrigger = trigger
 	e := newBufferExporter(exp, 1)
 	t.Cleanup(func() {
+		// Unblock the export worker before waiting for buffer shutdown.
 		close(trigger)
 		_ = e.Shutdown(t.Context())
 		exp.Stop()
 	})
 
+	// Occupy the export worker, leaving the one-slot buffer available for each
+	// test to arrange its cancellation point.
 	require.True(t, e.EnqueueExport(make([]Record, 1)))
 	require.Eventually(t, func() bool {
 		return exp.ExportN() > 0
@@ -485,9 +491,9 @@ func TestBufferExporter(t *testing.T) {
 				cancel()
 
 				err := <-got
-				assert.ErrorIs(t, err, context.Canceled)
-				assert.ErrorIs(t, err, assert.AnError)
-				assert.Equal(t, 1, exp.ForceFlushN())
+				assert.ErrorIs(t, err, context.Canceled, "buffer draining cancellation")
+				assert.ErrorIs(t, err, assert.AnError, "underlying exporter ForceFlush error")
+				assert.Equal(t, 1, exp.ForceFlushN(), "underlying exporter ForceFlush calls")
 			})
 
 			t.Run("BeforeEnqueue", func(t *testing.T) {
@@ -497,9 +503,9 @@ func TestBufferExporter(t *testing.T) {
 				ctx, cancel := context.WithCancel(t.Context())
 				cancel()
 				err := e.ForceFlush(ctx)
-				assert.ErrorIs(t, err, context.Canceled)
-				assert.ErrorIs(t, err, assert.AnError)
-				assert.Equal(t, 1, exp.ForceFlushN())
+				assert.ErrorIs(t, err, context.Canceled, "buffer enqueue cancellation")
+				assert.ErrorIs(t, err, assert.AnError, "underlying exporter ForceFlush error")
+				assert.Equal(t, 1, exp.ForceFlushN(), "underlying exporter ForceFlush calls")
 			})
 		})
 
