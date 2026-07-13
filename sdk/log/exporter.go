@@ -291,15 +291,15 @@ func (e *bufferExporter) ForceFlush(ctx context.Context) error {
 		if errors.Is(err, errStopped) {
 			return nil
 		}
-		return errors.Join(err, e.Exporter.ForceFlush(ctx))
+		return err
 	}
 
 	select {
-	case err = <-resp:
+	case <-resp:
 	case <-ctx.Done():
-		err = ctx.Err()
+		return ctx.Err()
 	}
-	return errors.Join(err, e.Exporter.ForceFlush(ctx))
+	return e.Exporter.ForceFlush(ctx)
 }
 
 // Shutdown shuts down e.

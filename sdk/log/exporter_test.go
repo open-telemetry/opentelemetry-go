@@ -345,33 +345,6 @@ func TestTimeoutExporter(t *testing.T) {
 	})
 }
 
-func newBlockedBufferExporter(t *testing.T) (*bufferExporter, *testExporter) {
-	t.Helper()
-
-	exp := newTestExporter(nil)
-	// Make the underlying ForceFlush call observable in the returned error.
-	exp.ForceFlushErr = assert.AnError
-	// Keep the export worker busy so tests can cancel ForceFlush either while
-	// its request is buffered or before that request can be enqueued.
-	trigger := make(chan struct{})
-	exp.ExportTrigger = trigger
-	e := newBufferExporter(exp, 1)
-	t.Cleanup(func() {
-		// Unblock the export worker before waiting for buffer shutdown.
-		close(trigger)
-		_ = e.Shutdown(t.Context())
-		exp.Stop()
-	})
-
-	// Occupy the export worker, leaving the one-slot buffer available for each
-	// test to arrange its cancellation point.
-	require.True(t, e.EnqueueExport(make([]Record, 1)))
-	require.Eventually(t, func() bool {
-		return exp.ExportN() > 0
-	}, 2*time.Second, time.Microsecond)
-	return e, exp
-}
-
 func TestBufferExporter(t *testing.T) {
 	t.Run("ConcurrentSafe", func(t *testing.T) {
 		const goRoutines = 10
@@ -479,34 +452,30 @@ func TestBufferExporter(t *testing.T) {
 		})
 
 		t.Run("ContextCancelled", func(t *testing.T) {
-			t.Run("WhileDraining", func(t *testing.T) {
-				e, exp := newBlockedBufferExporter(t)
+			exp := newTestExporter(nil)
+			t.Cleanup(exp.Stop)
 
-				ctx, cancel := context.WithCancel(t.Context())
-				got := make(chan error, 1)
-				go func() { got <- e.ForceFlush(ctx) }()
-				require.Eventually(t, func() bool {
-					return len(e.input) == 1
-				}, 2*time.Second, time.Microsecond)
-				cancel()
+			trigger := make(chan struct{})
+			exp.ExportTrigger = trigger
+			t.Cleanup(func() { close(trigger) })
+			e := newBufferExporter(exp, 1)
 
-				err := <-got
-				assert.ErrorIs(t, err, context.Canceled, "buffer draining cancellation")
-				assert.ErrorIs(t, err, assert.AnError, "underlying exporter ForceFlush error")
-				assert.Equal(t, 1, exp.ForceFlushN(), "underlying exporter ForceFlush calls")
-			})
+			ctx, cancel := context.WithCancel(t.Context())
+			require.True(t, e.EnqueueExport(make([]Record, 1)))
 
-			t.Run("BeforeEnqueue", func(t *testing.T) {
-				e, exp := newBlockedBufferExporter(t)
-				require.True(t, e.EnqueueExport(make([]Record, 1)))
+			got := make(chan error, 1)
+			go func() { got <- e.ForceFlush(ctx) }()
+			require.Eventually(t, func() bool {
+				return exp.ExportN() > 0
+			}, 2*time.Second, time.Microsecond)
+			cancel() // Canceled before export response.
+			err := <-got
+			assert.ErrorIs(t, err, context.Canceled, "enqueued")
+			_ = e.Shutdown(ctx)
 
-				ctx, cancel := context.WithCancel(t.Context())
-				cancel()
-				err := e.ForceFlush(ctx)
-				assert.ErrorIs(t, err, context.Canceled, "buffer enqueue cancellation")
-				assert.ErrorIs(t, err, assert.AnError, "underlying exporter ForceFlush error")
-				assert.Equal(t, 1, exp.ForceFlushN(), "underlying exporter ForceFlush calls")
-			})
+			// Zero length buffer
+			e = newBufferExporter(exp, 0)
+			assert.ErrorIs(t, e.ForceFlush(ctx), context.Canceled, "not enqueued")
 		})
 
 		t.Run("Error", func(t *testing.T) {

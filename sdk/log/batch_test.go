@@ -369,7 +369,7 @@ func TestBatchProcessor(t *testing.T) {
 			cancel()
 
 			assert.ErrorIs(t, b.Shutdown(c), context.Canceled)
-			assert.Equal(t, []string{"ForceFlush", "Shutdown"}, e.Calls())
+			assert.Equal(t, []string{"Shutdown"}, e.Calls())
 		})
 	})
 
