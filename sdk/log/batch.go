@@ -217,15 +217,14 @@ func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 
 	// Stop the poll goroutine.
 	close(b.pollKill)
+	var err error
 	select {
 	case <-b.pollDone:
+		// Flush remaining queued before exporter shutdown.
+		err = b.exporter.Export(ctx, b.q.Flush())
 	case <-ctx.Done():
-		// Out of time.
-		return errors.Join(ctx.Err(), shutdownExporter(ctx, b.exporter))
+		err = ctx.Err()
 	}
-
-	// Flush remaining queued before exporter shutdown.
-	err := b.exporter.Export(ctx, b.q.Flush())
 	return errors.Join(err, shutdownExporter(ctx, b.exporter))
 }
 

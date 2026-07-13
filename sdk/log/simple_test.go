@@ -33,10 +33,9 @@ type exporter struct {
 	records []log.Record
 	calls   []string
 
-	exportCalled     bool
-	forceFlushCalled bool
-	shutdownErr      error
-	forceFlushErr    error
+	exportCalled  bool
+	shutdownErr   error
+	forceFlushErr error
 }
 
 func (e *exporter) Export(_ context.Context, r []log.Record) error {
@@ -52,7 +51,6 @@ func (e *exporter) Shutdown(context.Context) error {
 
 func (e *exporter) ForceFlush(context.Context) error {
 	e.calls = append(e.calls, "ForceFlush")
-	e.forceFlushCalled = true
 	return e.forceFlushErr
 }
 
@@ -104,7 +102,7 @@ func TestSimpleProcessorForceFlush(t *testing.T) {
 	e := new(exporter)
 	s := log.NewSimpleProcessor(e)
 	_ = s.ForceFlush(t.Context())
-	require.True(t, e.forceFlushCalled, "exporter ForceFlush not called")
+	require.Equal(t, []string{"ForceFlush"}, e.calls, "exporter calls")
 }
 
 type writerExporter struct {
