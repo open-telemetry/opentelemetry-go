@@ -240,12 +240,21 @@ func (p *LoggerProvider) waitForProcessorOperations(ctx context.Context) error {
 		close(done)
 	}()
 
+	return waitForProcessorOperationsCompletion(ctx, done)
+}
+
+func waitForProcessorOperationsCompletion(ctx context.Context, done <-chan struct{}) error {
 	select {
 	case <-done:
-		return nil
 	case <-ctx.Done():
-		return ctx.Err()
+		// Prefer a completed drain when it races with cancellation.
+		select {
+		case <-done:
+		default:
+			return ctx.Err()
+		}
 	}
+	return nil
 }
 
 // LoggerProviderOption applies a configuration option value to a LoggerProvider.
