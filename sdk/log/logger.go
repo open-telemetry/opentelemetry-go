@@ -66,18 +66,26 @@ func (l *logger) Emit(ctx context.Context, r log.Record) {
 		return
 	}
 
+	for _, err := range l.emit(ctx, r, processors) {
+		otel.Handle(err)
+	}
+}
+
+func (l *logger) emit(ctx context.Context, r log.Record, processors []Processor) []error {
 	if !l.provider.beginProcessorOperation() {
-		return
+		return nil
 	}
 	defer l.provider.endProcessorOperation()
 
 	l.recordCreated(ctx)
 	newRecord := l.newRecord(ctx, r)
+	var errs []error
 	for _, processor := range processors {
 		if err := processor.OnEmit(ctx, &newRecord); err != nil {
-			otel.Handle(err)
+			errs = append(errs, err)
 		}
 	}
+	return errs
 }
 
 func (l *logger) recordCreated(ctx context.Context) {
