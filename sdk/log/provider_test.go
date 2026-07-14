@@ -106,17 +106,6 @@ type processorBlock struct {
 	overlap     bool
 }
 
-type observedDoneContext struct {
-	context.Context
-	doneCalled chan struct{}
-	once       sync.Once
-}
-
-func (c *observedDoneContext) Done() <-chan struct{} {
-	c.once.Do(func() { close(c.doneCalled) })
-	return c.Context.Done()
-}
-
 func newBlockingProcessor(operation processorOperation) (*processor, *processorBlock) {
 	proc := newProcessor("first")
 	block := &processorBlock{
@@ -165,11 +154,15 @@ func (b *processorBlock) unblock() {
 	b.releaseOnce.Do(func() { close(b.release) })
 }
 
-func shutdownWhileBlocked(t *testing.T, provider *LoggerProvider) <-chan error {
+func shutdownWhileBlocked(
+	t *testing.T,
+	ctx context.Context,
+	provider *LoggerProvider,
+) <-chan error {
 	t.Helper()
 	done := make(chan error, 1)
-	go func() { done <- provider.Shutdown(t.Context()) }()
-	require.Eventually(t, provider.stopped.Load, time.Second, time.Microsecond)
+	go func() { done <- provider.Shutdown(ctx) }()
+	require.Eventually(t, provider.stopped.Load, time.Second, time.Millisecond)
 	select {
 	case err := <-done:
 		require.NoError(t, err)
@@ -518,6 +511,16 @@ func TestLoggerProviderShutdown(t *testing.T) {
 		assert.ErrorIs(t, p.Shutdown(ctx), assert.AnError, "processor error not returned")
 	})
 
+	t.Run("Canceled", func(t *testing.T) {
+		proc := newProcessor("")
+		provider := NewLoggerProvider(WithProcessor(proc))
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+
+		assert.ErrorIs(t, provider.Shutdown(ctx), context.Canceled)
+		assert.Zero(t, proc.shutdownCalls)
+	})
+
 	t.Run("CanceledWhileProcessorOperationActive", func(t *testing.T) {
 		proc, block := newBlockingProcessor(processorForceFlush)
 		t.Cleanup(block.unblock)
@@ -527,14 +530,8 @@ func TestLoggerProviderShutdown(t *testing.T) {
 		go func() { flushDone <- provider.ForceFlush(t.Context()) }()
 		<-block.started
 
-		baseCtx, cancel := context.WithCancel(t.Context())
-		ctx := &observedDoneContext{
-			Context:    baseCtx,
-			doneCalled: make(chan struct{}),
-		}
-		shutdownDone := make(chan error, 1)
-		go func() { shutdownDone <- provider.Shutdown(ctx) }()
-		<-ctx.doneCalled
+		ctx, cancel := context.WithCancel(t.Context())
+		shutdownDone := shutdownWhileBlocked(t, ctx, provider)
 		cancel()
 
 		select {
@@ -587,37 +584,83 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 	})
 }
 
-func TestLoggerProviderForceFlushShutdownConcurrentSafe(t *testing.T) {
-	first, block := newBlockingProcessor(processorForceFlush)
-	t.Cleanup(block.unblock)
-	second := newProcessor("second")
-	provider := NewLoggerProvider(
-		WithProcessor(first),
-		WithProcessor(second),
-	)
-	ctx := t.Context()
+func TestLoggerProviderShutdownConcurrentSafe(t *testing.T) {
+	testCases := []struct {
+		name      string
+		operation processorOperation
+	}{
+		{name: "Enabled", operation: processorEnabled},
+		{name: "Emit", operation: processorOnEmit},
+		{name: "ForceFlush", operation: processorForceFlush},
+	}
 
-	flushDone := make(chan error, 1)
-	go func() {
-		flushDone <- provider.ForceFlush(ctx)
-	}()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			first, block := newBlockingProcessor(tc.operation)
+			t.Cleanup(block.unblock)
+			second := newProcessor("second")
+			var secondEnabled atomic.Bool
+			second.enabledFunc = func(context.Context, EnabledParameters) bool {
+				secondEnabled.Store(true)
+				return true
+			}
+			provider := NewLoggerProvider(
+				WithProcessor(first),
+				WithProcessor(second),
+			)
+			logger := provider.Logger("logger")
+			ctx := t.Context()
 
-	<-block.started
-	shutdownDone := shutdownWhileBlocked(t, provider)
-	require.NoError(t, provider.ForceFlush(ctx))
-	assert.Equal(t, int64(1), block.calls.Load(), "ForceFlush admitted after shutdown started")
+			var (
+				enabled bool
+				err     error
+			)
+			operationDone := make(chan struct{})
+			go func() {
+				defer close(operationDone)
+				switch tc.operation {
+				case processorEnabled:
+					enabled = logger.Enabled(ctx, log.EnabledParameters{})
+				case processorOnEmit:
+					logger.Emit(ctx, log.Record{})
+				case processorForceFlush:
+					err = provider.ForceFlush(ctx)
+				}
+			}()
 
-	block.unblock()
-	flushErr := <-flushDone
-	shutdownErr := <-shutdownDone
+			<-block.started
+			shutdownDone := shutdownWhileBlocked(t, ctx, provider)
+			switch tc.operation {
+			case processorEnabled:
+				assert.False(t, logger.Enabled(ctx, log.EnabledParameters{}))
+			case processorOnEmit:
+				logger.Emit(ctx, log.Record{})
+			case processorForceFlush:
+				require.NoError(t, provider.ForceFlush(ctx))
+			}
+			assert.Equal(t, int64(1), block.calls.Load(), tc.name+" admitted after shutdown started")
 
-	require.NoError(t, flushErr)
-	require.NoError(t, shutdownErr)
-	assert.False(t, block.overlap)
-	assert.Equal(t, 1, first.forceFlushCalls)
-	assert.Equal(t, 1, second.forceFlushCalls, "admitted ForceFlush did not complete")
-	assert.Equal(t, 1, first.shutdownCalls)
-	assert.Equal(t, 1, second.shutdownCalls)
+			block.unblock()
+			<-operationDone
+			require.NoError(t, err)
+			if tc.operation == processorEnabled {
+				assert.True(t, enabled)
+			}
+			require.NoError(t, <-shutdownDone)
+
+			assert.False(t, block.overlap)
+			assert.Equal(t, 1, first.shutdownCalls)
+			assert.Equal(t, 1, second.shutdownCalls)
+			switch tc.operation {
+			case processorEnabled:
+				assert.True(t, secondEnabled.Load(), "admitted Enabled did not complete")
+			case processorOnEmit:
+				assert.Len(t, second.records, 1, "admitted Emit did not complete")
+			case processorForceFlush:
+				assert.Equal(t, 1, second.forceFlushCalls, "admitted ForceFlush did not complete")
+			}
+		})
+	}
 }
 
 func BenchmarkLoggerProviderLogger(b *testing.B) {

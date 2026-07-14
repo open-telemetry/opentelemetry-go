@@ -445,39 +445,6 @@ func TestLoggerEmitAfterProviderShutdown(t *testing.T) {
 	assert.Len(t, proc.records, 1)
 }
 
-func TestLoggerEmitShutdownConcurrentSafe(t *testing.T) {
-	first, block := newBlockingProcessor(processorOnEmit)
-	t.Cleanup(block.unblock)
-	second := newProcessor("second")
-	provider := NewLoggerProvider(
-		WithProcessor(first),
-		WithProcessor(second),
-	)
-	logger := provider.Logger("logger")
-	ctx := t.Context()
-
-	emitDone := make(chan struct{})
-	go func() {
-		defer close(emitDone)
-		logger.Emit(ctx, log.Record{})
-	}()
-
-	<-block.started
-	shutdownDone := shutdownWhileBlocked(t, provider)
-	logger.Emit(ctx, log.Record{})
-	assert.Equal(t, int64(1), block.calls.Load(), "Emit admitted after shutdown started")
-
-	block.unblock()
-	<-emitDone
-	shutdownErr := <-shutdownDone
-
-	require.NoError(t, shutdownErr)
-	assert.False(t, block.overlap)
-	assert.Equal(t, 1, first.shutdownCalls)
-	assert.Equal(t, 1, second.shutdownCalls)
-	assert.Len(t, second.records, 1, "admitted Emit did not complete")
-}
-
 func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
@@ -793,43 +760,11 @@ func TestLoggerEnabledAfterProviderShutdown(t *testing.T) {
 	assert.Len(t, proc.params, 1)
 }
 
-func TestLoggerEnabledShutdownConcurrentSafe(t *testing.T) {
-	first, block := newBlockingProcessor(processorEnabled)
-	t.Cleanup(block.unblock)
-	second := newFltrProcessor("second", true)
-	provider := NewLoggerProvider(
-		WithProcessor(first),
-		WithProcessor(second),
-	)
-	logger := provider.Logger("logger")
-	ctx := t.Context()
-
-	enabledDone := make(chan bool, 1)
-	go func() {
-		enabledDone <- logger.Enabled(ctx, log.EnabledParameters{})
-	}()
-
-	<-block.started
-	shutdownDone := shutdownWhileBlocked(t, provider)
-	assert.False(t, logger.Enabled(ctx, log.EnabledParameters{}))
-	assert.Equal(t, int64(1), block.calls.Load(), "Enabled admitted after shutdown started")
-
-	block.unblock()
-	enabled := <-enabledDone
-	shutdownErr := <-shutdownDone
-
-	require.NoError(t, shutdownErr)
-	assert.True(t, enabled)
-	assert.False(t, block.overlap)
-	assert.Equal(t, 1, first.shutdownCalls)
-	assert.Equal(t, 1, second.shutdownCalls)
-	assert.Len(t, second.params, 1, "admitted Enabled did not complete")
-}
-
 func TestLoggerObservability(t *testing.T) {
 	testCases := []struct {
 		name               string
 		enabled            bool
+		shutdown           bool
 		records            []log.Record
 		wantLogRecordCount int64
 	}{
@@ -845,6 +780,12 @@ func TestLoggerObservability(t *testing.T) {
 			records:            []log.Record{{}, {}, {}, {}, {}},
 			wantLogRecordCount: 5,
 		},
+		{
+			name:     "EnabledAfterProviderShutdown",
+			enabled:  true,
+			shutdown: true,
+			records:  []log.Record{{}, {}},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -857,7 +798,11 @@ func TestLoggerObservability(t *testing.T) {
 			r := sdkmetric.NewManualReader()
 			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(r))
 			otel.SetMeterProvider(mp)
-			l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+			provider := NewLoggerProvider()
+			l := newLogger(provider, instrumentation.Scope{})
+			if tc.shutdown {
+				require.NoError(t, provider.Shutdown(t.Context()))
+			}
 
 			for _, record := range tc.records {
 				l.Emit(t.Context(), record)
