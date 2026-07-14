@@ -55,16 +55,41 @@ func newLogger(p *LoggerProvider, scope instrumentation.Scope) *logger {
 }
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {
+	processors := l.provider.processors
+	if len(processors) == 0 {
+		if l.provider.stopped.Load() {
+			return
+		}
+		// Emit remains observable without processors, but no lifecycle
+		// admission or SDK record construction is needed.
+		l.recordCreated(ctx)
+		return
+	}
+
+	if !l.provider.beginProcessorOperation() {
+		return
+	}
+	defer l.provider.endProcessorOperation()
+
+	l.recordCreated(ctx)
 	newRecord := l.newRecord(ctx, r)
-	for _, p := range l.provider.processors {
-		if err := p.OnEmit(ctx, &newRecord); err != nil {
+	for _, processor := range processors {
+		if err := processor.OnEmit(ctx, &newRecord); err != nil {
 			otel.Handle(err)
 		}
 	}
 }
 
+func (l *logger) recordCreated(ctx context.Context) {
+	if l.recCntIncr != nil {
+		l.recCntIncr(ctx)
+	}
+}
+
 // Enabled returns true if at least one Processor held by the LoggerProvider
 // that created the logger will process for the provided context and param.
+//
+// Enabled returns false after the LoggerProvider that created l starts shutdown.
 //
 // If it is not possible to definitively determine the record will be
 // processed, true will be returned by default. A value of false will only be
@@ -76,7 +101,13 @@ func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool 
 		EventName:            param.EventName,
 	}
 
-	for _, processor := range l.provider.processors {
+	processors := l.provider.processors
+	if len(processors) == 0 || !l.provider.beginProcessorOperation() {
+		return false
+	}
+	defer l.provider.endProcessorOperation()
+
+	for _, processor := range processors {
 		if processor.Enabled(ctx, p) {
 			// At least one Processor will process the Record.
 			return true
@@ -106,10 +137,6 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 		attributeCountLimit:       l.provider.attributeCountLimit,
 		allowDupKeys:              l.provider.allowDupKeys,
 	}
-	if l.recCntIncr != nil {
-		l.recCntIncr(ctx)
-	}
-
 	// This ensures we deduplicate key-value collections in the log body
 	newRecord.SetBody(r.Body())
 

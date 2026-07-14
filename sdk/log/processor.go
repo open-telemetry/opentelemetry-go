@@ -15,6 +15,14 @@ import (
 // Any of the Processor's methods may be called concurrently with itself
 // or with other methods. It is the responsibility of the Processor to manage
 // this concurrency.
+//
+// A [LoggerProvider] waits for all Enabled, OnEmit, and ForceFlush calls it
+// invoked to complete before calling Shutdown. If the LoggerProvider's
+// Shutdown context is canceled while waiting, Processor Shutdown is not called.
+// After shutdown starts, the LoggerProvider will not admit new operations that
+// invoke those methods. Callers that invoke Processor methods directly or
+// register a Processor with more than one LoggerProvider are responsible for
+// coordinating those calls with Shutdown.
 type Processor interface {
 	// Enabled reports whether the Processor will process for the given context
 	// and param.

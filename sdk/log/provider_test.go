@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
@@ -30,6 +32,11 @@ type processor struct {
 	Name string
 	Err  error
 
+	enabledFunc    func(context.Context, EnabledParameters) bool
+	onEmitFunc     func(context.Context, *Record) error
+	shutdownFunc   func(context.Context) error
+	forceFlushFunc func(context.Context) error
+
 	shutdownCalls   int
 	forceFlushCalls int
 
@@ -40,11 +47,17 @@ func newProcessor(name string) *processor {
 	return &processor{Name: name}
 }
 
-func (*processor) Enabled(context.Context, EnabledParameters) bool {
+func (p *processor) Enabled(ctx context.Context, param EnabledParameters) bool {
+	if p.enabledFunc != nil {
+		return p.enabledFunc(ctx, param)
+	}
 	return true
 }
 
-func (p *processor) OnEmit(_ context.Context, r *Record) error {
+func (p *processor) OnEmit(ctx context.Context, r *Record) error {
+	if p.onEmitFunc != nil {
+		return p.onEmitFunc(ctx, r)
+	}
 	if p.Err != nil {
 		return p.Err
 	}
@@ -53,13 +66,19 @@ func (p *processor) OnEmit(_ context.Context, r *Record) error {
 	return nil
 }
 
-func (p *processor) Shutdown(context.Context) error {
+func (p *processor) Shutdown(ctx context.Context) error {
 	p.shutdownCalls++
+	if p.shutdownFunc != nil {
+		return p.shutdownFunc(ctx)
+	}
 	return p.Err
 }
 
-func (p *processor) ForceFlush(context.Context) error {
+func (p *processor) ForceFlush(ctx context.Context) error {
 	p.forceFlushCalls++
+	if p.forceFlushFunc != nil {
+		return p.forceFlushFunc(ctx)
+	}
 	return p.Err
 }
 
@@ -68,6 +87,96 @@ type fltrProcessor struct {
 
 	enabled bool
 	params  []EnabledParameters
+}
+
+type processorOperation int
+
+const (
+	processorEnabled processorOperation = iota
+	processorOnEmit
+	processorForceFlush
+)
+
+type processorBlock struct {
+	started     chan struct{}
+	release     chan struct{}
+	finished    chan struct{}
+	releaseOnce sync.Once
+	calls       atomic.Int64
+	overlap     bool
+}
+
+type observedDoneContext struct {
+	context.Context
+	doneCalled chan struct{}
+	once       sync.Once
+}
+
+func (c *observedDoneContext) Done() <-chan struct{} {
+	c.once.Do(func() { close(c.doneCalled) })
+	return c.Context.Done()
+}
+
+func newBlockingProcessor(operation processorOperation) (*processor, *processorBlock) {
+	proc := newProcessor("first")
+	block := &processorBlock{
+		started:  make(chan struct{}),
+		release:  make(chan struct{}),
+		finished: make(chan struct{}),
+	}
+	wait := func() {
+		if block.calls.Add(1) != 1 {
+			return
+		}
+		close(block.started)
+		<-block.release
+		close(block.finished)
+	}
+
+	switch operation {
+	case processorEnabled:
+		proc.enabledFunc = func(context.Context, EnabledParameters) bool {
+			wait()
+			return false
+		}
+	case processorOnEmit:
+		proc.onEmitFunc = func(context.Context, *Record) error {
+			wait()
+			return proc.Err
+		}
+	case processorForceFlush:
+		proc.forceFlushFunc = func(context.Context) error {
+			wait()
+			return proc.Err
+		}
+	}
+	proc.shutdownFunc = func(context.Context) error {
+		select {
+		case <-block.finished:
+		default:
+			block.overlap = true
+		}
+		return proc.Err
+	}
+	return proc, block
+}
+
+func (b *processorBlock) unblock() {
+	b.releaseOnce.Do(func() { close(b.release) })
+}
+
+func shutdownWhileBlocked(t *testing.T, provider *LoggerProvider) <-chan error {
+	t.Helper()
+	done := make(chan error, 1)
+	go func() { done <- provider.Shutdown(t.Context()) }()
+	require.Eventually(t, provider.stopped.Load, time.Second, time.Microsecond)
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+		t.Fatal("Shutdown returned while a processor operation was blocked")
+	default:
+	}
+	return done
 }
 
 func newFltrProcessor(name string, enabled bool) *fltrProcessor {
@@ -408,6 +517,37 @@ func TestLoggerProviderShutdown(t *testing.T) {
 		ctx := t.Context()
 		assert.ErrorIs(t, p.Shutdown(ctx), assert.AnError, "processor error not returned")
 	})
+
+	t.Run("CanceledWhileProcessorOperationActive", func(t *testing.T) {
+		proc, block := newBlockingProcessor(processorForceFlush)
+		t.Cleanup(block.unblock)
+		provider := NewLoggerProvider(WithProcessor(proc))
+
+		flushDone := make(chan error, 1)
+		go func() { flushDone <- provider.ForceFlush(t.Context()) }()
+		<-block.started
+
+		baseCtx, cancel := context.WithCancel(t.Context())
+		ctx := &observedDoneContext{
+			Context:    baseCtx,
+			doneCalled: make(chan struct{}),
+		}
+		shutdownDone := make(chan error, 1)
+		go func() { shutdownDone <- provider.Shutdown(ctx) }()
+		<-ctx.doneCalled
+		cancel()
+
+		select {
+		case err := <-shutdownDone:
+			assert.ErrorIs(t, err, context.Canceled)
+		case <-time.After(time.Second):
+			t.Fatal("Shutdown did not honor context cancellation while waiting")
+		}
+		assert.Zero(t, proc.shutdownCalls, "processor Shutdown called before active operation completed")
+
+		block.unblock()
+		require.NoError(t, <-flushDone)
+	})
 }
 
 func TestLoggerProviderForceFlush(t *testing.T) {
@@ -445,6 +585,39 @@ func TestLoggerProviderForceFlush(t *testing.T) {
 		ctx := t.Context()
 		assert.ErrorIs(t, p.ForceFlush(ctx), assert.AnError, "processor error not returned")
 	})
+}
+
+func TestLoggerProviderForceFlushShutdownConcurrentSafe(t *testing.T) {
+	first, block := newBlockingProcessor(processorForceFlush)
+	t.Cleanup(block.unblock)
+	second := newProcessor("second")
+	provider := NewLoggerProvider(
+		WithProcessor(first),
+		WithProcessor(second),
+	)
+	ctx := t.Context()
+
+	flushDone := make(chan error, 1)
+	go func() {
+		flushDone <- provider.ForceFlush(ctx)
+	}()
+
+	<-block.started
+	shutdownDone := shutdownWhileBlocked(t, provider)
+	require.NoError(t, provider.ForceFlush(ctx))
+	assert.Equal(t, int64(1), block.calls.Load(), "ForceFlush admitted after shutdown started")
+
+	block.unblock()
+	flushErr := <-flushDone
+	shutdownErr := <-shutdownDone
+
+	require.NoError(t, flushErr)
+	require.NoError(t, shutdownErr)
+	assert.False(t, block.overlap)
+	assert.Equal(t, 1, first.forceFlushCalls)
+	assert.Equal(t, 1, second.forceFlushCalls, "admitted ForceFlush did not complete")
+	assert.Equal(t, 1, first.shutdownCalls)
+	assert.Equal(t, 1, second.shutdownCalls)
 }
 
 func BenchmarkLoggerProviderLogger(b *testing.B) {
