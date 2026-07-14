@@ -3,7 +3,7 @@
 
 // Package observ provides experimental observability instrumentation for the
 // otlptracehttp exporter.
-package observ // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/observ"
+package observ
 
 import (
 	"context"

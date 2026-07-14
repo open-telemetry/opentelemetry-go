@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package metricdata provides types for the metric SDK data model.
-package metricdata // import "go.opentelemetry.io/otel/sdk/metric/metricdata"
+package metricdata
 
 import (
 	"encoding/json"
@@ -77,9 +77,9 @@ type DataPoint[N int64 | float64] struct {
 	// timeseries.
 	Attributes attribute.Set
 	// StartTime is when the timeseries was started. (optional)
-	StartTime time.Time `json:",omitempty"`
+	StartTime time.Time
 	// Time is the time when the timeseries was recorded. (optional)
-	Time time.Time `json:",omitempty"`
+	Time time.Time
 	// Value is the value of this data point.
 	Value N
 

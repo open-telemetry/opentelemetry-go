@@ -5,7 +5,7 @@
 // source: internal/shared/otlp/otlpmetric/otest/client.go.tmpl
 
 // Package otest provides testing functionality for the otlpmetric exporters.
-package otest // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/otest"
+package otest
 
 import (
 	"context"

@@ -1,12 +1,12 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package telemetry // import "go.opentelemetry.io/otel/trace/internal/telemetry"
+package telemetry
 
 // Attr is a key-value pair.
 type Attr struct {
 	Key   string `json:"key,omitempty"`
-	Value Value  `json:"value,omitempty"`
+	Value Value  `json:"value"`
 }
 
 // String returns an Attr for a string value.
