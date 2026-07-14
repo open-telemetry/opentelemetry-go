@@ -16,13 +16,10 @@ import (
 // or with other methods. It is the responsibility of the Processor to manage
 // this concurrency.
 //
-// A [LoggerProvider] waits for all Enabled, OnEmit, and ForceFlush calls it
-// invoked to complete before calling Shutdown. If the LoggerProvider's
-// Shutdown context is canceled while waiting, Processor Shutdown is not called.
-// After shutdown starts, the LoggerProvider will not admit new operations that
-// invoke those methods. Callers that invoke Processor methods directly or
-// register a Processor with more than one LoggerProvider are responsible for
-// coordinating those calls with Shutdown.
+// A [LoggerProvider] stops admitting new operations that invoke Enabled,
+// OnEmit, or ForceFlush when shutdown starts. Callers that invoke Processor
+// methods directly or register a Processor with more than one LoggerProvider
+// are responsible for coordinating those calls with Shutdown.
 type Processor interface {
 	// Enabled reports whether the Processor will process for the given context
 	// and param.
@@ -80,6 +77,10 @@ type Processor interface {
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the Processor (and any underlying Exporter) should be
 	// done in this call.
+	//
+	// Before calling Shutdown, a LoggerProvider waits for all Enabled, OnEmit,
+	// and ForceFlush calls it admitted to complete. If the LoggerProvider's
+	// Shutdown context is canceled while waiting, Shutdown is not called.
 	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
