@@ -66,7 +66,11 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 }
 
 // LoggerProvider handles the creation and coordination of Loggers. All Loggers
-// created by a LoggerProvider will be associated with the same Resource.
+// it creates are associated with the same Resource.
+//
+// After [LoggerProvider.Shutdown] starts, calls to [log.Logger.Enabled] on
+// Loggers created by the LoggerProvider return false, and calls to
+// [log.Logger.Emit] perform no operation.
 type LoggerProvider struct {
 	embedded.LoggerProvider
 
@@ -108,7 +112,7 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
 //
-// If p is shut down, a [noop.Logger] instance is returned.
+// Calls made after [LoggerProvider.Shutdown] starts return a [noop.Logger].
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logger {
@@ -161,8 +165,6 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 // processor code executes, and processor Shutdown is not invoked in a separate
 // goroutine.
 //
-// Once shutdown starts, new Logger.Enabled calls return false and new
-// Logger.Emit and LoggerProvider.ForceFlush calls perform no operation.
 // Concurrent or subsequent Shutdown calls return nil without invoking
 // processor Shutdown.
 //
