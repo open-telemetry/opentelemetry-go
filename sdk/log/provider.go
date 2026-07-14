@@ -161,9 +161,7 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 // OnEmit, or ForceFlush methods. It waits for operations already admitted to
 // complete before synchronously invoking each processor's Shutdown method. If
 // ctx is canceled before the admitted operations complete, Shutdown returns
-// ctx.Err() without invoking processor Shutdown. No SDK lock is held while
-// processor code executes, and processor Shutdown is not invoked in a separate
-// goroutine.
+// ctx.Err() without invoking processor Shutdown.
 //
 // Concurrent or subsequent Shutdown calls return nil without invoking
 // processor Shutdown.
