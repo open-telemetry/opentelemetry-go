@@ -389,6 +389,45 @@ func TestTruncateAttr(t *testing.T) {
 	}
 }
 
+func TestTruncateValue(t *testing.T) {
+	tests := []struct {
+		name        string
+		limit       int
+		value, want attribute.Value
+	}{
+		{
+			name:  "NegativeLimit",
+			limit: -1,
+			value: attribute.StringValue("value"),
+			want:  attribute.StringValue("value"),
+		},
+		{
+			name:  "String",
+			limit: 2,
+			value: attribute.StringValue("value"),
+			want:  attribute.StringValue("va"),
+		},
+		{
+			name:  "Map",
+			limit: 2,
+			value: attribute.MapValue(attribute.String("key", "value")),
+			want:  attribute.MapValue(attribute.String("key", "va")),
+		},
+		{
+			name:  "UnchangedMap",
+			limit: 5,
+			value: attribute.MapValue(attribute.String("key", "value")),
+			want:  attribute.MapValue(attribute.String("key", "value")),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, TruncateValue(test.limit, test.value))
+		})
+	}
+}
+
 func TestTruncateString(t *testing.T) {
 	type group struct {
 		limit    int
