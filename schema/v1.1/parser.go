@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package schema provides functionality and types for OpenTelemetry schemas.
-package schema // import "go.opentelemetry.io/otel/schema/v1.1"
+package schema
 
 import (
 	"io"
