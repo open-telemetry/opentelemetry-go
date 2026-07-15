@@ -18,6 +18,14 @@ var now = time.Now
 // Measure receives measurements to be aggregated.
 type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
 
+// BoundMeasure receives measurements for a pinned attribute set.
+type BoundMeasure[N int64 | float64] func(context.Context, N)
+
+// Binder allows binding a specific attribute set to a BoundMeasure.
+type Binder[N int64 | float64] interface {
+	Bind(attrs attribute.Set) BoundMeasure[N]
+}
+
 // ComputeAggregation stores the aggregate of measurements into dest and
 // returns the number of aggregate data-points output.
 type ComputeAggregation func(dest *metricdata.Aggregation) int
@@ -72,6 +80,29 @@ func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 	}
 }
 
+type fltrBinder[N int64 | float64] struct {
+	binder Binder[N]
+	filter attribute.Filter
+}
+
+func (b fltrBinder[N]) Bind(attrs attribute.Set) BoundMeasure[N] {
+	fltrAttr, _ := attrs.Filter(b.filter)
+	return b.binder.Bind(fltrAttr)
+}
+
+func (b Builder[N]) bind(binder Binder[N]) Binder[N] {
+	if binder == nil {
+		return nil
+	}
+	if b.Filter != nil {
+		return fltrBinder[N]{
+			binder: binder,
+			filter: b.Filter,
+		}
+	}
+	return binder
+}
+
 // LastValue returns a last-value aggregate function input and output.
 func (b Builder[N]) LastValue() (Measure[N], ComputeAggregation) {
 	switch b.Temporality {
@@ -110,14 +141,14 @@ func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], ComputeAggregati
 }
 
 // Sum returns a sum aggregate function input and output, and the aggregator instance.
-func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation, any) {
+func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation, Binder[N]) {
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		s := newDeltaSum[N](monotonic, b.AggregationLimit, b.resFunc(), b.Filter)
-		return b.filter(s.measure), s.collect, s
+		s := newDeltaSum[N](monotonic, b.AggregationLimit, b.resFunc())
+		return b.filter(s.measure), s.collect, b.bind(s)
 	default:
-		s := newCumulativeSum[N](monotonic, b.AggregationLimit, b.resFunc(), b.Filter)
-		return b.filter(s.measure), s.collect, s
+		s := newCumulativeSum[N](monotonic, b.AggregationLimit, b.resFunc())
+		return b.filter(s.measure), s.collect, b.bind(s)
 	}
 }
 

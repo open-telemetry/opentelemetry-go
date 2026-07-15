@@ -649,7 +649,7 @@ func (p int64InstProvider) aggs(
 	kind InstrumentKind,
 	name, desc, u string,
 	allowedKeys []attribute.Key,
-) ([]aggregate.Measure[int64], []any, error) {
+) ([]aggregate.Measure[int64], []aggregate.Binder[int64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -664,7 +664,7 @@ func (p int64InstProvider) histogramAggs(
 	name string,
 	cfg metric.Int64HistogramConfig,
 	allowedKeys []attribute.Key,
-) ([]aggregate.Measure[int64], []any, error) {
+) ([]aggregate.Measure[int64], []aggregate.Binder[int64], error) {
 	boundaries := cfg.ExplicitBucketBoundaries()
 	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
 	if aggError != nil {
@@ -723,7 +723,7 @@ func (p float64InstProvider) aggs(
 	kind InstrumentKind,
 	name, desc, u string,
 	allowedKeys []attribute.Key,
-) ([]aggregate.Measure[float64], []any, error) {
+) ([]aggregate.Measure[float64], []aggregate.Binder[float64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -738,7 +738,7 @@ func (p float64InstProvider) histogramAggs(
 	name string,
 	cfg metric.Float64HistogramConfig,
 	allowedKeys []attribute.Key,
-) ([]aggregate.Measure[float64], []any, error) {
+) ([]aggregate.Measure[float64], []aggregate.Binder[float64], error) {
 	boundaries := cfg.ExplicitBucketBoundaries()
 	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
 	if aggError != nil {

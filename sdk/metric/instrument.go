@@ -10,8 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
-	"sync/atomic"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -226,7 +224,7 @@ func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) a
 
 type int64Inst struct {
 	measures    []aggregate.Measure[int64]
-	aggregators []any // Used to coordinate with experimental bound instruments
+	aggregators []aggregate.Binder[int64] // Used to coordinate with experimental bound instruments
 
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
@@ -270,7 +268,7 @@ func (i *int64Inst) aggregate(
 
 type float64Inst struct {
 	measures    []aggregate.Measure[float64]
-	aggregators []any // Used to coordinate with experimental bound instruments
+	aggregators []aggregate.Binder[float64] // Used to coordinate with experimental bound instruments
 
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
@@ -420,23 +418,12 @@ func (o *observable[N]) registerable(m *meter) error {
 	return nil
 }
 
-type float64MeasureBinder interface {
-	LookupBoundMeasure([]attribute.KeyValue) metric.Float64Counter
-}
-
-type int64MeasureBinder interface {
-	LookupBoundMeasureInt64([]attribute.KeyValue) metric.Int64Counter
-}
-
 // boundFloat64Counter implements metric.Float64Counter using resolved measures.
 type boundFloat64Counter struct {
 	embedded.Float64Counter
 	inst          *float64Inst
 	preboundAttrs attribute.Set
-
-	directCounters []metric.Float64Counter
-	resolved       atomic.Bool
-	mux            sync.Mutex
+	boundMeasures []aggregate.BoundMeasure[float64]
 }
 
 func (b *boundFloat64Counter) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
@@ -444,23 +431,8 @@ func (b *boundFloat64Counter) Add(ctx context.Context, val float64, opts ...metr
 	extraAttrs := cfg.Attributes()
 
 	if extraAttrs.Len() == 0 {
-		if b.resolved.Load() {
-			for _, c := range b.directCounters {
-				c.Add(ctx, val)
-			}
-			return
-		}
-
-		b.mux.Lock()
-		defer b.mux.Unlock()
-
-		if !b.resolved.Load() {
-			b.directCounters = b.inst.resolveBoundCounter(b.preboundAttrs)
-			b.resolved.Store(true)
-		}
-
-		for _, c := range b.directCounters {
-			c.Add(ctx, val)
+		for _, m := range b.boundMeasures {
+			m(ctx, val)
 		}
 		return
 	}
@@ -483,10 +455,7 @@ type boundInt64Counter struct {
 	embedded.Int64Counter
 	inst          *int64Inst
 	preboundAttrs attribute.Set
-
-	directCounters []metric.Int64Counter
-	resolved       atomic.Bool
-	mux            sync.Mutex
+	boundMeasures []aggregate.BoundMeasure[int64]
 }
 
 func (b *boundInt64Counter) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
@@ -494,23 +463,8 @@ func (b *boundInt64Counter) Add(ctx context.Context, val int64, opts ...metric.A
 	extraAttrs := cfg.Attributes()
 
 	if extraAttrs.Len() == 0 {
-		if b.resolved.Load() {
-			for _, c := range b.directCounters {
-				c.Add(ctx, val)
-			}
-			return
-		}
-
-		b.mux.Lock()
-		defer b.mux.Unlock()
-
-		if !b.resolved.Load() {
-			b.directCounters = b.inst.resolveBoundCounterInt64(b.preboundAttrs)
-			b.resolved.Store(true)
-		}
-
-		for _, c := range b.directCounters {
-			c.Add(ctx, val)
+		for _, m := range b.boundMeasures {
+			m(ctx, val)
 		}
 		return
 	}
@@ -528,44 +482,40 @@ func (*boundInt64Counter) Enabled(_ context.Context) bool {
 	return true
 }
 
-func (i *float64Inst) resolveBoundCounter(attrs attribute.Set) []metric.Float64Counter {
-	var measures []metric.Float64Counter
-	for _, agg := range i.aggregators {
-		if b, ok := agg.(float64MeasureBinder); ok {
-			m := b.LookupBoundMeasure(attrs.ToSlice())
-			if m != nil {
-				measures = append(measures, m)
-			}
-		}
-	}
-	return measures
-}
-
-func (i *int64Inst) resolveBoundCounterInt64(attrs attribute.Set) []metric.Int64Counter {
-	var measures []metric.Int64Counter
-	for _, agg := range i.aggregators {
-		if b, ok := agg.(int64MeasureBinder); ok {
-			m := b.LookupBoundMeasureInt64(attrs.ToSlice())
-			if m != nil {
-				measures = append(measures, m)
-			}
-		}
-	}
-	return measures
-}
-
 // Bind implements x.Float64Binder for float64Inst.
 func (i *float64Inst) Bind(attrs ...attribute.KeyValue) metric.Float64Counter {
+	preboundSet := attribute.NewSet(attrs...)
+	var measures []aggregate.BoundMeasure[float64]
+	for _, agg := range i.aggregators {
+		if agg != nil {
+			m := agg.Bind(preboundSet)
+			if m != nil {
+				measures = append(measures, m)
+			}
+		}
+	}
 	return &boundFloat64Counter{
 		inst:          i,
-		preboundAttrs: attribute.NewSet(attrs...),
+		preboundAttrs: preboundSet,
+		boundMeasures: measures,
 	}
 }
 
 // Bind implements x.Int64Binder for int64Inst.
 func (i *int64Inst) Bind(attrs ...attribute.KeyValue) metric.Int64Counter {
+	preboundSet := attribute.NewSet(attrs...)
+	var measures []aggregate.BoundMeasure[int64]
+	for _, agg := range i.aggregators {
+		if agg != nil {
+			m := agg.Bind(preboundSet)
+			if m != nil {
+				measures = append(measures, m)
+			}
+		}
+	}
 	return &boundInt64Counter{
 		inst:          i,
-		preboundAttrs: attribute.NewSet(attrs...),
+		preboundAttrs: preboundSet,
+		boundMeasures: measures,
 	}
 }
