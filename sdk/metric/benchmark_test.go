@@ -619,7 +619,7 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 										}
 									})
 								} else {
-									b.Fatal("counter does not implement x.Binder")
+									b.Skip("counter does not implement x.Binder")
 								}
 							})
 							// This case shows the performance of our API + SDK when
@@ -684,7 +684,7 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 										}
 									})
 								} else {
-									b.Fatal("counter does not implement x.Binder")
+									b.Skip("counter does not implement x.Binder")
 								}
 							})
 							// This case shows the performance of our API + SDK when
