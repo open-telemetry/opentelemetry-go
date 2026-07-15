@@ -5,16 +5,14 @@ package log // import "go.opentelemetry.io/otel/sdk/log"
 
 import (
 	"slices"
-	"strings"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/log/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -195,7 +193,7 @@ func (r *Record) Body() attribute.Value {
 // SetBody sets the body of the log record.
 func (r *Record) SetBody(v attribute.Value) {
 	if !r.allowDupKeys {
-		r.body, _ = attrdedup.Value(v)
+		r.body, _ = attrnorm.Value(v)
 	} else {
 		r.body = v
 	}
@@ -479,175 +477,11 @@ func (r *Record) Clone() Record {
 func (r *Record) applyAttrLimitsAndDedup(attr attribute.KeyValue) attribute.KeyValue {
 	if !r.allowDupKeys {
 		var changed bool
-		attr, changed = attrdedup.KeyValue(attr)
+		attr, changed = attrnorm.KeyValue(attr)
 		if changed {
 			logKeyValuePairDropped()
 		}
 	}
-	attr.Value = truncateValue(r.attributeValueLengthLimit, attr.Value)
+	attr.Value = attrnorm.TruncateValue(r.attributeValueLengthLimit, attr.Value)
 	return attr
-}
-
-// truncateValue returns a truncated version of v. Only string, string slice,
-// byte slice, and (recursively) slice and map values are modified.
-//
-// No truncation is performed for a negative limit.
-func truncateValue(limit int, v attribute.Value) attribute.Value {
-	if limit < 0 {
-		return v
-	}
-
-	switch v.Type() {
-	case attribute.STRING:
-		return attribute.StringValue(truncate(limit, v.AsString()))
-	case attribute.STRINGSLICE:
-		ss := v.AsStringSlice()
-		for i := range ss {
-			ss[i] = truncate(limit, ss[i])
-		}
-		return attribute.StringSliceValue(ss)
-	case attribute.BYTESLICE:
-		// len(v.AsString()) is identical to len(v.AsByteSlice()) but
-		// avoids allocating the full slice before truncation.
-		s := v.AsString()
-		if limit >= 0 && len(s) > limit {
-			return attribute.ByteSliceValue([]byte(s[:limit]))
-		}
-	case attribute.SLICE:
-		sl := v.AsSlice()
-		if !slices.ContainsFunc(sl, func(e attribute.Value) bool { return needsTruncation(limit, e) }) {
-			return v
-		}
-		newSl := make([]attribute.Value, len(sl))
-		for i, elem := range sl {
-			newSl[i] = truncateValue(limit, elem)
-		}
-		return attribute.SliceValue(newSl...)
-	case attribute.MAP:
-		m := v.AsMap()
-		if !slices.ContainsFunc(m, func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) }) {
-			return v
-		}
-		newM := make([]attribute.KeyValue, len(m))
-		for i, elem := range m {
-			elem.Value = truncateValue(limit, elem.Value)
-			newM[i] = elem
-		}
-		return attribute.MapValue(newM...)
-	}
-	return v
-}
-
-// stringNeedsTruncation reports whether s would be modified by truncate for the
-// given limit.
-func stringNeedsTruncation(limit int, s string) bool {
-	if limit < 0 || len(s) <= limit {
-		return false
-	}
-	return utf8.RuneCountInString(s) > limit || !utf8.ValidString(s)
-}
-
-// needsTruncation reports whether v would be modified by truncateValue for the
-// given limit.
-func needsTruncation(limit int, v attribute.Value) bool {
-	switch v.Type() {
-	case attribute.STRING:
-		return stringNeedsTruncation(limit, v.AsString())
-	case attribute.BYTESLICE:
-		// len(v.AsString()) is identical to len(v.AsByteSlice()) but
-		// avoids memory allocation.
-		if limit >= 0 && len(v.AsString()) > limit {
-			return true
-		}
-	case attribute.STRINGSLICE:
-		for _, s := range v.AsStringSlice() {
-			if stringNeedsTruncation(limit, s) {
-				return true
-			}
-		}
-	case attribute.SLICE:
-		return slices.ContainsFunc(v.AsSlice(), func(e attribute.Value) bool { return needsTruncation(limit, e) })
-	case attribute.MAP:
-		return slices.ContainsFunc(
-			v.AsMap(),
-			func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) },
-		)
-	}
-	return false
-}
-
-// truncate returns a truncated version of s such that it contains less than
-// the limit number of characters. Truncation is applied by returning the limit
-// number of valid characters contained in s.
-//
-// If limit is negative, it returns the original string.
-//
-// UTF-8 is supported. When truncating, all invalid characters are dropped
-// before applying truncation.
-//
-// If s already contains less than the limit number of bytes, it is returned
-// unchanged. No invalid characters are removed.
-func truncate(limit int, s string) string {
-	// This prioritize performance in the following order based on the most
-	// common expected use-cases.
-	//
-	//  - Short values less than the default limit (128).
-	//  - Strings with valid encodings that exceed the limit.
-	//  - No limit.
-	//  - Strings with invalid encodings that exceed the limit.
-	if limit < 0 || len(s) <= limit {
-		return s
-	}
-
-	// Optimistically, assume all valid UTF-8.
-	var b strings.Builder
-	count := 0
-	for i, c := range s {
-		if c != utf8.RuneError {
-			count++
-			if count > limit {
-				return s[:i]
-			}
-			continue
-		}
-
-		_, size := utf8.DecodeRuneInString(s[i:])
-		if size == 1 {
-			// Invalid encoding.
-			b.Grow(len(s) - 1)
-			_, _ = b.WriteString(s[:i])
-			s = s[i:]
-			break
-		}
-	}
-
-	// Fast-path, no invalid input.
-	if b.Cap() == 0 {
-		return s
-	}
-
-	// Truncate while validating UTF-8.
-	for i := 0; i < len(s) && count < limit; {
-		c := s[i]
-		if c < utf8.RuneSelf {
-			// Optimization for single byte runes (common case).
-			_ = b.WriteByte(c)
-			i++
-			count++
-			continue
-		}
-
-		_, size := utf8.DecodeRuneInString(s[i:])
-		if size == 1 {
-			// We checked for all 1-byte runes above, this is a RuneError.
-			i++
-			continue
-		}
-
-		_, _ = b.WriteString(s[i : i+size])
-		i += size
-		count++
-	}
-
-	return b.String()
 }
