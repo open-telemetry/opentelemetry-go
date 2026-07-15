@@ -573,16 +573,12 @@ func TestHistogramDatapointReuseLeakedStaleValues(t *testing.T) {
 func TestHistogramMinMaxUnset(t *testing.T) {
 	alice := attribute.NewSet(attribute.String("user", "alice"))
 
-	state := &cardinalityState{limit: 0}
 	h := &deltaHistogram[int64]{
 		noMinMax: false,
 		noSum:    false,
 		bounds:   []float64{1, 5},
 		start:    time.Now(),
-		hotColdValMap: [2]limitedSyncMap[*histogramPoint[int64]]{
-			{state: state},
-			{state: state},
-		},
+		vals:     newHotColdMap[*histogramPoint[int64]](0),
 	}
 
 	hPt := &histogramPoint[int64]{
@@ -594,9 +590,9 @@ func TestHistogramMinMaxUnset(t *testing.T) {
 	}
 	// hPt.minMax.set is false by default
 
-	h.hotColdValMap[0].LoadOrStoreAttr(alice, func(attribute.Set) *histogramPoint[int64] {
+	h.vals.WriteUnbound(alice, func(attribute.Set) *histogramPoint[int64] {
 		return hPt
-	})
+	}, func(*histogramPoint[int64]) {})
 
 	var dest metricdata.Aggregation
 	h.collect(&dest)

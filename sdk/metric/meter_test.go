@@ -2669,10 +2669,11 @@ func TestMeterDefaultAttributes(t *testing.T) {
 	combined := attribute.NewSet(k1.String("alice"), k2.String("bob"))
 
 	testCases := []struct {
-		name     string
-		instName string
-		record   func(t *testing.T, m metric.Meter)
-		wantData func(attrs attribute.Set) metricdata.Aggregation
+		name                 string
+		instName             string
+		record               func(t *testing.T, m metric.Meter)
+		wantData             func(attrs attribute.Set) metricdata.Aggregation
+		wantDataViewOverride func(attrs attribute.Set) metricdata.Aggregation
 	}{
 		{
 			name:     "Int64Counter",
@@ -2729,6 +2730,16 @@ func TestMeterDefaultAttributes(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
 					DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 3}},
+				}
+			},
+			wantDataViewOverride: func(attrs attribute.Set) metricdata.Aggregation {
+				return metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attrs, Value: 3},
+						{Attributes: attribute.NewSet(k1.String("alice")), Value: 0},
+					},
 				}
 			},
 		},
@@ -3057,9 +3068,13 @@ func TestMeterDefaultAttributes(t *testing.T) {
 			require.Len(t, sm.Metrics, 1)
 			got := sm.Metrics[0]
 
+			wantAgg := tt.wantData(combined)
+			if tt.wantDataViewOverride != nil {
+				wantAgg = tt.wantDataViewOverride(combined)
+			}
 			want := metricdata.Metrics{
 				Name: tt.instName,
-				Data: tt.wantData(combined),
+				Data: wantAgg,
 			}
 			metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})

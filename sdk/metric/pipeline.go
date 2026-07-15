@@ -241,11 +241,11 @@ func (i *inserter[N]) Instrument(
 	inst Instrument,
 	allowedKeys []attribute.Key,
 	readerAggregation Aggregation,
-) ([]aggregate.Measure[N], []any, error) {
+) ([]aggregate.Measure[N], []aggregate.Binder[N], error) {
 	var (
 		matched   bool
 		measures  []aggregate.Measure[N]
-		instances []any
+		instances []aggregate.Binder[N]
 	)
 
 	var err error
@@ -321,7 +321,7 @@ var aggIDCount atomic.Uint64
 type aggVal[N int64 | float64] struct {
 	ID      uint64
 	Measure aggregate.Measure[N]
-	AggInst any
+	AggInst aggregate.Binder[N]
 	Err     error
 }
 
@@ -369,7 +369,7 @@ func (i *inserter[N]) cachedAggregator(
 	kind InstrumentKind,
 	stream Stream,
 	readerAggregation Aggregation,
-) (meas aggregate.Measure[N], aggInst any, aggID uint64, err error) {
+) (meas aggregate.Measure[N], aggInst aggregate.Binder[N], aggID uint64, err error) {
 	switch stream.Aggregation.(type) {
 	case nil:
 		// The aggregation was not overridden with a view. Use the aggregation
@@ -510,7 +510,7 @@ func (i *inserter[N]) aggregateFunc(
 	b aggregate.Builder[N],
 	agg Aggregation,
 	kind InstrumentKind,
-) (meas aggregate.Measure[N], comp aggregate.ComputeAggregation, aggInst any, err error) {
+) (meas aggregate.Measure[N], comp aggregate.ComputeAggregation, aggInst aggregate.Binder[N], err error) {
 	switch a := agg.(type) {
 	case AggregationDefault:
 		return i.aggregateFunc(b, DefaultAggregationSelector(kind), kind)
@@ -677,10 +677,13 @@ func newResolver[N int64 | float64](p pipelines, vc *cache[string, instID]) reso
 
 // Aggregators returns the Aggregators that must be updated by the instrument
 // defined by key.
-func (r resolver[N]) Aggregators(id Instrument, allowedKeys []attribute.Key) ([]aggregate.Measure[N], []any, error) {
+func (r resolver[N]) Aggregators(
+	id Instrument,
+	allowedKeys []attribute.Key,
+) ([]aggregate.Measure[N], []aggregate.Binder[N], error) {
 	var (
 		measures  []aggregate.Measure[N]
-		instances []any
+		instances []aggregate.Binder[N]
 	)
 
 	var err error
@@ -702,10 +705,10 @@ func (r resolver[N]) HistogramAggregators(
 	id Instrument,
 	allowedKeys []attribute.Key,
 	boundaries []float64,
-) ([]aggregate.Measure[N], []any, error) {
+) ([]aggregate.Measure[N], []aggregate.Binder[N], error) {
 	var (
 		measures  []aggregate.Measure[N]
-		instances []any
+		instances []aggregate.Binder[N]
 	)
 
 	var err error
