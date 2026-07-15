@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package stdoutmetric_test // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+package stdoutmetric_test
 
 import (
 	"bytes"
