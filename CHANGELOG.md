@@ -37,7 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- Deprecate `WithExportBufferSize` in `go.opentelemetry.io/otel/sdk/log`. The option remains available for source compatibility but no longer affects behavior; `BatchProcessor` no longer maintains a separate export-request buffer.
+- Deprecate `WithExportBufferSize` in `go.opentelemetry.io/otel/sdk/log`. The option remains available for source compatibility but no longer affects behavior; `BatchProcessor` no longer maintains a separate export-request buffer. (#8620)
 
 ### Removed
 
@@ -46,9 +46,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Prevent `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` from busy-spinning under exporter backpressure, and serialize dequeue, export, force-flush, and shutdown work in one worker.
-- Make `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` return errors produced while draining records for `ForceFlush` and `Shutdown`, and continue attempting later batches while the request context remains valid.
-- Keep the default `BatchProcessor` maximum export batch size in `go.opentelemetry.io/otel/sdk/log` at or below the configured maximum queue size.
+- Prevent `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` from busy-spinning under exporter backpressure, and serialize dequeue, export, force-flush, and shutdown work in one worker. (#8620)
+- Make `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` return errors produced while draining records for `ForceFlush` and `Shutdown`, and continue attempting later batches while the request context remains valid. (#8620)
+- Keep the default `BatchProcessor` maximum export batch size in `go.opentelemetry.io/otel/sdk/log` at or below the configured maximum queue size. (#8620)
 - Clarify in `go.opentelemetry.io/otel/log` that `LoggerProvider` implementations should retain an empty `Logger` name instead of replacing it with a default. (#8587)
 - Clarify that `Float64Histogram` and `Int64Histogram` `Record` methods expect non-negative values in `go.opentelemetry.io/otel/metric`. (#8574)
 - Make `WithAttributeCountLimit(0)` and `OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT=0` discard all log record attributes in `go.opentelemetry.io/otel/sdk/log`. (#8570)
