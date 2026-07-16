@@ -163,6 +163,7 @@ func (b *BatchProcessor) process(interval time.Duration) {
 }
 
 func resetTimer(timer *time.Timer, interval time.Duration) {
+	// Handle both GODEBUG=asynctimerchan=[0|1] properly.
 	if !timer.Stop() {
 		select {
 		case <-timer.C:
