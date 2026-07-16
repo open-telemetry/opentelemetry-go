@@ -164,6 +164,26 @@ func TestChunker(t *testing.T) {
 		assert.ErrorIs(t, err, assert.AnError, "with chunking")
 		assert.Equal(t, 4, exp.ExportN(), "all chunks attempted")
 	})
+
+	t.Run("CanceledBetweenChunks", func(t *testing.T) {
+		exp := newTestExporter(nil)
+		t.Cleanup(exp.Stop)
+		ctx, cancel := context.WithCancel(t.Context())
+		t.Cleanup(cancel)
+		exp.ExportFunc = func(context.Context, []Record) error {
+			cancel()
+			return assert.AnError
+		}
+
+		c := newChunkExporter(exp, 10)
+		err := c.Export(ctx, make([]Record, 25))
+		assert.ErrorIs(t, err, assert.AnError)
+		assert.ErrorIs(t, err, context.Canceled)
+		assert.Equal(t, 1, exp.ExportN(), "later chunks skipped")
+		records := exp.Records()
+		require.Len(t, records, 1, "chunks")
+		assert.Len(t, records[0], 10)
+	})
 }
 
 func TestTimeoutExporter(t *testing.T) {
