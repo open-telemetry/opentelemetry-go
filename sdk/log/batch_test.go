@@ -7,19 +7,17 @@ import (
 	"bytes"
 	"context"
 	stdlog "log"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
-	"unsafe"
 
 	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 )
@@ -27,6 +25,23 @@ import (
 type concurrentBuffer struct {
 	b bytes.Buffer
 	m sync.Mutex
+}
+
+func cleanupBatchProcessor(t *testing.T, b *BatchProcessor, unblock func()) {
+	t.Helper()
+	t.Cleanup(func() {
+		if unblock != nil {
+			unblock()
+		}
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(t.Context()), time.Second)
+		defer cancel()
+		_ = b.Shutdown(ctx)
+		select {
+		case <-b.done:
+		case <-ctx.Done():
+			t.Errorf("BatchProcessor worker did not stop: %v", ctx.Err())
+		}
+	})
 }
 
 func (b *concurrentBuffer) Write(p []byte) (n int, err error) {
@@ -53,10 +68,6 @@ func TestEmptyBatchConfig(t *testing.T) {
 }
 
 func TestNewBatchConfig(t *testing.T) {
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		t.Log(err)
-	}))
-
 	testcases := []struct {
 		name    string
 		envars  map[string]string
@@ -70,7 +81,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
 				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
-				expBufferSize:   newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -87,7 +97,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expInterval:     newSetting(time.Microsecond),
 				expTimeout:      newSetting(time.Hour),
 				expMaxBatchSize: newSetting(2),
-				expBufferSize:   newSetting(3),
 			},
 		},
 		{
@@ -103,7 +112,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expInterval:     newSetting(100 * time.Millisecond),
 				expTimeout:      newSetting(1000 * time.Millisecond),
 				expMaxBatchSize: newSetting(1),
-				expBufferSize:   newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -120,7 +128,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
 				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
-				expBufferSize:   newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -136,7 +143,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
 				expMaxBatchSize: newSetting(dfltExpMaxBatchSize),
-				expBufferSize:   newSetting(dfltExpBufferSize),
 			},
 		},
 		{
@@ -160,7 +166,6 @@ func TestNewBatchConfig(t *testing.T) {
 				expInterval:     newSetting(time.Microsecond),
 				expTimeout:      newSetting(time.Hour),
 				expMaxBatchSize: newSetting(2),
-				expBufferSize:   newSetting(2),
 			},
 		},
 		{
@@ -175,7 +180,30 @@ func TestNewBatchConfig(t *testing.T) {
 				expInterval:     newSetting(dfltExpInterval),
 				expTimeout:      newSetting(dfltExpTimeout),
 				expMaxBatchSize: newSetting(1),
-				expBufferSize:   newSetting(3),
+			},
+		},
+		{
+			name: "DefaultBatchLessThanOrEqualToOptionQSize",
+			options: []BatchProcessorOption{
+				WithMaxQueueSize(1),
+			},
+			want: batchConfig{
+				maxQSize:        newSetting(1),
+				expInterval:     newSetting(dfltExpInterval),
+				expTimeout:      newSetting(dfltExpTimeout),
+				expMaxBatchSize: newSetting(1),
+			},
+		},
+		{
+			name: "DefaultBatchLessThanOrEqualToEnvironmentQSize",
+			envars: map[string]string{
+				envarMaxQSize: "1",
+			},
+			want: batchConfig{
+				maxQSize:        newSetting(1),
+				expInterval:     newSetting(dfltExpInterval),
+				expTimeout:      newSetting(dfltExpTimeout),
+				expMaxBatchSize: newSetting(1),
 			},
 		},
 	}
@@ -194,7 +222,9 @@ func TestBatchProcessor(t *testing.T) {
 	ctx := t.Context()
 
 	t.Run("NilExporter", func(t *testing.T) {
-		assert.NotPanics(t, func() { NewBatchProcessor(nil) })
+		var b *BatchProcessor
+		assert.NotPanics(t, func() { b = NewBatchProcessor(nil) })
+		cleanupBatchProcessor(t, b, nil)
 	})
 
 	t.Run("Polling", func(t *testing.T) {
@@ -207,6 +237,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Nanosecond),
 			WithExportTimeout(time.Hour),
 		)
+		cleanupBatchProcessor(t, b, nil)
 		for range size {
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
@@ -223,6 +254,7 @@ func TestBatchProcessor(t *testing.T) {
 	t.Run("Enabled", func(t *testing.T) {
 		e := newTestExporter(nil)
 		b := NewBatchProcessor(e)
+		cleanupBatchProcessor(t, b, nil)
 		enabled := b.Enabled(ctx, EnabledParameters{})
 		assert.True(t, enabled, "Enabled should return true")
 	})
@@ -237,6 +269,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
+		cleanupBatchProcessor(t, b, nil)
 		for range 10 * batch {
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
@@ -251,6 +284,9 @@ func TestBatchProcessor(t *testing.T) {
 	t.Run("RetriggerFlushNonBlocking", func(t *testing.T) {
 		e := newTestExporter(nil)
 		e.ExportTrigger = make(chan struct{})
+		t.Cleanup(e.Stop)
+		var release sync.Once
+		releaseExport := func() { release.Do(func() { close(e.ExportTrigger) }) }
 
 		const batch = 10
 		b := NewBatchProcessor(
@@ -260,6 +296,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
+		cleanupBatchProcessor(t, b, releaseExport)
 		for range 2 * batch {
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
@@ -282,7 +319,7 @@ func TestBatchProcessor(t *testing.T) {
 			return e.ExportN() > n
 		}, 2*time.Second, time.Microsecond, "flush not retriggered")
 
-		close(e.ExportTrigger)
+		releaseExport()
 		assert.NoError(t, b.Shutdown(ctx))
 		assert.Equal(t, 3, e.ExportN())
 	})
@@ -291,6 +328,7 @@ func TestBatchProcessor(t *testing.T) {
 		t.Run("Error", func(t *testing.T) {
 			e := newTestExporter(assert.AnError)
 			b := NewBatchProcessor(e)
+			cleanupBatchProcessor(t, b, nil)
 			assert.ErrorIs(t, b.Shutdown(ctx), assert.AnError, "exporter error not returned")
 			assert.NoError(t, b.Shutdown(ctx))
 		})
@@ -298,6 +336,7 @@ func TestBatchProcessor(t *testing.T) {
 		t.Run("Multiple", func(t *testing.T) {
 			e := newTestExporter(nil)
 			b := NewBatchProcessor(e)
+			cleanupBatchProcessor(t, b, nil)
 
 			const shutdowns = 3
 			for range shutdowns {
@@ -309,6 +348,7 @@ func TestBatchProcessor(t *testing.T) {
 		t.Run("OnEmit", func(t *testing.T) {
 			e := newTestExporter(nil)
 			b := NewBatchProcessor(e)
+			cleanupBatchProcessor(t, b, nil)
 			assert.NoError(t, b.Shutdown(ctx))
 
 			want := e.ExportN()
@@ -319,19 +359,23 @@ func TestBatchProcessor(t *testing.T) {
 		t.Run("ForceFlush", func(t *testing.T) {
 			e := newTestExporter(nil)
 			b := NewBatchProcessor(e)
+			cleanupBatchProcessor(t, b, nil)
 
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 			assert.NoError(t, b.Shutdown(ctx))
 
+			want := e.ForceFlushN()
 			assert.NoError(t, b.ForceFlush(ctx))
-			assert.Equal(t, 0, e.ForceFlushN(), "ForceFlush called after shutdown")
+			assert.Equal(t, want, e.ForceFlushN(), "ForceFlush called after shutdown")
 		})
 
 		t.Run("CanceledContext", func(t *testing.T) {
 			e := newTestExporter(nil)
 			e.ExportTrigger = make(chan struct{})
-			t.Cleanup(func() { close(e.ExportTrigger) })
+			var release sync.Once
+			releaseExport := func() { release.Do(func() { close(e.ExportTrigger) }) }
 			b := NewBatchProcessor(e)
+			cleanupBatchProcessor(t, b, releaseExport)
 
 			ctx := t.Context()
 			c, cancel := context.WithCancel(ctx)
@@ -351,7 +395,7 @@ func TestBatchProcessor(t *testing.T) {
 				WithExportInterval(time.Hour),
 				WithExportTimeout(time.Hour),
 			)
-			t.Cleanup(func() { _ = b.Shutdown(ctx) })
+			cleanupBatchProcessor(t, b, nil)
 
 			r := new(Record)
 			r.SetBody(attribute.BoolValue(true))
@@ -367,77 +411,17 @@ func TestBatchProcessor(t *testing.T) {
 			}
 		})
 
-		t.Run("ErrorPartialFlush", func(t *testing.T) {
-			e := newTestExporter(nil)
-			e.ExportTrigger = make(chan struct{})
-
-			ctxErrCalled := make(chan struct{})
-			orig := ctxErr
-			ctxErr = func(ctx context.Context) error {
-				close(ctxErrCalled)
-				return orig(ctx)
-			}
-			t.Cleanup(func() { ctxErr = orig })
-
-			const batch = 1
-			b := NewBatchProcessor(
-				e,
-				WithMaxQueueSize(10*batch),
-				WithExportMaxBatchSize(batch),
-				WithExportInterval(time.Hour),
-				WithExportTimeout(time.Hour),
-			)
-
-			// Enqueue 10 x "batch size" amount of records.
-			for range 10 * batch {
-				require.NoError(t, b.OnEmit(ctx, new(Record)))
-			}
-			assert.Eventually(t, func() bool {
-				return e.ExportN() > 0 && len(b.exporter.input) == cap(b.exporter.input)
-			}, 2*time.Second, time.Microsecond)
-			// 1 export being performed, 1 export in buffer chan, >1 batch
-			// still in queue that an attempt to flush will be made on.
-			//
-			// Stop the poll routine to prevent contention with the queue lock.
-			// This is outside of "normal" operations, but we are testing if
-			// ForceFlush will return the correct error when an EnqueueExport
-			// fails and not if ForceFlush will ever get the queue lock in high
-			// throughput situations.
-			close(b.pollDone)
-			<-b.pollDone
-
-			// Cancel the flush ctx from the start so errPartialFlush is
-			// returned right away.
-			fCtx, cancel := context.WithCancel(ctx)
-			cancel()
-
-			errCh := make(chan error, 1)
-			go func() {
-				errCh <- b.ForceFlush(fCtx)
-				close(errCh)
-			}()
-			// Wait for ctxErrCalled to close before closing ExportTrigger so
-			// we know the errPartialFlush will be returned in ForceFlush.
-			<-ctxErrCalled
-			close(e.ExportTrigger)
-
-			err := <-errCh
-			assert.ErrorIs(t, err, errPartialFlush, "partial flush error")
-			assert.ErrorIs(t, err, context.Canceled, "ctx canceled error")
-		})
-
 		t.Run("CanceledContext", func(t *testing.T) {
 			e := newTestExporter(nil)
 			e.ExportTrigger = make(chan struct{})
 			b := NewBatchProcessor(e)
-			t.Cleanup(func() { _ = b.Shutdown(ctx) })
+			var release sync.Once
+			releaseExport := func() { release.Do(func() { close(e.ExportTrigger) }) }
+			cleanupBatchProcessor(t, b, releaseExport)
 
 			r := new(Record)
 			r.SetBody(attribute.BoolValue(true))
 			_ = b.OnEmit(ctx, r)
-			t.Cleanup(func() { _ = b.Shutdown(ctx) })
-			t.Cleanup(func() { close(e.ExportTrigger) })
-
 			c, cancel := context.WithCancel(ctx)
 			cancel()
 			assert.ErrorIs(t, b.ForceFlush(c), context.Canceled)
@@ -454,6 +438,8 @@ func TestBatchProcessor(t *testing.T) {
 
 		e := newTestExporter(nil)
 		e.ExportTrigger = make(chan struct{})
+		var release sync.Once
+		releaseExport := func() { release.Do(func() { close(e.ExportTrigger) }) }
 
 		b := NewBatchProcessor(
 			e,
@@ -462,6 +448,7 @@ func TestBatchProcessor(t *testing.T) {
 			WithExportInterval(time.Hour),
 			WithExportTimeout(time.Hour),
 		)
+		cleanupBatchProcessor(t, b, releaseExport)
 		r := new(Record)
 		// First record will be blocked by testExporter.Export
 		assert.NoError(t, b.OnEmit(ctx, r), "exported record")
@@ -469,60 +456,284 @@ func TestBatchProcessor(t *testing.T) {
 			return e.ExportN() > 0
 		}, 2*time.Second, time.Microsecond, "blocked export not attempted")
 
-		// Second record will be written to export queue
-		assert.NoError(t, b.OnEmit(ctx, r), "export queue record")
-		require.Eventually(t, func() bool {
-			return len(b.exporter.input) == cap(b.exporter.input)
-		}, 2*time.Second, time.Microsecond, "blocked queue read not attempted")
-
-		// Third record will be written to BatchProcessor.q
+		// The second record is queued while Export is blocked. The third
+		// replaces it because the queue is full.
 		assert.NoError(t, b.OnEmit(ctx, r), "first queued")
-		// The previous record will be dropped, as the new one will be written to BatchProcessor.q
 		assert.NoError(t, b.OnEmit(ctx, r), "second queued")
+
+		releaseExport()
 
 		wantMsg := `"level"=1 "msg"="dropped log records" "dropped"=1`
 		assert.Eventually(t, func() bool {
 			return strings.Contains(buf.String(), wantMsg)
 		}, 2*time.Second, time.Microsecond)
 
-		close(e.ExportTrigger)
 		_ = b.Shutdown(ctx)
 	})
+}
 
-	t.Run("ConcurrentSafe", func(t *testing.T) {
-		const goRoutines = 10
+func TestBatchProcessorBackpressureDoesNotPoll(t *testing.T) {
+	ctx := t.Context()
+	blocked := make(chan struct{})
+	e := newTestExporter(nil)
+	e.ExportTrigger = blocked
+	t.Cleanup(e.Stop)
 
-		e := newTestExporter(nil)
-		b := NewBatchProcessor(e)
+	b := NewBatchProcessor(
+		e,
+		WithMaxQueueSize(4),
+		WithExportMaxBatchSize(1),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	var release sync.Once
+	releaseExport := func() { release.Do(func() { close(blocked) }) }
+	cleanupBatchProcessor(t, b, releaseExport)
 
-		ctx, cancel := context.WithCancel(ctx)
-		var wg sync.WaitGroup
-		for range goRoutines - 1 {
-			wg.Go(func() {
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					default:
-						assert.NoError(t, b.OnEmit(ctx, new(Record)))
-						// Ignore partial flush errors.
-						_ = b.ForceFlush(ctx)
-					}
-				}
-			})
+	require.NoError(t, b.OnEmit(ctx, new(Record)))
+	require.Eventually(t, func() bool {
+		return e.ExportN() == 1
+	}, 2*time.Second, time.Microsecond, "export did not block")
+
+	for range 4 {
+		require.NoError(t, b.OnEmit(ctx, new(Record)))
+	}
+	require.Eventually(t, func() bool {
+		return b.q.Len() > 0
+	}, 2*time.Second, time.Microsecond, "queue did not retain records")
+
+	// Dropped is sampled by the processing goroutine. It must remain untouched
+	// while that goroutine is blocked in Export; consuming it proves the
+	// processor is polling without being able to make progress.
+	b.q.dropped.Store(1)
+	assert.Never(t, func() bool {
+		return b.q.dropped.Load() == 0
+	}, 25*time.Millisecond, 100*time.Microsecond)
+
+	b.q.dropped.Store(0)
+	releaseExport()
+	require.NoError(t, b.Shutdown(ctx))
+}
+
+func TestBatchProcessorForceFlushExportError(t *testing.T) {
+	e := newTestExporter(nil)
+	e.ExportFunc = func(context.Context, []Record) error {
+		return assert.AnError
+	}
+	t.Cleanup(e.Stop)
+
+	b := NewBatchProcessor(
+		e,
+		WithExportMaxBatchSize(10),
+		WithExportInterval(time.Hour),
+	)
+	cleanupBatchProcessor(t, b, nil)
+
+	require.NoError(t, b.OnEmit(t.Context(), new(Record)))
+	err := b.ForceFlush(t.Context())
+	assert.ErrorIs(t, err, assert.AnError)
+	assert.Equal(t, 1, e.ExportN())
+	assert.Equal(t, 1, e.ForceFlushN())
+}
+
+func TestBatchProcessorCanceledFlushRetainsQueue(t *testing.T) {
+	e := newTestExporter(nil)
+	t.Cleanup(e.Stop)
+	b := NewBatchProcessor(
+		e,
+		WithMaxQueueSize(2),
+		WithExportMaxBatchSize(2),
+		WithExportInterval(time.Hour),
+	)
+	cleanupBatchProcessor(t, b, nil)
+	require.NoError(t, b.OnEmit(t.Context(), new(Record)))
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	assert.ErrorIs(t, b.flushExporter(ctx), context.Canceled)
+	assert.Equal(t, 1, b.q.Len(), "queued record removed")
+	assert.Zero(t, e.ExportN(), "Export calls")
+	assert.Zero(t, e.ForceFlushN(), "ForceFlush calls")
+}
+
+func TestBatchProcessorForceFlushAttemptsAllBatches(t *testing.T) {
+	e := newTestExporter(nil)
+	e.ExportFunc = func(context.Context, []Record) error {
+		if e.ExportN() == 1 {
+			return assert.AnError
 		}
+		return nil
+	}
+	t.Cleanup(e.Stop)
 
-		require.Eventually(t, func() bool {
-			return e.ExportN() > 0
-		}, 2*time.Second, time.Microsecond, "export before shutdown")
+	const (
+		batchSize = 2
+		records   = 3 * batchSize
+	)
+	b := NewBatchProcessor(
+		e,
+		WithMaxQueueSize(records),
+		WithExportMaxBatchSize(batchSize),
+		WithExportInterval(time.Hour),
+	)
+	cleanupBatchProcessor(t, b, nil)
 
-		wg.Go(func() {
-			assert.NoError(t, b.Shutdown(ctx))
-			cancel()
-		})
+	for range records {
+		_, accepted := b.q.Enqueue(Record{})
+		require.True(t, accepted)
+	}
+	err := b.ForceFlush(t.Context())
+	assert.ErrorIs(t, err, assert.AnError)
+	assert.Equal(t, records/batchSize, e.ExportN())
+	for i, batch := range e.Records() {
+		assert.LessOrEqualf(t, len(batch), batchSize, "batch %d", i)
+	}
+}
 
-		wg.Wait()
+func TestBatchProcessorShutdownIncludesForceFlush(t *testing.T) {
+	var (
+		eventsMu sync.Mutex
+		events   []string
+	)
+	addEvent := func(event string) {
+		eventsMu.Lock()
+		defer eventsMu.Unlock()
+		events = append(events, event)
+	}
+
+	e := newTestExporter(nil)
+	e.ExportFunc = func(context.Context, []Record) error {
+		addEvent("export")
+		return nil
+	}
+	e.ForceFlushFunc = func(context.Context) error {
+		addEvent("force flush")
+		return nil
+	}
+	e.ShutdownFunc = func(context.Context) error {
+		addEvent("shutdown")
+		return nil
+	}
+	t.Cleanup(e.Stop)
+
+	b := NewBatchProcessor(
+		e,
+		WithExportMaxBatchSize(10),
+		WithExportInterval(time.Hour),
+	)
+	cleanupBatchProcessor(t, b, nil)
+	require.NoError(t, b.OnEmit(t.Context(), new(Record)))
+	require.NoError(t, b.Shutdown(t.Context()))
+
+	eventsMu.Lock()
+	defer eventsMu.Unlock()
+	assert.Equal(t, []string{"export", "force flush", "shutdown"}, events)
+}
+
+func TestBatchProcessorForceFlushErrorWithConcurrentShutdown(t *testing.T) {
+	exportStarted := make(chan struct{})
+	releaseExport := make(chan struct{})
+	var release sync.Once
+
+	e := newTestExporter(nil)
+	e.ExportFunc = func(context.Context, []Record) error {
+		close(exportStarted)
+		<-releaseExport
+		return assert.AnError
+	}
+	t.Cleanup(e.Stop)
+
+	b := NewBatchProcessor(
+		e,
+		WithExportInterval(time.Hour),
+	)
+	cleanupBatchProcessor(t, b, func() {
+		release.Do(func() { close(releaseExport) })
 	})
+	require.NoError(t, b.OnEmit(t.Context(), new(Record)))
+
+	flushErr := make(chan error, 1)
+	go func() { flushErr <- b.ForceFlush(t.Context()) }()
+	<-exportStarted
+
+	shutdownErr := make(chan error, 1)
+	go func() { shutdownErr <- b.Shutdown(t.Context()) }()
+	require.Eventually(t, func() bool {
+		return b.stopped.Load() && len(b.shutdown) == 1
+	}, time.Second, time.Microsecond, "shutdown request not queued")
+	release.Do(func() { close(releaseExport) })
+
+	assert.ErrorIs(t, <-flushErr, assert.AnError)
+	assert.NoError(t, <-shutdownErr)
+}
+
+func TestBatchProcessorConcurrentSafe(t *testing.T) {
+	var (
+		active    atomic.Int32
+		maxActive atomic.Int32
+	)
+	call := func() {
+		n := active.Add(1)
+		for {
+			old := maxActive.Load()
+			if n <= old || maxActive.CompareAndSwap(old, n) {
+				break
+			}
+		}
+		time.Sleep(time.Microsecond)
+		active.Add(-1)
+	}
+
+	e := newTestExporter(nil)
+	e.ExportFunc = func(context.Context, []Record) error {
+		call()
+		return nil
+	}
+	e.ForceFlushFunc = func(context.Context) error {
+		call()
+		return nil
+	}
+	e.ShutdownFunc = func(context.Context) error {
+		call()
+		return nil
+	}
+	t.Cleanup(e.Stop)
+
+	b := NewBatchProcessor(
+		e,
+		WithMaxQueueSize(64),
+		WithExportMaxBatchSize(8),
+		WithExportInterval(time.Millisecond),
+	)
+	cleanupBatchProcessor(t, b, nil)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	var wg sync.WaitGroup
+	for range 4 {
+		wg.Go(func() {
+			for ctx.Err() == nil {
+				_ = b.OnEmit(ctx, new(Record))
+			}
+		})
+	}
+	for range 4 {
+		wg.Go(func() {
+			for ctx.Err() == nil {
+				_ = b.ForceFlush(ctx)
+			}
+		})
+	}
+
+	require.Eventually(t, func() bool {
+		return e.ExportN() > 0
+	}, 2*time.Second, time.Microsecond, "no export attempted")
+	require.NoError(t, b.Shutdown(t.Context()))
+	cancel()
+	wg.Wait()
+
+	assert.Equal(t, int32(1), maxActive.Load(), "concurrent exporter calls")
+	assert.Equal(t, 1, e.ShutdownN(), "Shutdown calls")
+	assert.Zero(t, b.q.Len(), "records retained after shutdown")
 }
 
 func TestQueue(t *testing.T) {
@@ -541,19 +752,24 @@ func TestQueue(t *testing.T) {
 	t.Run("Enqueue", func(t *testing.T) {
 		const size = 2
 		q := newQueue(size)
+		enqueue := func(r Record) int {
+			n, accepted := q.Enqueue(r)
+			assert.True(t, accepted)
+			return n
+		}
 
 		var notR Record
 		notR.SetBody(attribute.IntValue(10))
 
-		assert.Equal(t, 1, q.Enqueue(notR), "incomplete batch")
+		assert.Equal(t, 1, enqueue(notR), "incomplete batch")
 		assert.Equal(t, 1, q.len, "length")
 		assert.Equal(t, size, q.cap, "capacity")
 
-		assert.Equal(t, 2, q.Enqueue(r), "complete batch")
+		assert.Equal(t, 2, enqueue(r), "complete batch")
 		assert.Equal(t, 2, q.len, "length")
 		assert.Equal(t, size, q.cap, "capacity")
 
-		assert.Equal(t, 2, q.Enqueue(r), "overflow batch")
+		assert.Equal(t, 2, enqueue(r), "overflow batch")
 		assert.Equal(t, 2, q.len, "length")
 		assert.Equal(t, size, q.cap, "capacity")
 
@@ -563,12 +779,12 @@ func TestQueue(t *testing.T) {
 	t.Run("Dropped", func(t *testing.T) {
 		q := newQueue(1)
 
-		_ = q.Enqueue(r)
-		_ = q.Enqueue(r)
+		_, _ = q.Enqueue(r)
+		_, _ = q.Enqueue(r)
 		assert.Equal(t, uint64(1), q.Dropped(), "fist")
 
-		_ = q.Enqueue(r)
-		_ = q.Enqueue(r)
+		_, _ = q.Enqueue(r)
+		_, _ = q.Enqueue(r)
 		assert.Equal(t, uint64(2), q.Dropped(), "second")
 	})
 
@@ -582,7 +798,7 @@ func TestQueue(t *testing.T) {
 		assert.Equal(t, []Record{r}, q.Flush(), "flushed")
 	})
 
-	t.Run("TryFlush", func(t *testing.T) {
+	t.Run("Dequeue", func(t *testing.T) {
 		const size = 3
 		q := newQueue(size)
 		for range size - 1 {
@@ -592,25 +808,29 @@ func TestQueue(t *testing.T) {
 		}
 
 		buf := make([]Record, 1)
-		f := func([]Record) bool { return false }
-		assert.Equal(t, size-1, q.TryDequeue(buf, f), "not flushed")
-		require.Equal(t, size-1, q.len, "length")
-		require.NotSame(t, q.read, q.write, "read ring advanced")
+		n, remaining := q.Dequeue(buf)
+		assert.Equal(t, 1, n, "dequeued")
+		assert.Equal(t, size-2, remaining, "remaining")
+		assert.Equal(t, []Record{r}, buf, "records")
+		assert.Equal(t, Record{}, q.read.Prev().Value, "retained record")
 
-		var flushed []Record
-		f = func(r []Record) bool {
-			flushed = append(flushed, r...)
-			return true
-		}
-		if assert.Equal(t, size-2, q.TryDequeue(buf, f), "did not flush len(buf)") {
-			assert.Equal(t, []Record{r}, flushed, "Records")
-		}
+		buf = make([]Record, size)
+		n, remaining = q.Dequeue(buf)
+		assert.Equal(t, 1, n, "dequeued")
+		assert.Zero(t, remaining, "remaining")
+		assert.Equal(t, []Record{r}, buf[:n], "records")
+	})
 
-		buf = slices.Grow(buf, size)
-		flushed = flushed[:0]
-		if assert.Equal(t, 0, q.TryDequeue(buf, f), "did not flush len(queue)") {
-			assert.Equal(t, []Record{r}, flushed, "Records")
-		}
+	t.Run("Close", func(t *testing.T) {
+		q := newQueue(1)
+		_, accepted := q.Enqueue(r)
+		require.True(t, accepted)
+
+		q.Close()
+		assert.Equal(t, []Record{r}, q.Flush())
+		_, accepted = q.Enqueue(r)
+		assert.False(t, accepted)
+		assert.Empty(t, q.Flush())
 	})
 
 	t.Run("ConcurrentSafe", func(t *testing.T) {
@@ -633,7 +853,7 @@ func TestQueue(t *testing.T) {
 		for range goRoutines {
 			go func() {
 				defer wg.Done()
-				b.Enqueue(Record{})
+				_, _ = b.Enqueue(Record{})
 				flushed <- b.Flush()
 			}()
 		}
@@ -646,23 +866,121 @@ func TestQueue(t *testing.T) {
 	})
 }
 
-func BenchmarkBatchProcessorOnEmit(b *testing.B) {
-	r := new(Record)
-	body := attribute.BoolValue(true)
-	r.SetBody(body)
+func TestQueueConcurrentSafeClose(t *testing.T) {
+	const writers = 32
+	q := newQueue(writers)
+	start := make(chan struct{})
+	accepted := make(chan int64, writers)
 
-	rSize := unsafe.Sizeof(r) + unsafe.Sizeof(body)
+	var wg sync.WaitGroup
+	for i := range writers {
+		wg.Go(func() {
+			<-start
+			var r Record
+			r.SetBody(attribute.IntValue(i))
+			if _, ok := q.Enqueue(r); ok {
+				accepted <- int64(i)
+			}
+		})
+	}
+	flushed := make(chan []Record, 1)
+	wg.Go(func() {
+		<-start
+		q.Close()
+		flushed <- q.Flush()
+	})
+
+	close(start)
+	wg.Wait()
+	close(accepted)
+
+	var want []int64
+	for id := range accepted {
+		want = append(want, id)
+	}
+	var got []int64
+	for _, r := range <-flushed {
+		got = append(got, r.Body().AsInt64())
+	}
+	assert.ElementsMatch(t, want, got)
+	assert.Zero(t, q.Len())
+	_, ok := q.Enqueue(Record{})
+	assert.False(t, ok)
+}
+
+type blockingBenchmarkExporter struct {
+	started chan struct{}
+	release chan struct{}
+	once    sync.Once
+}
+
+func (e *blockingBenchmarkExporter) Export(ctx context.Context, _ []Record) error {
+	e.once.Do(func() { close(e.started) })
+	select {
+	case <-e.release:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (*blockingBenchmarkExporter) ForceFlush(context.Context) error { return nil }
+
+func (*blockingBenchmarkExporter) Shutdown(context.Context) error { return nil }
+
+type countingBenchmarkExporter struct {
+	records    atomic.Int64
+	forceFlush atomic.Int64
+}
+
+func (e *countingBenchmarkExporter) Export(_ context.Context, records []Record) error {
+	e.records.Add(int64(len(records)))
+	return nil
+}
+
+func (e *countingBenchmarkExporter) ForceFlush(context.Context) error {
+	e.forceFlush.Add(1)
+	return nil
+}
+
+func (*countingBenchmarkExporter) Shutdown(context.Context) error { return nil }
+
+func cleanupBenchmarkBatchProcessor(b *testing.B, bp *BatchProcessor) {
+	b.Helper()
+	b.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(b.Context()), time.Second)
+		defer cancel()
+		_ = bp.Shutdown(ctx)
+	})
+}
+
+func BenchmarkBatchProcessorOnEmit(b *testing.B) {
+	b.Run("ExporterBlocked", benchmarkBatchProcessorOnEmitExporterBlocked)
+}
+
+func benchmarkBatchProcessorOnEmitExporterBlocked(b *testing.B) {
+	r := new(Record)
+	r.SetBody(attribute.BoolValue(true))
+
 	ctx := b.Context()
+	exporter := &blockingBenchmarkExporter{
+		started: make(chan struct{}),
+		release: make(chan struct{}),
+	}
 	bp := NewBatchProcessor(
-		defaultNoopExporter,
-		WithMaxQueueSize(b.N+1),
-		WithExportMaxBatchSize(b.N+1),
+		exporter,
+		WithMaxQueueSize(dfltMaxQSize),
+		WithExportMaxBatchSize(1),
 		WithExportInterval(time.Hour),
 		WithExportTimeout(time.Hour),
 	)
-	b.Cleanup(func() { _ = bp.Shutdown(ctx) })
+	cleanupBenchmarkBatchProcessor(b, bp)
+	b.Cleanup(func() {
+		close(exporter.release)
+	})
+	_ = bp.OnEmit(ctx, r)
+	<-exporter.started
 
-	b.SetBytes(int64(rSize))
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -672,4 +990,70 @@ func BenchmarkBatchProcessorOnEmit(b *testing.B) {
 		}
 		_ = err
 	})
+}
+
+func BenchmarkBatchProcessorForceFlush(b *testing.B) {
+	b.Run("Empty", func(b *testing.B) {
+		exporter := new(countingBenchmarkExporter)
+		bp := NewBatchProcessor(exporter, WithExportInterval(time.Hour))
+		cleanupBenchmarkBatchProcessor(b, bp)
+
+		ctx := b.Context()
+		b.ReportAllocs()
+		b.ResetTimer()
+		var err error
+		for range b.N {
+			err = bp.ForceFlush(ctx)
+		}
+		b.StopTimer()
+		require.NoError(b, err)
+		assert.Equal(b, int64(b.N), exporter.forceFlush.Load())
+		assert.Zero(b, exporter.records.Load())
+	})
+
+	b.Run("Queued", func(b *testing.B) {
+		exporter := new(countingBenchmarkExporter)
+		bp := NewBatchProcessor(exporter, WithExportInterval(time.Hour))
+		cleanupBenchmarkBatchProcessor(b, bp)
+
+		ctx := b.Context()
+		r := new(Record)
+		b.ReportAllocs()
+		b.ResetTimer()
+		var err error
+		for range b.N {
+			b.StopTimer()
+			err = bp.OnEmit(ctx, r)
+			b.StartTimer()
+			if err == nil {
+				err = bp.ForceFlush(ctx)
+			}
+		}
+		b.StopTimer()
+		require.NoError(b, err)
+		assert.Equal(b, int64(b.N), exporter.forceFlush.Load())
+		assert.Equal(b, int64(b.N), exporter.records.Load())
+	})
+}
+
+func BenchmarkBatchProcessorEmitForceFlush(b *testing.B) {
+	exporter := new(countingBenchmarkExporter)
+	bp := NewBatchProcessor(exporter, WithExportInterval(time.Hour))
+	cleanupBenchmarkBatchProcessor(b, bp)
+
+	ctx := b.Context()
+	r := new(Record)
+	b.ReportAllocs()
+	b.ResetTimer()
+	var err error
+	for range b.N {
+		err = bp.OnEmit(ctx, r)
+		if err == nil {
+			err = bp.ForceFlush(ctx)
+		}
+	}
+	b.StopTimer()
+	require.NoError(b, err)
+	assert.Equal(b, int64(b.N), exporter.forceFlush.Load())
+	assert.Equal(b, int64(b.N), exporter.records.Load())
 }

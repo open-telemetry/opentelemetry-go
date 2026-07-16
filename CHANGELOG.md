@@ -35,6 +35,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - ⚠️ **Breaking Change:** `WithEndpointURL` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` no longer appends the default signal path for an endpoint URL without path, making the behavior consistent with `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. It is now also consistent with setting the endpoint via `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`. If the URL has no path component, `/` (e.g. the root path) is now appended. Use `WithEndpointURL(url.JoinPath(endpoint, "/v1/metrics"))` to keep the previous behavior. (#8538)
 - ⚠️ **Breaking Change:** `WithEndpointURL` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` no longer appends the default signal path for an endpoint URL without path, making the behavior consistent with `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. It is now also consistent with setting the endpoint via `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`. If the URL has no path component, `/` (e.g. the root path) is now appended. Use `WithEndpointURL(url.JoinPath(endpoint, "/v1/traces"))` to keep the previous behavior. (#8538)
 
+### Deprecated
+
+- Deprecate `WithExportBufferSize` in `go.opentelemetry.io/otel/sdk/log`. The option remains available for source compatibility but no longer affects behavior; `BatchProcessor` no longer maintains a separate export-request buffer.
+
 ### Removed
 
 - ⚠️ **Breaking Change:** Remove `Kind`, `Value`, `KeyValue`, value and key-value constructors, and attribute conversion helpers from `go.opentelemetry.io/otel/log`. (#8490)
@@ -42,6 +46,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Prevent `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` from busy-spinning under exporter backpressure, and serialize dequeue, export, force-flush, and shutdown work in one worker.
+- Make `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` return errors produced while draining records for `ForceFlush` and `Shutdown`, and continue attempting later batches while the request context remains valid.
+- Keep the default `BatchProcessor` maximum export batch size in `go.opentelemetry.io/otel/sdk/log` at or below the configured maximum queue size.
 - Clarify in `go.opentelemetry.io/otel/log` that `LoggerProvider` implementations should retain an empty `Logger` name instead of replacing it with a default. (#8587)
 - Clarify that `Float64Histogram` and `Int64Histogram` `Record` methods expect non-negative values in `go.opentelemetry.io/otel/metric`. (#8574)
 - Make `WithAttributeCountLimit(0)` and `OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT=0` discard all log record attributes in `go.opentelemetry.io/otel/sdk/log`. (#8570)
