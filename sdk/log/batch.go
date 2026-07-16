@@ -107,11 +107,14 @@ func (b *BatchProcessor) process(interval time.Duration) {
 	go func() {
 		timer := time.NewTimer(interval)
 		defer timer.Stop()
+		// The worker owns and reuses buf. Exporters must not retain the slice
+		// passed to them, so it is safe to refill after Export returns.
 		buf := make([]Record, b.batchSize)
 
 		for {
-			// Prefer lifecycle work between exports so sustained traffic cannot
-			// keep it waiting indefinitely.
+			// Probe shutdown by itself first. This makes an already queued terminal
+			// request win over every other ready case. Closing done before replying
+			// also means a successful Shutdown response observes a stopped worker.
 			select {
 			case req := <-b.shutdown:
 				err := b.shutdownExporter(req.ctx)
@@ -120,6 +123,10 @@ func (b *BatchProcessor) process(interval time.Duration) {
 				return
 			default:
 			}
+
+			// With no queued shutdown, service a waiting ForceFlush before ordinary
+			// export wakes. The default keeps this priority check non-blocking.
+			// Shutdown remains selectable in case it arrived after the first probe.
 			select {
 			case req := <-b.shutdown:
 				err := b.shutdownExporter(req.ctx)
@@ -133,6 +140,8 @@ func (b *BatchProcessor) process(interval time.Duration) {
 			default:
 			}
 
+			// No lifecycle request was waiting, so block on the complete event set.
+			// Both timer and size-triggered exports start a new interval window.
 			select {
 			case req := <-b.shutdown:
 				err := b.shutdownExporter(req.ctx)
