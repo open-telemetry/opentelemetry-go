@@ -152,11 +152,11 @@ func (b *BatchProcessor) process(interval time.Duration) {
 				err := b.flushExporter(req.ctx)
 				req.respond(err)
 			case <-timer.C:
-				b.exportBatch(buf)
 				resetTimer(timer, interval)
+				b.exportBatch(buf)
 			case <-b.exportTrigger:
-				b.exportBatch(buf)
 				resetTimer(timer, interval)
+				b.exportBatch(buf)
 			}
 		}
 	}()
