@@ -32,10 +32,6 @@ type testExporter struct {
 	records [][]Record
 }
 
-func newTestExporter(err error) *testExporter {
-	return &testExporter{Err: err}
-}
-
 func (e *testExporter) Records() [][]Record {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -93,7 +89,7 @@ func (e *testExporter) ForceFlushN() int {
 
 func TestChunker(t *testing.T) {
 	t.Run("ZeroSize", func(t *testing.T) {
-		exp := newTestExporter(nil)
+		exp := &testExporter{}
 		c := newChunkExporter(exp, 0)
 		const size = 100
 		_ = c.Export(t.Context(), make([]Record, size))
@@ -105,21 +101,21 @@ func TestChunker(t *testing.T) {
 	})
 
 	t.Run("ForceFlush", func(t *testing.T) {
-		exp := newTestExporter(nil)
+		exp := &testExporter{}
 		c := newChunkExporter(exp, 0)
 		_ = c.ForceFlush(t.Context())
 		assert.Equal(t, 1, exp.ForceFlushN(), "ForceFlush not passed through")
 	})
 
 	t.Run("Shutdown", func(t *testing.T) {
-		exp := newTestExporter(nil)
+		exp := &testExporter{}
 		c := newChunkExporter(exp, 0)
 		_ = c.Shutdown(t.Context())
 		assert.Equal(t, 1, exp.ShutdownN(), "Shutdown not passed through")
 	})
 
 	t.Run("Chunk", func(t *testing.T) {
-		exp := newTestExporter(nil)
+		exp := &testExporter{}
 		c := newChunkExporter(exp, 10)
 		assert.NoError(t, c.Export(t.Context(), make([]Record, 5)))
 		assert.NoError(t, c.Export(t.Context(), make([]Record, 25)))
@@ -133,7 +129,7 @@ func TestChunker(t *testing.T) {
 	})
 
 	t.Run("ExportError", func(t *testing.T) {
-		exp := newTestExporter(assert.AnError)
+		exp := &testExporter{Err: assert.AnError}
 		c := newChunkExporter(exp, 0)
 		ctx := t.Context()
 		records := make([]Record, 25)
@@ -147,7 +143,7 @@ func TestChunker(t *testing.T) {
 	})
 
 	t.Run("CanceledBetweenChunks", func(t *testing.T) {
-		exp := newTestExporter(nil)
+		exp := &testExporter{}
 		ctx, cancel := context.WithCancel(t.Context())
 		t.Cleanup(cancel)
 		exp.ExportFunc = func(context.Context, []Record) error {
@@ -168,7 +164,7 @@ func TestChunker(t *testing.T) {
 
 func TestTimeoutExporter(t *testing.T) {
 	t.Run("ZeroTimeout", func(t *testing.T) {
-		exp := newTestExporter(nil)
+		exp := &testExporter{}
 		e := newTimeoutExporter(exp, 0)
 		assert.Same(t, exp, e)
 	})
@@ -177,7 +173,7 @@ func TestTimeoutExporter(t *testing.T) {
 		trigger := make(chan struct{})
 		t.Cleanup(func() { close(trigger) })
 
-		exp := newTestExporter(nil)
+		exp := &testExporter{}
 		exp.ExportTrigger = trigger
 		e := newTimeoutExporter(exp, time.Nanosecond)
 

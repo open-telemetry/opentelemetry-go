@@ -210,7 +210,7 @@ func TestBatchProcessor(t *testing.T) {
 	})
 
 	t.Run("Polling", func(t *testing.T) {
-		e := newTestExporter(nil)
+		e := &testExporter{}
 		const size = 15
 		b := NewBatchProcessor(
 			e,
@@ -234,7 +234,7 @@ func TestBatchProcessor(t *testing.T) {
 	})
 
 	t.Run("Enabled", func(t *testing.T) {
-		e := newTestExporter(nil)
+		e := &testExporter{}
 		b := NewBatchProcessor(e)
 		defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
 		enabled := b.Enabled(ctx, EnabledParameters{})
@@ -243,7 +243,7 @@ func TestBatchProcessor(t *testing.T) {
 
 	t.Run("OnEmit", func(t *testing.T) {
 		const batch = 10
-		e := newTestExporter(nil)
+		e := &testExporter{}
 		b := NewBatchProcessor(
 			e,
 			WithMaxQueueSize(10*batch),
@@ -264,7 +264,7 @@ func TestBatchProcessor(t *testing.T) {
 	})
 
 	t.Run("RetriggerFlushNonBlocking", func(t *testing.T) {
-		e := newTestExporter(nil)
+		e := &testExporter{}
 		e.ExportTrigger = make(chan struct{})
 		var release sync.Once
 		releaseExport := func() { release.Do(func() { close(e.ExportTrigger) }) }
@@ -305,7 +305,7 @@ func TestBatchProcessor(t *testing.T) {
 
 	t.Run("Shutdown", func(t *testing.T) {
 		t.Run("Error", func(t *testing.T) {
-			e := newTestExporter(assert.AnError)
+			e := &testExporter{Err: assert.AnError}
 			b := NewBatchProcessor(e)
 			defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
 			assert.ErrorIs(t, b.Shutdown(ctx), assert.AnError, "exporter error not returned")
@@ -313,7 +313,7 @@ func TestBatchProcessor(t *testing.T) {
 		})
 
 		t.Run("Multiple", func(t *testing.T) {
-			e := newTestExporter(nil)
+			e := &testExporter{}
 			b := NewBatchProcessor(e)
 			defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
 
@@ -325,7 +325,7 @@ func TestBatchProcessor(t *testing.T) {
 		})
 
 		t.Run("OnEmit", func(t *testing.T) {
-			e := newTestExporter(nil)
+			e := &testExporter{}
 			b := NewBatchProcessor(e)
 			defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
 			assert.NoError(t, b.Shutdown(ctx))
@@ -336,7 +336,7 @@ func TestBatchProcessor(t *testing.T) {
 		})
 
 		t.Run("ForceFlush", func(t *testing.T) {
-			e := newTestExporter(nil)
+			e := &testExporter{}
 			b := NewBatchProcessor(e)
 			defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
 
@@ -349,7 +349,7 @@ func TestBatchProcessor(t *testing.T) {
 		})
 
 		t.Run("CanceledContext", func(t *testing.T) {
-			e := newTestExporter(nil)
+			e := &testExporter{}
 			e.ExportTrigger = make(chan struct{})
 			var release sync.Once
 			releaseExport := func() { release.Do(func() { close(e.ExportTrigger) }) }
@@ -367,7 +367,7 @@ func TestBatchProcessor(t *testing.T) {
 
 	t.Run("ForceFlush", func(t *testing.T) {
 		t.Run("Flush", func(t *testing.T) {
-			e := newTestExporter(assert.AnError)
+			e := &testExporter{Err: assert.AnError}
 			b := NewBatchProcessor(
 				e,
 				WithMaxQueueSize(100),
@@ -392,7 +392,7 @@ func TestBatchProcessor(t *testing.T) {
 		})
 
 		t.Run("CanceledContext", func(t *testing.T) {
-			e := newTestExporter(nil)
+			e := &testExporter{}
 			e.ExportTrigger = make(chan struct{})
 			b := NewBatchProcessor(e)
 			var release sync.Once
@@ -417,7 +417,7 @@ func TestBatchProcessor(t *testing.T) {
 		stdr.SetVerbosity(1)
 		global.SetLogger(stdr.New(stdlog.New(buf, "", 0)))
 
-		e := newTestExporter(nil)
+		e := &testExporter{}
 		e.ExportTrigger = make(chan struct{})
 		var release sync.Once
 		releaseExport := func() { release.Do(func() { close(e.ExportTrigger) }) }
@@ -457,7 +457,7 @@ func TestBatchProcessor(t *testing.T) {
 func TestBatchProcessorBackpressureDoesNotPoll(t *testing.T) {
 	ctx := t.Context()
 	blocked := make(chan struct{})
-	e := newTestExporter(nil)
+	e := &testExporter{}
 	e.ExportTrigger = blocked
 
 	b := NewBatchProcessor(
@@ -498,7 +498,7 @@ func TestBatchProcessorBackpressureDoesNotPoll(t *testing.T) {
 }
 
 func TestBatchProcessorForceFlushExportError(t *testing.T) {
-	e := newTestExporter(nil)
+	e := &testExporter{}
 	e.ExportFunc = func(context.Context, []Record) error {
 		return assert.AnError
 	}
@@ -518,7 +518,7 @@ func TestBatchProcessorForceFlushExportError(t *testing.T) {
 }
 
 func TestBatchProcessorCanceledFlushRetainsQueue(t *testing.T) {
-	e := newTestExporter(nil)
+	e := &testExporter{}
 	b := NewBatchProcessor(
 		e,
 		WithMaxQueueSize(2),
@@ -537,7 +537,7 @@ func TestBatchProcessorCanceledFlushRetainsQueue(t *testing.T) {
 }
 
 func TestBatchProcessorForceFlushAttemptsAllBatches(t *testing.T) {
-	e := newTestExporter(nil)
+	e := &testExporter{}
 	e.ExportFunc = func(context.Context, []Record) error {
 		if e.ExportN() == 1 {
 			return assert.AnError
@@ -580,7 +580,7 @@ func TestBatchProcessorShutdownIncludesForceFlush(t *testing.T) {
 		events = append(events, event)
 	}
 
-	e := newTestExporter(nil)
+	e := &testExporter{}
 	e.ExportFunc = func(context.Context, []Record) error {
 		addEvent("export")
 		return nil
@@ -613,7 +613,7 @@ func TestBatchProcessorForceFlushErrorWithConcurrentShutdown(t *testing.T) {
 	releaseExport := make(chan struct{})
 	var release sync.Once
 
-	e := newTestExporter(nil)
+	e := &testExporter{}
 	e.ExportFunc = func(context.Context, []Record) error {
 		close(exportStarted)
 		<-releaseExport
@@ -662,7 +662,7 @@ func TestBatchProcessorConcurrentSafe(t *testing.T) {
 		active.Add(-1)
 	}
 
-	e := newTestExporter(nil)
+	e := &testExporter{}
 	e.ExportFunc = func(context.Context, []Record) error {
 		call()
 		return nil
