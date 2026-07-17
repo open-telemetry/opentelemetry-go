@@ -11,13 +11,10 @@ permissions:
 jobs:
   fossa:
     runs-on: ubuntu-latest
-    env:
-      FOSSA_API_KEY: ${{secrets.FOSSA_API_KEY}}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: fossas/fossa-action@29693cc50323968e039056be419b32989fc5880c # v2.0.0
-        if: ${{ env.FOSSA_API_KEY != '' }}
         with:
           api-key: ${{secrets.FOSSA_API_KEY}}
           team: OpenTelemetry
