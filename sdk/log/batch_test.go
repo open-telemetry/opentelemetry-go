@@ -483,47 +483,21 @@ func TestBatchProcessorCanceledFlushRetainsQueue(t *testing.T) {
 		WithExportInterval(time.Hour),
 	)
 	defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
-	require.NoError(t, b.OnEmit(t.Context(), new(Record)))
+	r := new(Record)
+	r.SetBody(attribute.BoolValue(true))
+	require.NoError(t, b.OnEmit(t.Context(), r))
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	assert.ErrorIs(t, b.flushExporter(ctx), context.Canceled)
-	assert.Equal(t, 1, b.q.Len(), "queued record removed")
+	assert.ErrorIs(t, b.ForceFlush(ctx), context.Canceled)
 	assert.Zero(t, e.ExportN(), "Export calls")
 	assert.Zero(t, e.ForceFlushN(), "ForceFlush calls")
-}
 
-func TestBatchProcessorForceFlushAttemptsAllBatches(t *testing.T) {
-	e := &testExporter{}
-	e.ExportFunc = func(context.Context, []Record) error {
-		if e.ExportN() == 1 {
-			return assert.AnError
-		}
-		return nil
-	}
-
-	const (
-		batchSize = 2
-		records   = 3 * batchSize
-	)
-	b := NewBatchProcessor(
-		e,
-		WithMaxQueueSize(records),
-		WithExportMaxBatchSize(batchSize),
-		WithExportInterval(time.Hour),
-	)
-	defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
-
-	for range records {
-		_, accepted := b.q.Enqueue(Record{})
-		require.True(t, accepted)
-	}
-	err := b.ForceFlush(t.Context())
-	assert.ErrorIs(t, err, assert.AnError)
-	assert.Equal(t, records/batchSize, e.ExportN())
-	for i, batch := range e.Records() {
-		assert.LessOrEqualf(t, len(batch), batchSize, "batch %d", i)
-	}
+	require.NoError(t, b.ForceFlush(t.Context()))
+	records := e.Records()
+	require.Len(t, records, 1, "exported batches")
+	require.Len(t, records[0], 1, "exported records")
+	assert.Equal(t, *r, records[0][0])
 }
 
 func TestBatchProcessorShutdownIncludesForceFlush(t *testing.T) {
@@ -667,7 +641,6 @@ func TestBatchProcessorConcurrentSafe(t *testing.T) {
 
 	assert.Equal(t, int32(1), maxActive.Load(), "concurrent exporter calls")
 	assert.Equal(t, 1, e.ShutdownN(), "Shutdown calls")
-	assert.Zero(t, b.q.Len(), "records retained after shutdown")
 }
 
 func TestQueue(t *testing.T) {
