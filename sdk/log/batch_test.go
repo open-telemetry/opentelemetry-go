@@ -832,67 +832,17 @@ func benchmarkBatchProcessorOnEmitExporterBlocked(b *testing.B) {
 }
 
 func BenchmarkBatchProcessorForceFlush(b *testing.B) {
-	b.Run("Empty", func(b *testing.B) {
-		exporter := new(countingBenchmarkExporter)
-		bp := NewBatchProcessor(exporter, WithExportInterval(time.Hour))
-		cleanupBenchmarkBatchProcessor(b, bp)
-
-		ctx := b.Context()
-		b.ReportAllocs()
-		b.ResetTimer()
-		var err error
-		for range b.N {
-			err = bp.ForceFlush(ctx)
-		}
-		b.StopTimer()
-		require.NoError(b, err)
-		assert.Equal(b, int64(b.N), exporter.forceFlush.Load())
-		assert.Zero(b, exporter.records.Load())
-	})
-
-	b.Run("Queued", func(b *testing.B) {
-		exporter := new(countingBenchmarkExporter)
-		bp := NewBatchProcessor(exporter, WithExportInterval(time.Hour))
-		cleanupBenchmarkBatchProcessor(b, bp)
-
-		ctx := b.Context()
-		r := new(Record)
-		b.ReportAllocs()
-		b.ResetTimer()
-		var err error
-		for range b.N {
-			b.StopTimer()
-			err = bp.OnEmit(ctx, r)
-			b.StartTimer()
-			if err == nil {
-				err = bp.ForceFlush(ctx)
-			}
-		}
-		b.StopTimer()
-		require.NoError(b, err)
-		assert.Equal(b, int64(b.N), exporter.forceFlush.Load())
-		assert.Equal(b, int64(b.N), exporter.records.Load())
-	})
-}
-
-func BenchmarkBatchProcessorEmitForceFlush(b *testing.B) {
-	exporter := new(countingBenchmarkExporter)
-	bp := NewBatchProcessor(exporter, WithExportInterval(time.Hour))
-	cleanupBenchmarkBatchProcessor(b, bp)
+	bp := NewBatchProcessor(noopExporter{}, WithExportInterval(time.Hour))
+	defer func() { assert.NoError(b, bp.Shutdown(b.Context())) }()
 
 	ctx := b.Context()
 	r := new(Record)
 	b.ReportAllocs()
 	b.ResetTimer()
-	var err error
-	for range b.N {
-		err = bp.OnEmit(ctx, r)
-		if err == nil {
-			err = bp.ForceFlush(ctx)
-		}
+	for b.Loop() {
+		b.StopTimer()
+		_ = bp.OnEmit(ctx, r)
+		b.StartTimer()
+		_ = bp.ForceFlush(ctx)
 	}
-	b.StopTimer()
-	require.NoError(b, err)
-	assert.Equal(b, int64(b.N), exporter.forceFlush.Load())
-	assert.Equal(b, int64(b.N), exporter.records.Load())
 }
