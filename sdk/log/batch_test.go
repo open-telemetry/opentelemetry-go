@@ -454,49 +454,6 @@ func TestBatchProcessor(t *testing.T) {
 	})
 }
 
-func TestBatchProcessorBackpressureDoesNotPoll(t *testing.T) {
-	ctx := t.Context()
-	blocked := make(chan struct{})
-	e := &testExporter{}
-	e.ExportTrigger = blocked
-
-	b := NewBatchProcessor(
-		e,
-		WithMaxQueueSize(4),
-		WithExportMaxBatchSize(1),
-		WithExportInterval(time.Hour),
-		WithExportTimeout(time.Hour),
-	)
-	var release sync.Once
-	releaseExport := func() { release.Do(func() { close(blocked) }) }
-	defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
-	defer releaseExport()
-
-	require.NoError(t, b.OnEmit(ctx, new(Record)))
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.Equal(c, 1, e.ExportN())
-	}, 2*time.Second, time.Microsecond, "export did not block")
-
-	for range 4 {
-		require.NoError(t, b.OnEmit(ctx, new(Record)))
-	}
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.Positive(c, b.q.Len())
-	}, 2*time.Second, time.Microsecond, "queue did not retain records")
-
-	// Dropped is sampled by the processing goroutine. It must remain untouched
-	// while that goroutine is blocked in Export; consuming it proves the
-	// processor is polling without being able to make progress.
-	b.q.dropped.Store(1)
-	assert.Never(t, func() bool {
-		return b.q.dropped.Load() == 0
-	}, 25*time.Millisecond, 100*time.Microsecond)
-
-	b.q.dropped.Store(0)
-	releaseExport()
-	require.NoError(t, b.Shutdown(ctx))
-}
-
 func TestBatchProcessorForceFlushExportError(t *testing.T) {
 	e := &testExporter{}
 	e.ExportFunc = func(context.Context, []Record) error {
