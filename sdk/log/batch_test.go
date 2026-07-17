@@ -9,7 +9,6 @@ import (
 	stdlog "log"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -748,13 +747,11 @@ func TestQueueCloseConcurrentSafe(t *testing.T) {
 }
 
 type blockingBenchmarkExporter struct {
-	started chan struct{}
 	release chan struct{}
 	once    sync.Once
 }
 
 func (e *blockingBenchmarkExporter) Export(ctx context.Context, _ []Record) error {
-	e.once.Do(func() { close(e.started) })
 	select {
 	case <-e.release:
 		return nil
@@ -767,67 +764,26 @@ func (*blockingBenchmarkExporter) ForceFlush(context.Context) error { return nil
 
 func (*blockingBenchmarkExporter) Shutdown(context.Context) error { return nil }
 
-type countingBenchmarkExporter struct {
-	records    atomic.Int64
-	forceFlush atomic.Int64
-}
-
-func (e *countingBenchmarkExporter) Export(_ context.Context, records []Record) error {
-	e.records.Add(int64(len(records)))
-	return nil
-}
-
-func (e *countingBenchmarkExporter) ForceFlush(context.Context) error {
-	e.forceFlush.Add(1)
-	return nil
-}
-
-func (*countingBenchmarkExporter) Shutdown(context.Context) error { return nil }
-
-func cleanupBenchmarkBatchProcessor(b *testing.B, bp *BatchProcessor) {
-	b.Helper()
-	b.Cleanup(func() {
-		ctx, cancel := context.WithTimeout(context.WithoutCancel(b.Context()), time.Second)
-		defer cancel()
-		_ = bp.Shutdown(ctx)
-	})
-}
-
-func BenchmarkBatchProcessorOnEmit(b *testing.B) {
-	b.Run("ExporterBlocked", benchmarkBatchProcessorOnEmitExporterBlocked)
-}
-
-func benchmarkBatchProcessorOnEmitExporterBlocked(b *testing.B) {
-	r := new(Record)
-	r.SetBody(attribute.BoolValue(true))
-
-	ctx := b.Context()
-	exporter := &blockingBenchmarkExporter{
-		started: make(chan struct{}),
+func BenchmarkBatchProcessorOnEmitExporterBlocked(b *testing.B) {
+	exp := &blockingBenchmarkExporter{
 		release: make(chan struct{}),
 	}
 	bp := NewBatchProcessor(
-		exporter,
-		WithMaxQueueSize(dfltMaxQSize),
-		WithExportMaxBatchSize(1),
+		exp,
 		WithExportInterval(time.Hour),
 		WithExportTimeout(time.Hour),
 	)
-	cleanupBenchmarkBatchProcessor(b, bp)
-	b.Cleanup(func() {
-		close(exporter.release)
-	})
-	_ = bp.OnEmit(ctx, r)
-	<-exporter.started
+	defer func() { assert.NoError(b, bp.Shutdown(b.Context())) }()
+	defer close(exp.release)
 
+	ctx := b.Context()
+	r := new(Record)
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
-		var err error
 		for pb.Next() {
-			err = bp.OnEmit(ctx, r)
+			_ = bp.OnEmit(ctx, r)
 		}
-		_ = err
 	})
 }
 
