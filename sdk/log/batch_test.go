@@ -500,42 +500,30 @@ func TestBatchProcessorCanceledFlushRetainsQueue(t *testing.T) {
 }
 
 func TestBatchProcessorShutdownIncludesForceFlush(t *testing.T) {
-	var (
-		eventsMu sync.Mutex
-		events   []string
-	)
-	addEvent := func(event string) {
-		eventsMu.Lock()
-		defer eventsMu.Unlock()
-		events = append(events, event)
-	}
-
+	var calls []string
 	e := &testExporter{}
 	e.ExportFunc = func(context.Context, []Record) error {
-		addEvent("export")
+		calls = append(calls, "export")
 		return nil
 	}
 	e.ForceFlushFunc = func(context.Context) error {
-		addEvent("force flush")
+		calls = append(calls, "force flush")
 		return nil
 	}
 	e.ShutdownFunc = func(context.Context) error {
-		addEvent("shutdown")
+		calls = append(calls, "shutdown")
 		return nil
 	}
 
 	b := NewBatchProcessor(
 		e,
-		WithExportMaxBatchSize(10),
 		WithExportInterval(time.Hour),
 	)
 	defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
 	require.NoError(t, b.OnEmit(t.Context(), new(Record)))
 	require.NoError(t, b.Shutdown(t.Context()))
 
-	eventsMu.Lock()
-	defer eventsMu.Unlock()
-	assert.Equal(t, []string{"export", "force flush", "shutdown"}, events)
+	assert.Equal(t, []string{"export", "force flush", "shutdown"}, calls)
 }
 
 func TestBatchProcessorForceFlushErrorWithConcurrentShutdown(t *testing.T) {
