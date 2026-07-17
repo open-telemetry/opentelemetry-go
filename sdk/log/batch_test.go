@@ -8,7 +8,6 @@ import (
 	"context"
 	stdlog "log"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -225,11 +224,11 @@ func TestBatchProcessor(t *testing.T) {
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
 		var got []Record
-		assert.Eventually(t, func() bool {
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			for _, r := range e.Records() {
 				got = append(got, r...)
 			}
-			return len(got) == size
+			assert.Len(c, got, size)
 		}, 2*time.Second, time.Microsecond)
 		_ = b.Shutdown(ctx)
 	})
@@ -256,8 +255,8 @@ func TestBatchProcessor(t *testing.T) {
 		for range 10 * batch {
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 		}
-		assert.Eventually(t, func() bool {
-			return e.ExportN() > 1
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.Greater(c, e.ExportN(), 1)
 		}, 2*time.Second, time.Microsecond, "multi-batch flush")
 
 		assert.NoError(t, b.Shutdown(ctx))
@@ -286,21 +285,18 @@ func TestBatchProcessor(t *testing.T) {
 		}
 
 		var n int
-		require.Eventually(t, func() bool {
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			n = e.ExportN()
-			return n > 0
+			assert.Positive(c, n)
 		}, 2*time.Second, time.Microsecond, "blocked export not attempted")
 
-		var err error
-		require.Eventually(t, func() bool {
-			err = b.OnEmit(ctx, new(Record))
-			return true
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.NoError(c, b.OnEmit(ctx, new(Record)))
 		}, time.Second, time.Microsecond, "OnEmit blocked")
-		assert.NoError(t, err)
 
 		e.ExportTrigger <- struct{}{}
-		assert.Eventually(t, func() bool {
-			return e.ExportN() > n
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.Greater(c, e.ExportN(), n)
 		}, 2*time.Second, time.Microsecond, "flush not retriggered")
 
 		releaseExport()
@@ -439,8 +435,8 @@ func TestBatchProcessor(t *testing.T) {
 		r := new(Record)
 		// First record will be blocked by testExporter.Export
 		assert.NoError(t, b.OnEmit(ctx, r), "exported record")
-		require.Eventually(t, func() bool {
-			return e.ExportN() > 0
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.Positive(c, e.ExportN())
 		}, 2*time.Second, time.Microsecond, "blocked export not attempted")
 
 		// The second record is queued while Export is blocked. The third
@@ -451,8 +447,8 @@ func TestBatchProcessor(t *testing.T) {
 		releaseExport()
 
 		wantMsg := `"level"=1 "msg"="dropped log records" "dropped"=1`
-		assert.Eventually(t, func() bool {
-			return strings.Contains(buf.String(), wantMsg)
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.Contains(c, buf.String(), wantMsg)
 		}, 2*time.Second, time.Microsecond)
 
 		_ = b.Shutdown(ctx)
@@ -479,15 +475,15 @@ func TestBatchProcessorBackpressureDoesNotPoll(t *testing.T) {
 	defer releaseExport()
 
 	require.NoError(t, b.OnEmit(ctx, new(Record)))
-	require.Eventually(t, func() bool {
-		return e.ExportN() == 1
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.Equal(c, 1, e.ExportN())
 	}, 2*time.Second, time.Microsecond, "export did not block")
 
 	for range 4 {
 		require.NoError(t, b.OnEmit(ctx, new(Record)))
 	}
-	require.Eventually(t, func() bool {
-		return b.q.Len() > 0
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.Positive(c, b.q.Len())
 	}, 2*time.Second, time.Microsecond, "queue did not retain records")
 
 	// Dropped is sampled by the processing goroutine. It must remain untouched
@@ -646,8 +642,9 @@ func TestBatchProcessorForceFlushErrorWithConcurrentShutdown(t *testing.T) {
 
 	shutdownErr := make(chan error, 1)
 	go func() { shutdownErr <- b.Shutdown(t.Context()) }()
-	require.Eventually(t, func() bool {
-		return b.stopped.Load() && len(b.shutdown) == 1
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.True(c, b.stopped.Load(), "processor stopped state")
+		assert.Len(c, b.shutdown, 1, "shutdown requests")
 	}, time.Second, time.Microsecond, "shutdown request not queued")
 	unblock()
 
@@ -712,8 +709,8 @@ func TestBatchProcessorConcurrentSafe(t *testing.T) {
 		})
 	}
 
-	require.Eventually(t, func() bool {
-		return e.ExportN() > 0
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.Positive(c, e.ExportN())
 	}, 2*time.Second, time.Microsecond, "no export attempted")
 	require.NoError(t, b.Shutdown(t.Context()))
 	cancel()
