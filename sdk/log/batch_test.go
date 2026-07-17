@@ -266,7 +266,6 @@ func TestBatchProcessor(t *testing.T) {
 	t.Run("RetriggerFlushNonBlocking", func(t *testing.T) {
 		e := newTestExporter(nil)
 		e.ExportTrigger = make(chan struct{})
-		t.Cleanup(e.Stop)
 		var release sync.Once
 		releaseExport := func() { release.Do(func() { close(e.ExportTrigger) }) }
 
@@ -460,7 +459,6 @@ func TestBatchProcessorBackpressureDoesNotPoll(t *testing.T) {
 	blocked := make(chan struct{})
 	e := newTestExporter(nil)
 	e.ExportTrigger = blocked
-	t.Cleanup(e.Stop)
 
 	b := NewBatchProcessor(
 		e,
@@ -504,7 +502,6 @@ func TestBatchProcessorForceFlushExportError(t *testing.T) {
 	e.ExportFunc = func(context.Context, []Record) error {
 		return assert.AnError
 	}
-	t.Cleanup(e.Stop)
 
 	b := NewBatchProcessor(
 		e,
@@ -522,7 +519,6 @@ func TestBatchProcessorForceFlushExportError(t *testing.T) {
 
 func TestBatchProcessorCanceledFlushRetainsQueue(t *testing.T) {
 	e := newTestExporter(nil)
-	t.Cleanup(e.Stop)
 	b := NewBatchProcessor(
 		e,
 		WithMaxQueueSize(2),
@@ -548,7 +544,6 @@ func TestBatchProcessorForceFlushAttemptsAllBatches(t *testing.T) {
 		}
 		return nil
 	}
-	t.Cleanup(e.Stop)
 
 	const (
 		batchSize = 2
@@ -598,7 +593,6 @@ func TestBatchProcessorShutdownIncludesForceFlush(t *testing.T) {
 		addEvent("shutdown")
 		return nil
 	}
-	t.Cleanup(e.Stop)
 
 	b := NewBatchProcessor(
 		e,
@@ -625,7 +619,6 @@ func TestBatchProcessorForceFlushErrorWithConcurrentShutdown(t *testing.T) {
 		<-releaseExport
 		return assert.AnError
 	}
-	t.Cleanup(e.Stop)
 
 	b := NewBatchProcessor(
 		e,
@@ -682,7 +675,6 @@ func TestBatchProcessorConcurrentSafe(t *testing.T) {
 		call()
 		return nil
 	}
-	t.Cleanup(e.Stop)
 
 	b := NewBatchProcessor(
 		e,

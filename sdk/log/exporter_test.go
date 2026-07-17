@@ -28,7 +28,6 @@ type testExporter struct {
 	// Counts of method calls.
 	exportN, shutdownN, forceFlushN atomic.Int32
 
-	stopped atomic.Bool
 	mu      sync.Mutex
 	records [][]Record
 }
@@ -56,9 +55,7 @@ func (e *testExporter) Export(ctx context.Context, r []Record) error {
 		}
 	}
 	e.mu.Lock()
-	if !e.stopped.Load() {
-		e.records = append(e.records, slices.Clone(r))
-	}
+	e.records = append(e.records, slices.Clone(r))
 	e.mu.Unlock()
 	if e.ExportFunc != nil {
 		return e.ExportFunc(ctx, r)
@@ -68,17 +65,6 @@ func (e *testExporter) Export(ctx context.Context, r []Record) error {
 
 func (e *testExporter) ExportN() int {
 	return int(e.exportN.Load())
-}
-
-func (e *testExporter) Stop() {
-	if e.stopped.Swap(true) {
-		return
-	}
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	clear(e.records)
-	e.records = nil
 }
 
 func (e *testExporter) Shutdown(ctx context.Context) error {
@@ -108,7 +94,6 @@ func (e *testExporter) ForceFlushN() int {
 func TestChunker(t *testing.T) {
 	t.Run("ZeroSize", func(t *testing.T) {
 		exp := newTestExporter(nil)
-		t.Cleanup(exp.Stop)
 		c := newChunkExporter(exp, 0)
 		const size = 100
 		_ = c.Export(t.Context(), make([]Record, size))
@@ -121,7 +106,6 @@ func TestChunker(t *testing.T) {
 
 	t.Run("ForceFlush", func(t *testing.T) {
 		exp := newTestExporter(nil)
-		t.Cleanup(exp.Stop)
 		c := newChunkExporter(exp, 0)
 		_ = c.ForceFlush(t.Context())
 		assert.Equal(t, 1, exp.ForceFlushN(), "ForceFlush not passed through")
@@ -129,7 +113,6 @@ func TestChunker(t *testing.T) {
 
 	t.Run("Shutdown", func(t *testing.T) {
 		exp := newTestExporter(nil)
-		t.Cleanup(exp.Stop)
 		c := newChunkExporter(exp, 0)
 		_ = c.Shutdown(t.Context())
 		assert.Equal(t, 1, exp.ShutdownN(), "Shutdown not passed through")
@@ -137,7 +120,6 @@ func TestChunker(t *testing.T) {
 
 	t.Run("Chunk", func(t *testing.T) {
 		exp := newTestExporter(nil)
-		t.Cleanup(exp.Stop)
 		c := newChunkExporter(exp, 10)
 		assert.NoError(t, c.Export(t.Context(), make([]Record, 5)))
 		assert.NoError(t, c.Export(t.Context(), make([]Record, 25)))
@@ -152,7 +134,6 @@ func TestChunker(t *testing.T) {
 
 	t.Run("ExportError", func(t *testing.T) {
 		exp := newTestExporter(assert.AnError)
-		t.Cleanup(exp.Stop)
 		c := newChunkExporter(exp, 0)
 		ctx := t.Context()
 		records := make([]Record, 25)
@@ -167,7 +148,6 @@ func TestChunker(t *testing.T) {
 
 	t.Run("CanceledBetweenChunks", func(t *testing.T) {
 		exp := newTestExporter(nil)
-		t.Cleanup(exp.Stop)
 		ctx, cancel := context.WithCancel(t.Context())
 		t.Cleanup(cancel)
 		exp.ExportFunc = func(context.Context, []Record) error {
@@ -189,7 +169,6 @@ func TestChunker(t *testing.T) {
 func TestTimeoutExporter(t *testing.T) {
 	t.Run("ZeroTimeout", func(t *testing.T) {
 		exp := newTestExporter(nil)
-		t.Cleanup(exp.Stop)
 		e := newTimeoutExporter(exp, 0)
 		assert.Same(t, exp, e)
 	})
@@ -199,7 +178,6 @@ func TestTimeoutExporter(t *testing.T) {
 		t.Cleanup(func() { close(trigger) })
 
 		exp := newTestExporter(nil)
-		t.Cleanup(exp.Stop)
 		exp.ExportTrigger = trigger
 		e := newTimeoutExporter(exp, time.Nanosecond)
 
