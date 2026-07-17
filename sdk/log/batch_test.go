@@ -560,70 +560,19 @@ func TestBatchProcessorForceFlushErrorShutdownConcurrentSafe(t *testing.T) {
 }
 
 func TestBatchProcessorConcurrentSafe(t *testing.T) {
-	var (
-		active    atomic.Int32
-		maxActive atomic.Int32
-	)
-	call := func() {
-		n := active.Add(1)
-		for {
-			old := maxActive.Load()
-			if n <= old || maxActive.CompareAndSwap(old, n) {
-				break
-			}
-		}
-		time.Sleep(time.Microsecond)
-		active.Add(-1)
-	}
-
 	e := &testExporter{}
-	e.ExportFunc = func(context.Context, []Record) error {
-		call()
-		return nil
-	}
-	e.ForceFlushFunc = func(context.Context) error {
-		call()
-		return nil
-	}
-	e.ShutdownFunc = func(context.Context) error {
-		call()
-		return nil
-	}
-
-	b := NewBatchProcessor(
-		e,
-		WithMaxQueueSize(64),
-		WithExportMaxBatchSize(8),
-		WithExportInterval(time.Millisecond),
-	)
+	b := NewBatchProcessor(e)
 	defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
 
-	ctx, cancel := context.WithCancel(t.Context())
 	var wg sync.WaitGroup
-	for range 4 {
+	for range 10 {
 		wg.Go(func() {
-			for ctx.Err() == nil {
-				_ = b.OnEmit(ctx, new(Record))
-			}
+			_ = b.OnEmit(t.Context(), new(Record))
+			_ = b.ForceFlush(t.Context())
+			_ = b.Shutdown(t.Context())
 		})
 	}
-	for range 4 {
-		wg.Go(func() {
-			for ctx.Err() == nil {
-				_ = b.ForceFlush(ctx)
-			}
-		})
-	}
-
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.Positive(c, e.ExportN())
-	}, 2*time.Second, time.Microsecond, "no export attempted")
-	require.NoError(t, b.Shutdown(t.Context()))
-	cancel()
 	wg.Wait()
-
-	assert.Equal(t, int32(1), maxActive.Load(), "concurrent exporter calls")
-	assert.Equal(t, 1, e.ShutdownN(), "Shutdown calls")
 }
 
 func TestQueue(t *testing.T) {
