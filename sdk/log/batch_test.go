@@ -748,7 +748,6 @@ func TestQueueCloseConcurrentSafe(t *testing.T) {
 
 type blockingBenchmarkExporter struct {
 	release chan struct{}
-	once    sync.Once
 }
 
 func (e *blockingBenchmarkExporter) Export(ctx context.Context, _ []Record) error {
