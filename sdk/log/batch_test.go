@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 )
@@ -262,6 +263,33 @@ func TestBatchProcessor(t *testing.T) {
 		assert.GreaterOrEqual(t, e.ExportN(), 10)
 	})
 
+	t.Run("ScheduledExportError", func(t *testing.T) {
+		original := otel.GetErrorHandler()
+		handled := make(chan error, 1)
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			select {
+			case handled <- err:
+			default:
+			}
+		}))
+		t.Cleanup(func() { otel.SetErrorHandler(original) })
+
+		e := &testExporter{
+			ExportFunc: func(context.Context, []Record) error {
+				return assert.AnError
+			},
+		}
+		b := NewBatchProcessor(
+			e,
+			WithMaxQueueSize(1),
+			WithExportInterval(time.Hour),
+		)
+		defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
+
+		require.NoError(t, b.OnEmit(ctx, new(Record)))
+		assert.ErrorIs(t, <-handled, assert.AnError)
+	})
+
 	t.Run("RetriggerFlushNonBlocking", func(t *testing.T) {
 		e := &testExporter{}
 		e.ExportTrigger = make(chan struct{})
@@ -405,6 +433,66 @@ func TestBatchProcessor(t *testing.T) {
 			c, cancel := context.WithCancel(ctx)
 			cancel()
 			assert.ErrorIs(t, b.ForceFlush(c), context.Canceled)
+		})
+	})
+
+	t.Run("CanceledWhileWaiting", func(t *testing.T) {
+		blockedExporter := func() (*testExporter, <-chan struct{}, func()) {
+			started := make(chan struct{})
+			release := make(chan struct{})
+			var once sync.Once
+			e := &testExporter{
+				ExportFunc: func(context.Context, []Record) error {
+					close(started)
+					<-release
+					return nil
+				},
+			}
+			return e, started, func() { once.Do(func() { close(release) }) }
+		}
+
+		t.Run("ForceFlush", func(t *testing.T) {
+			exp, exportStarted, unblock := blockedExporter()
+			b := NewBatchProcessor(
+				exp,
+				WithExportInterval(time.Hour),
+			)
+			defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
+			defer unblock()
+
+			require.NoError(t, b.OnEmit(t.Context(), new(Record)))
+			ctx, cancel := context.WithCancel(t.Context())
+			flushErr := make(chan error, 1)
+			go func() { flushErr <- b.ForceFlush(ctx) }()
+
+			<-exportStarted
+			cancel()
+			assert.ErrorIs(t, <-flushErr, context.Canceled)
+		})
+
+		t.Run("Shutdown", func(t *testing.T) {
+			exp, exportStarted, unblock := blockedExporter()
+			shutdownDone := make(chan struct{})
+			exp.ShutdownFunc = func(context.Context) error {
+				close(shutdownDone)
+				return nil
+			}
+			b := NewBatchProcessor(
+				exp,
+				WithMaxQueueSize(1),
+				WithExportInterval(time.Hour),
+			)
+			defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
+			defer unblock()
+
+			require.NoError(t, b.OnEmit(t.Context(), new(Record)))
+			<-exportStarted
+
+			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Millisecond)
+			defer cancel()
+			assert.ErrorIs(t, b.Shutdown(ctx), context.DeadlineExceeded)
+			unblock()
+			<-shutdownDone
 		})
 	})
 
