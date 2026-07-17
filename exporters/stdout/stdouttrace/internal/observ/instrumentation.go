@@ -3,7 +3,7 @@
 
 // Package observ provides experimental observability instrumentation
 // for the stdout trace exporter.
-package observ // import "go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/observ"
+package observ
 
 import (
 	"context"

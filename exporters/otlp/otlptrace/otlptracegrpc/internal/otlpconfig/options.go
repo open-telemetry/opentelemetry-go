@@ -5,7 +5,7 @@
 // source: internal/shared/otlp/otlptrace/otlpconfig/options.go.tmpl
 
 // Package otlpconfig provides configuration for the otlptrace exporters.
-package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig"
+package otlpconfig
 
 import (
 	"crypto/tls"
@@ -286,6 +286,11 @@ func WithEndpointURL(v string) GenericOption {
 
 		cfg.Traces.Endpoint = u.Host
 		cfg.Traces.URLPath = u.Path
+		if cfg.Traces.URLPath == "" {
+			// For HTTP exporters, a URL without a path targets the root path. Set it explicitly so the default signal
+			// path is not appended by cleanPath. (URLPath is ignored by gRPC exporters.)
+			cfg.Traces.URLPath = "/"
+		}
 		cfg.Traces.Insecure = u.Scheme != "https"
 
 		return cfg

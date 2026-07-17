@@ -4,13 +4,12 @@
 //go:build tools
 // +build tools
 
-package tools // import "go.opentelemetry.io/otel/internal/tools"
+package tools
 
 import (
 	_ "github.com/client9/misspell/cmd/misspell"
 	_ "github.com/gogo/protobuf/protoc-gen-gogofast"
 	_ "github.com/golangci/golangci-lint/v2/cmd/golangci-lint"
-	_ "github.com/jcchavezs/porto/cmd/porto"
 	_ "github.com/wadey/gocovmerge"
 	_ "go.opentelemetry.io/build-tools/crosslink"
 	_ "go.opentelemetry.io/build-tools/gotmpl"

@@ -5,7 +5,7 @@
 // source: internal/shared/otlp/otlpmetric/oconf/options.go.tmpl
 
 // Package oconf provides configuration for the otlpmetric exporters.
-package oconf // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
+package oconf
 
 import (
 	"crypto/tls"
@@ -295,6 +295,11 @@ func WithEndpointURL(v string) GenericOption {
 
 		cfg.Metrics.Endpoint = u.Host
 		cfg.Metrics.URLPath = u.Path
+		if cfg.Metrics.URLPath == "" {
+			// For HTTP exporters, a URL without a path targets the root path. Set it explicitly so the default signal
+			// path is not appended by cleanPath. (URLPath is ignored by gRPC exporters.)
+			cfg.Metrics.URLPath = "/"
+		}
 		cfg.Metrics.Insecure = u.Scheme != "https"
 
 		return cfg

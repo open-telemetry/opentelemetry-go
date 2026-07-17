@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package migration // import "go.opentelemetry.io/otel/bridge/opentracing/migration"
+package migration
 
 import (
 	"context"

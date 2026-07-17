@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package zipkin // import "go.opentelemetry.io/otel/exporters/zipkin"
+package zipkin
 
 import (
 	"encoding/binary"

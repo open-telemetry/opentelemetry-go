@@ -5,7 +5,7 @@
 // source: internal/shared/attrdedup/dedup.go.tmpl
 
 // Package attrdedup deduplicates attribute map values.
-package attrdedup // import "go.opentelemetry.io/otel/sdk/log/internal/attrdedup"
+package attrdedup
 
 import (
 	"reflect"
