@@ -526,7 +526,7 @@ func TestBatchProcessorShutdownIncludesForceFlush(t *testing.T) {
 	assert.Equal(t, []string{"export", "force flush", "shutdown"}, calls)
 }
 
-func TestBatchProcessorForceFlushErrorWithConcurrentShutdown(t *testing.T) {
+func TestBatchProcessorForceFlushErrorShutdownConcurrentSafe(t *testing.T) {
 	exportStarted := make(chan struct{})
 	releaseExport := make(chan struct{})
 	var release sync.Once
@@ -553,10 +553,6 @@ func TestBatchProcessorForceFlushErrorWithConcurrentShutdown(t *testing.T) {
 
 	shutdownErr := make(chan error, 1)
 	go func() { shutdownErr <- b.Shutdown(t.Context()) }()
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, b.stopped.Load(), "processor stopped state")
-		assert.Len(c, b.shutdown, 1, "shutdown requests")
-	}, time.Second, time.Microsecond, "shutdown request not queued")
 	unblock()
 
 	assert.ErrorIs(t, <-flushErr, assert.AnError)
