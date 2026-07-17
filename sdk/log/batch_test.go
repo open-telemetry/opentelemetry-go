@@ -22,18 +22,18 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 )
 
-type concurrentBuffer struct {
+type syncBuffer struct {
 	b bytes.Buffer
 	m sync.Mutex
 }
 
-func (b *concurrentBuffer) Write(p []byte) (n int, err error) {
+func (b *syncBuffer) Write(p []byte) (n int, err error) {
 	b.m.Lock()
 	defer b.m.Unlock()
 	return b.b.Write(p)
 }
 
-func (b *concurrentBuffer) String() string {
+func (b *syncBuffer) String() string {
 	b.m.Lock()
 	defer b.m.Unlock()
 	return b.b.String()
@@ -418,7 +418,7 @@ func TestBatchProcessor(t *testing.T) {
 		orig := global.GetLogger()
 		t.Cleanup(func() { global.SetLogger(orig) })
 		// Use concurrentBuffer for concurrent-safe reading.
-		buf := new(concurrentBuffer)
+		buf := new(syncBuffer)
 		stdr.SetVerbosity(1)
 		global.SetLogger(stdr.New(stdlog.New(buf, "", 0)))
 
