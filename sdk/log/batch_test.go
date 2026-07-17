@@ -412,7 +412,6 @@ func TestBatchProcessor(t *testing.T) {
 	t.Run("DroppedLogs", func(t *testing.T) {
 		orig := global.GetLogger()
 		t.Cleanup(func() { global.SetLogger(orig) })
-		// Use concurrentBuffer for concurrent-safe reading.
 		buf := new(syncBuffer)
 		stdr.SetVerbosity(1)
 		global.SetLogger(stdr.New(stdlog.New(buf, "", 0)))
@@ -773,7 +772,7 @@ func TestQueue(t *testing.T) {
 	})
 }
 
-func TestQueueConcurrentSafeClose(t *testing.T) {
+func TestQueueCloseConcurrentSafe(t *testing.T) {
 	const writers = 32
 	q := newQueue(writers)
 	start := make(chan struct{})
