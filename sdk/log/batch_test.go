@@ -746,11 +746,11 @@ func TestQueueCloseConcurrentSafe(t *testing.T) {
 	assert.False(t, ok)
 }
 
-type blockingBenchmarkExporter struct {
+type blockingExporter struct {
 	release chan struct{}
 }
 
-func (e *blockingBenchmarkExporter) Export(ctx context.Context, _ []Record) error {
+func (e *blockingExporter) Export(ctx context.Context, _ []Record) error {
 	select {
 	case <-e.release:
 		return nil
@@ -759,12 +759,12 @@ func (e *blockingBenchmarkExporter) Export(ctx context.Context, _ []Record) erro
 	}
 }
 
-func (*blockingBenchmarkExporter) ForceFlush(context.Context) error { return nil }
+func (*blockingExporter) ForceFlush(context.Context) error { return nil }
 
-func (*blockingBenchmarkExporter) Shutdown(context.Context) error { return nil }
+func (*blockingExporter) Shutdown(context.Context) error { return nil }
 
 func BenchmarkBatchProcessorOnEmitExporterBlocked(b *testing.B) {
-	exp := &blockingBenchmarkExporter{
+	exp := &blockingExporter{
 		release: make(chan struct{}),
 	}
 	bp := NewBatchProcessor(
