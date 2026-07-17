@@ -9,6 +9,7 @@ import (
 	stdlog "log"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -646,6 +647,86 @@ func TestBatchProcessorForceFlushErrorShutdownConcurrentSafe(t *testing.T) {
 
 	assert.ErrorIs(t, <-flushErr, assert.AnError)
 	assert.NoError(t, <-shutdownErr)
+}
+
+func TestBatchProcessorSerializesExporterCallsConcurrentSafe(t *testing.T) {
+	// Track all exporter entry points with the same counters so an overlap
+	// between any combination of calls raises maxActive above one.
+	var (
+		active    atomic.Int32
+		maxActive atomic.Int32
+	)
+	call := func() {
+		n := active.Add(1)
+		for {
+			old := maxActive.Load()
+			if n <= old || maxActive.CompareAndSwap(old, n) {
+				break
+			}
+		}
+		// Keep the callback active long enough for a concurrent call to enter if
+		// the BatchProcessor stops serializing exporter calls.
+		time.Sleep(time.Microsecond)
+		active.Add(-1)
+	}
+
+	e := &testExporter{}
+	e.ExportFunc = func(context.Context, []Record) error {
+		call()
+		return nil
+	}
+	e.ForceFlushFunc = func(context.Context) error {
+		call()
+		return nil
+	}
+	e.ShutdownFunc = func(context.Context) error {
+		call()
+		return nil
+	}
+
+	b := NewBatchProcessor(
+		e,
+		WithMaxQueueSize(64),
+		WithExportMaxBatchSize(8),
+		WithExportInterval(time.Millisecond),
+	)
+	defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
+
+	// Keep emission and flush traffic in flight so Shutdown races with work
+	// already being handled instead of only exercising the stopped fast path.
+	var wg sync.WaitGroup
+	// Use a child context as the shared stop signal for the looping callers.
+	// Canceling it also unblocks a pending ForceFlush if the test exits early.
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	for range 4 {
+		wg.Go(func() {
+			for ctx.Err() == nil {
+				_ = b.OnEmit(ctx, new(Record))
+			}
+		})
+	}
+	for range 4 {
+		wg.Go(func() {
+			for ctx.Err() == nil {
+				_ = b.ForceFlush(ctx)
+			}
+		})
+	}
+
+	// Ensure the ordinary export and flush paths reached the exporter before
+	// initiating Shutdown and testing serialization of the terminal call.
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.Positive(c, e.ExportN(), "Export calls")
+		assert.Positive(c, e.ForceFlushN(), "ForceFlush calls")
+	}, 10*time.Second, time.Microsecond, "exporter methods not exercised")
+	require.NoError(t, b.Shutdown(t.Context()))
+	cancel()
+	wg.Wait()
+
+	assert.Equal(t, int32(1), maxActive.Load(), "concurrent exporter calls")
+	assert.Zero(t, active.Load(), "active exporter calls")
+	assert.Equal(t, 1, e.ShutdownN(), "Shutdown calls")
 }
 
 func TestBatchProcessorConcurrentSafe(t *testing.T) {
