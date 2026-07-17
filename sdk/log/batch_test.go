@@ -206,7 +206,9 @@ func TestBatchProcessor(t *testing.T) {
 	t.Run("NilExporter", func(t *testing.T) {
 		var b *BatchProcessor
 		assert.NotPanics(t, func() { b = NewBatchProcessor(nil) })
-		defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
+		assert.NoError(t, b.OnEmit(ctx, new(Record)))
+		assert.NoError(t, b.ForceFlush(ctx))
+		assert.NoError(t, b.Shutdown(ctx))
 	})
 
 	t.Run("Polling", func(t *testing.T) {

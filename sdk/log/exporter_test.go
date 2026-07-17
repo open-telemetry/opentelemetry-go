@@ -142,6 +142,16 @@ func TestChunker(t *testing.T) {
 		assert.Equal(t, 4, exp.ExportN(), "all chunks attempted")
 	})
 
+	t.Run("CanceledContext", func(t *testing.T) {
+		exp := &testExporter{}
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+
+		err := newChunkExporter(exp, 10).Export(ctx, make([]Record, 25))
+		assert.ErrorIs(t, err, context.Canceled)
+		assert.Zero(t, exp.ExportN(), "Export calls")
+	})
+
 	t.Run("CanceledBetweenChunks", func(t *testing.T) {
 		exp := &testExporter{}
 		ctx, cancel := context.WithCancel(t.Context())
