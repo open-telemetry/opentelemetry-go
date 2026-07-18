@@ -325,6 +325,21 @@ func TestSeverityNumber(t *testing.T) {
 	}
 }
 
+func TestLogRecordDroppedAttributesCount(t *testing.T) {
+	record := logtest.RecordFactory{
+		Timestamp:         ts,
+		ObservedTimestamp: obs,
+		Severity:          sevC,
+		SeverityText:      "C",
+		Body:              bodyC,
+		Attributes:        []attribute.KeyValue{tom},
+		DroppedAttributes: 7,
+	}.NewRecord()
+
+	got := LogRecord(record)
+	assert.Equal(t, uint32(7), got.DroppedAttributesCount)
+}
+
 func BenchmarkResourceLogs(b *testing.B) {
 	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {

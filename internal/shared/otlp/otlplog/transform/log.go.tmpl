@@ -9,6 +9,7 @@
 package transform
 
 import (
+	"math"
 	"time"
 
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -89,15 +90,15 @@ func ResourceLogs(records []log.Record) []*lpb.ResourceLogs {
 // LogRecord returns an OTLP LogRecord generated from record.
 func LogRecord(record log.Record) *lpb.LogRecord {
 	r := &lpb.LogRecord{
-		TimeUnixNano:         timeUnixNano(record.Timestamp()),
-		ObservedTimeUnixNano: timeUnixNano(record.ObservedTimestamp()),
-		EventName:            record.EventName(),
-		SeverityNumber:       SeverityNumber(record.Severity()),
-		SeverityText:         record.SeverityText(),
-		Body:                 AttrValue(record.Body()),
-		Attributes:           make([]*cpb.KeyValue, 0, record.AttributesLen()),
-		Flags:                uint32(record.TraceFlags()),
-		// TODO: DroppedAttributesCount: /* ... */,
+		TimeUnixNano:           timeUnixNano(record.Timestamp()),
+		ObservedTimeUnixNano:   timeUnixNano(record.ObservedTimestamp()),
+		EventName:              record.EventName(),
+		SeverityNumber:         SeverityNumber(record.Severity()),
+		SeverityText:           record.SeverityText(),
+		Body:                   AttrValue(record.Body()),
+		Attributes:             make([]*cpb.KeyValue, 0, record.AttributesLen()),
+		DroppedAttributesCount: clampUint32(record.DroppedAttributes()),
+		Flags:                  uint32(record.TraceFlags()),
 	}
 	record.WalkAttributes(func(kv attribute.KeyValue) bool {
 		r.Attributes = append(r.Attributes, Attr(kv))
@@ -123,6 +124,16 @@ func timeUnixNano(t time.Time) uint64 {
 		return 0
 	}
 	return uint64(nano) // nolint:gosec // Overflow checked.
+}
+
+func clampUint32(v int) uint32 {
+	if v < 0 {
+		return 0
+	}
+	if int64(v) > math.MaxUint32 {
+		return math.MaxUint32
+	}
+	return uint32(v) // nolint:gosec // Overflow/Underflow checked.
 }
 
 // AttrIter transforms an [attribute.Iterator] into OTLP key-values.
