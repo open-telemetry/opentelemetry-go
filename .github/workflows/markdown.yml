@@ -36,7 +36,6 @@ jobs:
         number=$(gh issue list --search "in:title Workflow failed: $GITHUB_WORKFLOW" --limit 1 --json number -q .[].number)
 
         echo $number
-        echo ${{ inputs.success }}
 
         if [[ $number ]]; then
           if [[ "${{ steps.markdownlint.outcome }}" != "failure" ]]; then
