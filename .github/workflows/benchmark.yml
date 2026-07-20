@@ -49,7 +49,7 @@ jobs:
           apt-get update
           apt-get install -y make build-essential git ca-certificates curl
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      # This makes CodSpeed running inside the container to use git correctly.
+      # This makes CodSpeed running inside the container use git correctly.
       - name: Mark workspace as a safe Git directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
