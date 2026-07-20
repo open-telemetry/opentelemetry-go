@@ -37,8 +37,8 @@ jobs:
     name: Benchmarks
     runs-on: oracle-bare-metal-64cpu-1024gb-x86-64-ubuntu-24
     container:
-      image: ubuntu:26.04@sha256:3131b4cc82a783df6c9df078f86e01819a13594b865c2cad47bd1bca2b7063bb
-      # CodSpeed's profiling feature needs elevated permissions.
+      image: ubuntu:24.04@sha256:52df9b1ee71626e0088f7d400d5c6b5f7bb916f8f0c82b474289a4ece6cf3faf
+      # CodSpeed's profiling feature needs elevated permissions for profiling.
       options: --privileged
     strategy:
       matrix:
