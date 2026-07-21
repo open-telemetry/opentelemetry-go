@@ -36,7 +36,9 @@ jobs:
     name: Benchmarks
     runs-on: oracle-bare-metal-64cpu-1024gb-x86-64-ubuntu-24
     container:
-      image: ubuntu:26.04@sha256:3131b4cc82a783df6c9df078f86e01819a13594b865c2cad47bd1bca2b7063bb
+      image: ubuntu:24.04@sha256:52df9b1ee71626e0088f7d400d5c6b5f7bb916f8f0c82b474289a4ece6cf3faf
+      # CodSpeed's profiling feature needs elevated permissions.
+      options: --cap-add=PERFMON
     strategy:
       matrix:
         shard: ${{ fromJson(needs.sharding-benchmark.outputs.shards) }}
@@ -47,12 +49,19 @@ jobs:
           apt-get update
           apt-get install -y make build-essential git ca-certificates curl
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      # This makes CodSpeed running inside the container use git correctly.
+      - name: Mark workspace as a safe Git directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true
           cache-dependency-path: "**/go.sum"
       - name: Run the benchmarks
+        env:
+          # Job containers do not run systemd. Without this override,
+          # CodSpeed tries to start the benchmark using systemd-run.
+          CODSPEED_ISOLATION: "false"
         uses: CodSpeedHQ/action@f99becdce5e5d51fd556489ebef684f4ecfd6286 # v4.18.5
         with:
           mode: walltime
