@@ -21,16 +21,28 @@ jobs:
 
     - name: Run linter
       id: markdownlint
-      uses: docker://avtodev/markdown-lint:v1@sha256:6aeedc2f49138ce7a1cd0adffc1b1c0321b841dc2102408967d9301c031949ee
+      uses: DavidAnson/markdownlint-cli2-action@8de2aa07cae85fd17c0b35642db70cf5495f1d25 # v24.0.0
       with:
-        config: .markdownlint.yaml
-        args: '**/*.md'
-        output: ./markdownlint.txt
+        config: .markdownlint-cli2.yaml
+        fix: false
+        globs: |
+          '**/*.md'
+      continue-on-error: true
 
-    - name: Create Issue From File
-      if: steps.markdownlint.outputs.exit_code != 0
-      uses: peter-evans/create-issue-from-file@fca9117c27cdc29c6c4db3b86c48e4115a786710 # v6.0.0
-      with:
-        title: Markdown Lint Report
-        content-filepath: ./markdownlint.txt
-        labels: report, bot-generated
+    - name: Manage issue
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        number=$(gh issue list --search "in:title Workflow failed: $GITHUB_WORKFLOW" --limit 1 --json number -q .[].number)
+
+        echo $number
+
+        if [[ $number ]]; then
+          if [[ "${{ steps.markdownlint.outcome }}" != "failure" ]]; then
+            gh issue close $number
+          fi
+        elif [[ "${{ steps.markdownlint.outcome }}" == "failure"  ]]; then
+          gh issue create --title "Workflow failed: $GITHUB_WORKFLOW (#$GITHUB_RUN_NUMBER)" \
+                          --body "See [$GITHUB_WORKFLOW #$GITHUB_RUN_NUMBER](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)." \
+                          --label "report,bot-generated"
+        fi

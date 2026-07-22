@@ -58,7 +58,9 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Run linter
-        uses: docker://avtodev/markdown-lint:v1@sha256:6aeedc2f49138ce7a1cd0adffc1b1c0321b841dc2102408967d9301c031949ee
-        with:
-          args: ${{needs.changedfiles.outputs.md}}
+      - name: Run linteruses: DavidAnson/markdownlint-cli2-action@8de2aa07cae85fd17c0b35642db70cf5495f1d25 # v24.0.0
+      with:
+        config: .markdownlint-cli2.yaml
+        fix: false
+        globs: |
+          ${{needs.changedfiles.outputs.md}}
