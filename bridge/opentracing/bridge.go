@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -115,10 +116,11 @@ func (s *bridgeSpan) FinishWithOptions(opts ot.FinishOptions) {
 }
 
 func (s *bridgeSpan) logRecord(record ot.LogRecord) {
+	attrs := otLogFieldsToOTelAttrs(record.Fields)
 	s.otelSpan.AddEvent(
-		"",
+		otelEventName(attrs),
 		trace.WithTimestamp(record.Timestamp),
-		trace.WithAttributes(otLogFieldsToOTelAttrs(record.Fields)...),
+		trace.WithAttributes(attrs...),
 	)
 }
 
@@ -155,9 +157,10 @@ func (s *bridgeSpan) SetTag(key string, value any) ot.Span {
 }
 
 func (s *bridgeSpan) LogFields(fields ...otlog.Field) {
+	attrs := otLogFieldsToOTelAttrs(fields)
 	s.otelSpan.AddEvent(
-		"",
-		trace.WithAttributes(otLogFieldsToOTelAttrs(fields)...),
+		otelEventName(attrs),
+		trace.WithAttributes(attrs...),
 	)
 }
 
@@ -221,6 +224,30 @@ func otLogFieldsToOTelAttrs(fields []otlog.Field) []attribute.KeyValue {
 		field.Marshal(encoder)
 	}
 	return encoder.pairs
+}
+
+// eventNameKey is the OpenTracing log field conventionally carrying the name
+// of the logged event.
+const eventNameKey = attribute.Key("event")
+
+// defaultEventName is used when a log field set carries no usable
+// eventNameKey field.
+const defaultEventName = "log"
+
+// otelEventName returns the OTel event name for a set of converted OpenTracing
+// log fields: the value of the last eventNameKey attribute, falling back to
+// defaultEventName. An event name is semantically required to be non-empty, so
+// an empty value is treated as absent.
+func otelEventName(attrs []attribute.KeyValue) string {
+	for _, attr := range slices.Backward(attrs) {
+		if attr.Key != eventNameKey {
+			continue
+		}
+		if name := attr.Value.String(); name != "" {
+			return name
+		}
+	}
+	return defaultEventName
 }
 
 func (s *bridgeSpan) LogKV(alternatingKeyValues ...any) {
