@@ -5,7 +5,7 @@
 // source: internal/shared/otlp/otlptrace/otlpconfig/options.go.tmpl
 
 // Package otlpconfig provides configuration for the otlptrace exporters.
-package otlpconfig // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
+package otlpconfig
 
 import (
 	"crypto/tls"

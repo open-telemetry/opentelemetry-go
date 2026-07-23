@@ -26,6 +26,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/otel/semconv/v1.42.0` package. (#8484)
   The package contains semantic conventions from the `v1.42.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.42.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.41.0`.
+- Add `go.opentelemetry.io/otel/semconv/v1.43.0` package. (#8628)
+  The package contains semantic conventions from the `v1.43.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.43.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.42.0`.
 
 ### Changed
 
