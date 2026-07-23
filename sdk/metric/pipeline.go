@@ -42,6 +42,7 @@ func newPipeline(
 	reader Reader,
 	views []View,
 	exemplarFilter exemplar.Filter,
+	filter metricFilter,
 	cardinalityLimit int,
 ) *pipeline {
 	if res == nil {
@@ -51,6 +52,7 @@ func newPipeline(
 		resource:         res,
 		reader:           reader,
 		views:            views,
+		filter:           filter,
 		int64Measures:    map[observableID[int64]][]aggregate.Measure[int64]{},
 		float64Measures:  map[observableID[float64]][]aggregate.Measure[float64]{},
 		exemplarFilter:   exemplarFilter,
@@ -70,6 +72,8 @@ type pipeline struct {
 
 	reader Reader
 	views  []View
+
+	filter metricFilter
 
 	sync.Mutex
 	int64Measures    map[observableID[int64]][]aggregate.Measure[int64]
@@ -163,8 +167,22 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		rm.ScopeMetrics[i].Metrics = internal.ReuseSlice(rm.ScopeMetrics[i].Metrics, len(instruments))
 		j := 0
 		for _, inst := range instruments {
+			// TODO: Inject MetricFilter TestMetric logic here.
+			if p.filter != nil {
+				// Run p.filter.TestMetric(scope, inst.name, inst.kind, inst.unit)
+				// If result is Drop, continue (skip to next instrument).
+				// If result is Accept_Partial, mark instrument for TestAttributes check.
+			}
+
 			data := rm.ScopeMetrics[i].Metrics[j].Data
 			if n := inst.compAgg(&data); n > 0 {
+				// TODO: Inject MetricFilter TestAttributes logic here.
+				if p.filter != nil {
+					// If marked as Accept_Partial, iterate through attribute sets in data.
+					// Run p.filter.TestAttributes(...)
+					// If result is Drop, remove attribute set from data.
+				}
+
 				rm.ScopeMetrics[i].Metrics[j].Name = inst.name
 				rm.ScopeMetrics[i].Metrics[j].Description = inst.description
 				rm.ScopeMetrics[i].Metrics[j].Unit = inst.unit
