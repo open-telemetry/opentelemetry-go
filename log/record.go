@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package log // import "go.opentelemetry.io/otel/log"
+package log
 
 import (
 	"slices"
@@ -57,6 +57,7 @@ func (r *Record) EventName() string {
 
 // SetEventName sets the event name.
 // A log record with non-empty event name is interpreted as an event record.
+// Event names should uniquely identify the event's attribute and body structure.
 func (r *Record) SetEventName(s string) {
 	r.eventName = s
 }
