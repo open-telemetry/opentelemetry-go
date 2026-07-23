@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr/funcr"
 	"github.com/go-logr/logr/testr"
@@ -33,6 +34,52 @@ func TestMeterConcurrentSafe(*testing.T) {
 
 	_ = mp.Meter(name)
 	<-done
+}
+
+// TestShutdownHonorsContextDeadline verifies Shutdown returns by the caller's
+// deadline instead of blocking on an in-flight collection that holds the
+// pipeline lock.
+func TestShutdownHonorsContextDeadline(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	started := make(chan struct{})
+	release := make(chan struct{})
+	_, err := m.Int64ObservableCounter("ctr",
+		api.WithInt64Callback(func(context.Context, api.Int64Observer) error {
+			close(started)
+			<-release // Hold the pipeline lock until the test releases it.
+			return nil
+		}))
+	require.NoError(t, err)
+
+	// Start a collection that parks in the callback while holding the pipeline
+	// lock, then wait until it has actually started.
+	collectDone := make(chan struct{})
+	go func() {
+		defer close(collectDone)
+		var rm metricdata.ResourceMetrics
+		_ = reader.Collect(t.Context(), &rm)
+	}()
+	<-started
+
+	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+	defer cancel()
+	shutdownDone := make(chan error, 1)
+	go func() { shutdownDone <- mp.Shutdown(ctx) }()
+
+	select {
+	case err := <-shutdownDone:
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+	case <-time.After(2 * time.Second):
+		t.Fatal("Shutdown blocked past its context deadline")
+	}
+
+	// Release the callback so it frees the pipeline lock.
+	close(release)
+	// Wait so the collection goroutine does not outlive the test.
+	<-collectDone
 }
 
 func TestForceFlushConcurrentSafe(t *testing.T) {

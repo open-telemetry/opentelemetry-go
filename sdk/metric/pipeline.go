@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -18,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -47,6 +49,12 @@ func newPipeline(
 	if res == nil {
 		res = resource.Empty()
 	}
+	var pool *callbackPool
+	if x.ParallelCallbacks.Enabled() {
+		// Callbacks are expected to be fast and local, so a small pool sized to
+		// GOMAXPROCS suffices.
+		pool = newCallbackPool(runtime.GOMAXPROCS(0))
+	}
 	return &pipeline{
 		resource:         res,
 		reader:           reader,
@@ -55,6 +63,7 @@ func newPipeline(
 		float64Measures:  map[observableID[float64]][]aggregate.Measure[float64]{},
 		exemplarFilter:   exemplarFilter,
 		cardinalityLimit: cardinalityLimit,
+		pool:             pool,
 		// aggregations is lazy allocated when needed.
 	}
 }
@@ -79,6 +88,11 @@ type pipeline struct {
 	multiCallbacks   list.List
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+
+	// pool runs observable callbacks concurrently during produce when the
+	// experimental parallel-callbacks feature is enabled; it is nil otherwise.
+	// stop resets it to nil on shutdown.
+	pool *callbackPool
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
@@ -140,20 +154,7 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 	p.Lock()
 	defer p.Unlock()
 
-	var err error
-	for _, c := range p.callbacks {
-		// TODO make the callbacks parallel. ( #3034 )
-		if e := c(ctx); e != nil {
-			err = errors.Join(err, e)
-		}
-	}
-	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
-		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(multiCallback)
-		if e := f(ctx); e != nil {
-			err = errors.Join(err, e)
-		}
-	}
+	err := p.runCallbacks(ctx)
 
 	rm.Resource = p.resource
 	rm.ScopeMetrics = internal.ReuseSlice(rm.ScopeMetrics, len(p.aggregations))
@@ -182,6 +183,157 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 	rm.ScopeMetrics = rm.ScopeMetrics[:i]
 
 	return err
+}
+
+func (p *pipeline) runCallbacks(ctx context.Context) error {
+	if p.pool == nil {
+		return p.runCallbacksSequential(ctx)
+	}
+	return p.runCallbacksParallel(ctx)
+}
+
+func (p *pipeline) runCallbacksSequential(ctx context.Context) error {
+	var err error
+	for _, c := range p.callbacks {
+		if e := c(ctx); e != nil {
+			err = errors.Join(err, e)
+		}
+	}
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+		if e2 := e.Value.(multiCallback)(ctx); e2 != nil {
+			err = errors.Join(err, e2)
+		}
+	}
+	return err
+}
+
+func (p *pipeline) runCallbacksParallel(ctx context.Context) error {
+	pool := p.pool
+	// produce holds p's lock for the whole batch and stop takes that lock before
+	// tearing the pool down, so only one produce call ever uses the pool at a
+	// time; that is what makes reusing batch/err/ctx safe. ctx is published to
+	// workers by the channel sends below (send happens-before receive) and so
+	// needs no mutex; mu guards only err, which workers join concurrently.
+	pool.ctx = ctx
+
+	for _, c := range p.callbacks {
+		pool.batch.Add(1)
+		pool.jobs <- c
+	}
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+		pool.batch.Add(1)
+		pool.jobs <- e.Value.(multiCallback)
+	}
+	pool.batch.Wait()
+
+	// Workers are done (batch.Wait returned); release the batch context and take
+	// the joined error so the pool retains neither between collections.
+	pool.ctx = nil
+	return pool.takeErr()
+}
+
+// stop tears down this pipeline's resources on shutdown.
+func (p *pipeline) stop(ctx context.Context) error {
+	// TryLock guards against an already-canceled ctx. If it succeeds, no
+	// collection is running, so teardown is fast and completes regardless of
+	// ctx. Racing ctx here instead would report failure on a clean shutdown
+	// whose ctx just happened to be already done.
+	if p.TryLock() {
+		pool := p.pool
+		p.pool = nil
+		// Unlock before pool.stop waits on the workers so a concurrent produce
+		// is not blocked while they exit.
+		p.Unlock()
+		if pool != nil {
+			pool.stop()
+		}
+		return nil
+	}
+	// A collection holds the lock and cannot be interrupted. Wait for it on a
+	// separate goroutine so stop can return once ctx is done; the goroutine still
+	// finishes teardown after the collection releases the lock.
+	done := make(chan struct{})
+	go func() {
+		p.Lock()
+		pool := p.pool
+		p.pool = nil
+		p.Unlock()
+		if pool != nil {
+			pool.stop()
+		}
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// callbackPool is a fixed set of long-lived worker goroutines that execute
+// observable callbacks during collection. Workers are started once and reused
+// across collections, avoiding per-collection goroutine churn.
+type callbackPool struct {
+	jobs   chan func(context.Context) error
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+
+	// batch, err, and ctx coordinate one produce call's callbacks and are reused
+	// across produce calls to avoid per-call allocation. This is safe because
+	// produce holds the pipeline lock for the whole batch, so only one produce
+	// call ever uses them at a time. mu guards err, which workers join into
+	// concurrently. ctx is published to workers by the job-channel send (send
+	// happens-before receive) and so needs no mutex.
+	batch sync.WaitGroup
+	mu    sync.Mutex
+	err   error
+	ctx   context.Context
+}
+
+// newCallbackPool starts worker goroutines that block waiting for jobs until
+// stop is called.
+func newCallbackPool(workers int) *callbackPool {
+	ctx, cancel := context.WithCancel(context.Background())
+	p := &callbackPool{jobs: make(chan func(context.Context) error), cancel: cancel}
+	for range workers {
+		p.wg.Go(func() {
+			for {
+				select {
+				case cb := <-p.jobs:
+					p.runJob(cb)
+				case <-ctx.Done():
+					return
+				}
+			}
+		})
+	}
+	return p
+}
+
+func (p *callbackPool) runJob(cb func(context.Context) error) {
+	defer p.batch.Done()
+	if e := cb(p.ctx); e != nil {
+		p.mu.Lock()
+		p.err = errors.Join(p.err, e)
+		p.mu.Unlock()
+	}
+}
+
+// takeErr returns the joined error of the just-completed batch and clears it so
+// the next batch starts clean and the pool does not retain it. Call only after
+// batch.Wait has returned, when no worker is touching err.
+func (p *callbackPool) takeErr() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	err := p.err
+	p.err = nil
+	return err
+}
+
+func (p *callbackPool) stop() {
+	p.cancel()
+	p.wg.Wait()
 }
 
 // inserter facilitates inserting of new instruments from a single scope into a
