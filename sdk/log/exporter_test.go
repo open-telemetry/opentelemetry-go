@@ -213,7 +213,7 @@ func TestExportSync(t *testing.T) {
 		in := make(chan exportData, 1)
 		exp := newTestExporter(assert.AnError)
 		t.Cleanup(exp.Stop)
-		done := exportSync(in, exp)
+		done := exportSync(in, exp, nil)
 
 		var wg sync.WaitGroup
 		wg.Go(func() {
@@ -234,7 +234,7 @@ func TestExportSync(t *testing.T) {
 		in := make(chan exportData, 1)
 		exp := newTestExporter(assert.AnError)
 		t.Cleanup(exp.Stop)
-		done := exportSync(in, exp)
+		done := exportSync(in, exp, nil)
 
 		const goRoutines = 10
 		var wg sync.WaitGroup
@@ -382,7 +382,8 @@ func TestBufferExporter(t *testing.T) {
 
 			trigger := make(chan struct{})
 			exp.ExportTrigger = trigger
-			t.Cleanup(func() { close(trigger) })
+			release := sync.OnceFunc(func() { close(trigger) })
+			t.Cleanup(release)
 			e := newBufferExporter(exp, 1)
 
 			// Make sure there is something to flush.
@@ -393,7 +394,11 @@ func TestBufferExporter(t *testing.T) {
 
 			err := e.Shutdown(ctx)
 			assert.ErrorIs(t, err, context.Canceled)
-			assert.ErrorIs(t, err, assert.AnError)
+			assert.Zero(t, exp.ShutdownN(), "Shutdown called before export worker stopped")
+			release()
+			require.Eventually(t, func() bool {
+				return exp.ShutdownN() == 1
+			}, time.Second, time.Microsecond, "exporter was not shut down")
 		})
 
 		t.Run("Error", func(t *testing.T) {
@@ -588,4 +593,45 @@ func TestBufferExporter(t *testing.T) {
 			assert.True(t, e.EnqueueExport(make([]Record, 1)))
 		})
 	})
+}
+
+func TestBatchProcessorDoesNotExportAfterExporterShutdown(t *testing.T) {
+	exporter := newTestExporter(nil)
+	exporter.ExportTrigger = make(chan struct{})
+	release := sync.OnceFunc(func() { close(exporter.ExportTrigger) })
+	t.Cleanup(exporter.Stop)
+	t.Cleanup(release)
+
+	processor := NewBatchProcessor(
+		exporter,
+		WithExportMaxBatchSize(1),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+
+	require.NoError(t, processor.OnEmit(t.Context(), new(Record)))
+	require.Eventually(t, func() bool {
+		return exporter.ExportN() == 1
+	}, time.Second, time.Microsecond, "first export did not start")
+
+	require.NoError(t, processor.OnEmit(t.Context(), new(Record)))
+	require.Eventually(t, func() bool {
+		return len(processor.exporter.input) == 1
+	}, time.Second, time.Microsecond, "second export was not buffered")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	assert.ErrorIs(t, processor.Shutdown(ctx), context.Canceled)
+	assert.Zero(t, exporter.ShutdownN(), "Shutdown called before export worker stopped")
+
+	release()
+	select {
+	case <-processor.exporter.done:
+	case <-time.After(time.Second):
+		t.Fatal("export worker did not stop")
+	}
+	assert.Equal(t, 1, exporter.ExportN())
+	require.Eventually(t, func() bool {
+		return exporter.ShutdownN() == 1
+	}, time.Second, time.Microsecond, "exporter was not shut down")
 }

@@ -126,15 +126,39 @@ func (e *timeoutExporter) Export(ctx context.Context, records []Record) error {
 	return e.Exporter.Export(ctx, records)
 }
 
-// exportSync exports all data from input using exporter in a spawned
-// goroutine. The returned chan will be closed when the spawned goroutine
-// completes.
-func exportSync(input <-chan exportData, exporter Exporter) (done chan struct{}) {
+// exportSync exports data from input sequentially using exporter in a spawned
+// goroutine. Closing abort discards data that has not started exporting. Input
+// must be closed before abort. The returned chan is closed when the spawned
+// goroutine completes.
+func exportSync(input <-chan exportData, exporter Exporter, abort <-chan struct{}) (done chan struct{}) {
 	done = make(chan struct{})
 	go func() {
 		defer close(done)
-		for data := range input {
-			data.DoExport(exporter.Export)
+		discard := func() {
+			for data := range input {
+				data.respond(nil)
+			}
+		}
+		for {
+			select {
+			case <-abort:
+				// Unblock callers waiting for accepted work, but do not start
+				// another export after shutdown has begun.
+				discard()
+				return
+			case data, ok := <-input:
+				if !ok {
+					return
+				}
+				select {
+				case <-abort:
+					data.respond(nil)
+					discard()
+					return
+				default:
+					data.DoExport(exporter.Export)
+				}
+			}
 		}
 	}()
 	return done
@@ -182,6 +206,7 @@ type bufferExporter struct {
 	input   chan exportData
 	inputMu sync.Mutex
 
+	abort   chan struct{}
 	done    chan struct{}
 	stopped atomic.Bool
 }
@@ -194,11 +219,13 @@ func newBufferExporter(exporter Exporter, size int) *bufferExporter {
 		size = 1
 	}
 	input := make(chan exportData, size)
+	abort := make(chan struct{})
 	return &bufferExporter{
 		Exporter: exporter,
 
 		input: input,
-		done:  exportSync(input, exporter),
+		abort: abort,
+		done:  exportSync(input, exporter, abort),
 	}
 }
 
@@ -304,23 +331,33 @@ func (e *bufferExporter) ForceFlush(ctx context.Context) error {
 
 // Shutdown shuts down e.
 //
-// Any buffered exports are flushed before this returns.
+// Buffered exports are flushed before this returns unless ctx is canceled. On
+// cancellation, the export worker is signaled to discard exports it has not
+// started and this returns without waiting for it. Exporter.Shutdown is called
+// after the worker stops.
 //
-// All calls to EnqueueExport or Exporter will return nil without any export
-// after this is called.
+// After Shutdown returns, EnqueueExport returns true without enqueueing and Export
+// returns nil without exporting.
 func (e *bufferExporter) Shutdown(ctx context.Context) error {
 	if e.stopped.Swap(true) {
 		return nil
 	}
 	e.inputMu.Lock()
-	defer e.inputMu.Unlock()
-
 	// No more sends will be made.
 	close(e.input)
+	e.inputMu.Unlock()
+
+	wait := make(chan error, 1)
+	go func() {
+		<-e.done
+		wait <- e.Exporter.Shutdown(ctx)
+	}()
+
 	select {
-	case <-e.done:
+	case err := <-wait:
+		return err
 	case <-ctx.Done():
-		return errors.Join(ctx.Err(), e.Exporter.Shutdown(ctx))
+		close(e.abort)
+		return ctx.Err()
 	}
-	return e.Exporter.Shutdown(ctx)
 }
