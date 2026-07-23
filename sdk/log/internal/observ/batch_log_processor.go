@@ -25,6 +25,9 @@ const (
 // ErrQueueFull is the attribute value for the "queue_full" error type.
 var ErrQueueFull = otelconv.SDKProcessorLogProcessed{}.AttrErrorType("queue_full")
 
+// ErrAlreadyShutdown is the attribute value for the "already_shutdown" error type.
+var ErrAlreadyShutdown = otelconv.SDKProcessorLogProcessed{}.AttrErrorType("already_shutdown")
+
 // BLPComponentName returns the component name attribute for a
 // BatchLogProcessor with the given ID.
 func BLPComponentName(id int64) attribute.KeyValue {
@@ -37,9 +40,10 @@ func BLPComponentName(id int64) attribute.KeyValue {
 type BLP struct {
 	reg metric.Registration
 
-	processed              metric.Int64Counter
-	processedOpts          []metric.AddOption
-	processedQueueFullOpts []metric.AddOption
+	processed                    metric.Int64Counter
+	processedOpts                []metric.AddOption
+	processedQueueFullOpts       []metric.AddOption
+	processedAlreadyShutdownOpts []metric.AddOption
 }
 
 // NewBLP creates a new BatchLogProcessor instrumentation.
@@ -96,14 +100,19 @@ func NewBLP(id int64, qLen func() int64, qMax int64) (*BLP, error) {
 	}
 
 	processedOpts := []metric.AddOption{metric.WithAttributeSet(set)}
-	setWithError := attribute.NewSet(cmpnt, cmpntT, ErrQueueFull)
-	processedQueueFullOpts := []metric.AddOption{metric.WithAttributeSet(setWithError)}
+	queueFullSet := attribute.NewSet(cmpnt, cmpntT, ErrQueueFull)
+	processedQueueFullOpts := []metric.AddOption{metric.WithAttributeSet(queueFullSet)}
+	alreadyShutdownSet := attribute.NewSet(cmpnt, cmpntT, ErrAlreadyShutdown)
+	processedAlreadyShutdownOpts := []metric.AddOption{
+		metric.WithAttributeSet(alreadyShutdownSet),
+	}
 
 	return &BLP{
-		reg:                    reg,
-		processed:              processed.Inst(),
-		processedOpts:          processedOpts,
-		processedQueueFullOpts: processedQueueFullOpts,
+		reg:                          reg,
+		processed:                    processed.Inst(),
+		processedOpts:                processedOpts,
+		processedQueueFullOpts:       processedQueueFullOpts,
+		processedAlreadyShutdownOpts: processedAlreadyShutdownOpts,
 	}, nil
 }
 
@@ -123,5 +132,11 @@ func (b *BLP) Processed(ctx context.Context, n int64) {
 func (b *BLP) ProcessedQueueFull(ctx context.Context, n int64) {
 	if b.processed.Enabled(ctx) {
 		b.processed.Add(ctx, n, b.processedQueueFullOpts...)
+	}
+}
+
+func (b *BLP) ProcessedAlreadyShutdown(ctx context.Context, n int64) {
+	if b.processed.Enabled(ctx) {
+		b.processed.Add(ctx, n, b.processedAlreadyShutdownOpts...)
 	}
 }

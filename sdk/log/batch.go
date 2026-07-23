@@ -221,8 +221,14 @@ func (*BatchProcessor) Enabled(context.Context, EnabledParameters) bool {
 }
 
 // OnEmit batches provided log record.
-func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
-	if b.stopped.Load() || b.q == nil {
+func (b *BatchProcessor) OnEmit(ctx context.Context, r *Record) error {
+	if b.stopped.Load() {
+		if b.inst != nil {
+			b.inst.ProcessedAlreadyShutdown(ctx, 1)
+		}
+		return nil
+	}
+	if b.q == nil {
 		return nil
 	}
 	// The record is cloned so that changes done by subsequent processors
