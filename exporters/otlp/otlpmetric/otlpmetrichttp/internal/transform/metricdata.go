@@ -6,7 +6,7 @@
 
 // Package transform provides transformation functionality from the
 // sdk/metric/metricdata data-types into OTLP data-types.
-package transform // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/transform"
+package transform
 
 import (
 	"fmt"

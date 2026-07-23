@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package log // import "go.opentelemetry.io/otel/sdk/log"
+package log
 
 import (
 	"context"
@@ -24,8 +24,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
-	"go.opentelemetry.io/otel/semconv/v1.42.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -559,56 +559,90 @@ func (e wrappedErr) Error() string { return "wrapped: " + e.err.Error() }
 
 func (e wrappedErr) Unwrap() error { return e.err }
 
-func TestNewRecordSkipsExceptionWhenPresent(t *testing.T) {
+type derivationError struct{}
+
+func (*derivationError) Error() string {
+	return "derived.message"
+}
+
+func (*derivationError) ErrorType() string {
+	return "derived.type"
+}
+
+func TestNewRecordExceptionAttributePrecedence(t *testing.T) {
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
-	t.Run("ExistingMessage", func(t *testing.T) {
-		var r log.Record
-		r.SetBody(attribute.StringValue("boom"))
-		r.SetSeverity(log.SeverityError)
-		r.SetErr(errors.New("boom"))
-		r.AddAttributes(attribute.String(string(semconv.ExceptionMessageKey), "existing.message"))
+	testCases := []struct {
+		name           string
+		attrs          []attribute.KeyValue
+		wantMessage    string
+		wantType       string
+		wantStacktrace string
+	}{
+		{
+			name: "ExistingMessage",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionMessageKey), "existing.message"),
+			},
+			wantMessage: "existing.message",
+			wantType:    "derived.type",
+		},
+		{
+			name: "ExistingType",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionTypeKey), "existing.type"),
+			},
+			wantMessage: "derived.message",
+			wantType:    "existing.type",
+		},
+		{
+			name: "ExistingMessageAndType",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionMessageKey), "existing.message"),
+				attribute.String(string(semconv.ExceptionTypeKey), "existing.type"),
+			},
+			wantMessage: "existing.message",
+			wantType:    "existing.type",
+		},
+		{
+			name: "ExistingStacktrace",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionStacktraceKey), "existing.stacktrace"),
+			},
+			wantMessage:    "derived.message",
+			wantType:       "derived.type",
+			wantStacktrace: "existing.stacktrace",
+		},
+	}
 
-		got := l.newRecord(t.Context(), r)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var r log.Record
+			r.SetBody(attribute.StringValue("boom"))
+			r.SetSeverity(log.SeverityError)
+			r.SetErr(new(derivationError))
+			r.AddAttributes(tc.attrs...)
 
-		var gotType, gotMessage string
-		got.WalkAttributes(func(kv attribute.KeyValue) bool {
-			switch kv.Key {
-			case semconv.ExceptionTypeKey:
-				gotType = kv.Value.AsString()
-			case semconv.ExceptionMessageKey:
-				gotMessage = kv.Value.AsString()
-			}
-			return true
+			got := l.newRecord(t.Context(), r)
+
+			var gotType, gotMessage, gotStacktrace string
+			got.WalkAttributes(func(kv attribute.KeyValue) bool {
+				switch kv.Key {
+				case semconv.ExceptionTypeKey:
+					gotType = kv.Value.AsString()
+				case semconv.ExceptionMessageKey:
+					gotMessage = kv.Value.AsString()
+				case semconv.ExceptionStacktraceKey:
+					gotStacktrace = kv.Value.AsString()
+				}
+				return true
+			})
+
+			assert.Equal(t, tc.wantMessage, gotMessage)
+			assert.Equal(t, tc.wantType, gotType)
+			assert.Equal(t, tc.wantStacktrace, gotStacktrace)
 		})
-
-		assert.Equal(t, "existing.message", gotMessage)
-		assert.Empty(t, gotType)
-	})
-
-	t.Run("ExistingType", func(t *testing.T) {
-		var r log.Record
-		r.SetBody(attribute.StringValue("boom"))
-		r.SetSeverity(log.SeverityError)
-		r.SetErr(errors.New("boom"))
-		r.AddAttributes(attribute.String(string(semconv.ExceptionTypeKey), "existing.type"))
-
-		got := l.newRecord(t.Context(), r)
-
-		var gotType, gotMessage string
-		got.WalkAttributes(func(kv attribute.KeyValue) bool {
-			switch kv.Key {
-			case semconv.ExceptionTypeKey:
-				gotType = kv.Value.AsString()
-			case semconv.ExceptionMessageKey:
-				gotMessage = kv.Value.AsString()
-			}
-			return true
-		})
-
-		assert.Equal(t, "existing.type", gotType)
-		assert.Empty(t, gotMessage)
-	})
+	}
 }
 
 func TestLoggerEnabled(t *testing.T) {
