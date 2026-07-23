@@ -8,7 +8,7 @@
 //
 // This package is used to generate unique IDs while allowing testing packages
 // to reset the counter.
-package counter // import "go.opentelemetry.io/otel/exporters/prometheus/internal/counter"
+package counter
 
 import "sync/atomic"
 

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package log // import "go.opentelemetry.io/otel/sdk/log"
+package log
 
 import (
 	"context"
@@ -72,6 +72,8 @@ type Processor interface {
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the Processor (and any underlying Exporter) should be
 	// done in this call.
+	//
+	// Shutdown must include the effects of ForceFlush.
 	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
