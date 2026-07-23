@@ -35,6 +35,25 @@
 // is being run on. That way when multiple instances of the code are collected
 // at a single endpoint their origin is decipherable.
 //
+// # Environment Variables
+//
+// The following environment variables are used by this package.
+//
+// OTEL_METRIC_EXPORT_INTERVAL (default: 60000) and
+// OTEL_METRIC_EXPORT_TIMEOUT (default: 30000) -
+// configure [NewPeriodicReader] when [WithInterval] or [WithTimeout] are not
+// used. The values are interpreted as milliseconds.
+//
+// OTEL_METRICS_EXEMPLAR_FILTER (default: trace_based) -
+// configures the exemplar filter used by [NewMeterProvider] when
+// [WithExemplarFilter] is not used. Supported values are always_on,
+// always_off, and trace_based.
+//
+// Resource-related environment variables, including OTEL_RESOURCE_ATTRIBUTES
+// and OTEL_SERVICE_NAME, are documented in
+// [go.opentelemetry.io/otel/sdk/resource] and are applied when this package
+// uses the default resource or [WithResource].
+//
 // To avoid leaking memory, the SDK returns the same instrument for calls to
 // create new instruments with the same Name, Unit, and Description.
 // Importantly, callbacks provided using metric.WithFloat64Callback or
