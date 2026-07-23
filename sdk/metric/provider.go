@@ -15,6 +15,15 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/attrdedup"
 )
 
+type meterConfigurator func(instrumentation.Scope) any
+
+type meterConfigReader interface{ Enabled() bool }
+
+type meterConfiguratorOption interface {
+	Experimental()
+	MeterConfigurator() func(instrumentation.Scope) any
+}
+
 // MeterProvider handles the creation and coordination of Meters. All Meters
 // created by a MeterProvider will be associated with the same Resource, have
 // the same Views applied to them, and have their produced metric telemetry
@@ -22,8 +31,9 @@ import (
 type MeterProvider struct {
 	embedded.MeterProvider
 
-	pipes  pipelines
-	meters cache[instrumentation.Scope, *meter]
+	pipes        pipelines
+	meters       cache[instrumentation.Scope, *meter]
+	configurator atomic.Pointer[meterConfigurator]
 
 	forceFlush, shutdown func(context.Context) error
 	stopped              atomic.Bool
@@ -47,6 +57,14 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 		forceFlush: flush,
 		shutdown:   sdown,
 	}
+
+	for _, o := range options {
+		if mco, ok := o.(meterConfiguratorOption); ok {
+			fn := meterConfigurator(mco.MeterConfigurator())
+			mp.configurator.Store(&fn)
+		}
+	}
+
 	// Log after creation so all readers show correctly they are registered.
 	global.Info(
 		"MeterProvider created",
@@ -94,8 +112,17 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	)
 
 	return mp.meters.Lookup(s, func() *meter {
+		// TODO: set initial enabled state from configurator (Step 3: meter.enabled)
 		return newMeter(s, mp.pipes)
 	})
+}
+
+// SetMeterConfigurator sets the MeterConfigurator on the MeterProvider,
+// satisfying [x.MeterConfiguratorUpdater] implicitly.
+func (mp *MeterProvider) SetMeterConfigurator(fn func(instrumentation.Scope) any) {
+	c := meterConfigurator(fn)
+	mp.configurator.Store(&c)
+	// TODO: walk meters cache and update enabled state (Step 2: cache.Range)
 }
 
 // ForceFlush flushes all pending telemetry.
