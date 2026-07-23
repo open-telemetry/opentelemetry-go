@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package log // import "go.opentelemetry.io/otel/sdk/log"
+package log
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/log/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -127,7 +127,7 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 	cfg := log.NewLoggerConfig(opts...)
 	attrs := cfg.InstrumentationAttributes()
 	if !p.allowDupKeys {
-		attrs, _ = attrdedup.Set(attrs)
+		attrs, _ = attrnorm.Set(attrs)
 	}
 	scope := instrumentation.Scope{
 		Name:       name,

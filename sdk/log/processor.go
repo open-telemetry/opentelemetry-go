@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package log // import "go.opentelemetry.io/otel/sdk/log"
+package log
 
 import (
 	"context"
@@ -87,6 +87,8 @@ type Processor interface {
 	// LoggerProvider waits for all Enabled, OnEmit, and ForceFlush calls it
 	// admitted to complete. If the LoggerProvider's Shutdown context is canceled
 	// while waiting, Shutdown is not called.
+  //
+	// Shutdown must include the effects of ForceFlush.
 	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.

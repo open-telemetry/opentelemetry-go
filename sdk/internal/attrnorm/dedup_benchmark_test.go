@@ -1,13 +1,13 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package attrdedup_test
+package attrnorm_test
 
 import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/internal/attrnorm"
 )
 
 func BenchmarkValue(b *testing.B) {
@@ -47,7 +47,7 @@ func BenchmarkValue(b *testing.B) {
 		b.Run(value.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				_, _ = attrdedup.Value(value.value)
+				_, _ = attrnorm.Value(value.value)
 			}
 		})
 	}

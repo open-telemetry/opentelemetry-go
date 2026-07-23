@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package ast // import "go.opentelemetry.io/otel/schema/v1.1/ast"
+package ast
 
 import (
 	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
