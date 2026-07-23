@@ -738,6 +738,36 @@ func BenchmarkBatchProcessorOnEmit(b *testing.B) {
 	})
 }
 
+func BenchmarkBatchProcessorEmitAndExport(b *testing.B) {
+	r := new(Record)
+	body := attribute.BoolValue(true)
+	r.SetBody(body)
+
+	rSize := unsafe.Sizeof(r) + unsafe.Sizeof(body)
+	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	ctx := context.Background()
+	bp := NewBatchProcessor(
+		defaultNoopExporter,
+		WithMaxQueueSize(100000),
+		WithExportMaxBatchSize(100),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	b.Cleanup(func() { _ = bp.Shutdown(ctx) })
+
+	b.SetBytes(int64(rSize) * 100)
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			for i := 0; i < 100; i++ {
+				_ = bp.OnEmit(ctx, r)
+			}
+			_ = bp.ForceFlush(ctx)
+		}
+	})
+}
+
 type blockingRecordExporter struct {
 	ExportFunc func(context.Context, []Record) error
 }
