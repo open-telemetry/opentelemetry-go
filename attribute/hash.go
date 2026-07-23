@@ -33,9 +33,9 @@ const (
 	emptyID        uint64 = 7305809155345288421 // "__empty_" (little endian)
 )
 
-// Hasher computes an authoritative Distinct hash incrementally
-// for a sequence of KeyValue attributes.
-// The zero value of Hasher is safe to use.
+// Hasher computes a Distinct value from KeyValue attributes supplied with Write.
+//
+// The zero value is ready to use.
 type Hasher struct {
 	h     xxhash.Hash
 	count int
@@ -47,9 +47,12 @@ func NewHasher() Hasher {
 	return Hasher{h: *xxhash.New(), init: true}
 }
 
-// Write adds a KeyValue attribute to the hash computation.
-// Attributes written to Hasher must be sorted by key and deduplicated
-// for the returned Distinct to match Set.Equivalent().
+// Write adds kv to the hash.
+//
+// Write does not sort attributes or remove duplicate keys. To produce the same
+// Distinct as Set.Equivalent, write attributes in ascending key order, with no
+// more than one value for each key. If the source contains duplicate keys,
+// retain the last value for each key before calling Write.
 func (h *Hasher) Write(kv KeyValue) {
 	if !h.init {
 		h.h = *xxhash.New()
@@ -59,7 +62,8 @@ func (h *Hasher) Write(kv KeyValue) {
 	h.count++
 }
 
-// Distinct returns the authoritative Distinct value corresponding to the written attributes.
+// Distinct returns the identifier for the attributes written to h. When Write
+// is called as described above, it returns the same value as [Set.Equivalent].
 func (h *Hasher) Distinct() Distinct {
 	if h.count == 0 {
 		return emptySet.Equivalent()
