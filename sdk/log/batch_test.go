@@ -831,6 +831,39 @@ func TestBatchProcessorMetrics(t *testing.T) {
 	require.NoError(t, bp.Shutdown(ctx))
 }
 
+func TestBatchProcessorMetricsAlreadyShutdown(t *testing.T) {
+	origID := counter.SetExporterID(blpComponentID)
+	t.Cleanup(func() { counter.SetExporterID(origID) })
+
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	bp := NewBatchProcessor(
+		defaultNoopExporter,
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	ctx := t.Context()
+	require.NoError(t, bp.OnEmit(ctx, new(Record)))
+	require.NoError(t, bp.Shutdown(ctx))
+	require.NoError(t, bp.OnEmit(ctx, new(Record)))
+	require.NoError(t, bp.OnEmit(ctx, new(Record)))
+
+	assertBLPMetrics(
+		t, reader,
+		blpProcessed(
+			blpDPt(blpSet(), 1),
+			blpDPt(blpSet(observ.ErrAlreadyShutdown), 2),
+		),
+	)
+}
+
 func blpSet(attrs ...attribute.KeyValue) attribute.Set {
 	return attribute.NewSet(append([]attribute.KeyValue{
 		semconv.OTelComponentTypeBatchingLogProcessor,

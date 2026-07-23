@@ -153,18 +153,24 @@ func TestBLPProcessed(t *testing.T) {
 	blp.Processed(ctx, p0)
 	const e0 int64 = 1
 	blp.ProcessedQueueFull(ctx, e0)
+	const s0 int64 = 2
+	blp.ProcessedAlreadyShutdown(ctx, s0)
 	check(t, collect(), processed(
 		dPt(blpSet(), p0),
 		dPt(blpSet(observ.ErrQueueFull), e0),
+		dPt(blpSet(observ.ErrAlreadyShutdown), s0),
 	))
 
 	const p1 int64 = 20
 	blp.Processed(ctx, p1)
 	const e1 int64 = 2
 	blp.ProcessedQueueFull(ctx, e1)
+	const s1 int64 = 3
+	blp.ProcessedAlreadyShutdown(ctx, s1)
 	check(t, collect(), processed(
 		dPt(blpSet(), p0+p1),
 		dPt(blpSet(observ.ErrQueueFull), e0+e1),
+		dPt(blpSet(observ.ErrAlreadyShutdown), s0+s1),
 	))
 }
 
@@ -194,6 +200,9 @@ func BenchmarkBLP(b *testing.B) {
 	}{
 		{"Processed", func(blp *observ.BLP, ctx context.Context) { blp.Processed(ctx, 10) }},
 		{"ProcessedQueueFull", func(blp *observ.BLP, ctx context.Context) { blp.ProcessedQueueFull(ctx, 1) }},
+		{"ProcessedAlreadyShutdown", func(blp *observ.BLP, ctx context.Context) {
+			blp.ProcessedAlreadyShutdown(ctx, 1)
+		}},
 	} {
 		b.Run(tt.name, func(b *testing.B) {
 			otel.SetMeterProvider(noop.NewMeterProvider())
