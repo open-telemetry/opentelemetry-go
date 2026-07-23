@@ -10,3 +10,5 @@ package internal
 //go:generate gotmpl --body=../../../internal/shared/attrnorm/dedup_test.go.tmpl "--data={}" --out=attrnorm/dedup_test.go
 //go:generate gotmpl --body=../../../internal/shared/attrnorm/truncate.go.tmpl "--data={}" --out=attrnorm/truncate.go
 //go:generate gotmpl --body=../../../internal/shared/attrnorm/truncate_test.go.tmpl "--data={}" --out=attrnorm/truncate_test.go
+//go:generate gotmpl --body=../../../internal/shared/counter/counter.go.tmpl "--data={ \"pkg\": \"go.opentelemetry.io/otel/sdk/log\" }" --out=counter/counter.go
+//go:generate gotmpl --body=../../../internal/shared/counter/counter_test.go.tmpl "--data={}" --out=counter/counter_test.go

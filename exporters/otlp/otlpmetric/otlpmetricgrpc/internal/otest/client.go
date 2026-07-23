@@ -23,7 +23,7 @@ import (
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 var (
