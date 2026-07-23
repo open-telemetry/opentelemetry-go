@@ -87,7 +87,7 @@ type Processor interface {
 	// LoggerProvider waits for all Enabled, OnEmit, and ForceFlush calls it
 	// admitted to complete. If the LoggerProvider's Shutdown context is canceled
 	// while waiting, Shutdown is not called.
-  //
+	//
 	// Shutdown must include the effects of ForceFlush.
 	//
 	// The deadline or cancellation of the passed context must be honored. An
