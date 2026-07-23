@@ -6,12 +6,15 @@ package log
 import (
 	"context"
 	"errors"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/log/internal/counter"
+	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 )
 
 const (
@@ -58,6 +61,9 @@ type BatchProcessor struct {
 	// stopped holds the stopped state of the BatchProcessor.
 	stopped atomic.Bool
 
+	// inst is the instrumentation for observability (nil when disabled).
+	inst *observ.BLP
+
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
@@ -81,6 +87,33 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
 	}
+
+	b := &BatchProcessor{
+		q:             newQueue(cfg.maxQSize.Value),
+		batchSize:     cfg.expMaxBatchSize.Value,
+		exportTrigger: make(chan struct{}, 1),
+		flush:         make(chan batchProcessorRequest),
+		shutdown:      make(chan batchProcessorRequest, 1),
+		done:          make(chan struct{}),
+	}
+
+	var err error
+	b.inst, err = observ.NewBLP(
+		counter.NextExporterID(),
+		func() int64 { return int64(b.q.Len()) },
+		int64(cfg.maxQSize.Value),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
+
+	// Wrap exporter with metrics recording if observability is enabled.
+	// This must be the innermost wrapper (closest to user exporter) to record
+	// metrics just before calling the actual exporter.
+	if b.inst != nil {
+		exporter = newMetricsExporter(exporter, b.inst)
+	}
+
 	// Order is important here. Wrap the timeoutExporter with the chunkExporter
 	// to ensure each export completes in timeout (instead of all chunked
 	// exports).
@@ -89,15 +122,7 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	// appropriately on export.
 	exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
 
-	b := &BatchProcessor{
-		exporter:      exporter,
-		q:             newQueue(cfg.maxQSize.Value),
-		batchSize:     cfg.expMaxBatchSize.Value,
-		exportTrigger: make(chan struct{}, 1),
-		flush:         make(chan batchProcessorRequest),
-		shutdown:      make(chan batchProcessorRequest, 1),
-		done:          make(chan struct{}),
-	}
+	b.exporter = exporter
 	b.process(cfg.expInterval.Value)
 	return b
 }
@@ -214,11 +239,18 @@ func (b *BatchProcessor) shutdownExporter(ctx context.Context) error {
 	} else {
 		err = errors.Join(err, b.exporter.ForceFlush(ctx))
 	}
-	return errors.Join(err, b.exporter.Shutdown(ctx))
+	err = errors.Join(err, b.exporter.Shutdown(ctx))
+	if b.inst != nil {
+		err = errors.Join(err, b.inst.Shutdown())
+	}
+	return err
 }
 
 func (b *BatchProcessor) logDroppedRecords() {
 	if d := b.q.Dropped(); d > 0 {
+		if b.inst != nil {
+			b.inst.ProcessedQueueFull(context.Background(), int64(min(math.MaxInt64, d))) // nolint:gosec
+		}
 		global.Warn("dropped log records", "dropped", d)
 	}
 }
@@ -248,7 +280,8 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 	return nil
 }
 
-// Shutdown flushes queued log records and shuts down the decorated exporter.
+// Shutdown flushes queued log records and the decorated exporter before
+// shutting it down.
 func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 	if b.stopped.Swap(true) || b.q == nil {
 		return nil

@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 )
 
 // Exporter handles the delivery of log records to external receivers.
@@ -61,6 +63,11 @@ func (noopExporter) Export(context.Context, []Record) error { return nil }
 func (noopExporter) Shutdown(context.Context) error { return nil }
 
 func (noopExporter) ForceFlush(context.Context) error { return nil }
+
+func shutdownExporter(ctx context.Context, exporter Exporter) error {
+	err := exporter.ForceFlush(ctx)
+	return errors.Join(err, exporter.Shutdown(ctx))
+}
 
 // chunkExporter wraps an Exporter's Export method so it is called with
 // appropriately sized export payloads. Any payload larger than a defined size
@@ -125,5 +132,30 @@ func (e *timeoutExporter) Export(ctx context.Context, records []Record) error {
 	// Thus, the error message points to the processor. So users know they should adjust the processor timeout.
 	ctx, cancel := context.WithTimeoutCause(ctx, e.timeout, errors.New("processor export timeout"))
 	defer cancel()
+	return e.Exporter.Export(ctx, records)
+}
+
+// metricsExporter wraps an Exporter to record log processing metrics
+// just before calling the wrapped exporter.
+type metricsExporter struct {
+	Exporter
+	inst *observ.BLP
+}
+
+// newMetricsExporter creates a metricsExporter that wraps the given exporter.
+func newMetricsExporter(exporter Exporter, inst *observ.BLP) Exporter {
+	return &metricsExporter{
+		Exporter: exporter,
+		inst:     inst,
+	}
+}
+
+// Export records the number of log records as a metric then forwards
+// them to the wrapped Exporter. Error returned from wrapped exporter
+// is not considered as per specification (to be measured by exporter).
+func (e *metricsExporter) Export(ctx context.Context, records []Record) error {
+	if e.inst != nil {
+		e.inst.Processed(ctx, int64(len(records)))
+	}
 	return e.Exporter.Export(ctx, records)
 }

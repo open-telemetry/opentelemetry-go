@@ -6,8 +6,10 @@ package log
 import (
 	"bytes"
 	"context"
+	"errors"
 	stdlog "log"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -20,6 +22,15 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/log/internal/counter"
+	"go.opentelemetry.io/otel/sdk/log/internal/observ"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 type syncBuffer struct {
@@ -290,12 +301,12 @@ func TestBatchProcessor(t *testing.T) {
 		defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
 
 		require.NoError(t, b.OnEmit(ctx, new(Record)))
- 		select {
- 		case err := <-handled:
- 			assert.ErrorIs(t, err, assert.AnError)
- 		case <-time.After(10 * time.Second):
- 			t.Fatal("timed out waiting for scheduled export error")
- 		}
+		select {
+		case err := <-handled:
+			assert.ErrorIs(t, err, assert.AnError)
+		case <-time.After(10 * time.Second):
+			t.Fatal("timed out waiting for scheduled export error")
+		}
 	})
 
 	t.Run("RetriggerFlushNonBlocking", func(t *testing.T) {
@@ -347,6 +358,31 @@ func TestBatchProcessor(t *testing.T) {
 			assert.NoError(t, b.Shutdown(ctx))
 		})
 
+		t.Run("FlushesBeforeShutdown", func(t *testing.T) {
+			exportErr := errors.New("export")
+			forceFlushErr := errors.New("force flush")
+			shutdownErr := errors.New("shutdown")
+			e := &testExporter{
+				ExportErr:     exportErr,
+				ForceFlushErr: forceFlushErr,
+				ShutdownErr:   shutdownErr,
+			}
+			b := NewBatchProcessor(
+				e,
+				WithMaxQueueSize(2),
+				WithExportMaxBatchSize(2),
+				WithExportInterval(time.Hour),
+				WithExportTimeout(time.Hour),
+			)
+			require.NoError(t, b.OnEmit(ctx, new(Record)))
+
+			err := b.Shutdown(ctx)
+			assert.ErrorIs(t, err, exportErr)
+			assert.ErrorIs(t, err, forceFlushErr)
+			assert.ErrorIs(t, err, shutdownErr)
+			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.Calls())
+		})
+
 		t.Run("Multiple", func(t *testing.T) {
 			e := &testExporter{}
 			b := NewBatchProcessor(e)
@@ -356,6 +392,7 @@ func TestBatchProcessor(t *testing.T) {
 			for range shutdowns {
 				assert.NoError(t, b.Shutdown(ctx))
 			}
+			assert.Equal(t, 1, e.ForceFlushN(), "exporter ForceFlush calls")
 			assert.Equal(t, 1, e.ShutdownN(), "exporter Shutdown calls")
 		})
 
@@ -377,6 +414,7 @@ func TestBatchProcessor(t *testing.T) {
 
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 			assert.NoError(t, b.Shutdown(ctx))
+			assert.Equal(t, 1, e.ForceFlushN(), "ForceFlush not called by Shutdown")
 
 			want := e.ForceFlushN()
 			assert.NoError(t, b.ForceFlush(ctx))
@@ -385,18 +423,26 @@ func TestBatchProcessor(t *testing.T) {
 
 		t.Run("CanceledContext", func(t *testing.T) {
 			e := &testExporter{}
-			e.ExportTrigger = make(chan struct{})
-			var release sync.Once
-			releaseExport := func() { release.Do(func() { close(e.ExportTrigger) }) }
-			b := NewBatchProcessor(e)
-			defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
-			defer releaseExport()
+			b := NewBatchProcessor(
+				e,
+				WithExportInterval(time.Hour),
+				WithExportTimeout(time.Hour),
+			)
 
 			ctx := t.Context()
 			c, cancel := context.WithCancel(ctx)
 			cancel()
 
 			assert.ErrorIs(t, b.Shutdown(c), context.Canceled)
+			require.Eventually(t, func() bool {
+				select {
+				case <-b.done:
+					return true
+				default:
+					return false
+				}
+			}, 2*time.Second, time.Microsecond, "processor shutdown did not finish")
+			assert.Equal(t, 1, e.ShutdownN(), "exporter Shutdown calls")
 		})
 	})
 
@@ -976,4 +1022,216 @@ func BenchmarkBatchProcessorForceFlush(b *testing.B) {
 		b.StartTimer()
 		_ = bp.ForceFlush(ctx)
 	}
+}
+
+const blpComponentID int64 = 0
+
+func TestBatchProcessorMetricsDisabled(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+
+	origID := counter.SetExporterID(blpComponentID)
+	t.Cleanup(func() { counter.SetExporterID(origID) })
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	e := &testExporter{}
+	bp := NewBatchProcessor(
+		e,
+		WithMaxQueueSize(2),
+		WithExportMaxBatchSize(2),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	ctx := t.Context()
+
+	r := new(Record)
+	r.SetBody(attribute.BoolValue(true))
+	require.NoError(t, bp.OnEmit(ctx, r))
+	require.NoError(t, bp.ForceFlush(ctx))
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &rm))
+	for _, sm := range rm.ScopeMetrics {
+		assert.NotEqual(t, observ.ScopeName, sm.Scope.Name,
+			"observ metrics should not be present when disabled")
+	}
+
+	require.NoError(t, bp.Shutdown(ctx))
+}
+
+func TestBatchProcessorMetrics(t *testing.T) {
+	origID := counter.SetExporterID(blpComponentID)
+	t.Cleanup(func() { counter.SetExporterID(origID) })
+
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	origLogger := global.GetLogger()
+	origVerbosity := stdr.SetVerbosity(1)
+	t.Cleanup(func() {
+		global.SetLogger(origLogger)
+		stdr.SetVerbosity(origVerbosity)
+	})
+	buf := new(syncBuffer)
+	global.SetLogger(stdr.New(stdlog.New(buf, "", 0)))
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	e := &testExporter{}
+	e.ExportTrigger = make(chan struct{})
+	var release sync.Once
+	releaseExporter := func() {
+		release.Do(func() { close(e.ExportTrigger) })
+	}
+	bp := NewBatchProcessor(
+		e,
+		WithMaxQueueSize(1),
+		WithExportMaxBatchSize(1),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	ctx := t.Context()
+	defer func() {
+		releaseExporter()
+		assert.NoError(t, bp.Shutdown(t.Context()))
+	}()
+
+	r := new(Record)
+	r.SetBody(attribute.BoolValue(true))
+	require.NoError(t, bp.OnEmit(ctx, r))
+	require.Eventually(t, func() bool {
+		return e.ExportN() > 0
+	}, 2*time.Second, time.Microsecond, "export not started")
+
+	assertBLPMetrics(
+		t, reader,
+		blpQCap(1),
+		blpQSize(0),
+		blpProcessed(blpDPt(blpSet(), 1)),
+	)
+
+	require.NoError(t, bp.OnEmit(ctx, r))
+	require.NoError(t, bp.OnEmit(ctx, r))
+	require.NoError(t, bp.OnEmit(ctx, r))
+
+	assertBLPMetrics(
+		t, reader,
+		blpQCap(1),
+		blpQSize(1),
+		blpProcessed(blpDPt(blpSet(), 1)),
+	)
+
+	releaseExporter()
+	wantMsg := `"level"=1 "msg"="dropped log records" "dropped"=2`
+	require.Eventually(t, func() bool {
+		return e.ExportN() == 2 && strings.Contains(buf.String(), wantMsg)
+	}, 2*time.Second, time.Microsecond, "queued record and drops not processed")
+
+	assertBLPMetrics(
+		t, reader,
+		blpQCap(1),
+		blpQSize(0),
+		blpProcessed(
+			blpDPt(blpSet(), 2),
+			blpDPt(blpSet(observ.ErrQueueFull), 2),
+		),
+	)
+
+	require.NoError(t, bp.Shutdown(ctx))
+}
+
+func blpSet(attrs ...attribute.KeyValue) attribute.Set {
+	return attribute.NewSet(append([]attribute.KeyValue{
+		semconv.OTelComponentTypeBatchingLogProcessor,
+		observ.BLPComponentName(blpComponentID),
+	}, attrs...)...)
+}
+
+func blpDPt(set attribute.Set, value int64) metricdata.DataPoint[int64] {
+	return metricdata.DataPoint[int64]{Attributes: set, Value: value}
+}
+
+func blpQCap(v int64) metricdata.Metrics {
+	return metricdata.Metrics{
+		Name:        otelconv.SDKProcessorLogQueueCapacity{}.Name(),
+		Description: otelconv.SDKProcessorLogQueueCapacity{}.Description(),
+		Unit:        otelconv.SDKProcessorLogQueueCapacity{}.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: false,
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: blpSet(), Value: v}},
+		},
+	}
+}
+
+func blpQSize(v int64) metricdata.Metrics {
+	return metricdata.Metrics{
+		Name:        otelconv.SDKProcessorLogQueueSize{}.Name(),
+		Description: otelconv.SDKProcessorLogQueueSize{}.Description(),
+		Unit:        otelconv.SDKProcessorLogQueueSize{}.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: false,
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: blpSet(), Value: v}},
+		},
+	}
+}
+
+func blpProcessed(dPts ...metricdata.DataPoint[int64]) metricdata.Metrics {
+	return metricdata.Metrics{
+		Name:        otelconv.SDKProcessorLogProcessed{}.Name(),
+		Description: otelconv.SDKProcessorLogProcessed{}.Description(),
+		Unit:        otelconv.SDKProcessorLogProcessed{}.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints:  dPts,
+		},
+	}
+}
+
+func assertBLPMetrics(
+	t *testing.T,
+	reader sdkmetric.Reader,
+	wantMetrics ...metricdata.Metrics,
+) {
+	t.Helper()
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	var found bool
+	var gotScope metricdata.ScopeMetrics
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name == observ.ScopeName {
+			gotScope = sm
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "observ scope %q not found in collected metrics", observ.ScopeName)
+
+	metricdatatest.AssertEqual(
+		t,
+		metricdata.ScopeMetrics{
+			Scope: instrumentation.Scope{
+				Name:      observ.ScopeName,
+				Version:   sdk.Version(),
+				SchemaURL: observ.SchemaURL,
+			},
+			Metrics: wantMetrics,
+		},
+		gotScope,
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreExemplars(),
+	)
 }

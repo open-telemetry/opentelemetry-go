@@ -18,6 +18,8 @@ import (
 type testExporter struct {
 	// Err is the error returned by all methods of the testExporter.
 	Err error
+	// Method-specific errors take precedence over Err when set.
+	ExportErr, ShutdownErr, ForceFlushErr error
 	// ExportTrigger is read from prior to returning from the Export method if
 	// non-nil.
 	ExportTrigger  chan struct{}
@@ -30,6 +32,9 @@ type testExporter struct {
 
 	mu      sync.Mutex
 	records [][]Record
+
+	callsMu sync.Mutex
+	calls   []string
 }
 
 func (e *testExporter) Records() [][]Record {
@@ -42,6 +47,7 @@ func (e *testExporter) Records() [][]Record {
 }
 
 func (e *testExporter) Export(ctx context.Context, r []Record) error {
+	e.recordCall("Export")
 	e.exportN.Add(1)
 	if e.ExportTrigger != nil {
 		select {
@@ -56,7 +62,7 @@ func (e *testExporter) Export(ctx context.Context, r []Record) error {
 	if e.ExportFunc != nil {
 		return e.ExportFunc(ctx, r)
 	}
-	return e.Err
+	return e.methodError(e.ExportErr)
 }
 
 func (e *testExporter) ExportN() int {
@@ -64,11 +70,12 @@ func (e *testExporter) ExportN() int {
 }
 
 func (e *testExporter) Shutdown(ctx context.Context) error {
+	e.recordCall("Shutdown")
 	e.shutdownN.Add(1)
 	if e.ShutdownFunc != nil {
 		return e.ShutdownFunc(ctx)
 	}
-	return e.Err
+	return e.methodError(e.ShutdownErr)
 }
 
 func (e *testExporter) ShutdownN() int {
@@ -76,15 +83,35 @@ func (e *testExporter) ShutdownN() int {
 }
 
 func (e *testExporter) ForceFlush(ctx context.Context) error {
+	e.recordCall("ForceFlush")
 	e.forceFlushN.Add(1)
 	if e.ForceFlushFunc != nil {
 		return e.ForceFlushFunc(ctx)
 	}
-	return e.Err
+	return e.methodError(e.ForceFlushErr)
 }
 
 func (e *testExporter) ForceFlushN() int {
 	return int(e.forceFlushN.Load())
+}
+
+func (e *testExporter) methodError(err error) error {
+	if err != nil {
+		return err
+	}
+	return e.Err
+}
+
+func (e *testExporter) recordCall(name string) {
+	e.callsMu.Lock()
+	defer e.callsMu.Unlock()
+	e.calls = append(e.calls, name)
+}
+
+func (e *testExporter) Calls() []string {
+	e.callsMu.Lock()
+	defer e.callsMu.Unlock()
+	return slices.Clone(e.calls)
 }
 
 func TestChunker(t *testing.T) {
