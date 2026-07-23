@@ -38,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve the performance of hashing `BOOLSLICE`, `INT64SLICE`, `FLOAT64SLICE`, and `STRINGSLICE` attribute values by avoiding reflection for short slices in `go.opentelemetry.io/otel/attribute`. (#8511)
 - ⚠️ **Breaking Change:** `WithEndpointURL` in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` no longer appends the default signal path for an endpoint URL without path, making the behavior consistent with `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. It is now also consistent with setting the endpoint via `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`. If the URL has no path component, `/` (e.g. the root path) is now appended. Use `WithEndpointURL(url.JoinPath(endpoint, "/v1/metrics"))` to keep the previous behavior. (#8538)
 - ⚠️ **Breaking Change:** `WithEndpointURL` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` no longer appends the default signal path for an endpoint URL without path, making the behavior consistent with `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. It is now also consistent with setting the endpoint via `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`. If the URL has no path component, `/` (e.g. the root path) is now appended. Use `WithEndpointURL(url.JoinPath(endpoint, "/v1/traces"))` to keep the previous behavior. (#8538)
+- `HistogramReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` now uses a time-unbiased sampling algorithm for exemplars. (#8306)
 
 ### Removed
 
@@ -46,6 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Ensure built-in processors include exporter `ForceFlush` effects in `Shutdown` in `go.opentelemetry.io/otel/sdk/log`. (#8599)
 - Clarify in `go.opentelemetry.io/otel/log` that `LoggerProvider` implementations should retain an empty `Logger` name instead of replacing it with a default. (#8587)
 - Clarify that `Float64Histogram` and `Int64Histogram` `Record` methods expect non-negative values in `go.opentelemetry.io/otel/metric`. (#8574)
 - Make `WithAttributeCountLimit(0)` and `OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT=0` discard all log record attributes in `go.opentelemetry.io/otel/sdk/log`. (#8570)

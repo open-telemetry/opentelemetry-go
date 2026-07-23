@@ -6,6 +6,7 @@ package log
 import (
 	"bytes"
 	"context"
+	"errors"
 	stdlog "log"
 	"slices"
 	"strconv"
@@ -304,6 +305,31 @@ func TestBatchProcessor(t *testing.T) {
 			assert.NoError(t, b.Shutdown(ctx))
 		})
 
+		t.Run("FlushesBeforeShutdown", func(t *testing.T) {
+			exportErr := errors.New("export")
+			forceFlushErr := errors.New("force flush")
+			shutdownErr := errors.New("shutdown")
+			e := newTestExporter(nil)
+			t.Cleanup(e.Stop)
+			e.ExportErr = exportErr
+			e.ForceFlushErr = forceFlushErr
+			e.ShutdownErr = shutdownErr
+			b := NewBatchProcessor(
+				e,
+				WithMaxQueueSize(2),
+				WithExportMaxBatchSize(2),
+				WithExportInterval(time.Hour),
+				WithExportTimeout(time.Hour),
+			)
+			require.NoError(t, b.OnEmit(ctx, new(Record)))
+
+			err := b.Shutdown(ctx)
+			assert.ErrorIs(t, err, exportErr)
+			assert.ErrorIs(t, err, forceFlushErr)
+			assert.ErrorIs(t, err, shutdownErr)
+			assert.Equal(t, []string{"Export", "ForceFlush", "Shutdown"}, e.Calls())
+		})
+
 		t.Run("Multiple", func(t *testing.T) {
 			e := newTestExporter(nil)
 			b := NewBatchProcessor(e)
@@ -312,6 +338,7 @@ func TestBatchProcessor(t *testing.T) {
 			for range shutdowns {
 				assert.NoError(t, b.Shutdown(ctx))
 			}
+			assert.Equal(t, 1, e.ForceFlushN(), "exporter ForceFlush calls")
 			assert.Equal(t, 1, e.ShutdownN(), "exporter Shutdown calls")
 		})
 
@@ -331,22 +358,27 @@ func TestBatchProcessor(t *testing.T) {
 
 			assert.NoError(t, b.OnEmit(ctx, new(Record)))
 			assert.NoError(t, b.Shutdown(ctx))
+			assert.Equal(t, 1, e.ForceFlushN(), "ForceFlush not called by Shutdown")
 
 			assert.NoError(t, b.ForceFlush(ctx))
-			assert.Equal(t, 0, e.ForceFlushN(), "ForceFlush called after shutdown")
+			assert.Equal(t, 1, e.ForceFlushN(), "ForceFlush called after shutdown")
 		})
 
 		t.Run("CanceledContext", func(t *testing.T) {
 			e := newTestExporter(nil)
-			e.ExportTrigger = make(chan struct{})
-			t.Cleanup(func() { close(e.ExportTrigger) })
-			b := NewBatchProcessor(e)
+			t.Cleanup(e.Stop)
+			b := NewBatchProcessor(
+				e,
+				WithExportInterval(time.Hour),
+				WithExportTimeout(time.Hour),
+			)
 
 			ctx := t.Context()
 			c, cancel := context.WithCancel(ctx)
 			cancel()
 
 			assert.ErrorIs(t, b.Shutdown(c), context.Canceled)
+			assert.Equal(t, 1, e.ShutdownN(), "exporter Shutdown calls")
 		})
 	})
 

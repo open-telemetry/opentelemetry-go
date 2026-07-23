@@ -68,6 +68,11 @@ func (noopExporter) Shutdown(context.Context) error { return nil }
 
 func (noopExporter) ForceFlush(context.Context) error { return nil }
 
+func shutdownExporter(ctx context.Context, exporter Exporter) error {
+	err := exporter.ForceFlush(ctx)
+	return errors.Join(err, exporter.Shutdown(ctx))
+}
+
 // chunkExporter wraps an Exporter's Export method so it is called with
 // appropriately sized export payloads. Any payload larger than a defined size
 // is chunked into smaller payloads and exported sequentially.
