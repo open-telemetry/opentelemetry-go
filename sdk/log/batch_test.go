@@ -290,7 +290,12 @@ func TestBatchProcessor(t *testing.T) {
 		defer func() { assert.NoError(t, b.Shutdown(t.Context())) }()
 
 		require.NoError(t, b.OnEmit(ctx, new(Record)))
-		assert.ErrorIs(t, <-handled, assert.AnError)
+ 		select {
+ 		case err := <-handled:
+ 			assert.ErrorIs(t, err, assert.AnError)
+ 		case <-time.After(10 * time.Second):
+ 			t.Fatal("timed out waiting for scheduled export error")
+ 		}
 	})
 
 	t.Run("RetriggerFlushNonBlocking", func(t *testing.T) {
