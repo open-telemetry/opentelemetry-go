@@ -450,3 +450,91 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 		}
 	}
 }
+
+var (
+	benchAttrsDup = []attribute.KeyValue{
+		attribute.Bool("key1", false),
+		attribute.String("key2", "hello"),
+		attribute.Int64("key3", 123),
+		attribute.Float64("key4", 123.456),
+		attribute.Map(
+			"key5",
+			attribute.String("inner", "val1"),
+			attribute.String("inner", "val2"),
+		),
+		attribute.String("key2", "hello-updated"),
+		attribute.Int64("key3", 456),
+	}
+
+	benchAttrsNoDup = []attribute.KeyValue{
+		attribute.Bool("key1", false),
+		attribute.String("key2", "hello"),
+		attribute.Int64("key3", 123),
+		attribute.Float64("key4", 123.456),
+		attribute.Map(
+			"key5",
+			attribute.String("inner1", "val1"),
+			attribute.String("inner2", "val2"),
+		),
+	}
+)
+
+func BenchmarkSetAttributes(b *testing.B) {
+	tpDedup := sdktrace.NewTracerProvider()
+	tpNoDedup := sdktrace.NewTracerProvider(sdktrace.WithAllowKeyDuplication())
+
+	benchmarks := []struct {
+		name  string
+		tp    *sdktrace.TracerProvider
+		attrs []attribute.KeyValue
+	}{
+		{"DedupEnabled/WithDuplicates", tpDedup, benchAttrsDup},
+		{"DedupEnabled/WithoutDuplicates", tpDedup, benchAttrsNoDup},
+		{"DedupDisabled/WithDuplicates", tpNoDedup, benchAttrsDup},
+		{"DedupDisabled/WithoutDuplicates", tpNoDedup, benchAttrsNoDup},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			tr := bm.tp.Tracer("bench")
+			ctx := b.Context()
+			b.ResetTimer()
+			b.ReportAllocs()
+			for b.Loop() {
+				_, span := tr.Start(ctx, "span")
+				span.SetAttributes(bm.attrs...)
+				span.End()
+			}
+		})
+	}
+}
+
+func BenchmarkAddEvent(b *testing.B) {
+	tpDedup := sdktrace.NewTracerProvider()
+	tpNoDedup := sdktrace.NewTracerProvider(sdktrace.WithAllowKeyDuplication())
+
+	benchmarks := []struct {
+		name  string
+		tp    *sdktrace.TracerProvider
+		attrs []attribute.KeyValue
+	}{
+		{"DedupEnabled/WithDuplicates", tpDedup, benchAttrsDup},
+		{"DedupEnabled/WithoutDuplicates", tpDedup, benchAttrsNoDup},
+		{"DedupDisabled/WithDuplicates", tpNoDedup, benchAttrsDup},
+		{"DedupDisabled/WithoutDuplicates", tpNoDedup, benchAttrsNoDup},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			tr := bm.tp.Tracer("bench")
+			ctx := b.Context()
+			b.ResetTimer()
+			b.ReportAllocs()
+			for b.Loop() {
+				_, span := tr.Start(ctx, "span")
+				span.AddEvent("event", trace.WithAttributes(bm.attrs...))
+				span.End()
+			}
+		})
+	}
+}

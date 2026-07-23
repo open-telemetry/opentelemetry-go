@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
@@ -44,6 +45,9 @@ type tracerProviderConfig struct {
 	// resource contains attributes representing an entity that produces telemetry.
 	resource *resource.Resource
 
+	// allowDupKeys disables duplicate-key removal for span, event, link, and instrumentation scope attributes (including within attribute.MAP values) when true.
+	allowDupKeys bool
+
 	// panicRecordingDisabled disables recording exception events from panics.
 	panicRecordingDisabled bool
 }
@@ -56,6 +60,7 @@ func (cfg tracerProviderConfig) MarshalLog() any {
 		IDGeneratorType        string
 		SpanLimits             SpanLimits
 		Resource               *resource.Resource
+		AllowKeyDuplication    bool
 		PanicRecordingDisabled bool
 	}{
 		SpanProcessors:         cfg.processors,
@@ -63,6 +68,7 @@ func (cfg tracerProviderConfig) MarshalLog() any {
 		IDGeneratorType:        fmt.Sprintf("%T", cfg.idGenerator),
 		SpanLimits:             cfg.spanLimits,
 		Resource:               cfg.resource,
+		AllowKeyDuplication:    cfg.allowDupKeys,
 		PanicRecordingDisabled: cfg.panicRecordingDisabled,
 	}
 }
@@ -85,6 +91,14 @@ type TracerProvider struct {
 	spanLimits             SpanLimits
 	resource               *resource.Resource
 	panicRecordingDisabled bool
+
+	// deduplication and attribute limits strategies swapped at TracerProvider construction time.
+	// Swapping these function pointers avoids checking runtime boolean flags in the hot path.
+	dedupAttr       func(attribute.KeyValue) attribute.KeyValue
+	dedupKeyValues  func([]attribute.KeyValue) []attribute.KeyValue
+	dedupSet        func(attribute.Set) attribute.Set
+	dedupeSpanAttrs func(*recordingSpan)
+	addOverCapAttrs func(*recordingSpan, int, []attribute.KeyValue)
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
@@ -126,6 +140,40 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 		resource:               o.resource,
 		panicRecordingDisabled: o.panicRecordingDisabled,
 	}
+
+	if o.allowDupKeys {
+		tp.dedupAttr = func(kv attribute.KeyValue) attribute.KeyValue { return kv }
+		tp.dedupKeyValues = func(kvs []attribute.KeyValue) []attribute.KeyValue { return kvs }
+		tp.dedupSet = func(set attribute.Set) attribute.Set { return set }
+		tp.dedupeSpanAttrs = func(*recordingSpan) {}
+		tp.addOverCapAttrs = addOverCapAttrsNoDup
+	} else {
+		tp.dedupAttr = func(kv attribute.KeyValue) attribute.KeyValue {
+			switch kv.Value.Type() {
+			case attribute.SLICE, attribute.MAP:
+				attr, _ := attrdedup.KeyValue(kv)
+				return attr
+			default:
+				return kv
+			}
+		}
+		tp.dedupKeyValues = func(kvs []attribute.KeyValue) []attribute.KeyValue {
+			deduped, _ := attrdedup.KeyValues(kvs)
+			return deduped
+		}
+		tp.dedupSet = func(s attribute.Set) attribute.Set {
+			deduped, _ := attrdedup.Set(s)
+			return deduped
+		}
+		tp.dedupeSpanAttrs = func(s *recordingSpan) {
+			exists := make(map[attribute.Key]int, len(s.attributes))
+			s.dedupeAttrsFromRecord(exists)
+		}
+		tp.addOverCapAttrs = func(s *recordingSpan, limit int, attrs []attribute.KeyValue) {
+			s.addOverCapAttrs(limit, attrs)
+		}
+	}
+
 	global.Info("TracerProvider created", "config", o)
 
 	spss := make(spanProcessorStates, 0, len(o.processors))
@@ -150,7 +198,7 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		return noop.NewTracerProvider().Tracer(name, opts...)
 	}
 	c := trace.NewTracerConfig(opts...)
-	attrs, _ := attrdedup.Set(c.InstrumentationAttributes())
+	attrs := p.dedupSet(c.InstrumentationAttributes())
 	if name == "" {
 		name = defaultTracerName
 	}
@@ -487,6 +535,27 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 func WithRawSpanLimits(limits SpanLimits) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
 		cfg.spanLimits = limits
+		return cfg
+	})
+}
+
+// WithAllowKeyDuplication sets whether deduplication is skipped for span, event,
+// link, and instrumentation scope key-value collections.
+//
+// By default, span attributes are deduplicated by key (last-value-wins) to comply
+// with the OpenTelemetry Specification. Additionally, `attribute.MAP` values
+// within span, event, link, and instrumentation scope attributes have duplicate
+// map keys removed (last-value-wins).
+// Resource attributes are always deduplicated by go.opentelemetry.io/otel/sdk/resource.
+//
+// Disabling deduplication with this option can improve performance e.g. of adding attributes to spans.
+//
+// Note that if you disable deduplication, you are responsible for ensuring that duplicate
+// key-value pairs within a single collection are not emitted,
+// or that the telemetry receiver can handle such duplicates.
+func WithAllowKeyDuplication() TracerProviderOption {
+	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
+		cfg.allowDupKeys = true
 		return cfg
 	})
 }
