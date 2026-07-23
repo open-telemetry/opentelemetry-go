@@ -142,7 +142,7 @@ func (t *nextTracker) shouldSample() (bool, int) {
 }
 
 func randomFloat64() float64 {
-	// TODO: Use an algorithm that avoids rejection sampling. For example:
+	// TODO (#8654): Use an algorithm that avoids rejection sampling. For example:
 	//
 	//   const precision = 1 << 53 // 2^53
 	//   // Generate an integer in [1, 2^53 - 1]
