@@ -208,7 +208,8 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 	return nil
 }
 
-// Shutdown flushes queued log records and shuts down the decorated exporter.
+// Shutdown flushes queued log records and the decorated exporter before
+// shutting it down.
 func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 	if b.stopped.Swap(true) || b.q == nil {
 		return nil
@@ -216,16 +217,15 @@ func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 
 	// Stop the poll goroutine.
 	close(b.pollKill)
+	var err error
 	select {
 	case <-b.pollDone:
+		// Flush remaining queued before exporter shutdown.
+		err = b.exporter.Export(ctx, b.q.Flush())
 	case <-ctx.Done():
-		// Out of time.
-		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
+		err = ctx.Err()
 	}
-
-	// Flush remaining queued before exporter shutdown.
-	err := b.exporter.Export(ctx, b.q.Flush())
-	return errors.Join(err, b.exporter.Shutdown(ctx))
+	return errors.Join(err, shutdownExporter(ctx, b.exporter))
 }
 
 var errPartialFlush = errors.New("partial flush: export buffer full")
