@@ -5,7 +5,7 @@
 // source: internal/shared/x/x.go.tmpl
 
 // Package x documents experimental features for [go.opentelemetry.io/otel/exporters/stdout/stdoutlog].
-package x // import "go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/x"
+package x
 
 import (
 	"os"
