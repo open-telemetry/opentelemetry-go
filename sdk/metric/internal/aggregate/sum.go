@@ -181,12 +181,7 @@ func (s *deltaSum[N]) Bind(attrs attribute.Set) BoundMeasure[N] {
 			isBound:       true,
 		}
 	})
-	return func(ctx context.Context, val N) {
-		sv.n.add(val)
-		if !sv.dropExemplars {
-			sv.res.Offer(ctx, val, nil)
-		}
-	}
+	return sv.boundMeasure()
 }
 
 // newCumulativeSum returns an aggregator that summarizes a set of measurements
@@ -250,11 +245,23 @@ func (s *cumulativeSum[N]) Bind(attrs attribute.Set) BoundMeasure[N] {
 			isBound:       true,
 		}
 	})
-	return func(ctx context.Context, val N) {
-		sv.n.add(val)
-		if !sv.dropExemplars {
-			sv.res.Offer(ctx, val, nil)
+	return sv.boundMeasure()
+}
+
+// boundMeasure returns the BoundMeasure recording to v. The exemplar
+// decision is made once here rather than per-measurement so the returned
+// hot path does not read v's fields, which share a cache line with the
+// concurrently written counter.
+func (v *sumValue[N]) boundMeasure() BoundMeasure[N] {
+	if v.dropExemplars {
+		n := &v.n
+		return func(_ context.Context, val N) {
+			n.add(val)
 		}
+	}
+	return func(ctx context.Context, val N) {
+		v.n.add(val)
+		v.res.Offer(ctx, val, nil)
 	}
 }
 
