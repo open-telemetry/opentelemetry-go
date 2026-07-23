@@ -6,12 +6,16 @@ package log
 import (
 	"context"
 	"errors"
+	"math"
 	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/log/internal/counter"
+	"go.opentelemetry.io/otel/sdk/log/internal/observ"
 )
 
 const (
@@ -98,6 +102,9 @@ type BatchProcessor struct {
 	// stopped holds the stopped state of the BatchProcessor.
 	stopped atomic.Bool
 
+	// inst is the instrumentation for observability (nil when disabled).
+	inst *observ.BLP
+
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
@@ -111,6 +118,31 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 		// Do not panic on nil export.
 		exporter = defaultNoopExporter
 	}
+
+	b := &BatchProcessor{
+		q:           newQueue(cfg.maxQSize.Value),
+		batchSize:   cfg.expMaxBatchSize.Value,
+		pollTrigger: make(chan struct{}, 1),
+		pollKill:    make(chan struct{}),
+	}
+
+	var err error
+	b.inst, err = observ.NewBLP(
+		counter.NextExporterID(),
+		func() int64 { return int64(b.q.Len()) },
+		int64(cfg.maxQSize.Value),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
+
+	// Wrap exporter with metrics recording if observability is enabled.
+	// This must be the innermost wrapper (closest to user exporter) to record
+	// metrics just before calling the actual exporter.
+	if b.inst != nil {
+		exporter = newMetricsExporter(exporter, b.inst)
+	}
+
 	// Order is important here. Wrap the timeoutExporter with the chunkExporter
 	// to ensure each export completes in timeout (instead of all chunked
 	// exports).
@@ -119,15 +151,9 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 	// appropriately on export.
 	exporter = newChunkExporter(exporter, cfg.expMaxBatchSize.Value)
 
-	b := &BatchProcessor{
-		exporter: newBufferExporter(exporter, cfg.expBufferSize.Value),
-
-		q:           newQueue(cfg.maxQSize.Value),
-		batchSize:   cfg.expMaxBatchSize.Value,
-		pollTrigger: make(chan struct{}, 1),
-		pollKill:    make(chan struct{}),
-	}
+	b.exporter = newBufferExporter(exporter, cfg.expBufferSize.Value)
 	b.pollDone = b.poll(cfg.expInterval.Value)
+
 	return b
 }
 
@@ -143,6 +169,8 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 		defer close(done)
 		defer ticker.Stop()
 
+		ctx := context.Background()
+
 		for {
 			select {
 			case <-ticker.C:
@@ -153,6 +181,9 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 			}
 
 			if d := b.q.Dropped(); d > 0 {
+				if b.inst != nil {
+					b.inst.ProcessedQueueFull(ctx, int64(min(math.MaxInt64, d))) // nolint:gosec
+				}
 				global.Warn("dropped log records", "dropped", d)
 			}
 
@@ -208,7 +239,8 @@ func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
 	return nil
 }
 
-// Shutdown flushes queued log records and shuts down the decorated exporter.
+// Shutdown flushes queued log records and the decorated exporter before
+// shutting it down.
 func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 	if b.stopped.Swap(true) || b.q == nil {
 		return nil
@@ -216,16 +248,20 @@ func (b *BatchProcessor) Shutdown(ctx context.Context) error {
 
 	// Stop the poll goroutine.
 	close(b.pollKill)
+	var err error
 	select {
 	case <-b.pollDone:
+		// Flush remaining queued before exporter shutdown.
+		err = b.exporter.Export(ctx, b.q.Flush())
 	case <-ctx.Done():
-		// Out of time.
-		return errors.Join(ctx.Err(), b.exporter.Shutdown(ctx))
+		err = ctx.Err()
 	}
-
-	// Flush remaining queued before exporter shutdown.
-	err := b.exporter.Export(ctx, b.q.Flush())
-	return errors.Join(err, b.exporter.Shutdown(ctx))
+	if b.inst != nil {
+		err = errors.Join(err, shutdownExporter(ctx, b.exporter), b.inst.Shutdown())
+	} else {
+		err = errors.Join(err, shutdownExporter(ctx, b.exporter))
+	}
+	return err
 }
 
 var errPartialFlush = errors.New("partial flush: export buffer full")
