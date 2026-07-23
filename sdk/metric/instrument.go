@@ -427,6 +427,13 @@ type boundFloat64Counter struct {
 }
 
 func (b *boundFloat64Counter) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
+	if len(opts) == 0 {
+		for _, m := range b.boundMeasures {
+			m(ctx, val)
+		}
+		return
+	}
+
 	cfg := metric.NewAddConfig(opts)
 	extraAttrs := cfg.Attributes()
 
@@ -459,6 +466,13 @@ type boundInt64Counter struct {
 }
 
 func (b *boundInt64Counter) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
+	if len(opts) == 0 {
+		for _, m := range b.boundMeasures {
+			m(ctx, val)
+		}
+		return
+	}
+
 	cfg := metric.NewAddConfig(opts)
 	extraAttrs := cfg.Attributes()
 
