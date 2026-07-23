@@ -27,6 +27,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/otel/semconv/v1.42.0` package. (#8484)
   The package contains semantic conventions from the `v1.42.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.42.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.41.0`.
+- Add `go.opentelemetry.io/otel/semconv/v1.43.0` package. (#8628)
+  The package contains semantic conventions from the `v1.43.0` version of the OpenTelemetry Semantic Conventions.
+  See the [migration documentation](./semconv/v1.43.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.42.0`.
 
 ### Changed
 
@@ -43,6 +46,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Clarify in `go.opentelemetry.io/otel/log` that `LoggerProvider` implementations should retain an empty `Logger` name instead of replacing it with a default. (#8587)
 - Clarify that `Float64Histogram` and `Int64Histogram` `Record` methods expect non-negative values in `go.opentelemetry.io/otel/metric`. (#8574)
 - Make `WithAttributeCountLimit(0)` and `OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT=0` discard all log record attributes in `go.opentelemetry.io/otel/sdk/log`. (#8570)
 - Preserve user-provided exception attributes while independently deriving missing exception message and type attributes in `go.opentelemetry.io/otel/sdk/log`. (#8566)
