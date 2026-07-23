@@ -6,7 +6,6 @@ package log
 import (
 	"context"
 	"errors"
-	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -98,6 +97,9 @@ type BatchProcessor struct {
 	// stopped holds the stopped state of the BatchProcessor.
 	stopped atomic.Bool
 
+	// pool is used to reuse slices of Record.
+	pool sync.Pool
+
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
 
@@ -127,6 +129,10 @@ func NewBatchProcessor(exporter Exporter, opts ...BatchProcessorOption) *BatchPr
 		pollTrigger: make(chan struct{}, 1),
 		pollKill:    make(chan struct{}),
 	}
+	b.pool.New = func() any {
+		buf := make([]Record, b.batchSize)
+		return &buf
+	}
 	b.pollDone = b.poll(cfg.expInterval.Value)
 	return b
 }
@@ -137,11 +143,16 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 	done = make(chan struct{})
 
 	ticker := time.NewTicker(interval)
-	// TODO: investigate using a sync.Pool instead of cloning.
-	buf := make([]Record, b.batchSize)
+	// We cannot simply reuse a single buffer because the exporter is asynchronous.
+	// We use a sync.Pool to reuse buffers only after the exporter has finished with them.
+	bufPtr := b.pool.Get().(*[]Record)
 	go func() {
 		defer close(done)
 		defer ticker.Stop()
+		defer func() {
+			clear(*bufPtr)
+			b.pool.Put(bufPtr)
+		}()
 
 		for {
 			select {
@@ -159,10 +170,21 @@ func (b *BatchProcessor) poll(interval time.Duration) (done chan struct{}) {
 			var qLen int
 			// Don't copy data from queue unless exporter can accept more, it is very expensive.
 			if b.exporter.Ready() {
-				qLen = b.q.TryDequeue(buf, func(r []Record) bool {
-					ok := b.exporter.EnqueueExport(r)
+				currentBufPtr := bufPtr
+				qLen = b.q.TryDequeue(*currentBufPtr, func(r []Record) bool {
+					if len(r) == 0 {
+						return false
+					}
+					ok := b.exporter.EnqueueExport(r, func(_ []Record) {
+						// Clear the full buffer (not just r) before pooling it to avoid retaining
+						// stale records in the tail when a later dequeue exports a smaller batch.
+						clear(*currentBufPtr)
+						b.pool.Put(currentBufPtr)
+					})
 					if ok {
-						buf = slices.Clone(buf)
+						// We must use a new buffer because the exporter is asynchronous
+						// and may still be reading from the current one.
+						bufPtr = b.pool.Get().(*[]Record)
 					}
 					return ok
 				})
@@ -245,7 +267,7 @@ func (b *BatchProcessor) ForceFlush(ctx context.Context) error {
 	notFlushed := func() bool {
 		var flushed bool
 		_ = b.q.TryDequeue(buf, func(r []Record) bool {
-			flushed = b.exporter.EnqueueExport(r)
+			flushed = b.exporter.EnqueueExport(r, nil)
 			return flushed
 		})
 		return !flushed

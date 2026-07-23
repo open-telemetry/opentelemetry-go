@@ -147,14 +147,21 @@ type exportData struct {
 
 	// respCh is the channel any error returned from the export will be sent
 	// on. If this is nil, and the export error is non-nil, the error will
-	// passed to the OTel error handler.
+	// be passed to the OTel error handler.
 	respCh chan<- error
+
+	// release is called after the export has completed.
+	release func([]Record)
 }
 
 // DoExport calls exportFn with the data contained in e. The error response
 // will be returned on e's respCh if not nil. The error will be handled by the
 // default OTel error handle if it is not nil and respCh is nil or full.
 func (e exportData) DoExport(exportFn func(context.Context, []Record) error) {
+	if e.release != nil {
+		defer e.release(e.records)
+	}
+
 	if len(e.records) == 0 {
 		e.respond(nil)
 		return
@@ -209,7 +216,7 @@ func (e *bufferExporter) Ready() bool {
 var errStopped = errors.New("exporter stopped")
 
 func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan<- error) error {
-	data := exportData{ctx, records, rCh}
+	data := exportData{ctx: ctx, records: records, respCh: rCh}
 
 	e.inputMu.Lock()
 	defer e.inputMu.Unlock()
@@ -228,34 +235,45 @@ func (e *bufferExporter) enqueue(ctx context.Context, records []Record, rCh chan
 	return nil
 }
 
-// EnqueueExport enqueues an export of records in the context of ctx to be
-// performed asynchronously. This will return true if the records are
-// successfully enqueued (or the bufferExporter is shut down), false otherwise.
+// EnqueueExport enqueues an export of records to be performed asynchronously.
+// It returns true if the records are accepted for export (or if the exporter
+// is shut down), false otherwise.
 //
-// The passed records are held after this call returns.
-func (e *bufferExporter) EnqueueExport(records []Record) bool {
+// If this returns true, the exporter takes ownership of the records and the
+// release callback (if non-nil) is guaranteed to be called eventually.
+//
+// If this returns false, the records are not accepted, and the release
+// callback is not called.
+func (e *bufferExporter) EnqueueExport(records []Record, release func([]Record)) bool {
 	if len(records) == 0 {
 		// Nothing to enqueue, do not waste input space.
+		if release != nil {
+			release(records)
+		}
 		return true
 	}
 
-	data := exportData{ctx: context.Background(), records: records}
+	data := exportData{ctx: context.Background(), records: records, release: release}
 
 	e.inputMu.Lock()
-	defer e.inputMu.Unlock()
+	stopped := e.stopped.Load()
+	var enqueued bool
+	if !stopped {
+		select {
+		case e.input <- data:
+			enqueued = true
+		default:
+		}
+	}
+	e.inputMu.Unlock()
 
-	// Check stopped before enqueueing now that e.inputMu is held. This
-	// prevents sends on a closed chan when Shutdown is called concurrently.
-	if e.stopped.Load() {
+	if stopped {
+		if release != nil {
+			release(records)
+		}
 		return true
 	}
-
-	select {
-	case e.input <- data:
-		return true
-	default:
-		return false
-	}
+	return enqueued
 }
 
 // Export synchronously exports records in the context of ctx. This will not

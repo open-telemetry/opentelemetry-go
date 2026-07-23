@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 	"unsafe"
 
@@ -285,6 +286,69 @@ func TestBatchProcessor(t *testing.T) {
 		close(e.ExportTrigger)
 		assert.NoError(t, b.Shutdown(ctx))
 		assert.Equal(t, 3, e.ExportN())
+	})
+
+	t.Run("ExportedRecordsStableUntilExportReturns", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			releaseExport := make(chan struct{})
+			releaseBlockedExport := sync.OnceFunc(func() {
+				close(releaseExport)
+			})
+
+			exported := make(chan []Record, 1)
+			exporter := &blockingRecordExporter{
+				ExportFunc: func(_ context.Context, records []Record) error {
+					exported <- records
+					<-releaseExport
+					return nil
+				},
+			}
+
+			b := NewBatchProcessor(
+				exporter,
+				WithMaxQueueSize(10),
+				WithExportMaxBatchSize(1),
+				WithExportInterval(time.Hour),
+			)
+			t.Cleanup(func() {
+				releaseBlockedExport()
+				synctest.Wait()
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(t, b.Shutdown(context.Background()))
+			})
+
+			r := Record{}
+			r.SetBody(attribute.StringValue("test-message"))
+			assert.NoError(t, b.OnEmit(t.Context(), &r))
+			synctest.Wait()
+
+			captured, ok := <-exported
+			require.True(t, ok, "exporter did not receive records")
+			if assert.NotEmpty(t, captured) {
+				assert.Equal(
+					t,
+					"test-message",
+					captured[0].Body().AsString(),
+					"captured record body differs from the emitted record",
+				)
+			}
+
+			// If the BatchProcessor reuses or clears the exported buffer before
+			// Export returns, this later export attempt can mutate captured.
+			r2 := Record{}
+			r2.SetBody(attribute.StringValue("another-message"))
+			assert.NoError(t, b.OnEmit(t.Context(), &r2))
+			synctest.Wait()
+
+			if assert.NotEmpty(t, captured) {
+				assert.Equal(
+					t,
+					"test-message",
+					captured[0].Body().AsString(),
+					"captured record body was mutated before Export returned",
+				)
+			}
+		})
 	})
 
 	t.Run("Shutdown", func(t *testing.T) {
@@ -673,3 +737,47 @@ func BenchmarkBatchProcessorOnEmit(b *testing.B) {
 		_ = err
 	})
 }
+
+func BenchmarkBatchProcessorEmitAndExport(b *testing.B) {
+	r := new(Record)
+	body := attribute.BoolValue(true)
+	r.SetBody(body)
+
+	rSize := unsafe.Sizeof(r) + unsafe.Sizeof(body)
+	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	ctx := context.Background()
+	bp := NewBatchProcessor(
+		defaultNoopExporter,
+		WithMaxQueueSize(100000),
+		WithExportMaxBatchSize(100),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	b.Cleanup(func() { _ = bp.Shutdown(ctx) })
+
+	b.SetBytes(int64(rSize) * 100)
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			for i := 0; i < 100; i++ {
+				_ = bp.OnEmit(ctx, r)
+			}
+			_ = bp.ForceFlush(ctx)
+		}
+	})
+}
+
+type blockingRecordExporter struct {
+	ExportFunc func(context.Context, []Record) error
+}
+
+func (e *blockingRecordExporter) Export(ctx context.Context, records []Record) error {
+	if e.ExportFunc != nil {
+		return e.ExportFunc(ctx, records)
+	}
+	return nil
+}
+
+func (*blockingRecordExporter) Shutdown(context.Context) error   { return nil }
+func (*blockingRecordExporter) ForceFlush(context.Context) error { return nil }
