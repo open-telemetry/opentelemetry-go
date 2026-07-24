@@ -70,7 +70,9 @@ GOVULNCHECK = $(TOOLS)/govulncheck
 $(TOOLS)/govulncheck: PACKAGE=golang.org/x/vuln/cmd/govulncheck
 
 AFFECTEDMODS = $(TOOLS)/affectedmods
+AFFECTEDMODS_FILES := $(sort $(shell find $(TOOLS_MOD_DIR)/affectedmods -type f))
 $(TOOLS)/affectedmods: PACKAGE=go.opentelemetry.io/otel/$(TOOLS_MOD_DIR)/affectedmods
+$(TOOLS)/affectedmods: $(AFFECTEDMODS_FILES)
 
 .PHONY: tools
 tools: $(CROSSLINK) $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(VERIFYREADMES) $(MULTIMOD) $(SEMCONVKIT) $(GOTMPL) $(GORELEASE) $(AFFECTEDMODS)
