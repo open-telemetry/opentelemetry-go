@@ -84,8 +84,9 @@ type LoggerProvider struct {
 	loggers   map[instrumentation.Scope]*logger
 
 	stopped                   atomic.Bool
-	processorAdmissionMu      sync.Mutex
-	activeProcessorOperations sync.WaitGroup
+	processorOperationsMu     sync.Mutex
+	processorOperationsActive int
+	processorOperationsDone   chan struct{}
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
@@ -170,16 +171,21 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
-	p.processorAdmissionMu.Lock()
-	stopped := p.stopped.Swap(true)
-	p.processorAdmissionMu.Unlock()
-	if stopped {
+	p.processorOperationsMu.Lock()
+	if p.stopped.Load() {
+		p.processorOperationsMu.Unlock()
 		return nil
 	}
+	p.processorOperationsDone = make(chan struct{})
+	p.stopped.Store(true)
+	if p.processorOperationsActive == 0 {
+		close(p.processorOperationsDone)
+	}
+	p.processorOperationsMu.Unlock()
 
-	// All Add calls happen while processorAdmissionMu is held and stopped is
-	// false. Setting stopped while holding the same mutex ensures no Add can
-	// race with Wait.
+	// All count updates happen while processorOperationsMu is held. Therefore,
+	// either Shutdown observes zero operations and closes the channel above, or
+	// the final operation observes stopped and closes it synchronously.
 	if err := p.waitForProcessorOperations(ctx); err != nil {
 		return err
 	}
@@ -214,17 +220,22 @@ func (p *LoggerProvider) beginProcessorOperation() bool {
 		return false
 	}
 
-	p.processorAdmissionMu.Lock()
-	defer p.processorAdmissionMu.Unlock()
+	p.processorOperationsMu.Lock()
+	defer p.processorOperationsMu.Unlock()
 	if p.stopped.Load() {
 		return false
 	}
-	p.activeProcessorOperations.Add(1)
+	p.processorOperationsActive++
 	return true
 }
 
 func (p *LoggerProvider) endProcessorOperation() {
-	p.activeProcessorOperations.Done()
+	p.processorOperationsMu.Lock()
+	defer p.processorOperationsMu.Unlock()
+	p.processorOperationsActive--
+	if p.processorOperationsActive == 0 && p.stopped.Load() {
+		close(p.processorOperationsDone)
+	}
 }
 
 func (p *LoggerProvider) waitForProcessorOperations(ctx context.Context) error {
@@ -232,15 +243,7 @@ func (p *LoggerProvider) waitForProcessorOperations(ctx context.Context) error {
 		return err
 	}
 
-	done := make(chan struct{})
-	// WaitGroup does not provide a context-aware wait. This goroutine only
-	// observes the drain; processor Shutdown remains on the caller's goroutine.
-	go func() {
-		p.activeProcessorOperations.Wait()
-		close(done)
-	}()
-
-	return waitForProcessorOperationsCompletion(ctx, done)
+	return waitForProcessorOperationsCompletion(ctx, p.processorOperationsDone)
 }
 
 func waitForProcessorOperationsCompletion(ctx context.Context, done <-chan struct{}) error {
