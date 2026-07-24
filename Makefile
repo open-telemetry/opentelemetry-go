@@ -159,8 +159,7 @@ test-verbose: ARGS=-v -race
 test-concurrent-safe: ARGS=-run=ConcurrentSafe -count=100 -race
 test-concurrent-safe: TIMEOUT=120
 $(TEST_TARGETS): test
-# Include ./internal/tools in the test command
-test: $(ALL_GO_MOD_DIRS:%=test/%)
+test: $(OTEL_GO_MOD_DIRS:%=test/%)
 test/%: DIR=$*
 test/%:
 	@echo "$(GO) test -timeout $(TIMEOUT)s $(ARGS) $(DIR)/..." \
@@ -168,6 +167,9 @@ test/%:
 		&& $(GO) list ./... \
 		| grep -v third_party \
 		| xargs $(GO) test -timeout $(TIMEOUT)s $(ARGS)
+
+.PHONY: test-tools
+test-tools: test/$(TOOLS_MOD_DIR)
 
 COVERAGE_MODE    = atomic
 COVERAGE_PROFILE = coverage.out

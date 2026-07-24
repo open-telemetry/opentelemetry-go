@@ -111,6 +111,23 @@ jobs:
       - name: Run benchmarks to check functionality
         run: make test-bench
 
+  test-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          cache-dependency-path: "**/go.sum"
+      - name: Run tests for internal tools
+        run: make test-tools
+
   test-race:
     runs-on: ubuntu-latest
     steps:
