@@ -283,7 +283,7 @@ func TestPeriodicReaderRun(t *testing.T) {
 	exp := &fnExporter{
 		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
 			// The testSDKProducer produces testResourceMetricsAB.
-			assert.Equal(t, testResourceMetricsAB, *m)
+			assert.Equal(t, testResourceMetricsAB(), *m)
 			return assert.AnError
 		},
 	}
@@ -413,7 +413,7 @@ func TestPeriodicReaderBatching_WithoutCancel(t *testing.T) {
 				return ctx.Err()
 			}
 
-			*rm = testResourceMetricsAB // Has 2 data points
+			*rm = testResourceMetricsAB() // Has 2 data points
 			return nil
 		},
 	})
@@ -440,7 +440,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		return &fnExporter{
 			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
 				// The testSDKProducer produces testResourceMetricsA.
-				assert.Equal(t, testResourceMetricsAB, *m)
+				assert.Equal(t, testResourceMetricsAB(), *m)
 				*called = true
 				return assert.AnError
 			},
@@ -466,7 +466,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 				select {
 				case <-time.After(timeout + time.Second):
-					*rm = testResourceMetricsA
+					*rm = testResourceMetricsA()
 				case <-ctx.Done():
 					// we timed out before we could collect metrics
 					return ctx.Err()
@@ -492,7 +492,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 					// we timed out before we could collect metrics
 					return nil, ctx.Err()
 				}
-				return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
+				return []metricdata.ScopeMetrics{testScopeMetricsA()}, nil
 			},
 		}))
 		r.register(testSDKProducer{})
@@ -569,7 +569,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 				select {
 				case <-time.After(timeout + time.Second):
-					*rm = testResourceMetricsA
+					*rm = testResourceMetricsA()
 				case <-ctx.Done():
 					// we timed out before we could collect metrics
 					return ctx.Err()
@@ -592,7 +592,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 					// we timed out before we could collect metrics
 					return nil, ctx.Err()
 				}
-				return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
+				return []metricdata.ScopeMetrics{testScopeMetricsA()}, nil
 			},
 		}))
 		r.register(testSDKProducer{})
