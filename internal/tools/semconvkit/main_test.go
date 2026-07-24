@@ -15,6 +15,15 @@ func TestNewMigrationIgnoresUnexportedDeclarations(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
+	goMod := filepath.Join(root, "go.mod")
+	if err := os.WriteFile(
+		goMod,
+		[]byte("module example.com/semconvtest\n\ngo 1.25.0\n"),
+		0o600,
+	); err != nil {
+		t.Fatalf("WriteFile(%q) error = %v", goMod, err)
+	}
+
 	prev := filepath.Join(root, "v1.40.0")
 	cur := filepath.Join(root, "v1.41.0")
 
