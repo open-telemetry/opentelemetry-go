@@ -207,7 +207,7 @@ print-sharded-benchmarks:
 BASE_REF ?= main
 .PHONY: print-affected-benchmarks
 print-affected-benchmarks:
-	@$(MAKE) -s print-sharded-benchmarks | $(GO) -C $(TOOLS_MOD_DIR) run ./affectedmods -base=$(BASE_REF) $(ARGS)
+	@$(MAKE) -s print-sharded-benchmarks | $(GO) -C $(TOOLS_MOD_DIR) run ./affectedmods $(if $(strip $(BASE_REF)),-base=$(BASE_REF),) $(ARGS)
 
 .PHONY: golangci-lint golangci-lint-fix
 golangci-lint-fix: ARGS=--fix
