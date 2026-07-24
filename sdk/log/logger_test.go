@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package log // import "go.opentelemetry.io/otel/sdk/log"
+package log
 
 import (
 	"context"
@@ -24,8 +24,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -46,12 +46,12 @@ func TestLoggerEmit(t *testing.T) {
 	r := log.Record{}
 	r.SetEventName("testing.name")
 	r.SetTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
-	r.SetBody(log.StringValue("testing body value"))
+	r.SetBody(attribute.StringValue("testing body value"))
 	r.SetSeverity(log.SeverityInfo)
 	r.SetSeverityText("testing text")
 	r.AddAttributes(
-		log.String("k1", "str"),
-		log.Float64("k2", 1.0),
+		attribute.String("k1", "str"),
+		attribute.Float64("k2", 1.0),
 	)
 	r.SetObservedTimestamp(time.Date(2001, time.January, 1, 0, 0, 0, 0, time.UTC))
 
@@ -60,18 +60,24 @@ func TestLoggerEmit(t *testing.T) {
 
 	rWithAllowKeyDuplication := r
 	rWithAllowKeyDuplication.AddAttributes(
-		log.String("k1", "str1"),
+		attribute.String("k1", "str1"),
 	)
-	rWithAllowKeyDuplication.SetBody(log.MapValue(
-		log.Int64("1", 2),
-		log.Int64("1", 3),
+	rWithAllowKeyDuplication.SetBody(attribute.MapValue(
+		attribute.Int64("1", 2),
+		attribute.Int64("1", 3),
 	))
 
 	rWithDuplicatesInBody := r
-	rWithDuplicatesInBody.SetBody(log.MapValue(
-		log.Int64("1", 2),
-		log.Int64("1", 3),
+	rWithDuplicatesInBody.SetBody(attribute.MapValue(
+		attribute.Int64("1", 2),
+		attribute.Int64("1", 3),
 	))
+
+	rWithErr := r
+	rWithErr.SetErr(errors.New("boom"))
+
+	attrLimitResource := resource.NewSchemaless(attribute.String("key", "value"))
+	attrLimitScope := instrumentation.Scope{Name: "scope"}
 
 	contextWithSpanContext := trace.ContextWithSpanContext(
 		t.Context(),
@@ -84,26 +90,30 @@ func TestLoggerEmit(t *testing.T) {
 
 	testCases := []struct {
 		name            string
-		logger          *logger
+		loggerFn        func(*testing.T) *logger
 		ctx             context.Context
 		record          log.Record
 		expectedRecords []Record
 	}{
 		{
-			name:   "NoProcessors",
-			logger: newLogger(NewLoggerProvider(), instrumentation.Scope{}),
+			name: "NoProcessors",
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(), instrumentation.Scope{})
+			},
 			ctx:    t.Context(),
 			record: r,
 		},
 		{
 			name: "WithProcessors",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(3),
-				WithAttributeCountLimit(2),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(3),
+					WithAttributeCountLimit(2),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    t.Context(),
 			record: r,
 			expectedRecords: []Record{
@@ -118,33 +128,130 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 3,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
 					},
 					nFront: 2,
 				},
 			},
 		},
 		{
+			name: "ZeroAttributeCountLimitOption",
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(defaultAttrValLenLim),
+					WithAttributeCountLimit(0),
+					WithResource(attrLimitResource),
+				), attrLimitScope)
+			},
+			ctx:    t.Context(),
+			record: rWithErr,
+			expectedRecords: []Record{
+				{
+					eventName:                 rWithErr.EventName(),
+					timestamp:                 rWithErr.Timestamp(),
+					body:                      rWithErr.Body(),
+					severity:                  rWithErr.Severity(),
+					severityText:              rWithErr.SeverityText(),
+					observedTimestamp:         rWithErr.ObservedTimestamp(),
+					resource:                  attrLimitResource,
+					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeCountLimit:       0,
+					scope:                     &attrLimitScope,
+					dropped:                   2,
+				},
+			},
+		},
+		{
+			name: "ZeroAttributeCountLimitEnvironment",
+			loggerFn: func(t *testing.T) *logger {
+				t.Setenv(envarAttrCntLim, "0")
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(defaultAttrValLenLim),
+					WithResource(attrLimitResource),
+				), attrLimitScope)
+			},
+			ctx:    t.Context(),
+			record: rWithErr,
+			expectedRecords: []Record{
+				{
+					eventName:                 rWithErr.EventName(),
+					timestamp:                 rWithErr.Timestamp(),
+					body:                      rWithErr.Body(),
+					severity:                  rWithErr.Severity(),
+					severityText:              rWithErr.SeverityText(),
+					observedTimestamp:         rWithErr.ObservedTimestamp(),
+					resource:                  attrLimitResource,
+					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeCountLimit:       0,
+					scope:                     &attrLimitScope,
+					dropped:                   2,
+				},
+			},
+		},
+		{
+			name: "NegativeAttributeCountLimit",
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(defaultAttrValLenLim),
+					WithAttributeCountLimit(-1),
+					WithResource(attrLimitResource),
+				), attrLimitScope)
+			},
+			ctx:    t.Context(),
+			record: rWithErr,
+			expectedRecords: []Record{
+				{
+					eventName:                 rWithErr.EventName(),
+					timestamp:                 rWithErr.Timestamp(),
+					body:                      rWithErr.Body(),
+					severity:                  rWithErr.Severity(),
+					severityText:              rWithErr.SeverityText(),
+					observedTimestamp:         rWithErr.ObservedTimestamp(),
+					resource:                  attrLimitResource,
+					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeCountLimit:       -1,
+					scope:                     &attrLimitScope,
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
+						exceptionMessageKey.String("boom"),
+						exceptionTypeKey.String("*errors.errorString"),
+					},
+					nFront: 4,
+				},
+			},
+		},
+		{
 			name: "WithProcessorsWithError",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p2WithError),
-				WithAttributeValueLengthLimit(3),
-				WithAttributeCountLimit(2),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p2WithError),
+					WithAttributeValueLengthLimit(3),
+					WithAttributeCountLimit(2),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx: t.Context(),
 		},
 		{
 			name: "WithTraceSpanInContext",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(3),
-				WithAttributeCountLimit(2),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(3),
+					WithAttributeCountLimit(2),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    contextWithSpanContext,
 			record: r,
 			expectedRecords: []Record{
@@ -159,9 +266,9 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 3,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
 					},
 					nFront:     2,
 					traceID:    trace.TraceID{0o1},
@@ -172,13 +279,15 @@ func TestLoggerEmit(t *testing.T) {
 		},
 		{
 			name: "WithNilContext",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(3),
-				WithAttributeCountLimit(2),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(3),
+					WithAttributeCountLimit(2),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    t.Context(),
 			record: r,
 			expectedRecords: []Record{
@@ -193,9 +302,9 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 3,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
 					},
 					nFront: 2,
 				},
@@ -203,13 +312,15 @@ func TestLoggerEmit(t *testing.T) {
 		},
 		{
 			name: "NoObservedTimestamp",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(3),
-				WithAttributeCountLimit(2),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(3),
+					WithAttributeCountLimit(2),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    t.Context(),
 			record: rWithNoObservedTimestamp,
 			expectedRecords: []Record{
@@ -224,9 +335,9 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 3,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
 					},
 					nFront: 2,
 				},
@@ -234,14 +345,16 @@ func TestLoggerEmit(t *testing.T) {
 		},
 		{
 			name: "WithAllowKeyDuplication",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(5),
-				WithAttributeCountLimit(5),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-				WithAllowKeyDuplication(),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(5),
+					WithAttributeCountLimit(5),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+					WithAllowKeyDuplication(),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    t.Context(),
 			record: rWithAllowKeyDuplication,
 			expectedRecords: []Record{
@@ -256,10 +369,10 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 5,
 					attributeCountLimit:       5,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
-						log.String("k1", "str1"),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
+						attribute.String("k1", "str1"),
 					},
 					nFront:       3,
 					allowDupKeys: true,
@@ -268,22 +381,25 @@ func TestLoggerEmit(t *testing.T) {
 		},
 		{
 			name: "WithDuplicatesInBody",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(5),
-				WithAttributeCountLimit(5),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(5),
+					WithAttributeCountLimit(5),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    t.Context(),
 			record: rWithDuplicatesInBody,
 			expectedRecords: []Record{
 				{
 					eventName: rWithDuplicatesInBody.EventName(),
 					timestamp: rWithDuplicatesInBody.Timestamp(),
-					body: log.MapValue(
-						log.Int64("1", 3),
+					body: attribute.MapValue(
+						attribute.Int64("1", 3),
 					),
+
 					severity:                  rWithDuplicatesInBody.Severity(),
 					severityText:              rWithDuplicatesInBody.SeverityText(),
 					observedTimestamp:         rWithDuplicatesInBody.ObservedTimestamp(),
@@ -291,9 +407,9 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: 5,
 					attributeCountLimit:       5,
 					scope:                     &instrumentation.Scope{Name: "scope"},
-					front: [attributesInlineCount]log.KeyValue{
-						log.String("k1", "str"),
-						log.Float64("k2", 1.0),
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
 					},
 					nFront: 2,
 				},
@@ -307,7 +423,7 @@ func TestLoggerEmit(t *testing.T) {
 			p0.records = nil
 			p1.records = nil
 
-			tc.logger.Emit(tc.ctx, tc.record)
+			tc.loggerFn(t).Emit(tc.ctx, tc.record)
 
 			assert.Equal(t, tc.expectedRecords, p0.records)
 			assert.Equal(t, tc.expectedRecords, p1.records)
@@ -320,38 +436,38 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 
 	t.Run("AddsMissing", func(t *testing.T) {
 		var in log.Record
-		in.SetBody(log.StringValue("boom"))
+		in.SetBody(attribute.StringValue("boom"))
 		in.SetSeverity(log.SeverityError)
 		in.SetErr(errors.New("boom"))
 		got := l.newRecord(t.Context(), in)
 
-		var gotAttrs []log.KeyValue
-		got.WalkAttributes(func(kv log.KeyValue) bool {
+		var gotAttrs []attribute.KeyValue
+		got.WalkAttributes(func(kv attribute.KeyValue) bool {
 			gotAttrs = append(gotAttrs, kv)
 			return true
 		})
 
 		assert.Len(t, gotAttrs, 2)
-		assert.Contains(t, gotAttrs, log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"))
-		assert.Contains(t, gotAttrs, log.String(string(semconv.ExceptionMessageKey), "boom"))
+		assert.Contains(t, gotAttrs, attribute.String(string(semconv.ExceptionTypeKey), "*errors.errorString"))
+		assert.Contains(t, gotAttrs, attribute.String(string(semconv.ExceptionMessageKey), "boom"))
 	})
 
 	t.Run("ShortCircuitsAtAttributeLimit", func(t *testing.T) {
 		var in log.Record
-		in.SetBody(log.StringValue("boom"))
+		in.SetBody(attribute.StringValue("boom"))
 		in.SetSeverity(log.SeverityError)
 		in.SetErr(errors.New("boom"))
-		in.AddAttributes(log.String("k1", "v1"))
+		in.AddAttributes(attribute.String("k1", "v1"))
 
 		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(2)), instrumentation.Scope{})
 		got := lLimited.newRecord(t.Context(), in)
 
 		var gotType, gotMessage string
-		got.WalkAttributes(func(kv log.KeyValue) bool {
+		got.WalkAttributes(func(kv attribute.KeyValue) bool {
 			switch kv.Key {
-			case string(semconv.ExceptionTypeKey):
+			case semconv.ExceptionTypeKey:
 				gotType = kv.Value.AsString()
-			case string(semconv.ExceptionMessageKey):
+			case semconv.ExceptionMessageKey:
 				gotMessage = kv.Value.AsString()
 			}
 			return true
@@ -363,19 +479,19 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 
 	t.Run("NoSlotsLeft", func(t *testing.T) {
 		var in log.Record
-		in.SetBody(log.StringValue("boom"))
+		in.SetBody(attribute.StringValue("boom"))
 		in.SetSeverity(log.SeverityError)
 		in.SetErr(errors.New("boom"))
-		in.AddAttributes(log.String("k1", "v1"))
+		in.AddAttributes(attribute.String("k1", "v1"))
 		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(1)), instrumentation.Scope{})
 		got := lLimited.newRecord(t.Context(), in)
 
 		var gotType, gotMessage string
-		got.WalkAttributes(func(kv log.KeyValue) bool {
+		got.WalkAttributes(func(kv attribute.KeyValue) bool {
 			switch kv.Key {
-			case string(semconv.ExceptionTypeKey):
+			case semconv.ExceptionTypeKey:
 				gotType = kv.Value.AsString()
-			case string(semconv.ExceptionMessageKey):
+			case semconv.ExceptionMessageKey:
 				gotMessage = kv.Value.AsString()
 			}
 			return true
@@ -443,56 +559,90 @@ func (e wrappedErr) Error() string { return "wrapped: " + e.err.Error() }
 
 func (e wrappedErr) Unwrap() error { return e.err }
 
-func TestNewRecordSkipsExceptionWhenPresent(t *testing.T) {
+type derivationError struct{}
+
+func (*derivationError) Error() string {
+	return "derived.message"
+}
+
+func (*derivationError) ErrorType() string {
+	return "derived.type"
+}
+
+func TestNewRecordExceptionAttributePrecedence(t *testing.T) {
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
-	t.Run("ExistingMessage", func(t *testing.T) {
-		var r log.Record
-		r.SetBody(log.StringValue("boom"))
-		r.SetSeverity(log.SeverityError)
-		r.SetErr(errors.New("boom"))
-		r.AddAttributes(log.String(string(semconv.ExceptionMessageKey), "existing.message"))
+	testCases := []struct {
+		name           string
+		attrs          []attribute.KeyValue
+		wantMessage    string
+		wantType       string
+		wantStacktrace string
+	}{
+		{
+			name: "ExistingMessage",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionMessageKey), "existing.message"),
+			},
+			wantMessage: "existing.message",
+			wantType:    "derived.type",
+		},
+		{
+			name: "ExistingType",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionTypeKey), "existing.type"),
+			},
+			wantMessage: "derived.message",
+			wantType:    "existing.type",
+		},
+		{
+			name: "ExistingMessageAndType",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionMessageKey), "existing.message"),
+				attribute.String(string(semconv.ExceptionTypeKey), "existing.type"),
+			},
+			wantMessage: "existing.message",
+			wantType:    "existing.type",
+		},
+		{
+			name: "ExistingStacktrace",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionStacktraceKey), "existing.stacktrace"),
+			},
+			wantMessage:    "derived.message",
+			wantType:       "derived.type",
+			wantStacktrace: "existing.stacktrace",
+		},
+	}
 
-		got := l.newRecord(t.Context(), r)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var r log.Record
+			r.SetBody(attribute.StringValue("boom"))
+			r.SetSeverity(log.SeverityError)
+			r.SetErr(new(derivationError))
+			r.AddAttributes(tc.attrs...)
 
-		var gotType, gotMessage string
-		got.WalkAttributes(func(kv log.KeyValue) bool {
-			switch kv.Key {
-			case string(semconv.ExceptionTypeKey):
-				gotType = kv.Value.AsString()
-			case string(semconv.ExceptionMessageKey):
-				gotMessage = kv.Value.AsString()
-			}
-			return true
+			got := l.newRecord(t.Context(), r)
+
+			var gotType, gotMessage, gotStacktrace string
+			got.WalkAttributes(func(kv attribute.KeyValue) bool {
+				switch kv.Key {
+				case semconv.ExceptionTypeKey:
+					gotType = kv.Value.AsString()
+				case semconv.ExceptionMessageKey:
+					gotMessage = kv.Value.AsString()
+				case semconv.ExceptionStacktraceKey:
+					gotStacktrace = kv.Value.AsString()
+				}
+				return true
+			})
+
+			assert.Equal(t, tc.wantMessage, gotMessage)
+			assert.Equal(t, tc.wantType, gotType)
+			assert.Equal(t, tc.wantStacktrace, gotStacktrace)
 		})
-
-		assert.Equal(t, "existing.message", gotMessage)
-		assert.Empty(t, gotType)
-	})
-
-	t.Run("ExistingType", func(t *testing.T) {
-		var r log.Record
-		r.SetBody(log.StringValue("boom"))
-		r.SetSeverity(log.SeverityError)
-		r.SetErr(errors.New("boom"))
-		r.AddAttributes(log.String(string(semconv.ExceptionTypeKey), "existing.type"))
-
-		got := l.newRecord(t.Context(), r)
-
-		var gotType, gotMessage string
-		got.WalkAttributes(func(kv log.KeyValue) bool {
-			switch kv.Key {
-			case string(semconv.ExceptionTypeKey):
-				gotType = kv.Value.AsString()
-			case string(semconv.ExceptionMessageKey):
-				gotMessage = kv.Value.AsString()
-			}
-			return true
-		})
-
-		assert.Equal(t, "existing.type", gotType)
-		assert.Empty(t, gotMessage)
-	})
+	}
 }
 
 func TestLoggerEnabled(t *testing.T) {

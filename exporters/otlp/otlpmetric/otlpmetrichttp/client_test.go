@@ -36,8 +36,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 type clientShim struct {
@@ -118,7 +118,7 @@ func TestConfig(t *testing.T) {
 		require.NoError(t, err)
 		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 
-		exp, err := New(ctx, WithEndpointURL("http://"+coll.Addr().String()))
+		exp, err := New(ctx, WithEndpointURL("http://"+coll.Addr().String()+oconf.DefaultMetricsPath))
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
@@ -173,7 +173,7 @@ func TestConfig(t *testing.T) {
 	t.Run("WithRetry", func(t *testing.T) {
 		emptyErr := errors.New("")
 		rCh := make(chan otest.ExportResult, 5)
-		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"10"}}
+		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"1"}}
 		// All retryable errors.
 		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
 			Status: http.StatusServiceUnavailable,
@@ -818,6 +818,40 @@ func TestClientInstrumentationStaleStatusCode(t *testing.T) {
 		assert.False(t, ok, "should not report status code when the request fails before getting a response.")
 	}
 	assert.True(t, found, "expected to find operation duration metric")
+}
+
+func TestRetryAfterUsesSeconds(t *testing.T) {
+	err := newResponseError(http.Header{"Retry-After": {"10"}}, nil)
+	_, throttle := evaluate(err)
+	assert.Equal(t, 10*time.Second, throttle)
+}
+
+// TestWithEndpointURLNoPathUsesRootPath verifies that a pathless endpoint URL (scheme and host only, no path component)
+// passed to WithEndpointURL is normalized to the root path ("/") rather than falling back to the default OTLP metrics
+// path ("/v1/metrics").
+func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
+	pathCh := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pathCh <- r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+	require.Empty(t, u.Path)
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	// srv.URL has no path component, e.g. "http://127.0.0.1:port".
+	exp, err := New(ctx, WithEndpointURL(srv.URL), WithRetry(RetryConfig{Enabled: false}))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+	require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+
+	got, ok := <-pathCh
+	require.True(t, ok, "request was not received")
+	assert.Equal(t, "/", got, "a pathless endpoint URL must target the root path, not the default metrics path")
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)

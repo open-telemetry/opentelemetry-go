@@ -4,6 +4,7 @@
 package otlptracegrpc_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -39,7 +41,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 func TestMain(m *testing.M) {
@@ -47,6 +49,25 @@ func TestMain(m *testing.M) {
 }
 
 var roSpans = tracetest.SpanStubs{{Name: "Span 0"}}.Snapshots()
+
+func TestClientMarshalLogDoesNotIncludeEndpointConfig(t *testing.T) {
+	const sensitiveEndpoint = "user:pass@collector.internal:4317"
+
+	var buf bytes.Buffer
+	logger := funcr.New(func(_, args string) {
+		_, _ = buf.WriteString(args)
+	}, funcr.Options{})
+
+	client := otlptracegrpc.NewClient(
+		otlptracegrpc.WithEndpoint(sensitiveEndpoint),
+		otlptracegrpc.WithInsecure(),
+	)
+	logger.Info("client", "config", client)
+
+	logged := buf.String()
+	assert.Contains(t, logged, "otlptracegrpc")
+	assert.NotContains(t, logged, sensitiveEndpoint)
+}
 
 func contextWithTimeout(
 	parent context.Context,

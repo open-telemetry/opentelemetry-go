@@ -30,13 +30,14 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/observ"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 const (
@@ -126,7 +127,7 @@ func TestEndToEnd(t *testing.T) {
 			mcCfg: mockCollectorConfig{
 				InjectHTTPStatus: []int{504},
 				InjectResponseHeader: []map[string]string{
-					{"Retry-After": "10"},
+					{"Retry-After": "1"},
 				},
 			},
 		},
@@ -194,7 +195,10 @@ func TestEndToEnd(t *testing.T) {
 			allOpts := []otlptracehttp.Option{}
 
 			if tc.withURLEndpoint {
-				allOpts = append(allOpts, otlptracehttp.WithEndpointURL("http://"+mc.Endpoint()))
+				allOpts = append(
+					allOpts,
+					otlptracehttp.WithEndpointURL("http://"+mc.Endpoint()+otlpconfig.DefaultTracesPath),
+				)
 			} else {
 				allOpts = append(allOpts, otlptracehttp.WithEndpoint(mc.Endpoint()))
 			}
@@ -918,6 +922,39 @@ func TestClientInstrumentationStaleStatusCode(t *testing.T) {
 		assert.False(t, ok, "should not report status code when the request fails before getting a response.")
 	}
 	assert.True(t, found, "expected to find operation duration metric")
+}
+
+// TestWithEndpointURLNoPathUsesRootPath verifies that a pathless endpoint URL (scheme and host only, no path component)
+// passed to WithEndpointURL is normalized to the root path ("/") rather than falling back to the default OTLP traces
+// path ("/v1/traces").
+func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
+	pathCh := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pathCh <- r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+	require.Empty(t, u.Path)
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	// srv.URL has no path component, e.g. "http://127.0.0.1:port".
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpointURL(srv.URL),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+	)
+	exporter, err := otlptrace.New(ctx, client)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, exporter.Shutdown(ctx)) })
+
+	require.NoError(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
+
+	got, ok := <-pathCh
+	require.True(t, ok, "request was not received")
+	assert.Equal(t, "/", got, "a pathless endpoint URL must target the root path, not the default traces path")
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)

@@ -5,6 +5,7 @@ package log_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"slices"
 	"strconv"
@@ -24,16 +25,17 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 type exporter struct {
 	records []log.Record
+	calls   []string
 
-	exportCalled     bool
-	shutdownCalled   bool
-	forceFlushCalled bool
+	exportCalled  bool
+	shutdownErr   error
+	forceFlushErr error
 }
 
 func (e *exporter) Export(_ context.Context, r []log.Record) error {
@@ -43,13 +45,13 @@ func (e *exporter) Export(_ context.Context, r []log.Record) error {
 }
 
 func (e *exporter) Shutdown(context.Context) error {
-	e.shutdownCalled = true
-	return nil
+	e.calls = append(e.calls, "Shutdown")
+	return e.shutdownErr
 }
 
 func (e *exporter) ForceFlush(context.Context) error {
-	e.forceFlushCalled = true
-	return nil
+	e.calls = append(e.calls, "ForceFlush")
+	return e.forceFlushErr
 }
 
 var _ log.Exporter = (*failingTestExporter)(nil)
@@ -82,17 +84,25 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 }
 
 func TestSimpleProcessorShutdown(t *testing.T) {
-	e := new(exporter)
+	forceFlushErr := errors.New("force flush")
+	shutdownErr := errors.New("shutdown")
+	e := &exporter{
+		forceFlushErr: forceFlushErr,
+		shutdownErr:   shutdownErr,
+	}
 	s := log.NewSimpleProcessor(e)
-	_ = s.Shutdown(t.Context())
-	require.True(t, e.shutdownCalled, "exporter Shutdown not called")
+
+	err := s.Shutdown(t.Context())
+	assert.ErrorIs(t, err, forceFlushErr)
+	assert.ErrorIs(t, err, shutdownErr)
+	assert.Equal(t, []string{"ForceFlush", "Shutdown"}, e.calls)
 }
 
 func TestSimpleProcessorForceFlush(t *testing.T) {
 	e := new(exporter)
 	s := log.NewSimpleProcessor(e)
 	_ = s.ForceFlush(t.Context())
-	require.True(t, e.forceFlushCalled, "exporter ForceFlush not called")
+	require.Equal(t, []string{"ForceFlush"}, e.calls, "exporter calls")
 }
 
 type writerExporter struct {
