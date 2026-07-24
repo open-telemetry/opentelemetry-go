@@ -15,6 +15,19 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/retry"
 )
 
+// Compression describes the compression used for payloads sent to the
+// collector.
+type Compression otlpconfig.Compression
+
+const (
+	// NoCompression tells the driver to send payloads without
+	// compression.
+	NoCompression = Compression(otlpconfig.NoCompression)
+	// GzipCompression tells the driver to send payloads after
+	// compressing them with gzip.
+	GzipCompression = Compression(otlpconfig.GzipCompression)
+)
+
 // Option applies an option to the gRPC driver.
 type Option interface {
 	applyGRPCOption(otlpconfig.Config) otlpconfig.Config
@@ -115,6 +128,11 @@ func compressorToCompression(compressor string) otlpconfig.Compression {
 
 	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression as default", compressor))
 	return otlpconfig.NoCompression
+}
+
+// WithCompression sets the compression for the gRPC client to use when sending requests.
+func WithCompression(compression Compression) Option {
+	return wrappedOption{otlpconfig.WithCompression(otlpconfig.Compression(compression))}
 }
 
 // WithCompressor sets the compressor for the gRPC client to use when sending
