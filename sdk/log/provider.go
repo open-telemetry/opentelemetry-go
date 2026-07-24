@@ -216,10 +216,6 @@ func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
 }
 
 func (p *LoggerProvider) beginProcessorOperation() bool {
-	if p.stopped.Load() {
-		return false
-	}
-
 	p.processorOperationsMu.Lock()
 	defer p.processorOperationsMu.Unlock()
 	if p.stopped.Load() {
