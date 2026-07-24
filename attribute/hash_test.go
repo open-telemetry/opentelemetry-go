@@ -230,12 +230,30 @@ func TestHashValueMapOrdering(t *testing.T) {
 			reversed := slices.Clone(tt.kvs)
 			slices.Reverse(reversed)
 
-			got := hashValue(xxhash.New(), MapValue(tt.kvs...)).Sum64()
-			want := hashValue(xxhash.New(), MapValue(reversed...)).Sum64()
+			h1 := *xxhash.New()
+			got := hashValue(&h1, MapValue(tt.kvs...)).Sum64()
+			h2 := *xxhash.New()
+			want := hashValue(&h2, MapValue(reversed...)).Sum64()
 			if got != want {
 				t.Fatalf("hashValue(MapValue(%v)) = %d, want %d", tt.kvs, got, want)
 			}
 		})
+	}
+}
+
+func TestHasherZeroValue(t *testing.T) {
+	var zero Hasher
+	if got, want := zero.Distinct(), emptySet.Equivalent(); got != want {
+		t.Errorf("zero.Distinct() = %v, want %v", got, want)
+	}
+
+	kv := String("key", "value")
+	zero.Write(kv)
+
+	h := NewHasher()
+	h.Write(kv)
+	if got, want := zero.Distinct(), h.Distinct(); got != want {
+		t.Errorf("zero.Distinct() after Write = %v, want %v", got, want)
 	}
 }
 
@@ -335,7 +353,8 @@ func BenchmarkHashValueSlice(b *testing.B) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				hashValue(xxhash.New(), bench.v).Sum64()
+				h := *xxhash.New()
+				hashValue(&h, bench.v).Sum64()
 			}
 		})
 	}
@@ -382,7 +401,8 @@ func BenchmarkHashValueMap(b *testing.B) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				hashValue(xxhash.New(), bench.v).Sum64()
+				h := *xxhash.New()
+				hashValue(&h, bench.v).Sum64()
 			}
 		})
 	}
@@ -621,4 +641,21 @@ func FuzzHashKVs(f *testing.F) {
 			}
 		}
 	})
+}
+
+func BenchmarkHasher(b *testing.B) {
+	kvs := []KeyValue{
+		String("A", "alpha"),
+		Int64("B", 42),
+		Bool("C", true),
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		h := NewHasher()
+		for _, kv := range kvs {
+			h.Write(kv)
+		}
+		_ = h.Distinct()
+	}
 }
