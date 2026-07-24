@@ -10,6 +10,7 @@ import (
 
 // TextMapCarrier is the storage medium used by a TextMapPropagator.
 // See ValuesGetter for how a TextMapCarrier can get multiple values for a key.
+// TODO: REMOVE THIS COMMENT.
 type TextMapCarrier interface {
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
