@@ -29,6 +29,7 @@ type Exporter struct {
 // ExportSpans exports a batch of spans.
 func (e *Exporter) ExportSpans(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
 	protoSpans := tracetransform.Spans(ss)
+
 	if len(protoSpans) == 0 {
 		return nil
 	}

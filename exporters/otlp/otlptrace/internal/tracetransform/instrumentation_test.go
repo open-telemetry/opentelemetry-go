@@ -33,7 +33,8 @@ func TestInstrumentationScope(t *testing.T) {
 		Attributes: attribute.NewSet(attribute.String("foo", "bar")),
 	}
 
-	got := InstrumentationScope(in)
+	arena := NewArena(4)
+	got := InstrumentationScope(in, arena)
 
 	assert.Equal(t, want, got)
 }

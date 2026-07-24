@@ -22,6 +22,9 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 		return nil
 	}
 
+	// we can't reset/pool arena since some async-clients can process spans after UploadTraces returns
+	arena := NewArena(len(sdl))
+
 	rsm := make(map[attribute.Distinct]*tracepb.ResourceSpans)
 
 	type key struct {
@@ -46,20 +49,20 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 		if !iOk {
 			// Either the resource or instrumentation scope were unknown.
 			scopeSpan = &tracepb.ScopeSpans{
-				Scope:     InstrumentationScope(scope),
+				Scope:     InstrumentationScope(scope, arena),
 				Spans:     []*tracepb.Span{},
 				SchemaUrl: scope.SchemaURL,
 			}
 			ssm[k] = scopeSpan
 		}
-		scopeSpan.Spans = append(scopeSpan.Spans, span(sd))
+		scopeSpan.Spans = append(scopeSpan.Spans, span(sd, arena))
 
 		rs, rOk := rsm[rKey]
 		if !rOk {
 			resources++
 			// The resource was unknown.
 			rs = &tracepb.ResourceSpans{
-				Resource:   Resource(sd.Resource()),
+				Resource:   Resource(sd.Resource(), arena),
 				ScopeSpans: []*tracepb.ScopeSpans{scopeSpan},
 				SchemaUrl:  sd.Resource().SchemaURL(),
 			}
@@ -86,7 +89,7 @@ func Spans(sdl []tracesdk.ReadOnlySpan) []*tracepb.ResourceSpans {
 }
 
 // span transforms a Span into an OTLP span.
-func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
+func span(sd tracesdk.ReadOnlySpan, arena *Arena) *tracepb.Span {
 	if sd == nil {
 		return nil
 	}
@@ -97,17 +100,17 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 
 	sdStatus := sd.Status()
 	s := &tracepb.Span{
-		TraceId:                tid[:],
-		SpanId:                 sid[:],
+		TraceId:                arena.allocTraceID(tid),
+		SpanId:                 arena.allocSpanID(sid),
 		TraceState:             spanContext.TraceState().String(),
 		Status:                 status(sdStatus.Code, sdStatus.Description),
 		StartTimeUnixNano:      uint64(max(0, sd.StartTime().UnixNano())), // nolint:gosec // Overflow checked.
 		EndTimeUnixNano:        uint64(max(0, sd.EndTime().UnixNano())),   // nolint:gosec // Overflow checked.
-		Links:                  links(sd.Links()),
+		Links:                  links(sd.Links(), arena),
 		Kind:                   spanKind(sd.SpanKind()),
 		Name:                   sd.Name(),
-		Attributes:             KeyValues(sd.Attributes()),
-		Events:                 spanEvents(sd.Events()),
+		Attributes:             KeyValues(sd.Attributes(), arena),
+		Events:                 spanEvents(sd.Events(), arena),
 		DroppedAttributesCount: clampUint32(sd.DroppedAttributes()),
 		DroppedEventsCount:     clampUint32(sd.DroppedEvents()),
 		DroppedLinksCount:      clampUint32(sd.DroppedLinks()),
@@ -115,7 +118,7 @@ func span(sd tracesdk.ReadOnlySpan) *tracepb.Span {
 
 	sdParent := sd.Parent()
 	if psid := sdParent.SpanID(); psid.IsValid() {
-		s.ParentSpanId = psid[:]
+		s.ParentSpanId = arena.allocSpanID(psid)
 	}
 	s.Flags = buildSpanFlagsWith(spanContext.TraceFlags(), sdParent)
 
@@ -150,7 +153,7 @@ func status(status codes.Code, message string) *tracepb.Status {
 }
 
 // links transforms span Links to OTLP span links.
-func links(links []tracesdk.Link) []*tracepb.Span_Link {
+func links(links []tracesdk.Link, arena *Arena) []*tracepb.Span_Link {
 	if len(links) == 0 {
 		return nil
 	}
@@ -166,9 +169,9 @@ func links(links []tracesdk.Link) []*tracepb.Span_Link {
 		flags := buildSpanFlagsWith(otLink.SpanContext.TraceFlags(), otLink.SpanContext)
 
 		sl = append(sl, &tracepb.Span_Link{
-			TraceId:                tid[:],
-			SpanId:                 sid[:],
-			Attributes:             KeyValues(otLink.Attributes),
+			TraceId:                arena.allocTraceID(tid),
+			SpanId:                 arena.allocSpanID(sid),
+			Attributes:             KeyValues(otLink.Attributes, arena),
 			DroppedAttributesCount: clampUint32(otLink.DroppedAttributeCount),
 			Flags:                  flags,
 		})
@@ -188,7 +191,7 @@ func buildSpanFlagsWith(tf trace.TraceFlags, parent trace.SpanContext) uint32 {
 }
 
 // spanEvents transforms span Events to an OTLP span events.
-func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
+func spanEvents(es []tracesdk.Event, arena *Arena) []*tracepb.Span_Event {
 	if len(es) == 0 {
 		return nil
 	}
@@ -199,7 +202,7 @@ func spanEvents(es []tracesdk.Event) []*tracepb.Span_Event {
 		events[i] = &tracepb.Span_Event{
 			Name:                   es[i].Name,
 			TimeUnixNano:           uint64(max(0, es[i].Time.UnixNano())), // nolint:gosec // Overflow checked.
-			Attributes:             KeyValues(es[i].Attributes),
+			Attributes:             KeyValues(es[i].Attributes, arena),
 			DroppedAttributesCount: clampUint32(es[i].DroppedAttributeCount),
 		}
 	}
