@@ -142,6 +142,10 @@ func (s *atomicMinMax[N]) Update(val N) {
 	}
 }
 
+func (s *atomicMinMax[N]) reset() {
+	s.set.Store(false)
+}
+
 // hotColdWaitGroup is a synchronization primitive which enables lockless
 // writes for concurrent writers and enables a reader to acquire exclusive
 // access to a snapshot of state including only completed operations.
@@ -226,6 +230,7 @@ type limitedSyncMap[V any] struct {
 	aggLimit int
 	len      int
 	lenMux   sync.Mutex
+	overflow atomic.Bool
 }
 
 func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) V) V {
@@ -233,11 +238,13 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue fun
 	if loaded {
 		return actual.(V)
 	}
-	// If the overflow set exists, assume we have already overflowed and don't
-	// bother with the slow path below.
-	actual, loaded = m.Load(overflowSet.Equivalent())
-	if loaded {
-		return actual.(V)
+	// If aggregation overflow has already happened due to exceeding the limit,
+	// any new attribute set will be aggregated into the overflow set.
+	if m.aggLimit > 0 && m.overflow.Load() {
+		actual, loaded = m.Load(overflowSet.Equivalent())
+		if loaded {
+			return actual.(V)
+		}
 	}
 	// Slow path: add a new attribute set.
 	m.lenMux.Lock()
@@ -253,6 +260,7 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue fun
 
 	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
 		fltrAttr = overflowSet
+		m.overflow.Store(true)
 	}
 	actual, loaded = m.LoadOrStore(fltrAttr.Equivalent(), newValue(fltrAttr))
 	if !loaded {
@@ -264,6 +272,7 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue fun
 func (m *limitedSyncMap[V]) Clear() {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
+	m.overflow.Store(false)
 	m.len = 0
 	m.Map.Clear()
 }
