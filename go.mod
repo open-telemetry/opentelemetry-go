@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/go-logr/stdr v1.2.2
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.11.1
