@@ -9,6 +9,8 @@ on:
       - '**/go.sum'
       - 'Makefile'
       - '.github/workflows/benchmark.yml'
+  # REMOVE THIS BEFORE MERGE
+  pull_request:
   workflow_dispatch:
     inputs:
       full:
