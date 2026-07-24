@@ -40,6 +40,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - ⚠️ **Breaking Change:** `WithEndpointURL` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` no longer appends the default signal path for an endpoint URL without path, making the behavior consistent with `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. It is now also consistent with setting the endpoint via `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`. If the URL has no path component, `/` (e.g. the root path) is now appended. Use `WithEndpointURL(url.JoinPath(endpoint, "/v1/traces"))` to keep the previous behavior. (#8538)
 - `HistogramReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` now uses a time-unbiased sampling algorithm for exemplars. (#8306)
 
+### Deprecated
+
+- Deprecate `WithExportBufferSize` in `go.opentelemetry.io/otel/sdk/log`. The option remains available for source compatibility but no longer affects behavior; `BatchProcessor` no longer maintains a separate export-request buffer. (#8620)
+
 ### Removed
 
 - ⚠️ **Breaking Change:** Remove `Kind`, `Value`, `KeyValue`, value and key-value constructors, and attribute conversion helpers from `go.opentelemetry.io/otel/log`. (#8490)
@@ -48,6 +52,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Record `error.type="already_shutdown"` on the experimental BatchProcessor observability metric in `go.opentelemetry.io/otel/sdk/log` for records dropped after shutdown. (#8657)
+- Prevent `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` from busy-spinning under exporter backpressure, and serialize dequeue, export, force-flush, and shutdown work in one worker. (#8620)
+- Make `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` return errors produced while draining records for `ForceFlush` and `Shutdown`, and continue attempting later batches while the request context remains valid. (#8620)
+- Keep the default `BatchProcessor` maximum export batch size in `go.opentelemetry.io/otel/sdk/log` at or below the configured maximum queue size. (#8620)
 - Ensure built-in processors include exporter `ForceFlush` effects in `Shutdown` in `go.opentelemetry.io/otel/sdk/log`. (#8599)
 - Clarify in `go.opentelemetry.io/otel/log` that `LoggerProvider` implementations should retain an empty `Logger` name instead of replacing it with a default. (#8587)
 - Clarify that `Float64Histogram` and `Int64Histogram` `Record` methods expect non-negative values in `go.opentelemetry.io/otel/metric`. (#8574)
@@ -100,13 +107,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Set `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE=<max_size>` to enable for all periodic readers.
   See `go.opentelemetry.io/otel/sdk/metric/internal/x` for feature documentation. (#8071)
 - Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`.
-  Enable with `OTEL_GO_X_SELF_OBSERVABILITY=true` environment variable.
+  Enable with `OTEL_GO_X_OBSERVABILITY=true` environment variable.
   See `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x` for feature documentation. (#8192)
 - Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`.
-  Enable with `OTEL_GO_X_SELF_OBSERVABILITY=true` environment variable.
+  Enable with `OTEL_GO_X_OBSERVABILITY=true` environment variable.
   See `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/x` for feature documentation. (#8194)
 - Add experimental self-observability metrics in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`.
-  Enable with `OTEL_GO_X_SELF_OBSERVABILITY=true` environment variable.
+  Enable with `OTEL_GO_X_OBSERVABILITY=true` environment variable.
   See `go.opentelemetry.io/otel/stdout/stdoutlog/internal/x` for feature documentation. (#8263)
 - Add `WithDefaultAttributes` to `go.opentelemetry.io/otel/metric/x` to support setting default attributes on instruments. (#8135)
 - Add `go.opentelemetry.io/otel/semconv/v1.41.0` package.
