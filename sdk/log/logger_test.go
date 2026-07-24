@@ -431,6 +431,56 @@ func TestLoggerEmit(t *testing.T) {
 	}
 }
 
+func TestLoggerEmitErrorHandlerShutdown(t *testing.T) {
+	proc := newProcessor("processor")
+	proc.onEmitFunc = func(context.Context, *Record) error { return assert.AnError }
+	provider := NewLoggerProvider(WithProcessor(proc))
+	logger := provider.Logger("logger")
+	ctx := t.Context()
+
+	orig := otel.GetErrorHandler()
+	t.Cleanup(func() { otel.SetErrorHandler(orig) })
+
+	var (
+		handledErr  error
+		shutdownErr error
+	)
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		handledErr = err
+		shutdownErr = provider.Shutdown(ctx)
+	}))
+
+	done := make(chan struct{})
+	go func() {
+		logger.Emit(ctx, log.Record{})
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("Emit deadlocked when the error handler called Shutdown")
+	}
+
+	assert.ErrorIs(t, handledErr, assert.AnError)
+	assert.NoError(t, shutdownErr)
+	assert.Equal(t, 1, proc.shutdownCalls)
+}
+
+func TestLoggerEmitAfterProviderShutdown(t *testing.T) {
+	proc := newProcessor("processor")
+	provider := NewLoggerProvider(WithProcessor(proc))
+	logger := provider.Logger("logger")
+
+	logger.Emit(t.Context(), log.Record{})
+	require.Len(t, proc.records, 1)
+
+	require.NoError(t, provider.Shutdown(t.Context()))
+	logger.Emit(t.Context(), log.Record{})
+
+	assert.Len(t, proc.records, 1)
+}
+
 func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
@@ -733,10 +783,24 @@ func TestLoggerEnabled(t *testing.T) {
 	}
 }
 
+func TestLoggerEnabledAfterProviderShutdown(t *testing.T) {
+	proc := newFltrProcessor("processor", true)
+	provider := NewLoggerProvider(WithProcessor(proc))
+	logger := provider.Logger("logger")
+
+	require.True(t, logger.Enabled(t.Context(), log.EnabledParameters{}))
+	require.Len(t, proc.params, 1)
+
+	require.NoError(t, provider.Shutdown(t.Context()))
+	assert.False(t, logger.Enabled(t.Context(), log.EnabledParameters{}))
+	assert.Len(t, proc.params, 1)
+}
+
 func TestLoggerObservability(t *testing.T) {
 	testCases := []struct {
 		name               string
 		enabled            bool
+		shutdown           bool
 		records            []log.Record
 		wantLogRecordCount int64
 	}{
@@ -752,6 +816,12 @@ func TestLoggerObservability(t *testing.T) {
 			records:            []log.Record{{}, {}, {}, {}, {}},
 			wantLogRecordCount: 5,
 		},
+		{
+			name:     "EnabledAfterProviderShutdown",
+			enabled:  true,
+			shutdown: true,
+			records:  []log.Record{{}, {}},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -764,7 +834,11 @@ func TestLoggerObservability(t *testing.T) {
 			r := sdkmetric.NewManualReader()
 			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(r))
 			otel.SetMeterProvider(mp)
-			l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+			provider := NewLoggerProvider()
+			l := newLogger(provider, instrumentation.Scope{})
+			if tc.shutdown {
+				require.NoError(t, provider.Shutdown(t.Context()))
+			}
 
 			for _, record := range tc.records {
 				l.Emit(t.Context(), record)

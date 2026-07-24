@@ -66,7 +66,11 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 }
 
 // LoggerProvider handles the creation and coordination of Loggers. All Loggers
-// created by a LoggerProvider will be associated with the same Resource.
+// it creates are associated with the same Resource.
+//
+// After [LoggerProvider.Shutdown] starts, calls to [log.Logger.Enabled] on
+// Loggers created by the LoggerProvider return false, and calls to
+// [log.Logger.Emit] perform no operation.
 type LoggerProvider struct {
 	embedded.LoggerProvider
 
@@ -79,7 +83,9 @@ type LoggerProvider struct {
 	loggersMu sync.Mutex
 	loggers   map[instrumentation.Scope]*logger
 
-	stopped atomic.Bool
+	stopped                   atomic.Bool
+	processorAdmissionMu      sync.Mutex
+	activeProcessorOperations sync.WaitGroup
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 }
@@ -106,7 +112,7 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 
 // Logger returns a new [log.Logger] with the provided name and configuration.
 //
-// If p is shut down, a [noop.Logger] instance is returned.
+// Calls made after [LoggerProvider.Shutdown] starts return a [noop.Logger].
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logger {
@@ -148,13 +154,34 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 	return l
 }
 
-// Shutdown shuts down the provider and all processors.
+// Shutdown shuts down the provider and all processors in the order they were
+// registered.
+//
+// The first call stops admitting new operations that invoke processor Enabled,
+// OnEmit, or ForceFlush methods. It waits for operations already admitted to
+// complete before synchronously invoking each processor's Shutdown method. If
+// ctx is canceled before the admitted operations complete, Shutdown returns
+// ctx.Err() without invoking processor Shutdown.
+//
+// Concurrent or subsequent Shutdown calls return nil without invoking
+// processor Shutdown.
+//
+// Shutdown must not be called directly or indirectly from a Processor method.
 //
 // This method can be called concurrently.
 func (p *LoggerProvider) Shutdown(ctx context.Context) error {
+	p.processorAdmissionMu.Lock()
 	stopped := p.stopped.Swap(true)
+	p.processorAdmissionMu.Unlock()
 	if stopped {
 		return nil
+	}
+
+	// All Add calls happen while processorAdmissionMu is held and stopped is
+	// false. Setting stopped while holding the same mutex ensures no Add can
+	// race with Wait.
+	if err := p.waitForProcessorOperations(ctx); err != nil {
+		return err
 	}
 
 	var err error
@@ -166,17 +193,68 @@ func (p *LoggerProvider) Shutdown(ctx context.Context) error {
 
 // ForceFlush flushes all processors.
 //
+// Once Shutdown starts, ForceFlush performs no operation and returns nil.
+//
 // This method can be called concurrently.
 func (p *LoggerProvider) ForceFlush(ctx context.Context) error {
-	if p.stopped.Load() {
+	if len(p.processors) == 0 || !p.beginProcessorOperation() {
 		return nil
 	}
+	defer p.endProcessorOperation()
 
 	var err error
 	for _, p := range p.processors {
 		err = errors.Join(err, p.ForceFlush(ctx))
 	}
 	return err
+}
+
+func (p *LoggerProvider) beginProcessorOperation() bool {
+	if p.stopped.Load() {
+		return false
+	}
+
+	p.processorAdmissionMu.Lock()
+	defer p.processorAdmissionMu.Unlock()
+	if p.stopped.Load() {
+		return false
+	}
+	p.activeProcessorOperations.Add(1)
+	return true
+}
+
+func (p *LoggerProvider) endProcessorOperation() {
+	p.activeProcessorOperations.Done()
+}
+
+func (p *LoggerProvider) waitForProcessorOperations(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	done := make(chan struct{})
+	// WaitGroup does not provide a context-aware wait. This goroutine only
+	// observes the drain; processor Shutdown remains on the caller's goroutine.
+	go func() {
+		p.activeProcessorOperations.Wait()
+		close(done)
+	}()
+
+	return waitForProcessorOperationsCompletion(ctx, done)
+}
+
+func waitForProcessorOperationsCompletion(ctx context.Context, done <-chan struct{}) error {
+	select {
+	case <-done:
+	case <-ctx.Done():
+		// Prefer a completed drain when it races with cancellation.
+		select {
+		case <-done:
+		default:
+			return ctx.Err()
+		}
+	}
+	return nil
 }
 
 // LoggerProviderOption applies a configuration option value to a LoggerProvider.
