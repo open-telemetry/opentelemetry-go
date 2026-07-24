@@ -159,7 +159,8 @@ test-verbose: ARGS=-v -race
 test-concurrent-safe: ARGS=-run=ConcurrentSafe -count=100 -race
 test-concurrent-safe: TIMEOUT=120
 $(TEST_TARGETS): test
-test: $(OTEL_GO_MOD_DIRS:%=test/%)
+# Include ./internal/tools in the test command
+test: $(ALL_GO_MOD_DIRS:%=test/%)
 test/%: DIR=$*
 test/%:
 	@echo "$(GO) test -timeout $(TIMEOUT)s $(ARGS) $(DIR)/..." \
