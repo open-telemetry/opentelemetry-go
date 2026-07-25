@@ -26,7 +26,7 @@ jobs:
         config: .markdownlint-cli2.yaml
         fix: false
         globs: |
-          '**/*.md'
+          **/*.md
       continue-on-error: true
 
     - name: Manage issue
