@@ -45,13 +45,15 @@ func NewArena(size int) *Arena {
 func (a *Arena) allocTraceID(tid trace.TraceID) []byte {
 	start := len(a.ids)
 	a.ids = append(a.ids, tid[:]...)
-	return a.ids[start:]
+	end := len(a.ids)
+	return a.ids[start:end:end]
 }
 
 func (a *Arena) allocSpanID(sid trace.SpanID) []byte {
 	start := len(a.ids)
 	a.ids = append(a.ids, sid[:]...)
-	return a.ids[start:]
+	end := len(a.ids)
+	return a.ids[start:end:end]
 }
 
 type chunkedStorage[T any] struct {
