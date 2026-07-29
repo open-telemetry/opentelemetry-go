@@ -52,6 +52,48 @@ func TestArena(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("appending to allocated traceID does not overwrite next spanID", func(t *testing.T) {
+		a := NewArena(2)
+		s := generateSpanWithRandomIDs()
+		sc := s.SpanContext()
+
+		tid := a.allocTraceID(sc.TraceID())
+		sid := a.allocSpanID(sc.SpanID())
+
+		tid = append(tid, 77)
+
+		var (
+			traceID trace.TraceID
+			spanID  trace.SpanID
+		)
+		copy(traceID[:], tid)
+		copy(spanID[:], sid)
+
+		assert.Equal(t, sc.TraceID(), traceID)
+		assert.Equal(t, sc.SpanID(), spanID)
+	})
+
+	t.Run("appending to allocated spanID does not overwrite next traceID", func(t *testing.T) {
+		a := NewArena(2)
+		s := generateSpanWithRandomIDs()
+		sc := s.SpanContext()
+
+		sid := a.allocSpanID(sc.SpanID())
+		tid := a.allocTraceID(sc.TraceID())
+
+		sid = append(sid, 88)
+
+		var (
+			traceID trace.TraceID
+			spanID  trace.SpanID
+		)
+		copy(traceID[:], tid)
+		copy(spanID[:], sid)
+
+		assert.Equal(t, sc.TraceID(), traceID)
+		assert.Equal(t, sc.SpanID(), spanID)
+	})
 }
 
 func generateSpans(n int) []tracesdk.ReadOnlySpan {
