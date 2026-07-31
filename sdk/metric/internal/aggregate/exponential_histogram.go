@@ -753,7 +753,7 @@ func (e *lockedCumulativeExpoHistogram[N]) measure(
 		return newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, e.newRes, now())
 	})
 	vp.record(value)
-	if !vp.dropExemplars {
+	if vp.res != nil && !vp.dropExemplars {
 		vp.res.Offer(ctx, value, lazy)
 	}
 }
@@ -789,7 +789,7 @@ func (e *lockedCumulativeExpoHistogram[N]) collect(
 
 		val.uploadTo(dp, startTime, t)
 
-		if val.res != nil {
+		if val.res != nil && !val.dropExemplars {
 			collectExemplars(&dp.Exemplars, val.res.Collect)
 		} else {
 			dp.Exemplars = dp.Exemplars[:0]
