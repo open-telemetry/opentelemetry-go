@@ -34,6 +34,7 @@ const (
 )
 
 // Hasher computes a Distinct value from KeyValue attributes supplied with Write.
+// Attributes MUST be supplied in ascending key order without duplicate keys.
 //
 // The zero value is ready to use.
 type Hasher struct {
@@ -47,12 +48,21 @@ func NewHasher() Hasher {
 	return Hasher{h: *xxhash.New(), init: true}
 }
 
+// Reset resets the Hasher to its initial state so it can be reused.
+func (h *Hasher) Reset() {
+	if h.init {
+		h.h.Reset()
+	}
+	h.count = 0
+}
+
 // Write adds kv to the hash.
 //
-// Write does not sort attributes or remove duplicate keys. To produce the same
-// Distinct as Set.Equivalent, write attributes in ascending key order, with no
-// more than one value for each key. If the source contains duplicate keys,
-// retain the last value for each key before calling Write.
+// Write requires attributes to be supplied in ascending key order with no
+// duplicate keys. To produce the same Distinct as Set.Equivalent, write
+// attributes in ascending key order, with no more than one value for each key.
+// If the source contains duplicate keys, retain the last value for each key
+// before calling Write.
 func (h *Hasher) Write(kv KeyValue) {
 	if !h.init {
 		h.h = *xxhash.New()

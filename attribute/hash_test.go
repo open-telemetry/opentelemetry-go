@@ -257,6 +257,24 @@ func TestHasherZeroValue(t *testing.T) {
 	}
 }
 
+func TestHasherReset(t *testing.T) {
+	h := NewHasher()
+	h.Write(String("a", "1"))
+	h.Write(String("b", "2"))
+	distinctBefore := h.Distinct()
+
+	h.Reset()
+	if got, want := h.Distinct(), emptySet.Equivalent(); got != want {
+		t.Errorf("h.Distinct() after Reset = %v, want %v", got, want)
+	}
+
+	h.Write(String("a", "1"))
+	h.Write(String("b", "2"))
+	if got, want := h.Distinct(), distinctBefore; got != want {
+		t.Errorf("h.Distinct() after re-write = %v, want %v", got, want)
+	}
+}
+
 func slice(kvs []KeyValue) string {
 	if len(kvs) == 0 {
 		return "[]"
