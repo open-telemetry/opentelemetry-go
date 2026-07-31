@@ -508,6 +508,11 @@ func (i *float64Inst) Bind(attrs ...attribute.KeyValue) metric.Float64Counter {
 			}
 		}
 	}
+	if len(measures) == 0 {
+		measures = append(measures, func(ctx context.Context, val float64) {
+			i.aggregate(ctx, val, preboundSet)
+		})
+	}
 	return &boundFloat64Counter{
 		inst:          i,
 		preboundAttrs: preboundSet,
@@ -526,6 +531,11 @@ func (i *int64Inst) Bind(attrs ...attribute.KeyValue) metric.Int64Counter {
 				measures = append(measures, m)
 			}
 		}
+	}
+	if len(measures) == 0 {
+		measures = append(measures, func(ctx context.Context, val int64) {
+			i.aggregate(ctx, val, preboundSet)
+		})
 	}
 	return &boundInt64Counter{
 		inst:          i,
