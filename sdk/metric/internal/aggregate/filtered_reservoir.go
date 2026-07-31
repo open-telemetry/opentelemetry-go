@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal/reservoir"
 )
@@ -59,10 +58,7 @@ func (f *filteredExemplarReservoir[N]) Offer(ctx context.Context, val N, lazy la
 	if f.filter(ctx) {
 		// only record the current time if we are sampling this measurement.
 		ts := time.Now()
-		var attr []attribute.KeyValue
-		if lazy.HasDroppedAttributes() {
-			attr = lazy.Dropped()
-		}
+		attr := lazy.Dropped()
 		if !f.concurrentSafe {
 			f.reservoirMux.Lock()
 			defer f.reservoirMux.Unlock()
