@@ -134,7 +134,7 @@ func TestLazyFilteredAttributes_Correctness(t *testing.T) {
 	t.Run("LargeSetMoreThan64_AllKeptZeroAllocs", func(t *testing.T) {
 		var kvs []attribute.KeyValue
 		for i := range 75 {
-			kvs = append(kvs, attribute.Int("k"+fmt.Sprint(i), i))
+			kvs = append(kvs, attribute.Int(fmt.Sprintf("k%03d", i), i))
 		}
 		orig := attribute.NewSet(kvs...)
 		filter := func(attribute.KeyValue) bool { return true }
@@ -154,12 +154,12 @@ func TestLazyFilteredAttributes_Correctness(t *testing.T) {
 	t.Run("LargeSetMoreThan64_BackfillBigMask", func(t *testing.T) {
 		var kvs []attribute.KeyValue
 		for i := range 80 {
-			kvs = append(kvs, attribute.Int("k"+fmt.Sprint(i), i))
+			kvs = append(kvs, attribute.Int(fmt.Sprintf("k%03d", i), i))
 		}
 		orig := attribute.NewSet(kvs...)
 		filter := func(kv attribute.KeyValue) bool {
 			// Drop attribute at index 10 and index 66, keep everything else including 64, 65, 67, etc.
-			return kv.Key != "k10" && kv.Key != "k66"
+			return kv.Key != "k010" && kv.Key != "k066"
 		}
 		l := newLazyFilteredAttributes(orig, filter)
 		assert.True(t, l.HasDroppedAttributes())
@@ -173,7 +173,7 @@ func TestLazyFilteredAttributes_Correctness(t *testing.T) {
 	t.Run("LargeSetMoreThan64_SuffixDropsAfter63", func(t *testing.T) {
 		var kvs []attribute.KeyValue
 		for i := range 80 {
-			kvs = append(kvs, attribute.Int("k"+fmt.Sprint(i), i))
+			kvs = append(kvs, attribute.Int(fmt.Sprintf("k%03d", i), i))
 		}
 		orig := attribute.NewSet(kvs...)
 		filter := func(kv attribute.KeyValue) bool {
