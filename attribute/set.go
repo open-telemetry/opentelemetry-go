@@ -265,14 +265,14 @@ func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 	return newSet(kvs), nil
 }
 
-// NewDistinctWithFilter returns a Distinct identifier for the filtered attribute set,
+// newDistinctWithFilter returns a Distinct identifier for the filtered attribute set,
 // and the sorted and de-duplicated slice of attributes. It modifies the input slice
 // in-place to sort and de-duplicate the attributes.
 //
 // The returned Distinct represents the equivalence class of the attribute set after
 // the filter is applied. The returned slice contains all unique attributes, including
 // those that did not pass the filter.
-func NewDistinctWithFilter(kvs []KeyValue, filter Filter) (Distinct, []KeyValue) {
+func newDistinctWithFilter(kvs []KeyValue, filter Filter) (Distinct, []KeyValue) {
 	if len(kvs) == 0 {
 		return Distinct{hash: emptyHash}, kvs
 	}
