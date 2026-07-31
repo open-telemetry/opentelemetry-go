@@ -1564,6 +1564,18 @@ func TestExponentialHistogramNoMinMax(t *testing.T) {
 	assert.False(t, defined, "Max should be invalid when noMinMax is true")
 }
 
+func TestExponentialHistogramMinMaxUnset(t *testing.T) {
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+	val := newExpoHistogramDataPoint[int64](alice, 4, 20, false, false, nil, now())
+	var dp metricdata.ExponentialHistogramDataPoint[int64]
+	val.uploadTo(&dp, now(), now())
+
+	_, defined := dp.Min.Value()
+	assert.False(t, defined, "Min should be invalid for unrecorded minMax")
+	_, defined = dp.Max.Value()
+	assert.False(t, defined, "Max should be invalid for unrecorded minMax")
+}
+
 func TestExponentialHistogramCumulativeExemplarPreservedAcrossCollections(t *testing.T) {
 	ctx := t.Context()
 	alice := attribute.NewSet(attribute.String("user", "alice"))
