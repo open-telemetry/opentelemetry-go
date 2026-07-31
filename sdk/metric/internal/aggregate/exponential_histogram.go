@@ -611,11 +611,7 @@ type doubleBufferedCumulativePoint[N int64 | float64] struct {
 	points     [2]*expoHistogramDataPoint[N]
 	cumulative *expoHistogramDataPoint[N]
 
-	newRes   func(attribute.Set) FilteredExemplarReservoir[N]
-	maxSize  int
 	maxScale int32
-	noMinMax bool
-	noSum    bool
 }
 
 func (cp *doubleBufferedCumulativePoint[N]) measure(ctx context.Context, value N, lazy lazyFilteredAttributes) {
@@ -681,11 +677,7 @@ func (e *doubleBufferedCumulativeExpoHistogram[N]) measure(
 	vp := e.values.LoadOrStoreAttr(lazy, func(attr attribute.Set) *doubleBufferedCumulativePoint[N] {
 		n := now()
 		cp := &doubleBufferedCumulativePoint[N]{
-			maxSize:  e.maxSize,
 			maxScale: e.maxScale,
-			noMinMax: e.noMinMax,
-			noSum:    e.noSum,
-			newRes:   e.newRes,
 		}
 		cp.cumulative = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, e.newRes, n)
 		cp.points[0] = newExpoHistogramDataPoint[N](attr, e.maxSize, e.maxScale, e.noMinMax, e.noSum, nil, n)
