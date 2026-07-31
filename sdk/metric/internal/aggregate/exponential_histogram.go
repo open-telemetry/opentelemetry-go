@@ -201,7 +201,7 @@ func (p *expoHistogramDataPoint[N]) scaleChange(bin, startBin int32, length int)
 		low >>= 1
 		high >>= 1
 		count++
-		if count > int32(expoMaxScale-expoMinScale) {
+		if count > expoMaxScale-expoMinScale {
 			return count
 		}
 	}
