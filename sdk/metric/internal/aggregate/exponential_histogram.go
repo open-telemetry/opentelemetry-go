@@ -728,9 +728,9 @@ func (e *doubleBufferedCumulativeExpoHistogram[N]) collect(
 	// sets that become "stale" need to be forgotten so this will not
 	// overload the system.
 
-	h.DataPoints = hDPts
+	h.DataPoints = hDPts[:i]
 	*dest = h
-	return len(hDPts)
+	return i
 }
 
 // lockedCumulativeExpoHistogram summarizes a set of measurements as a cumulative
@@ -812,7 +812,7 @@ func (e *lockedCumulativeExpoHistogram[N]) collect(
 	// sets that become "stale" need to be forgotten so this will not
 	// overload the system.
 
-	h.DataPoints = hDPts
+	h.DataPoints = hDPts[:i]
 	*dest = h
-	return len(hDPts)
+	return i
 }
