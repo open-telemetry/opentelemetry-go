@@ -55,10 +55,11 @@ jobs:
           #
           # For a manual workflow_dispatch run, neither field is set,
           # and the Makefile's default base ref kicks in.
-          BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
           ARGS: ${{ inputs.full && '-all' || '' }}
         run: |
-          echo "shards=$(make print-affected-benchmarks)" >> $GITHUB_OUTPUT
+          shards=$(make print-affected-benchmarks)
+          echo "shards=${shards}" >> "$GITHUB_OUTPUT"
 
   benchmark:
     needs: sharding-benchmark
