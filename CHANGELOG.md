@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Prevent underflowed measurements from updating sum, min, or max in exponential histograms in `go.opentelemetry.io/otel/sdk/metric`. (#8077)
 - The simple span and log processors record `otel.sdk.processor.{span,log}.processed` when the record is submitted to the exporter instead of after the export completes, and no longer set `error.type` from the export outcome, in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log`. (#8705)
 
 <!-- Released section -->

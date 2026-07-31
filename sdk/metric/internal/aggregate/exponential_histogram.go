@@ -25,6 +25,7 @@ const (
 )
 
 // expoHistogramDataPoint is a single data point in an exponential histogram.
+// Access to its fields during record, merge, reset, and uploadTo is synchronized by mu.
 type expoHistogramDataPoint[N int64 | float64] struct {
 	attrs         attribute.Set
 	res           FilteredExemplarReservoir[N]
@@ -306,7 +307,9 @@ func (b *expoBuckets) merge(other *expoBuckets) {
 }
 
 func (p *expoHistogramDataPoint[N]) merge(other *expoHistogramDataPoint[N]) {
-	// Caller must ensure other is quiescent (no concurrent record/merge), as merge reads and mutates other.
+	// Caller must ensure other is idle (no concurrent record/merge), as merge reads and mutates other.
+	// Note: scale underflow below expoMinScale cannot happen during merge because maxSize <= 2 is routed to
+	// lockedCumulativeExpoHistogram, and maxSize > 2 guarantees scale changes remain bounded within [expoMinScale, expoMaxScale].
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -578,6 +581,9 @@ func newCumulativeExpoHistogram[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) (fltrMeasure[N], func(*metricdata.Aggregation) int) {
+	// For maxSize <= 2, use lockedCumulativeExpoHistogram to avoid scale underflow issues
+	// during merge while reserving doubleBufferedCumulativeExpoHistogram for high-performance
+	// concurrent aggregation at larger max sizes.
 	if maxSize <= 2 {
 		h := &lockedCumulativeExpoHistogram[N]{
 			noSum:    noSum,
@@ -620,6 +626,8 @@ func (cp *doubleBufferedCumulativePoint[N]) measure(ctx context.Context, value N
 	v := cp.points[hotIdx]
 	v.record(value)
 	if cp.cumulative.res != nil && !cp.cumulative.dropExemplars {
+		// Note: Measurements occurring after swapHotAndWait can offer an exemplar to
+		// cp.cumulative.res before collectExemplars runs, which is an accepted tradeoff.
 		cp.cumulative.res.Offer(ctx, value, lazy)
 	}
 }
@@ -629,12 +637,14 @@ func (cp *doubleBufferedCumulativePoint[N]) collect(
 	t, defaultStartTime time.Time,
 ) {
 	val := cp.cumulative
+	// swapHotAndWait makes sure all active writes to coldIdx are done before merge runs,
+	// allowing merge to mutate delta without needing delta.mu.
 	coldIdx := cp.wg.swapHotAndWait()
 	delta := cp.points[coldIdx]
 
 	val.merge(delta)
 
-	// Reset the quiescent cold point for reuse without allocation.
+	// Reset the inactive cold point for reuse without allocation.
 	delta.reset(t, cp.maxScale)
 
 	startTime := defaultStartTime
