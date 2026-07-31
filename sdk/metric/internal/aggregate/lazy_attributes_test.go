@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func TestLazyFilteredAttributes_CalledExactlyOnce(t *testing.T) {
+func TestLazyFilteredAttributesConcurrentSafe_CalledExactlyOnce(t *testing.T) {
 	kvs := []attribute.KeyValue{
 		attribute.String("a", "1"),
 		attribute.String("b", "2"),
