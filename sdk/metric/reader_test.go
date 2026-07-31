@@ -48,7 +48,7 @@ func (ts *readerTestSuite) TestSDKProducer() {
 	m := metricdata.ResourceMetrics{}
 	err := ts.Reader.Collect(context.Background(), &m)
 	ts.NoError(err)
-	ts.Equal(testResourceMetricsA, m)
+	ts.Equal(testResourceMetricsA(), m)
 }
 
 func (ts *readerTestSuite) TestExternalProducer() {
@@ -57,7 +57,7 @@ func (ts *readerTestSuite) TestExternalProducer() {
 	m := metricdata.ResourceMetrics{}
 	err := ts.Reader.Collect(context.Background(), &m)
 	ts.NoError(err)
-	ts.Equal(testResourceMetricsAB, m)
+	ts.Equal(testResourceMetricsAB(), m)
 }
 
 func (ts *readerTestSuite) TestCollectAfterShutdown() {
@@ -86,7 +86,7 @@ func (ts *readerTestSuite) TestMultipleRegister() {
 		produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
 			// Differentiate this producer from the second by returning an
 			// error.
-			*rm = testResourceMetricsA
+			*rm = testResourceMetricsA()
 			return assert.AnError
 		},
 	}
@@ -109,7 +109,7 @@ func (ts *readerTestSuite) TestExternalProducerPartialSuccess() {
 		}),
 		WithProducer(testExternalProducer{
 			produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
-				return []metricdata.ScopeMetrics{testScopeMetricsB}, nil
+				return []metricdata.ScopeMetrics{testScopeMetricsB()}, nil
 			},
 		}),
 	)
@@ -118,7 +118,7 @@ func (ts *readerTestSuite) TestExternalProducerPartialSuccess() {
 	m := metricdata.ResourceMetrics{}
 	err := ts.Reader.Collect(context.Background(), &m)
 	ts.ErrorIs(err, assert.AnError)
-	ts.Equal(testResourceMetricsAB, m)
+	ts.Equal(testResourceMetricsAB(), m)
 }
 
 func (ts *readerTestSuite) TestSDKFailureBlocksExternalProducer() {
@@ -191,50 +191,60 @@ func (ts *readerTestSuite) TestCollectNilResourceMetricError() {
 	ts.Error(ts.Reader.Collect(ctx, nil))
 }
 
-var testScopeMetricsA = metricdata.ScopeMetrics{
-	Scope: instrumentation.Scope{Name: "sdk/metric/test/reader"},
-	Metrics: []metricdata.Metrics{{
-		Name:        "fake data",
-		Description: "Data used to test a reader",
-		Unit:        "1",
-		Data: metricdata.Sum[int64]{
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
-			DataPoints: []metricdata.DataPoint[int64]{{
-				Attributes: attribute.NewSet(attribute.String("user", "alice")),
-				StartTime:  time.Now(),
-				Time:       time.Now().Add(time.Second),
-				Value:      -1,
-			}},
-		},
-	}},
+var nowForMetrics = time.Now()
+
+func testScopeMetricsA() metricdata.ScopeMetrics {
+	return metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{Name: "sdk/metric/test/reader"},
+		Metrics: []metricdata.Metrics{{
+			Name:        "fake data",
+			Description: "Data used to test a reader",
+			Unit:        "1",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: true,
+				DataPoints: []metricdata.DataPoint[int64]{{
+					Attributes: attribute.NewSet(attribute.String("user", "alice")),
+					StartTime:  nowForMetrics,
+					Time:       nowForMetrics.Add(time.Second),
+					Value:      -1,
+				}},
+			},
+		}},
+	}
 }
 
-var testScopeMetricsB = metricdata.ScopeMetrics{
-	Scope: instrumentation.Scope{Name: "sdk/metric/test/reader/external"},
-	Metrics: []metricdata.Metrics{{
-		Name:        "fake scope data",
-		Description: "Data used to test a Producer reader",
-		Unit:        "ms",
-		Data: metricdata.Gauge[int64]{
-			DataPoints: []metricdata.DataPoint[int64]{{
-				Attributes: attribute.NewSet(attribute.String("user", "ben")),
-				StartTime:  time.Now(),
-				Time:       time.Now().Add(time.Second),
-				Value:      10,
-			}},
-		},
-	}},
+func testScopeMetricsB() metricdata.ScopeMetrics {
+	return metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{Name: "sdk/metric/test/reader/external"},
+		Metrics: []metricdata.Metrics{{
+			Name:        "fake scope data",
+			Description: "Data used to test a Producer reader",
+			Unit:        "ms",
+			Data: metricdata.Gauge[int64]{
+				DataPoints: []metricdata.DataPoint[int64]{{
+					Attributes: attribute.NewSet(attribute.String("user", "ben")),
+					StartTime:  nowForMetrics,
+					Time:       nowForMetrics.Add(time.Second),
+					Value:      10,
+				}},
+			},
+		}},
+	}
 }
 
-var testResourceMetricsA = metricdata.ResourceMetrics{
-	Resource:     resource.NewSchemaless(attribute.String("test", "Reader")),
-	ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsA},
+func testResourceMetricsA() metricdata.ResourceMetrics {
+	return metricdata.ResourceMetrics{
+		Resource:     resource.NewSchemaless(attribute.String("test", "Reader")),
+		ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsA()},
+	}
 }
 
-var testResourceMetricsAB = metricdata.ResourceMetrics{
-	Resource:     resource.NewSchemaless(attribute.String("test", "Reader")),
-	ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsA, testScopeMetricsB},
+func testResourceMetricsAB() metricdata.ResourceMetrics {
+	return metricdata.ResourceMetrics{
+		Resource:     resource.NewSchemaless(attribute.String("test", "Reader")),
+		ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsA(), testScopeMetricsB()},
+	}
 }
 
 type testSDKProducer struct {
@@ -245,7 +255,7 @@ func (p testSDKProducer) produce(ctx context.Context, rm *metricdata.ResourceMet
 	if p.produceFunc != nil {
 		return p.produceFunc(ctx, rm)
 	}
-	*rm = testResourceMetricsA
+	*rm = testResourceMetricsA()
 	return nil
 }
 
@@ -257,7 +267,7 @@ func (p testExternalProducer) Produce(ctx context.Context) ([]metricdata.ScopeMe
 	if p.produceFunc != nil {
 		return p.produceFunc(ctx)
 	}
-	return []metricdata.ScopeMetrics{testScopeMetricsB}, nil
+	return []metricdata.ScopeMetrics{testScopeMetricsB()}, nil
 }
 
 func benchReaderCollectFunc(r Reader) func(b *testing.B) {
@@ -278,7 +288,7 @@ func benchReaderCollectFunc(r Reader) func(b *testing.B) {
 			err = r.Collect(b.Context(), &collectedMetrics)
 			assert.Equalf(
 				b,
-				testResourceMetricsA,
+				testResourceMetricsA(),
 				collectedMetrics,
 				"unexpected Collect response: (%#v, %v)",
 				collectedMetrics,

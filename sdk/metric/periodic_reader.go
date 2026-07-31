@@ -246,7 +246,11 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
 	defer func() {
-		*rm = metricdata.ResourceMetrics{} // erase fields to allow GC to collect them.
+		// Retain the underlying array capacity for the next flush.
+		// pipeline.produce() overwrites ScopeMetrics entries via ReuseSlice,
+		// so clearing is not needed and would break data reuse inside produce.
+		rm.ScopeMetrics = rm.ScopeMetrics[:0]
+		rm.Resource = nil
 		r.rmPool.Put(rm)
 	}()
 	err := r.Collect(ctx, rm)
@@ -410,6 +414,9 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 					err = r.exporter.Export(ctx, m)
 				}
 			}
+			// Retain the underlying array capacity for the next flush.
+			m.ScopeMetrics = m.ScopeMetrics[:0]
+			m.Resource = nil
 			r.rmPool.Put(m)
 		}
 
