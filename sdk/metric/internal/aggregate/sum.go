@@ -146,6 +146,9 @@ func (s *deltaSum[N]) collect(
 	s.vals.RangePinned(func(_ any, val *sumValue[N]) bool {
 		n := val.n.load()
 		delta := n - val.lastReported
+		if delta == 0 {
+			return true
+		}
 
 		newPt := metricdata.DataPoint[N]{
 			Attributes: val.attrs,
