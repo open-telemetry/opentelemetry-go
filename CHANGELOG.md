@@ -66,6 +66,7 @@ The next release will require at least [Go 1.26].
 - Prevent log record and instrumentation scope attributes with empty keys from reaching processors and exporters in `go.opentelemetry.io/otel/sdk/log`. (#8797)
 - Fix a data race when span attributes are read concurrently in `go.opentelemetry.io/otel/sdk/trace`. (#8706)
 - Prevent a panic in `(*Set).Filter` when called on a nil receiver in `go.opentelemetry.io/otel/attribute`. (#8792)
+- Prevent underflowed measurements from updating sum, min, or max in exponential histograms in `go.opentelemetry.io/otel/sdk/metric`. (#8077)
 - The simple span and log processors record `otel.sdk.processor.{span,log}.processed` when the record is submitted to the exporter instead of after the export completes, and no longer set `error.type` from the export outcome, in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log`. (#8705)
 - Prevent `Resource.MarshalLog` from panicking on nil resources in `go.opentelemetry.io/otel/sdk/resource`. (#8758)
 

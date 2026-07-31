@@ -142,6 +142,7 @@ func (s *atomicMinMax[N]) Update(val N) {
 	}
 }
 
+// reset resets the internal state, and is not safe to call concurrently.
 func (s *atomicMinMax[N]) reset() {
 	s.set.Store(false)
 }
