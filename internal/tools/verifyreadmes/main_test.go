@@ -5,6 +5,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -37,7 +38,7 @@ func TestVerifyReadme(t *testing.T) {
 		{
 			name:    "missing readme",
 			path:    filepath.Join(missingReadme, "go.mod"),
-			wantErr: `couldn't find README.md for "` + missingReadme + `"`,
+			wantErr: fmt.Sprintf("couldn't find %s for %q", readmeFilename, missingReadme),
 		},
 		{
 			name: "non go mod file",
@@ -81,7 +82,9 @@ func TestVerifyReadmeIgnoresExcludedDirectories(t *testing.T) {
 		filepath.Join(root, "internal", "pkg", "go.mod"),
 		filepath.Join(root, "test", "pkg", "go.mod"),
 		filepath.Join(root, "example", "pkg", "go.mod"),
-		filepath.Join(root, ".hidden", "pkg", "go.mod"),
+	}
+	if filepath.Separator == '/' {
+		paths = append(paths, filepath.Join(root, ".hidden", "pkg", "go.mod"))
 	}
 
 	for _, path := range paths {
