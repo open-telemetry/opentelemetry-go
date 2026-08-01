@@ -90,7 +90,8 @@ func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.S
 }
 
 func (s *deltaSum[N]) collect(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
+	filter filterAttrs,
 ) int {
 	t := now()
 
@@ -110,6 +111,9 @@ func (s *deltaSum[N]) collect(
 	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
+		if filter != nil && !filter(val.attrs) {
+			return true
+		}
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
@@ -122,7 +126,7 @@ func (s *deltaSum[N]) collect(
 	// The delta collection cycle resets.
 	s.start = t
 
-	sData.DataPoints = dPts
+	sData.DataPoints = dPts[:i]
 	*dest = sData
 
 	return i
@@ -155,7 +159,8 @@ type cumulativeSum[N int64 | float64] struct {
 }
 
 func (s *cumulativeSum[N]) collect(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
+	filter filterAttrs,
 ) int {
 	t := now()
 
@@ -174,6 +179,9 @@ func (s *cumulativeSum[N]) collect(
 	var i int
 	s.values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
+		if filter != nil && !filter(val.attrs) {
+			return true
+		}
 
 		startTime := s.start
 		if perSeriesStartTimeEnabled {
@@ -222,7 +230,8 @@ type precomputedSum[N int64 | float64] struct {
 }
 
 func (s *precomputedSum[N]) delta(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
+	filter filterAttrs,
 ) int {
 	t := now()
 	newReported := make(map[any]N)
@@ -246,12 +255,15 @@ func (s *precomputedSum[N]) delta(
 		n := val.n.load()
 
 		delta := n - s.reported[key]
+		newReported[key] = n
+		if filter != nil && !filter(val.attrs) {
+			return true
+		}
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = delta
-		newReported[key] = n
 		i++
 		return true
 	})
@@ -260,14 +272,15 @@ func (s *precomputedSum[N]) delta(
 	// The delta collection cycle resets.
 	s.start = t
 
-	sData.DataPoints = dPts
+	sData.DataPoints = dPts[:i]
 	*dest = sData
 
 	return i
 }
 
 func (s *precomputedSum[N]) cumulative(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
+	filter filterAttrs,
 ) int {
 	t := now()
 
@@ -287,6 +300,9 @@ func (s *precomputedSum[N]) cumulative(
 	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
+		if filter != nil && !filter(val.attrs) {
+			return true
+		}
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
@@ -297,7 +313,7 @@ func (s *precomputedSum[N]) cumulative(
 	})
 	s.hotColdValMap[readIdx].values.Clear()
 
-	sData.DataPoints = dPts
+	sData.DataPoints = dPts[:i]
 	*dest = sData
 
 	return i

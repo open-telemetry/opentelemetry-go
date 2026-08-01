@@ -365,7 +365,8 @@ func (e *expoHistogram[N]) measure(
 }
 
 func (e *expoHistogram[N]) delta(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
+	filter filterAttrs,
 ) int {
 	t := now()
 
@@ -382,6 +383,9 @@ func (e *expoHistogram[N]) delta(
 
 	var i int
 	for _, val := range e.values {
+		if filter != nil && !filter(val.attrs) {
+			continue
+		}
 		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = e.start
 		hDPts[i].Time = t
@@ -431,13 +435,14 @@ func (e *expoHistogram[N]) delta(
 	clear(e.values)
 
 	e.start = t
-	h.DataPoints = hDPts
+	h.DataPoints = hDPts[:i]
 	*dest = h
-	return n
+	return i
 }
 
 func (e *expoHistogram[N]) cumulative(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
+	filter filterAttrs,
 ) int {
 	t := now()
 
@@ -456,6 +461,9 @@ func (e *expoHistogram[N]) cumulative(
 
 	var i int
 	for _, val := range e.values {
+		if filter != nil && !filter(val.attrs) {
+			continue
+		}
 		hDPts[i].Attributes = val.attrs
 
 		startTime := e.start
@@ -511,7 +519,7 @@ func (e *expoHistogram[N]) cumulative(
 		// overload the system.
 	}
 
-	h.DataPoints = hDPts
+	h.DataPoints = hDPts[:i]
 	*dest = h
-	return n
+	return i
 }

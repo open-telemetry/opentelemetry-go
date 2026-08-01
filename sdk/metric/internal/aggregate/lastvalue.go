@@ -94,9 +94,10 @@ func (s *deltaLastValue[N]) measure(
 
 func (s *deltaLastValue[N]) collect(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	filter filterAttrs,
 ) int {
 	t := now()
-	n := s.copyAndClearDpts(dest, t)
+	n := s.copyAndClearDpts(dest, t, filter)
 	// Update start time for delta temporality.
 	s.start = t
 	return n
@@ -107,6 +108,7 @@ func (s *deltaLastValue[N]) collect(
 func (s *deltaLastValue[N]) copyAndClearDpts(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 	t time.Time,
+	filter filterAttrs,
 ) int {
 	// Ignore if dest is not a metricdata.Gauge. The chance for memory reuse of
 	// the DataPoints is missed (better luck next time).
@@ -121,6 +123,9 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		v := value.(*lastValuePoint[N])
+		if filter != nil && !filter(v.attrs) {
+			return true
+		}
 		dPts[i].Attributes = v.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
@@ -129,7 +134,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 		i++
 		return true
 	})
-	gData.DataPoints = dPts
+	gData.DataPoints = dPts[:i]
 	// Do not report stale values.
 	s.hotColdValMap[readIdx].values.Clear()
 	*dest = gData
@@ -156,7 +161,8 @@ func newCumulativeLastValue[N int64 | float64](
 }
 
 func (s *cumulativeLastValue[N]) collect(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
+	filter filterAttrs,
 ) int {
 	t := now()
 	// Ignore if dest is not a metricdata.Gauge. The chance for memory reuse of
@@ -172,6 +178,9 @@ func (s *cumulativeLastValue[N]) collect(
 	var i int
 	s.values.Range(func(_, value any) bool {
 		v := value.(*lastValuePoint[N])
+		if filter != nil && !filter(v.attrs) {
+			return true
+		}
 
 		startTime := s.start
 		if perSeriesStartTimeEnabled {
@@ -213,14 +222,16 @@ type precomputedLastValue[N int64 | float64] struct {
 }
 
 func (s *precomputedLastValue[N]) delta(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
+	filter filterAttrs,
 ) int {
-	return s.collect(dest)
+	return s.collect(dest, filter)
 }
 
 func (s *precomputedLastValue[N]) cumulative(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
+	filter filterAttrs,
 ) int {
 	// Do not reset the start time.
-	return s.copyAndClearDpts(dest, now())
+	return s.copyAndClearDpts(dest, now(), filter)
 }

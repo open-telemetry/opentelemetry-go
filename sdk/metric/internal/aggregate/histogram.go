@@ -177,7 +177,8 @@ func newDeltaHistogram[N int64 | float64](
 }
 
 func (s *deltaHistogram[N]) collect(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
+	filter filterAttrs,
 ) int {
 	t := now()
 
@@ -200,6 +201,9 @@ func (s *deltaHistogram[N]) collect(
 	var i int
 	s.hotColdValMap[readIdx].Range(func(_, value any) bool {
 		val := value.(*histogramPoint[N])
+		if filter != nil && !filter(val.attrs) {
+			return true
+		}
 
 		count := val.loadCountsInto(&hDPts[i].BucketCounts)
 		hDPts[i].Attributes = val.attrs
@@ -232,10 +236,10 @@ func (s *deltaHistogram[N]) collect(
 	// The delta collection cycle resets.
 	s.start = t
 
-	h.DataPoints = hDPts
+	h.DataPoints = hDPts[:i]
 	*dest = h
 
-	return n
+	return i
 }
 
 // cumulativeHistogram summarizes a set of measurements as an histogram with explicitly
@@ -339,7 +343,8 @@ func (s *cumulativeHistogram[N]) measure(
 }
 
 func (s *cumulativeHistogram[N]) collect(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
+	filter filterAttrs,
 ) int {
 	t := now()
 
@@ -374,6 +379,13 @@ func (s *cumulativeHistogram[N]) collect(
 		}
 		// swap, observe, and clear the point
 		readIdx := val.hcwg.swapHotAndWait()
+
+		if filter != nil && !filter(val.attrs) {
+			// Drain the point's state without emitting it.
+			hotIdx := (readIdx + 1) % 2
+			val.hotColdPoint[readIdx].mergeIntoAndReset(&val.hotColdPoint[hotIdx], s.noMinMax, s.noSum)
+			return true
+		}
 
 		// Concurrent writers can grow s.values between Len() and Range.
 		// Cold-path grow.
@@ -418,7 +430,7 @@ func (s *cumulativeHistogram[N]) collect(
 		return true
 	})
 
-	h.DataPoints = hDPts
+	h.DataPoints = hDPts[:i]
 	*dest = h
 
 	return i
