@@ -51,6 +51,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Prevent processor operations from overlapping processor shutdown or being invoked after `LoggerProvider` shutdown in `go.opentelemetry.io/otel/sdk/log`. (#8608)
 - Prevent `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` from busy-spinning under exporter backpressure, and serialize dequeue, export, force-flush, and shutdown work in one worker. (#8620)
 - Make `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` return errors produced while draining records for `ForceFlush` and `Shutdown`, and continue attempting later batches while the request context remains valid. (#8620)
 - Keep the default `BatchProcessor` maximum export batch size in `go.opentelemetry.io/otel/sdk/log` at or below the configured maximum queue size. (#8620)
