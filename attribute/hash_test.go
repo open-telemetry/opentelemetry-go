@@ -230,10 +230,12 @@ func TestHashValueMapOrdering(t *testing.T) {
 			reversed := slices.Clone(tt.kvs)
 			slices.Reverse(reversed)
 
-			h1 := *xxhash.New()
-			got := hashValue(&h1, MapValue(tt.kvs...)).Sum64()
-			h2 := *xxhash.New()
-			want := hashValue(&h2, MapValue(reversed...)).Sum64()
+			h1 := xxhash.New()
+			h1 = hashValue(h1, MapValue(tt.kvs...))
+			got := h1.Sum64()
+			h2 := xxhash.New()
+			h2 = hashValue(h2, MapValue(reversed...))
+			want := h2.Sum64()
 			if got != want {
 				t.Fatalf("hashValue(MapValue(%v)) = %d, want %d", tt.kvs, got, want)
 			}
@@ -241,20 +243,48 @@ func TestHashValueMapOrdering(t *testing.T) {
 	}
 }
 
-func TestHasherZeroValue(t *testing.T) {
-	var zero Hasher
-	if got, want := zero.Distinct(), emptySet.Equivalent(); got != want {
-		t.Errorf("zero.Distinct() = %v, want %v", got, want)
+// TestHasherMatchesSetEquivalent pins the invariant that a Hasher written in
+// ascending key order produces the same Distinct as the equivalent Set. Hasher
+// and Set hashing share their initialization, per-attribute mixing, and final
+// framing, so this holds structurally today. The test guards against a future
+// change that splits those paths apart.
+func TestHasherMatchesSetEquivalent(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
+		h := NewHasher()
+		set := NewSet()
+		if got, want := h.Distinct(), set.Equivalent(); got != want {
+			t.Errorf("Hasher.Distinct() = %v, NewSet().Equivalent() = %v", got, want)
+		}
+	})
+
+	for _, gen := range keyVals {
+		t.Run(gen.name, func(t *testing.T) {
+			kv := gen.kv("k")
+			h := NewHasher()
+			h.Write(kv)
+			set := NewSet(kv)
+			if got, want := h.Distinct(), set.Equivalent(); got != want {
+				t.Errorf("Hasher.Distinct() = %v, NewSet(%v).Equivalent() = %v", got, kv, want)
+			}
+		})
 	}
 
-	kv := String("key", "value")
-	zero.Write(kv)
-
-	h := NewHasher()
-	h.Write(kv)
-	if got, want := zero.Distinct(), h.Distinct(); got != want {
-		t.Errorf("zero.Distinct() after Write = %v, want %v", got, want)
-	}
+	t.Run("All", func(t *testing.T) {
+		// Distinct keys in ascending order, which is the precondition Write
+		// documents and the order NewSet sorts into.
+		attrs := make([]KeyValue, len(keyVals))
+		for i, gen := range keyVals {
+			attrs[i] = gen.kv(fmt.Sprintf("k%03d", i))
+		}
+		h := NewHasher()
+		for _, kv := range attrs {
+			h.Write(kv)
+		}
+		set := NewSet(attrs...)
+		if got, want := h.Distinct(), set.Equivalent(); got != want {
+			t.Errorf("Hasher.Distinct() = %v, NewSet(...).Equivalent() = %v", got, want)
+		}
+	})
 }
 
 func TestHasherReset(t *testing.T) {
@@ -371,8 +401,9 @@ func BenchmarkHashValueSlice(b *testing.B) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				h := *xxhash.New()
-				hashValue(&h, bench.v).Sum64()
+				h := xxhash.New()
+				h = hashValue(h, bench.v)
+				_ = h.Sum64()
 			}
 		})
 	}
@@ -419,8 +450,9 @@ func BenchmarkHashValueMap(b *testing.B) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				h := *xxhash.New()
-				hashValue(&h, bench.v).Sum64()
+				h := xxhash.New()
+				h = hashValue(h, bench.v)
+				_ = h.Sum64()
 			}
 		})
 	}
