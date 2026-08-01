@@ -615,14 +615,4 @@ func BenchmarkHistogram(b *testing.B) {
 			Temporality: metricdata.DeltaTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
 	}))
-	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
-			Temporality: metricdata.CumulativeTemporality,
-		}.ExplicitBucketHistogram(bounds, noMinMax, false)
-	}))
-	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
-			Temporality: metricdata.DeltaTemporality,
-		}.ExplicitBucketHistogram(bounds, noMinMax, false)
-	}))
 }
