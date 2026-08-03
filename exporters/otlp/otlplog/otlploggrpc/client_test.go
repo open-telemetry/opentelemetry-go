@@ -5,6 +5,7 @@ package otlploggrpc
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net"
 	"sync"
@@ -384,6 +385,51 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
+func TestEnvTLSCredentials(t *testing.T) {
+	const certPath, keyPath = "cert_path", "key_path"
+	origReadFile := readFile
+	readFile = func(name string) ([]byte, error) {
+		switch name {
+		case certPath:
+			return []byte(weakCertificate), nil
+		case keyPath:
+			return []byte(weakPrivateKey), nil
+		default:
+			return nil, errors.New("unexpected certificate path")
+		}
+	}
+	t.Cleanup(func() { readFile = origReadFile })
+
+	tlsCfg, err := newTLSConf([]byte(weakCertificate), []byte(weakPrivateKey))
+	require.NoError(t, err)
+	serverCreds := credentials.NewTLS(&tls.Config{
+		Certificates: tlsCfg.Certificates,
+		ClientAuth:   tls.RequireAnyClientCert,
+	})
+	coll, err := newGRPCCollector(t.Context(), "localhost:0", nil, grpc.Creds(serverCreds))
+	require.NoError(t, err)
+	t.Cleanup(coll.srv.Stop)
+
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "https://"+coll.listener.Addr().String())
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE", certPath)
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE", certPath)
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY", keyPath)
+
+	cfg := newConfig(nil)
+	require.NotNil(t, cfg.tlsCfg.Value)
+	cfg.tlsCfg.Value.Time = func() time.Time {
+		return time.Date(2021, 4, 1, 14, 30, 0, 0, time.UTC)
+	}
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, client.Shutdown(t.Context())) }()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+	require.Len(t, coll.Collect().Dump(), 1)
+}
+
 type exportResult struct {
 	Response *collogpb.ExportLogsServiceResponse
 	Err      error
@@ -441,7 +487,12 @@ var _ collogpb.LogsServiceServer = (*grpcCollector)(nil)
 // If errCh is not nil, the collector will respond to Export calls with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
-func newGRPCCollector(ctx context.Context, endpoint string, resultCh <-chan exportResult) (*grpcCollector, error) {
+func newGRPCCollector(
+	ctx context.Context,
+	endpoint string,
+	resultCh <-chan exportResult,
+	opts ...grpc.ServerOption,
+) (*grpcCollector, error) {
 	if endpoint == "" {
 		endpoint = "localhost:0"
 	}
@@ -457,7 +508,7 @@ func newGRPCCollector(ctx context.Context, endpoint string, resultCh <-chan expo
 		return nil, err
 	}
 
-	c.srv = grpc.NewServer()
+	c.srv = grpc.NewServer(opts...)
 	collogpb.RegisterLogsServiceServer(c.srv, c)
 	go func() { _ = c.srv.Serve(c.listener) }()
 
