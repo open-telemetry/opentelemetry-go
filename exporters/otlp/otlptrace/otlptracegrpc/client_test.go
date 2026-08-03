@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"net"
 	"strings"
 	"testing"
@@ -26,6 +27,8 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -320,6 +323,227 @@ func TestExportSpansRequestSizeLimit(t *testing.T) {
 	err := exp.ExportSpans(ctx, roSpans)
 	assert.ErrorContains(t, err, "request message too large")
 	assert.Empty(t, mc.getResourceSpans(), "oversized request must fail before sending")
+}
+
+func TestExporterWithArena(t *testing.T) {
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	ctx, cancel := contextWithTimeout(context.Background(), t, 10*time.Second)
+	t.Cleanup(cancel)
+
+	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithBatcher(
+			exp,
+			// add following two options to ensure flush
+			sdktrace.WithBatchTimeout(5*time.Second),
+			sdktrace.WithMaxExportBatchSize(100),
+		),
+	)
+	t.Cleanup(func() { require.NoError(t, tp.Shutdown(ctx)) })
+
+	tr := tp.Tracer("test-tracer")
+
+	const spanCount = 2048
+
+	for range spanCount {
+		ctxWithSpan, span := tr.Start(ctx, "AlwaysSample")
+		ctx = ctxWithSpan
+		sc := span.SpanContext()
+
+		traceIDStr := sc.TraceID().String()
+		spanIDStr := sc.SpanID().String()
+		testKvs := []attribute.KeyValue{
+			attribute.Int("Int"+spanIDStr, int(sc.SpanID()[0])),
+			attribute.Int64("Int64"+spanIDStr, int64(sc.SpanID()[1])),
+			attribute.Float64("Float64"+spanIDStr, 2.22*float64(sc.SpanID()[2])),
+			attribute.Bool("Bool"+spanIDStr, sc.SpanID()[3]%2 == 0),
+			attribute.String("String"+traceIDStr, "test"+spanIDStr),
+			{Key: attribute.Key("Empty" + spanIDStr)},
+			attribute.Slice(
+				"Slice"+spanIDStr,
+				attribute.BoolValue(sc.SpanID()[4]%2 == 0),
+				attribute.ByteSliceValue([]byte(spanIDStr)),
+				attribute.SliceValue(attribute.IntValue(int(sc.SpanID()[4])), attribute.Value{}),
+			),
+		}
+
+		// we shuffle to "randomly" allocate them with arena on different place for each span
+		// to be sure that arena reset works properly
+		rand.Shuffle(len(testKvs), func(i, j int) {
+			testKvs[i], testKvs[j] = testKvs[j], testKvs[i]
+		})
+
+		span.SetAttributes(testKvs...)
+		span.AddEvent(
+			"one",
+			trace.WithAttributes(
+				attribute.String("EventString"+spanIDStr+"one", "testEvent"+spanIDStr+"one"),
+			),
+		)
+		span.AddEvent(
+			"two",
+			trace.WithAttributes(
+				attribute.String("EventString"+spanIDStr+"two", "testEvent"+spanIDStr+"two"),
+			),
+		)
+		span.End()
+	}
+
+	// Flush and close.
+	func() {
+		shutdownCtx, shutdownCancel := contextWithTimeout(ctx, t, 10*time.Second)
+		defer shutdownCancel()
+		require.NoError(t, tp.Shutdown(shutdownCtx))
+	}()
+
+	rss := mc.getSpans()
+	require.Len(t, rss, spanCount, "resource span count: got %d, want %d", len(rss), spanCount)
+
+	generateExpected := func(traceID trace.TraceID, spanID trace.SpanID) map[string]*commonpb.KeyValue {
+		traceIDStr := traceID.String()
+		spanIDStr := spanID.String()
+		kvs := []*commonpb.KeyValue{
+			{
+				Key: "Int" + spanIDStr,
+				Value: &commonpb.AnyValue{
+					Value: &commonpb.AnyValue_IntValue{
+						IntValue: int64(spanID[0]),
+					},
+				},
+			},
+			{
+				Key: "Int64" + spanIDStr,
+				Value: &commonpb.AnyValue{
+					Value: &commonpb.AnyValue_IntValue{
+						IntValue: int64(spanID[1]),
+					},
+				},
+			},
+			{
+				Key: "Float64" + spanIDStr,
+				Value: &commonpb.AnyValue{
+					Value: &commonpb.AnyValue_DoubleValue{
+						DoubleValue: 2.22 * float64(spanID[2]),
+					},
+				},
+			},
+			{
+				Key: "Bool" + spanIDStr,
+				Value: &commonpb.AnyValue{
+					Value: &commonpb.AnyValue_BoolValue{
+						BoolValue: spanID[3]%2 == 0,
+					},
+				},
+			},
+			{
+				Key: "String" + traceIDStr,
+				Value: &commonpb.AnyValue{
+					Value: &commonpb.AnyValue_StringValue{
+						StringValue: "test" + spanIDStr,
+					},
+				},
+			},
+			{
+				Key:   "Empty" + spanIDStr,
+				Value: &commonpb.AnyValue{},
+			},
+			{
+				Key: "Slice" + spanIDStr,
+				Value: &commonpb.AnyValue{
+					Value: &commonpb.AnyValue_ArrayValue{
+						ArrayValue: &commonpb.ArrayValue{
+							Values: []*commonpb.AnyValue{
+								{
+									Value: &commonpb.AnyValue_BoolValue{
+										BoolValue: spanID[4]%2 == 0,
+									},
+								},
+								{
+									Value: &commonpb.AnyValue_BytesValue{
+										BytesValue: []byte(spanIDStr),
+									},
+								},
+								{
+									Value: &commonpb.AnyValue_ArrayValue{
+										ArrayValue: &commonpb.ArrayValue{
+											Values: []*commonpb.AnyValue{
+												{
+													Value: &commonpb.AnyValue_IntValue{
+														IntValue: int64(spanID[4]),
+													},
+												},
+												{},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		r := make(map[string]*commonpb.KeyValue, len(kvs))
+		for _, kv := range kvs {
+			r[kv.Key] = kv
+		}
+		return r
+	}
+
+	generateEventAttributes := func(name string, spanID trace.SpanID) []*commonpb.KeyValue {
+		return []*commonpb.KeyValue{
+			{
+				Key: "EventString" + spanID.String() + name,
+				Value: &commonpb.AnyValue{
+					Value: &commonpb.AnyValue_StringValue{
+						StringValue: "testEvent" + spanID.String() + name,
+					},
+				},
+			},
+		}
+	}
+
+	for _, rs := range rss {
+		var (
+			traceID trace.TraceID
+			spanID  trace.SpanID
+		)
+		assert.Len(t, rs.TraceId, len(traceID))
+		copy(traceID[:], rs.TraceId)
+		assert.Len(t, rs.SpanId, len(spanID))
+		copy(spanID[:], rs.SpanId)
+		expected := generateExpected(traceID, spanID)
+		assert.Len(t, rs.Attributes, len(expected))
+		for _, actual := range rs.Attributes {
+			expKV, ok := expected[actual.Key]
+			if !assert.True(t, ok, "missing attribute %q", expKV.Key) {
+				continue
+			}
+			if a, ok := actual.Value.Value.(*commonpb.AnyValue_DoubleValue); ok {
+				e, ok := expKV.Value.Value.(*commonpb.AnyValue_DoubleValue)
+				if !ok {
+					t.Errorf("expected AnyValue_DoubleValue, got %T", expKV.Value.Value)
+					continue
+				}
+				if !assert.InDelta(t, e.DoubleValue, a.DoubleValue, 0.01) {
+					continue
+				}
+				e.DoubleValue = a.DoubleValue
+			}
+			assert.Equal(t, expKV, actual)
+		}
+
+		for _, event := range rs.Events {
+			expectedEventAttributes := generateEventAttributes(event.Name, spanID)
+			assert.Equal(t, expectedEventAttributes, event.Attributes)
+		}
+	}
 }
 
 func TestNewWithMultipleAttributeTypes(t *testing.T) {

@@ -9,13 +9,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-func InstrumentationScope(il instrumentation.Scope) *commonpb.InstrumentationScope {
+func InstrumentationScope(il instrumentation.Scope, arena *Arena) *commonpb.InstrumentationScope {
 	if il == (instrumentation.Scope{}) {
 		return nil
 	}
 	return &commonpb.InstrumentationScope{
 		Name:       il.Name,
 		Version:    il.Version,
-		Attributes: Iterator(il.Attributes.Iter()),
+		Attributes: Iterator(il.Attributes.Iter(), arena),
 	}
 }

@@ -10,9 +10,9 @@ import (
 )
 
 // Resource transforms a Resource into an OTLP Resource.
-func Resource(r *resource.Resource) *resourcepb.Resource {
+func Resource(r *resource.Resource, arena *Arena) *resourcepb.Resource {
 	if r == nil {
 		return nil
 	}
-	return &resourcepb.Resource{Attributes: ResourceAttributes(r)}
+	return &resourcepb.Resource{Attributes: ResourceAttributes(r, arena)}
 }

@@ -13,11 +13,13 @@ import (
 )
 
 func TestNilResource(t *testing.T) {
-	assert.Empty(t, Resource(nil))
+	arena := NewArena(16)
+	assert.Empty(t, Resource(nil, arena))
 }
 
 func TestEmptyResource(t *testing.T) {
-	assert.Empty(t, Resource(&resource.Resource{}))
+	arena := NewArena(16)
+	assert.Empty(t, Resource(&resource.Resource{}, arena))
 }
 
 /*
@@ -29,9 +31,10 @@ func TestEmptyResource(t *testing.T) {
 func TestResourceAttributes(t *testing.T) {
 	attrs := []attribute.KeyValue{attribute.Int("one", 1), attribute.Int("two", 2)}
 
-	got := Resource(resource.NewSchemaless(attrs...)).GetAttributes()
+	arena := NewArena(16)
+	got := Resource(resource.NewSchemaless(attrs...), arena).GetAttributes()
 	if !assert.Len(t, attrs, 2) {
 		return
 	}
-	assert.ElementsMatch(t, KeyValues(attrs), got)
+	assert.ElementsMatch(t, KeyValues(attrs, arena), got)
 }
