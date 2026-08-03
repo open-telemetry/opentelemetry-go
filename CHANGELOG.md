@@ -51,6 +51,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Prevent processor operations from overlapping processor shutdown or being invoked after `LoggerProvider` shutdown in `go.opentelemetry.io/otel/sdk/log`. (#8608)
 - Prevent `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` from busy-spinning under exporter backpressure, and serialize dequeue, export, force-flush, and shutdown work in one worker. (#8620)
 - Make `BatchProcessor` in `go.opentelemetry.io/otel/sdk/log` return errors produced while draining records for `ForceFlush` and `Shutdown`, and continue attempting later batches while the request context remains valid. (#8620)
 - Keep the default `BatchProcessor` maximum export batch size in `go.opentelemetry.io/otel/sdk/log` at or below the configured maximum queue size. (#8620)
@@ -71,6 +72,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix off-by-one error in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar`, which prevented the first exemplar after the reservoir is filled from being sampled. (#8309)
 - Fix histogram datapoint reuse in `go.opentelemetry.io/otel/sdk/metric` aggregation to avoid leaking stale sum/min/max values when they are disabled in subsequent collections. (#8403)
 - Prevent zero-hash collapse to empty set in `go.opentelemetry.io/otel/attribute` when computed hash is zero for non-empty input. (#8402)
+- Prevent panics in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is propagated concurrently with `Span.SetBaggageItem`.
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
