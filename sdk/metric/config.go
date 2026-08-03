@@ -16,6 +16,19 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+// ViewMatchingMode controls how multiple matching Views are applied to an Instrument.
+type ViewMatchingMode int
+
+const (
+	// ViewMatchingModeIndependent specifies that each matching View creates a
+	// separate metric stream independently. This is the default behavior.
+	ViewMatchingModeIndependent ViewMatchingMode = iota
+
+	// ViewMatchingModeComposable specifies that matching Views are combined
+	// (merged) to modify metric streams.
+	ViewMatchingModeComposable
+)
+
 // config contains configuration options for a MeterProvider.
 type config struct {
 	res              *resource.Resource
@@ -23,6 +36,7 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+	viewMatchingMode ViewMatchingMode
 }
 
 const defaultCardinalityLimit = 2000
@@ -148,6 +162,14 @@ func WithView(views ...View) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.views = append(cfg.views, views...)
 		return cfg
+	})
+}
+
+// WithViewMatchingMode sets the ViewMatchingMode for a MeterProvider.
+func WithViewMatchingMode(mode ViewMatchingMode) Option {
+	return optionFunc(func(conf config) config {
+		conf.viewMatchingMode = mode
+		return conf
 	})
 }
 
