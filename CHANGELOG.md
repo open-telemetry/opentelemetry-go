@@ -56,6 +56,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Apply TLS certificates configured through environment variables to gRPC connections in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`.
 - Prevent panics in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is propagated concurrently with `Span.SetBaggageItem`.
 - Fix an off-by-one error in `FixedSizeReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar` that prevented the first exemplar from being sampled after the reservoir was filled. (#8309)
 - Interpret HTTP `Retry-After` header values as seconds instead of nanoseconds when retrying OTLP HTTP exports in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8383)
