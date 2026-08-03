@@ -141,8 +141,8 @@ func (t *nextTracker) shouldSample() (bool, int) {
 	return false, 0
 }
 
-// randomFloat64 returns, as a float64, a uniform pseudo-random number in the
-// open interval (0.0,1.0).
+// randomFloat64 returns a pseudo-random value uniformly selected from
+// {k / 2^53 | 1 <= k < 2^53}.
 func randomFloat64() float64 {
 	// rand.Float64 returns a value in [0, 1). Retry in the extremely
 	// unlikely event that it returns zero to produce a value in (0, 1).
