@@ -80,7 +80,25 @@ is implemented as `SimpleProcessor` struct in [simple.go](simple.go).
 The [Batching processor](https://opentelemetry.io/docs/specs/otel/logs/sdk/#batching-processor)
 is implemented as `BatchProcessor` struct in [batch.go](batch.go).
 
-The `Batcher` can be also configured using the `OTEL_BLRP_*` environment variables as
+`OnEmit` clones accepted records into a bounded, drop-oldest queue. Once the
+queue reaches the batch size, it attempts a non-blocking, coalesced worker
+notification. It may briefly contend on the queue lock but never waits for
+exporter I/O. A single worker goroutine owns dequeueing, scheduled exports, and
+all exporter lifecycle calls, so exporter backpressure blocks the worker
+instead of causing repeated polling.
+
+`ForceFlush` is serialized through the worker. When the worker accepts a
+request, it drains the records then queued in batches no larger than the
+configured maximum and calls the exporter's `ForceFlush` while the request
+context remains valid. `Shutdown` first closes queue admission, drains accepted
+records, calls `ForceFlush` while its context remains valid, and always invokes
+the exporter's `Shutdown`. Cancellation stops additional drain chunks subject
+to the exporter honoring its context.
+
+`WithMaxQueueSize` bounds the pending-record queue; the worker additionally
+retains bounded batch scratch space and records currently being exported.
+
+The `BatchProcessor` can also be configured using the `OTEL_BLRP_*` environment variables as
 [defined by the specification](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#batch-logrecord-processor).
 
 ### Exporter

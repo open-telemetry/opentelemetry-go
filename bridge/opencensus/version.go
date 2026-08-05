@@ -5,5 +5,5 @@ package opencensus
 
 // Version is the current release version of the opencensus bridge.
 func Version() string {
-	return "1.44.0"
+	return "1.45.0"
 }
