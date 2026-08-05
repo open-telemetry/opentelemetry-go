@@ -418,11 +418,6 @@ func (i *inserter[N]) cachedAggregator(
 				stream.ExemplarReservoirProviderSelector(stream.Aggregation),
 				i.pipeline.exemplarFilter,
 			),
-			FilterAttrs: func(s attribute.Set) bool {
-				if stream.metricFilter != nil {
-					return stream.metricFilter.TestAttributes(scope, stream.Name, kind, stream.Unit, s) == 1
-				}
-			},
 		}
 		b.Filter = stream.AttributeFilter
 		// A value less than or equal to zero will disable the aggregation
