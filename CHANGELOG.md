@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix a data race when span attributes are read concurrently in `go.opentelemetry.io/otel/sdk/trace`.
+- Fix a data race when span attributes are read concurrently in `go.opentelemetry.io/otel/sdk/trace`. (#8706)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
