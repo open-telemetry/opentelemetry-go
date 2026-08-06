@@ -92,7 +92,11 @@ func TestRecordingSpanConcurrentSafeSetAttributes(t *testing.T) {
 				}
 			}
 		},
-		func() { s.SetAttributes(updates...) },
+		func() {
+			for range 100 {
+				s.SetAttributes(updates...)
+			}
+		},
 	)
 	assert.Positive(t, total)
 }
