@@ -70,10 +70,20 @@ func BenchmarkSyncMeasure(b *testing.B) {
 	}
 }
 
+func exponentialAggregationSelector(ik InstrumentKind) Aggregation {
+	if ik == InstrumentKindHistogram {
+		return AggregationBase2ExponentialHistogram{MaxScale: 20, MaxSize: 160}
+	}
+	return AggregationDefault{}
+}
+
 func benchSyncViews(sc trace.SpanContext, views ...View) func(*testing.B) {
 	rdr := NewManualReader()
 	provider := NewMeterProvider(WithReader(rdr), WithView(views...))
 	meter := provider.Meter("benchSyncViews")
+	expRdr := NewManualReader(WithAggregationSelector(exponentialAggregationSelector))
+	expProvider := NewMeterProvider(WithReader(expRdr), WithView(views...))
+	expMeter := expProvider.Meter("benchSyncViews")
 	// Precompute histogram values so they are distributed equally to buckets.
 	histogramBuckets := DefaultAggregationSelector(InstrumentKindHistogram).(AggregationExplicitBucketHistogram).Boundaries
 	histogramObservations := make([]float64, len(histogramBuckets))
@@ -91,12 +101,30 @@ func benchSyncViews(sc trace.SpanContext, views ...View) func(*testing.B) {
 			}
 		}()))
 
+		iGauge, err := meter.Int64Gauge("int64-gauge")
+		assert.NoError(b, err)
+		b.Run("Int64Gauge", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func(int) {
+				o := []metric.RecordOption{metric.WithAttributeSet(s)}
+				return func(int) { iGauge.Record(ctx, 1, o...) }
+			}
+		}()))
+
 		iHist, err := meter.Int64Histogram("int64-histogram")
 		assert.NoError(b, err)
 		b.Run("Int64Histogram", benchMeasAttrs(func() measF {
 			return func(s attribute.Set) func(int) {
 				o := []metric.RecordOption{metric.WithAttributeSet(s)}
 				return func(i int) { iHist.Record(ctx, int64(histogramObservations[i%len(histogramObservations)]), o...) }
+			}
+		}()))
+
+		expIHist, err := expMeter.Int64Histogram("exponential-int64-histogram")
+		assert.NoError(b, err)
+		b.Run("ExponentialInt64Histogram", benchMeasAttrs(func() measF {
+			return func(s attribute.Set) func(int) {
+				o := []metric.RecordOption{metric.WithAttributeSet(s)}
+				return func(int) { expIHist.Record(ctx, 1, o...) }
 			}
 		}()))
 	}
