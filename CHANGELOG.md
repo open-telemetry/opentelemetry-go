@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithAllowKeyDuplication` option in `go.opentelemetry.io/otel/sdk/metric` to disable duplicate-key removal in `attribute.MAP` values for measurement and instrumentation scope attributes. (#8709)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
