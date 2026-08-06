@@ -162,12 +162,19 @@ func TestResolveAttributes(t *testing.T) {
 	k2 := attribute.String("k2", "v2")
 	k3 := attribute.String("k3", "v3")
 	k1Alt := attribute.String("k1", "v1_alt")
+	dupMap := attribute.Map(
+		"map",
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	dedupMap := attribute.Map("map", attribute.String("key", "second"))
 
 	tests := []struct {
-		name        string
-		configAttrs attribute.Set
-		rawKVs      []attribute.KeyValue
-		want        attribute.Set
+		name         string
+		configAttrs  attribute.Set
+		rawKVs       []attribute.KeyValue
+		allowDupKeys bool
+		want         attribute.Set
 	}{
 		{
 			name:        "Empty",
@@ -199,11 +206,42 @@ func TestResolveAttributes(t *testing.T) {
 			rawKVs:      []attribute.KeyValue{k1Alt, k3},
 			want:        attribute.NewSet(k1Alt, k2, k3),
 		},
+		{
+			name:        "MapValueDeduplicated",
+			configAttrs: attribute.NewSet(dupMap),
+			rawKVs:      nil,
+			want:        attribute.NewSet(dedupMap),
+		},
+		{
+			name:         "MapValuePreservedWithAllowDupKeys",
+			configAttrs:  attribute.NewSet(dupMap),
+			rawKVs:       nil,
+			allowDupKeys: true,
+			want:         attribute.NewSet(dupMap),
+		},
+		{
+			name:        "RawMapValueDeduplicated",
+			configAttrs: *attribute.EmptySet(),
+			rawKVs:      []attribute.KeyValue{dupMap},
+			want:        attribute.NewSet(dedupMap),
+		},
+		{
+			name:         "RawMapValuePreservedWithAllowDupKeys",
+			configAttrs:  *attribute.EmptySet(),
+			rawKVs:       []attribute.KeyValue{dupMap},
+			allowDupKeys: true,
+			want:         attribute.NewSet(dupMap),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := resolveAttributes(tt.configAttrs, tt.rawKVs)
+			var got attribute.Set
+			if tt.allowDupKeys {
+				got = resolveAttributesAllowingKeyDuplication(tt.configAttrs, tt.rawKVs)
+			} else {
+				got = resolveAttributes(tt.configAttrs, tt.rawKVs)
+			}
 			require.Equal(t, tt.want, got)
 		})
 	}

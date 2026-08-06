@@ -937,6 +937,71 @@ func BenchmarkMeasureNewAttributeSet(b *testing.B) {
 	}
 }
 
+var (
+	benchAttrs = []attribute.KeyValue{
+		attribute.String("user", "Robin"),
+		attribute.Bool("admin", true),
+		attribute.Map(
+			"map",
+			attribute.String("key1", "value1"),
+			attribute.String("key2", "value2"),
+		),
+	}
+	benchAttrsDupMapKeys = []attribute.KeyValue{
+		attribute.String("user", "Robin"),
+		attribute.Bool("admin", true),
+		attribute.Map(
+			"map",
+			attribute.String("key", "first"),
+			attribute.String("key", "second"),
+		),
+	}
+)
+
+func BenchmarkSyncMeasureKeyDuplication(b *testing.B) {
+	ctx := b.Context()
+
+	for _, bc := range []struct {
+		name  string
+		opts  []Option
+		attrs []attribute.KeyValue
+	}{
+		{
+			name:  "Dedup/UniqueMapKeys",
+			attrs: benchAttrs,
+		},
+		{
+			name:  "Dedup/DuplicateMapKeys",
+			attrs: benchAttrsDupMapKeys,
+		},
+		{
+			name:  "AllowKeyDuplication/UniqueMapKeys",
+			opts:  []Option{WithAllowKeyDuplication()},
+			attrs: benchAttrs,
+		},
+		{
+			name:  "AllowKeyDuplication/DuplicateMapKeys",
+			opts:  []Option{WithAllowKeyDuplication()},
+			attrs: benchAttrsDupMapKeys,
+		},
+	} {
+		b.Run(bc.name, func(b *testing.B) {
+			opts := append([]Option{WithReader(NewManualReader())}, bc.opts...)
+			provider := NewMeterProvider(opts...)
+			meter := provider.Meter("BenchmarkSyncMeasureKeyDuplication")
+			cnt, err := meter.Int64Counter("int64-counter")
+			assert.NoError(b, err)
+
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for n := 0; n < b.N; n++ {
+				cnt.Add(ctx, 1, metric.WithAttributes(bc.attrs...))
+			}
+		})
+	}
+}
+
 func BenchmarkAsyncMeasureNewAttributeSet(b *testing.B) {
 	ctx := b.Context()
 
