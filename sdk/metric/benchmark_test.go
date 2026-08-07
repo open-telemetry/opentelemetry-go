@@ -700,6 +700,16 @@ func BenchmarkMeasureNewAttributeSet(b *testing.B) {
 				}
 			},
 		},
+		{
+			name: "Int64Histogram",
+			make: func(b *testing.B, meter metric.Meter) func(int) {
+				cnt, err := meter.Int64Histogram("int64-histogram")
+				assert.NoError(b, err)
+				return func(n int) {
+					cnt.Record(ctx, 1, metric.WithAttributes(attribute.Int("id", n)))
+				}
+			},
+		},
 	}
 
 	for _, filterName := range []string{"AlwaysOn", "AlwaysOff"} {
