@@ -23,6 +23,7 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+	allowDupKeys     bool
 }
 
 const defaultCardinalityLimit = 2000
@@ -185,6 +186,13 @@ func WithCardinalityLimit(limit int) Option {
 	// can also be used to set this value.
 	return optionFunc(func(cfg config) config {
 		cfg.cardinalityLimit = limit
+		return cfg
+	})
+}
+
+func WithAllowKeyDuplication() Option {
+	return optionFunc(func(cfg config) config {
+		cfg.allowDupKeys = true
 		return cfg
 	})
 }
