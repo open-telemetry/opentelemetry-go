@@ -514,6 +514,9 @@ func TestNewConfig(t *testing.T) {
 			if !tc.want.maxRequestSize.Set {
 				tc.want.maxRequestSize = newSetting(64 * 1024 * 1024)
 			}
+			if !tc.want.encoding.Set {
+				tc.want.encoding = newSetting(ProtoEncoding)
+			}
 
 			// Do not compare pointer values.
 			assertTLSConfig(t, tc.want.tlsCfg, c.tlsCfg)
@@ -552,6 +555,23 @@ func assertTLSConfig(t *testing.T, want, got setting[*tls.Config]) {
 		assert.True(t, want.Value.RootCAs.Equal(got.Value.RootCAs), "RootCAs equal")
 	}
 	assert.Equal(t, want.Value.Certificates, got.Value.Certificates, "Certificates")
+}
+
+func TestWithEncoding(t *testing.T) {
+	t.Run("Default", func(t *testing.T) {
+		c := newConfig(nil)
+		assert.Equal(t, ProtoEncoding, c.encoding.Value)
+	})
+
+	t.Run("JSON", func(t *testing.T) {
+		c := newConfig([]Option{WithEncoding(JSONEncoding)})
+		assert.Equal(t, JSONEncoding, c.encoding.Value)
+	})
+
+	t.Run("Proto", func(t *testing.T) {
+		c := newConfig([]Option{WithEncoding(ProtoEncoding)})
+		assert.Equal(t, ProtoEncoding, c.encoding.Value)
+	})
 }
 
 func TestWithProxy(t *testing.T) {
