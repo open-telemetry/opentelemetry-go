@@ -127,8 +127,17 @@ func TestAggregators_OfferToReservoir(t *testing.T) {
 			},
 		},
 		{
-			desc:    "ExponentialHistogram",
-			measure: func() { newExponentialHistogram(160, 20, false, false, 2, newRes).measure(ctx, 10, lazy) },
+			desc: "DeltaExpoHistogram",
+			measure: func() {
+				newDeltaExpoHistogram[int64](160, 20, false, false, 2, newRes).measure(ctx, 10, lazy)
+			},
+		},
+		{
+			desc: "CumulativeExpoHistogram",
+			measure: func() {
+				measure, _ := newCumulativeExpoHistogram[int64](160, 20, false, false, 2, newRes)
+				measure(ctx, 10, lazy)
+			},
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
