@@ -613,16 +613,6 @@ func BenchmarkExponentialHistogram(b *testing.B) {
 			Temporality: metricdata.DeltaTemporality,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
-	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
-			Temporality: metricdata.CumulativeTemporality,
-		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
-	}))
-	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
-			Temporality: metricdata.DeltaTemporality,
-		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
-	}))
 }
 
 func TestSubNormal(t *testing.T) {
