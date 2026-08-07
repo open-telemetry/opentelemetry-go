@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	ot "github.com/opentracing/opentracing-go"
@@ -20,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -1013,6 +1015,31 @@ func TestBridgeSpan_BaggageItem(t *testing.T) {
 		assert.Equal(t, "val", v)
 		return true
 	})
+}
+
+func TestBridgeSpan_BaggageHookConcurrentSafe(t *testing.T) {
+	tracer := NewBridgeTracer()
+	span := tracer.StartSpan("span")
+	ctx := tracer.NewHookedContext(ot.ContextWithSpan(t.Context(), span))
+
+	const iterations = 10
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for range iterations {
+			span.SetBaggageItem("key", "value")
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for range iterations {
+			_ = baggage.FromContext(ctx)
+		}
+	}()
+	wg.Wait()
+
+	assert.Equal(t, "value", baggage.FromContext(ctx).Member("key").Value())
 }
 
 func TestBridgeSpan_LogEventMethods(t *testing.T) {
