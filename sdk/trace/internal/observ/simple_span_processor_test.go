@@ -56,6 +56,21 @@ func TestSSPSpanProcessed(t *testing.T) {
 	check(t, collect(), processed(dPt(sspSet(), 3)))
 }
 
+func TestSSPSpanProcessedAlreadyShutdown(t *testing.T) {
+	ctx := t.Context()
+	collect := setup(t)
+	ssp, err := observ.NewSSP(sspComponentID)
+	assert.NoError(t, err)
+
+	ssp.SpanProcessed(ctx)
+	ssp.SpanProcessedAlreadyShutdown(ctx)
+	ssp.SpanProcessedAlreadyShutdown(ctx)
+	check(t, collect(), processed(
+		dPt(sspSet(), 1),
+		dPt(sspSet(observ.ErrAlreadyShutdown), 2),
+	))
+}
+
 func BenchmarkSSP(b *testing.B) {
 	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
