@@ -16,10 +16,17 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
+// ErrAlreadyShutdown is the attribute value for the "already_shutdown" error
+// type.
+var ErrAlreadyShutdown = otelconv.SDKProcessorSpanProcessed{}.AttrErrorType(
+	otelconv.ErrorTypeAttr("already_shutdown"),
+)
+
 // SSP is the instrumentation for an OTel SDK SimpleSpanProcessor.
 type SSP struct {
-	spansProcessedCounter metric.Int64Counter
-	addOpts               []metric.AddOption
+	spansProcessedCounter  metric.Int64Counter
+	addOpts                []metric.AddOption
+	alreadyShutdownAddOpts []metric.AddOption
 }
 
 // SSPComponentName returns the component name attribute for a
@@ -54,9 +61,13 @@ func NewSSP(id int64) (*SSP, error) {
 	attrs := []attribute.KeyValue{componentName, componentType}
 	addOpts := []metric.AddOption{metric.WithAttributeSet(attribute.NewSet(attrs...))}
 
+	shutdownAttrs := append(attrs, ErrAlreadyShutdown)
+	alreadyShutdownAddOpts := []metric.AddOption{metric.WithAttributeSet(attribute.NewSet(shutdownAttrs...))}
+
 	return &SSP{
-		spansProcessedCounter: spansProcessedCounter.Inst(),
-		addOpts:               addOpts,
+		spansProcessedCounter:  spansProcessedCounter.Inst(),
+		addOpts:                addOpts,
+		alreadyShutdownAddOpts: alreadyShutdownAddOpts,
 	}, err
 }
 
@@ -65,4 +76,12 @@ func NewSSP(id int64) (*SSP, error) {
 // submission time and MUST NOT be affected by the export outcome.
 func (ssp *SSP) SpanProcessed(ctx context.Context) {
 	ssp.spansProcessedCounter.Add(ctx, 1, ssp.addOpts...)
+}
+
+// SpanProcessedAlreadyShutdown records that a span reached the
+// SimpleSpanProcessor after it had already been shut down and therefore could
+// not be submitted to the exporter. Per the semantic conventions, it is counted
+// with error.type set to "already_shutdown".
+func (ssp *SSP) SpanProcessedAlreadyShutdown(ctx context.Context) {
+	ssp.spansProcessedCounter.Add(ctx, 1, ssp.alreadyShutdownAddOpts...)
 }

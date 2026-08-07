@@ -67,16 +67,25 @@ func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 	ssp.exporterMu.Lock()
 	defer ssp.exporterMu.Unlock()
 
+	// A nil exporter signals the processor has been shut down. Spans ended
+	// after shutdown can never be submitted to the exporter.
+	alreadyShutdown := ssp.exporter == nil
+
 	if ssp.inst != nil {
 		// Add the span to the context to ensure the metric is recorded
 		// with the correct span context. Record the span as processed before
 		// invoking the exporter so the count is unaffected by the export
-		// outcome.
+		// outcome. A span that reaches an already shut down processor is
+		// counted with error.type=already_shutdown.
 		ctx := trace.ContextWithSpanContext(context.Background(), s.SpanContext())
-		ssp.inst.SpanProcessed(ctx)
+		if alreadyShutdown {
+			ssp.inst.SpanProcessedAlreadyShutdown(ctx)
+		} else {
+			ssp.inst.SpanProcessed(ctx)
+		}
 	}
 
-	if ssp.exporter != nil && s.SpanContext().TraceFlags().IsSampled() {
+	if !alreadyShutdown && s.SpanContext().TraceFlags().IsSampled() {
 		if err := ssp.exporter.ExportSpans(context.Background(), []ReadOnlySpan{s}); err != nil {
 			otel.Handle(err)
 		}
