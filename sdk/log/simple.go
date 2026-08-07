@@ -57,7 +57,7 @@ func (*SimpleProcessor) Enabled(context.Context, EnabledParameters) bool {
 }
 
 // OnEmit batches provided log record.
-func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) (err error) {
+func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	if s.exporter == nil {
 		return nil
 	}
@@ -73,9 +73,9 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) (err error) {
 	(*records)[0] = *r
 
 	if s.inst != nil {
-		defer func() {
-			s.inst.LogProcessed(ctx, err)
-		}()
+		// Record the log record as processed at the point it is submitted to
+		// the exporter, independent of the export outcome.
+		s.inst.LogProcessed(ctx)
 	}
 	return s.exporter.Export(ctx, *records)
 }
