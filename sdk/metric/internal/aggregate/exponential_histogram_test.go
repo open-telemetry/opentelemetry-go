@@ -593,32 +593,51 @@ func TestScaleChange(t *testing.T) {
 }
 
 func TestExpoHistogramOverflow(t *testing.T) {
-	newRes := func(attribute.Set) FilteredExemplarReservoir[int64] {
-		return DropReservoir[int64](attribute.NewSet())
-	}
-	e := newExponentialHistogram(160, 20, false, false, 2, newRes)
+	t.Run("Delta", func(t *testing.T) {
+		newRes := func(attribute.Set) FilteredExemplarReservoir[int64] {
+			return DropReservoir[int64](attribute.NewSet())
+		}
+		e := newDeltaExpoHistogram[int64](160, 20, false, false, 2, newRes)
 
-	attrA := attribute.NewSet(attribute.String("key", "a"))
-	lazyA := newLazyFilteredAttributes(attrA, nil)
-	e.measure(t.Context(), 10, lazyA)
+		attrA := attribute.NewSet(attribute.String("key", "a"))
+		lazyA := newLazyFilteredAttributes(attrA, nil)
+		e.measure(t.Context(), 10, lazyA)
 
-	// Second distinct attribute set should trigger overflow since aggLimit == 2
-	attrB := attribute.NewSet(attribute.String("key", "b"))
-	lazyB := newLazyFilteredAttributes(attrB, nil)
-	e.measure(t.Context(), 20, lazyB)
+		// Second distinct attribute set should trigger overflow since aggLimit == 2
+		attrB := attribute.NewSet(attribute.String("key", "b"))
+		lazyB := newLazyFilteredAttributes(attrB, nil)
+		e.measure(t.Context(), 20, lazyB)
 
-	// Check that overflow series exists and attrB series does not
-	e.valuesMu.Lock()
-	_, hasOverflow := e.values[overflowSet.Equivalent()]
-	_, hasB := e.values[attrB.Equivalent()]
-	e.valuesMu.Unlock()
+		var dest metricdata.Aggregation
+		e.collect(&dest)
+		eh := dest.(metricdata.ExponentialHistogram[int64])
+		require.Len(t, eh.DataPoints, 2)
+		attrs := []attribute.Set{eh.DataPoints[0].Attributes, eh.DataPoints[1].Attributes}
+		assert.ElementsMatch(t, []attribute.Set{attrA, overflowSet}, attrs)
+	})
 
-	if !hasOverflow {
-		t.Error("expected overflowSet to be recorded in e.values on limit exceeded")
-	}
-	if hasB {
-		t.Error("did not expect attrB to be recorded separately after overflow")
-	}
+	t.Run("Cumulative", func(t *testing.T) {
+		newRes := func(attribute.Set) FilteredExemplarReservoir[int64] {
+			return DropReservoir[int64](attribute.NewSet())
+		}
+		measure, collect := newCumulativeExpoHistogram[int64](160, 20, false, false, 2, newRes)
+
+		attrA := attribute.NewSet(attribute.String("key", "a"))
+		lazyA := newLazyFilteredAttributes(attrA, nil)
+		measure(t.Context(), 10, lazyA)
+
+		// Second distinct attribute set should trigger overflow since aggLimit == 2
+		attrB := attribute.NewSet(attribute.String("key", "b"))
+		lazyB := newLazyFilteredAttributes(attrB, nil)
+		measure(t.Context(), 20, lazyB)
+
+		var dest metricdata.Aggregation
+		collect(&dest)
+		eh := dest.(metricdata.ExponentialHistogram[int64])
+		require.Len(t, eh.DataPoints, 2)
+		attrs := []attribute.Set{eh.DataPoints[0].Attributes, eh.DataPoints[1].Attributes}
+		assert.ElementsMatch(t, []attribute.Set{attrA, overflowSet}, attrs)
+	})
 }
 
 func BenchmarkPrepend(b *testing.B) {
@@ -1326,8 +1345,8 @@ func TestExpoHistogramUnderflow(t *testing.T) {
 			name: "delta measure downscale underflow",
 			run: func(t *testing.T, ctx context.Context) {
 				h := newDeltaExpoHistogram[float64](2, 20, false, false, 0, dropExemplars[float64])
-				h.measure(ctx, math.MaxFloat64, attribute.NewSet(), nil)
-				h.measure(ctx, math.SmallestNonzeroFloat64, attribute.NewSet(), nil)
+				h.measure(ctx, math.MaxFloat64, newLazyFilteredAttributes(attribute.NewSet(), nil))
+				h.measure(ctx, math.SmallestNonzeroFloat64, newLazyFilteredAttributes(attribute.NewSet(), nil))
 
 				var dest metricdata.Aggregation
 				h.collect(&dest)
@@ -1350,8 +1369,8 @@ func TestExpoHistogramUnderflow(t *testing.T) {
 			name: "cumulative tracker measure underflow",
 			run: func(t *testing.T, ctx context.Context) {
 				measure, collect := newCumulativeExpoHistogram[float64](2, 20, false, false, 0, dropExemplars[float64])
-				measure(ctx, math.MaxFloat64, attribute.NewSet(), nil)
-				measure(ctx, math.SmallestNonzeroFloat64, attribute.NewSet(), nil)
+				measure(ctx, math.MaxFloat64, newLazyFilteredAttributes(attribute.NewSet(), nil))
+				measure(ctx, math.SmallestNonzeroFloat64, newLazyFilteredAttributes(attribute.NewSet(), nil))
 
 				var dest metricdata.Aggregation
 				collect(&dest)
@@ -1374,15 +1393,14 @@ func TestExpoHistogramUnderflow(t *testing.T) {
 			name: "cumulative multi-cycle underflow",
 			run: func(t *testing.T, ctx context.Context) {
 				measure, collect := newCumulativeExpoHistogram[float64](2, 20, false, false, 0, dropExemplars[float64])
-				measure(ctx, math.MaxFloat64, attribute.NewSet(), nil)
+				measure(ctx, math.MaxFloat64, newLazyFilteredAttributes(attribute.NewSet(), nil))
 				var dest metricdata.Aggregation
 				collect(&dest) // Collect MaxFloat64
 
 				measure(
 					ctx,
 					math.SmallestNonzeroFloat64,
-					attribute.NewSet(),
-					nil,
+					newLazyFilteredAttributes(attribute.NewSet(), nil),
 				) // Underflow happens here during measure
 				collect(
 					&dest,
@@ -1540,7 +1558,7 @@ func TestExponentialHistogramNoMinMax(t *testing.T) {
 
 	// Test Delta with noMinMax = true
 	hDelta := newDeltaExpoHistogram[int64](4, 20, true, false, 0, dropExemplars[int64])
-	hDelta.measure(ctx, 1, alice, nil)
+	hDelta.measure(ctx, 1, newLazyFilteredAttributes(alice, nil))
 
 	var dest metricdata.Aggregation
 	hDelta.collect(&dest)
@@ -1553,7 +1571,7 @@ func TestExponentialHistogramNoMinMax(t *testing.T) {
 
 	// Test Cumulative with noMinMax = true
 	measure, collect := newCumulativeExpoHistogram[int64](4, 20, true, false, 0, dropExemplars[int64])
-	measure(ctx, 1, alice, nil)
+	measure(ctx, 1, newLazyFilteredAttributes(alice, nil))
 
 	collect(&dest)
 	ehCumul := dest.(metricdata.ExponentialHistogram[int64])
@@ -1585,7 +1603,7 @@ func TestExponentialHistogramCumulativeExemplarPreservedAcrossCollections(t *tes
 	}
 
 	measure, collect := newCumulativeExpoHistogram[int64](4, 20, false, false, 0, factory)
-	measure(ctx, 42, alice, []attribute.KeyValue{attribute.String("trace_id", "123")})
+	measure(ctx, 42, newLazyFilteredAttributes(alice, nil))
 
 	var dest metricdata.Aggregation
 

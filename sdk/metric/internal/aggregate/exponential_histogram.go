@@ -469,7 +469,6 @@ func (b *expoBuckets) count() uint64 {
 	return total
 }
 
-
 // newDeltaExpoHistogram returns an Aggregator that summarizes a set of
 // measurements as a delta exponential histogram.
 func newDeltaExpoHistogram[N int64 | float64](
