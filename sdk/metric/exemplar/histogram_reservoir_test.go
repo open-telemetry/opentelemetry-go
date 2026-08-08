@@ -79,3 +79,10 @@ func TestHistogramReservoirTimeUnbiased(t *testing.T) {
 		N-1,
 	)
 }
+
+func TestHistogramReservoirResetNil(t *testing.T) {
+	var r *HistogramReservoir
+	assert.NotPanics(t, func() {
+		r.Reset()
+	})
+}

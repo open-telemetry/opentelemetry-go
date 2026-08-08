@@ -188,3 +188,86 @@ func (r *concurrentSafeReservoir) Collect(dest *[]exemplar.Exemplar) {
 	defer r.Unlock()
 	r.base.Collect(dest)
 }
+
+type mockMergeableReservoir struct {
+	notConcurrentSafeReservoir
+	merged   bool
+	wasReset bool
+	other    exemplar.Reservoir
+}
+
+func (m *mockMergeableReservoir) Merge(other exemplar.Reservoir) {
+	m.merged = true
+	m.other = other
+}
+
+func (m *mockMergeableReservoir) Reset() {
+	m.wasReset = true
+}
+
+func TestFilteredExemplarReservoir_Merge(t *testing.T) {
+	t.Run("NilOther", func(t *testing.T) {
+		r := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, exemplar.NewFixedSizeReservoir(1))
+		assert.NotPanics(t, func() { r.Merge(nil) })
+	})
+
+	t.Run("SelfMerge", func(t *testing.T) {
+		r := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, exemplar.NewFixedSizeReservoir(1))
+		assert.NotPanics(t, func() { r.Merge(r) })
+	})
+
+	t.Run("NonMergeableUnderlying", func(t *testing.T) {
+		r1 := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, &notConcurrentSafeReservoir{})
+		r2 := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, &notConcurrentSafeReservoir{})
+		assert.NotPanics(t, func() { r1.Merge(r2) })
+	})
+
+	t.Run("DelegatesToMergeableReservoir", func(t *testing.T) {
+		mock1 := &mockMergeableReservoir{}
+		mock2 := &mockMergeableReservoir{}
+		r1 := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, mock1)
+		r2 := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, mock2)
+
+		r1.Merge(r2)
+		assert.True(t, mock1.merged)
+		assert.Equal(t, mock2, mock1.other)
+
+		mock1.merged = false
+		mock1.other = nil
+
+		r2.Merge(r1)
+		assert.True(t, mock2.merged)
+		assert.Equal(t, mock1, mock2.other)
+	})
+}
+
+func TestFilteredExemplarReservoir_Reset(t *testing.T) {
+	t.Run("NilReceiver", func(t *testing.T) {
+		var r *filteredExemplarReservoir[int64]
+		assert.NotPanics(t, func() { r.Reset() })
+	})
+
+	t.Run("ValidReceiver", func(t *testing.T) {
+		mock := &mockMergeableReservoir{}
+		r := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, mock)
+		r.Reset()
+		assert.True(t, mock.wasReset)
+	})
+}
+
+func TestFilteredExemplarReservoir_IsMergeable(t *testing.T) {
+	t.Run("NilReceiver", func(t *testing.T) {
+		var r *filteredExemplarReservoir[int64]
+		assert.False(t, r.IsMergeable())
+	})
+
+	t.Run("Mergeable", func(t *testing.T) {
+		rMergeable := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, exemplar.NewFixedSizeReservoir(1))
+		assert.True(t, rMergeable.IsMergeable())
+	})
+
+	t.Run("NonMergeable", func(t *testing.T) {
+		rNonMergeable := NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, &notConcurrentSafeReservoir{})
+		assert.False(t, rNonMergeable.IsMergeable())
+	})
+}

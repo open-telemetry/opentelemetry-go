@@ -5,6 +5,7 @@ package exemplar
 
 import (
 	"context"
+	"slices"
 	"sync"
 	"time"
 
@@ -32,7 +33,10 @@ func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
 	return r
 }
 
-var _ Reservoir = &FixedSizeReservoir{}
+var (
+	_ Reservoir          = &FixedSizeReservoir{}
+	_ MergeableReservoir = &FixedSizeReservoir{}
+)
 
 // FixedSizeReservoir is a [Reservoir] that samples at most k exemplars. If
 // there are k or less measurements made, the Reservoir will sample each one.
@@ -91,5 +95,57 @@ func (r *FixedSizeReservoir) Collect(dest *[]Exemplar) {
 	// number series. This will persist any old exemplars as long as no new
 	// measurements are offered, but it will also prioritize those new
 	// measurements that are made over the older collection cycle ones.
+	r.nt.reset()
+}
+
+// Merge merges the newly sampled exemplars from other (delta) into r (cumulative accumulator).
+func (r *FixedSizeReservoir) Merge(other Reservoir) {
+	if r == nil || other == nil || r == other {
+		return
+	}
+	o, ok := other.(*FixedSizeReservoir)
+	if !ok || o == nil || len(r.storage) == 0 || len(r.storage) != len(o.storage) {
+		return
+	}
+
+	o.mu.Lock()
+	type indexedMeasurement struct {
+		idx int
+		m   measurement
+	}
+	items := make([]indexedMeasurement, 0, len(o.storage))
+	for i := range o.storage {
+		if o.storage[i].valid {
+			m := o.storage[i]
+			m.FilteredAttributes = slices.Clone(m.FilteredAttributes)
+			items = append(items, indexedMeasurement{idx: i, m: m})
+		}
+	}
+	o.mu.Unlock()
+
+	if len(items) == 0 {
+		return
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, item := range items {
+		if item.idx < len(r.storage) {
+			r.storage[item.idx] = item.m
+		}
+	}
+}
+
+// Reset resets the reservoir's stored exemplars and sampling state.
+func (r *FixedSizeReservoir) Reset() {
+	if r == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for i := range r.storage {
+		r.storage[i] = measurement{}
+	}
 	r.nt.reset()
 }

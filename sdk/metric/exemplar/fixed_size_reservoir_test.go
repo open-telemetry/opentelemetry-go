@@ -103,3 +103,42 @@ func TestFixedSizeReservoirSamplesAfterFilling(t *testing.T) {
 	// 5 standard deviations is 250, which is 2.5% (0.025).
 	assert.InDelta(t, 0.5, rate, 0.025, "should sample the second item with ~50% probability")
 }
+
+func TestFixedSizeReservoirMergeDifferentCapacity(t *testing.T) {
+	r1 := NewFixedSizeReservoir(2)
+	r2 := NewFixedSizeReservoir(5)
+
+	r1.Offer(t.Context(), staticTime, NewValue(float64(1)), nil)
+	r2.Offer(t.Context(), staticTime, NewValue(float64(2)), nil)
+
+	assert.NotPanics(t, func() {
+		r1.Merge(r2)
+	})
+
+	var dest []Exemplar
+	r1.Collect(&dest)
+	assert.Len(t, dest, 1)
+	assert.Equal(t, float64(1), dest[0].Value.Float64())
+}
+
+func TestFixedSizeReservoirMergePreservesSamplingState(t *testing.T) {
+	r1 := NewFixedSizeReservoir(2)
+	for i := range 10 {
+		r1.Offer(t.Context(), staticTime, NewValue(float64(i)), nil)
+	}
+	countBefore := r1.nt.count
+
+	r2 := NewFixedSizeReservoir(2)
+	r2.Offer(t.Context(), staticTime, NewValue(float64(100)), nil)
+
+	r1.Merge(r2)
+
+	assert.Equal(t, countBefore, r1.nt.count, "Merge should preserve target reservoir's sampling state")
+}
+
+func TestFixedSizeReservoirResetNil(t *testing.T) {
+	var r *FixedSizeReservoir
+	assert.NotPanics(t, func() {
+		r.Reset()
+	})
+}
