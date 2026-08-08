@@ -155,6 +155,15 @@ type Stream struct {
 	//
 	// If unspecified, [DefaultExemplarReservoirProviderSelector] is used.
 	ExemplarReservoirProviderSelector ExemplarReservoirProviderSelector
+
+	// metricFilter is filter applied to metric measurements. If TestMetric
+	// returns Drop, measurement will not be aggregated. If TestAttributes
+	// returns Drop, measurement attributes will not be recorded.
+	//
+	// Note that measurements filtered out by a View may still appear on
+	// Exemplars, because Exemplars are recorded with measurement attributes
+	// when View filtering is applied.
+	metricFilter                      metricFilter
 }
 
 // instID are the identifying properties of a instrument.

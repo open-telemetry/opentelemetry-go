@@ -18,9 +18,15 @@ var now = time.Now
 // Measure receives measurements to be aggregated.
 type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
 
+// filterAttrs reports whether an aggregated data point with the given
+// attribute set is included in the collection output. It is evaluated
+// once per data point during collection. A nil filterAttrs includes all
+// data points.
+type filterAttrs func(attrs attribute.Set) bool
+
 // ComputeAggregation stores the aggregate of measurements into dest and
 // returns the number of aggregate data-points output.
-type ComputeAggregation func(dest *metricdata.Aggregation) int
+type ComputeAggregation func(dest *metricdata.Aggregation, filter filterAttrs) int
 
 // Builder builds an aggregate function.
 type Builder[N int64 | float64] struct {
