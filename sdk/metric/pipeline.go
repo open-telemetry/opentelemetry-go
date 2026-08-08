@@ -112,16 +112,22 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 
 type multiCallback func(context.Context) error
 
+type multiCallbackEntry struct {
+	callback multiCallback
+	active   atomic.Bool
+}
+
 // addMultiCallback registers a multi-instrument callback to be run when
 // `produce()` is called.
 func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
 	p.Lock()
 	defer p.Unlock()
-	e := p.multiCallbacks.PushBack(c)
+
+	entry := &multiCallbackEntry{callback: c}
+	entry.active.Store(true)
+	p.multiCallbacks.PushBack(entry)
 	return func() {
-		p.Lock()
-		p.multiCallbacks.Remove(e)
-		p.Unlock()
+		entry.active.Store(false)
 	}
 }
 
@@ -147,12 +153,23 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 			err = errors.Join(err, e)
 		}
 	}
-	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
-		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(multiCallback)
-		if e := f(ctx); e != nil {
-			err = errors.Join(err, e)
+	for e := p.multiCallbacks.Front(); e != nil; {
+		next := e.Next()
+		entry := e.Value.(*multiCallbackEntry)
+		if !entry.active.Load() {
+			p.multiCallbacks.Remove(e)
+			e = next
+			continue
 		}
+
+		// TODO make the callbacks parallel. ( #3034 )
+		if cErr := entry.callback(ctx); cErr != nil {
+			err = errors.Join(err, cErr)
+		}
+		if !entry.active.Load() {
+			p.multiCallbacks.Remove(e)
+		}
+		e = next
 	}
 
 	rm.Resource = p.resource
