@@ -24,4 +24,5 @@ func testDropFiltered[N int64 | float64](t *testing.T) {
 	r.Collect(&dest)
 
 	assert.Empty(t, dest, "non-sampled context should not be offered")
+	assert.False(t, r.IsMergeable(), "drop reservoir should not be mergeable")
 }

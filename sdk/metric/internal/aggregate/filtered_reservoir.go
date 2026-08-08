@@ -7,6 +7,7 @@ import (
 	"context"
 	"sync"
 	"time"
+	"unsafe"
 
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal/reservoir"
@@ -27,6 +28,12 @@ type FilteredExemplarReservoir[N int64 | float64] interface {
 	Offer(ctx context.Context, val N, lazy lazyFilteredAttributes)
 	// Collect returns all the held exemplars in the reservoir.
 	Collect(dest *[]exemplar.Exemplar)
+	// Merge merges the sampled exemplars from other into this reservoir.
+	Merge(other FilteredExemplarReservoir[N])
+	// Reset resets the reservoir's stored exemplars and sampling state.
+	Reset()
+	// IsMergeable returns whether the underlying reservoir supports merging.
+	IsMergeable() bool
 }
 
 // filteredExemplarReservoir handles the pre-sampled exemplar of measurements made.
@@ -73,4 +80,58 @@ func (f *filteredExemplarReservoir[N]) Collect(dest *[]exemplar.Exemplar) {
 		defer f.reservoirMux.Unlock()
 	}
 	f.reservoir.Collect(dest)
+}
+
+func (f *filteredExemplarReservoir[N]) Merge(other FilteredExemplarReservoir[N]) {
+	if f == nil || other == nil || f == other {
+		return
+	}
+	o, ok := other.(*filteredExemplarReservoir[N])
+	if !ok || o == nil {
+		return
+	}
+	if mr, ok := f.reservoir.(exemplar.MergeableReservoir); ok {
+		switch {
+		case !f.concurrentSafe && !o.concurrentSafe:
+			if uintptr(unsafe.Pointer(f)) < uintptr(unsafe.Pointer(o)) {
+				f.reservoirMux.Lock()
+				defer f.reservoirMux.Unlock()
+				o.reservoirMux.Lock()
+				defer o.reservoirMux.Unlock()
+			} else {
+				o.reservoirMux.Lock()
+				defer o.reservoirMux.Unlock()
+				f.reservoirMux.Lock()
+				defer f.reservoirMux.Unlock()
+			}
+		case !f.concurrentSafe:
+			f.reservoirMux.Lock()
+			defer f.reservoirMux.Unlock()
+		case !o.concurrentSafe:
+			o.reservoirMux.Lock()
+			defer o.reservoirMux.Unlock()
+		}
+		mr.Merge(o.reservoir)
+	}
+}
+
+func (f *filteredExemplarReservoir[N]) Reset() {
+	if f == nil {
+		return
+	}
+	if mr, ok := f.reservoir.(exemplar.MergeableReservoir); ok {
+		if !f.concurrentSafe {
+			f.reservoirMux.Lock()
+			defer f.reservoirMux.Unlock()
+		}
+		mr.Reset()
+	}
+}
+
+func (f *filteredExemplarReservoir[N]) IsMergeable() bool {
+	if f == nil {
+		return false
+	}
+	_, ok := f.reservoir.(exemplar.MergeableReservoir)
+	return ok
 }

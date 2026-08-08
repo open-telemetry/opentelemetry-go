@@ -46,7 +46,10 @@ func NewHistogramReservoir(bounds []float64) *HistogramReservoir {
 	}
 }
 
-var _ Reservoir = &HistogramReservoir{}
+var (
+	_ Reservoir          = &HistogramReservoir{}
+	_ MergeableReservoir = &HistogramReservoir{}
+)
 
 // HistogramReservoir is a [Reservoir] that samples
 // measurements that fall within a histogram bucket using Algorithm L. The
@@ -107,4 +110,50 @@ func (r *HistogramReservoir) Collect(dest *[]Exemplar) {
 		b.mu.Unlock()
 	}
 	*dest = (*dest)[:n]
+}
+
+// Merge merges the newly sampled exemplars from other (delta) into r (cumulative accumulator).
+func (r *HistogramReservoir) Merge(other Reservoir) {
+	if r == nil || other == nil || r == other {
+		return
+	}
+	o, ok := other.(*HistogramReservoir)
+	if !ok || o == nil || !slices.Equal(r.bounds, o.bounds) {
+		return
+	}
+
+	for i := range o.buckets {
+		ob := &o.buckets[i]
+		ob.mu.Lock()
+		valid := ob.valid
+		m := ob.measurement
+		if valid {
+			m.FilteredAttributes = slices.Clone(ob.FilteredAttributes)
+		}
+		ob.mu.Unlock()
+
+		if !valid {
+			continue
+		}
+
+		rb := &r.buckets[i]
+		rb.mu.Lock()
+		rb.measurement = m
+		rb.valid = true
+		rb.mu.Unlock()
+	}
+}
+
+// Reset resets the reservoir's stored exemplars and sampling state.
+func (r *HistogramReservoir) Reset() {
+	if r == nil {
+		return
+	}
+	for i := range r.buckets {
+		b := &r.buckets[i]
+		b.mu.Lock()
+		b.measurement = measurement{}
+		b.nt.reset()
+		b.mu.Unlock()
+	}
 }

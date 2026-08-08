@@ -22,6 +22,19 @@ func (*dropRes[N]) Offer(context.Context, N, lazyFilteredAttributes) {}
 
 // Collect resets dest. No exemplars will ever be returned.
 func (*dropRes[N]) Collect(dest *[]exemplar.Exemplar) {
-	clear(*dest) // Erase elements to let GC collect objects
-	*dest = (*dest)[:0]
+	if dest != nil {
+		clear(*dest) // Erase elements to let GC collect objects
+		*dest = (*dest)[:0]
+	}
+}
+
+// Merge does nothing, all measurements are dropped.
+func (*dropRes[N]) Merge(FilteredExemplarReservoir[N]) {}
+
+// Reset does nothing.
+func (*dropRes[N]) Reset() {}
+
+// IsMergeable returns false for dropRes.
+func (*dropRes[N]) IsMergeable() bool {
+	return false
 }
