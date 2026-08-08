@@ -26,11 +26,13 @@ type histogramPoint[N int64 | float64] struct {
 // hotColdHistogramPoint a hot and cold histogram points, used in cumulative
 // aggregations.
 type hotColdHistogramPoint[N int64 | float64] struct {
-	hcwg         hotColdWaitGroup
-	hotColdPoint [2]histogramPointCounters[N]
+	hcwg          hotColdWaitGroup
+	hotColdPoint  [2]histogramPointCounters[N]
+	hotColdRes    [2]FilteredExemplarReservoir[N]
+	cumulativeRes FilteredExemplarReservoir[N]
+	isMergeable   bool
 
 	attrs         attribute.Set
-	res           FilteredExemplarReservoir[N]
 	startTime     time.Time
 	dropExemplars bool
 }
@@ -288,10 +290,18 @@ func (s *cumulativeHistogram[N]) measure(
 	lazy lazyFilteredAttributes,
 ) {
 	h := s.values.LoadOrStoreAttr(lazy, func(attr attribute.Set) *hotColdHistogramPoint[N] {
-		r := s.newRes(attr)
-		_, isDrop := r.(*dropRes[N])
+		rCum := s.newRes(attr)
+		_, isDrop := rCum.(*dropRes[N])
+		isMergeable := rCum.IsMergeable()
+		var r0, r1 FilteredExemplarReservoir[N]
+		if isMergeable {
+			r0 = s.newRes(attr)
+			r1 = s.newRes(attr)
+		}
 		hPt := &hotColdHistogramPoint[N]{
-			res:           r,
+			hotColdRes:    [2]FilteredExemplarReservoir[N]{r0, r1},
+			cumulativeRes: rCum,
+			isMergeable:   isMergeable,
 			attrs:         attr,
 			startTime:     now(),
 			dropExemplars: isDrop,
@@ -332,7 +342,11 @@ func (s *cumulativeHistogram[N]) measure(
 		h.hotColdPoint[hotIdx].total.add(value)
 	}
 	if !h.dropExemplars {
-		h.res.Offer(ctx, value, lazy)
+		if h.isMergeable {
+			h.hotColdRes[hotIdx].Offer(ctx, value, lazy)
+		} else {
+			h.cumulativeRes.Offer(ctx, value, lazy)
+		}
 	}
 }
 
@@ -406,7 +420,16 @@ func (s *cumulativeHistogram[N]) collect(
 		hotIdx := (readIdx + 1) % 2
 		val.hotColdPoint[readIdx].mergeIntoAndReset(&val.hotColdPoint[hotIdx], s.noMinMax, s.noSum)
 
-		collectExemplars(&dp.Exemplars, val.res.Collect)
+		if !val.dropExemplars {
+			if val.isMergeable {
+				val.cumulativeRes.Merge(val.hotColdRes[readIdx])
+				val.hotColdRes[readIdx].Reset()
+			}
+
+			collectExemplars(&dp.Exemplars, val.cumulativeRes.Collect)
+		} else {
+			dp.Exemplars = dp.Exemplars[:0]
+		}
 
 		i++
 		// TODO (#3006): This will use an unbounded amount of memory if there
