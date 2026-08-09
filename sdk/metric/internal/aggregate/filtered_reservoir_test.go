@@ -38,7 +38,7 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 			var wg sync.WaitGroup
 			for range 5 {
 				wg.Go(func() {
-					reservoir.Offer(t.Context(), 25, []attribute.KeyValue{})
+					reservoir.Offer(t.Context(), 25, lazyFilteredAttributes{})
 				})
 			}
 			into := []exemplar.Exemplar{}
@@ -52,8 +52,96 @@ func TestConcurrentSafeFilteredReservoir(t *testing.T) {
 	}
 }
 
+func TestFilteredExemplarReservoir_Offer(t *testing.T) {
+	orig := attribute.NewSet(attribute.String("k1", "v1"), attribute.String("k2", "v2"))
+	for _, tc := range []struct {
+		desc           string
+		filter         exemplar.Filter
+		attrFilter     attribute.Filter
+		wantOffered    bool
+		wantAttributes []attribute.KeyValue
+	}{
+		{
+			desc:           "sampled with dropped attributes",
+			filter:         exemplar.AlwaysOnFilter,
+			attrFilter:     func(kv attribute.KeyValue) bool { return kv.Key == "k1" },
+			wantOffered:    true,
+			wantAttributes: []attribute.KeyValue{attribute.String("k2", "v2")},
+		},
+		{
+			desc:           "sampled with no dropped attributes",
+			filter:         exemplar.AlwaysOnFilter,
+			attrFilter:     nil,
+			wantOffered:    true,
+			wantAttributes: nil,
+		},
+		{
+			desc:           "not sampled",
+			filter:         exemplar.AlwaysOffFilter,
+			attrFilter:     nil,
+			wantOffered:    false,
+			wantAttributes: nil,
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			mockRes := &notConcurrentSafeReservoir{}
+			res := NewFilteredExemplarReservoir[int64](tc.filter, mockRes)
+			lazy := newLazyFilteredAttributes(orig, tc.attrFilter)
+			res.Offer(t.Context(), 10, lazy)
+			assert.Equal(t, tc.wantOffered, mockRes.offered)
+			assert.Equal(t, tc.wantAttributes, mockRes.ex.FilteredAttributes)
+		})
+	}
+}
+
+func TestAggregators_OfferToReservoir(t *testing.T) {
+	DropReservoir[int64](attribute.NewSet()).Offer(t.Context(), 1, lazyFilteredAttributes{})
+
+	mockRes := &notConcurrentSafeReservoir{}
+	newRes := func(attribute.Set) FilteredExemplarReservoir[int64] {
+		return NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, mockRes)
+	}
+	ctx := t.Context()
+	lazy := newLazyFilteredAttributes(attribute.NewSet(attribute.String("k", "v")), nil)
+
+	for _, tc := range []struct {
+		desc    string
+		measure func()
+	}{
+		{
+			desc:    "DeltaSum",
+			measure: func() { newDeltaSum[int64](true, 10, newRes).measure(ctx, 10, lazy) },
+		},
+		{
+			desc:    "DeltaLastValue",
+			measure: func() { newDeltaLastValue[int64](10, newRes).measure(ctx, 10, lazy) },
+		},
+		{
+			desc:    "DeltaHistogram",
+			measure: func() { newDeltaHistogram[int64]([]float64{1, 10}, false, false, 10, newRes).measure(ctx, 10, lazy) },
+		},
+		{
+			desc: "CumulativeHistogram",
+			measure: func() {
+				newCumulativeHistogram[int64]([]float64{1, 10}, false, false, 10, newRes).measure(ctx, 10, lazy)
+			},
+		},
+		{
+			desc:    "ExponentialHistogram",
+			measure: func() { newExponentialHistogram(160, 20, false, false, 2, newRes).measure(ctx, 10, lazy) },
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			mockRes.offered = false
+			tc.measure()
+			assert.True(t, mockRes.offered)
+		})
+	}
+}
+
 type notConcurrentSafeReservoir struct {
-	ex exemplar.Exemplar
+	offered bool
+	ex      exemplar.Exemplar
 }
 
 func (r *notConcurrentSafeReservoir) Offer(
@@ -62,6 +150,7 @@ func (r *notConcurrentSafeReservoir) Offer(
 	val exemplar.Value,
 	attr []attribute.KeyValue,
 ) {
+	r.offered = true
 	r.ex = exemplar.Exemplar{
 		FilteredAttributes: attr,
 		Time:               t,
