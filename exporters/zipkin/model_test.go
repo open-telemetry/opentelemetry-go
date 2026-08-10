@@ -22,7 +22,8 @@ import (
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv125 "go.opentelemetry.io/otel/semconv/v1.25.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv138 "go.opentelemetry.io/otel/semconv/v1.38.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -981,6 +982,50 @@ func TestModelConversion(t *testing.T) {
 	require.Equal(t, expectedOutputBatch, gottenOutputBatch)
 }
 
+func TestAttributeToStringPairByteSlice(t *testing.T) {
+	t.Parallel()
+
+	k, v := attributeToStringPair(attribute.ByteSlice("bytes", []byte{1, 2, 3}))
+
+	assert.Equal(t, "bytes", k)
+	assert.Equal(t, "[1,2,3]", v)
+}
+
+func TestAttributeToStringPairSlice(t *testing.T) {
+	k, v := attributeToStringPair(attribute.Slice(
+		"slice",
+		attribute.BoolValue(true),
+		attribute.ByteSliceValue([]byte("bin")),
+		attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),
+	))
+
+	assert.Equal(t, "slice", k)
+	assert.Equal(t, `[true,"Ymlu",[2,null]]`, v)
+}
+
+func TestAttributeToStringPairMap(t *testing.T) {
+	k, v := attributeToStringPair(attribute.Map(
+		"map",
+		attribute.String("string", "o"),
+		attribute.Int("number", 2),
+		attribute.ByteSlice("bytes", []byte("bin")),
+		attribute.Slice(
+			"slice",
+			attribute.BoolValue(true),
+			attribute.MapValue(attribute.String("inner", "value")),
+		),
+		attribute.Map("nested", attribute.Bool("ok", true)),
+		attribute.KeyValue{Key: "empty"},
+	))
+
+	assert.Equal(t, "map", k)
+	assert.JSONEq(
+		t,
+		`{"bytes":"Ymlu","empty":null,"nested":{"ok":true},"number":2,"slice":[true,{"inner":"value"}],"string":"o"}`,
+		v,
+	)
+}
+
 func zkmodelIDPtr(n uint64) *zkmodel.ID {
 	id := zkmodel.ID(n)
 	return &id
@@ -1154,7 +1199,7 @@ func TestRemoteEndpointTransformation(t *testing.T) {
 			data: tracetest.SpanStub{
 				SpanKind: trace.SpanKindProducer,
 				Attributes: []attribute.KeyValue{
-					semconv.PeerService("peer-service-test"),
+					semconv138.PeerService("peer-service-test"),
 					semconv.ServerAddress("server-address-test"),
 					semconv.NetworkPeerAddress("10.1.2.80"),
 				},

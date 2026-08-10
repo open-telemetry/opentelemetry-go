@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otlpmetricgrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+package otlpmetricgrpc
 
 import (
 	"sync"
@@ -84,14 +84,12 @@ func TestExporterDoesNotBlockTemporalityAndAggregation(t *testing.T) {
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		rm := new(metricdata.ResourceMetrics)
 		t.Log("starting export")
 		require.NoError(t, exp.Export(ctx, rm))
 		t.Log("export complete")
-	}()
+	})
 
 	assert.Eventually(t, func() bool {
 		const inst = metric.InstrumentKindCounter

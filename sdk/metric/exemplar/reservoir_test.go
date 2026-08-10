@@ -171,12 +171,10 @@ func reservoirConcurrentSafeTest[N int64 | float64](f factory) func(*testing.T) 
 		}
 
 		// Also test concurrent Collect calls
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			var dest []Exemplar
 			r.Collect(&dest)
-			wg.Done()
-		}()
+		})
 
 		wg.Wait()
 

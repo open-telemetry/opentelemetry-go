@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+package aggregate
 
 import (
 	"math"
@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func TestAtomicSumAddFloatConcurrentSafe(t *testing.T) {
@@ -22,11 +24,9 @@ func TestAtomicSumAddFloatConcurrentSafe(t *testing.T) {
 		10.55,
 		42.4,
 	} {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			aSum.add(in)
-		}()
+		})
 	}
 	wg.Wait()
 	assert.Equal(t, float64(55), math.Round(aSum.load()))
@@ -42,11 +42,9 @@ func TestAtomicSumAddIntConcurrentSafe(t *testing.T) {
 		4,
 		5,
 	} {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			aSum.add(in)
-		}()
+		})
 	}
 	wg.Wait()
 	assert.Equal(t, int64(15), aSum.load())
@@ -82,15 +80,13 @@ func benchmarkAtomicCounter[N int64 | float64](b *testing.B) {
 func TestHotColdWaitGroupConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	hcwg := &hotColdWaitGroup{}
-	var data [2]uint64
+	var data [2]atomic.Uint64
 	for range 5 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			hotIdx := hcwg.start()
 			defer hcwg.done(hotIdx)
-			atomic.AddUint64(&data[hotIdx], 1)
-		}()
+			data[hotIdx].Add(1)
+		})
 	}
 	for range 2 {
 		readIdx := hcwg.swapHotAndWait()
@@ -98,7 +94,7 @@ func TestHotColdWaitGroupConcurrentSafe(t *testing.T) {
 			// reading without using atomics should not panic since we are
 			// reading from the cold element, and have waited for all writes to
 			// finish.
-			t.Logf("read value %+v", data[readIdx])
+			t.Logf("read value %+v", data[readIdx].Load())
 		})
 	}
 	wg.Wait()
@@ -129,22 +125,16 @@ func testAtomicNConcurrentSafe[N int64 | float64](t *testing.T) {
 	var v atomicN[N]
 
 	for range 2 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			got := v.Load()
 			assert.Equal(t, int64(0), int64(got)%6)
-		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		})
+		wg.Go(func() {
 			v.Store(12)
-		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		})
+		wg.Go(func() {
 			v.CompareAndSwap(0, 6)
-		}()
+		})
 	}
 	wg.Wait()
 }
@@ -202,11 +192,9 @@ func testAtomicMinMaxConcurrentSafe[N int64 | float64](t *testing.T) {
 
 	assert.False(t, minMax.set.Load())
 	for _, i := range []float64{2, 4, 6, 8, -3, 0, 8, 0} {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			minMax.Update(N(i))
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -248,5 +236,155 @@ func benchmarkAtomicMinMax[N int64 | float64](b *testing.B) {
 				a.Update(N(5))
 			}
 		})
+	})
+}
+
+func loadOrStore[V any](m *limitedSyncMap[V], attr attribute.Set, newValue func(attribute.Set) V) V {
+	return m.LoadOrStoreAttr(newLazyFilteredAttributes(attr, nil), newValue)
+}
+
+func TestLimitedSyncMapLimit(t *testing.T) {
+	m := limitedSyncMap[any]{aggLimit: 3}
+	newValue := func(attribute.Set) any { return new(int) }
+
+	attr1 := attribute.NewSet(attribute.String("key", "1"))
+	attr2 := attribute.NewSet(attribute.String("key", "2"))
+	attr3 := attribute.NewSet(attribute.String("key", "3"))
+	attr4 := attribute.NewSet(attribute.String("key", "4"))
+
+	// Add first (normal)
+	v1 := loadOrStore(&m, attr1, newValue)
+	assert.Equal(t, 1, m.Len())
+
+	// Add second (normal)
+	v2 := loadOrStore(&m, attr2, newValue)
+	assert.Equal(t, 2, m.Len())
+
+	// Add third (overflow)
+	v3 := loadOrStore(&m, attr3, newValue)
+	assert.Equal(t, 3, m.Len()) // Overflow counts as the 3rd entry
+	assert.NotSame(t, v1, v3)
+	assert.NotSame(t, v2, v3)
+
+	// Add fourth (overflow) - should return same overflow value
+	v4 := loadOrStore(&m, attr4, newValue)
+	assert.Same(t, v3, v4)
+
+	// Clear the map. Should be able to add new keys up to limit again.
+	m.Clear()
+	assert.Equal(t, 0, m.Len())
+
+	attr5 := attribute.NewSet(attribute.String("key", "5"))
+	attr6 := attribute.NewSet(attribute.String("key", "6"))
+	attr7 := attribute.NewSet(attribute.String("key", "7"))
+	attr8 := attribute.NewSet(attribute.String("key", "8"))
+
+	v5 := loadOrStore(&m, attr5, newValue)
+	assert.Equal(t, 1, m.Len())
+
+	v6 := loadOrStore(&m, attr6, newValue)
+	assert.Equal(t, 2, m.Len())
+
+	assert.NotSame(t, v5, v6, "Different keys should return different values")
+
+	v7 := loadOrStore(&m, attr7, newValue)
+	assert.Equal(t, 3, m.Len()) // Overflow counts as 3rd entry
+	assert.NotSame(t, v5, v7, "Overflow should be different from normal values")
+	assert.NotSame(t, v6, v7, "Overflow should be different from normal values")
+
+	v8 := loadOrStore(&m, attr8, newValue)
+	assert.Same(t, v7, v8, "Subsequent keys should return same overflow value")
+}
+
+func TestLimitedSyncMapConcurrentSafe(t *testing.T) {
+	m := limitedSyncMap[any]{aggLimit: 5}
+	newValue := func(attribute.Set) any { return 1 }
+	attr := attribute.NewSet(attribute.String("k", "v"))
+
+	var wg sync.WaitGroup
+	// 100 routines trying to read/write the same key
+	for range 100 {
+		wg.Go(func() {
+			loadOrStore(&m, attr, newValue)
+		})
+	}
+	wg.Wait()
+	assert.Equal(t, 1, m.Len())
+
+	// 10 routines trying to read/write DIFFERENT keys exceeding limit
+	var wg2 sync.WaitGroup
+	attrs := []attribute.Set{
+		attribute.NewSet(attribute.String("k", "1")),
+		attribute.NewSet(attribute.String("k", "2")),
+		attribute.NewSet(attribute.String("k", "3")),
+		attribute.NewSet(attribute.String("k", "4")),
+		attribute.NewSet(attribute.String("k", "5")),
+		attribute.NewSet(attribute.String("k", "6")),
+		attribute.NewSet(attribute.String("k", "7")),
+		attribute.NewSet(attribute.String("k", "8")),
+		attribute.NewSet(attribute.String("k", "9")),
+		attribute.NewSet(attribute.String("k", "10")),
+	}
+	for _, a := range attrs {
+		attrCopy := a
+		wg2.Go(func() {
+			loadOrStore(&m, attrCopy, newValue)
+		})
+	}
+	wg2.Wait()
+	// Map should be at limit (5)
+	assert.Equal(t, 5, m.Len())
+}
+
+func TestLimitedSyncMap_LoadOrStoreLazy(t *testing.T) {
+	var m limitedSyncMap[string]
+	orig := attribute.NewSet(attribute.String("k1", "v1"), attribute.String("k2", "v2"))
+	filter := func(kv attribute.KeyValue) bool { return kv.Key == "k1" }
+	lazy := newLazyFilteredAttributes(orig, filter)
+
+	newCalls := 0
+	val := m.LoadOrStoreAttr(lazy, func(attribute.Set) string {
+		newCalls++
+		return "stored_value"
+	})
+	assert.Equal(t, "stored_value", val)
+	assert.Equal(t, 1, newCalls)
+
+	// Second access should hit hot path
+	val2 := m.LoadOrStoreAttr(lazy, func(attribute.Set) string {
+		newCalls++
+		return "should_not_call"
+	})
+	assert.Equal(t, "stored_value", val2)
+	assert.Equal(t, 1, newCalls)
+}
+
+func BenchmarkSyncMap(b *testing.B) {
+	attr := attribute.NewSet(attribute.String("key", "value"))
+	newValue := func(attribute.Set) any { return 1 }
+
+	b.Run("limitedSyncMap/LoadOrStoreNoClear", func(b *testing.B) {
+		m := limitedSyncMap[any]{aggLimit: 10}
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			loadOrStore(&m, attr, newValue)
+		}
+	})
+
+	b.Run("limitedSyncMap/LoadOrStoreWithClear", func(b *testing.B) {
+		m := limitedSyncMap[any]{aggLimit: 10}
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			m.Clear()
+			loadOrStore(&m, attr, newValue)
+		}
+	})
+
+	b.Run("limitedSyncMap/OnlyClear", func(b *testing.B) {
+		m := limitedSyncMap[any]{aggLimit: 10}
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			m.Clear()
+		}
 	})
 }

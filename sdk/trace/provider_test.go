@@ -4,17 +4,20 @@
 package trace
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"math/rand/v2"
 	"testing"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -28,6 +31,7 @@ type basicSpanProcessor struct {
 	flushed             bool
 	closed              bool
 	injectShutdownError error
+	injectExportError   error
 }
 
 func (t *basicSpanProcessor) Shutdown(context.Context) error {
@@ -39,7 +43,7 @@ func (*basicSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
 func (*basicSpanProcessor) OnEnd(ReadOnlySpan)                     {}
 func (t *basicSpanProcessor) ForceFlush(context.Context) error {
 	t.flushed = true
-	return nil
+	return t.injectExportError
 }
 
 type shutdownSpanProcessor struct {
@@ -54,6 +58,56 @@ func (*shutdownSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
 func (*shutdownSpanProcessor) OnEnd(ReadOnlySpan)                     {}
 func (*shutdownSpanProcessor) ForceFlush(context.Context) error {
 	return nil
+}
+
+const sensitiveExporterEndpoint = "user:pass@collector.internal:4318"
+
+type marshalingSpanExporter struct{}
+
+func (*marshalingSpanExporter) ExportSpans(context.Context, []ReadOnlySpan) error {
+	return nil
+}
+
+func (*marshalingSpanExporter) Shutdown(context.Context) error {
+	return nil
+}
+
+func (*marshalingSpanExporter) MarshalLog() any {
+	return struct{ Endpoint string }{Endpoint: sensitiveExporterEndpoint}
+}
+
+func TestTracerProviderCreatedLogDoesNotIncludeExporterConfig(t *testing.T) {
+	tests := []struct {
+		name string
+		opt  func(SpanExporter) TracerProviderOption
+	}{
+		{
+			name: "batch",
+			opt:  func(e SpanExporter) TracerProviderOption { return WithBatcher(e) },
+		},
+		{
+			name: "simple",
+			opt:  WithSyncer,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			orig := global.GetLogger()
+			global.SetLogger(funcr.New(func(_, args string) {
+				_, _ = buf.WriteString(args)
+			}, funcr.Options{Verbosity: 4}))
+			t.Cleanup(func() { global.SetLogger(orig) })
+
+			tp := NewTracerProvider(tt.opt(&marshalingSpanExporter{}))
+			require.NoError(t, tp.Shutdown(t.Context()))
+
+			logged := buf.String()
+			assert.Contains(t, logged, "TracerProvider created")
+			assert.NotContains(t, logged, sensitiveExporterEndpoint)
+		})
+	}
 }
 
 func TestShutdownCallsTracerMethod(t *testing.T) {
@@ -149,7 +203,7 @@ func TestFailedProcessorShutdown(t *testing.T) {
 
 	err := stp.Shutdown(t.Context())
 	assert.Error(t, err)
-	assert.Equal(t, err, spErr)
+	assert.ErrorIs(t, err, spErr)
 	assert.True(t, stp.isShutdown.Load())
 }
 
@@ -168,7 +222,8 @@ func TestFailedProcessorsShutdown(t *testing.T) {
 
 	err := stp.Shutdown(t.Context())
 	assert.Error(t, err)
-	assert.EqualError(t, err, "basic span processor shutdown failure1; basic span processor shutdown failure2")
+	assert.ErrorIs(t, err, spErr1)
+	assert.ErrorIs(t, err, spErr2)
 	assert.True(t, sp1.closed)
 	assert.True(t, sp2.closed)
 	assert.True(t, stp.isShutdown.Load())
@@ -225,6 +280,59 @@ func TestRegisterAfterShutdownWithProcessors(t *testing.T) {
 	sp2 := &basicSpanProcessor{}
 	stp.RegisterSpanProcessor(sp2) // no-op
 	assert.Empty(t, stp.getSpanProcessors())
+}
+
+func TestTracerProviderForceFlush(t *testing.T) {
+	t.Run("AfterShutdown", func(t *testing.T) {
+		stp := NewTracerProvider()
+		sp1 := &basicSpanProcessor{}
+		stp.RegisterSpanProcessor(sp1)
+		ctx := t.Context()
+
+		require.NoError(t, stp.ForceFlush(ctx))
+		require.True(t, sp1.flushed, "SpanProcessor ForceFlush not called")
+
+		sp1.flushed = false
+		require.NoError(t, stp.Shutdown(ctx))
+
+		require.NoError(t, stp.ForceFlush(ctx))
+		assert.False(t, sp1.flushed, "SpanProcessor ForceFlush called after Shutdown")
+	})
+
+	t.Run("Multi", func(t *testing.T) {
+		stp := NewTracerProvider()
+		sp1 := &basicSpanProcessor{}
+		sp2 := &basicSpanProcessor{}
+		stp.RegisterSpanProcessor(sp1)
+		stp.RegisterSpanProcessor(sp2)
+		ctx := t.Context()
+
+		require.NoError(t, stp.ForceFlush(ctx))
+		require.True(t, sp1.flushed, "SpanProcessor ForceFlush not called")
+		require.True(t, sp2.flushed, "SpanProcessor ForceFlush not called")
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		stp := NewTracerProvider()
+		sp1 := &basicSpanProcessor{injectExportError: assert.AnError}
+		sp2 := &basicSpanProcessor{}
+		stp.RegisterSpanProcessor(sp1)
+		stp.RegisterSpanProcessor(sp2)
+		ctx := t.Context()
+
+		assert.ErrorIs(t, stp.ForceFlush(ctx), assert.AnError, "span processor error not returned")
+		require.True(t, sp1.flushed, "SpanProcessor ForceFlush not called")
+		require.True(t, sp2.flushed, "SpanProcessor ForceFlush not called")
+	})
+
+	t.Run("WithCancel", func(t *testing.T) {
+		stp := NewTracerProvider()
+		sp1 := &basicSpanProcessor{}
+		stp.RegisterSpanProcessor(sp1)
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		assert.ErrorIs(t, stp.ForceFlush(ctx), context.Canceled)
+	})
 }
 
 func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
@@ -462,4 +570,16 @@ func (m *errMeter) Int64Counter(string, ...metric.Int64CounterOption) (metric.In
 
 func (m *errMeter) Int64UpDownCounter(string, ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
 	return nil, m.err
+}
+
+type testExperimentalOption struct {
+	TracerProviderOption
+}
+
+func (testExperimentalOption) Experimental() {}
+
+func TestExperimentalOptionSafe(t *testing.T) {
+	var opt testExperimentalOption
+
+	assert.NotPanics(t, func() { _ = NewTracerProvider(opt) })
 }

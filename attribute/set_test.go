@@ -6,6 +6,7 @@ package attribute_test
 import (
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,6 +44,7 @@ func TestSetDedup(t *testing.T) {
 	cases := []testCase{
 		expect("A=B", attribute.String("A", "2"), attribute.String("A", "B")),
 		expect("A=B", attribute.String("A", "2"), attribute.Int("A", 1), attribute.String("A", "B")),
+		expect("A=[true false]", attribute.BoolSlice("A", []bool{true, false})),
 		expect(
 			"A=B",
 			attribute.String("A", "B"),
@@ -119,11 +121,11 @@ func TestSetDedup(t *testing.T) {
 				}
 			}
 		}
-		for _, strings := range d2s {
-			if strings[0] == s {
+		for _, strs := range d2s {
+			if strs[0] == s {
 				continue
 			}
-			for _, otherString := range strings {
+			for _, otherString := range strs {
 				require.NotEqual(t, otherString, s)
 			}
 		}
@@ -314,7 +316,7 @@ func TestLookup(t *testing.T) {
 }
 
 func TestZeroSetExportedMethodsNoPanic(t *testing.T) {
-	rType := reflect.TypeOf((*attribute.Set)(nil))
+	rType := reflect.TypeFor[*attribute.Set]()
 	rVal := reflect.ValueOf(&attribute.Set{})
 	for n := 0; n < rType.NumMethod(); n++ {
 		mType := rType.Method(n)
@@ -472,6 +474,7 @@ func TestMarshalJSON(t *testing.T) {
 func TestSetEqualsEmpty(t *testing.T) {
 	e := attribute.EmptySet()
 	empty := *e
+	t.Cleanup(func() { *e = empty })
 
 	alt := attribute.NewSet(attribute.String("A", "B"))
 	*e = alt
@@ -548,26 +551,27 @@ func BenchmarkNewSet(b *testing.B) {
 // generateStringAttrsWithSize creates 5 string attributes with specified key and value lengths.
 func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
 	// Generate base strings of specified lengths
-	keyBase := ""
-	valueBase := ""
+	var keyBase strings.Builder
 
 	// Build key base string
-	for i := 0; i < keyLen; i++ {
-		keyBase += string(rune('a' + i%26))
+	for i := range keyLen {
+		_, _ = keyBase.WriteString(string(rune('a' + i%26)))
 	}
 
 	// Build value base string
-	for i := 0; i < valueLen; i++ {
-		valueBase += string(rune('0' + i%10))
+	var sb strings.Builder
+	for i := range valueLen {
+		_ = sb.WriteByte(byte('0' + i%10))
 	}
+	valueBase := sb.String()
 
 	// Create 5 attributes with different suffixes to ensure uniqueness
 	attrs := []attribute.KeyValue{
-		attribute.String(keyBase+"1", valueBase+"x"),
-		attribute.String(keyBase+"2", valueBase+"y"),
-		attribute.String(keyBase+"3", valueBase+"z"),
-		attribute.String(keyBase+"4", valueBase+"w"),
-		attribute.String(keyBase+"5", valueBase+"v"),
+		attribute.String(keyBase.String()+"1", valueBase+"x"),
+		attribute.String(keyBase.String()+"2", valueBase+"y"),
+		attribute.String(keyBase.String()+"3", valueBase+"z"),
+		attribute.String(keyBase.String()+"4", valueBase+"w"),
+		attribute.String(keyBase.String()+"5", valueBase+"v"),
 	}
 	return attrs
 }

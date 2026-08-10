@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package metric
 
 import (
 	"context"
@@ -147,37 +147,27 @@ func (ts *readerTestSuite) TestMethodConcurrentSafe() {
 	var wg sync.WaitGroup
 	const threads = 2
 	for range threads {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = ts.Reader.temporality(InstrumentKindCounter)
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = ts.Reader.aggregation(InstrumentKindCounter)
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = ts.Reader.Collect(ctx, &metricdata.ResourceMetrics{})
-		}()
+		})
 
 		if f, ok := ts.Reader.(interface{ ForceFlush(context.Context) error }); ok {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				_ = f.ForceFlush(ctx)
-			}()
+			})
 		}
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = ts.Reader.Shutdown(ctx)
-		}()
+		})
 	}
 	wg.Wait()
 }

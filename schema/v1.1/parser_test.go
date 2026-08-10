@@ -4,9 +4,12 @@
 package schema
 
 import (
+	"os"
+	"runtime/debug"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	ast10 "go.opentelemetry.io/otel/schema/v1.0/ast"
 	types10 "go.opentelemetry.io/otel/schema/v1.0/types"
@@ -158,6 +161,29 @@ func TestParseSchemaFile(t *testing.T) {
 			},
 		}, ts,
 	)
+}
+
+func TestParseFileClosesFile(t *testing.T) {
+	oldGCPercent := debug.SetGCPercent(-1)
+	defer debug.SetGCPercent(oldGCPercent)
+
+	before := openFileDescriptors(t)
+	_, err := ParseFile("testdata/valid-example.yaml")
+	require.NoError(t, err)
+	after := openFileDescriptors(t)
+
+	assert.LessOrEqual(t, after, before, "ParseFile leaked file descriptors: before=%d after=%d", before, after)
+}
+
+func openFileDescriptors(t *testing.T) int {
+	t.Helper()
+
+	entries, err := os.ReadDir("/proc/self/fd")
+	if err != nil {
+		t.Skipf("cannot inspect file descriptors: %v", err)
+	}
+
+	return len(entries)
 }
 
 func TestFailParseFileUnsupportedFileFormat(t *testing.T) {

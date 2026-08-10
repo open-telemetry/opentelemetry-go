@@ -26,11 +26,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // GenAIOperationNameAttr is an attribute conforming to the gen_ai.operation.name
 // semantic conventions. It represents the name of the GenAI operation being
@@ -224,7 +222,9 @@ func (m ClientOperationDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("mcp.method.name", string(methodName)),
+		))
 		return
 	}
 
@@ -592,7 +592,9 @@ func (m ServerOperationDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("mcp.method.name", string(methodName)),
+		))
 		return
 	}
 

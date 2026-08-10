@@ -8,67 +8,28 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 ## Features
 
-- [Exemplars](#exemplars)
+- [Metric Export Batch Size](#metric-export-batch-size)
 
-### Exemplars
+### Metric Export Batch Size
 
-A sample of measurements made may be exported directly as a set of exemplars.
+The metric export can be split into batches before exporting by specifying a maximum number of data points per batch.
 
-This experimental feature can be enabled by setting the `OTEL_GO_X_EXEMPLAR` environment variable.
-The value of must be the case-insensitive string of `"true"` to enable the feature.
-All other values are ignored.
-
-Exemplar filters are a supported.
-The exemplar filter applies to all measurements made.
-They filter these measurements, only allowing certain measurements to be passed to the underlying exemplar reservoir.
-
-To change the exemplar filter from the default `"trace_based"` filter set the `OTEL_METRICS_EXEMPLAR_FILTER` environment variable.
-The value must be the case-sensitive string defined by the [OpenTelemetry specification].
-
-- `"always_on"`: allows all measurements
-- `"always_off"`: denies all measurements
-- `"trace_based"`: allows only sampled measurements
-
-All values other than these will result in the default, `"trace_based"`, exemplar filter being used.
-
-[OpenTelemetry specification]: https://github.com/open-telemetry/opentelemetry-specification/blob/a6ca2fd484c9e76fe1d8e1c79c99f08f4745b5ee/specification/configuration/sdk-environment-variables.md#exemplar
+This experimental feature can be enabled by setting the `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE` environment variable.
+The value MUST be a positive integer.
+All other values or an empty value will result in the default behavior of not batching.
 
 #### Examples
 
-Enable exemplars to be exported.
+Enable metrics to be batched by maximum export batch size of 200.
 
 ```console
-export OTEL_GO_X_EXEMPLAR=true
+export OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE=200
 ```
 
-Disable exemplars from being exported.
+Disable metric export batching.
 
 ```console
-unset OTEL_GO_X_EXEMPLAR
-```
-
-Set the exemplar filter to allow all measurements.
-
-```console
-export OTEL_METRICS_EXEMPLAR_FILTER=always_on
-```
-
-Set the exemplar filter to deny all measurements.
-
-```console
-export OTEL_METRICS_EXEMPLAR_FILTER=always_off
-```
-
-Set the exemplar filter to only allow sampled measurements.
-
-```console
-export OTEL_METRICS_EXEMPLAR_FILTER=trace_based
-```
-
-Revert to the default exemplar filter (`"trace_based"`)
-
-```console
-unset OTEL_METRICS_EXEMPLAR_FILTER
+unset OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE
 ```
 
 ## Compatibility and Stability

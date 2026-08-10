@@ -46,11 +46,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // CosmosDBClientActiveInstanceCount is an instrument used to record metric
 // values conforming to the "azure.cosmosdb.client.active_instance.count"
@@ -244,7 +242,9 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Histogram.Record(ctx, val)
+		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("db.operation.name", dbOperationName),
+		))
 		return
 	}
 

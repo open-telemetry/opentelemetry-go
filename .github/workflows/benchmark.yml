@@ -3,53 +3,75 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+      - 'Makefile'
+      - '.github/workflows/benchmark.yml'
   workflow_dispatch:
 
 # Declare default permissions as read only.
 permissions: read-all
 
 env:
-  DEFAULT_GO_VERSION: "~1.25.0"
+  DEFAULT_GO_VERSION: "~1.26.0"
 jobs:
+  # Related issue: https://github.com/CodSpeedHQ/codspeed-go/issues/51
+  sharding-benchmark:
+    name: Sharding benchmarks
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.sharding.outputs.shards }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: sharding
+        run: |
+          echo "shards=$(make print-sharded-benchmarks)" >> $GITHUB_OUTPUT
+
   benchmark:
+    needs: sharding-benchmark
     permissions:
       contents: write # required for pushing to gh-pages branch
     name: Benchmarks
-    runs-on: oracle-bare-metal-64cpu-512gb-x86-64
+    runs-on: oracle-bare-metal-64cpu-1024gb-x86-64-ubuntu-24
+    container:
+      image: ubuntu:26.04@sha256:7c2884fd32770fc6c173b78e0dc2278a2851d89f5447919edbc45475ac55dd6a
+      # CodSpeed's profiling feature needs elevated permissions.
+      options: --cap-add=PERFMON
+    strategy:
+      matrix:
+        shard: ${{ fromJson(needs.sharding-benchmark.outputs.shards) }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      # The benchmark container does not have the build toolchain preinstalled.
+      - name: Install prerequisites
+        run: |
+          apt-get update
+          apt-get install -y make build-essential git ca-certificates curl
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # This makes CodSpeed running inside the container use git correctly.
+      - name: Mark workspace as a safe Git directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true
           cache-dependency-path: "**/go.sum"
-      - name: Run benchmarks
-        run: make benchmark | tee output.txt
-      - name: Download previous benchmark data
-        uses: actions/cache/restore@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
+      - name: Run the benchmarks
+        env:
+          # Job containers do not run systemd. Without this override,
+          # CodSpeed tries to start the benchmark using systemd-run.
+          CODSPEED_ISOLATION: "false"
+        uses: CodSpeedHQ/action@4296e51e7041e24dadb86d1d6e8b9320d223dbe8 # v5.0.3
         with:
-          path: ./benchmarks
-          # `github.event.before` means the commit before the push (i.e. the previous commit).
-          # So we can fetch the exact benchmark data from the previous commit.
-          key: ${{ runner.os }}-benchmark-${{ github.event.before }}
-      - name: Store benchmarks result
-        uses: benchmark-action/github-action-benchmark@4bdcce38c94cec68da58d012ac24b7b1155efe8b # v1.20.7
-        with:
-          name: Benchmarks
-          tool: 'go'
-          output-file-path: output.txt
-          external-data-json-path: ./benchmarks/data.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          gh-pages-branch: benchmarks
-          fail-on-alert: true
-          alert-threshold: "400%"
-          # Add benchmark summary to GitHub workflow run report
-          summary-always: true
-      - name: Save benchmark data
-        uses: actions/cache/save@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
-        # The cache will be saved even if a step fails.
-        if: always()
-        with:
-          path: ./benchmarks
-          # Use the current commit SHA as the cache key.
-          key: ${{ runner.os }}-benchmark-${{ github.sha }}
+          mode: walltime
+          allow-empty: true
+          # CodSpeed runs extremely slow when there are 128 processes involved, which is the number
+          # of CPUs on the bare metal machine. Limiting the number of processes to 4 helps mitigate this. 4 also matches the number of CPUs on GitHub runners.
+          #
+          # CodSpeed overrides the default benchtime if we don't explicitly specify it.
+          # Having this would avoid running benchmark for more than 1 hour.
+          #
+          # The benchtime is adjusted to 500 ms to speed up the benchmark time.
+          # Per https://github.com/open-telemetry/community/issues/2331#issuecomment-2356403352
+          run: GOMAXPROCS=4 make benchmark/${{matrix.shard}} ARGS=-benchtime=500ms

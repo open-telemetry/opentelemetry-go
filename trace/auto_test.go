@@ -18,7 +18,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace/internal/telemetry"
 )
 
@@ -50,18 +50,21 @@ var (
 			telemetry.BoolValue(false),
 			telemetry.BoolValue(true),
 		),
-		telemetry.Slice("int slice",
+		telemetry.Slice(
+			"int slice",
 			telemetry.IntValue(-1),
 			telemetry.IntValue(-30),
 			telemetry.IntValue(328),
 		),
-		telemetry.Slice("int64 slice",
+		telemetry.Slice(
+			"int64 slice",
 			telemetry.Int64Value(1030),
 			telemetry.Int64Value(0),
 			telemetry.Int64Value(0),
 		),
 		telemetry.Slice("float64 slice", telemetry.Float64Value(1e9)),
-		telemetry.Slice("string slice",
+		telemetry.Slice(
+			"string slice",
 			telemetry.StringValue("one"),
 			telemetry.StringValue("two"),
 		),
@@ -161,6 +164,118 @@ func TestSpanKindTransform(t *testing.T) {
 
 	for in, want := range tests {
 		assert.Equal(t, want, spanKind(in), in.String())
+	}
+}
+
+func TestConvAttrValueBytes(t *testing.T) {
+	v := []byte("bytes")
+	tests := []struct {
+		name  string
+		want  []byte
+		limit int
+	}{
+		{
+			name:  "Unlimited",
+			want:  []byte("bytes"),
+			limit: -1,
+		},
+		{
+			name:  "Zero",
+			want:  []byte(""),
+			limit: 0,
+		},
+		{
+			name:  "Truncate",
+			want:  []byte("by"),
+			limit: 2,
+		},
+		{
+			name:  "NoTruncation",
+			want:  []byte("bytes"),
+			limit: 10,
+		},
+	}
+	orig := maxSpan.AttrValueLen
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Cleanup(func() { maxSpan.AttrValueLen = orig })
+			maxSpan.AttrValueLen = test.limit
+
+			val := convAttrValue(attribute.ByteSliceValue(v))
+
+			assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
+			assert.Equal(t, test.want, val.AsBytes())
+		})
+	}
+}
+
+func TestConvAttrValueSlice(t *testing.T) {
+	t.Parallel()
+
+	val := convAttrValue(attribute.SliceValue(
+		attribute.BoolValue(true),
+		attribute.IntValue(2),
+		attribute.SliceValue(
+			attribute.StringValue("nested"),
+			attribute.ByteSliceValue([]byte("bytes")),
+		),
+	))
+
+	assert.Equal(t, telemetry.ValueKindSlice, val.Kind())
+
+	slice := val.AsSlice()
+	if assert.Len(t, slice, 3) {
+		assert.Equal(t, telemetry.ValueKindBool, slice[0].Kind())
+		assert.True(t, slice[0].AsBool())
+
+		assert.Equal(t, telemetry.ValueKindInt64, slice[1].Kind())
+		assert.EqualValues(t, 2, slice[1].AsInt64())
+
+		assert.Equal(t, telemetry.ValueKindSlice, slice[2].Kind())
+		nested := slice[2].AsSlice()
+		if assert.Len(t, nested, 2) {
+			assert.Equal(t, telemetry.ValueKindString, nested[0].Kind())
+			assert.Equal(t, "nested", nested[0].AsString())
+
+			assert.Equal(t, telemetry.ValueKindBytes, nested[1].Kind())
+			assert.Equal(t, []byte("bytes"), nested[1].AsBytes())
+		}
+	}
+}
+
+func TestConvAttrValueMap(t *testing.T) {
+	t.Parallel()
+
+	val := convAttrValue(attribute.MapValue(
+		attribute.String("b", "two"),
+		attribute.Key("a").Map(attribute.Int("nested", 1)),
+		attribute.Key("slice").Slice(attribute.BoolValue(true)),
+	))
+
+	assert.Equal(t, telemetry.ValueKindMap, val.Kind())
+
+	kvs := val.AsMap()
+	if assert.Len(t, kvs, 3) {
+		assert.Equal(t, "a", kvs[0].Key)
+		assert.Equal(t, telemetry.ValueKindMap, kvs[0].Value.Kind())
+		nested := kvs[0].Value.AsMap()
+		if assert.Len(t, nested, 1) {
+			assert.Equal(t, "nested", nested[0].Key)
+			assert.Equal(t, telemetry.ValueKindInt64, nested[0].Value.Kind())
+			assert.EqualValues(t, 1, nested[0].Value.AsInt64())
+		}
+
+		assert.Equal(t, "b", kvs[1].Key)
+		assert.Equal(t, telemetry.ValueKindString, kvs[1].Value.Kind())
+		assert.Equal(t, "two", kvs[1].Value.AsString())
+
+		assert.Equal(t, "slice", kvs[2].Key)
+		assert.Equal(t, telemetry.ValueKindSlice, kvs[2].Value.Kind())
+		slice := kvs[2].Value.AsSlice()
+		if assert.Len(t, slice, 1) {
+			assert.Equal(t, telemetry.ValueKindBool, slice[0].Kind())
+			assert.True(t, slice[0].AsBool())
+		}
 	}
 }
 

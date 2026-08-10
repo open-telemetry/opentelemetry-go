@@ -162,7 +162,7 @@ func runMockCollectorAtEndpoint(tb testing.TB, endpoint string) *mockCollector {
 
 func runMockCollectorWithConfig(tb testing.TB, mockConfig *mockConfig) *mockCollector {
 	tb.Helper()
-	ln, err := net.Listen("tcp", mockConfig.endpoint)
+	ln, err := (&net.ListenConfig{}).Listen(tb.Context(), "tcp", mockConfig.endpoint)
 	require.NoError(tb, err, "net.Listen")
 
 	srv := grpc.NewServer()

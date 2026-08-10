@@ -142,7 +142,10 @@ func TestHTTPServerRequest(t *testing.T) {
 	srvPort, err := strconv.ParseInt(srvURL.Port(), 10, 32)
 	require.NoError(t, err)
 
-	resp, err := srv.Client().Get(srv.URL)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := srv.Client().Do(r)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 

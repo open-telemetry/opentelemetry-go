@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package noop // import "go.opentelemetry.io/otel/trace/noop"
+package noop
 
 import (
 	"reflect"
@@ -17,15 +17,15 @@ func TestImplementationNoPanics(t *testing.T) {
 	// methods added to it than the No-Op implementation implements them.
 	t.Run("TracerProvider", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(TracerProvider{}),
-		reflect.TypeOf((*trace.TracerProvider)(nil)).Elem(),
+		reflect.TypeFor[trace.TracerProvider](),
 	))
 	t.Run("Tracer", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Tracer{}),
-		reflect.TypeOf((*trace.Tracer)(nil)).Elem(),
+		reflect.TypeFor[trace.Tracer](),
 	))
 	t.Run("Span", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Span{}),
-		reflect.TypeOf((*trace.Span)(nil)).Elem(),
+		reflect.TypeFor[trace.Span](),
 	))
 }
 

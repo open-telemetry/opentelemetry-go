@@ -210,11 +210,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // ClientConnectionCount is an instrument used to record metric values conforming
 // to the "db.client.connection.count" semantic conventions. It represents the
@@ -294,7 +292,10 @@ func (m ClientConnectionCount) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+			attribute.String("db.client.connection.state", string(clientConnectionState)),
+		))
 		return
 	}
 
@@ -410,7 +411,9 @@ func (m ClientConnectionCreateTime) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+		))
 		return
 	}
 
@@ -524,7 +527,9 @@ func (m ClientConnectionIdleMax) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+		))
 		return
 	}
 
@@ -638,7 +643,9 @@ func (m ClientConnectionIdleMin) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+		))
 		return
 	}
 
@@ -752,7 +759,9 @@ func (m ClientConnectionMax) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+		))
 		return
 	}
 
@@ -868,7 +877,9 @@ func (m ClientConnectionPendingRequests) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+		))
 		return
 	}
 
@@ -983,7 +994,9 @@ func (m ClientConnectionTimeouts) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr)
+		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+		))
 		return
 	}
 
@@ -1098,7 +1111,9 @@ func (m ClientConnectionUseTime) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+		))
 		return
 	}
 
@@ -1212,7 +1227,9 @@ func (m ClientConnectionWaitTime) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("db.client.connection.pool.name", clientConnectionPoolName),
+		))
 		return
 	}
 
@@ -1325,7 +1342,9 @@ func (m ClientOperationDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("db.system.name", string(systemName)),
+		))
 		return
 	}
 
@@ -1520,7 +1539,9 @@ func (m ClientResponseReturnedRows) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Histogram.Record(ctx, val)
+		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("db.system.name", string(systemName)),
+		))
 		return
 	}
 

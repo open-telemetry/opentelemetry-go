@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package internal // import "go.opentelemetry.io/otel/bridge/opencensus/internal"
+package internal
 
 import (
 	"fmt"
@@ -81,7 +81,8 @@ func (s *Span) Annotatef(attributes []octrace.Attribute, format string, a ...any
 
 // AddMessageSendEvent adds a message send event to this span.
 func (s *Span) AddMessageSendEvent(_, uncompressedByteSize, compressedByteSize int64) {
-	s.otelSpan.AddEvent(MessageSendEvent,
+	s.otelSpan.AddEvent(
+		MessageSendEvent,
 		trace.WithAttributes(
 			attribute.KeyValue{
 				Key:   UncompressedKey,
@@ -90,13 +91,15 @@ func (s *Span) AddMessageSendEvent(_, uncompressedByteSize, compressedByteSize i
 			attribute.KeyValue{
 				Key:   CompressedKey,
 				Value: attribute.Int64Value(compressedByteSize),
-			}),
+			},
+		),
 	)
 }
 
 // AddMessageReceiveEvent adds a message receive event to this span.
 func (s *Span) AddMessageReceiveEvent(_, uncompressedByteSize, compressedByteSize int64) {
-	s.otelSpan.AddEvent(MessageReceiveEvent,
+	s.otelSpan.AddEvent(
+		MessageReceiveEvent,
 		trace.WithAttributes(
 			attribute.KeyValue{
 				Key:   UncompressedKey,
@@ -105,7 +108,8 @@ func (s *Span) AddMessageReceiveEvent(_, uncompressedByteSize, compressedByteSiz
 			attribute.KeyValue{
 				Key:   CompressedKey,
 				Value: attribute.Int64Value(compressedByteSize),
-			}),
+			},
+		),
 	)
 }
 

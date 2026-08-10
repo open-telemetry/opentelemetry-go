@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package metric
 
 import (
 	"context"
@@ -86,11 +86,9 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	const threads = 2
 	for i := range threads {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = pipe.produce(ctx, &output)
-		}()
+		})
 
 		wg.Add(1)
 		go func(n int) {
@@ -100,15 +98,11 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 			pipe.addSync(instrumentation.Scope{}, sync)
 		}(i)
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			pipe.addMultiCallback(func(context.Context) error { return nil })
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			b := aggregate.Builder[int64]{
 				Temporality:      metricdata.CumulativeTemporality,
 				ReservoirFunc:    nil,
@@ -119,7 +113,7 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 			measures := []aggregate.Measure[int64]{}
 			measures = append(measures, m)
 			pipe.addInt64Measure(oID, measures)
-		}()
+		})
 	}
 	wg.Wait()
 }
@@ -159,7 +153,7 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 				var c cache[string, instID]
 				i := newInserter[N](test.pipe, &c)
 				readerAggregation := i.readerDefaultAggregation(inst.Kind)
-				got, err := i.Instrument(inst, readerAggregation)
+				got, err := i.Instrument(inst, nil, readerAggregation)
 				require.NoError(t, err)
 				assert.Len(t, got, 1, "default view not applied")
 				for _, in := range got {
@@ -408,7 +402,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 }
 
 func TestExemplars(t *testing.T) {
-	nCPU := runtime.NumCPU()
+	nCPU := max(runtime.GOMAXPROCS(0), 1)
 	setup := func(name string) (metric.Meter, Reader) {
 		r := NewManualReader()
 		v := NewView(Instrument{Name: "int64-expo-histogram"}, Stream{
@@ -549,35 +543,28 @@ func TestAddingAndObservingMeasureConcurrentSafe(t *testing.T) {
 	require.NoError(t, err)
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_, err := m.Int64ObservableCounter("int64-observable-counter-2")
 		require.NoError(t, err)
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_, err := m.RegisterCallback(
 			func(_ context.Context, o metric.Observer) error {
 				o.ObserveInt64(oc1, 2)
 				return nil
-			}, oc1)
+			}, oc1,
+		)
 		require.NoError(t, err)
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_ = mp.pipes[0].produce(t.Context(), &metricdata.ResourceMetrics{})
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_ = mp.pipes[1].produce(t.Context(), &metricdata.ResourceMetrics{})
-	}()
+	})
 
 	wg.Wait()
 }
@@ -595,7 +582,8 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 		func(_ context.Context, o metric.Observer) error {
 			o.ObserveInt64(oc, val.Load())
 			return nil
-		}, oc)
+		}, oc,
+	)
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, reg.Unregister()) })
 	ctx := t.Context()

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package semconv // import "go.opentelemetry.io/otel/semconv/v1.34.0"
+package semconv
 
 import (
 	"errors"
@@ -23,7 +23,7 @@ func TestErrorType(t *testing.T) {
 	builtinErr := errors.New("something went wrong")
 	var nilErr error
 
-	wantCustomType := reflect.TypeOf(customErr)
+	wantCustomType := reflect.TypeFor[CustomError]()
 	wantCustomStr := fmt.Sprintf("%s.%s", wantCustomType.PkgPath(), wantCustomType.Name())
 
 	tests := []struct {

@@ -19,16 +19,12 @@ import (
 
 func TestLoggerConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		SetLogger(stdr.New(log.New(io.Discard, "", 0)))
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		Info("")
-	}()
+	})
 
 	wg.Wait()
 	ResetForTest(t)

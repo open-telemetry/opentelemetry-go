@@ -1319,12 +1319,12 @@ func (ContainerStatusReason) Description() string {
 // Corresponds to the `reason` field of the: [K8s ContainerStateWaiting] or
 // [K8s ContainerStateTerminated]
 //
-// [K8s ContainerStateWaiting]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatewaiting-v1-core
-// [K8s ContainerStateTerminated]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
-//
 // All possible container state reasons will be reported at each time interval to
 // avoid missing metrics.
 // Only the value corresponding to the current state reason will be non-zero.
+//
+// [K8s ContainerStateWaiting]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstatewaiting-v1-core
+// [K8s ContainerStateTerminated]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
 func (m ContainerStatusReason) Add(
 	ctx context.Context,
 	incr int64,
@@ -1332,7 +1332,9 @@ func (m ContainerStatusReason) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.container.status.reason", string(containerStatusReason)),
+		))
 		return
 	}
 
@@ -1439,11 +1441,11 @@ func (ContainerStatusState) Description() string {
 // The containerStatusState is the the state of the container.
 // [K8s ContainerState]
 //
-// [K8s ContainerState]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstate-v1-core
-//
 // All possible container states will be reported at each time interval to avoid
 // missing metrics.
 // Only the value corresponding to the current state will be non-zero.
+//
+// [K8s ContainerState]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstate-v1-core
 func (m ContainerStatusState) Add(
 	ctx context.Context,
 	incr int64,
@@ -1451,7 +1453,9 @@ func (m ContainerStatusState) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.container.status.state", string(containerStatusState)),
+		))
 		return
 	}
 
@@ -3821,7 +3825,9 @@ func (m NamespacePhase) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.namespace.phase", string(namespacePhase)),
+		))
 		return
 	}
 
@@ -3937,7 +3943,10 @@ func (m NodeConditionStatus) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.node.condition.status", string(nodeConditionStatus)),
+			attribute.String("k8s.node.condition.type", string(nodeConditionType)),
+		))
 		return
 	}
 
@@ -7127,11 +7136,11 @@ func (PodStatusPhase) Description() string {
 // The podStatusPhase is the the phase for the pod. Corresponds to the `phase`
 // field of the: [K8s PodStatus]
 //
-// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
-//
 // All possible pod phases will be reported at each time interval to avoid
 // missing metrics.
 // Only the value corresponding to the current phase will be non-zero.
+//
+// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
 func (m PodStatusPhase) Add(
 	ctx context.Context,
 	incr int64,
@@ -7139,7 +7148,9 @@ func (m PodStatusPhase) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.pod.status.phase", string(podStatusPhase)),
+		))
 		return
 	}
 
@@ -7246,11 +7257,11 @@ func (PodStatusReason) Description() string {
 // The podStatusReason is the the reason for the pod state. Corresponds to the
 // `reason` field of the: [K8s PodStatus]
 //
-// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
-//
 // All possible pod status reasons will be reported at each time interval to
 // avoid missing metrics.
 // Only the value corresponding to the current reason will be non-zero.
+//
+// [K8s PodStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podstatus-v1-core
 func (m PodStatusReason) Add(
 	ctx context.Context,
 	incr int64,
@@ -7258,7 +7269,9 @@ func (m PodStatusReason) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.pod.status.reason", string(podStatusReason)),
+		))
 		return
 	}
 
@@ -7480,7 +7493,9 @@ func (m PodVolumeAvailable) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.volume.name", volumeName),
+		))
 		return
 	}
 
@@ -7612,7 +7627,9 @@ func (m PodVolumeCapacity) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.volume.name", volumeName),
+		))
 		return
 	}
 
@@ -7744,7 +7761,9 @@ func (m PodVolumeInodeCount) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.volume.name", volumeName),
+		))
 		return
 	}
 
@@ -7876,7 +7895,9 @@ func (m PodVolumeInodeFree) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.volume.name", volumeName),
+		))
 		return
 	}
 
@@ -8011,7 +8032,9 @@ func (m PodVolumeInodeUsed) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.volume.name", volumeName),
+		))
 		return
 	}
 
@@ -8148,7 +8171,9 @@ func (m PodVolumeUsage) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.volume.name", volumeName),
+		))
 		return
 	}
 
@@ -9538,7 +9563,9 @@ func (m ResourceQuotaHugepageCountRequestHard) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.hugepage.size", hugepageSize),
+		))
 		return
 	}
 
@@ -9660,7 +9687,9 @@ func (m ResourceQuotaHugepageCountRequestUsed) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.hugepage.size", hugepageSize),
+		))
 		return
 	}
 
@@ -10202,7 +10231,9 @@ func (m ResourceQuotaObjectCountHard) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
+		))
 		return
 	}
 
@@ -10324,7 +10355,9 @@ func (m ResourceQuotaObjectCountUsed) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("k8s.resourcequota.resource_name", resourcequotaResourceName),
+		))
 		return
 	}
 

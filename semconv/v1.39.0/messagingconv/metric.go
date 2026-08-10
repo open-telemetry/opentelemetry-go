@@ -26,11 +26,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // OperationTypeAttr is an attribute conforming to the messaging.operation.type
 // semantic conventions. It represents a string identifying the type of the
@@ -169,7 +167,10 @@ func (m ClientConsumedMessages) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr)
+		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("messaging.operation.name", operationName),
+			attribute.String("messaging.system", string(system)),
+		))
 		return
 	}
 
@@ -351,7 +352,10 @@ func (m ClientOperationDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("messaging.operation.name", operationName),
+			attribute.String("messaging.system", string(system)),
+		))
 		return
 	}
 
@@ -535,7 +539,10 @@ func (m ClientSentMessages) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr)
+		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("messaging.operation.name", operationName),
+			attribute.String("messaging.system", string(system)),
+		))
 		return
 	}
 
@@ -698,7 +705,10 @@ func (m ProcessDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("messaging.operation.name", operationName),
+			attribute.String("messaging.system", string(system)),
+		))
 		return
 	}
 

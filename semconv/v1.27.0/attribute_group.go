@@ -3,7 +3,7 @@
 
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-package semconv // import "go.opentelemetry.io/otel/semconv/v1.27.0"
+package semconv
 
 import "go.opentelemetry.io/otel/attribute"
 
@@ -3135,10 +3135,8 @@ const (
 	ErrorTypeKey = attribute.Key("error.type")
 )
 
-var (
-	// A fallback error value to be used when the instrumentation doesn't define a custom value
-	ErrorTypeOther = ErrorTypeKey.String("_OTHER")
-)
+// A fallback error value to be used when the instrumentation doesn't define a custom value
+var ErrorTypeOther = ErrorTypeKey.String("_OTHER")
 
 // Attributes for Events represented using Log Records.
 const (

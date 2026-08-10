@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package observ // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/observ"
+package observ
 
 import (
 	"context"
@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 const (
@@ -69,6 +69,7 @@ func get[T any](pool *sync.Pool) *[]T {
 }
 
 func put[T any](pool *sync.Pool, value *[]T) {
+	clear(*value) // erase elements to allow GC to collect what they refer to.
 	*value = (*value)[:0]
 	pool.Put(value)
 }
@@ -184,16 +185,18 @@ func ServerAddrAttrs(target string) []attribute.KeyValue {
 func (i *Instrumentation) ExportLogs(ctx context.Context, count int64) ExportOp {
 	start := time.Now()
 
-	addOpt := get[metric.AddOption](addOptPool)
-	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, i.addOpt)
-	i.inflightMetric.Add(ctx, count, *addOpt...)
+	if i.inflightMetric.Enabled(ctx) {
+		addOpt := get[metric.AddOption](addOptPool)
+		defer put(addOptPool, addOpt)
+		*addOpt = append(*addOpt, i.addOpt)
+		i.inflightMetric.Add(ctx, count, *addOpt...)
+	}
 
 	return ExportOp{
 		ctx:   ctx,
-		start: start,
 		inst:  i,
 		count: count,
+		start: start,
 	}
 }
 
@@ -214,15 +217,30 @@ type ExportOp struct {
 // of successfully exported logs will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
 func (e ExportOp) End(err error, code int) {
-	addOpt := get[metric.AddOption](addOptPool)
-	defer put(addOptPool, addOpt)
-	*addOpt = append(*addOpt, e.inst.addOpt)
+	inflightEnabled := e.inst.inflightMetric.Enabled(e.ctx)
+	exportedEnabled := e.inst.exportedMetric.Enabled(e.ctx)
+	durationEnabled := e.inst.operationDuration.Enabled(e.ctx)
 
-	e.inst.inflightMetric.Add(e.ctx, -e.count, *addOpt...)
-	success := successful(e.count, err)
-	e.inst.exportedMetric.Add(e.ctx, success, *addOpt...)
+	if !inflightEnabled && !exportedEnabled && !durationEnabled {
+		return
+	}
 
-	if err != nil {
+	var success int64
+	if inflightEnabled || exportedEnabled {
+		addOpt := get[metric.AddOption](addOptPool)
+		defer put(addOptPool, addOpt)
+		*addOpt = append(*addOpt, e.inst.addOpt)
+
+		if inflightEnabled {
+			e.inst.inflightMetric.Add(e.ctx, -e.count, *addOpt...)
+		}
+		if exportedEnabled {
+			success = successful(e.count, err)
+			e.inst.exportedMetric.Add(e.ctx, success, *addOpt...)
+		}
+	}
+
+	if err != nil && exportedEnabled {
 		attrs := get[attribute.KeyValue](attrsPool)
 		defer put(attrsPool, attrs)
 
@@ -233,12 +251,13 @@ func (e ExportOp) End(err error, code int) {
 		e.inst.exportedMetric.Add(e.ctx, e.count-success, a)
 	}
 
-	record := get[metric.RecordOption](recordPool)
-	defer put(recordPool, record)
-	*record = append(*record, e.recordOption(err, code))
-
-	duration := time.Since(e.start).Seconds()
-	e.inst.operationDuration.Record(e.ctx, duration, *record...)
+	if durationEnabled {
+		record := get[metric.RecordOption](recordPool)
+		defer put(recordPool, record)
+		*record = append(*record, e.recordOption(err, code))
+		duration := time.Since(e.start).Seconds()
+		e.inst.operationDuration.Record(e.ctx, duration, *record...)
+	}
 }
 
 func (e ExportOp) recordOption(err error, code int) metric.RecordOption {
@@ -250,11 +269,10 @@ func (e ExportOp) recordOption(err error, code int) metric.RecordOption {
 	defer put(attrsPool, attrs)
 
 	*attrs = append(*attrs, e.inst.presetAttrs...)
-	*attrs = append(
-		*attrs,
-		semconv.HTTPResponseStatusCode(code),
-		semconv.ErrorType(err),
-	)
+	if code != 0 {
+		*attrs = append(*attrs, semconv.HTTPResponseStatusCode(code))
+	}
+	*attrs = append(*attrs, semconv.ErrorType(err))
 	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
 }
 
@@ -287,7 +305,10 @@ var errPool = sync.Pool{
 // the provided non-nil err.
 func rejected(n int64, err error) int64 {
 	ps := errPool.Get().(*internal.PartialSuccess)
-	defer errPool.Put(ps)
+	defer func() {
+		*ps = internal.PartialSuccess{} // erase fields to allow GC to collect them.
+		errPool.Put(ps)
+	}()
 
 	if errors.As(err, ps) {
 		// Bound RejectedItems to [0, n]. This should not be needed,
@@ -298,7 +319,7 @@ func rejected(n int64, err error) int64 {
 	return n
 }
 
-// parseEndpoint parses the host and port from target that has the form
+// parseTarget parses the host and port from target that has the form
 // "host[:port]", or it returns an error if the target is not parsable.
 //
 // If no port is specified, -1 is returned.

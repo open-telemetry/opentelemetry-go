@@ -107,6 +107,35 @@ func TestSpanContextIsSampled(t *testing.T) {
 	}
 }
 
+func TestSpanContextIsRandom(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		tf   TraceFlags
+		want bool
+	}{
+		{
+			name: "SpanContext.IsRandom() returns false if sc is not random",
+			want: false,
+		}, {
+			name: "SpanContext.IsRandom() returns true if sc is random",
+			tf:   FlagsRandom,
+			want: true,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			sc := SpanContext{
+				traceFlags: testcase.tf,
+			}
+
+			have := sc.IsRandom()
+
+			if have != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, have)
+			}
+		})
+	}
+}
+
 func TestSpanContextIsRemote(t *testing.T) {
 	for _, testcase := range []struct {
 		name   string
@@ -396,6 +425,78 @@ func TestTraceFlagsWithSampled(t *testing.T) {
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			have := testcase.start.WithSampled(testcase.sample)
+			if have != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestTraceFlagsIsRandom(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		tf   TraceFlags
+		want bool
+	}{
+		{
+			name: "random",
+			tf:   FlagsRandom,
+			want: true,
+		}, {
+			name: "unused bits are ignored, still not random",
+			tf:   ^FlagsRandom,
+			want: false,
+		}, {
+			name: "unused bits are ignored, still random",
+			tf:   FlagsRandom | ^FlagsRandom,
+			want: true,
+		}, {
+			name: "not random/default",
+			want: false,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			have := testcase.tf.IsRandom()
+			if have != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestTraceFlagsWithRandom(t *testing.T) {
+	for _, testcase := range []struct {
+		name   string
+		start  TraceFlags
+		random bool
+		want   TraceFlags
+	}{
+		{
+			name:   "random unchanged",
+			start:  FlagsRandom,
+			want:   FlagsRandom,
+			random: true,
+		}, {
+			name:   "become random",
+			want:   FlagsRandom,
+			random: true,
+		}, {
+			name:   "unused bits are ignored, still not random",
+			start:  ^FlagsRandom,
+			want:   ^FlagsRandom,
+			random: false,
+		}, {
+			name:   "unused bits are ignored, becomes random",
+			start:  ^FlagsRandom,
+			want:   FlagsRandom | ^FlagsRandom,
+			random: true,
+		}, {
+			name:   "not random/default",
+			random: false,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			have := testcase.start.WithRandom(testcase.random)
 			if have != testcase.want {
 				t.Errorf("Want: %v, but have: %v", testcase.want, have)
 			}
