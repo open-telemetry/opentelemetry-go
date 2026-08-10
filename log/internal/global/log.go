@@ -3,7 +3,7 @@
 
 // Package global is the internal implementation of the OpenTelemetry global
 // Logs API.
-package global // import "go.opentelemetry.io/otel/log/internal/global"
+package global
 
 import (
 	"context"

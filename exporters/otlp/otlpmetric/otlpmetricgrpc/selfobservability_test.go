@@ -25,8 +25,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 func TestSelfObservability(t *testing.T) {
@@ -113,9 +113,11 @@ func TestSelfObservability(t *testing.T) {
 			},
 		},
 		{
-			name:        "error",
-			envValue:    "true",
-			endpoint:    "dns:///invalid:999999",
+			name:     "error",
+			envValue: "true",
+			// Use passthrough to avoid DNS resolver delays. This test only needs a
+			// deterministic export failure to verify self-observability metrics.
+			endpoint:    "passthrough:///127.0.0.1:1",
 			expectError: true,
 			wantMetrics: func(actualComponentName, addr string, port int, err error) []metricdata.Metrics {
 				baseAttrs := []attribute.KeyValue{
