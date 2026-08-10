@@ -4,7 +4,6 @@
 package attribute
 
 import (
-	"fmt"
 	"reflect"
 
 	"go.opentelemetry.io/otel/attribute/internal/xxhash"
@@ -31,6 +30,7 @@ const (
 	sliceID        uint64 = 7883494272577650031 // "__slice_" (little endian)
 	mapID          uint64 = 6872316492666199903 // "__map___" (little endian)
 	emptyID        uint64 = 7305809155345288421 // "__empty_" (little endian)
+	unknownID      uint64 = 7959953386440127839 // "_unknown" (little endian)
 )
 
 // Hasher computes a Distinct value from KeyValue attributes supplied with
@@ -282,11 +282,14 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 	case EMPTY:
 		h = h.Uint64(emptyID)
 	default:
-		// Logging is an alternative, but using the internal logger here
-		// causes an import cycle so it is not done.
-		val := v.AsInterface()
-		msg := fmt.Sprintf("unknown value type: %[1]v (%[1]T)", val)
-		panic(msg)
+		// This case is unreachable through the public API: Value.Type is
+		// only ever set by the constructor functions in this package, all
+		// of which set it to one of the types handled above. Fall back to a
+		// stable, distinct hash instead of panicking so that a Distinct
+		// (and, in turn, a hashed Set) can never crash the caller, matching
+		// the defensive behavior of Value.String and Value.AsInterface for
+		// this same unreachable case.
+		h = h.Uint64(unknownID)
 	}
 	return h
 }
