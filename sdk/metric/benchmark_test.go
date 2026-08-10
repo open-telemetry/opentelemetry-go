@@ -416,7 +416,7 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 	testCases := []struct {
 		name     string
 		provider func() metric.MeterProvider
-		fn       func(b *testing.B, ctx context.Context, counter metric.Float64Counter)
+		fn       func(ctx context.Context, b *testing.B, counter metric.Float64Counter)
 	}{
 		{
 			name:     "NoFilter/Precomputed/WithAttributeSet",
@@ -468,12 +468,12 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
 			counter := testCounter(b, tc.provider())
-			tc.fn(b, ctx, counter)
+			tc.fn(ctx, b, counter)
 		})
 	}
 }
 
-func benchPrecomputedWithAttributeSet(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
+func benchPrecomputedWithAttributeSet(ctx context.Context, b *testing.B, counter metric.Float64Counter) {
 	precomputedOpts := []metric.AddOption{
 		metric.WithAttributeSet(attribute.NewSet(attributes()...)),
 	}
@@ -485,7 +485,7 @@ func benchPrecomputedWithAttributeSet(b *testing.B, ctx context.Context, counter
 	})
 }
 
-func benchPrecomputedWithAttributes(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
+func benchPrecomputedWithAttributes(ctx context.Context, b *testing.B, counter metric.Float64Counter) {
 	precomputedOpts := []metric.AddOption{metric.WithAttributes(attributes()...)}
 	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
@@ -495,7 +495,7 @@ func benchPrecomputedWithAttributes(b *testing.B, ctx context.Context, counter m
 	})
 }
 
-func benchPrecomputedWithUnsafeAttributes(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
+func benchPrecomputedWithUnsafeAttributes(ctx context.Context, b *testing.B, counter metric.Float64Counter) {
 	precomputedOpts := []metric.AddOption{x.WithUnsafeAttributes(attributes()...)}
 	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
@@ -505,7 +505,7 @@ func benchPrecomputedWithUnsafeAttributes(b *testing.B, ctx context.Context, cou
 	})
 }
 
-func benchDynamicWithAttributeSet(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
+func benchDynamicWithAttributeSet(ctx context.Context, b *testing.B, counter metric.Float64Counter) {
 	attrPool := &sync.Pool{
 		New: func() any {
 			s := make([]attribute.KeyValue, 0, endToEndAttrsLen)
@@ -559,7 +559,7 @@ func benchDynamicWithAttributeSet(b *testing.B, ctx context.Context, counter met
 	})
 }
 
-func benchDynamicWithAttributes(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
+func benchDynamicWithAttributes(ctx context.Context, b *testing.B, counter metric.Float64Counter) {
 	attrPool := &sync.Pool{
 		New: func() any {
 			s := make([]attribute.KeyValue, 0, endToEndAttrsLen)
@@ -613,7 +613,7 @@ func benchDynamicWithAttributes(b *testing.B, ctx context.Context, counter metri
 	})
 }
 
-func benchDynamicWithUnsafeAttributes(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
+func benchDynamicWithUnsafeAttributes(ctx context.Context, b *testing.B, counter metric.Float64Counter) {
 	attrPool := &sync.Pool{
 		New: func() any {
 			s := make([]attribute.KeyValue, 0, endToEndAttrsLen)
@@ -654,7 +654,7 @@ func benchDynamicWithUnsafeAttributes(b *testing.B, ctx context.Context, counter
 	})
 }
 
-func benchNaiveWithAttributes(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
+func benchNaiveWithAttributes(ctx context.Context, b *testing.B, counter metric.Float64Counter) {
 	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {

@@ -144,7 +144,6 @@ linters:
         - name: context-as-argument
           arguments:
             - allow-types-before: '*testing.T'
-          disabled: true
         - name: context-keys-type
         - name: deep-exit
         - name: defer
