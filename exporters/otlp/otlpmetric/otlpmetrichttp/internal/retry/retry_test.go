@@ -46,6 +46,16 @@ func TestWait(t *testing.T) {
 			delay:    1 * time.Hour,
 			expected: context.Canceled,
 		},
+		{
+			ctx: func() context.Context {
+				ctx, cancel := context.WithCancelCause(t.Context())
+				cancel(assert.AnError)
+				return ctx
+			}(),
+			// Ensure the timer and context do not end simultaneously.
+			delay:    1 * time.Hour,
+			expected: assert.AnError,
+		},
 	}
 
 	for _, test := range tests {
