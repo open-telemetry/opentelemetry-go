@@ -12,11 +12,11 @@ require (
 	github.com/prometheus/common v0.70.1
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/otel v1.44.0
-	go.opentelemetry.io/otel/metric v1.44.0
-	go.opentelemetry.io/otel/sdk v1.44.0
-	go.opentelemetry.io/otel/sdk/metric v1.44.0
-	go.opentelemetry.io/otel/trace v1.44.0
+	go.opentelemetry.io/otel v1.45.0
+	go.opentelemetry.io/otel/metric v1.45.0
+	go.opentelemetry.io/otel/sdk v1.45.0
+	go.opentelemetry.io/otel/sdk/metric v1.45.0
+	go.opentelemetry.io/otel/trace v1.45.0
 	google.golang.org/protobuf v1.36.11
 )
 
