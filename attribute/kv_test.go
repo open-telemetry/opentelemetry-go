@@ -74,6 +74,17 @@ func TestKeyValueConstructors(t *testing.T) {
 				Value: attribute.SliceValue(attribute.BoolValue(true), attribute.IntValue(42)),
 			},
 		},
+		{
+			name:   "Map",
+			actual: attribute.Map("k1", attribute.String("b", "two"), attribute.Int("a", 1)),
+			expected: attribute.KeyValue{
+				Key: "k1",
+				Value: attribute.MapValue(
+					attribute.Int("a", 1),
+					attribute.String("b", "two"),
+				),
+			},
+		},
 	}
 
 	for _, test := range tt {
@@ -140,6 +151,11 @@ func TestKeyValueValid(t *testing.T) {
 			valid: true,
 			kv:    attribute.Slice("slice", attribute.StringValue("value")),
 		},
+		{
+			desc:  "non-empty key with MAP type Value should be valid",
+			valid: true,
+			kv:    attribute.Map("map", attribute.String("key", "value")),
+		},
 	}
 
 	for _, test := range tests {
@@ -190,6 +206,10 @@ func TestIncorrectCast(t *testing.T) {
 			name: "Slice",
 			val:  attribute.SliceValue(attribute.StringValue("value")),
 		},
+		{
+			name: "Map",
+			val:  attribute.MapValue(attribute.String("key", "value")),
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -201,6 +221,7 @@ func TestIncorrectCast(t *testing.T) {
 				tt.val.AsInt64()
 				tt.val.AsInt64Slice()
 				tt.val.AsInterface()
+				tt.val.AsMap()
 				tt.val.AsSlice()
 				tt.val.AsString()
 				tt.val.AsStringSlice()

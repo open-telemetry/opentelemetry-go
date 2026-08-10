@@ -12,16 +12,11 @@ package {{ pkg }}
 
 import (
 	"context"
-	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
-)
-
-var (
-	addOptPool = &sync.Pool{New: func() any { return &[]metric.AddOption{} }}
-	recOptPool = &sync.Pool{New: func() any { return &[]metric.RecordOption{} }}
+	"go.opentelemetry.io/otel/semconv/internal/metricpool"
 )
 {%- for attr in ctx.metrics | map(attribute="attributes") | flatten | selectattr("type", "mapping") | unique(attribute="name") | sort(attribute="name") %}
 {%- set name = h.to_go_name(attr.name, ctx.root_namespace) %}

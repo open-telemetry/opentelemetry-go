@@ -125,6 +125,15 @@ func TestEmit(t *testing.T) {
 			want: `[true,"foo\"bar","Infinity","Ymlu"]`,
 		},
 		{
+			name: `test Key.Emit() can emit a string representing self.MAP`,
+			v: attribute.MapValue(
+				attribute.String("b", "foo\"bar"),
+				attribute.Float64("a", math.Inf(1)),
+				attribute.Key("bytes").ByteSlice([]byte("bin")),
+			),
+			want: `{"a":"Infinity","b":"foo\"bar","bytes":"Ymlu"}`,
+		},
+		{
 			name: `test Key.Emit() can emit a string representing self.EMPTY`,
 			v:    attribute.Value{},
 			want: "",
@@ -151,4 +160,15 @@ func TestString(t *testing.T) {
 	)
 
 	require.Equal(t, `["foo\nbar","NaN",["Ymlu",null]]`, v.String())
+
+	m := attribute.MapValue(
+		attribute.String("foo\nbar", "value"),
+		attribute.Float64("nan", math.NaN()),
+		attribute.Key("nested").Map(
+			attribute.Key("bytes").ByteSlice([]byte("bin")),
+			attribute.Key("empty").Slice(attribute.Value{}),
+		),
+	)
+
+	require.JSONEq(t, `{"foo\nbar":"value","nan":"NaN","nested":{"bytes":"Ymlu","empty":[null]}}`, m.String())
 }

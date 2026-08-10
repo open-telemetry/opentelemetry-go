@@ -25,6 +25,7 @@ var (
 	outStr          string
 	outStrSlice     []string
 	outValueSlice   []attribute.Value
+	outMap          []attribute.KeyValue
 )
 
 func benchmarkEmit(kv attribute.KeyValue) func(*testing.B) {
@@ -387,6 +388,58 @@ func BenchmarkSlice(b *testing.B) {
 				b.ReportAllocs()
 				for i := 0; i < b.N; i++ {
 					outValueSlice = kv.Value.AsSlice()
+				}
+			})
+			b.Run("String", benchmarkString(kv))
+			b.Run("Emit", benchmarkEmit(kv))
+		})
+	}
+}
+
+func BenchmarkMap(b *testing.B) {
+	for _, bench := range []struct {
+		name string
+		v    []attribute.KeyValue
+	}{
+		{
+			name: "Len3",
+			v: []attribute.KeyValue{
+				attribute.Bool("enabled", true),
+				attribute.Int("count", 42),
+				attribute.String("name", "test"),
+			},
+		},
+		{
+			name: "Len5Nested",
+			v: []attribute.KeyValue{
+				attribute.String("quote", "quote\""),
+				attribute.Float64("inf", math.Inf(1)),
+				attribute.ByteSlice("bin", []byte("bin")),
+				attribute.Key("nested").Map(attribute.String("key", "value"), attribute.Key("empty").Slice(attribute.Value{})),
+				attribute.Bool("enabled", false),
+			},
+		},
+	} {
+		b.Run(bench.name, func(b *testing.B) {
+			k, v := "map", bench.v
+			kv := attribute.Map(k, v...)
+
+			b.Run("Value", func(b *testing.B) {
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					outV = attribute.MapValue(v...)
+				}
+			})
+			b.Run("KeyValue", func(b *testing.B) {
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					outKV = attribute.Map(k, v...)
+				}
+			})
+			b.Run("AsMap", func(b *testing.B) {
+				b.ReportAllocs()
+				for i := 0; i < b.N; i++ {
+					outMap = kv.Value.AsMap()
 				}
 			})
 			b.Run("String", benchmarkString(kv))
