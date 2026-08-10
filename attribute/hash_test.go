@@ -12,6 +12,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute/internal/xxhash"
 )
 
@@ -243,6 +246,34 @@ func TestHashValueMapOrdering(t *testing.T) {
 	}
 }
 
+// TestHashValueUnknownType verifies that hashValue does not panic for a
+// Value with a type that does not match any of the known Type constants.
+//
+// This is unreachable through the public API: every exported constructor in
+// this package sets vtype to one of the known constants. It can only happen
+// if a Value's zero-value defaults are bypassed by unsafe means (e.g. an
+// invalid enum from a future refactor, or memory corruption). hashValue
+// should degrade gracefully like Value.String and Value.AsInterface do for
+// this same case, rather than panicking and crashing the caller.
+func TestHashValueUnknownType(t *testing.T) {
+	unknown := Value{vtype: Type(-1)}
+
+	var got uint64
+	require.NotPanics(t, func() {
+		h := xxhash.New()
+		h = hashValue(h, unknown)
+		got = h.Sum64()
+	})
+	assert.NotZero(t, got)
+
+	// The hash must be stable and independent of any other field on Value,
+	// since none of them are meaningful for an unknown type.
+	other := Value{vtype: Type(-1), numeric: 42, stringly: "ignored"}
+	h := xxhash.New()
+	h = hashValue(h, other)
+	assert.Equal(t, got, h.Sum64(), "hash of an unknown-type Value must not depend on unrelated fields")
+}
+
 // TestHasherMatchesSetEquivalent pins the invariant that a Hasher written in
 // ascending key order produces the same Distinct as the equivalent Set. Hasher
 // and Set hashing share their initialization, per-attribute mixing, and final
@@ -461,7 +492,7 @@ func BenchmarkHashValueMap(b *testing.B) {
 func FuzzHashKVs(f *testing.F) {
 	// Add seed inputs to ensure coverage of edge cases.
 	f.Add("", "", "", "", "", "", 0, int64(0), 0.0, false, uint8(0))
-	f.Add("key", "value", "🌍", "test", "bool", "float", -1, int64(-1), -1.0, true, uint8(1))
+	f.Add("key", "value", "\U0001F30D", "test", "bool", "float", -1, int64(-1), -1.0, true, uint8(1))
 	f.Add("duplicate", "duplicate", "duplicate", "duplicate", "duplicate", "NaN",
 		0, int64(0), math.Inf(1), false, uint8(2))
 
@@ -593,7 +624,7 @@ func FuzzHashKVs(f *testing.F) {
 
 		// Add more attributes with Unicode keys.
 		if numAttrs > 8 {
-			kvs = append(kvs, String("🔑", "unicode_key"))
+			kvs = append(kvs, String("\U0001F511", "unicode_key"))
 		}
 		if numAttrs > 9 {
 			kvs = append(kvs, String("empty", ""))
