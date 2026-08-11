@@ -5,6 +5,7 @@ package metric
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -120,6 +121,69 @@ func TestConfiguratorCacheWalkUpdatesCachedMeter(t *testing.T) {
 
 	// Cached meter is updated by the cache walk triggered via onUpdate.
 	assert.False(t, cachedMeter.enabled.Load(), "cached meter should be updated by cache walk")
+}
+
+// TestConfiguratorNewMeterConvergesWithSetWalk proves both orderings of the
+// cache-lock/walk consistency guarantee: whichever of a new meter's insertion
+// or a concurrent Set() walk acquires the cache lock first, the meter never
+// ends up stale.
+func TestConfiguratorNewMeterConvergesWithSetWalk(t *testing.T) {
+	newProvider := func() (mp *MeterProvider, enabled *atomic.Bool, walk func()) {
+		enabled = new(atomic.Bool)
+		enabled.Store(true)
+
+		var storedCallback func()
+		configuratorOpt := testConfiguratorOpt{
+			fn: func(instrumentation.Scope) any {
+				return testMeterConfig{enabled: enabled.Load()}
+			},
+			onUpdate: func(cb func()) { storedCallback = cb },
+		}
+
+		mp = NewMeterProvider(configuratorOpt)
+		return mp, enabled, func() { storedCallback() }
+	}
+
+	cachedMeter := func(mp *MeterProvider, name string) *meter {
+		return mp.meters.Lookup(instrumentation.Scope{Name: name}, func() *meter {
+			return newMeter(instrumentation.Scope{Name: name}, mp.pipes)
+		})
+	}
+
+	t.Run("insert_then_cfg_set", func(t *testing.T) {
+		mp, enabled, walk := newProvider()
+		defer mp.Shutdown(t.Context()) //nolint:errcheck
+
+		inserted := make(chan struct{})
+		go func() {
+			defer close(inserted)
+			_ = mp.Meter("race")
+		}()
+		<-inserted
+
+		enabled.Store(false)
+		walk()
+
+		assert.False(t, cachedMeter(mp, "race").enabled.Load(),
+			"walk started after new meter must observe it")
+	})
+
+	t.Run("cfg_set_then_new_meter", func(t *testing.T) {
+		mp, enabled, walk := newProvider()
+		defer mp.Shutdown(t.Context()) //nolint:errcheck
+
+		walked := make(chan struct{})
+		go func() {
+			defer close(walked)
+			enabled.Store(false)
+			walk()
+		}()
+		<-walked
+
+		_ = mp.Meter("race")
+		assert.False(t, cachedMeter(mp, "race").enabled.Load(),
+			"meter created after the walk must read the updated configurator directly")
+	})
 }
 
 func TestInstrumentEnabledReflectsConfigurator(t *testing.T) {
