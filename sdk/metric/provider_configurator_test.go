@@ -42,7 +42,7 @@ func disablingConfiguratorFn(s instrumentation.Scope) any {
 	return testMeterConfig{enabled: s.Name != "disabled"}
 }
 
-func TestMeterConfiguratorNewMeter(t *testing.T) {
+func TestConfiguratorNewMeter(t *testing.T) {
 	for _, tc := range []struct {
 		name            string
 		configuratorOpt Option
@@ -81,7 +81,7 @@ func TestMeterConfiguratorNewMeter(t *testing.T) {
 			}
 
 			mp := NewMeterProvider(configuratorOpts...)
-			defer mp.Shutdown(context.Background()) //nolint:errcheck
+			defer mp.Shutdown(t.Context()) //nolint:errcheck
 
 			_ = mp.Meter(tc.scope)
 			m := mp.meters.Lookup(instrumentation.Scope{Name: tc.scope}, func() *meter {
@@ -103,7 +103,7 @@ func TestConfiguratorCacheWalkUpdatesCachedMeter(t *testing.T) {
 	}
 
 	mp := NewMeterProvider(configuratorOpt)
-	defer mp.Shutdown(context.Background()) //nolint:errcheck
+	defer mp.Shutdown(t.Context()) //nolint:errcheck
 
 	// Create and cache a meter before updating the configurator.
 	_ = mp.Meter("test")
@@ -113,7 +113,7 @@ func TestConfiguratorCacheWalkUpdatesCachedMeter(t *testing.T) {
 	assert.True(t, cachedMeter.enabled.Load(), "meter should be enabled before configurator update")
 
 	// Swap configurator to disable all scopes and simulate handle.Set().
-	mp.configurator = func(s instrumentation.Scope) any {
+	mp.configurator = func(_ instrumentation.Scope) any {
 		return testMeterConfig{enabled: false}
 	}
 	if storedCallback != nil {
@@ -142,12 +142,12 @@ func TestInstrumentEnabledReflectsConfigurator(t *testing.T) {
 
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr), configuratorOpt)
-	defer mp.Shutdown(context.Background()) //nolint:errcheck
+	defer mp.Shutdown(t.Context()) //nolint:errcheck
 
 	m := mp.Meter("disabled")
 	ctr, err := m.Int64Counter("ctr")
 	require.NoError(t, err)
-	assert.False(t, ctr.Enabled(context.Background()), "instrument in disabled scope should report Enabled=false")
+	assert.False(t, ctr.Enabled(t.Context()), "instrument in disabled scope should report Enabled=false")
 
 	// Re-enable via configurator update; Enabled() should reflect the live
 	// meter state rather than a value captured at instrument-creation time.
@@ -156,7 +156,7 @@ func TestInstrumentEnabledReflectsConfigurator(t *testing.T) {
 	}
 	require.NotNil(t, storedCallback)
 	storedCallback()
-	assert.True(t, ctr.Enabled(context.Background()), "instrument should reflect re-enabled meter")
+	assert.True(t, ctr.Enabled(t.Context()), "instrument should reflect re-enabled meter")
 }
 
 func TestInstrumentAddGatedByConfigurator(t *testing.T) {
@@ -170,15 +170,15 @@ func TestInstrumentAddGatedByConfigurator(t *testing.T) {
 
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr), configuratorOpt)
-	defer mp.Shutdown(context.Background()) //nolint:errcheck
+	defer mp.Shutdown(t.Context()) //nolint:errcheck
 
 	ctr, err := mp.Meter("disabled").Int64Counter("ctr")
 	require.NoError(t, err)
 
-	ctr.Add(context.Background(), 5)
+	ctr.Add(t.Context(), 5)
 
 	var rm metricdata.ResourceMetrics
-	require.NoError(t, rdr.Collect(context.Background(), &rm))
+	require.NoError(t, rdr.Collect(t.Context(), &rm))
 	assert.Empty(t, rm.ScopeMetrics, "Add on a disabled meter should not reach the aggregator")
 
 	// Re-enable and confirm Add() now reaches the aggregator.
@@ -188,10 +188,10 @@ func TestInstrumentAddGatedByConfigurator(t *testing.T) {
 	require.NotNil(t, storedCallback)
 	storedCallback()
 
-	ctr.Add(context.Background(), 7)
+	ctr.Add(t.Context(), 7)
 
 	rm = metricdata.ResourceMetrics{}
-	require.NoError(t, rdr.Collect(context.Background(), &rm))
+	require.NoError(t, rdr.Collect(t.Context(), &rm))
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
 }
@@ -207,7 +207,7 @@ func TestObservableCallbackGatedByConfigurator(t *testing.T) {
 
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr), configuratorOpt)
-	defer mp.Shutdown(context.Background()) //nolint:errcheck
+	defer mp.Shutdown(t.Context()) //nolint:errcheck
 
 	_, err := mp.Meter("disabled").Int64ObservableCounter("ctr", metric.WithInt64Callback(
 		func(_ context.Context, o metric.Int64Observer) error {
@@ -218,7 +218,7 @@ func TestObservableCallbackGatedByConfigurator(t *testing.T) {
 	require.NoError(t, err)
 
 	var rm metricdata.ResourceMetrics
-	require.NoError(t, rdr.Collect(context.Background(), &rm))
+	require.NoError(t, rdr.Collect(t.Context(), &rm))
 	assert.Empty(t, rm.ScopeMetrics, "callback Observe on a disabled meter should not reach the aggregator")
 
 	// Re-enable and confirm the callback's Observe() now reaches the aggregator.
@@ -229,7 +229,7 @@ func TestObservableCallbackGatedByConfigurator(t *testing.T) {
 	storedCallback()
 
 	rm = metricdata.ResourceMetrics{}
-	require.NoError(t, rdr.Collect(context.Background(), &rm))
+	require.NoError(t, rdr.Collect(t.Context(), &rm))
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
 }
@@ -245,7 +245,7 @@ func TestObserverObserveGatedByConfigurator(t *testing.T) {
 
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr), configuratorOpt)
-	defer mp.Shutdown(context.Background()) //nolint:errcheck
+	defer mp.Shutdown(t.Context()) //nolint:errcheck
 
 	m := mp.Meter("disabled")
 	ctr, err := m.Int64ObservableCounter("ctr")
@@ -258,7 +258,7 @@ func TestObserverObserveGatedByConfigurator(t *testing.T) {
 	require.NoError(t, err)
 
 	var rm metricdata.ResourceMetrics
-	require.NoError(t, rdr.Collect(context.Background(), &rm))
+	require.NoError(t, rdr.Collect(t.Context(), &rm))
 	assert.Empty(t, rm.ScopeMetrics, "ObserveInt64 on a disabled meter should not reach the aggregator")
 
 	// Re-enable and confirm ObserveInt64 now reaches the aggregator.
@@ -269,7 +269,7 @@ func TestObserverObserveGatedByConfigurator(t *testing.T) {
 	storedCallback()
 
 	rm = metricdata.ResourceMetrics{}
-	require.NoError(t, rdr.Collect(context.Background(), &rm))
+	require.NoError(t, rdr.Collect(t.Context(), &rm))
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
 }

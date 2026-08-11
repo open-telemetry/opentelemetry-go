@@ -32,8 +32,8 @@ type meterConfiguratorOption interface {
 type MeterProvider struct {
 	embedded.MeterProvider
 
-	pipes        pipelines
-	meters       cache[instrumentation.Scope, *meter]
+	pipes  pipelines
+	meters cache[instrumentation.Scope, *meter]
 	// configurator is written once, in NewMeterProvider before mp is returned to
 	// any caller, and never reassigned after. No synchronization is needed for
 	// that single write or the reads that follow it.

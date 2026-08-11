@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
@@ -69,7 +70,7 @@ func TestMeterConfiguratorHandleSet(t *testing.T) {
 	opt := WithMeterConfigurator(h)
 	opt.(meterConfiguratorOnUpdateRegistrar).RegisterOnUpdate(func() { walked = true })
 
-	h.Set(func(s instrumentation.Scope) MeterConfig { return MeterConfig{} })
+	h.Set(func(_ instrumentation.Scope) MeterConfig { return MeterConfig{} })
 	assert.True(t, walked, "Set must trigger the registered onUpdate callback")
 }
 
@@ -100,11 +101,9 @@ func TestMeterConfiguratorHandleSetSerializesConcurrentCalls(t *testing.T) {
 	const goroutines = 10
 	var wg sync.WaitGroup
 	for range goroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			h.Set(func(instrumentation.Scope) MeterConfig { return MeterConfig{} })
-		}()
+		})
 	}
 
 	done := make(chan struct{})

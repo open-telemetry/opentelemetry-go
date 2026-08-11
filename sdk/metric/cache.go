@@ -4,6 +4,7 @@
 package metric
 
 import (
+	"maps"
 	"sync"
 )
 
@@ -65,9 +66,7 @@ func (c *cache[K, V]) HasKey(key K) bool {
 func (c *cache[K, V]) Range(f func(K, V)) {
 	c.Lock()
 	data := make(map[K]V, len(c.data))
-	for k, v := range c.data {
-		data[k] = v
-	}
+	maps.Copy(data, c.data)
 	c.Unlock()
 
 	for k, v := range data {
