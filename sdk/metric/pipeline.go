@@ -4,10 +4,10 @@
 package metric
 
 import (
-	"container/list"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -72,11 +72,12 @@ type pipeline struct {
 	views  []View
 
 	sync.Mutex
+	produceMu        sync.Mutex
 	int64Measures    map[observableID[int64]][]aggregate.Measure[int64]
 	float64Measures  map[observableID[float64]][]aggregate.Measure[float64]
 	aggregations     map[instrumentation.Scope][]instrumentSync
 	callbacks        []func(context.Context) error
-	multiCallbacks   list.List
+	multiCallbacks   []*multiCallbackEntry
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
 }
@@ -125,7 +126,7 @@ func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
 
 	entry := &multiCallbackEntry{callback: c}
 	entry.active.Store(true)
-	p.multiCallbacks.PushBack(entry)
+	p.multiCallbacks = append(p.multiCallbacks, entry)
 	return func() {
 		entry.active.Store(false)
 	}
@@ -143,34 +144,36 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		return err
 	}
 
+	p.produceMu.Lock()
+	defer p.produceMu.Unlock()
+
+	// Snapshot callbacks so they can call Meter methods that acquire p.Mutex.
 	p.Lock()
-	defer p.Unlock()
+	callbacks := p.callbacks
+	multiCallbacks := p.multiCallbacks
+	p.Unlock()
 
 	var err error
-	for _, c := range p.callbacks {
+	for _, c := range callbacks {
 		// TODO make the callbacks parallel. ( #3034 )
 		if e := c(ctx); e != nil {
 			err = errors.Join(err, e)
 		}
 	}
-	for e := p.multiCallbacks.Front(); e != nil; {
-		next := e.Next()
-		entry := e.Value.(*multiCallbackEntry)
-		if !entry.active.Load() {
-			p.multiCallbacks.Remove(e)
-			e = next
-			continue
-		}
-
+	for _, entry := range multiCallbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		if cErr := entry.callback(ctx); cErr != nil {
-			err = errors.Join(err, cErr)
+		if entry.active.Load() {
+			if cErr := entry.callback(ctx); cErr != nil {
+				err = errors.Join(err, cErr)
+			}
 		}
-		if !entry.active.Load() {
-			p.multiCallbacks.Remove(e)
-		}
-		e = next
 	}
+
+	p.Lock()
+	defer p.Unlock()
+	p.multiCallbacks = slices.DeleteFunc(p.multiCallbacks, func(entry *multiCallbackEntry) bool {
+		return !entry.active.Load()
+	})
 
 	rm.Resource = p.resource
 	rm.ScopeMetrics = internal.ReuseSlice(rm.ScopeMetrics, len(p.aggregations))

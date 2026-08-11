@@ -633,6 +633,137 @@ func TestCallbackCanUnregisterDuringCollect(t *testing.T) {
 	assert.Empty(t, rm.ScopeMetrics)
 }
 
+func TestCallbackCanCallMeterMethods(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	int64Observable, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+	float64Observable, err := m.Float64ObservableCounter("float64-observable-counter")
+	require.NoError(t, err)
+
+	var called atomic.Bool
+	var reg metric.Registration
+	reg, err = m.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
+		called.Store(true)
+		o.ObserveInt64(int64Observable, 1)
+		o.ObserveFloat64(float64Observable, 1)
+
+		int64Counter, err := m.Int64Counter("int64-counter")
+		if err != nil {
+			return err
+		}
+		int64Counter.Add(ctx, 1)
+		_ = int64Counter.Enabled(ctx)
+
+		int64UpDownCounter, err := m.Int64UpDownCounter("int64-up-down-counter")
+		if err != nil {
+			return err
+		}
+		int64UpDownCounter.Add(ctx, 1)
+		_ = int64UpDownCounter.Enabled(ctx)
+
+		int64Histogram, err := m.Int64Histogram("int64-histogram")
+		if err != nil {
+			return err
+		}
+		int64Histogram.Record(ctx, 1)
+		_ = int64Histogram.Enabled(ctx)
+
+		int64Gauge, err := m.Int64Gauge("int64-gauge")
+		if err != nil {
+			return err
+		}
+		int64Gauge.Record(ctx, 1)
+		_ = int64Gauge.Enabled(ctx)
+
+		float64Counter, err := m.Float64Counter("float64-counter")
+		if err != nil {
+			return err
+		}
+		float64Counter.Add(ctx, 1)
+		_ = float64Counter.Enabled(ctx)
+
+		float64UpDownCounter, err := m.Float64UpDownCounter("float64-up-down-counter")
+		if err != nil {
+			return err
+		}
+		float64UpDownCounter.Add(ctx, 1)
+		_ = float64UpDownCounter.Enabled(ctx)
+
+		float64Histogram, err := m.Float64Histogram("float64-histogram")
+		if err != nil {
+			return err
+		}
+		float64Histogram.Record(ctx, 1)
+		_ = float64Histogram.Enabled(ctx)
+
+		float64Gauge, err := m.Float64Gauge("float64-gauge")
+		if err != nil {
+			return err
+		}
+		float64Gauge.Record(ctx, 1)
+		_ = float64Gauge.Enabled(ctx)
+
+		_, err = m.Int64ObservableCounter(
+			"int64-observable-counter-from-callback",
+			metric.WithInt64Callback(func(context.Context, metric.Int64Observer) error { return nil }),
+		)
+		if err != nil {
+			return err
+		}
+		_, err = m.Int64ObservableUpDownCounter(
+			"int64-observable-up-down-counter-from-callback",
+			metric.WithInt64Callback(func(context.Context, metric.Int64Observer) error { return nil }),
+		)
+		if err != nil {
+			return err
+		}
+		_, err = m.Int64ObservableGauge(
+			"int64-observable-gauge-from-callback",
+			metric.WithInt64Callback(func(context.Context, metric.Int64Observer) error { return nil }),
+		)
+		if err != nil {
+			return err
+		}
+		_, err = m.Float64ObservableCounter(
+			"float64-observable-counter-from-callback",
+			metric.WithFloat64Callback(func(context.Context, metric.Float64Observer) error { return nil }),
+		)
+		if err != nil {
+			return err
+		}
+		_, err = m.Float64ObservableUpDownCounter(
+			"float64-observable-up-down-counter-from-callback",
+			metric.WithFloat64Callback(func(context.Context, metric.Float64Observer) error { return nil }),
+		)
+		if err != nil {
+			return err
+		}
+		observable, err := m.Float64ObservableGauge("registered-observable-gauge")
+		if err != nil {
+			return err
+		}
+		innerReg, err := m.RegisterCallback(
+			func(context.Context, metric.Observer) error { return nil },
+			observable,
+		)
+		if err != nil {
+			return err
+		}
+		if err := innerReg.Unregister(); err != nil {
+			return err
+		}
+		return reg.Unregister()
+	}, int64Observable, float64Observable)
+	require.NoError(t, err)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.True(t, called.Load())
+}
+
 // TestPipelineProduceErrors tests the issue described in https://github.com/open-telemetry/opentelemetry-go/issues/6344.
 // Earlier implementations of the pipeline produce method could corrupt metric data point state when the passed context
 // was canceled during execution of callbacks. In this case, corroption was the result of some or all callbacks being
