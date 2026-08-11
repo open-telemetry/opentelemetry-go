@@ -362,6 +362,183 @@ func TestNextTSForcedIncrement(t *testing.T) {
 	assert.Equal(t, future+2, ts2, "must keep incrementing")
 }
 
+// ---- Injectable-var error paths ----------------------------------------
+
+// TestAllocMappingFtruncateError exercises the ftruncate-failure branch in
+// allocMapping (lines 202-205) by injecting a ftruncate error.
+func TestAllocMappingFtruncateError(t *testing.T) {
+	orig := ftruncateFunc
+	ftruncateFunc = func(_ int, _ int64) error { return unix.ENOSPC }
+	defer func() { ftruncateFunc = orig }()
+
+	_, _, err := allocMapping(pageAlign(1))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "ftruncate")
+}
+
+// TestAllocMappingMmapMemfdError exercises the mmap-failure branch in
+// allocMapping when memfd is available (lines 208-210).
+func TestAllocMappingMmapMemfdError(t *testing.T) {
+	orig := mmapFunc
+	mmapFunc = func(_ int, _ int64, _, _, _ int) ([]byte, error) {
+		return nil, unix.ENOMEM
+	}
+	defer func() { mmapFunc = orig }()
+
+	_, _, err := allocMapping(pageAlign(1))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "mmap (memfd)")
+}
+
+// TestNewPublisherAllocMappingFails exercises the anonymous-mmap-failure branch
+// (lines 213-215) and the resulting error return in newPublisher (lines 67-69)
+// by making both memfd_create and mmap fail.
+func TestNewPublisherAllocMappingFails(t *testing.T) {
+	origMemfd := memfdCreateFunc
+	memfdCreateFunc = func(_ string, _ int) (int, error) { return -1, unix.ENOSYS }
+	origMmap := mmapFunc
+	mmapFunc = func(_ int, _ int64, _, _, _ int) ([]byte, error) {
+		return nil, unix.ENOMEM
+	}
+	defer func() {
+		memfdCreateFunc = origMemfd
+		mmapFunc = origMmap
+	}()
+
+	r := makeResource(t, attribute.String("k", "v"))
+	_, err := NewPublisher(r)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "mmap (anonymous)")
+}
+
+// TestRemapAllocFails exercises the allocMapping-failure branch in remap
+// (lines 156-158) by calling remap directly with injected alloc failures.
+func TestRemapAllocFails(t *testing.T) {
+	r := makeResource(t, attribute.String("k", "v"))
+	pub, err := NewPublisher(r)
+	require.NoError(t, err)
+	defer pub.Shutdown(t.Context()) //nolint:errcheck
+
+	origMemfd := memfdCreateFunc
+	memfdCreateFunc = func(_ string, _ int) (int, error) { return -1, unix.ENOSYS }
+	origMmap := mmapFunc
+	mmapFunc = func(_ int, _ int64, _, _, _ int) ([]byte, error) {
+		return nil, unix.ENOMEM
+	}
+	defer func() {
+		memfdCreateFunc = origMemfd
+		mmapFunc = origMmap
+	}()
+
+	remapErr := pub.impl.remap(1)
+	require.Error(t, remapErr)
+	assert.Contains(t, remapErr.Error(), "processcontext: remap:")
+}
+
+// TestRemapNotDiscoverable exercises the !hasMemfd && prctlErr != nil branch in
+// remap (lines 160-163) by injecting memfd and prctl failures.
+func TestRemapNotDiscoverable(t *testing.T) {
+	r := makeResource(t, attribute.String("k", "v"))
+	pub, err := NewPublisher(r)
+	require.NoError(t, err)
+	defer pub.Shutdown(t.Context()) //nolint:errcheck
+
+	origMemfd := memfdCreateFunc
+	memfdCreateFunc = func(_ string, _ int) (int, error) { return -1, unix.ENOSYS }
+	origSyscall6 := syscall6Func
+	syscall6Func = func(_, _, _, _, _, _, _ uintptr) (uintptr, uintptr, unix.Errno) {
+		return 0, 0, unix.EINVAL
+	}
+	defer func() {
+		memfdCreateFunc = origMemfd
+		syscall6Func = origSyscall6
+	}()
+
+	remapErr := pub.impl.remap(1)
+	require.Error(t, remapErr)
+	assert.Contains(t, remapErr.Error(), "mapping not discoverable")
+}
+
+// TestUpdateRemapFails exercises the remap-failure return in update
+// (lines 101-103) by triggering a remap via a large payload and injecting
+// alloc failures so the remap itself fails.
+func TestUpdateRemapFails(t *testing.T) {
+	r1 := makeResource(t, attribute.String("k", "v"))
+	pub, err := NewPublisher(r1)
+	require.NoError(t, err)
+	defer pub.Shutdown(t.Context()) //nolint:errcheck
+
+	// Build a resource large enough to exceed the current one-page mapping.
+	attrs := make([]attribute.KeyValue, 0, 200)
+	for i := range 200 {
+		attrs = append(attrs, attribute.String(
+			fmt.Sprintf("key.%04d", i),
+			strings.Repeat("v", 20),
+		))
+	}
+	r2 := makeResource(t, attrs...)
+	payload, encErr := encodeProcessContext(r2)
+	require.NoError(t, encErr)
+	if headerSize+len(payload) <= len(pub.impl.mem) {
+		t.Skip("payload fits in current mapping; increase attribute count to trigger remap")
+	}
+
+	origMemfd := memfdCreateFunc
+	memfdCreateFunc = func(_ string, _ int) (int, error) { return -1, unix.ENOSYS }
+	origMmap := mmapFunc
+	mmapFunc = func(_ int, _ int64, _, _, _ int) ([]byte, error) {
+		return nil, unix.ENOMEM
+	}
+	defer func() {
+		memfdCreateFunc = origMemfd
+		mmapFunc = origMmap
+	}()
+
+	updateErr := pub.Update(r2)
+	require.Error(t, updateErr)
+	assert.Contains(t, updateErr.Error(), "remap")
+}
+
+// TestNameVMASuccess exercises the success return path in nameVMA (line 238)
+// by injecting a prctl implementation that always reports success.
+func TestNameVMASuccess(t *testing.T) {
+	orig := syscall6Func
+	syscall6Func = func(_, _, _, _, _, _, _ uintptr) (uintptr, uintptr, unix.Errno) {
+		return 0, 0, 0 // success
+	}
+	defer func() { syscall6Func = orig }()
+
+	mem := make([]byte, pageAlign(1))
+	assert.NoError(t, nameVMA(mem))
+}
+
+// TestMonotonicNsFallbackToMonotonic exercises the CLOCK_MONOTONIC fallback
+// branch in monotonicNs (lines 256-258) by injecting a failure for
+// CLOCK_BOOTTIME.
+func TestMonotonicNsFallbackToMonotonic(t *testing.T) {
+	orig := clockGettimeFunc
+	clockGettimeFunc = func(clockid int32, ts *unix.Timespec) error {
+		if clockid == unix.CLOCK_BOOTTIME {
+			return unix.EINVAL
+		}
+		return unix.ClockGettime(clockid, ts)
+	}
+	defer func() { clockGettimeFunc = orig }()
+
+	ts := monotonicNs()
+	assert.NotZero(t, ts, "CLOCK_MONOTONIC fallback must return a non-zero timestamp")
+}
+
+// TestMonotonicNsBothClocksFail exercises the final fallback in monotonicNs
+// (line 260) by injecting failures for both CLOCK_BOOTTIME and CLOCK_MONOTONIC.
+func TestMonotonicNsBothClocksFail(t *testing.T) {
+	orig := clockGettimeFunc
+	clockGettimeFunc = func(_ int32, _ *unix.Timespec) error { return unix.EINVAL }
+	defer func() { clockGettimeFunc = orig }()
+
+	assert.Equal(t, uint64(1), monotonicNs(), "must return 1 when both clocks fail")
+}
+
 // mappingInMaps reports whether an OTEL_CTX named mapping is present in
 // /proc/self/maps right now.
 func mappingInMaps() bool {

@@ -188,6 +188,20 @@ func (p *publisher) nextTS() uint64 {
 // Overridable in tests to exercise the anonymous-mapping fallback path.
 var memfdCreateFunc = unix.MemfdCreate
 
+// ftruncateFunc sets the size of a file descriptor. Overridable in tests.
+var ftruncateFunc = unix.Ftruncate
+
+// mmapFunc creates a memory mapping. Overridable in tests.
+var mmapFunc = unix.Mmap
+
+// clockGettimeFunc reads a clock value. Overridable in tests to exercise
+// clock-fallback paths in monotonicNs.
+var clockGettimeFunc = unix.ClockGettime
+
+// syscall6Func issues a raw 6-argument syscall. Overridable in tests to
+// exercise the nameVMA success and error paths without kernel dependency.
+var syscall6Func = unix.Syscall6
+
 // allocMapping creates the mmap'd region. It tries memfd first; on failure
 // falls back to a MAP_PRIVATE|MAP_ANONYMOUS mapping. Returns whether memfd
 // was used so the caller can decide whether prctl is required for
@@ -199,17 +213,17 @@ func allocMapping(size int) (mem []byte, hasMemfd bool, err error) {
 	}
 	if fdErr == nil {
 		hasMemfd = true
-		if err = unix.Ftruncate(fd, int64(size)); err != nil {
+		if err = ftruncateFunc(fd, int64(size)); err != nil {
 			_ = unix.Close(fd)
 			return nil, false, fmt.Errorf("processcontext: ftruncate: %w", err)
 		}
-		mem, err = unix.Mmap(fd, 0, size, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE)
+		mem, err = mmapFunc(fd, 0, size, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE)
 		_ = unix.Close(fd)
 		if err != nil {
 			return nil, false, fmt.Errorf("processcontext: mmap (memfd): %w", err)
 		}
 	} else {
-		mem, err = unix.Mmap(-1, 0, size, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANONYMOUS)
+		mem, err = mmapFunc(-1, 0, size, unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE|unix.MAP_ANONYMOUS)
 		if err != nil {
 			return nil, false, fmt.Errorf("processcontext: mmap (anonymous): %w", err)
 		}
@@ -223,7 +237,7 @@ func allocMapping(size int) (mem []byte, hasMemfd bool, err error) {
 // 5.17+ with CONFIG_ANON_VMA_NAME.
 func nameVMA(mem []byte) error {
 	name := append([]byte("OTEL_CTX"), 0) // NUL-terminated
-	_, _, errno := unix.Syscall6(
+	_, _, errno := syscall6Func(
 		unix.SYS_PRCTL,
 		prSetVMA,
 		prSetVMAAnon,
@@ -249,11 +263,11 @@ func atomicStore64(mem []byte, off int, v uint64) {
 // falling back to CLOCK_MONOTONIC if unavailable.
 func monotonicNs() uint64 {
 	var ts unix.Timespec
-	if unix.ClockGettime(unix.CLOCK_BOOTTIME, &ts) == nil {
+	if clockGettimeFunc(unix.CLOCK_BOOTTIME, &ts) == nil {
 		// Sec and Nsec are always non-negative for elapsed-time clocks.
 		return uint64(ts.Sec)*1_000_000_000 + uint64(ts.Nsec) //nolint:gosec // G115: non-negative clock values
 	}
-	if unix.ClockGettime(unix.CLOCK_MONOTONIC, &ts) == nil {
+	if clockGettimeFunc(unix.CLOCK_MONOTONIC, &ts) == nil {
 		return uint64(ts.Sec)*1_000_000_000 + uint64(ts.Nsec) //nolint:gosec // G115: non-negative clock values
 	}
 	// This path should never be reached on any modern Linux kernel.
