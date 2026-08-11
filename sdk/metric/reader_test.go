@@ -251,11 +251,13 @@ type testSDKProducer struct {
 	produceFunc func(context.Context, *metricdata.ResourceMetrics) error
 }
 
+var prebuiltTestResourceMetricsA = testResourceMetricsA()
+
 func (p testSDKProducer) produce(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	if p.produceFunc != nil {
 		return p.produceFunc(ctx, rm)
 	}
-	*rm = testResourceMetricsA()
+	*rm = prebuiltTestResourceMetricsA
 	return nil
 }
 
@@ -279,6 +281,7 @@ func benchReaderCollectFunc(r Reader) func(b *testing.B) {
 		collectedMetrics metricdata.ResourceMetrics
 		err              error
 	)
+	expectedMetrics := testResourceMetricsA()
 
 	return func(b *testing.B) {
 		b.ReportAllocs()
@@ -288,7 +291,7 @@ func benchReaderCollectFunc(r Reader) func(b *testing.B) {
 			err = r.Collect(b.Context(), &collectedMetrics)
 			assert.Equalf(
 				b,
-				testResourceMetricsA(),
+				expectedMetrics,
 				collectedMetrics,
 				"unexpected Collect response: (%#v, %v)",
 				collectedMetrics,

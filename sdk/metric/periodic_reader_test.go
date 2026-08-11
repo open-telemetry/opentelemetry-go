@@ -1095,3 +1095,73 @@ func BenchmarkPeriodicReaderInstrumentation(b *testing.B) {
 		run(b, true)
 	})
 }
+
+func BenchmarkPeriodicReader_collectAndExport(b *testing.B) {
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, _ *metricdata.ResourceMetrics) error { return nil },
+	}
+	r := NewPeriodicReader(exp)
+	r.register(testSDKProducer{})
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = r.collectAndExport(context.Background())
+	}
+}
+
+func TestPeriodicReader_ExternalProducerOwnership(t *testing.T) {
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, _ *metricdata.ResourceMetrics) error { return nil },
+	}
+	
+	externalData := []metricdata.ScopeMetrics{
+		{
+			Scope: instrumentation.Scope{Name: "external-scope"},
+			Metrics: []metricdata.Metrics{{
+				Name: "external-metric",
+				Data: metricdata.Sum[int64]{},
+			}},
+		},
+	}
+	
+	ep := testExternalProducer{
+		produceFunc: func(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+			return externalData, nil
+		},
+	}
+
+	r := NewPeriodicReader(exp, WithProducer(ep))
+	var callCount int
+	sp := testSDKProducer{
+		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+			callCount++
+			needed := 1
+			if callCount >= 2 {
+				needed = 2
+			}
+			if cap(rm.ScopeMetrics) >= needed {
+				rm.ScopeMetrics = rm.ScopeMetrics[:needed]
+			} else {
+				rm.ScopeMetrics = make([]metricdata.ScopeMetrics, needed)
+			}
+			rm.ScopeMetrics[0] = metricdata.ScopeMetrics{
+				Scope: instrumentation.Scope{Name: "internal-scope-1"},
+			}
+			if needed >= 2 {
+				// Simulate pipeline.produce reusing the inner slice capacity
+				if len(rm.ScopeMetrics[1].Metrics) > 0 {
+					rm.ScopeMetrics[1].Metrics[0].Name = "corrupted-by-internal"
+				}
+				rm.ScopeMetrics[1].Scope = instrumentation.Scope{Name: "internal-scope-2"}
+			}
+			return nil
+		},
+	}
+	r.register(sp)
+
+	_ = r.collectAndExport(context.Background())
+	_ = r.collectAndExport(context.Background())
+
+	assert.Equal(t, "external-metric", externalData[0].Metrics[0].Name, "external producer data was corrupted")
+}
+
