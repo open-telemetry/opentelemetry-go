@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 type simpleTestExporter struct {
@@ -55,6 +55,20 @@ type failingTestExporter struct {
 func (f *failingTestExporter) ExportSpans(ctx context.Context, spans []ReadOnlySpan) error {
 	_ = f.simpleTestExporter.ExportSpans(ctx, spans)
 	return errors.New("failed to export spans")
+}
+
+// callbackTestExporter invokes onExport at the start of ExportSpans, allowing a
+// test to observe state at the moment a span is submitted to the exporter.
+type callbackTestExporter struct {
+	simpleTestExporter
+	onExport func()
+}
+
+func (c *callbackTestExporter) ExportSpans(ctx context.Context, spans []ReadOnlySpan) error {
+	if c.onExport != nil {
+		c.onExport()
+	}
+	return c.simpleTestExporter.ExportSpans(ctx, spans)
 }
 
 var _ SpanExporter = (*simpleTestExporter)(nil)
@@ -280,7 +294,6 @@ func TestSimpleSpanProcessorObservability(t *testing.T) {
 										Attributes: attribute.NewSet(
 											semconv.OTelComponentName("simple_span_processor/0"),
 											semconv.OTelComponentTypeKey.String("simple_span_processor"),
-											semconv.ErrorTypeKey.String("*errors.errorString"),
 										),
 									},
 								},
@@ -327,4 +340,54 @@ func TestSimpleSpanProcessorObservability(t *testing.T) {
 			simpleProcessorIDCounter.Store(0) // reset simpleProcessorIDCounter
 		})
 	}
+}
+
+// processedSpanCount returns the current total value of the
+// otel.sdk.processor.span.processed metric recorded by r.
+func processedSpanCount(t *testing.T, r metric.Reader) int64 {
+	t.Helper()
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, r.Collect(t.Context(), &rm))
+	name := otelconv.SDKProcessorSpanProcessed{}.Name()
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != name {
+				continue
+			}
+			var total int64
+			for _, dp := range m.Data.(metricdata.Sum[int64]).DataPoints {
+				total += dp.Value
+			}
+			return total
+		}
+	}
+	return 0
+}
+
+// TestSimpleSpanProcessorProcessedBeforeExport asserts the span is counted as
+// processed at the point it is submitted to the exporter, not after the export
+// completes (semantic-conventions requirement).
+func TestSimpleSpanProcessorProcessedBeforeExport(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	original := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(original) })
+	t.Cleanup(func() { simpleProcessorIDCounter.Store(0) })
+
+	r := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(r), metric.WithView(dropSpanMetricsView))
+	otel.SetMeterProvider(mp)
+
+	var duringExport int64
+	exp := &callbackTestExporter{
+		onExport: func() { duringExport = processedSpanCount(t, r) },
+	}
+
+	ssp := NewSimpleSpanProcessor(exp)
+	tp := basicTracerProvider(t)
+	tp.RegisterSpanProcessor(ssp)
+	startSpan(tp, "test").End()
+
+	assert.Equal(t, int64(1), duringExport,
+		"processed must be recorded before the span is submitted to the exporter")
 }

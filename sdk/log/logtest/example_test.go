@@ -10,7 +10,7 @@ import (
 	"io"
 	"os"
 
-	logapi "go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/log/logtest"
@@ -22,10 +22,10 @@ func ExampleRecordFactory() {
 		InstrumentationScope: &instrumentation.Scope{Name: "myapp"},
 	}
 
-	rf.Body = logapi.StringValue("foo")
+	rf.Body = attribute.StringValue("foo")
 	r1 := rf.NewRecord()
 
-	rf.Body = logapi.StringValue("bar")
+	rf.Body = attribute.StringValue("bar")
 	r2 := rf.NewRecord()
 
 	_ = exp.Export(context.Background(), []log.Record{r1, r2})

@@ -62,7 +62,9 @@ func TestNoInvalidObservableHistogramTypes(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() || filepath.Base(path) != "metric.go" || !strings.HasSuffix(filepath.Base(filepath.Dir(path)), "conv") {
+		if d.IsDir() ||
+			filepath.Base(path) != "metric.go" ||
+			!strings.HasSuffix(filepath.Base(filepath.Dir(path)), "conv") {
 			return nil
 		}
 
@@ -83,11 +85,16 @@ func TestNoInvalidObservableHistogramTypes(t *testing.T) {
 	}
 }
 
-func writeGoFile(t *testing.T, dir, pkg, src string) {
+func writeGoFile(t *testing.T, dir, _, src string) {
 	t.Helper()
 
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("MkdirAll(%q) error = %v", dir, err)
+	}
+
+	modPath := filepath.Join(dir, "go.mod")
+	if err := os.WriteFile(modPath, []byte("module example.com/semconvtest\n\ngo 1.25.0\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile(%q) error = %v", modPath, err)
 	}
 
 	path := filepath.Join(dir, "decls.go")

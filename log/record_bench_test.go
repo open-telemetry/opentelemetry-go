@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -15,8 +16,8 @@ func BenchmarkRecord(b *testing.B) {
 		tStamp time.Time
 		sev    log.Severity
 		text   string
-		body   log.Value
-		attr   log.KeyValue
+		body   attribute.Value
+		attr   attribute.KeyValue
 		n      int
 	)
 
@@ -56,7 +57,7 @@ func BenchmarkRecord(b *testing.B) {
 		}
 	})
 
-	bodyVal := log.BoolValue(true)
+	bodyVal := attribute.BoolValue(true)
 	b.Run("Body", func(b *testing.B) {
 		b.ReportAllocs()
 		for n := 0; n < b.N; n++ {
@@ -66,20 +67,20 @@ func BenchmarkRecord(b *testing.B) {
 		}
 	})
 
-	attrs10 := []log.KeyValue{
-		log.Bool("b1", true),
-		log.Int("i1", 324),
-		log.Float64("f1", -230.213),
-		log.String("s1", "value1"),
-		log.Map("m1", log.Slice("slice1", log.BoolValue(true))),
-		log.Bool("b2", false),
-		log.Int("i2", 39847),
-		log.Float64("f2", 0.382964329),
-		log.String("s2", "value2"),
-		log.Map("m2", log.Slice("slice2", log.BoolValue(false))),
+	attrs10 := []attribute.KeyValue{
+		attribute.Bool("b1", true),
+		attribute.Int("i1", 324),
+		attribute.Float64("f1", -230.213),
+		attribute.String("s1", "value1"),
+		attribute.Map("m1", attribute.Slice("slice1", attribute.BoolValue(true))),
+		attribute.Bool("b2", false),
+		attribute.Int("i2", 39847),
+		attribute.Float64("f2", 0.382964329),
+		attribute.String("s2", "value2"),
+		attribute.Map("m2", attribute.Slice("slice2", attribute.BoolValue(false))),
 	}
 	attrs5 := attrs10[:5]
-	walk := func(kv log.KeyValue) bool {
+	walk := func(kv attribute.KeyValue) bool {
 		attr = kv
 		return true
 	}
