@@ -9,7 +9,7 @@
 //   - enum values encoded as integers
 //   - field names in lowerCamelCase
 //   - 64-bit integers encoded as quoted decimal strings (ProtoJSON specs)
-package otlpjson // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpjson"
+package otlpjson
 
 import (
 	"encoding/hex"
