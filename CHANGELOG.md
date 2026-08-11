@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
+
+### Changed
+
+- Lazily evaluate filtered and dropped attributes on measurement hot paths in `go.opentelemetry.io/otel/sdk/metric` to avoid unnecessary attribute set allocations. (#8598)
+
 ### Fixed
 
 - Fix a data race when span attributes are read concurrently in `go.opentelemetry.io/otel/sdk/trace`. (#8706)

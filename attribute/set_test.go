@@ -474,6 +474,7 @@ func TestMarshalJSON(t *testing.T) {
 func TestSetEqualsEmpty(t *testing.T) {
 	e := attribute.EmptySet()
 	empty := *e
+	t.Cleanup(func() { *e = empty })
 
 	alt := attribute.NewSet(attribute.String("A", "B"))
 	*e = alt
