@@ -7,7 +7,7 @@
 // Package retry provides request retry functionality that can perform
 // configurable exponential backoff for transient errors and honor any
 // explicit throttle responses received.
-package retry // import "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/retry"
+package retry
 
 import (
 	"context"
@@ -96,7 +96,7 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 
 			// Check if context is canceled before attempting to wait and retry.
 			if ctx.Err() != nil {
-				return fmt.Errorf("%w: %w", ctx.Err(), err)
+				return fmt.Errorf("%w: %w", context.Cause(ctx), err)
 			}
 
 			if maxElapsedTime != 0 && time.Since(startTime) > maxElapsedTime {
