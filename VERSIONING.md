@@ -15,8 +15,9 @@ is designed so the following goals can be achieved.
     * Stable module compatibility is understood in terms of the [Go 1
       compatibility guidelines](https://go.dev/doc/go1compat). Code that
       compiled against an older version of a package should continue to compile
-      against newer versions of that package unless covered by an exception
-      documented below.
+      against newer versions of that package, subject to the exceptions in the
+      Go 1 compatibility guidelines and any additional exceptions documented
+      below.
     * Versions will comply with [semver
       2.0](https://semver.org/spec/v2.0.0.html) with the following exceptions.
       * New methods may be added to exported API interfaces. All exported
