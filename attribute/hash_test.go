@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package attribute // import "go.opentelemetry.io/otel/attribute"
+package attribute
 
 import (
 	"cmp"
@@ -230,12 +230,78 @@ func TestHashValueMapOrdering(t *testing.T) {
 			reversed := slices.Clone(tt.kvs)
 			slices.Reverse(reversed)
 
-			got := hashValue(xxhash.New(), MapValue(tt.kvs...)).Sum64()
-			want := hashValue(xxhash.New(), MapValue(reversed...)).Sum64()
+			h1 := xxhash.New()
+			h1 = hashValue(h1, MapValue(tt.kvs...))
+			got := h1.Sum64()
+			h2 := xxhash.New()
+			h2 = hashValue(h2, MapValue(reversed...))
+			want := h2.Sum64()
 			if got != want {
 				t.Fatalf("hashValue(MapValue(%v)) = %d, want %d", tt.kvs, got, want)
 			}
 		})
+	}
+}
+
+// TestHasherMatchesSetEquivalent pins the invariant that a Hasher written in
+// ascending key order produces the same Distinct as the equivalent Set. Hasher
+// and Set hashing share their initialization, per-attribute mixing, and final
+// framing, so this holds structurally today. The test guards against a future
+// change that splits those paths apart.
+func TestHasherMatchesSetEquivalent(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
+		h := NewHasher()
+		set := NewSet()
+		if got, want := h.Distinct(), set.Equivalent(); got != want {
+			t.Errorf("Hasher.Distinct() = %v, NewSet().Equivalent() = %v", got, want)
+		}
+	})
+
+	for _, gen := range keyVals {
+		t.Run(gen.name, func(t *testing.T) {
+			kv := gen.kv("k")
+			h := NewHasher()
+			h.Write(kv)
+			set := NewSet(kv)
+			if got, want := h.Distinct(), set.Equivalent(); got != want {
+				t.Errorf("Hasher.Distinct() = %v, NewSet(%v).Equivalent() = %v", got, kv, want)
+			}
+		})
+	}
+
+	t.Run("All", func(t *testing.T) {
+		// Distinct keys in ascending order, which is the precondition Write
+		// documents and the order NewSet sorts into.
+		attrs := make([]KeyValue, len(keyVals))
+		for i, gen := range keyVals {
+			attrs[i] = gen.kv(fmt.Sprintf("k%03d", i))
+		}
+		h := NewHasher()
+		for _, kv := range attrs {
+			h.Write(kv)
+		}
+		set := NewSet(attrs...)
+		if got, want := h.Distinct(), set.Equivalent(); got != want {
+			t.Errorf("Hasher.Distinct() = %v, NewSet(...).Equivalent() = %v", got, want)
+		}
+	})
+}
+
+func TestHasherReset(t *testing.T) {
+	h := NewHasher()
+	h.Write(String("a", "1"))
+	h.Write(String("b", "2"))
+	distinctBefore := h.Distinct()
+
+	h.Reset()
+	if got, want := h.Distinct(), emptySet.Equivalent(); got != want {
+		t.Errorf("h.Distinct() after Reset = %v, want %v", got, want)
+	}
+
+	h.Write(String("a", "1"))
+	h.Write(String("b", "2"))
+	if got, want := h.Distinct(), distinctBefore; got != want {
+		t.Errorf("h.Distinct() after re-write = %v, want %v", got, want)
 	}
 }
 
@@ -335,7 +401,9 @@ func BenchmarkHashValueSlice(b *testing.B) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				hashValue(xxhash.New(), bench.v).Sum64()
+				h := xxhash.New()
+				h = hashValue(h, bench.v)
+				_ = h.Sum64()
 			}
 		})
 	}
@@ -382,7 +450,9 @@ func BenchmarkHashValueMap(b *testing.B) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				hashValue(xxhash.New(), bench.v).Sum64()
+				h := xxhash.New()
+				h = hashValue(h, bench.v)
+				_ = h.Sum64()
 			}
 		})
 	}
@@ -621,4 +691,21 @@ func FuzzHashKVs(f *testing.F) {
 			}
 		}
 	})
+}
+
+func BenchmarkHasher(b *testing.B) {
+	kvs := []KeyValue{
+		String("A", "alpha"),
+		Int64("B", 42),
+		Bool("C", true),
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		h := NewHasher()
+		for _, kv := range kvs {
+			h.Write(kv)
+		}
+		_ = h.Distinct()
+	}
 }

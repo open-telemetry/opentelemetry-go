@@ -3,7 +3,7 @@
 
 //go:generate stringer -type=InstrumentKind -trimprefix=InstrumentKind
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package metric
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
-	"go.opentelemetry.io/otel/sdk/metric/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
 )
 
 var zeroScope instrumentation.Scope
@@ -207,11 +207,11 @@ func extractRawKVs[T any](opts []T) []attribute.KeyValue {
 }
 
 func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) attribute.Set {
-	configAttrs, _ = attrdedup.Set(configAttrs)
+	configAttrs, _ = attrnorm.Set(configAttrs)
 	if len(rawKVs) == 0 {
 		return configAttrs
 	}
-	rawKVs, _ = attrdedup.KeyValues(rawKVs)
+	rawKVs, _ = attrnorm.KeyValues(rawKVs)
 	merged := make([]attribute.KeyValue, 0, configAttrs.Len()+len(rawKVs))
 	merged = append(merged, configAttrs.ToSlice()...)
 	// rawKVs are appended after configAttrs, meaning they will override any duplicate keys in configAttrs.

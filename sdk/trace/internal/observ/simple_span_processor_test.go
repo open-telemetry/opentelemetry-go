@@ -3,7 +3,6 @@
 package observ_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 const sspComponentID = 0
@@ -50,18 +49,11 @@ func TestSSPSpanProcessed(t *testing.T) {
 	ssp, err := observ.NewSSP(sspComponentID)
 	assert.NoError(t, err)
 
-	ssp.SpanProcessed(ctx, nil)
+	ssp.SpanProcessed(ctx)
 	check(t, collect(), processed(dPt(sspSet(), 1)))
-	ssp.SpanProcessed(ctx, nil)
-	ssp.SpanProcessed(ctx, nil)
+	ssp.SpanProcessed(ctx)
+	ssp.SpanProcessed(ctx)
 	check(t, collect(), processed(dPt(sspSet(), 3)))
-
-	processErr := errors.New("error processing span")
-	ssp.SpanProcessed(ctx, processErr)
-	check(t, collect(), processed(
-		dPt(sspSet(), 3),
-		dPt(sspSet(semconv.ErrorType(processErr)), 1),
-	))
 }
 
 func BenchmarkSSP(b *testing.B) {
@@ -91,29 +83,7 @@ func BenchmarkSSP(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				ssp.SpanProcessed(ctx, nil)
-			}
-		})
-	})
-
-	b.Run("SpanProcessedWithError", func(b *testing.B) {
-		orig := otel.GetMeterProvider()
-		b.Cleanup(func() {
-			otel.SetMeterProvider(orig)
-		})
-
-		// Ensure deterministic benchmark by using noop meter.
-		otel.SetMeterProvider(noop.NewMeterProvider())
-
-		ssp := newSSP(b)
-		ctx := b.Context()
-		processErr := errors.New("error processing span")
-
-		b.ResetTimer()
-		b.ReportAllocs()
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				ssp.SpanProcessed(ctx, processErr)
+				ssp.SpanProcessed(ctx)
 			}
 		})
 	})

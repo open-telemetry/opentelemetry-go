@@ -157,7 +157,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 
 			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, newLazyFilteredAttributes(alice, nil))
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -199,7 +199,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, newLazyFilteredAttributes(alice, nil))
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -573,6 +573,35 @@ func TestScaleChange(t *testing.T) {
 	}
 }
 
+func TestExpoHistogramOverflow(t *testing.T) {
+	newRes := func(attribute.Set) FilteredExemplarReservoir[int64] {
+		return DropReservoir[int64](attribute.NewSet())
+	}
+	e := newExponentialHistogram(160, 20, false, false, 2, newRes)
+
+	attrA := attribute.NewSet(attribute.String("key", "a"))
+	lazyA := newLazyFilteredAttributes(attrA, nil)
+	e.measure(t.Context(), 10, lazyA)
+
+	// Second distinct attribute set should trigger overflow since aggLimit == 2
+	attrB := attribute.NewSet(attribute.String("key", "b"))
+	lazyB := newLazyFilteredAttributes(attrB, nil)
+	e.measure(t.Context(), 20, lazyB)
+
+	// Check that overflow series exists and attrB series does not
+	e.valuesMu.Lock()
+	_, hasOverflow := e.values[overflowSet.Equivalent()]
+	_, hasB := e.values[attrB.Equivalent()]
+	e.valuesMu.Unlock()
+
+	if !hasOverflow {
+		t.Error("expected overflowSet to be recorded in e.values on limit exceeded")
+	}
+	if hasB {
+		t.Error("did not expect attrB to be recorded separately after overflow")
+	}
+}
+
 func BenchmarkPrepend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		agg := newExpoHistogramDataPoint[float64](alice, 1024, 20, false, false)
@@ -610,16 +639,6 @@ func BenchmarkExponentialHistogram(b *testing.B) {
 	}))
 	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
-			Temporality: metricdata.DeltaTemporality,
-		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
-	}))
-	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
-			Temporality: metricdata.CumulativeTemporality,
-		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
-	}))
-	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
@@ -1282,9 +1301,9 @@ func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
 	h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 	ctx := t.Context()
 
-	h.measure(ctx, math.NaN(), attribute.NewSet(), nil)
-	h.measure(ctx, math.Inf(1), attribute.NewSet(), nil)
-	h.measure(ctx, math.Inf(-1), attribute.NewSet(), nil)
+	h.measure(ctx, math.NaN(), newLazyFilteredAttributes(attribute.NewSet(), nil))
+	h.measure(ctx, math.Inf(1), newLazyFilteredAttributes(attribute.NewSet(), nil))
+	h.measure(ctx, math.Inf(-1), newLazyFilteredAttributes(attribute.NewSet(), nil))
 
 	var dest metricdata.Aggregation
 	h.delta(&dest)

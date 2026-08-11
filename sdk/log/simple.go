@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package log // import "go.opentelemetry.io/otel/sdk/log"
+package log
 
 import (
 	"context"
@@ -57,7 +57,7 @@ func (*SimpleProcessor) Enabled(context.Context, EnabledParameters) bool {
 }
 
 // OnEmit batches provided log record.
-func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) (err error) {
+func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	if s.exporter == nil {
 		return nil
 	}
@@ -73,20 +73,20 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) (err error) {
 	(*records)[0] = *r
 
 	if s.inst != nil {
-		defer func() {
-			s.inst.LogProcessed(ctx, err)
-		}()
+		// Record the log record as processed at the point it is submitted to
+		// the exporter, independent of the export outcome.
+		s.inst.LogProcessed(ctx)
 	}
 	return s.exporter.Export(ctx, *records)
 }
 
-// Shutdown shuts down the exporter.
+// Shutdown flushes the exporter before shutting it down.
 func (s *SimpleProcessor) Shutdown(ctx context.Context) error {
 	if s.exporter == nil {
 		return nil
 	}
 
-	return s.exporter.Shutdown(ctx)
+	return shutdownExporter(ctx, s.exporter)
 }
 
 // ForceFlush flushes the exporter.

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package trace // import "go.opentelemetry.io/otel/sdk/trace"
+package trace
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	"go.opentelemetry.io/otel/trace"
@@ -151,18 +151,18 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 		tp.dedupAttr = func(kv attribute.KeyValue) attribute.KeyValue {
 			switch kv.Value.Type() {
 			case attribute.SLICE, attribute.MAP:
-				attr, _ := attrdedup.KeyValue(kv)
+				attr, _ := attrnorm.KeyValue(kv)
 				return attr
 			default:
 				return kv
 			}
 		}
 		tp.dedupKeyValues = func(kvs []attribute.KeyValue) []attribute.KeyValue {
-			deduped, _ := attrdedup.KeyValues(kvs)
+			deduped, _ := attrnorm.KeyValues(kvs)
 			return deduped
 		}
 		tp.dedupSet = func(s attribute.Set) attribute.Set {
-			deduped, _ := attrdedup.Set(s)
+			deduped, _ := attrnorm.Set(s)
 			return deduped
 		}
 		tp.dedupeSpanAttrs = func(s *recordingSpan) {
