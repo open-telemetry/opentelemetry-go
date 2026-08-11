@@ -22,7 +22,7 @@ type meterConfiguratorOnUpdateRegistrar interface {
 	RegisterOnUpdate(func())
 }
 
-func TestWithMeterConfiguratorContract(t *testing.T) {
+func TestWithMeterConfiguratorImplementsExperimentalOption(t *testing.T) {
 	h := NewMeterConfiguratorHandle()
 	opt := WithMeterConfigurator(h)
 
@@ -37,7 +37,7 @@ func TestWithMeterConfiguratorContract(t *testing.T) {
 	require.True(t, ok, "must implement RegisterOnUpdate(func())")
 }
 
-func TestWithMeterConfiguratorBehavior(t *testing.T) {
+func TestWithMeterConfiguratorReflectsSet(t *testing.T) {
 	h := NewMeterConfiguratorHandle()
 	h.Set(func(s instrumentation.Scope) MeterConfig {
 		return NewMeterConfig(WithMeterEnabled(s.Name != "disabled"))
@@ -63,7 +63,7 @@ func TestWithMeterConfiguratorBehavior(t *testing.T) {
 	}
 }
 
-func TestMeterConfiguratorHandleSet(t *testing.T) {
+func TestMeterConfiguratorHandleSetTriggersOnUpdate(t *testing.T) {
 	h := NewMeterConfiguratorHandle()
 
 	walked := false

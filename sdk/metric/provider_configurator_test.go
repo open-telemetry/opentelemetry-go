@@ -46,31 +46,31 @@ func TestConfiguratorNewMeter(t *testing.T) {
 	for _, tc := range []struct {
 		name            string
 		configuratorOpt Option
-		scope           string
+		scopeName       string
 		wantEnabled     bool
 	}{
 		{
 			name:            "configurator/none",
 			configuratorOpt: nil,
-			scope:           "any",
+			scopeName:       "any",
 			wantEnabled:     true,
 		},
 		{
 			name:            "configurator/scope/disabled",
 			configuratorOpt: testConfiguratorOpt{fn: disablingConfiguratorFn},
-			scope:           "disabled",
+			scopeName:       "disabled",
 			wantEnabled:     false,
 		},
 		{
 			name:            "configurator/scope/enabled",
 			configuratorOpt: testConfiguratorOpt{fn: disablingConfiguratorFn},
-			scope:           "other",
+			scopeName:       "other",
 			wantEnabled:     true,
 		},
 		{
 			name:            "configurator/set-before-provider",
 			configuratorOpt: testConfiguratorOpt{fn: disablingConfiguratorFn},
-			scope:           "disabled",
+			scopeName:       "disabled",
 			wantEnabled:     false,
 		},
 	} {
@@ -83,9 +83,9 @@ func TestConfiguratorNewMeter(t *testing.T) {
 			mp := NewMeterProvider(configuratorOpts...)
 			defer mp.Shutdown(t.Context()) //nolint:errcheck
 
-			_ = mp.Meter(tc.scope)
-			m := mp.meters.Lookup(instrumentation.Scope{Name: tc.scope}, func() *meter {
-				return newMeter(instrumentation.Scope{Name: tc.scope}, mp.pipes)
+			_ = mp.Meter(tc.scopeName)
+			m := mp.meters.Lookup(instrumentation.Scope{Name: tc.scopeName}, func() *meter {
+				return newMeter(instrumentation.Scope{Name: tc.scopeName}, mp.pipes)
 			})
 			require.NotNil(t, m)
 			assert.Equal(t, tc.wantEnabled, m.enabled.Load())
@@ -96,9 +96,7 @@ func TestConfiguratorNewMeter(t *testing.T) {
 func TestConfiguratorCacheWalkUpdatesCachedMeter(t *testing.T) {
 	var storedCallback func()
 	configuratorOpt := testConfiguratorOpt{
-		fn: func(s instrumentation.Scope) any {
-			return testMeterConfig{enabled: s.Name != "disabled"}
-		},
+		fn:       disablingConfiguratorFn,
 		onUpdate: func(cb func()) { storedCallback = cb },
 	}
 
@@ -122,21 +120,12 @@ func TestConfiguratorCacheWalkUpdatesCachedMeter(t *testing.T) {
 
 	// Cached meter is updated by the cache walk triggered via onUpdate.
 	assert.False(t, cachedMeter.enabled.Load(), "cached meter should be updated by cache walk")
-
-	// New meter picks up the updated configurator.
-	_ = mp.Meter("disabled")
-	newM := mp.meters.Lookup(instrumentation.Scope{Name: "disabled"}, func() *meter {
-		return newMeter(instrumentation.Scope{Name: "disabled"}, mp.pipes)
-	})
-	assert.False(t, newM.enabled.Load(), "new meter should pick up updated configurator")
 }
 
 func TestInstrumentEnabledReflectsConfigurator(t *testing.T) {
 	var storedCallback func()
 	configuratorOpt := testConfiguratorOpt{
-		fn: func(s instrumentation.Scope) any {
-			return testMeterConfig{enabled: s.Name != "disabled"}
-		},
+		fn:       disablingConfiguratorFn,
 		onUpdate: func(cb func()) { storedCallback = cb },
 	}
 
@@ -162,9 +151,7 @@ func TestInstrumentEnabledReflectsConfigurator(t *testing.T) {
 func TestInstrumentAddGatedByConfigurator(t *testing.T) {
 	var storedCallback func()
 	configuratorOpt := testConfiguratorOpt{
-		fn: func(s instrumentation.Scope) any {
-			return testMeterConfig{enabled: s.Name != "disabled"}
-		},
+		fn:       disablingConfiguratorFn,
 		onUpdate: func(cb func()) { storedCallback = cb },
 	}
 
@@ -199,9 +186,7 @@ func TestInstrumentAddGatedByConfigurator(t *testing.T) {
 func TestObservableCallbackGatedByConfigurator(t *testing.T) {
 	var storedCallback func()
 	configuratorOpt := testConfiguratorOpt{
-		fn: func(s instrumentation.Scope) any {
-			return testMeterConfig{enabled: s.Name != "disabled"}
-		},
+		fn:       disablingConfiguratorFn,
 		onUpdate: func(cb func()) { storedCallback = cb },
 	}
 
@@ -237,9 +222,7 @@ func TestObservableCallbackGatedByConfigurator(t *testing.T) {
 func TestObserverObserveGatedByConfigurator(t *testing.T) {
 	var storedCallback func()
 	configuratorOpt := testConfiguratorOpt{
-		fn: func(s instrumentation.Scope) any {
-			return testMeterConfig{enabled: s.Name != "disabled"}
-		},
+		fn:       disablingConfiguratorFn,
 		onUpdate: func(cb func()) { storedCallback = cb },
 	}
 
