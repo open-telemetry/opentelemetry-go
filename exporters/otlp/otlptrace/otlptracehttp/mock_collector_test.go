@@ -215,7 +215,7 @@ func (c *mockCollectorConfig) fillInDefaults() {
 
 func runMockCollector(tb testing.TB, cfg mockCollectorConfig) *mockCollector {
 	cfg.fillInDefaults()
-	ln, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", cfg.Port))
+	ln, err := (&net.ListenConfig{}).Listen(tb.Context(), "tcp", fmt.Sprintf("localhost:%d", cfg.Port))
 	require.NoError(tb, err)
 	_, portStr, err := net.SplitHostPort(ln.Addr().String())
 	require.NoError(tb, err)

@@ -44,6 +44,7 @@ func TestSetDedup(t *testing.T) {
 	cases := []testCase{
 		expect("A=B", attribute.String("A", "2"), attribute.String("A", "B")),
 		expect("A=B", attribute.String("A", "2"), attribute.Int("A", 1), attribute.String("A", "B")),
+		expect("A=[true false]", attribute.BoolSlice("A", []bool{true, false})),
 		expect(
 			"A=B",
 			attribute.String("A", "B"),
@@ -473,6 +474,7 @@ func TestMarshalJSON(t *testing.T) {
 func TestSetEqualsEmpty(t *testing.T) {
 	e := attribute.EmptySet()
 	empty := *e
+	t.Cleanup(func() { *e = empty })
 
 	alt := attribute.NewSet(attribute.String("A", "B"))
 	*e = alt

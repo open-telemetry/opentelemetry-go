@@ -39,7 +39,7 @@ func (*testGRPCServer) StreamingBidirectionalCall(testpb.TestService_StreamingBi
 }
 
 func startTestGRPCServer(t *testing.T, tracer ot.Tracer) (*grpc.Server, net.Addr) {
-	lis, _ := net.Listen("tcp", ":0")
+	lis, _ := (&net.ListenConfig{}).Listen(t.Context(), "tcp", ":0")
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(otgrpc.OpenTracingServerInterceptor(tracer)),
 	)
@@ -80,7 +80,8 @@ func TestBridgeTracer_ExtractAndInject_gRPC(t *testing.T) {
 		return len(tracer.FinishedSpans) == 2
 	}
 	require.Eventuallyf(t, checkSpans, 5*time.Second, 5*time.Millisecond, "expecting two spans")
-	assert.Equal(t,
+	assert.Equal(
+		t,
 		tracer.FinishedSpans[0].SpanContext().TraceID(),
 		tracer.FinishedSpans[1].SpanContext().TraceID(),
 		"expecting same trace ID",

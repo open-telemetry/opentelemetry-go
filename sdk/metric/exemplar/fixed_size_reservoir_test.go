@@ -10,20 +10,30 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/otel/attribute"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewFixedSizeReservoir(t *testing.T) {
 	t.Run("Int64", ReservoirTest[int64](func(n int) (ReservoirProvider, int) {
-		provider := FixedSizeReservoirProvider(n)
-		return provider, int(provider(attribute.NewSet()).(*FixedSizeReservoir).k)
+		return FixedSizeReservoirProvider(n), n
 	}))
 
 	t.Run("Float64", ReservoirTest[float64](func(n int) (ReservoirProvider, int) {
-		provider := FixedSizeReservoirProvider(n)
-		return provider, int(provider(attribute.NewSet()).(*FixedSizeReservoir).k)
+		return FixedSizeReservoirProvider(n), n
 	}))
+}
+
+func TestNewFixedSizeReservoirZeroSize(t *testing.T) {
+	r := NewFixedSizeReservoir(0)
+	require.NotNil(t, r)
+
+	// Offer should be a no-op and not panic.
+	r.Offer(t.Context(), staticTime, NewValue(float64(10)), nil)
+
+	// Collect should leave dest empty.
+	dest := []Exemplar{{}} // pre-filled sentinel
+	r.Collect(&dest)
+	assert.Empty(t, dest)
 }
 
 func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
@@ -49,8 +59,8 @@ func TestNewFixedSizeReservoirSamplingCorrectness(t *testing.T) {
 	}
 
 	var sum float64
-	for i := range r.measurements {
-		sum += r.measurements[i].Value.Float64()
+	for i := range r.storage {
+		sum += r.storage[i].Value.Float64()
 	}
 	mean := sum / float64(sampleSize)
 
@@ -68,18 +78,28 @@ func TestFixedSizeReservoirConcurrentSafe(t *testing.T) {
 	}))
 }
 
-func TestNextTrackerAtomics(t *testing.T) {
-	capacity := uint32(10)
-	nt := newNextTracker(capacity)
-	nt.setCountAndNext(0, 11)
-	count, next := nt.incrementCount()
-	assert.Equal(t, uint32(0), count)
-	assert.Equal(t, uint32(11), next)
-	count, secondNext := nt.incrementCount()
-	assert.Equal(t, uint32(1), count)
-	assert.Equal(t, next, secondNext)
-	nt.setCountAndNext(50, 100)
-	count, next = nt.incrementCount()
-	assert.Equal(t, uint32(50), count)
-	assert.Equal(t, uint32(100), next)
+func TestFixedSizeReservoirSamplesAfterFilling(t *testing.T) {
+	k := 1
+	var sampledSecondItemCount int
+	iterations := 10000
+	for range iterations {
+		r := NewFixedSizeReservoir(k)
+		// Offer k items (1 item)
+		r.Offer(t.Context(), staticTime, NewValue(float64(1)), nil)
+		// Offer the k+1 item (2nd item)
+		r.Offer(t.Context(), staticTime, NewValue(float64(2)), nil)
+
+		var dest []Exemplar
+		r.Collect(&dest)
+		if len(dest) == 1 && dest[0].Value.Float64() == 2 {
+			sampledSecondItemCount++
+		}
+	}
+	rate := float64(sampledSecondItemCount) / float64(iterations)
+	// For k=1, the probability of sampling the k+1 item is k/(k+1) = 1/2.
+	// Expected rate is 0.5.
+	// With 10000 iterations, the standard deviation of the count is:
+	//   sqrt(10000 * 0.5 * 0.5) = 50.
+	// 5 standard deviations is 250, which is 2.5% (0.025).
+	assert.InDelta(t, 0.5, rate, 0.025, "should sample the second item with ~50% probability")
 }

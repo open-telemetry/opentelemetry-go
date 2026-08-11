@@ -52,37 +52,37 @@ func TestSettingSpanLimits(t *testing.T) {
 		{
 			name: "env",
 			env:  envLimits("42"),
-			want: *(limits(42)),
+			want: *limits(42),
 		},
 		{
 			name: "opt",
 			opt:  limits(42),
-			want: *(limits(42)),
+			want: *limits(42),
 		},
 		{
 			name:   "raw-opt",
 			rawOpt: limits(42),
-			want:   *(limits(42)),
+			want:   *limits(42),
 		},
 		{
 			name: "opt-override",
 			env:  envLimits("-2"),
 			// Option take priority.
 			opt:  limits(43),
-			want: *(limits(43)),
+			want: *limits(43),
 		},
 		{
 			name: "raw-opt-override",
 			env:  envLimits("-2"),
 			// Option take priority.
 			rawOpt: limits(43),
-			want:   *(limits(43)),
+			want:   *limits(43),
 		},
 		{
 			name:   "last-opt-wins",
 			opt:    limits(-2),
 			rawOpt: limits(-3),
-			want:   *(limits(-3)),
+			want:   *limits(-3),
 		},
 		{
 			name: "env(unlimited)",
@@ -91,7 +91,7 @@ func TestSettingSpanLimits(t *testing.T) {
 			// negative values to signal this than this value is expected to
 			// pass through.
 			env:  envLimits("-1"),
-			want: *(limits(-1)),
+			want: *limits(-1),
 		},
 		{
 			name: "opt(unlimited)",
@@ -102,7 +102,7 @@ func TestSettingSpanLimits(t *testing.T) {
 		{
 			name:   "raw-opt(unlimited)",
 			rawOpt: limits(-1),
-			want:   *(limits(-1)),
+			want:   *limits(-1),
 		},
 	}
 

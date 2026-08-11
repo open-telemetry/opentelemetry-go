@@ -67,7 +67,7 @@ func NewConfigGogc(
 		opt...,
 	)
 	if err != nil {
-	    return ConfigGogc{noop.Int64ObservableUpDownCounter{}}, err
+		return ConfigGogc{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return ConfigGogc{i}, nil
 }
@@ -125,7 +125,7 @@ func NewGoroutineCount(
 		opt...,
 	)
 	if err != nil {
-	    return GoroutineCount{noop.Int64ObservableUpDownCounter{}}, err
+		return GoroutineCount{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return GoroutineCount{i}, nil
 }
@@ -183,7 +183,7 @@ func NewMemoryAllocated(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryAllocated{noop.Int64ObservableCounter{}}, err
+		return MemoryAllocated{noop.Int64ObservableCounter{}}, err
 	}
 	return MemoryAllocated{i}, nil
 }
@@ -241,7 +241,7 @@ func NewMemoryAllocations(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryAllocations{noop.Int64ObservableCounter{}}, err
+		return MemoryAllocations{noop.Int64ObservableCounter{}}, err
 	}
 	return MemoryAllocations{i}, nil
 }
@@ -299,7 +299,7 @@ func NewMemoryGCGoal(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryGCGoal{noop.Int64ObservableUpDownCounter{}}, err
+		return MemoryGCGoal{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return MemoryGCGoal{i}, nil
 }
@@ -357,7 +357,7 @@ func NewMemoryLimit(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryLimit{noop.Int64ObservableUpDownCounter{}}, err
+		return MemoryLimit{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return MemoryLimit{i}, nil
 }
@@ -415,7 +415,7 @@ func NewMemoryUsed(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryUsed{noop.Int64ObservableUpDownCounter{}}, err
+		return MemoryUsed{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return MemoryUsed{i}, nil
 }
@@ -479,7 +479,7 @@ func NewProcessorLimit(
 		opt...,
 	)
 	if err != nil {
-	    return ProcessorLimit{noop.Int64ObservableUpDownCounter{}}, err
+		return ProcessorLimit{noop.Int64ObservableUpDownCounter{}}, err
 	}
 	return ProcessorLimit{i}, nil
 }
@@ -538,7 +538,7 @@ func NewScheduleDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ScheduleDuration{noop.Float64Histogram{}}, err
+		return ScheduleDuration{noop.Float64Histogram{}}, err
 	}
 	return ScheduleDuration{i}, nil
 }

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,8 +30,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -402,7 +403,8 @@ func TestStartSpanNewRootNotSampled(t *testing.T) {
 func TestSetSpanAttributesOnStart(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
-	span := startSpan(tp,
+	span := startSpan(
+		tp,
 		"StartSpanAttribute",
 		trace.WithAttributes(attribute.String("key1", "value1")),
 		trace.WithAttributes(attribute.String("key2", "value2")),
@@ -806,7 +808,8 @@ func TestLinksOverLimit(t *testing.T) {
 	sl.LinkCountLimit = 2
 	tp := NewTracerProvider(WithSpanLimits(sl), WithSyncer(te), WithResource(resource.Empty()))
 
-	span := startSpan(tp, "LinksOverLimit",
+	span := startSpan(
+		tp, "LinksOverLimit",
 		trace.WithLinks(
 			trace.Link{SpanContext: sc1, Attributes: []attribute.KeyValue{attribute.String("key1", "value1")}},
 			trace.Link{SpanContext: sc2, Attributes: []attribute.KeyValue{attribute.String("key2", "value2")}},
@@ -921,7 +924,8 @@ func TestSetSpanStatusWithoutMessageWhenStatusIsNotError(t *testing.T) {
 }
 
 func cmpDiff(x, y any) string {
-	return cmp.Diff(x, y,
+	return cmp.Diff(
+		x, y,
 		cmp.AllowUnexported(snapshot{}),
 		cmp.AllowUnexported(attribute.Value{}),
 		cmp.AllowUnexported(Event{}),
@@ -1510,6 +1514,55 @@ func TestWithResource(t *testing.T) {
 	}
 }
 
+func TestMapDeduplication(t *testing.T) {
+	dup := attribute.Map(
+		"map",
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	dedup := attribute.Map("map", attribute.String("key", "second"))
+	res := resource.NewSchemaless(dup)
+
+	linkSC := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{1},
+		SpanID:  trace.SpanID{1},
+	})
+
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithSampler(AlwaysSample()),
+		WithResource(res),
+	)
+
+	_, span := tp.Tracer(
+		"scope",
+		trace.WithInstrumentationAttributes(dup),
+	).Start(
+		t.Context(),
+		"span0",
+		trace.WithAttributes(dup),
+	)
+	span.AddEvent("event", trace.WithAttributes(dup))
+	span.AddLink(trace.Link{
+		SpanContext: linkSC,
+		Attributes:  []attribute.KeyValue{dup},
+	})
+
+	got, err := endSpan(te, span)
+	require.NoError(t, err)
+
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Attributes())
+	require.Len(t, got.Events(), 1)
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Events()[0].Attributes)
+	assert.Zero(t, got.Events()[0].DroppedAttributeCount)
+	require.Len(t, got.Links(), 1)
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Links()[0].Attributes)
+	assert.Zero(t, got.Links()[0].DroppedAttributeCount)
+	assert.Equal(t, []attribute.KeyValue{dedup}, got.Resource().Attributes())
+	assert.Equal(t, attribute.NewSet(dedup), got.InstrumentationScope().Attributes)
+}
+
 func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
@@ -1545,6 +1598,11 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 	}
 }
 
+const (
+	recordingSpanEndFrame      = "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End"
+	recordingSpanEndDeferFrame = "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End.deferwrap1"
+)
+
 func TestSpanCapturesPanic(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
@@ -1553,11 +1611,19 @@ func TestSpanCapturesPanic(t *testing.T) {
 		"span",
 	)
 
-	f := func() {
+	var stack string
+	func() {
+		defer func() {
+			recovered := recover()
+			require.EqualError(t, recovered.(error), "error message")
+			stack = string(debug.Stack())
+		}()
 		defer span.End()
 		panic(errors.New("error message"))
-	}
-	require.PanicsWithError(t, "error message", f)
+	}()
+	assert.Contains(t, stack, recordingSpanEndFrame)
+	assert.Contains(t, stack, recordingSpanEndDeferFrame)
+
 	spans := te.Spans()
 	require.Len(t, spans, 1)
 	require.Len(t, spans[0].Events(), 1)
@@ -1566,6 +1632,32 @@ func TestSpanCapturesPanic(t *testing.T) {
 		semconv.ExceptionType("*errors.errorString"),
 		semconv.ExceptionMessage("error message"),
 	}, spans[0].Events()[0].Attributes)
+}
+
+func TestSpanWithoutPanicRecording(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()), WithoutPanicRecording())
+	_, span := tp.Tracer("CatchPanic").Start(
+		t.Context(),
+		"span",
+	)
+
+	var stack string
+	func() {
+		defer func() {
+			recovered := recover()
+			require.EqualError(t, recovered.(error), "error message")
+			stack = string(debug.Stack())
+		}()
+		defer span.End()
+		panic(errors.New("error message"))
+	}()
+	assert.NotContains(t, stack, recordingSpanEndFrame)
+	assert.NotContains(t, stack, recordingSpanEndDeferFrame)
+
+	spans := te.Spans()
+	require.Len(t, spans, 1)
+	assert.Empty(t, spans[0].Events())
 }
 
 func TestSpanCapturesPanicWithStackTrace(t *testing.T) {

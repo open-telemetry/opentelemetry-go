@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -82,6 +82,25 @@ func TestNewRawExporterCollectorURLFromEnv(t *testing.T) {
 	assert.Equal(t, expectedEndpoint, exp.url)
 }
 
+func TestExporterMarshalLogDoesNotIncludeURL(t *testing.T) {
+	const sensitiveURL = "http://user:pass@zipkin.internal:9411/api/v2/spans?token=secret"
+
+	exp, err := New(sensitiveURL)
+	require.NoError(t, err)
+
+	var buf bytes.Buffer
+	logger := funcr.New(func(_, args string) {
+		_, _ = buf.WriteString(args)
+	}, funcr.Options{})
+	logger.Info("exporter", "config", exp)
+
+	logged := buf.String()
+	assert.Contains(t, logged, "zipkin")
+	assert.NotContains(t, logged, sensitiveURL)
+	assert.NotContains(t, logged, "user:pass")
+	assert.NotContains(t, logged, "token=secret")
+}
+
 type mockZipkinCollector struct {
 	t       *testing.T
 	url     string
@@ -98,7 +117,7 @@ func startMockZipkinCollector(t *testing.T) *mockZipkinCollector {
 		t:       t,
 		closing: false,
 	}
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	collector.url = fmt.Sprintf("http://%s", listener.Addr().String())
 	server := &http.Server{

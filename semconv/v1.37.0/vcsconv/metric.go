@@ -1129,18 +1129,19 @@ func (RefLinesDelta) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
-//
 // This metric should be reported for each `vcs.line_change.type` value. For
 // example if a ref added 3 lines and removed 2 lines,
 // instrumentation SHOULD report two measurements: 3 and 2 (both positive
 // numbers).
 // If number of lines added/removed should be calculated from the start of time,
 // then `vcs.ref.base.name` SHOULD be set to an empty string.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefLinesDelta) Record(
 	ctx context.Context,
 	val int64,
@@ -1313,16 +1314,17 @@ func (RefRevisionsDelta) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
-//
 // This metric should be reported for each `vcs.revision_delta.direction` value.
 // For example if branch `a` is 3 commits behind and 2 commits ahead of `trunk`,
 // instrumentation SHOULD report two measurements: 3 and 2 (both positive
 // numbers) and `vcs.ref.base.name` is set to `trunk`.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefRevisionsDelta) Record(
 	ctx context.Context,
 	val int64,
@@ -1487,8 +1489,9 @@ func (RefTime) Description() string {
 // All additional attrs passed are included in the recorded value.
 //
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefTime) Record(
 	ctx context.Context,
 	val float64,

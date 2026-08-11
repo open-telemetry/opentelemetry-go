@@ -7,7 +7,7 @@ name: changelog
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types: [opened, synchronize, reopened, labeled, unlabeled, edited]
     branches:
       - main
 
@@ -20,14 +20,18 @@ jobs:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'dependencies') && !contains(github.event.pull_request.labels.*.name, 'Skip Changelog') && !contains(github.event.pull_request.title, '[chore]')}}
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Check for CHANGELOG changes
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
           # Only the latest commit of the feature branch is available
           # automatically. To diff with the base branch, we need to
           # fetch that too (and we only need its latest commit).
-          git fetch origin ${{ github.base_ref }} --depth=1
+          git fetch origin "$BASE_REF" --depth=1
           if [[ $(git diff --name-only FETCH_HEAD | grep CHANGELOG) ]]
           then
             echo "A CHANGELOG was modified. Looks good!"

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package noop // import "go.opentelemetry.io/otel/log/noop"
+package noop
 
 import (
 	"reflect"

@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/internal/x"
@@ -156,7 +157,7 @@ func testExpoHistogramMinMaxSumInt64(t *testing.T) {
 
 			h := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, newLazyFilteredAttributes(alice, nil))
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -198,7 +199,7 @@ func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
 
 			h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
 			for _, v := range tt.values {
-				h.measure(t.Context(), v, alice, nil)
+				h.measure(t.Context(), v, newLazyFilteredAttributes(alice, nil))
 			}
 			dp := h.values[alice.Equivalent()]
 
@@ -572,6 +573,35 @@ func TestScaleChange(t *testing.T) {
 	}
 }
 
+func TestExpoHistogramOverflow(t *testing.T) {
+	newRes := func(attribute.Set) FilteredExemplarReservoir[int64] {
+		return DropReservoir[int64](attribute.NewSet())
+	}
+	e := newExponentialHistogram(160, 20, false, false, 2, newRes)
+
+	attrA := attribute.NewSet(attribute.String("key", "a"))
+	lazyA := newLazyFilteredAttributes(attrA, nil)
+	e.measure(t.Context(), 10, lazyA)
+
+	// Second distinct attribute set should trigger overflow since aggLimit == 2
+	attrB := attribute.NewSet(attribute.String("key", "b"))
+	lazyB := newLazyFilteredAttributes(attrB, nil)
+	e.measure(t.Context(), 20, lazyB)
+
+	// Check that overflow series exists and attrB series does not
+	e.valuesMu.Lock()
+	_, hasOverflow := e.values[overflowSet.Equivalent()]
+	_, hasB := e.values[attrB.Equivalent()]
+	e.valuesMu.Unlock()
+
+	if !hasOverflow {
+		t.Error("expected overflowSet to be recorded in e.values on limit exceeded")
+	}
+	if hasB {
+		t.Error("did not expect attrB to be recorded separately after overflow")
+	}
+}
+
 func BenchmarkPrepend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		agg := newExpoHistogramDataPoint[float64](alice, 1024, 20, false, false)
@@ -609,16 +639,6 @@ func BenchmarkExponentialHistogram(b *testing.B) {
 	}))
 	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
-			Temporality: metricdata.DeltaTemporality,
-		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
-	}))
-	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
-			Temporality: metricdata.CumulativeTemporality,
-		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
-	}))
-	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
 	}))
@@ -1027,7 +1047,8 @@ func validateExponentialHistogram[N int64 | float64](t *testing.T, aggs []metric
 		}
 		require.LessOrEqual(t, len(s.DataPoints), 3, "AggregationLimit of 3 exceeded in a single cycle")
 		for _, dp := range s.DataPoints {
-			assert.False(t,
+			assert.False(
+				t,
 				dp.Time.Before(dp.StartTime),
 				"Timestamp %v must not be before start time %v", dp.Time, dp.StartTime,
 			)
@@ -1065,7 +1086,7 @@ func validateExponentialHistogram[N int64 | float64](t *testing.T, aggs []metric
 			if attr == overflowSet {
 				// The overflow set contains all the goroutines that didn't make the limit of 3
 				assert.Equal(t, uint64(0), count%expectedSingleCount)
-				assert.Equal(t, count/expectedSingleCount*uint64(expectedSingleSum), uint64(sum))
+				assertSumEqual[N](t, N(count/expectedSingleCount)*expectedSingleSum, sum)
 			} else {
 				// Individual attributes should have exactly one goroutine's worth of data
 				assert.Equal(t, expectedSingleSum, sum)
@@ -1255,4 +1276,172 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 			assert.Equal(t, refH, h)
 		})
 	}
+}
+
+func TestExpoHistogramRecordUnderflow(t *testing.T) {
+	var errs []error
+	original := global.GetErrorHandler()
+	global.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+		errs = append(errs, e)
+	}))
+	t.Cleanup(func() {
+		global.SetErrorHandler(original)
+	})
+
+	dp := newExpoHistogramDataPoint[float64](attribute.NewSet(), 1, 20, false, false)
+	// Force scale to a low value
+	dp.scale.Store(-10)
+	dp.record(1)
+	dp.record(math.MaxFloat64)
+	require.Len(t, errs, 1)
+	assert.EqualError(t, errs[0], "exponential histogram scale underflow")
+}
+
+func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
+	h := newExponentialHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
+	ctx := t.Context()
+
+	h.measure(ctx, math.NaN(), newLazyFilteredAttributes(attribute.NewSet(), nil))
+	h.measure(ctx, math.Inf(1), newLazyFilteredAttributes(attribute.NewSet(), nil))
+	h.measure(ctx, math.Inf(-1), newLazyFilteredAttributes(attribute.NewSet(), nil))
+
+	var dest metricdata.Aggregation
+	h.delta(&dest)
+	eh := dest.(metricdata.ExponentialHistogram[float64])
+	assert.Empty(t, eh.DataPoints)
+}
+
+func TestExponentialHistogramDatapointReuseLeakedStaleValues(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	// 1. Collect with sum and min/max enabled.
+	in1, out1 := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+
+	ctx := t.Context()
+	in1(ctx, 5, alice)
+
+	dest := new(metricdata.Aggregation)
+	n := out1(dest)
+	require.Equal(t, 1, n)
+
+	h, ok := (*dest).(metricdata.ExponentialHistogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+	require.Equal(t, int64(5), h.DataPoints[0].Sum)
+	val, defined := h.DataPoints[0].Min.Value()
+	require.True(t, defined)
+	require.Equal(t, int64(5), val)
+
+	// 2. Collect with sum and min/max disabled.
+	in2, out2 := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality,
+	}.ExponentialBucketHistogram(4, 20, true, true)
+
+	in2(ctx, 7, alice)
+
+	n = out2(dest)
+	require.Equal(t, 1, n)
+
+	h, ok = (*dest).(metricdata.ExponentialHistogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+
+	// Validate that stale values are not reported.
+	assert.Equal(t, int64(0), h.DataPoints[0].Sum, "stale Sum leaked")
+	_, defined = h.DataPoints[0].Min.Value()
+	assert.False(t, defined, "stale Min leaked")
+	_, defined = h.DataPoints[0].Max.Value()
+	assert.False(t, defined, "stale Max leaked")
+}
+
+func TestExponentialHistogramDatapointReuseLeakedStaleValues_Cumulative(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	// 1. Collect with sum and min/max enabled.
+	in1, out1 := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+
+	ctx := t.Context()
+	in1(ctx, 5, alice)
+
+	dest := new(metricdata.Aggregation)
+	n := out1(dest)
+	require.Equal(t, 1, n)
+
+	h, ok := (*dest).(metricdata.ExponentialHistogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+	require.Equal(t, int64(5), h.DataPoints[0].Sum)
+	val, defined := h.DataPoints[0].Min.Value()
+	require.True(t, defined)
+	require.Equal(t, int64(5), val)
+
+	// 2. Collect with sum and min/max disabled.
+	in2, out2 := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+	}.ExponentialBucketHistogram(4, 20, true, true)
+
+	in2(ctx, 7, alice)
+
+	n = out2(dest)
+	require.Equal(t, 1, n)
+
+	h, ok = (*dest).(metricdata.ExponentialHistogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+
+	// Validate that stale values are not reported.
+	assert.Equal(t, int64(0), h.DataPoints[0].Sum, "stale Sum leaked")
+	_, defined = h.DataPoints[0].Min.Value()
+	assert.False(t, defined, "stale Min leaked")
+	_, defined = h.DataPoints[0].Max.Value()
+	assert.False(t, defined, "stale Max leaked")
+}
+
+func TestExponentialHistogramMinMaxUnset(t *testing.T) {
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	// Test Delta
+	hDelta := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
+	dpDelta := newExpoHistogramDataPoint[int64](alice, 4, 20, false, false)
+	dpDelta.res = dropExemplars[int64](alice)
+	// dpDelta.minMax.set is false by default
+	hDelta.valuesMu.Lock()
+	hDelta.values[alice.Equivalent()] = dpDelta
+	hDelta.valuesMu.Unlock()
+
+	var dest metricdata.Aggregation
+	hDelta.delta(&dest)
+	ehDelta := dest.(metricdata.ExponentialHistogram[int64])
+	require.Len(t, ehDelta.DataPoints, 1)
+	_, defined := ehDelta.DataPoints[0].Min.Value()
+	assert.False(t, defined, "Min should be invalid when not set")
+	_, defined = ehDelta.DataPoints[0].Max.Value()
+	assert.False(t, defined, "Max should be invalid when not set")
+
+	// Test Cumulative
+	hCumul := newExponentialHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
+	dpCumul := newExpoHistogramDataPoint[int64](alice, 4, 20, false, false)
+	dpCumul.res = dropExemplars[int64](alice)
+	// dpCumul.minMax.set is false by default
+	hCumul.valuesMu.Lock()
+	hCumul.values[alice.Equivalent()] = dpCumul
+	hCumul.valuesMu.Unlock()
+
+	hCumul.cumulative(&dest)
+	ehCumul := dest.(metricdata.ExponentialHistogram[int64])
+	require.Len(t, ehCumul.DataPoints, 1)
+	_, defined = ehCumul.DataPoints[0].Min.Value()
+	assert.False(t, defined, "Min should be invalid when not set")
+	_, defined = ehCumul.DataPoints[0].Max.Value()
+	assert.False(t, defined, "Max should be invalid when not set")
 }

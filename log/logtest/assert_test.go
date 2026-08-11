@@ -4,6 +4,7 @@
 package logtest
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -11,10 +12,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 )
 
-var y2k = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+var (
+	y2k     = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	errBoom = errors.New("boom")
+)
 
 // Compile-time check to ensure testing structs implement TestingT.
 var (
@@ -35,12 +39,18 @@ func (m *mockTestingT) Errorf(format string, args ...any) {
 func TestAssertEqual(t *testing.T) {
 	a := Recording{
 		Scope{Name: t.Name()}: []Record{
-			{Body: log.StringValue("msg"), Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)}},
+			{
+				Body:       attribute.StringValue("msg"),
+				Attributes: []attribute.KeyValue{attribute.String("foo", "bar"), attribute.Int("n", 1)},
+			},
 		},
 	}
 	b := Recording{
 		Scope{Name: t.Name()}: []Record{
-			{Body: log.StringValue("msg"), Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")}},
+			{
+				Body:       attribute.StringValue("msg"),
+				Attributes: []attribute.KeyValue{attribute.Int("n", 1), attribute.String("foo", "bar")},
+			},
 		},
 	}
 
@@ -63,7 +73,8 @@ func TestAssertEqualRecording(t *testing.T) {
 					{
 						Timestamp:  y2k,
 						Context:    t.Context(),
-						Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")},
+						Error:      errBoom,
+						Attributes: []attribute.KeyValue{attribute.Int("n", 1), attribute.String("foo", "bar")},
 					},
 				},
 			},
@@ -72,7 +83,8 @@ func TestAssertEqualRecording(t *testing.T) {
 					{
 						Timestamp:  y2k,
 						Context:    t.Context(),
-						Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)},
+						Error:      errBoom,
+						Attributes: []attribute.KeyValue{attribute.String("foo", "bar"), attribute.Int("n", 1)},
 					},
 				},
 			},
@@ -82,12 +94,12 @@ func TestAssertEqualRecording(t *testing.T) {
 			name: "different recordings",
 			a: Recording{
 				Scope{Name: t.Name()}: []Record{
-					{Attributes: []log.KeyValue{log.String("foo", "bar")}},
+					{Attributes: []attribute.KeyValue{attribute.String("foo", "bar")}},
 				},
 			},
 			b: Recording{
 				Scope{Name: t.Name()}: []Record{
-					{Attributes: []log.KeyValue{log.Int("n", 1)}},
+					{Attributes: []attribute.KeyValue{attribute.Int("n", 1)}},
 				},
 			},
 			want: false,
@@ -106,12 +118,12 @@ func TestAssertEqualRecording(t *testing.T) {
 			name: "equal empty attributes",
 			a: Recording{
 				Scope{Name: t.Name()}: []Record{
-					{Body: log.StringValue("msg"), Attributes: []log.KeyValue{}},
+					{Body: attribute.StringValue("msg"), Attributes: []attribute.KeyValue{}},
 				},
 			},
 			b: Recording{
 				Scope{Name: t.Name()}: []Record{
-					{Body: log.StringValue("msg"), Attributes: nil},
+					{Body: attribute.StringValue("msg"), Attributes: nil},
 				},
 			},
 			want: true,
@@ -145,33 +157,35 @@ func TestAssertEqualRecord(t *testing.T) {
 			a: Record{
 				Timestamp:  y2k,
 				Context:    t.Context(),
-				Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")},
+				Error:      errBoom,
+				Attributes: []attribute.KeyValue{attribute.Int("n", 1), attribute.String("foo", "bar")},
 			},
 			b: Record{
 				Timestamp:  y2k,
 				Context:    t.Context(),
-				Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)},
+				Error:      errBoom,
+				Attributes: []attribute.KeyValue{attribute.String("foo", "bar"), attribute.Int("n", 1)},
 			},
 			want: true,
 		},
 		{
 			name: "different records",
 			a: Record{
-				Attributes: []log.KeyValue{log.String("foo", "bar")},
+				Attributes: []attribute.KeyValue{attribute.String("foo", "bar")},
 			},
 			b: Record{
-				Attributes: []log.KeyValue{log.Int("n", 1)},
+				Attributes: []attribute.KeyValue{attribute.Int("n", 1)},
 			},
 			want: false,
 		},
 		{
 			name: "Transform to ignore timestamps",
 			a: Record{
-				Attributes: []log.KeyValue{log.Int("n", 1), log.String("foo", "bar")},
+				Attributes: []attribute.KeyValue{attribute.Int("n", 1), attribute.String("foo", "bar")},
 			},
 			b: Record{
 				Timestamp:  y2k,
-				Attributes: []log.KeyValue{log.String("foo", "bar"), log.Int("n", 1)},
+				Attributes: []attribute.KeyValue{attribute.String("foo", "bar"), attribute.Int("n", 1)},
 			},
 			opts: []AssertOption{
 				Transform(func(time.Time) time.Time {
@@ -199,10 +213,10 @@ func TestAssertEqualRecord(t *testing.T) {
 func TestDesc(t *testing.T) {
 	mockT := &mockTestingT{}
 	a := Record{
-		Attributes: []log.KeyValue{log.String("foo", "bar")},
+		Attributes: []attribute.KeyValue{attribute.String("foo", "bar")},
 	}
 	b := Record{
-		Attributes: []log.KeyValue{log.Int("n", 1)},
+		Attributes: []attribute.KeyValue{attribute.Int("n", 1)},
 	}
 
 	AssertEqual(mockT, a, b, Desc("custom message, %s", "test"))

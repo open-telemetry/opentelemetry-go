@@ -115,6 +115,9 @@ func (m {{ name }}) Add(
 	incr {{ value_type(metric) | lower }},
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 {%- if req_attr | length > 0 %}
 		m.{{ inst }}.Add(ctx, incr, metric.WithAttributes(
@@ -128,11 +131,8 @@ func (m {{ name }}) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -159,16 +159,16 @@ func (m {{ name }}) Add(
 {{ metric.note | comment }}
 {%- endif %}
 func (m {{ h.to_go_name(metric.metric_name, pkg) }}) Add(ctx context.Context, incr {{ value_type(metric) | lower }}, attrs ...attribute.KeyValue) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.{{ inst }}.Add(ctx, incr)
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.{{ inst }}.Add(ctx, incr, *o...)
@@ -184,16 +184,16 @@ func (m {{ h.to_go_name(metric.metric_name, pkg) }}) Add(ctx context.Context, in
 {{ metric.note | comment }}
 {%- endif %}
 func (m {{ h.to_go_name(metric.metric_name, pkg) }}) AddSet(ctx context.Context, incr {{ value_type(metric) | lower }}, set attribute.Set) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.{{ inst }}.Add(ctx, incr)
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.{{ inst }}.Add(ctx, incr, *o...)
@@ -208,6 +208,9 @@ func (m {{ name }}) Record(
 	val {{ value_type(metric) | lower }},
 {{ params(metric.attributes, pkg=pkg, prefix="\t") }}
 ) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 {%- if req_attr | length > 0 %}
 		m.{{ inst }}.Record(ctx, val, metric.WithAttributes(
@@ -221,11 +224,8 @@ func (m {{ name }}) Record(
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(
 		*o,
@@ -253,16 +253,16 @@ func (m {{ name }}) Record(
 {{ metric.note | comment }}
 {%- endif %}
 func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lower }}, attrs ...attribute.KeyValue) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.{{ inst }}.Record(ctx, val)
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.{{ inst }}.Record(ctx, val, *o...)
@@ -279,16 +279,16 @@ func (m {{ name }}) Record(ctx context.Context, val {{ value_type(metric) | lowe
 {{ metric.note | comment }}
 {%- endif %}
 func (m {{ name }}) RecordSet(ctx context.Context, val {{ value_type(metric) | lower }}, set attribute.Set) {
+	if !m.{{ inst }}.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.{{ inst }}.Record(ctx, val)
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.{{ inst }}.Record(ctx, val, *o...)

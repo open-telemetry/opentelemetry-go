@@ -25,11 +25,9 @@ var (
 // conventions. It represents the type of error encountered by the component.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // StateAttr is an attribute conforming to the hw.state semantic conventions. It
 // represents the current state of the component.
@@ -134,7 +132,7 @@ func (Energy) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 func (m Energy) Add(
@@ -232,7 +230,7 @@ func (Errors) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 func (m Errors) Add(
@@ -723,7 +721,7 @@ func (Power) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 //
@@ -823,9 +821,9 @@ func (Status) Description() string {
 // The id is the an identifier for the hardware component, unique within the
 // monitored host
 //
-// The state is the the current state of the component
+// # The state is the the current state of the component
 //
-// The hwType is the type of the component
+// # The hwType is the type of the component
 //
 // All additional attrs passed are included in the recorded value.
 //

@@ -90,6 +90,9 @@ func (ClusterquotaCPULimitHard) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -115,6 +118,9 @@ func (m ClusterquotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ...
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaCPULimitHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -199,6 +205,9 @@ func (ClusterquotaCPULimitUsed) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -224,6 +233,9 @@ func (m ClusterquotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ...
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -309,6 +321,9 @@ func (ClusterquotaCPURequestHard) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaCPURequestHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -334,6 +349,9 @@ func (m ClusterquotaCPURequestHard) Add(ctx context.Context, incr int64, attrs .
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaCPURequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -419,6 +437,9 @@ func (ClusterquotaCPURequestUsed) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -444,6 +465,9 @@ func (m ClusterquotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs .
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -529,6 +553,9 @@ func (ClusterquotaEphemeralStorageLimitHard) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaEphemeralStorageLimitHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -554,6 +581,9 @@ func (m ClusterquotaEphemeralStorageLimitHard) Add(ctx context.Context, incr int
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaEphemeralStorageLimitHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -639,6 +669,9 @@ func (ClusterquotaEphemeralStorageLimitUsed) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaEphemeralStorageLimitUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -664,6 +697,9 @@ func (m ClusterquotaEphemeralStorageLimitUsed) Add(ctx context.Context, incr int
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaEphemeralStorageLimitUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -749,6 +785,9 @@ func (ClusterquotaEphemeralStorageRequestHard) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaEphemeralStorageRequestHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -774,6 +813,9 @@ func (m ClusterquotaEphemeralStorageRequestHard) Add(ctx context.Context, incr i
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaEphemeralStorageRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -860,6 +902,9 @@ func (ClusterquotaEphemeralStorageRequestUsed) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaEphemeralStorageRequestUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -885,6 +930,9 @@ func (m ClusterquotaEphemeralStorageRequestUsed) Add(ctx context.Context, incr i
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaEphemeralStorageRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -977,6 +1025,9 @@ func (m ClusterquotaHugepageCountRequestHard) Add(
 	k8sHugepageSize string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.hugepage.size", k8sHugepageSize),
@@ -1013,6 +1064,9 @@ func (m ClusterquotaHugepageCountRequestHard) Add(
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaHugepageCountRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1105,6 +1159,9 @@ func (m ClusterquotaHugepageCountRequestUsed) Add(
 	k8sHugepageSize string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.hugepage.size", k8sHugepageSize),
@@ -1141,6 +1198,9 @@ func (m ClusterquotaHugepageCountRequestUsed) Add(
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaHugepageCountRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1226,6 +1286,9 @@ func (ClusterquotaMemoryLimitHard) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaMemoryLimitHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1251,6 +1314,9 @@ func (m ClusterquotaMemoryLimitHard) Add(ctx context.Context, incr int64, attrs 
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaMemoryLimitHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1336,6 +1402,9 @@ func (ClusterquotaMemoryLimitUsed) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaMemoryLimitUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1361,6 +1430,9 @@ func (m ClusterquotaMemoryLimitUsed) Add(ctx context.Context, incr int64, attrs 
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaMemoryLimitUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1446,6 +1518,9 @@ func (ClusterquotaMemoryRequestHard) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaMemoryRequestHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1471,6 +1546,9 @@ func (m ClusterquotaMemoryRequestHard) Add(ctx context.Context, incr int64, attr
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaMemoryRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1556,6 +1634,9 @@ func (ClusterquotaMemoryRequestUsed) Description() string {
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaMemoryRequestUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1581,6 +1662,9 @@ func (m ClusterquotaMemoryRequestUsed) Add(ctx context.Context, incr int64, attr
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaMemoryRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1674,6 +1758,9 @@ func (m ClusterquotaObjectCountHard) Add(
 	k8sResourcequotaResourceName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.resourcequota.resource_name", k8sResourcequotaResourceName),
@@ -1710,6 +1797,9 @@ func (m ClusterquotaObjectCountHard) Add(
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaObjectCountHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1803,6 +1893,9 @@ func (m ClusterquotaObjectCountUsed) Add(
 	k8sResourcequotaResourceName string,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("k8s.resourcequota.resource_name", k8sResourcequotaResourceName),
@@ -1839,6 +1932,9 @@ func (m ClusterquotaObjectCountUsed) Add(
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaObjectCountUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1935,6 +2031,9 @@ func (m ClusterquotaPersistentvolumeclaimCountHard) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -1970,6 +2069,9 @@ func (m ClusterquotaPersistentvolumeclaimCountHard) Add(
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaPersistentvolumeclaimCountHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2075,6 +2177,9 @@ func (m ClusterquotaPersistentvolumeclaimCountUsed) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2110,6 +2215,9 @@ func (m ClusterquotaPersistentvolumeclaimCountUsed) Add(
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaPersistentvolumeclaimCountUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2214,6 +2322,9 @@ func (m ClusterquotaStorageRequestHard) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2249,6 +2360,9 @@ func (m ClusterquotaStorageRequestHard) Add(
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaStorageRequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2353,6 +2467,9 @@ func (m ClusterquotaStorageRequestUsed) Add(
 	incr int64,
 	attrs ...attribute.KeyValue,
 ) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if len(attrs) == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return
@@ -2388,6 +2505,9 @@ func (m ClusterquotaStorageRequestUsed) Add(
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 func (m ClusterquotaStorageRequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
+	if !m.Int64UpDownCounter.Enabled(ctx) {
+		return
+	}
 	if set.Len() == 0 {
 		m.Int64UpDownCounter.Add(ctx, incr)
 		return

@@ -4,17 +4,20 @@
 package trace
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"math/rand/v2"
 	"testing"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -55,6 +58,56 @@ func (*shutdownSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
 func (*shutdownSpanProcessor) OnEnd(ReadOnlySpan)                     {}
 func (*shutdownSpanProcessor) ForceFlush(context.Context) error {
 	return nil
+}
+
+const sensitiveExporterEndpoint = "user:pass@collector.internal:4318"
+
+type marshalingSpanExporter struct{}
+
+func (*marshalingSpanExporter) ExportSpans(context.Context, []ReadOnlySpan) error {
+	return nil
+}
+
+func (*marshalingSpanExporter) Shutdown(context.Context) error {
+	return nil
+}
+
+func (*marshalingSpanExporter) MarshalLog() any {
+	return struct{ Endpoint string }{Endpoint: sensitiveExporterEndpoint}
+}
+
+func TestTracerProviderCreatedLogDoesNotIncludeExporterConfig(t *testing.T) {
+	tests := []struct {
+		name string
+		opt  func(SpanExporter) TracerProviderOption
+	}{
+		{
+			name: "batch",
+			opt:  func(e SpanExporter) TracerProviderOption { return WithBatcher(e) },
+		},
+		{
+			name: "simple",
+			opt:  WithSyncer,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			orig := global.GetLogger()
+			global.SetLogger(funcr.New(func(_, args string) {
+				_, _ = buf.WriteString(args)
+			}, funcr.Options{Verbosity: 4}))
+			t.Cleanup(func() { global.SetLogger(orig) })
+
+			tp := NewTracerProvider(tt.opt(&marshalingSpanExporter{}))
+			require.NoError(t, tp.Shutdown(t.Context()))
+
+			logged := buf.String()
+			assert.Contains(t, logged, "TracerProvider created")
+			assert.NotContains(t, logged, sensitiveExporterEndpoint)
+		})
+	}
 }
 
 func TestShutdownCallsTracerMethod(t *testing.T) {
@@ -517,4 +570,16 @@ func (m *errMeter) Int64Counter(string, ...metric.Int64CounterOption) (metric.In
 
 func (m *errMeter) Int64UpDownCounter(string, ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error) {
 	return nil, m.err
+}
+
+type testExperimentalOption struct {
+	TracerProviderOption
+}
+
+func (testExperimentalOption) Experimental() {}
+
+func TestExperimentalOptionSafe(t *testing.T) {
+	var opt testExperimentalOption
+
+	assert.NotPanics(t, func() { _ = NewTracerProvider(opt) })
 }

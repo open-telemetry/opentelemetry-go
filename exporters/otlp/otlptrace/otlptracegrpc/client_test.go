@@ -4,6 +4,7 @@
 package otlptracegrpc_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -39,7 +41,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 func TestMain(m *testing.M) {
@@ -47,6 +49,25 @@ func TestMain(m *testing.M) {
 }
 
 var roSpans = tracetest.SpanStubs{{Name: "Span 0"}}.Snapshots()
+
+func TestClientMarshalLogDoesNotIncludeEndpointConfig(t *testing.T) {
+	const sensitiveEndpoint = "user:pass@collector.internal:4317"
+
+	var buf bytes.Buffer
+	logger := funcr.New(func(_, args string) {
+		_, _ = buf.WriteString(args)
+	}, funcr.Options{})
+
+	client := otlptracegrpc.NewClient(
+		otlptracegrpc.WithEndpoint(sensitiveEndpoint),
+		otlptracegrpc.WithInsecure(),
+	)
+	logger.Info("client", "config", client)
+
+	logged := buf.String()
+	assert.Contains(t, logged, "otlptracegrpc")
+	assert.NotContains(t, logged, sensitiveEndpoint)
+}
 
 func contextWithTimeout(
 	parent context.Context,
@@ -93,7 +114,8 @@ func TestNewEndToEnd(t *testing.T) {
 					grpc.WithConnectParams(grpc.ConnectParams{
 						Backoff:           backoff.DefaultConfig,
 						MinConnectTimeout: time.Second,
-					})),
+					}),
+				),
 			},
 		},
 	}
@@ -205,7 +227,7 @@ func TestNewCollectorOnBadConnection(t *testing.T) {
 		t.Skipf("Skipping this long running test")
 	}
 
-	ln, err := net.Listen("tcp", "localhost:0")
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 	if err != nil {
 		t.Fatalf("Failed to grab an available port: %v", err)
 	}
@@ -275,6 +297,29 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	unwrapped := errors.Unwrap(err)
 	require.Equal(t, codes.DeadlineExceeded, status.Convert(unwrapped).Code())
 	require.True(t, strings.HasPrefix(err.Error(), "traces export: "), "%+v", err)
+}
+
+func TestExportSpansRequestSizeLimit(t *testing.T) {
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	ctx := t.Context()
+	exp := newGRPCExporter(
+		t,
+		ctx,
+		mc.endpoint,
+		otlptracegrpc.WithMaxRequestSize(1),
+		otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}),
+	)
+	t.Cleanup(func() {
+		ctx, cancel := contextWithTimeout(context.WithoutCancel(t.Context()), t, 10*time.Second)
+		defer cancel()
+		require.NoError(t, exp.Shutdown(ctx))
+	})
+
+	err := exp.ExportSpans(ctx, roSpans)
+	assert.ErrorContains(t, err, "request message too large")
+	assert.Empty(t, mc.getResourceSpans(), "oversized request must fail before sending")
 }
 
 func TestNewWithMultipleAttributeTypes(t *testing.T) {
@@ -468,7 +513,8 @@ func TestClientInstrumentation(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	exp := newGRPCExporter(t, t.Context(), mc.endpoint)
-	err := exp.ExportSpans(t.Context(), roSpans)
+	localSpans := tracetest.SpanStubs{{Name: "Span 0"}, {Name: "Span 1"}}.Snapshots()
+	err := exp.ExportSpans(t.Context(), localSpans)
 	assert.ErrorIs(t, err, internal.TracePartialSuccessError(n, msg))
 	require.NoError(t, exp.Shutdown(t.Context()))
 
@@ -489,7 +535,7 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(attrs...), Value: 0},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 				},
@@ -500,11 +546,11 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(attrs...), Value: 0},
 						{Attributes: attribute.NewSet(append(
 							attrs,
 							otelconv.SDKExporterSpanExported{}.AttrErrorType("*errors.joinError"),
-						)...)},
+						)...), Value: 2},
 					},
 					Temporality: 0x1,
 					IsMonotonic: true,
@@ -530,12 +576,18 @@ func TestClientInstrumentation(t *testing.T) {
 		},
 	}
 	require.Len(t, got.ScopeMetrics, 1)
-	opt := []metricdatatest.Option{
+	gotMetrics := got.ScopeMetrics[0].Metrics
+	require.Len(t, gotMetrics, 3)
+
+	metricdatatest.AssertEqual(t, want.Metrics[0], gotMetrics[0], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(t, want.Metrics[1], gotMetrics[1], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(
+		t,
+		want.Metrics[2],
+		gotMetrics[2],
 		metricdatatest.IgnoreTimestamp(),
-		metricdatatest.IgnoreExemplars(),
 		metricdatatest.IgnoreValue(),
-	}
-	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+	)
 }
 
 func canonical(t *testing.T, endpoint string) string {

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+package aggregate
 
 import (
 	"context"
@@ -74,7 +74,7 @@ func (c *clock) Register() (unregister func()) {
 }
 
 func dropExemplars[N int64 | float64](attr attribute.Set) FilteredExemplarReservoir[N] {
-	return dropReservoir[N](attr)
+	return DropReservoir[N](attr)
 }
 
 func TestBuilderFilter(t *testing.T) {
@@ -91,10 +91,10 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 			return func(t *testing.T) {
 				t.Helper()
 
-				meas := b.filter(func(_ context.Context, v N, f attribute.Set, d []attribute.KeyValue) {
+				meas := b.filter(func(_ context.Context, v N, lazy lazyFilteredAttributes) {
 					assert.Equal(t, value, v, "measured incorrect value")
-					assert.Equal(t, wantF, f, "measured incorrect filtered attributes")
-					assert.ElementsMatch(t, wantD, d, "measured incorrect dropped attributes")
+					assert.Equal(t, wantF, lazy.Set(), "measured incorrect filtered attributes")
+					assert.ElementsMatch(t, wantD, lazy.Dropped(), "measured incorrect dropped attributes")
 				})
 				meas(t.Context(), value, attr)
 			}

@@ -26,11 +26,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // NetworkTransportAttr is an attribute conforming to the network.transport
 // semantic conventions. It represents the [OSI transport layer] or
@@ -110,7 +108,7 @@ func NewClientDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ClientDuration{noop.Float64Histogram{}}, err
+		return ClientDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientDuration{i}, nil
 }
@@ -289,7 +287,7 @@ func NewClientRequestSize(
 		opt...,
 	)
 	if err != nil {
-	    return ClientRequestSize{noop.Int64Histogram{}}, err
+		return ClientRequestSize{noop.Int64Histogram{}}, err
 	}
 	return ClientRequestSize{i}, nil
 }
@@ -462,7 +460,7 @@ func NewClientResponseSize(
 		opt...,
 	)
 	if err != nil {
-	    return ClientResponseSize{noop.Int64Histogram{}}, err
+		return ClientResponseSize{noop.Int64Histogram{}}, err
 	}
 	return ClientResponseSize{i}, nil
 }
@@ -635,7 +633,7 @@ func NewServerDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ServerDuration{noop.Float64Histogram{}}, err
+		return ServerDuration{noop.Float64Histogram{}}, err
 	}
 	return ServerDuration{i}, nil
 }
@@ -816,7 +814,7 @@ func NewServerRequestSize(
 		opt...,
 	)
 	if err != nil {
-	    return ServerRequestSize{noop.Int64Histogram{}}, err
+		return ServerRequestSize{noop.Int64Histogram{}}, err
 	}
 	return ServerRequestSize{i}, nil
 }
@@ -991,7 +989,7 @@ func NewServerResponseSize(
 		opt...,
 	)
 	if err != nil {
-	    return ServerResponseSize{noop.Int64Histogram{}}, err
+		return ServerResponseSize{noop.Int64Histogram{}}, err
 	}
 	return ServerResponseSize{i}, nil
 }

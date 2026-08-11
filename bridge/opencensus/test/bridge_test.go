@@ -4,6 +4,7 @@
 package test
 
 import (
+	"slices"
 	"testing"
 
 	octrace "go.opencensus.io/trace"
@@ -52,13 +53,13 @@ func TestMixedAPIs(t *testing.T) {
 	}
 
 	var parent trace.SpanContext
-	for i := len(spans) - 1; i >= 0; i-- {
+	for _, v := range slices.Backward(spans) {
 		// Verify that OpenCensus spans and OpenTelemetry spans have each
 		// other as parents.
-		if psid := spans[i].Parent().SpanID(); psid != parent.SpanID() {
-			t.Errorf("Span %v had parent %v. Expected %v", spans[i].Name(), psid, parent.SpanID())
+		if psid := v.Parent().SpanID(); psid != parent.SpanID() {
+			t.Errorf("Span %v had parent %v. Expected %v", v.Name(), psid, parent.SpanID())
 		}
-		parent = spans[i].SpanContext()
+		parent = v.SpanContext()
 	}
 }
 
@@ -138,13 +139,13 @@ func TestToFromContext(t *testing.T) {
 	}
 
 	var parent trace.SpanContext
-	for i := len(spans) - 1; i >= 0; i-- {
+	for _, v := range slices.Backward(spans) {
 		// Verify that OpenCensus spans and OpenTelemetry spans have each
 		// other as parents.
-		if psid := spans[i].Parent().SpanID(); psid != parent.SpanID() {
-			t.Errorf("Span %v had parent %v. Expected %v", spans[i].Name(), psid, parent.SpanID())
+		if psid := v.Parent().SpanID(); psid != parent.SpanID() {
+			t.Errorf("Span %v had parent %v. Expected %v", v.Name(), psid, parent.SpanID())
 		}
-		parent = spans[i].SpanContext()
+		parent = v.SpanContext()
 	}
 }
 

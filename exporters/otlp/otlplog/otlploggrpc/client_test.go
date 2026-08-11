@@ -1,10 +1,11 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
+package otlploggrpc
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net"
 	"sync"
@@ -37,8 +38,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 var (
@@ -148,6 +149,16 @@ var (
 		SchemaUrl: semconv.SchemaURL,
 	}}
 )
+
+type logsServiceClientFunc func(context.Context, *collogpb.ExportLogsServiceRequest, ...grpc.CallOption) (*collogpb.ExportLogsServiceResponse, error)
+
+func (f logsServiceClientFunc) Export(
+	ctx context.Context,
+	req *collogpb.ExportLogsServiceRequest,
+	opts ...grpc.CallOption,
+) (*collogpb.ExportLogsServiceResponse, error) {
+	return f(ctx, req, opts...)
+}
 
 func TestThrottleDelay(t *testing.T) {
 	c := codes.ResourceExhausted
@@ -267,6 +278,26 @@ func TestRetryableGRPCStatusResourceExhaustedWithRetryInfo(t *testing.T) {
 	assert.Equal(t, delay, d)
 }
 
+func TestUploadLogsRequestSizeLimit(t *testing.T) {
+	var calls int
+	c := &client{
+		maxRequestSize: 1,
+		requestFunc: func(ctx context.Context, fn func(context.Context) error) error {
+			return fn(ctx)
+		},
+		lsc: logsServiceClientFunc(
+			func(context.Context, *collogpb.ExportLogsServiceRequest, ...grpc.CallOption) (*collogpb.ExportLogsServiceResponse, error) {
+				calls++
+				return &collogpb.ExportLogsServiceResponse{}, nil
+			},
+		),
+	}
+
+	err := c.UploadLogs(t.Context(), []*lpb.ResourceLogs{{}})
+	assert.ErrorContains(t, err, "request message too large")
+	assert.Equal(t, 0, calls, "oversized request must fail before sending")
+}
+
 func TestNewClient(t *testing.T) {
 	newGRPCClientFnSwap := newGRPCClientFn
 	t.Cleanup(func() {
@@ -354,6 +385,51 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
+func TestEnvTLSCredentials(t *testing.T) {
+	const certPath, keyPath = "cert_path", "key_path"
+	origReadFile := readFile
+	readFile = func(name string) ([]byte, error) {
+		switch name {
+		case certPath:
+			return []byte(weakCertificate), nil
+		case keyPath:
+			return []byte(weakPrivateKey), nil
+		default:
+			return nil, errors.New("unexpected certificate path")
+		}
+	}
+	t.Cleanup(func() { readFile = origReadFile })
+
+	tlsCfg, err := newTLSConf([]byte(weakCertificate), []byte(weakPrivateKey))
+	require.NoError(t, err)
+	serverCreds := credentials.NewTLS(&tls.Config{
+		Certificates: tlsCfg.Certificates,
+		ClientAuth:   tls.RequireAnyClientCert,
+	})
+	coll, err := newGRPCCollector(t.Context(), "localhost:0", nil, grpc.Creds(serverCreds))
+	require.NoError(t, err)
+	t.Cleanup(coll.srv.Stop)
+
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "https://"+coll.listener.Addr().String())
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE", certPath)
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE", certPath)
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY", keyPath)
+
+	cfg := newConfig(nil)
+	require.NotNil(t, cfg.tlsCfg.Value)
+	cfg.tlsCfg.Value.Time = func() time.Time {
+		return time.Date(2021, 4, 1, 14, 30, 0, 0, time.UTC)
+	}
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, client.Shutdown(t.Context())) }()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+	require.Len(t, coll.Collect().Dump(), 1)
+}
+
 type exportResult struct {
 	Response *collogpb.ExportLogsServiceResponse
 	Err      error
@@ -411,7 +487,12 @@ var _ collogpb.LogsServiceServer = (*grpcCollector)(nil)
 // If errCh is not nil, the collector will respond to Export calls with errors
 // sent on that channel. This means that if errCh is not nil Export calls will
 // block until an error is received.
-func newGRPCCollector(endpoint string, resultCh <-chan exportResult) (*grpcCollector, error) {
+func newGRPCCollector(
+	ctx context.Context,
+	endpoint string,
+	resultCh <-chan exportResult,
+	opts ...grpc.ServerOption,
+) (*grpcCollector, error) {
 	if endpoint == "" {
 		endpoint = "localhost:0"
 	}
@@ -422,12 +503,12 @@ func newGRPCCollector(endpoint string, resultCh <-chan exportResult) (*grpcColle
 	}
 
 	var err error
-	c.listener, err = net.Listen("tcp", endpoint)
+	c.listener, err = (&net.ListenConfig{}).Listen(ctx, "tcp", endpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	c.srv = grpc.NewServer()
+	c.srv = grpc.NewServer(opts...)
 	collogpb.RegisterLogsServiceServer(c.srv, c)
 	go func() { _ = c.srv.Serve(c.listener) }()
 
@@ -464,7 +545,7 @@ func (c *grpcCollector) Collect() *storage {
 
 func clientFactory(t *testing.T, rCh <-chan exportResult) (*client, *grpcCollector) {
 	t.Helper()
-	coll, err := newGRPCCollector("", rCh)
+	coll, err := newGRPCCollector(t.Context(), "", rCh)
 	require.NoError(t, err)
 
 	addr := coll.listener.Addr().String()
@@ -564,7 +645,7 @@ func TestClient(t *testing.T) {
 
 func TestConfig(t *testing.T) {
 	factoryFunc := func(rCh <-chan exportResult, o ...Option) (log.Exporter, *grpcCollector) {
-		coll, err := newGRPCCollector("", rCh)
+		coll, err := newGRPCCollector(t.Context(), "", rCh)
 		require.NoError(t, err)
 
 		ctx := t.Context()
@@ -675,7 +756,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
 										),
-										Value: int64(len(resourceLogs)),
+										Value: int64(len(logRecords)),
 									},
 								},
 							},
@@ -801,7 +882,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
 										),
-										Value: 0,
+										Value: 2,
 									},
 									{
 										Attributes: attribute.NewSet(
@@ -813,7 +894,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[1],
 											semconv.ErrorType(wantErr),
 										),
-										Value: 1,
+										Value: 2,
 									},
 								},
 							},
@@ -946,7 +1027,7 @@ func TestClientObservability(t *testing.T) {
 											serverAddrAttrs[1],
 											wantErrTypeAttr,
 										),
-										Value: 1,
+										Value: int64(len(logRecords)),
 									},
 								},
 							},
@@ -1114,7 +1195,7 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 								serverAddrAttrs[0],
 								serverAddrAttrs[1],
 							),
-							Value: int64(len(resourceLogs)) - n,
+							Value: int64(len(logRecords)) - n,
 						},
 						{
 							Attributes: attribute.NewSet(
@@ -1184,7 +1265,7 @@ func BenchmarkExporterExportLogs(b *testing.B) {
 	const logRecordsCount = 100
 
 	run := func(b *testing.B) {
-		coll, err := newGRPCCollector("", nil)
+		coll, err := newGRPCCollector(b.Context(), "", nil)
 		require.NoError(b, err)
 		b.Cleanup(func() {
 			coll.srv.Stop()
