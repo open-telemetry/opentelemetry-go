@@ -190,6 +190,22 @@ func WithCardinalityLimit(limit int) Option {
 	})
 }
 
+// WithAllowKeyDuplication sets whether deduplication is skipped for
+// attribute.MAP values within measurement and instrumentation scope
+// attributes.
+//
+// By default, attribute.MAP values within measurement and instrumentation
+// scope attributes have duplicate map keys removed (last-value-wins) to comply
+// with the OpenTelemetry Specification. Top-level measurement attributes are
+// always deduplicated by attribute.Set, and resource attributes are always
+// deduplicated by go.opentelemetry.io/otel/sdk/resource.
+//
+// Disabling deduplication with this option can improve performance e.g. of
+// recording measurements.
+//
+// Note that if you disable deduplication, you are responsible for ensuring
+// that duplicate map keys within a single attribute.MAP value are not
+// emitted, or that the telemetry receiver can handle such duplicates.
 func WithAllowKeyDuplication() Option {
 	return optionFunc(func(cfg config) config {
 		cfg.allowDupKeys = true
