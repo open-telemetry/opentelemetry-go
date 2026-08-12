@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -115,20 +114,46 @@ type multiCallback func(context.Context) error
 
 type multiCallbackEntry struct {
 	callback multiCallback
-	active   atomic.Bool
+	// retired reports whether the callback was unregistered. It is guarded
+	// by the pipeline's Mutex.
+	retired bool
 }
 
 // addMultiCallback registers a multi-instrument callback to be run when
 // `produce()` is called.
+//
+// The returned unregister function retires the callback and immediately
+// removes it from the pipeline. Retirement is checked under the pipeline's
+// Mutex right before each dispatch, so after unregister returns the
+// callback is not selected for dispatch again. A dispatch that already
+// passed the retirement check may begin or complete after unregister
+// returns: unregister does not wait for it, which is what makes
+// unregister safe to call from within the callback itself. It is
+// idempotent and safe to call concurrently.
 func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
+	e := &multiCallbackEntry{callback: c}
 	p.Lock()
 	defer p.Unlock()
-
-	entry := &multiCallbackEntry{callback: c}
-	entry.active.Store(true)
-	p.multiCallbacks = append(p.multiCallbacks, entry)
+	p.multiCallbacks = append(p.multiCallbacks, e)
 	return func() {
-		entry.active.Store(false)
+		p.Lock()
+		defer p.Unlock()
+		if e.retired {
+			return
+		}
+		e.retired = true
+		// produce ranges over a snapshot of p.multiCallbacks without
+		// holding the lock. Rebuild the slice instead of deleting in
+		// place: elements below a live snapshot's length are never
+		// overwritten, and appends only ever write past a snapshot's
+		// length, so a snapshot never observes a mutation.
+		cbs := make([]*multiCallbackEntry, 0, len(p.multiCallbacks))
+		for _, o := range p.multiCallbacks {
+			if o != e {
+				cbs = append(cbs, o)
+			}
+		}
+		p.multiCallbacks = cbs
 	}
 }
 
@@ -160,20 +185,25 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 			err = errors.Join(err, e)
 		}
 	}
-	for _, entry := range multiCallbacks {
+	for _, e := range multiCallbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		if entry.active.Load() {
-			if cErr := entry.callback(ctx); cErr != nil {
-				err = errors.Join(err, cErr)
-			}
+		// Retirement is guarded by p.Mutex: a registration unregistered
+		// before this check is not dispatched. A dispatch that passes
+		// this check may begin after unregister returns; unregister
+		// does not wait for it (see addMultiCallback).
+		p.Lock()
+		retired := e.retired
+		p.Unlock()
+		if retired {
+			continue
+		}
+		if cErr := e.callback(ctx); cErr != nil {
+			err = errors.Join(err, cErr)
 		}
 	}
 
 	p.Lock()
 	defer p.Unlock()
-	p.multiCallbacks = slices.DeleteFunc(p.multiCallbacks, func(entry *multiCallbackEntry) bool {
-		return !entry.active.Load()
-	})
 
 	rm.Resource = p.resource
 	rm.ScopeMetrics = internal.ReuseSlice(rm.ScopeMetrics, len(p.aggregations))

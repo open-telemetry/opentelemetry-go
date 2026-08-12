@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -631,6 +632,117 @@ func TestCallbackCanUnregisterDuringCollect(t *testing.T) {
 	require.NoError(t, reader.Collect(t.Context(), &rm))
 	assert.Equal(t, int64(1), called.Load())
 	assert.Empty(t, rm.ScopeMetrics)
+}
+
+func TestUnregisterRemovesCallbackWithoutCollect(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	counter, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+
+	for range 10 {
+		reg, err := m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+			o.ObserveInt64(counter, 1)
+			return nil
+		}, counter)
+		require.NoError(t, err)
+		require.NoError(t, reg.Unregister())
+	}
+
+	pipe := mp.pipes[0]
+	pipe.Lock()
+	defer pipe.Unlock()
+	assert.Empty(t, pipe.multiCallbacks)
+}
+
+func TestUnregisterDuringCollectRemovesCallback(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	counter, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+
+	var calls atomic.Int64
+	started := make(chan struct{})
+	release := make(chan struct{})
+	reg, err := m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+		if calls.Add(1) == 1 {
+			close(started)
+			<-release
+		}
+		o.ObserveInt64(counter, 1)
+		return nil
+	}, counter)
+	require.NoError(t, err)
+
+	collectDone := make(chan error, 1)
+	go func() {
+		var rm metricdata.ResourceMetrics
+		collectDone <- reader.Collect(t.Context(), &rm)
+	}()
+	<-started
+
+	unregDone := make(chan error, 1)
+	go func() { unregDone <- reg.Unregister() }()
+	select {
+	case err := <-unregDone:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Unregister blocked on an in-flight callback")
+	}
+
+	pipe := mp.pipes[0]
+	pipe.Lock()
+	n := len(pipe.multiCallbacks)
+	pipe.Unlock()
+	assert.Equal(t, 0, n, "pipeline retained the callback after Unregister returned")
+
+	close(release)
+	require.NoError(t, <-collectDone)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, int64(1), calls.Load(), "callback ran after Unregister returned")
+}
+
+func TestCallbackCanUnregisterPeerDuringCollect(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	counter, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+
+	var aCalls, bCalls atomic.Int64
+	var regB metric.Registration
+	_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+		aCalls.Add(1)
+		o.ObserveInt64(counter, 1)
+		return regB.Unregister()
+	}, counter)
+	require.NoError(t, err)
+	regB, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+		bCalls.Add(1)
+		o.ObserveInt64(counter, 1)
+		return nil
+	}, counter)
+	require.NoError(t, err)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, int64(1), aCalls.Load())
+	assert.Equal(
+		t, int64(0), bCalls.Load(),
+		"callback ran in the same cycle after a peer callback unregistered it",
+	)
+
+	rm = metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, int64(2), aCalls.Load())
+	assert.Equal(t, int64(0), bCalls.Load())
 }
 
 func TestCallbackCanCallMeterMethods(t *testing.T) {
