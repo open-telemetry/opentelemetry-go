@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Lazily evaluate filtered and dropped attributes on measurement hot paths in `go.opentelemetry.io/otel/sdk/metric` to avoid unnecessary attribute set allocations. (#8598)
+- Decode `traceparent` using a hex lookup table in `go.opentelemetry.io/otel/propagation`, which rejects the specification-disallowed upper-case characters without a separate scan of the header. (#XXXX)
 
 ### Fixed
 
