@@ -774,43 +774,39 @@ func BenchmarkMeasureKeyDuplication(b *testing.B) {
 
 	operations := []struct {
 		name string
-		make func(b *testing.B, meter metric.Meter) func(attrs []attribute.KeyValue)
+		make func(b *testing.B, meter metric.Meter, reader Reader, attrs []attribute.KeyValue) func()
 	}{
 		{
 			name: "op=Add",
-			make: func(b *testing.B, meter metric.Meter) func(attrs []attribute.KeyValue) {
+			make: func(b *testing.B, meter metric.Meter, _ Reader, attrs []attribute.KeyValue) func() {
 				cnt, err := meter.Int64Counter("int64-counter")
 				assert.NoError(b, err)
-				return func(attrs []attribute.KeyValue) {
-					cnt.Add(ctx, 1, metric.WithAttributes(attrs...))
-				}
+				o := []metric.AddOption{metric.WithAttributes(attrs...)}
+				return func() { cnt.Add(ctx, 1, o...) }
 			},
 		},
 		{
 			name: "op=Record",
-			make: func(b *testing.B, meter metric.Meter) func(attrs []attribute.KeyValue) {
+			make: func(b *testing.B, meter metric.Meter, _ Reader, attrs []attribute.KeyValue) func() {
 				hist, err := meter.Int64Histogram("int64-histogram")
 				assert.NoError(b, err)
-				return func(attrs []attribute.KeyValue) {
-					hist.Record(ctx, 1, metric.WithAttributes(attrs...))
-				}
+				o := []metric.RecordOption{metric.WithAttributes(attrs...)}
+				return func() { hist.Record(ctx, 1, o...) }
 			},
 		},
 		{
 			name: "op=Observe",
-			make: func(b *testing.B, meter metric.Meter) func(attrs []attribute.KeyValue) {
-				gauge, err := meter.Int64ObservableGauge("int64-observable-gauge")
+			make: func(b *testing.B, meter metric.Meter, reader Reader, attrs []attribute.KeyValue) func() {
+				o := []metric.ObserveOption{metric.WithAttributes(attrs...)}
+				_, err := meter.Int64ObservableGauge("int64-observable-gauge", metric.WithInt64Callback(
+					func(_ context.Context, obs metric.Int64Observer) error {
+						obs.Observe(1, o...)
+						return nil
+					},
+				))
 				assert.NoError(b, err)
-				var obs metric.Observer
-				reg, err := meter.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-					obs = o
-					return nil
-				}, gauge)
-				assert.NoError(b, err)
-				b.Cleanup(func() { assert.NoError(b, reg.Unregister()) })
-				return func(attrs []attribute.KeyValue) {
-					obs.ObserveInt64(gauge, 1, metric.WithAttributes(attrs...))
-				}
+				out := new(metricdata.ResourceMetrics)
+				return func() { assert.NoError(b, reader.Collect(ctx, out)) }
 			},
 		},
 	}
@@ -837,16 +833,13 @@ func BenchmarkMeasureKeyDuplication(b *testing.B) {
 					opts := append([]Option{WithReader(reader)}, mode.opts...)
 					provider := NewMeterProvider(opts...)
 					meter := provider.Meter("BenchmarkMeasureKeyDuplication")
-					measure := op.make(b, meter)
-					// Collect once so observer callbacks are initialized.
-					var rm metricdata.ResourceMetrics
-					assert.NoError(b, reader.Collect(ctx, &rm))
+					measure := op.make(b, meter, reader, ac.attrs)
 
 					b.ReportAllocs()
 					b.ResetTimer()
 
 					for n := 0; n < b.N; n++ {
-						measure(ac.attrs)
+						measure()
 					}
 				})
 			}
