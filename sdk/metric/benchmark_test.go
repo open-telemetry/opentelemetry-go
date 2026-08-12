@@ -748,6 +748,112 @@ func BenchmarkMeasureNewAttributeSet(b *testing.B) {
 	}
 }
 
+var (
+	benchAttrs = []attribute.KeyValue{
+		attribute.String("user", "Robin"),
+		attribute.Bool("admin", true),
+		attribute.Map(
+			"map",
+			attribute.String("key1", "value1"),
+			attribute.String("key2", "value2"),
+		),
+	}
+	benchAttrsDupMapKeys = []attribute.KeyValue{
+		attribute.String("user", "Robin"),
+		attribute.Bool("admin", true),
+		attribute.Map(
+			"map",
+			attribute.String("key", "first"),
+			attribute.String("key", "second"),
+		),
+	}
+)
+
+func BenchmarkMeasureKeyDuplication(b *testing.B) {
+	ctx := b.Context()
+
+	operations := []struct {
+		name string
+		make func(b *testing.B, meter metric.Meter) func(attrs []attribute.KeyValue)
+	}{
+		{
+			name: "op=Add",
+			make: func(b *testing.B, meter metric.Meter) func(attrs []attribute.KeyValue) {
+				cnt, err := meter.Int64Counter("int64-counter")
+				assert.NoError(b, err)
+				return func(attrs []attribute.KeyValue) {
+					cnt.Add(ctx, 1, metric.WithAttributes(attrs...))
+				}
+			},
+		},
+		{
+			name: "op=Record",
+			make: func(b *testing.B, meter metric.Meter) func(attrs []attribute.KeyValue) {
+				hist, err := meter.Int64Histogram("int64-histogram")
+				assert.NoError(b, err)
+				return func(attrs []attribute.KeyValue) {
+					hist.Record(ctx, 1, metric.WithAttributes(attrs...))
+				}
+			},
+		},
+		{
+			name: "op=Observe",
+			make: func(b *testing.B, meter metric.Meter) func(attrs []attribute.KeyValue) {
+				gauge, err := meter.Int64ObservableGauge("int64-observable-gauge")
+				assert.NoError(b, err)
+				var obs metric.Observer
+				reg, err := meter.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+					obs = o
+					return nil
+				}, gauge)
+				assert.NoError(b, err)
+				b.Cleanup(func() { assert.NoError(b, reg.Unregister()) })
+				return func(attrs []attribute.KeyValue) {
+					obs.ObserveInt64(gauge, 1, metric.WithAttributes(attrs...))
+				}
+			},
+		},
+	}
+	dedupModes := []struct {
+		name string
+		opts []Option
+	}{
+		{name: "dedup=enabled"},
+		{name: "dedup=disabled", opts: []Option{WithAllowKeyDuplication()}},
+	}
+	attrCases := []struct {
+		name  string
+		attrs []attribute.KeyValue
+	}{
+		{name: "dupMapKeys=no", attrs: benchAttrs},
+		{name: "dupMapKeys=yes", attrs: benchAttrsDupMapKeys},
+	}
+
+	for _, op := range operations {
+		for _, mode := range dedupModes {
+			for _, ac := range attrCases {
+				b.Run(op.name+"/"+mode.name+"/"+ac.name, func(b *testing.B) {
+					reader := NewManualReader()
+					opts := append([]Option{WithReader(reader)}, mode.opts...)
+					provider := NewMeterProvider(opts...)
+					meter := provider.Meter("BenchmarkMeasureKeyDuplication")
+					measure := op.make(b, meter)
+					// Collect once so observer callbacks are initialized.
+					var rm metricdata.ResourceMetrics
+					assert.NoError(b, reader.Collect(ctx, &rm))
+
+					b.ReportAllocs()
+					b.ResetTimer()
+
+					for n := 0; n < b.N; n++ {
+						measure(ac.attrs)
+					}
+				})
+			}
+		}
+	}
+}
+
 func BenchmarkAsyncMeasureNewAttributeSet(b *testing.B) {
 	ctx := b.Context()
 

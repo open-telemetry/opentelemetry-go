@@ -100,25 +100,155 @@ func TestMapDeduplication(t *testing.T) {
 	dedup := attribute.Map("map", attribute.String("key", "second"))
 	res := resource.NewSchemaless(dup)
 
-	reader := NewManualReader()
-	mp := NewMeterProvider(WithReader(reader), WithResource(res))
-	meter := mp.Meter("scope", metric.WithInstrumentationAttributes(dup))
-	counter, err := meter.Int64Counter("counter")
-	require.NoError(t, err)
+	for _, test := range []struct {
+		name       string
+		opts       []Option
+		wantSignal attribute.KeyValue
+	}{
+		{
+			name:       "Default",
+			wantSignal: dedup,
+		},
+		{
+			name:       "WithAllowKeyDuplication",
+			opts:       []Option{WithAllowKeyDuplication()},
+			wantSignal: dup,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			reader := NewManualReader()
+			opts := []Option{
+				WithReader(reader),
+				WithResource(res),
+			}
+			opts = append(opts, test.opts...)
+			mp := NewMeterProvider(opts...)
+			meter := mp.Meter("scope", metric.WithInstrumentationAttributes(dup))
+			counter, err := meter.Int64Counter("counter")
+			require.NoError(t, err)
 
-	counter.Add(t.Context(), 1, metric.WithAttributes(dup))
+			counter.Add(t.Context(), 1, metric.WithAttributes(dup))
 
-	var rm metricdata.ResourceMetrics
-	require.NoError(t, reader.Collect(t.Context(), &rm))
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &rm))
 
-	assert.Equal(t, []attribute.KeyValue{dedup}, rm.Resource.Attributes())
-	require.Len(t, rm.ScopeMetrics, 1)
-	assert.Equal(t, attribute.NewSet(dedup), rm.ScopeMetrics[0].Scope.Attributes)
-	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-	require.True(t, ok)
-	require.Len(t, sum.DataPoints, 1)
-	assert.Equal(t, attribute.NewSet(dedup), sum.DataPoints[0].Attributes)
+			assert.Equal(t, []attribute.KeyValue{dedup}, rm.Resource.Attributes())
+			require.Len(t, rm.ScopeMetrics, 1)
+			assert.Equal(t, attribute.NewSet(test.wantSignal), rm.ScopeMetrics[0].Scope.Attributes)
+			require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+			sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.Len(t, sum.DataPoints, 1)
+			assert.Equal(t, attribute.NewSet(test.wantSignal), sum.DataPoints[0].Attributes)
+		})
+	}
+}
+
+func TestMapDeduplicationAllInstrumentPaths(t *testing.T) {
+	dup := attribute.Map(
+		"map",
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	dedup := attribute.Map("map", attribute.String("key", "second"))
+
+	for _, test := range []struct {
+		name       string
+		opts       []Option
+		wantSignal attribute.KeyValue
+	}{
+		{
+			name:       "Default",
+			wantSignal: dedup,
+		},
+		{
+			name:       "WithAllowKeyDuplication",
+			opts:       []Option{WithAllowKeyDuplication()},
+			wantSignal: dup,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			reader := NewManualReader()
+			opts := []Option{WithReader(reader)}
+			opts = append(opts, test.opts...)
+			mp := NewMeterProvider(opts...)
+			meter := mp.Meter("scope")
+
+			iCtr, err := meter.Int64Counter("int64-counter")
+			require.NoError(t, err)
+			iCtr.Add(t.Context(), 1, metric.WithAttributes(dup))
+
+			iHist, err := meter.Int64Histogram("int64-histogram")
+			require.NoError(t, err)
+			iHist.Record(t.Context(), 1, metric.WithAttributes(dup))
+
+			fCtr, err := meter.Float64Counter("float64-counter")
+			require.NoError(t, err)
+			fCtr.Add(t.Context(), 1, metric.WithAttributes(dup))
+
+			fHist, err := meter.Float64Histogram("float64-histogram")
+			require.NoError(t, err)
+			fHist.Record(t.Context(), 1, metric.WithAttributes(dup))
+
+			_, err = meter.Int64ObservableGauge("int64-observable-gauge", metric.WithInt64Callback(
+				func(_ context.Context, o metric.Int64Observer) error {
+					o.Observe(1, metric.WithAttributes(dup))
+					return nil
+				},
+			))
+			require.NoError(t, err)
+
+			_, err = meter.Float64ObservableGauge("float64-observable-gauge", metric.WithFloat64Callback(
+				func(_ context.Context, o metric.Float64Observer) error {
+					o.Observe(1, metric.WithAttributes(dup))
+					return nil
+				},
+			))
+			require.NoError(t, err)
+
+			iObsCtr, err := meter.Int64ObservableCounter("int64-observable-counter")
+			require.NoError(t, err)
+			fObsCtr, err := meter.Float64ObservableCounter("float64-observable-counter")
+			require.NoError(t, err)
+			_, err = meter.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+				o.ObserveInt64(iObsCtr, 1, metric.WithAttributes(dup))
+				o.ObserveFloat64(fObsCtr, 1, metric.WithAttributes(dup))
+				return nil
+			}, iObsCtr, fObsCtr)
+			require.NoError(t, err)
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+
+			require.Len(t, rm.ScopeMetrics, 1)
+			require.Len(t, rm.ScopeMetrics[0].Metrics, 8)
+			want := attribute.NewSet(test.wantSignal)
+			for _, m := range rm.ScopeMetrics[0].Metrics {
+				switch data := m.Data.(type) {
+				case metricdata.Sum[int64]:
+					require.Len(t, data.DataPoints, 1, m.Name)
+					assert.Equal(t, want, data.DataPoints[0].Attributes, m.Name)
+				case metricdata.Sum[float64]:
+					require.Len(t, data.DataPoints, 1, m.Name)
+					assert.Equal(t, want, data.DataPoints[0].Attributes, m.Name)
+				case metricdata.Gauge[int64]:
+					require.Len(t, data.DataPoints, 1, m.Name)
+					assert.Equal(t, want, data.DataPoints[0].Attributes, m.Name)
+				case metricdata.Gauge[float64]:
+					require.Len(t, data.DataPoints, 1, m.Name)
+					assert.Equal(t, want, data.DataPoints[0].Attributes, m.Name)
+				case metricdata.Histogram[int64]:
+					require.Len(t, data.DataPoints, 1, m.Name)
+					assert.Equal(t, want, data.DataPoints[0].Attributes, m.Name)
+				case metricdata.Histogram[float64]:
+					require.Len(t, data.DataPoints, 1, m.Name)
+					assert.Equal(t, want, data.DataPoints[0].Attributes, m.Name)
+				default:
+					t.Fatalf("unexpected data type for %s: %T", m.Name, data)
+				}
+			}
+		})
+	}
 }
 
 var emptyCallback metric.Callback = func(context.Context, metric.Observer) error { return nil }
