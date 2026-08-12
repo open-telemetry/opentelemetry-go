@@ -3,9 +3,14 @@ name: Markdown
 on:
   repository_dispatch:
   workflow_dispatch:
-  schedule:
-  # Everyday at 9:00 AM.
-  - cron: "0 9 * * *"
+    schedule:
+      # Everyday at 9:00 AM.
+      - cron: "0 9 * * *"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/markdown.yml"
 
 # Declare default permissions as read only.
 permissions: read-all
