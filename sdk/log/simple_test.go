@@ -65,6 +65,20 @@ func (f *failingTestExporter) Export(ctx context.Context, r []log.Record) error 
 	return assert.AnError
 }
 
+// callbackExporter invokes onExport at the start of Export, allowing a test to
+// observe state at the moment a record is submitted to the exporter.
+type callbackExporter struct {
+	exporter
+	onExport func()
+}
+
+func (c *callbackExporter) Export(ctx context.Context, r []log.Record) error {
+	if c.onExport != nil {
+		c.onExport()
+	}
+	return c.exporter.Export(ctx, r)
+}
+
 func TestSimpleProcessorEnabled(t *testing.T) {
 	e := log.NewSimpleProcessor(nil)
 	enabled := e.Enabled(t.Context(), log.EnabledParameters{})
@@ -299,7 +313,6 @@ func TestSimpleLogProcessorObservability(t *testing.T) {
 											semconv.OTelComponentTypeKey.String(
 												string(otelconv.ComponentTypeSimpleLogProcessor),
 											),
-											semconv.ErrorTypeKey.String("*errors.errorString"),
 										),
 									},
 								},
@@ -345,4 +358,54 @@ func TestSimpleLogProcessorObservability(t *testing.T) {
 			observ.SetSimpleProcessorID(0)
 		})
 	}
+}
+
+// processedLogCount returns the current total value of the
+// otel.sdk.processor.log.processed metric recorded by r.
+func processedLogCount(t *testing.T, r metric.Reader) int64 {
+	t.Helper()
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, r.Collect(t.Context(), &rm))
+	name := otelconv.SDKProcessorLogProcessed{}.Name()
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != name {
+				continue
+			}
+			var total int64
+			for _, dp := range m.Data.(metricdata.Sum[int64]).DataPoints {
+				total += dp.Value
+			}
+			return total
+		}
+	}
+	return 0
+}
+
+// TestSimpleProcessorProcessedBeforeExport asserts the record is counted as
+// processed at the point it is submitted to the exporter, not after the export
+// completes (semantic-conventions requirement).
+func TestSimpleProcessorProcessedBeforeExport(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	original := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(original) })
+	t.Cleanup(func() { observ.SetSimpleProcessorID(0) })
+
+	r := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+	otel.SetMeterProvider(mp)
+
+	var duringExport int64
+	exp := &callbackExporter{
+		onExport: func() { duringExport = processedLogCount(t, r) },
+	}
+
+	slp := log.NewSimpleProcessor(exp)
+	record := new(log.Record)
+	record.SetSeverityText("test")
+	require.NoError(t, slp.OnEmit(t.Context(), record))
+
+	assert.Equal(t, int64(1), duringExport,
+		"processed must be recorded before the record is submitted to the exporter")
 }
