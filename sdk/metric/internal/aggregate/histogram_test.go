@@ -6,6 +6,7 @@ package aggregate
 import (
 	"context"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -15,6 +16,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/internal/x"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
@@ -605,6 +607,197 @@ func TestHistogramMinMaxUnset(t *testing.T) {
 	assert.False(t, defined, "Min should be invalid when not set")
 	_, defined = eh.DataPoints[0].Max.Value()
 	assert.False(t, defined, "Max should be invalid when not set")
+}
+
+func TestCumulativeHistogramExemplarBoundary(t *testing.T) {
+	bounds := []float64{5, 10}
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	meas, comp := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+			return NewFilteredExemplarReservoir[int64](
+				exemplar.AlwaysOnFilter,
+				exemplar.NewHistogramReservoir(bounds),
+			)
+		},
+	}.ExplicitBucketHistogram(bounds, false, false)
+
+	ctx := t.Context()
+
+	// 1. Measure value 2 in first cycle.
+	meas(ctx, 2, alice)
+
+	var dest metricdata.Aggregation
+	n := comp(&dest)
+	require.Equal(t, 1, n)
+	h := dest.(metricdata.Histogram[int64])
+	require.Len(t, h.DataPoints, 1)
+	assert.Equal(t, uint64(1), h.DataPoints[0].Count)
+	require.Len(t, h.DataPoints[0].Exemplars, 1)
+	assert.Equal(t, int64(2), h.DataPoints[0].Exemplars[0].Value)
+
+	// 2. Second cycle with no measurements: cumulative count and exemplars persist.
+	dest = nil
+	n = comp(&dest)
+	require.Equal(t, 1, n)
+	h = dest.(metricdata.Histogram[int64])
+	require.Len(t, h.DataPoints, 1)
+	assert.Equal(t, uint64(1), h.DataPoints[0].Count)
+	require.Len(t, h.DataPoints[0].Exemplars, 1)
+	assert.Equal(t, int64(2), h.DataPoints[0].Exemplars[0].Value)
+
+	// 3. Measure value 7 in next cycle: merged cumulative exemplars.
+	meas(ctx, 7, alice)
+	dest = nil
+	n = comp(&dest)
+	require.Equal(t, 1, n)
+	h = dest.(metricdata.Histogram[int64])
+	require.Len(t, h.DataPoints, 1)
+	assert.Equal(t, uint64(2), h.DataPoints[0].Count)
+	require.Len(t, h.DataPoints[0].Exemplars, 2)
+	assert.Equal(t, int64(2), h.DataPoints[0].Exemplars[0].Value)
+	assert.Equal(t, int64(7), h.DataPoints[0].Exemplars[1].Value)
+}
+
+func TestCumulativeHistogram_NonMergeableReservoirFallback(t *testing.T) {
+	bounds := []float64{5, 10}
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	meas, comp := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+			return NewFilteredExemplarReservoir[int64](
+				exemplar.AlwaysOnFilter,
+				&notConcurrentSafeReservoir{},
+			)
+		},
+	}.ExplicitBucketHistogram(bounds, false, false)
+
+	ctx := t.Context()
+	meas(ctx, 42, alice)
+
+	var dest metricdata.Aggregation
+	n := comp(&dest)
+	require.Equal(t, 1, n)
+	h := dest.(metricdata.Histogram[int64])
+	require.Len(t, h.DataPoints, 1)
+	require.Len(t, h.DataPoints[0].Exemplars, 1)
+	assert.Equal(t, int64(42), h.DataPoints[0].Exemplars[0].Value)
+}
+
+func TestCumulativeHistogram_ConcurrentExemplarOfferCollect(t *testing.T) {
+	bounds := []float64{0, 5, 10, 20}
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	meas, comp := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+			return NewFilteredExemplarReservoir[int64](
+				exemplar.AlwaysOnFilter,
+				exemplar.NewHistogramReservoir(bounds),
+			)
+		},
+	}.ExplicitBucketHistogram(bounds, false, false)
+
+	ctx := t.Context()
+	var wg sync.WaitGroup
+	stop := make(chan struct{})
+
+	// Concurrent measurers offering values across different buckets
+	for i := range 4 {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			val := int64(id * 3)
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+					meas(ctx, val, alice)
+				}
+			}
+		}(i)
+	}
+
+	// Concurrent collector running multiple collection cycles
+	var dest metricdata.Aggregation
+	for range 50 {
+		comp(&dest)
+		h, ok := dest.(metricdata.Histogram[int64])
+		require.True(t, ok)
+		if len(h.DataPoints) > 0 {
+			for _, ex := range h.DataPoints[0].Exemplars {
+				assert.NotEmpty(t, ex.Time)
+			}
+		}
+	}
+	close(stop)
+	wg.Wait()
+}
+
+func TestCumulativeHistogram_ForcedInterleavingNoExemplarLeakage(t *testing.T) {
+	bounds := []float64{5, 10}
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	resFunc := func(attribute.Set) FilteredExemplarReservoir[int64] {
+		return NewFilteredExemplarReservoir[int64](
+			exemplar.AlwaysOnFilter,
+			exemplar.NewHistogramReservoir(bounds),
+		)
+	}
+
+	agg := newCumulativeHistogram[int64](bounds, false, false, 0, resFunc)
+	ctx := t.Context()
+
+	// 1. Initial measurement (value 1 in bucket (-inf, 5]).
+	agg.measure(ctx, 1, newLazyFilteredAttributes(alice, nil))
+
+	// Get the series point for alice
+	var pt *hotColdHistogramPoint[int64]
+	agg.values.Range(func(_, val any) bool {
+		pt = val.(*hotColdHistogramPoint[int64])
+		return false
+	})
+	require.NotNil(t, pt)
+
+	// 2. Simulate collection starting: swap hot and cold.
+	// This freezes the point containing value 1 to readIdx.
+	readIdx := pt.hcwg.swapHotAndWait()
+
+	// 3. FORCE INTERLEAVING: A new measurement (value 2 in bucket (-inf, 5]) arrives
+	// immediately after swapHotAndWait, while collection is in progress.
+	agg.measure(ctx, 2, newLazyFilteredAttributes(alice, nil))
+
+	// 4. Complete collection of the frozen readIdx point.
+	var dp metricdata.HistogramDataPoint[int64]
+	count := pt.hotColdPoint[readIdx].loadCountsInto(&dp.BucketCounts)
+	dp.Count = count
+	hotIdx := (readIdx + 1) % 2
+	pt.hotColdPoint[readIdx].mergeIntoAndReset(&pt.hotColdPoint[hotIdx], false, false)
+
+	if pt.isMergeable {
+		pt.cumulativeRes.Merge(pt.hotColdRes[readIdx])
+		pt.hotColdRes[readIdx].Reset()
+	}
+	collectExemplars(&dp.Exemplars, pt.cumulativeRes.Collect)
+
+	// 5. Verify the collected datapoint:
+	// MUST have Count = 1, and exemplar MUST be Value 1.
+	// Value 2 MUST NOT be present in this interval!
+	require.Equal(t, uint64(1), dp.Count, "count should reflect only measurement 1")
+	require.Len(t, dp.Exemplars, 1, "exemplars should contain only 1 exemplar")
+	assert.Equal(t, int64(1), dp.Exemplars[0].Value, "exemplar must be value 1, never value 2")
+
+	// 6. Run cycle 2 collection (which collects measurement 2).
+	var dest metricdata.Aggregation
+	agg.collect(&dest)
+	h := dest.(metricdata.Histogram[int64])
+	require.Len(t, h.DataPoints, 1)
+	assert.Equal(t, uint64(2), h.DataPoints[0].Count, "cycle 2 count should include measurement 2")
+	require.Len(t, h.DataPoints[0].Exemplars, 1, "cycle 2 exemplar should have replaced bucket 0 with value 2")
+	assert.Equal(t, int64(2), h.DataPoints[0].Exemplars[0].Value, "exemplar for bucket 0 is now value 2")
 }
 
 func BenchmarkHistogram(b *testing.B) {

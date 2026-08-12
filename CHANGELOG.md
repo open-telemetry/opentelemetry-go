@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `MergeableReservoir` interface and double-buffered exemplar collection for cumulative histograms in `go.opentelemetry.io/otel/sdk/metric`. (#8713)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
 
 ### Changed

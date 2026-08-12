@@ -226,3 +226,284 @@ func validateExemplar[N int64 | float64](t *testing.T, e Exemplar) {
 	assert.Equal(t, ts, e.Time)
 	assert.Equal(t, attrs, e.FilteredAttributes)
 }
+
+func TestFixedSizeReservoir_Merge(t *testing.T) {
+	ctx := t.Context()
+	rCum := NewFixedSizeReservoir(2)
+	rDelta := NewFixedSizeReservoir(2)
+
+	rDelta.Offer(ctx, staticTime, NewValue(int64(10)), nil)
+	rDelta.Offer(ctx, staticTime, NewValue(int64(20)), nil)
+
+	rCum.Merge(rDelta)
+	rDelta.Reset()
+
+	var dest []Exemplar
+	rCum.Collect(&dest)
+	require.Len(t, dest, 2)
+	assert.Equal(t, NewValue(int64(10)), dest[0].Value)
+	assert.Equal(t, NewValue(int64(20)), dest[1].Value)
+
+	dest = nil
+	rDelta.Collect(&dest)
+	assert.Empty(t, dest)
+
+	t2 := staticTime.Add(time.Second)
+	// Interval 2: offer 1 new measurement (which overwrites slot 0).
+	rDelta.Offer(ctx, t2, NewValue(int64(30)), nil)
+
+	rCum.Merge(rDelta)
+	rDelta.Reset()
+
+	dest = nil
+	rCum.Collect(&dest)
+	require.Len(t, dest, 2)
+	assert.Equal(t, NewValue(int64(30)), dest[0].Value)
+	assert.Equal(t, NewValue(int64(20)), dest[1].Value)
+}
+
+func TestFixedSizeReservoir_Merge_EdgeCases(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("NilSelfAndTypeMismatch", func(t *testing.T) {
+		r := NewFixedSizeReservoir(2)
+		r.Offer(ctx, staticTime, NewValue(int64(1)), nil)
+		assert.NotPanics(t, func() { r.Merge(nil) })
+		assert.NotPanics(t, func() { r.Merge((*FixedSizeReservoir)(nil)) })
+		assert.NotPanics(t, func() { (*FixedSizeReservoir)(nil).Merge(r) })
+		assert.NotPanics(t, func() { r.Merge(r) })
+		assert.NotPanics(t, func() { r.Merge(NewHistogramReservoir([]float64{1})) })
+
+		var dest []Exemplar
+		r.Collect(&dest)
+		require.Len(t, dest, 1)
+	})
+
+	t.Run("ZeroCapacity", func(t *testing.T) {
+		r0 := NewFixedSizeReservoir(0)
+		rDelta := NewFixedSizeReservoir(2)
+		rDelta.Offer(ctx, staticTime, NewValue(int64(10)), nil)
+		assert.NotPanics(t, func() { r0.Merge(rDelta) })
+	})
+
+	t.Run("FullReservoirSamplingBranch", func(t *testing.T) {
+		rCum := NewFixedSizeReservoir(2)
+		rCum.Offer(ctx, staticTime, NewValue(int64(1)), nil)
+		rCum.Offer(ctx, staticTime, NewValue(int64(2)), nil)
+
+		rDelta := NewFixedSizeReservoir(2)
+		rDelta.Offer(ctx, staticTime, NewValue(int64(3)), nil)
+		rDelta.Offer(ctx, staticTime, NewValue(int64(4)), nil)
+
+		rCum.Merge(rDelta)
+		var dest []Exemplar
+		rCum.Collect(&dest)
+		assert.Len(t, dest, 2)
+	})
+}
+
+func TestFixedSizeReservoir_Reset(t *testing.T) {
+	ctx := t.Context()
+	r := NewFixedSizeReservoir(2)
+	r.Offer(ctx, staticTime, NewValue(int64(10)), nil)
+
+	r.Reset()
+
+	var dest []Exemplar
+	r.Collect(&dest)
+	assert.Empty(t, dest)
+
+	r.Offer(ctx, staticTime, NewValue(int64(20)), nil)
+	r.Collect(&dest)
+	require.Len(t, dest, 1)
+	assert.Equal(t, NewValue(int64(20)), dest[0].Value)
+}
+
+func TestHistogramReservoir_Merge(t *testing.T) {
+	ctx := t.Context()
+	bounds := []float64{5, 10}
+	rCum := NewHistogramReservoir(bounds)
+	rDelta := NewHistogramReservoir(bounds)
+
+	rDelta.Offer(ctx, staticTime, NewValue(int64(2)), nil)
+
+	rCum.Merge(rDelta)
+	rDelta.Reset()
+
+	var dest []Exemplar
+	rCum.Collect(&dest)
+	require.Len(t, dest, 1)
+	assert.Equal(t, NewValue(int64(2)), dest[0].Value)
+
+	dest = nil
+	rDelta.Collect(&dest)
+	assert.Empty(t, dest)
+
+	t2 := staticTime.Add(time.Second)
+	rDelta.Offer(ctx, t2, NewValue(int64(7)), nil)
+
+	rCum.Merge(rDelta)
+	rDelta.Reset()
+
+	dest = nil
+	rCum.Collect(&dest)
+	require.Len(t, dest, 2)
+	assert.Equal(t, NewValue(int64(2)), dest[0].Value)
+	assert.Equal(t, NewValue(int64(7)), dest[1].Value)
+}
+
+func TestHistogramReservoir_Merge_EdgeCases(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("NilSelfAndMismatchedBounds", func(t *testing.T) {
+		r := NewHistogramReservoir([]float64{5, 10})
+		r.Offer(ctx, staticTime, NewValue(int64(2)), nil)
+		assert.NotPanics(t, func() { r.Merge(nil) })
+		assert.NotPanics(t, func() { r.Merge(r) })
+		assert.NotPanics(t, func() { r.Merge(NewHistogramReservoir([]float64{5})) })
+		assert.NotPanics(t, func() { r.Merge(NewHistogramReservoir([]float64{10, 20})) })
+
+		var dest []Exemplar
+		r.Collect(&dest)
+		require.Len(t, dest, 1)
+	})
+
+	t.Run("BucketCollision", func(t *testing.T) {
+		bounds := []float64{5, 10}
+		rCum := NewHistogramReservoir(bounds)
+		rDelta := NewHistogramReservoir(bounds)
+
+		rCum.Offer(ctx, staticTime, NewValue(int64(2)), nil)
+		rDelta.Offer(ctx, staticTime, NewValue(int64(3)), nil)
+
+		rCum.Merge(rDelta)
+		var dest []Exemplar
+		rCum.Collect(&dest)
+		require.Len(t, dest, 1)
+		assert.Equal(t, NewValue(int64(3)), dest[0].Value)
+	})
+}
+
+func TestHistogramReservoir_Reset(t *testing.T) {
+	ctx := t.Context()
+	bounds := []float64{5, 10}
+	r := NewHistogramReservoir(bounds)
+	r.Offer(ctx, staticTime, NewValue(int64(2)), nil)
+
+	r.Reset()
+
+	var dest []Exemplar
+	r.Collect(&dest)
+	assert.Empty(t, dest)
+
+	r.Offer(ctx, staticTime, NewValue(int64(7)), nil)
+	r.Collect(&dest)
+	require.Len(t, dest, 1)
+	assert.Equal(t, NewValue(int64(7)), dest[0].Value)
+}
+
+func TestFixedSizeReservoir_EquivalenceWithSingleReservoir(t *testing.T) {
+	ctx := t.Context()
+	k := 4
+
+	// 1. Single reservoir across 2 collection intervals.
+	rSingle := NewFixedSizeReservoir(k)
+	// Interval 1: Make K offer calls.
+	t1 := staticTime
+	for i := 1; i <= k; i++ {
+		rSingle.Offer(ctx, t1, NewValue(int64(i)), nil)
+	}
+	var destSingle1 []Exemplar
+	rSingle.Collect(&destSingle1)
+	require.Len(t, destSingle1, k)
+
+	// Interval 2: Make K/2 offer calls.
+	t2 := t1.Add(time.Second)
+	for i := 1; i <= k/2; i++ {
+		rSingle.Offer(ctx, t2, NewValue(int64(10+i)), nil)
+	}
+	var destSingle2 []Exemplar
+	rSingle.Collect(&destSingle2)
+	require.Len(t, destSingle2, k)
+
+	// 2. Double-buffered cumulative reservoir setup.
+	rCum := NewFixedSizeReservoir(k)
+	rDelta := NewFixedSizeReservoir(k)
+
+	// Interval 1: Make K offer calls on delta, merge into cumulative, reset delta, collect cumulative.
+	for i := 1; i <= k; i++ {
+		rDelta.Offer(ctx, t1, NewValue(int64(i)), nil)
+	}
+	rCum.Merge(rDelta)
+	rDelta.Reset()
+
+	var destDouble1 []Exemplar
+	rCum.Collect(&destDouble1)
+	assert.Equal(t, destSingle1, destDouble1)
+
+	// Interval 2: Make K/2 offer calls on delta, merge into cumulative, reset delta, collect cumulative.
+	for i := 1; i <= k/2; i++ {
+		rDelta.Offer(ctx, t2, NewValue(int64(10+i)), nil)
+	}
+	rCum.Merge(rDelta)
+	rDelta.Reset()
+
+	var destDouble2 []Exemplar
+	rCum.Collect(&destDouble2)
+	assert.Equal(t, destSingle2, destDouble2)
+}
+
+func TestHistogramReservoir_EquivalenceWithSingleReservoir(t *testing.T) {
+	ctx := t.Context()
+	bounds := []float64{5, 10, 15, 20}
+
+	// 1. Single reservoir across 2 collection intervals.
+	rSingle := NewHistogramReservoir(bounds)
+	t1 := staticTime
+	// Interval 1: Offer values in buckets 0, 1, 2, 3.
+	rSingle.Offer(ctx, t1, NewValue(int64(2)), nil)
+	rSingle.Offer(ctx, t1, NewValue(int64(7)), nil)
+	rSingle.Offer(ctx, t1, NewValue(int64(12)), nil)
+	rSingle.Offer(ctx, t1, NewValue(int64(17)), nil)
+
+	var destSingle1 []Exemplar
+	rSingle.Collect(&destSingle1)
+	require.Len(t, destSingle1, 4)
+
+	// Interval 2: Offer values in buckets 0, 1.
+	t2 := t1.Add(time.Second)
+	rSingle.Offer(ctx, t2, NewValue(int64(3)), nil)
+	rSingle.Offer(ctx, t2, NewValue(int64(8)), nil)
+
+	var destSingle2 []Exemplar
+	rSingle.Collect(&destSingle2)
+	require.Len(t, destSingle2, 4)
+
+	// 2. Double-buffered cumulative reservoir setup.
+	rCum := NewHistogramReservoir(bounds)
+	rDelta := NewHistogramReservoir(bounds)
+
+	// Interval 1: Offer on delta, merge into cumulative, reset delta, collect.
+	rDelta.Offer(ctx, t1, NewValue(int64(2)), nil)
+	rDelta.Offer(ctx, t1, NewValue(int64(7)), nil)
+	rDelta.Offer(ctx, t1, NewValue(int64(12)), nil)
+	rDelta.Offer(ctx, t1, NewValue(int64(17)), nil)
+
+	rCum.Merge(rDelta)
+	rDelta.Reset()
+
+	var destDouble1 []Exemplar
+	rCum.Collect(&destDouble1)
+	assert.Equal(t, destSingle1, destDouble1)
+
+	// Interval 2: Offer on delta, merge into cumulative, reset delta, collect.
+	rDelta.Offer(ctx, t2, NewValue(int64(3)), nil)
+	rDelta.Offer(ctx, t2, NewValue(int64(8)), nil)
+
+	rCum.Merge(rDelta)
+	rDelta.Reset()
+
+	var destDouble2 []Exemplar
+	rCum.Collect(&destDouble2)
+	assert.Equal(t, destSingle2, destDouble2)
+}
