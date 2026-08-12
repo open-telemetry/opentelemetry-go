@@ -60,8 +60,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Run linter
         uses: DavidAnson/markdownlint-cli2-action@8de2aa07cae85fd17c0b35642db70cf5495f1d25 # v24.0.0
-      with:
-        config: .markdownlint-cli2.yaml
-        fix: false
-        globs: |
-          ${{needs.changedfiles.outputs.md}}
+        with:
+          config: .markdownlint-cli2.yaml
+          fix: false
+          globs: |
+            ${{needs.changedfiles.outputs.md}}
