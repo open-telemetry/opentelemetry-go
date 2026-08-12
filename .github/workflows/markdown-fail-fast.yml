@@ -46,7 +46,7 @@ jobs:
             exit 1
           fi
 
-          MD=$(echo "$CHANGED" | tr '\n' ' ' | xargs)
+          MD=$(echo "$CHANGED" | tr '\n' ',' | xargs)
           echo "Markdown files changed: $MD"
           echo "md=$MD" >> "$GITHUB_OUTPUT"
 
@@ -63,5 +63,5 @@ jobs:
         with:
           config: .markdownlint-cli2.yaml
           fix: false
-          globs: |
-            ${{needs.changedfiles.outputs.md}}
+          globs: ${{needs.changedfiles.outputs.md}}
+          separator: ','
