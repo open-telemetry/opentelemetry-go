@@ -73,6 +73,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix histogram datapoint reuse in `go.opentelemetry.io/otel/sdk/metric` aggregation to avoid leaking stale sum/min/max values when they are disabled in subsequent collections. (#8403)
 - Prevent zero-hash collapse to empty set in `go.opentelemetry.io/otel/attribute` when computed hash is zero for non-empty input. (#8402)
 
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable -->
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -2393,7 +2396,6 @@ with major version 0.
 
 - Adds `otlpgrpc.WithRetry`option for configuring the retry policy for transient errors on the otlp/gRPC exporter. (#1832)
   - The following status codes are defined as transient errors:
-
       | gRPC Status Code | Description |
       | ---------------- | ----------- |
       | 1  | Cancelled |
@@ -2403,7 +2405,6 @@ with major version 0.
       | 10 | Out of Range |
       | 14 | Unavailable |
       | 15 | Data Loss |
-
 - Added `Status` type to the `go.opentelemetry.io/otel/sdk/trace` package to represent the status of a span. (#1874)
 - Added `SpanStub` type and its associated functions to the `go.opentelemetry.io/otel/sdk/trace/tracetest` package.
   This type can be used as a testing replacement for the `SpanSnapshot` that was removed from the `go.opentelemetry.io/otel/sdk/trace` package. (#1873)
@@ -2691,7 +2692,6 @@ with major version 0.
 - Added `Keys()` method to `propagation.TextMapCarrier` and `propagation.HeaderCarrier` to adapt `http.Header` to this interface. (#1544)
 - Added `code` attributes to `go.opentelemetry.io/otel/semconv` package. (#1558)
 - Compatibility testing suite in the CI system for the following systems. (#1567)
-
    | OS      | Go Version | Architecture |
    | ------- | ---------- | ------------ |
    | Ubuntu  | 1.15       | amd64        |
@@ -3884,6 +3884,8 @@ It contains api and sdk for trace and meter.
 [0.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.0
 
 <!-- Released section ended -->
+
+<!-- markdownlint-restore -->
 
 [Go 1.26]: https://go.dev/doc/go1.26
 [Go 1.25]: https://go.dev/doc/go1.25
