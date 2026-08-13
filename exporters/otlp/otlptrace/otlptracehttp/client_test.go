@@ -37,7 +37,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.42.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 const (
@@ -184,6 +184,46 @@ func TestEndToEnd(t *testing.T) {
 			},
 			mcCfg: mockCollectorConfig{
 				ExpectedHeaders: customProxyHeader,
+			},
+		},
+		{
+			name: "with protobuf request encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingProtobuf),
+			},
+		},
+		{
+			name: "with JSON request encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingJSON),
+			},
+		},
+		{
+			name: "with JSON collector response encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingJSON),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "application/json",
+			},
+		},
+		{
+			name: "with JSON collector response encoding and partial success",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingJSON),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "application/json",
+				Partial: &coltracepb.ExportTracePartialSuccess{
+					RejectedSpans: 1,
+					ErrorMessage:  "missing required attribute aaa",
+				},
+			},
+		},
+		{
+			name: "with the collector responding unsupported content type",
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "text/plain",
 			},
 		},
 	}
