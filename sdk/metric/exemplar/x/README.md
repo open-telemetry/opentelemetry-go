@@ -1,7 +1,5 @@
 # Experimental Exemplar Reservoirs
 
-[![pkg.go.dev](https://pkg.go.dev/badge/go.opentelemetry.io/otel/sdk/metric/exemplar/x.svg)](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric/exemplar/x)
-
 This package contains experimental exemplar reservoirs for the OpenTelemetry Go SDK.
 
 ## FixedSizeRoundRobinReservoir
