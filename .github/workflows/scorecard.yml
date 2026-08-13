@@ -10,54 +10,13 @@ on:
   push:
     branches: [ "main" ]
 
-# Declare default permissions as read only.
-permissions: read-all
+permissions: {}
 
 jobs:
   analysis:
     name: Scorecard analysis
-    runs-on: ubuntu-latest
     permissions:
-      # Needed to upload the results to code-scanning dashboard.
-      security-events: write
-      # Needed to publish results and get a badge (see publish_results below).
-      id-token: write
- 
-
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: "Run analysis"
-        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
-        with:
-          results_file: results.sarif
-          results_format: sarif
-          # (Optional) "write" PAT token. Uncomment the `repo_token` line below to
-          # enable the Branch-Protection check.
-          # To create the PAT, follow the steps in https://github.com/ossf/scorecard-action?tab=readme-ov-file#authentication-with-fine-grained-pat-optional.
-          # repo_token: ${{ secrets.SCORECARD_TOKEN }}
-
-          # Public repositories:
-          #   - Publish results to OpenSSF REST API for easy access by consumers
-          #   - Allows the repository to include the Scorecard badge.
-          #   - See https://github.com/ossf/scorecard-action#publishing-results.
-          publish_results: true
-
-      # Upload the results as artifacts (optional). Commenting out will disable uploads of run results in SARIF
-      # format to the repository Actions tab.
-      - name: "Upload artifact"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1.pre.node20
-        with:
-          name: SARIF file
-          path: results.sarif
-          retention-days: 5
-
-      # Upload the results to GitHub's code scanning dashboard (optional).
-      # Commenting out will disable upload of results to your repo's Code Scanning dashboard
-      - name: "Upload to code-scanning"
-        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
-        with:
-          sarif_file: results.sarif
+      contents: read # for actions/checkout
+      id-token: write # for Scorecard to publish results
+      security-events: write # for the SARIF upload to code scanning
+    uses: open-telemetry/shared-workflows/.github/workflows/scorecard.yml@f13d0cb656d7244ca8c1638b6996dbaef1083bdd # v0.6.0

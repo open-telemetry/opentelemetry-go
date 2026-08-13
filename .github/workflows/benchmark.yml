@@ -12,7 +12,8 @@ on:
   workflow_dispatch:
 
 # Declare default permissions as read only.
-permissions: read-all
+permissions:
+  contents: read
 
 env:
   DEFAULT_GO_VERSION: "~1.26.0"
@@ -25,6 +26,8 @@ jobs:
       shards: ${{ steps.sharding.outputs.shards }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - id: sharding
         run: |
           echo "shards=$(make print-sharded-benchmarks)" >> $GITHUB_OUTPUT
@@ -49,6 +52,8 @@ jobs:
           apt-get update
           apt-get install -y make build-essential git ca-certificates curl
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       # This makes CodSpeed running inside the container use git correctly.
       - name: Mark workspace as a safe Git directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -62,7 +67,7 @@ jobs:
           # Job containers do not run systemd. Without this override,
           # CodSpeed tries to start the benchmark using systemd-run.
           CODSPEED_ISOLATION: "false"
-        uses: CodSpeedHQ/action@88472375d0a4572cf70a9f1fe3a4e0ab8da1b924 # v5.0.1
+        uses: CodSpeedHQ/action@4296e51e7041e24dadb86d1d6e8b9320d223dbe8 # v5.0.3
         with:
           mode: walltime
           allow-empty: true
