@@ -1176,3 +1176,47 @@ func TestPeriodicReader_ExternalProducerOwnership(t *testing.T) {
 
 	assert.Equal(t, "external-metric", externalData[0].Metrics[0].Name, "external producer data was corrupted")
 }
+
+func TestPeriodicReader_ExporterTruncatesSlice(t *testing.T) {
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+			if len(m.ScopeMetrics) > 0 {
+				m.ScopeMetrics = m.ScopeMetrics[:0]
+			}
+			return nil
+		},
+		shutdownFunc: func(context.Context) error { return nil },
+	}
+
+	externalData := []metricdata.ScopeMetrics{
+		{
+			Scope: instrumentation.Scope{Name: "external"},
+		},
+	}
+	ep := testExternalProducer{
+		produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return externalData, nil
+		},
+	}
+
+	r := NewPeriodicReader(exp, WithProducer(ep))
+	sp := testSDKProducer{
+		produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+			if cap(rm.ScopeMetrics) == 0 {
+				rm.ScopeMetrics = make([]metricdata.ScopeMetrics, 1)
+			} else {
+				rm.ScopeMetrics = rm.ScopeMetrics[:1]
+			}
+			rm.ScopeMetrics[0] = metricdata.ScopeMetrics{
+				Scope: instrumentation.Scope{Name: "internal"},
+			}
+			return nil
+		},
+	}
+	r.register(sp)
+
+	// Hit collectAndExport branch
+	_ = r.collectAndExport(t.Context())
+	// Hit Shutdown branch
+	_ = r.Shutdown(t.Context())
+}
