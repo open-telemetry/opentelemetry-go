@@ -62,17 +62,21 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 		shutdown:   sdown,
 	}
 
+	var mco meterConfiguratorOption
 	for _, o := range options {
-		if mco, ok := o.(meterConfiguratorOption); ok {
-			mp.configurator = mco.MeterConfigurator()
-			mco.RegisterOnUpdate(func() {
-				mp.meters.Range(func(s instrumentation.Scope, m *meter) {
-					if cr, ok := mp.configurator(s).(meterConfigReader); ok {
-						m.setEnabled(cr.Enabled())
-					}
-				})
-			})
+		if m, ok := o.(meterConfiguratorOption); ok {
+			mco = m
 		}
+	}
+	if mco != nil {
+		mp.configurator = mco.MeterConfigurator()
+		mco.RegisterOnUpdate(func() {
+			mp.meters.Range(func(s instrumentation.Scope, m *meter) {
+				if cr, ok := mp.configurator(s).(meterConfigReader); ok {
+					m.setEnabled(cr.Enabled())
+				}
+			})
+		})
 	}
 
 	// Log after creation so all readers show correctly they are registered.

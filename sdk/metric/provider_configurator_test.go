@@ -94,6 +94,29 @@ func TestConfiguratorNewMeter(t *testing.T) {
 	}
 }
 
+func TestConfiguratorMultipleOptionsLastWins(t *testing.T) {
+	var registered1, registered2 bool
+	opt1 := testConfiguratorOpt{
+		fn:       func(instrumentation.Scope) any { return testMeterConfig{enabled: false} },
+		onUpdate: func(func()) { registered1 = true },
+	}
+	opt2 := testConfiguratorOpt{
+		fn:       func(instrumentation.Scope) any { return testMeterConfig{enabled: true} },
+		onUpdate: func(func()) { registered2 = true },
+	}
+
+	rdr := NewManualReader()
+	mp := NewMeterProvider(WithReader(rdr), opt1, opt2)
+	defer mp.Shutdown(t.Context()) //nolint:errcheck
+
+	assert.False(t, registered1, "earlier configurator option must not be wired to this provider")
+	assert.True(t, registered2, "only the last configurator option must be wired to this provider")
+
+	ctr, err := mp.Meter("any").Int64Counter("ctr")
+	require.NoError(t, err)
+	assert.True(t, ctr.Enabled(t.Context()), "provider must use the last configurator option, not the first")
+}
+
 func TestConfiguratorCacheWalkUpdatesCachedMeter(t *testing.T) {
 	var storedCallback func()
 	configuratorOpt := testConfiguratorOpt{
