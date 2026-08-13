@@ -17,7 +17,8 @@ on:
         default: false
 
 # Declare default permissions as read only.
-permissions: read-all
+permissions:
+  contents: read
 
 env:
   DEFAULT_GO_VERSION: "~1.26.0"
@@ -31,6 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           # Need history so the affected-module detector can diff
           # against the prior commit.
           fetch-depth: 0
@@ -83,6 +85,8 @@ jobs:
           apt-get update
           apt-get install -y make build-essential git ca-certificates curl
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       # This makes CodSpeed running inside the container use git correctly.
       - name: Mark workspace as a safe Git directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -103,7 +107,7 @@ jobs:
           # Job containers do not run systemd. Without this override,
           # CodSpeed tries to start the benchmark using systemd-run.
           CODSPEED_ISOLATION: "false"
-        uses: CodSpeedHQ/action@f22792bfac16f3e14eb9fbea76f4a48e9cc22b93 # v4.19.1
+        uses: CodSpeedHQ/action@4296e51e7041e24dadb86d1d6e8b9320d223dbe8 # v5.0.3
         with:
           mode: walltime
           allow-empty: true
