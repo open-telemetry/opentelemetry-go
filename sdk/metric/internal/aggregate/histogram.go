@@ -23,6 +23,14 @@ type histogramPoint[N int64 | float64] struct {
 	histogramPointCounters[N]
 }
 
+func (hp *histogramPoint[N]) reset() {
+	hp.total.reset()
+	hp.minMax.set.Store(false)
+	for i := range hp.counts {
+		hp.counts[i].Store(0)
+	}
+}
+
 // hotColdHistogramPoint a hot and cold histogram points, used in cumulative
 // aggregations.
 type hotColdHistogramPoint[N int64 | float64] struct {
@@ -95,7 +103,7 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 // unused attribute sets do not report in subsequent collect() calls.
 type deltaHistogram[N int64 | float64] struct {
 	hcwg          hotColdWaitGroup
-	hotColdValMap [2]limitedSyncMap[*histogramPoint[N]]
+	hotColdValMap [2]lazyLimitedSyncMap[*histogramPoint[N]]
 
 	start    time.Time
 	noMinMax bool
@@ -111,24 +119,7 @@ func (s *deltaHistogram[N]) measure(
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(lazy, func(attr attribute.Set) *histogramPoint[N] {
-		r := s.newRes(attr)
-		_, isDrop := r.(*dropRes[N])
-		hPt := &histogramPoint[N]{
-			res:           r,
-			attrs:         attr,
-			dropExemplars: isDrop,
-			// N+1 buckets. For example:
-			//
-			//   bounds = [0, 5, 10]
-			//
-			// Then,
-			//
-			//   counts = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
-			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(s.bounds)+1)},
-		}
-		return hPt
-	})
+	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(lazy)
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
@@ -162,15 +153,37 @@ func newDeltaHistogram[N int64 | float64](
 	// complete control over the fix.
 	b := slices.Clone(boundaries)
 	slices.Sort(b)
+
+	newVal := func(attr attribute.Set) *histogramPoint[N] {
+		res := r(attr)
+		_, isDrop := res.(*dropRes[N])
+		return &histogramPoint[N]{
+			res:           res,
+			attrs:         attr,
+			dropExemplars: isDrop,
+			// N+1 buckets. For example:
+			//
+			//   bounds = [0, 5, 10]
+			//
+			// Then,
+			//
+			//   counts = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
+			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(b)+1)},
+		}
+	}
+	resetFunc := func(v *histogramPoint[N]) {
+		v.reset()
+	}
+
 	return &deltaHistogram[N]{
 		start:    now(),
 		noMinMax: noMinMax,
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		hotColdValMap: [2]limitedSyncMap[*histogramPoint[N]]{
-			{aggLimit: limit},
-			{aggLimit: limit},
+		hotColdValMap: [2]lazyLimitedSyncMap[*histogramPoint[N]]{
+			newLazyLimitedSyncMap[*histogramPoint[N]](limit, newVal, resetFunc),
+			newLazyLimitedSyncMap[*histogramPoint[N]](limit, newVal, resetFunc),
 		},
 	}
 }
@@ -221,7 +234,7 @@ func (s *deltaHistogram[N]) collect(
 			hDPts[i].Max = metricdata.Extrema[N]{}
 		}
 
-		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
+		collectExemplarsAfter[N](&hDPts[i].Exemplars, s.start, val.res.Collect)
 
 		i++
 		return true

@@ -49,6 +49,23 @@ func (s *sumValueMap[N]) measure(
 	}
 }
 
+// lazySumValueMap is a map of sumValues backed by a lazyLimitedSyncMap.
+type lazySumValueMap[N int64 | float64] struct {
+	values lazyLimitedSyncMap[*sumValue[N]]
+}
+
+func (s *lazySumValueMap[N]) measure(
+	ctx context.Context,
+	value N,
+	lazy lazyFilteredAttributes,
+) {
+	sv := s.values.LoadOrStoreAttr(lazy)
+	sv.n.add(value)
+	if !sv.dropExemplars {
+		sv.res.Offer(ctx, value, lazy)
+	}
+}
+
 // newDeltaSum returns an aggregator that summarizes a set of measurements as
 // their arithmetic sum. Each sum is scoped by attributes and the aggregation
 // cycle the measurements were made in.
@@ -57,17 +74,28 @@ func newDeltaSum[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *deltaSum[N] {
+	newVal := func(attr attribute.Set) *sumValue[N] {
+		res := r(attr)
+		_, isDrop := res.(*dropRes[N])
+		return &sumValue[N]{
+			res:           res,
+			attrs:         attr,
+			dropExemplars: isDrop,
+			// delta aggregators ignore val.startTime, so we leave it zero to save a clock fetch.
+		}
+	}
+	resetFunc := func(v *sumValue[N]) {
+		v.n.reset()
+	}
 	return &deltaSum[N]{
 		monotonic: monotonic,
 		start:     now(),
-		hotColdValMap: [2]sumValueMap[N]{
+		hotColdValMap: [2]lazySumValueMap[N]{
 			{
-				newRes: r,
-				values: limitedSyncMap[*sumValue[N]]{aggLimit: limit},
+				values: newLazyLimitedSyncMap[*sumValue[N]](limit, newVal, resetFunc),
 			},
 			{
-				newRes: r,
-				values: limitedSyncMap[*sumValue[N]]{aggLimit: limit},
+				values: newLazyLimitedSyncMap[*sumValue[N]](limit, newVal, resetFunc),
 			},
 		},
 	}
@@ -79,7 +107,7 @@ type deltaSum[N int64 | float64] struct {
 	start     time.Time
 
 	hcwg          hotColdWaitGroup
-	hotColdValMap [2]sumValueMap[N]
+	hotColdValMap [2]lazySumValueMap[N]
 }
 
 func (s *deltaSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAttributes) {
@@ -109,7 +137,7 @@ func (s *deltaSum[N]) collect(
 	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
-		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
@@ -124,7 +152,7 @@ func (s *deltaSum[N]) collect(
 	sData.DataPoints = dPts
 	*dest = sData
 
-	return i
+	return len(dPts)
 }
 
 // newCumulativeSum returns an aggregator that summarizes a set of measurements
@@ -184,7 +212,7 @@ func (s *cumulativeSum[N]) collect(
 			Time:       t,
 			Value:      val.n.load(),
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
+		collectExemplars[N](&newPt.Exemplars, val.res.Collect)
 		dPts = append(dPts, newPt)
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
@@ -209,7 +237,7 @@ func newPrecomputedSum[N int64 | float64](
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *precomputedSum[N] {
 	return &precomputedSum[N]{
-		deltaSum: newDeltaSum(monotonic, limit, r),
+		deltaSum: newDeltaSum[N](monotonic, limit, r),
 	}
 }
 
@@ -245,7 +273,7 @@ func (s *precomputedSum[N]) delta(
 		n := val.n.load()
 
 		delta := n - s.reported[key]
-		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
@@ -262,7 +290,7 @@ func (s *precomputedSum[N]) delta(
 	sData.DataPoints = dPts
 	*dest = sData
 
-	return i
+	return len(dPts)
 }
 
 func (s *precomputedSum[N]) cumulative(
@@ -286,7 +314,7 @@ func (s *precomputedSum[N]) cumulative(
 	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
-		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
@@ -299,5 +327,5 @@ func (s *precomputedSum[N]) cumulative(
 	sData.DataPoints = dPts
 	*dest = sData
 
-	return i
+	return len(dPts)
 }
