@@ -1101,7 +1101,19 @@ func BenchmarkPeriodicReader_collectAndExport(b *testing.B) {
 		exportFunc: func(_ context.Context, _ *metricdata.ResourceMetrics) error { return nil },
 	}
 	r := NewPeriodicReader(exp)
-	r.register(testSDKProducer{})
+	r.register(testSDKProducer{
+		produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+			if cap(rm.ScopeMetrics) == 0 {
+				rm.ScopeMetrics = make([]metricdata.ScopeMetrics, 1)
+			} else {
+				rm.ScopeMetrics = rm.ScopeMetrics[:1]
+			}
+			rm.ScopeMetrics[0] = metricdata.ScopeMetrics{
+				Scope: instrumentation.Scope{Name: "benchmark"},
+			}
+			return nil
+		},
+	})
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -1113,7 +1125,7 @@ func TestPeriodicReader_ExternalProducerOwnership(t *testing.T) {
 	exp := &fnExporter{
 		exportFunc: func(_ context.Context, _ *metricdata.ResourceMetrics) error { return nil },
 	}
-	
+
 	externalData := []metricdata.ScopeMetrics{
 		{
 			Scope: instrumentation.Scope{Name: "external-scope"},
@@ -1164,4 +1176,3 @@ func TestPeriodicReader_ExternalProducerOwnership(t *testing.T) {
 
 	assert.Equal(t, "external-metric", externalData[0].Metrics[0].Name, "external producer data was corrupted")
 }
-

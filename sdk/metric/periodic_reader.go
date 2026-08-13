@@ -246,13 +246,17 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
 	var sdkLen int
+	var collectedLen int
 	defer func() {
 		// Retain the underlying array capacity for the next flush.
 		// pipeline.produce() overwrites ScopeMetrics entries via ReuseSlice,
 		// so clearing is not needed and would break data reuse inside produce.
 
 		// Clear producer-owned entries to avoid ownership boundary leaks.
-		for i := sdkLen; i < len(rm.ScopeMetrics); i++ {
+		if collectedLen > len(rm.ScopeMetrics) {
+			rm.ScopeMetrics = rm.ScopeMetrics[:collectedLen]
+		}
+		for i := sdkLen; i < collectedLen; i++ {
 			rm.ScopeMetrics[i] = metricdata.ScopeMetrics{}
 		}
 
@@ -262,6 +266,7 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	}()
 	var err error
 	sdkLen, err = r.collect(ctx, r.sdkProducer.Load(), rm)
+	collectedLen = len(rm.ScopeMetrics)
 	if err == nil {
 		if r.batcher.size > 0 {
 			batches := r.batcher.splitResourceMetrics(rm)
@@ -406,6 +411,7 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 			m := r.rmPool.Get().(*metricdata.ResourceMetrics)
 			var sdkLen int
 			sdkLen, err = r.collect(ctx, ph, m)
+			collectedLen := len(m.ScopeMetrics)
 			if err == nil {
 				if r.batcher.size > 0 {
 					batches := r.batcher.splitResourceMetrics(m)
@@ -428,7 +434,10 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 			}
 			// Retain the underlying array capacity for the next flush.
 			// Clear producer-owned entries to avoid ownership boundary leaks.
-			for i := sdkLen; i < len(m.ScopeMetrics); i++ {
+			if collectedLen > len(m.ScopeMetrics) {
+				m.ScopeMetrics = m.ScopeMetrics[:collectedLen]
+			}
+			for i := sdkLen; i < collectedLen; i++ {
 				m.ScopeMetrics[i] = metricdata.ScopeMetrics{}
 			}
 			m.ScopeMetrics = m.ScopeMetrics[:0]
