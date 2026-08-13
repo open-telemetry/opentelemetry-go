@@ -22,7 +22,7 @@ func BenchmarkFixedSizeRoundRobinReservoirOffer(b *testing.B) {
 			reservoir.Offer(ctx, ts, val, nil)
 			// Periodically trigger a reset, because the algorithm for fixed-size
 			// reservoirs records exemplars very infrequently after a large
-			// number of collect calls.
+			// number of offer calls.
 			if i%100 == 99 {
 				reservoir.reset()
 			}
