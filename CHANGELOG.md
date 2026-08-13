@@ -16,6 +16,7 @@ The next release will require at least [Go 1.26].
 - Support testing of [Go 1.27]. (#8811)
 - Support `http/json` in `otlptracehttp` (#8273)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
+- Add `ConcurrentSafe` interface in `go.opentelemetry.io/otel/sdk/metric/exemplar` to allow `Reservoir` implementations to declare concurrent safety. (#8305)
 - Add experimental `FixedSizeRoundRobinReservoir` in `go.opentelemetry.io/otel/sdk/metric/exemplar/x`. Use this for better concurrent performance than `FixedSizeReservoir`, but with some bias due to using round-robin. (#8305)
 
 ### Changed
