@@ -21,7 +21,7 @@ import (
 // a fixed number of exemplars using a round-robin strategy to distribute
 // measurements across independent buckets, each using Algorithm L for sampling.
 //
-// This reservoir can be used as a drop-in replacement for a FixedSizeReservoir
+// This reservoir can be used as a drop-in replacement for a [exemplar.FixedSizeReservoir]
 // when better concurrent performance is needed, and some sampling bias is acceptable.
 type FixedSizeRoundRobinReservoir struct {
 	exemplar.ConcurrentSafe
@@ -60,7 +60,7 @@ func (r *FixedSizeRoundRobinReservoir) Collect(dest *[]exemplar.Exemplar) {
 	r.storage.Collect(dest)
 }
 
-// storage is an exemplar storage for [Reservoir] implementations.
+// storage is an exemplar storage for [exemplar.Reservoir] implementations.
 type storage struct {
 	measurements []measurement
 }
