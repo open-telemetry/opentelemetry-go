@@ -11,7 +11,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
-- Add `WithUnsafeAttributes` to `go.opentelemetry.io/otel/metric/x` as an experimental no-copy attribute option intended for future performance work. This is a work in progress. (#8251)
 - Add `WithAllowKeyDuplication` to `go.opentelemetry.io/otel/sdk/trace` to disable span attribute key deduplication and duplicate-key removal in `attribute.MAP` values. (#8488)
 
 ### Changed
