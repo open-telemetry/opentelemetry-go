@@ -211,8 +211,10 @@ func newPrecomputedSum[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *precomputedSum[N] {
+	ds := newDeltaSum[N](monotonic, limit, r)
 	return &precomputedSum[N]{
-		deltaSum: newDeltaSum[N](monotonic, limit, r),
+		deltaSum:    ds,
+		lastCollect: ds.start,
 	}
 }
 
@@ -220,7 +222,8 @@ func newPrecomputedSum[N int64 | float64](
 type precomputedSum[N int64 | float64] struct {
 	*deltaSum[N]
 
-	reported map[any]N
+	reported    map[any]N
+	lastCollect time.Time
 }
 
 func (s *precomputedSum[N]) delta(
@@ -290,7 +293,7 @@ func (s *precomputedSum[N]) cumulative(
 	var i int
 	s.vals.Range(readIdx, func(_, value any) bool {
 		val := value.(*sumValue[N])
-		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, val.res.Collect)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.lastCollect, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
@@ -300,6 +303,7 @@ func (s *precomputedSum[N]) cumulative(
 	})
 	// Unused attribute sets do not report.
 	s.vals.Clear(readIdx)
+	s.lastCollect = t
 
 	sData.DataPoints = dPts
 	*dest = sData
