@@ -224,6 +224,22 @@ func TestWithView(t *testing.T) {
 	assert.Len(t, c.views, 2)
 }
 
+type testViewMatchingModeOption struct {
+	Option
+	mode int
+}
+
+func (testViewMatchingModeOption) Experimental()           {}
+func (o testViewMatchingModeOption) ViewMatchingMode() int { return o.mode }
+
+func TestWithViewMatchingMode(t *testing.T) {
+	c := newConfig([]Option{testViewMatchingModeOption{mode: 1}})
+	assert.Equal(t, viewMatchingModeComposable, c.viewMatchingMode)
+
+	cInvalid := newConfig([]Option{testViewMatchingModeOption{mode: 99}})
+	assert.Equal(t, viewMatchingModeIndependent, cInvalid.viewMatchingMode)
+}
+
 func TestWithExemplarFilterOff(t *testing.T) {
 	for _, tc := range []struct {
 		desc                   string
