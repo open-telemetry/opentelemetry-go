@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package x contains experimental exemplar reservoirs.
-package x // import "go.opentelemetry.io/otel/sdk/metric/exemplar/x"
+package x
 
 import (
 	"context"
