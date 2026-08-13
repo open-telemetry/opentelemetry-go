@@ -76,7 +76,7 @@ func (s *deltaLastValue[N]) collect(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
-	n := s.copyAndClearDpts(dest, t, nil)
+	n := s.copyAndClearDpts(dest, t, nil, s.start)
 	// Update start time for delta temporality.
 	s.start = t
 	return n
@@ -88,6 +88,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 	t time.Time,
 	startFor func(key any) time.Time,
+	exemplarFilterTime time.Time,
 ) int {
 	// Ignore if dest is not a metricdata.Gauge. The chance for memory reuse of
 	// the DataPoints is missed (better luck next time).
@@ -110,7 +111,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 		dPts[i].StartTime = startTime
 		dPts[i].Time = t
 		dPts[i].Value = v.value.Load()
-		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, v.res.Collect)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, exemplarFilterTime, v.res.Collect)
 		i++
 		return true
 	})
@@ -213,7 +214,11 @@ func newPrecomputedLastValue[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *precomputedLastValue[N] {
-	return &precomputedLastValue[N]{deltaLastValue: newDeltaLastValue[N](limit, r)}
+	dlv := newDeltaLastValue[N](limit, r)
+	return &precomputedLastValue[N]{
+		deltaLastValue: dlv,
+		lastCollect:    dlv.start,
+	}
 }
 
 // precomputedLastValue summarizes a set of observations as the last one made.
@@ -222,6 +227,7 @@ type precomputedLastValue[N int64 | float64] struct {
 
 	startTimes     map[any]time.Time
 	nextStartTimes map[any]time.Time
+	lastCollect    time.Time
 }
 
 func (s *precomputedLastValue[N]) delta(
@@ -236,7 +242,9 @@ func (s *precomputedLastValue[N]) cumulative(
 	t := now()
 	if !x.PerSeriesStartTimestamps.Enabled() {
 		// Do not reset the start time.
-		return s.copyAndClearDpts(dest, t, nil)
+		n := s.copyAndClearDpts(dest, t, nil, s.lastCollect)
+		s.lastCollect = t
+		return n
 	}
 	clear(s.nextStartTimes)
 	n := s.copyAndClearDpts(dest, t, func(key any) time.Time {
@@ -249,8 +257,9 @@ func (s *precomputedLastValue[N]) cumulative(
 		}
 		s.nextStartTimes[key] = startTime
 		return startTime
-	})
+	}, s.lastCollect)
 	s.startTimes, s.nextStartTimes = s.nextStartTimes, s.startTimes
 	s.start = t
+	s.lastCollect = t
 	return n
 }
