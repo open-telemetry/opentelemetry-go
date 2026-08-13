@@ -40,10 +40,17 @@ func NewMeterConfiguratorHandle() *MeterConfiguratorHandle {
 // across different meters. The callback registered via RegisterOnUpdate must
 // not call Set on the same handle; doing so deadlocks, since this lock is
 // not reentrant.
+//
+// Passing a nil fn clears the configurator, reverting to the same default
+// behavior as a handle that has never had Set called on it.
 func (h *MeterConfiguratorHandle) Set(fn MeterConfigurator) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.configurator.Store(&fn)
+	if fn == nil {
+		h.configurator.Store(nil)
+	} else {
+		h.configurator.Store(&fn)
+	}
 	if cb := h.onUpdate.Load(); cb != nil {
 		(*cb)()
 	}

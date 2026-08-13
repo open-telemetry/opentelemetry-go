@@ -132,3 +132,22 @@ func TestMeterConfiguratorHandleSetNoConfigurator(t *testing.T) {
 	require.True(t, ok)
 	assert.True(t, cfg.Enabled(), "zero MeterConfig must be enabled")
 }
+
+func TestMeterConfiguratorHandleSetNilClears(t *testing.T) {
+	h := NewMeterConfiguratorHandle()
+	opt := WithMeterConfigurator(h)
+	ex := opt.(meterConfiguratorOptionExtractor)
+
+	h.Set(func(s instrumentation.Scope) MeterConfig {
+		return NewMeterConfig(WithMeterEnabled(s.Name != "disabled"))
+	})
+	h.Set(nil)
+
+	// Set(nil) must clear the configurator, not store a nil func; the
+	// closure must fall back to the zero MeterConfig instead of panicking
+	// on a nil func call.
+	result := ex.MeterConfigurator()(instrumentation.Scope{Name: "disabled"})
+	cfg, ok := result.(interface{ Enabled() bool })
+	require.True(t, ok)
+	assert.True(t, cfg.Enabled(), "cleared configurator must fall back to zero MeterConfig")
+}
