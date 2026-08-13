@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Support `http/json` in `otlptracehttp` (#8273)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
+- Add `WithViewMatchingMode` and `ViewMatchingMode` in `go.opentelemetry.io/otel/sdk/metric/x` to support composable view matching. (#8510)
 
 ### Changed
 
