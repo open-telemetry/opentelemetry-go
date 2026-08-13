@@ -25,11 +25,26 @@ func newDeltaLastValue[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *deltaLastValue[N] {
+	newVal := func(attr attribute.Set) *lastValuePoint[N] {
+		res := r(attr)
+		_, isDrop := res.(*dropRes[N])
+		p := &lastValuePoint[N]{
+			res:           res,
+			attrs:         attr,
+			startTime:     now(),
+			dropExemplars: isDrop,
+		}
+		return p
+	}
+	resetFunc := func(v *lastValuePoint[N]) {
+		v.value.Store(0)
+	}
+
 	s := &deltaLastValue[N]{
 		newRes: r,
 		start:  now(),
 	}
-	s.vals.init(limit)
+	s.vals.init(limit, newVal, resetFunc)
 	return s
 }
 
@@ -49,18 +64,7 @@ func (s *deltaLastValue[N]) measure(
 	hotIdx := s.vals.start()
 	defer s.vals.done(hotIdx)
 
-	lv := s.vals.hot(hotIdx).LoadOrStoreAttr(lazy, func(attr attribute.Set) *lastValuePoint[N] {
-		r := s.newRes(attr)
-		_, isDrop := r.(*dropRes[N])
-		p := &lastValuePoint[N]{
-			res:           r,
-			attrs:         attr,
-			startTime:     now(),
-			dropExemplars: isDrop,
-		}
-		p.value.Store(value)
-		return p
-	})
+	lv := s.vals.hot(hotIdx).LoadOrStoreAttr(lazy)
 
 	lv.value.Store(value)
 	if !lv.dropExemplars {
@@ -101,7 +105,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = v.value.Load()
-		collectExemplars[N](&dPts[i].Exemplars, v.res.Collect)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, v.res.Collect)
 		i++
 		return true
 	})
