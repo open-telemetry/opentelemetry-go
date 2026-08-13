@@ -16,6 +16,7 @@ The next release will require at least [Go 1.26].
 - Support testing of [Go 1.27]. (#8811)
 - Support `http/json` in `otlptracehttp` (#8273)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
+- Add experimental bound counter instruments to `go.opentelemetry.io/otel/metric/x` and support in `go.opentelemetry.io/otel/sdk/metric` to optimize synchronous measurement recording. (#8354)
 
 ### Changed
 
