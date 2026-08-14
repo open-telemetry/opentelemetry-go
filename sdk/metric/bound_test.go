@@ -124,6 +124,28 @@ func TestBoundInstrumentInt64(t *testing.T) {
 		}
 		assert.True(t, found, "expected data point with merged attributes not found")
 	})
+
+	t.Run("Enabled", func(t *testing.T) {
+		r := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(r),
+			WithView(NewView(
+				Instrument{Name: "drop.counter"},
+				Stream{Aggregation: AggregationDrop{}},
+			)),
+		)
+		meter := mp.Meter("test")
+
+		counter, err := meter.Int64Counter("test.counter")
+		require.NoError(t, err)
+		bound := counter.(x.Int64Binder).Bind(attrs...)
+		assert.True(t, bound.Enabled(t.Context()))
+
+		droppedCounter, err := meter.Int64Counter("drop.counter")
+		require.NoError(t, err)
+		boundDropped := droppedCounter.(x.Int64Binder).Bind(attrs...)
+		assert.False(t, boundDropped.Enabled(t.Context()))
+	})
 }
 
 func TestBoundInstrumentFloat64(t *testing.T) {
@@ -234,5 +256,27 @@ func TestBoundInstrumentFloat64(t *testing.T) {
 			}
 		}
 		assert.True(t, found, "expected data point with merged attributes not found")
+	})
+
+	t.Run("Enabled", func(t *testing.T) {
+		r := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(r),
+			WithView(NewView(
+				Instrument{Name: "drop.counter"},
+				Stream{Aggregation: AggregationDrop{}},
+			)),
+		)
+		meter := mp.Meter("test")
+
+		counter, err := meter.Float64Counter("test.counter")
+		require.NoError(t, err)
+		bound := counter.(x.Float64Binder).Bind(attrs...)
+		assert.True(t, bound.Enabled(t.Context()))
+
+		droppedCounter, err := meter.Float64Counter("drop.counter")
+		require.NoError(t, err)
+		boundDropped := droppedCounter.(x.Float64Binder).Bind(attrs...)
+		assert.False(t, boundDropped.Enabled(t.Context()))
 	})
 }
