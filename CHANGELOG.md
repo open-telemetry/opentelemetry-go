@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `go.opentelemetry.io/otel/sdk/processcontext` package implementing the SDK publishing side of the OTEL_CTX process context mechanism (OTEP 4719). A `Publisher` serializes resource attributes into a protobuf payload in a named memory-mapped region (`OTEL_CTX`) that external readers such as eBPF profilers can discover via `/proc/<pid>/maps`. Linux only.
+- Support `http/json` in `otlptracehttp` (#8273)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
 
 ### Changed
