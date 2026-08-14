@@ -453,8 +453,8 @@ func (b *boundFloat64Counter) Add(ctx context.Context, val float64, opts ...metr
 	b.inst.aggregate(ctx, val, mergedSet)
 }
 
-func (*boundFloat64Counter) Enabled(_ context.Context) bool {
-	return true
+func (b *boundFloat64Counter) Enabled(ctx context.Context) bool {
+	return b.inst.Enabled(ctx)
 }
 
 // boundInt64Counter implements metric.Int64Counter using resolved measures.
@@ -492,8 +492,8 @@ func (b *boundInt64Counter) Add(ctx context.Context, val int64, opts ...metric.A
 	b.inst.aggregate(ctx, val, mergedSet)
 }
 
-func (*boundInt64Counter) Enabled(_ context.Context) bool {
-	return true
+func (b *boundInt64Counter) Enabled(ctx context.Context) bool {
+	return b.inst.Enabled(ctx)
 }
 
 // Bind implements x.Float64Binder for float64Inst.
