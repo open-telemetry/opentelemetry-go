@@ -130,9 +130,11 @@ go-work: $(CROSSLINK)
 
 # Build
 
-.PHONY: build
+.PHONY: build cross-build
 
 build: $(OTEL_GO_MOD_DIRS:%=build/%) $(OTEL_GO_MOD_DIRS:%=build-tests/%)
+# Cross-platform builds cannot execute the binaries produced by build-tests (go test), so use a compile-only target.
+cross-build: $(OTEL_GO_MOD_DIRS:%=build/%)
 build/%: DIR=$*
 build/%:
 	@echo "$(GO) build $(DIR)/..." \
