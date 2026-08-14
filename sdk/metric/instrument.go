@@ -435,7 +435,8 @@ func (b *boundFloat64Counter) Add(ctx context.Context, val float64, opts ...metr
 	}
 
 	cfg := metric.NewAddConfig(opts)
-	extraAttrs := cfg.Attributes()
+	rawKVs := extractRawKVs(opts)
+	extraAttrs := resolveAttributes(cfg.Attributes(), rawKVs)
 
 	if extraAttrs.Len() == 0 {
 		for _, m := range b.boundMeasures {
@@ -474,7 +475,8 @@ func (b *boundInt64Counter) Add(ctx context.Context, val int64, opts ...metric.A
 	}
 
 	cfg := metric.NewAddConfig(opts)
-	extraAttrs := cfg.Attributes()
+	rawKVs := extractRawKVs(opts)
+	extraAttrs := resolveAttributes(cfg.Attributes(), rawKVs)
 
 	if extraAttrs.Len() == 0 {
 		for _, m := range b.boundMeasures {
