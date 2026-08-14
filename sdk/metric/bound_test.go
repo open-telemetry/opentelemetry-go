@@ -123,6 +123,22 @@ func TestBoundInstrumentInt64(t *testing.T) {
 			}
 		}
 		assert.True(t, found, "expected data point with merged attributes not found")
+
+		// Test x.WithUnsafeAttributes
+		unsafeAttr := attribute.String("unsafe", "val")
+		bound.Add(t.Context(), 10, x.WithUnsafeAttributes(unsafeAttr))
+		err = r.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+		sum = rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+		expectedUnsafeSet := attribute.NewSet(attribute.String("K", "V"), unsafeAttr)
+		found = false
+		for _, dp := range sum.DataPoints {
+			if dp.Attributes.Equals(&expectedUnsafeSet) {
+				assert.Equal(t, int64(10), dp.Value)
+				found = true
+			}
+		}
+		assert.True(t, found, "expected data point with unsafe attributes not found")
 	})
 
 	t.Run("Enabled", func(t *testing.T) {
@@ -256,6 +272,22 @@ func TestBoundInstrumentFloat64(t *testing.T) {
 			}
 		}
 		assert.True(t, found, "expected data point with merged attributes not found")
+
+		// Test x.WithUnsafeAttributes
+		unsafeAttr := attribute.String("unsafe", "val")
+		bound.Add(t.Context(), 10.5, x.WithUnsafeAttributes(unsafeAttr))
+		err = r.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+		sum = rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[float64])
+		expectedUnsafeSet := attribute.NewSet(attribute.String("K", "V"), unsafeAttr)
+		found = false
+		for _, dp := range sum.DataPoints {
+			if dp.Attributes.Equals(&expectedUnsafeSet) {
+				assert.Equal(t, float64(10.5), dp.Value)
+				found = true
+			}
+		}
+		assert.True(t, found, "expected data point with unsafe attributes not found")
 	})
 
 	t.Run("Enabled", func(t *testing.T) {
