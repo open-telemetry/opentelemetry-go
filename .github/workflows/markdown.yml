@@ -3,9 +3,9 @@ name: Markdown
 on:
   repository_dispatch:
   workflow_dispatch:
-    schedule:
-      # Everyday at 9:00 AM.
-      - cron: "0 9 * * *"
+  schedule:
+    # Everyday at 9:00 AM.
+    - cron: "0 9 * * *"
   pull_request:
     branches:
       - main
@@ -17,9 +17,9 @@ permissions: read-all
 
 jobs:
   lint-markdown:
-    permissions:
-      issues: write # required for creating issues from markdown lint reports
     runs-on: ubuntu-latest
+    outputs:
+      lint_outcome: ${{ steps.markdownlint.outcome }}
     steps:
     - name: Checkout Repo
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,7 +36,15 @@ jobs:
           **/*.md
       continue-on-error: true
 
+  report:
+    if: github.event_name == 'schedule'
+    needs: lint-markdown
+    permissions:
+      issues: write # required for creating issues from markdown lint reports
+    runs-on: ubuntu-latest
+    steps:
     - name: Manage issue
+      if: github.event_name == 'schedule'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
