@@ -205,6 +205,57 @@ func TestBoundInstrumentInt64(t *testing.T) {
 		boundDropped := droppedCounter.(x.Int64Binder).Bind(attrs...)
 		assert.False(t, boundDropped.Enabled(t.Context()))
 	})
+
+	t.Run("MixedAggregations", func(t *testing.T) {
+		r := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(r),
+			WithView(
+				NewView(
+					Instrument{Name: "test.counter"},
+					Stream{
+						Name:        "test.counter.hist",
+						Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{0, 10, 100}},
+					},
+				),
+				NewView(
+					Instrument{Name: "test.counter"},
+					Stream{Aggregation: AggregationDefault{}},
+				),
+			),
+		)
+		meter := mp.Meter("test")
+
+		counter, err := meter.Int64Counter("test.counter")
+		require.NoError(t, err)
+		bound := counter.(x.Int64Binder).Bind(attrs...)
+		bound.Add(t.Context(), 5)
+
+		var rm metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+
+		var sumFound, histFound bool
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			switch data := m.Data.(type) {
+			case metricdata.Sum[int64]:
+				assert.Equal(t, "test.counter", m.Name)
+				require.Len(t, data.DataPoints, 1)
+				assert.Equal(t, int64(5), data.DataPoints[0].Value)
+				sumFound = true
+			case metricdata.Histogram[int64]:
+				assert.Equal(t, "test.counter.hist", m.Name)
+				require.Len(t, data.DataPoints, 1)
+				assert.Equal(t, uint64(1), data.DataPoints[0].Count)
+				assert.Equal(t, int64(5), data.DataPoints[0].Sum)
+				histFound = true
+			}
+		}
+		assert.True(t, sumFound, "expected Sum metric stream")
+		assert.True(t, histFound, "expected Histogram metric stream")
+	})
 }
 
 func TestBoundInstrumentFloat64(t *testing.T) {
@@ -396,5 +447,56 @@ func TestBoundInstrumentFloat64(t *testing.T) {
 		require.NoError(t, err)
 		boundDropped := droppedCounter.(x.Float64Binder).Bind(attrs...)
 		assert.False(t, boundDropped.Enabled(t.Context()))
+	})
+
+	t.Run("MixedAggregations", func(t *testing.T) {
+		r := NewManualReader()
+		mp := NewMeterProvider(
+			WithReader(r),
+			WithView(
+				NewView(
+					Instrument{Name: "test.counter"},
+					Stream{
+						Name:        "test.counter.hist",
+						Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{0, 10, 100}},
+					},
+				),
+				NewView(
+					Instrument{Name: "test.counter"},
+					Stream{Aggregation: AggregationDefault{}},
+				),
+			),
+		)
+		meter := mp.Meter("test")
+
+		counter, err := meter.Float64Counter("test.counter")
+		require.NoError(t, err)
+		bound := counter.(x.Float64Binder).Bind(attrs...)
+		bound.Add(t.Context(), 5.5)
+
+		var rm metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+
+		var sumFound, histFound bool
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			switch data := m.Data.(type) {
+			case metricdata.Sum[float64]:
+				assert.Equal(t, "test.counter", m.Name)
+				require.Len(t, data.DataPoints, 1)
+				assert.Equal(t, float64(5.5), data.DataPoints[0].Value)
+				sumFound = true
+			case metricdata.Histogram[float64]:
+				assert.Equal(t, "test.counter.hist", m.Name)
+				require.Len(t, data.DataPoints, 1)
+				assert.Equal(t, uint64(1), data.DataPoints[0].Count)
+				assert.Equal(t, float64(5.5), data.DataPoints[0].Sum)
+				histFound = true
+			}
+		}
+		assert.True(t, sumFound, "expected Sum metric stream")
+		assert.True(t, histFound, "expected Histogram metric stream")
 	})
 }
