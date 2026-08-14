@@ -501,18 +501,17 @@ func (b *boundInt64Counter) Enabled(ctx context.Context) bool {
 // Bind implements x.Float64Binder for float64Inst.
 func (i *float64Inst) Bind(attrs ...attribute.KeyValue) metric.Float64Counter {
 	preboundSet := attribute.NewSet(attrs...)
-	var measures []aggregate.BoundMeasure[float64]
-	for _, agg := range i.aggregators {
-		if agg != nil {
-			m := agg.Bind(preboundSet)
-			if m != nil {
+	measures := make([]aggregate.BoundMeasure[float64], 0, len(i.measures))
+	for idx, meas := range i.measures {
+		if idx < len(i.aggregators) && i.aggregators[idx] != nil {
+			if m := i.aggregators[idx].Bind(preboundSet); m != nil {
 				measures = append(measures, m)
+				continue
 			}
 		}
-	}
-	if len(measures) == 0 {
+		measure := meas
 		measures = append(measures, func(ctx context.Context, val float64) {
-			i.aggregate(ctx, val, preboundSet)
+			measure(ctx, val, preboundSet)
 		})
 	}
 	return &boundFloat64Counter{
@@ -525,18 +524,17 @@ func (i *float64Inst) Bind(attrs ...attribute.KeyValue) metric.Float64Counter {
 // Bind implements x.Int64Binder for int64Inst.
 func (i *int64Inst) Bind(attrs ...attribute.KeyValue) metric.Int64Counter {
 	preboundSet := attribute.NewSet(attrs...)
-	var measures []aggregate.BoundMeasure[int64]
-	for _, agg := range i.aggregators {
-		if agg != nil {
-			m := agg.Bind(preboundSet)
-			if m != nil {
+	measures := make([]aggregate.BoundMeasure[int64], 0, len(i.measures))
+	for idx, meas := range i.measures {
+		if idx < len(i.aggregators) && i.aggregators[idx] != nil {
+			if m := i.aggregators[idx].Bind(preboundSet); m != nil {
 				measures = append(measures, m)
+				continue
 			}
 		}
-	}
-	if len(measures) == 0 {
+		measure := meas
 		measures = append(measures, func(ctx context.Context, val int64) {
-			i.aggregate(ctx, val, preboundSet)
+			measure(ctx, val, preboundSet)
 		})
 	}
 	return &boundInt64Counter{
