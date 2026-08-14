@@ -153,6 +153,8 @@ func (s *deltaSum[N]) Bind(attrs attribute.Set) BoundMeasure[N] {
 			dropExemplars: isDrop,
 			isBound:       true,
 		}
+	}, func(val *sumValue[N]) {
+		val.isBound = true
 	})
 	return sv.boundMeasure()
 }

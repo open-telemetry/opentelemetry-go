@@ -332,7 +332,9 @@ func newHotColdMap[V any](limit int) *hotColdMap[V] {
 }
 
 // Bind stores a value in the pinned registry, enforcing limits.
-func (m *hotColdMap[V]) Bind(attrs attribute.Set, newValue func(attribute.Set) V) V {
+// If an entry for attrs already exists in hotColdValMap (from an earlier WriteUnbound),
+// onBind is called on the existing value to promote it, avoiding duplicate entries.
+func (m *hotColdMap[V]) Bind(attrs attribute.Set, newValue func(attribute.Set) V, onBind func(V)) V {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -349,9 +351,28 @@ func (m *hotColdMap[V]) Bind(attrs attribute.Set, newValue func(attribute.Set) V
 		}
 	}
 
-	val := newValue(attrs)
+	var val V
+	var found bool
+	if v, ok := m.hotColdValMap[0].Load(d); ok {
+		val = v
+		found = true
+	} else if v, ok := m.hotColdValMap[1].Load(d); ok {
+		val = v
+		found = true
+	}
+
+	if found {
+		if onBind != nil {
+			onBind(val)
+		}
+	} else {
+		val = newValue(attrs)
+		m.count.Add(1)
+	}
+
 	m.pinned[d] = val
-	m.count.Add(1)
+	m.hotColdValMap[0].Store(d, val)
+	m.hotColdValMap[1].Store(d, val)
 	return val
 }
 

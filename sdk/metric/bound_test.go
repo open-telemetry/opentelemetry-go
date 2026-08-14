@@ -92,6 +92,49 @@ func TestBoundInstrumentInt64(t *testing.T) {
 		assert.Equal(t, int64(2), sum.DataPoints[0].Value) // Delta
 	})
 
+	t.Run("UnboundThenBound_Delta", func(t *testing.T) {
+		r := NewManualReader(WithTemporalitySelector(func(InstrumentKind) metricdata.Temporality {
+			return metricdata.DeltaTemporality
+		}))
+		mp := NewMeterProvider(WithReader(r))
+		meter := mp.Meter("test")
+
+		counter, err := meter.Int64Counter("test.counter")
+		require.NoError(t, err)
+
+		binder, ok := counter.(x.Int64Binder)
+		require.True(t, ok)
+
+		// 1. Unbound write
+		counter.Add(t.Context(), 1, metricapi.WithAttributes(attrs...))
+
+		// 2. Bind the same attributes
+		bound := binder.Bind(attrs...)
+
+		// 3. Bound write
+		bound.Add(t.Context(), 2)
+
+		// 4. Collect - should produce exactly 1 data point with value 3 (1+2), no duplicates
+		var rm metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+		sum := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+		require.Len(t, sum.DataPoints, 1, "must not produce duplicate data points")
+		assert.Equal(t, int64(3), sum.DataPoints[0].Value)
+
+		// 5. Subsequent cycle with both bound and unbound writes
+		bound.Add(t.Context(), 4)
+		counter.Add(t.Context(), 1, metricapi.WithAttributes(attrs...))
+
+		err = r.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+		sum = rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+		require.Len(t, sum.DataPoints, 1, "must not produce duplicate data points")
+		assert.Equal(t, int64(5), sum.DataPoints[0].Value)
+	})
+
 	t.Run("WithOptions", func(t *testing.T) {
 		r := NewManualReader()
 		mp := NewMeterProvider(WithReader(r))
@@ -239,6 +282,49 @@ func TestBoundInstrumentFloat64(t *testing.T) {
 		require.NoError(t, err)
 		sum = rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[float64])
 		assert.Equal(t, float64(2.5), sum.DataPoints[0].Value) // Delta
+	})
+
+	t.Run("UnboundThenBound_Delta", func(t *testing.T) {
+		r := NewManualReader(WithTemporalitySelector(func(InstrumentKind) metricdata.Temporality {
+			return metricdata.DeltaTemporality
+		}))
+		mp := NewMeterProvider(WithReader(r))
+		meter := mp.Meter("test")
+
+		counter, err := meter.Float64Counter("test.counter")
+		require.NoError(t, err)
+
+		binder, ok := counter.(x.Float64Binder)
+		require.True(t, ok)
+
+		// 1. Unbound write
+		counter.Add(t.Context(), 1.5, metricapi.WithAttributes(attrs...))
+
+		// 2. Bind the same attributes
+		bound := binder.Bind(attrs...)
+
+		// 3. Bound write
+		bound.Add(t.Context(), 2.5)
+
+		// 4. Collect - should produce exactly 1 data point with value 4.0 (1.5+2.5), no duplicates
+		var rm metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+		sum := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[float64])
+		require.Len(t, sum.DataPoints, 1, "must not produce duplicate data points")
+		assert.Equal(t, float64(4.0), sum.DataPoints[0].Value)
+
+		// 5. Subsequent cycle with both bound and unbound writes
+		bound.Add(t.Context(), 4.5)
+		counter.Add(t.Context(), 1.5, metricapi.WithAttributes(attrs...))
+
+		err = r.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+		sum = rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[float64])
+		require.Len(t, sum.DataPoints, 1, "must not produce duplicate data points")
+		assert.Equal(t, float64(6.0), sum.DataPoints[0].Value)
 	})
 
 	t.Run("WithOptions", func(t *testing.T) {
