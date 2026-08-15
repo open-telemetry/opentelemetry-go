@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - The simple span and log processors record `otel.sdk.processor.{span,log}.processed` when the record is submitted to the exporter instead of after the export completes, and no longer set `error.type` from the export outcome, in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log`. (#8705)
-- Prevent `Resource.MarshalLog` from panicking on nil resources in `go.opentelemetry.io/otel/sdk/resource`.
+- Prevent `Resource.MarshalLog` from panicking on nil resources in `go.opentelemetry.io/otel/sdk/resource`. (#8758)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
