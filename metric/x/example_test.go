@@ -23,12 +23,13 @@ func ExampleInt64CounterBinder() {
 		counter = b.Bind(attrs...)
 		isBound = true
 	}
+	attrOpt := metric.WithAttributeSet(attribute.NewSet(attrs...))
 
 	http.HandleFunc("/orders", func(_ http.ResponseWriter, r *http.Request) {
 		if isBound {
 			counter.Add(r.Context(), 1)
 		} else {
-			counter.Add(r.Context(), 1, metric.WithAttributes(attrs...))
+			counter.Add(r.Context(), 1, attrOpt)
 		}
 	})
 }
