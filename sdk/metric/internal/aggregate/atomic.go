@@ -290,8 +290,8 @@ func (m *limitedSyncMap[V]) Len() int {
 // one "hot" which is concurrently updated by measure(), and one "cold", which
 // is read and reset by collect(). The embedded [hotColdWaitGroup] allows collect() to
 // swap the hot and cold maps, and wait for updates to the cold map to complete
-// prior to reading. Complete maps are swapped and cleared on each collection cycle
-// so that unused attribute sets do not report in subsequent collect() calls.
+// prior to reading. The caller can then read and Clear the cold map so that
+// unused attribute sets do not report in subsequent collect() calls.
 type hotColdMap[V any] struct {
 	hotColdWaitGroup
 	hotColdValMap [2]limitedSyncMap[V]
