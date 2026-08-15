@@ -297,8 +297,8 @@ type hotColdMap[V any] struct {
 	hotColdValMap [2]limitedSyncMap[V]
 }
 
-func newHotColdMap[V any](limit int) *hotColdMap[V] {
-	return &hotColdMap[V]{
+func newHotColdMap[V any](limit int) hotColdMap[V] {
+	return hotColdMap[V]{
 		hotColdValMap: [2]limitedSyncMap[V]{
 			{aggLimit: limit},
 			{aggLimit: limit},
