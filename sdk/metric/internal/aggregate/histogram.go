@@ -86,7 +86,7 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 // deltaHistogram is a histogram whose internal storage is reset when it is
 // collected.
 type deltaHistogram[N int64 | float64] struct {
-	vals     *hotColdMap[*histogramPoint[N]]
+	vals     hotColdMap[*histogramPoint[N]]
 	start    time.Time
 	noMinMax bool
 	noSum    bool

@@ -41,7 +41,7 @@ type deltaSum[N int64 | float64] struct {
 	monotonic bool
 	start     time.Time
 
-	vals   *hotColdMap[*sumValue[N]]
+	vals   hotColdMap[*sumValue[N]]
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 }
 
