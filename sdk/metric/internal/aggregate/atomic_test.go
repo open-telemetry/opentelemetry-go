@@ -388,3 +388,79 @@ func BenchmarkSyncMap(b *testing.B) {
 		}
 	})
 }
+
+func TestHotColdMap(t *testing.T) {
+	t.Run("BasicWriteAndCollect", func(t *testing.T) {
+		m := newHotColdMap[int](10)
+		set := attribute.NewSet(attribute.String("k", "v"))
+		lazy := newLazyFilteredAttributes(set, nil)
+
+		hotIdx := m.start()
+		val := m.LoadOrStoreAttr(hotIdx, lazy, func(attribute.Set) int { return 100 })
+		m.done(hotIdx)
+		assert.Equal(t, 100, val)
+
+		readIdx := m.swapHotAndWait()
+		assert.Equal(t, 1, m.Len(readIdx))
+
+		var collected []int
+		m.Range(readIdx, func(_, value any) bool {
+			collected = append(collected, value.(int))
+			return true
+		})
+		m.Clear(readIdx)
+		assert.Equal(t, []int{100}, collected)
+		assert.Equal(t, 0, m.Len(readIdx))
+	})
+
+	t.Run("LimitEnforcement", func(t *testing.T) {
+		m := newHotColdMap[int](2) // Limit of 2: 1 normal + 1 overflow
+		set1 := attribute.NewSet(attribute.String("k", "1"))
+		set2 := attribute.NewSet(attribute.String("k", "2"))
+		set3 := attribute.NewSet(attribute.String("k", "3"))
+
+		lazy1 := newLazyFilteredAttributes(set1, nil)
+		lazy2 := newLazyFilteredAttributes(set2, nil)
+		lazy3 := newLazyFilteredAttributes(set3, nil)
+
+		hotIdx := m.start()
+		val1 := m.LoadOrStoreAttr(hotIdx, lazy1, func(attribute.Set) int { return 1 })
+		val2 := m.LoadOrStoreAttr(hotIdx, lazy2, func(attribute.Set) int { return 2 })
+		val3 := m.LoadOrStoreAttr(hotIdx, lazy3, func(attribute.Set) int { return 3 })
+		m.done(hotIdx)
+
+		assert.Equal(t, 1, val1)
+		assert.Equal(t, 2, val2)
+		assert.Equal(t, 2, val3) // Reuses overflow entry
+
+		readIdx := m.swapHotAndWait()
+		assert.Equal(t, 2, m.Len(readIdx))
+
+		var collected []int
+		m.Range(readIdx, func(_, value any) bool {
+			collected = append(collected, value.(int))
+			return true
+		})
+		m.Clear(readIdx)
+		assert.Len(t, collected, 2)
+	})
+
+	t.Run("ConcurrentAccess", func(t *testing.T) {
+		m := newHotColdMap[int](100)
+		set := attribute.NewSet(attribute.String("k", "v"))
+		lazy := newLazyFilteredAttributes(set, nil)
+
+		var wg sync.WaitGroup
+		for range 50 {
+			wg.Go(func() {
+				hotIdx := m.start()
+				_ = m.LoadOrStoreAttr(hotIdx, lazy, func(attribute.Set) int { return 1 })
+				m.done(hotIdx)
+			})
+		}
+		wg.Wait()
+
+		readIdx := m.swapHotAndWait()
+		assert.Equal(t, 1, m.Len(readIdx))
+	})
+}
