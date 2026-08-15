@@ -37,7 +37,7 @@ type deltaLastValue[N int64 | float64] struct {
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 	start  time.Time
 
-	vals *hotColdMap[*lastValuePoint[N]]
+	vals hotColdMap[*lastValuePoint[N]]
 }
 
 func (s *deltaLastValue[N]) measure(
