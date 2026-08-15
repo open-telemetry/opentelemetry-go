@@ -282,3 +282,47 @@ func (m *limitedSyncMap[V]) Len() int {
 	defer m.lenMux.Unlock()
 	return m.len
 }
+
+// hotColdMap manages two [limitedSyncMap] instances for hot/cold swapping.
+//
+// hotColdMap's measure is implemented without locking, even when called
+// concurrently with collect. This is done by maintaining two separate maps:
+// one "hot" which is concurrently updated by measure(), and one "cold", which
+// is read and reset by collect(). The embedded [hotColdWaitGroup] allows collect() to
+// swap the hot and cold maps, and wait for updates to the cold map to complete
+// prior to reading. Complete maps are swapped and cleared on each collection cycle
+// so that unused attribute sets do not report in subsequent collect() calls.
+type hotColdMap[V any] struct {
+	hotColdWaitGroup
+	hotColdValMap [2]limitedSyncMap[V]
+}
+
+func newHotColdMap[V any](limit int) *hotColdMap[V] {
+	return &hotColdMap[V]{
+		hotColdValMap: [2]limitedSyncMap[V]{
+			{aggLimit: limit},
+			{aggLimit: limit},
+		},
+	}
+}
+
+// LoadOrStoreAttr returns the existing value for lazy in the hot map at hotIdx,
+// or constructs and stores a new value using newValue if it does not exist.
+func (m *hotColdMap[V]) LoadOrStoreAttr(hotIdx uint64, lazy lazyFilteredAttributes, newValue func(attribute.Set) V) V {
+	return m.hotColdValMap[hotIdx].LoadOrStoreAttr(lazy, newValue)
+}
+
+// Len returns the length of the specified map.
+func (m *hotColdMap[V]) Len(readIdx uint64) int {
+	return m.hotColdValMap[readIdx].Len()
+}
+
+// Range calls f sequentially for each key and value present in the map at readIdx.
+func (m *hotColdMap[V]) Range(readIdx uint64, f func(key, value any) bool) {
+	m.hotColdValMap[readIdx].Range(f)
+}
+
+// Clear clears the map at readIdx.
+func (m *hotColdMap[V]) Clear(readIdx uint64) {
+	m.hotColdValMap[readIdx].Clear()
+}
