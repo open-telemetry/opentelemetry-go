@@ -6,7 +6,7 @@
 
 // Package otlptracetest provides testing utilities and framework for the
 // otlptrace exporters.
-package otlptracetest // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
+package otlptracetest
 
 import (
 	"context"

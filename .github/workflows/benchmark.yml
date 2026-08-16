@@ -10,9 +10,15 @@ on:
       - 'Makefile'
       - '.github/workflows/benchmark.yml'
   workflow_dispatch:
+    inputs:
+      full:
+        description: "Run benchmarks for every module, ignoring the affected-module diff."
+        type: boolean
+        default: false
 
 # Declare default permissions as read only.
-permissions: read-all
+permissions:
+  contents: read
 
 env:
   DEFAULT_GO_VERSION: "~1.26.0"
@@ -24,41 +30,87 @@ jobs:
     outputs:
       shards: ${{ steps.sharding.outputs.shards }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - id: sharding
-        run: |
-          echo "shards=$(make print-sharded-benchmarks)" >> $GITHUB_OUTPUT
-
-  benchmark:
-    needs: sharding-benchmark
-    permissions:
-      contents: write # required for pushing to gh-pages branch
-    name: Benchmarks
-    runs-on: oracle-bare-metal-64cpu-1024gb-x86-64-ubuntu-24
-    strategy:
-      matrix:
-        shard: ${{ fromJson(needs.sharding-benchmark.outputs.shards) }}
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      # Bare metal uses Ubuntu 24.04, which does not have `make` and `build-essential`.
-      - name: Install make and build-essential
-        run: sudo apt-get update && sudo apt-get install -y make build-essential
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Need history so the affected-module detector can diff
+          # against the prior commit.
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true
           cache-dependency-path: "**/go.sum"
+      - id: sharding
+        env:
+          # We want to diff HEAD against whatever "before this change"
+          # means for the current event.
+          #
+          # For a PR, that's the commit on main the PR branched from --
+          # we want every commit in the PR, not just the latest push.
+          # (Tempting to use github.event.before here, but on PRs it's
+          # the previous tip of the PR branch, so it'd miss earlier
+          # commits in the same PR.)
+          #
+          # For a push to main, it's the commit that was at the tip
+          # before this push -- exactly the new work this push brings.
+          #
+          # For a manual workflow_dispatch run, neither field is set,
+          # and the Makefile's default base ref kicks in.
+          BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
+          ARGS: ${{ inputs.full && '-all' || '' }}
+        run: |
+          shards=$(make print-affected-benchmarks)
+          echo "shards=${shards}" >> "$GITHUB_OUTPUT"
+
+  benchmark:
+    needs: sharding-benchmark
+    # Skip the matrix entirely when nothing benchmark-relevant changed.
+    if: needs.sharding-benchmark.outputs.shards != '[]'
+    permissions:
+      contents: write # required for pushing to gh-pages branch
+    name: Benchmarks
+    runs-on: oracle-bare-metal-64cpu-1024gb-x86-64-ubuntu-24
+    container:
+      image: ubuntu:26.04@sha256:7b202b0e2e0028c6250f5fcf41d04df492d145a1654c6995a6553f0c1f6f1960
+      # CodSpeed's profiling feature needs elevated permissions.
+      options: --cap-add=PERFMON
+    strategy:
+      matrix:
+        shard: ${{ fromJson(needs.sharding-benchmark.outputs.shards) }}
+    steps:
+      # The benchmark container does not have the build toolchain preinstalled.
+      - name: Install prerequisites
+        run: |
+          apt-get update
+          apt-get install -y make build-essential git ca-certificates curl
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # This makes CodSpeed running inside the container use git correctly.
+      - name: Mark workspace as a safe Git directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
+          # Disable setup-go's GOMODCACHE/GOCACHE caching on the bare-metal
+          # runner. The runner is persistent, so ~/go/pkg/mod and
+          # ~/.cache/go-build already survive between jobs locally. The
+          # Actions cache for this key reaches multiple GB across the matrix,
+          # which makes every shard pay ~1-2 min on either the restore
+          # (download + tar -xf) or the post-step save (tar + upload), with
+          # no benefit over the on-disk caches.
+          cache: false
       - name: Run the benchmarks
-        uses: CodSpeedHQ/action@f99becdce5e5d51fd556489ebef684f4ecfd6286 # v4.18.5
+        env:
+          # Job containers do not run systemd. Without this override,
+          # CodSpeed tries to start the benchmark using systemd-run.
+          CODSPEED_ISOLATION: "false"
+        uses: CodSpeedHQ/action@4296e51e7041e24dadb86d1d6e8b9320d223dbe8 # v5.0.3
         with:
           mode: walltime
           allow-empty: true
           # CodSpeed runs extremely slow when there are 128 processes involved, which is the number
           # of CPUs on the bare metal machine. Limiting the number of processes to 4 helps mitigate this. 4 also matches the number of CPUs on GitHub runners.
-          #
-          # CodSpeed overrides the default benchtime if we don't explicitly specify it.
-          # Having this would avoid running benchmark for more than 1 hour.
-          #
-          # The benchtime is adjusted to 500 ms to speed up the benchmark time.
-          # Per https://github.com/open-telemetry/community/issues/2331#issuecomment-2356403352
-          run: GOMAXPROCS=4 make benchmark/${{matrix.shard}} ARGS=-benchtime=500ms
+          run: GOMAXPROCS=4 make benchmark/${{matrix.shard}}

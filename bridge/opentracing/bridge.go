@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
+package opentracing
 
 import (
 	"context"
@@ -76,11 +76,12 @@ func (c *bridgeSpanContext) baggageItem(restrictedKey string) baggage.Member {
 }
 
 type bridgeSpan struct {
-	otelSpan          trace.Span
-	ctx               *bridgeSpanContext
-	tracer            *BridgeTracer
-	skipDeferHook     bool
-	extraBaggageItems map[string]string
+	otelSpan            trace.Span
+	ctx                 *bridgeSpanContext
+	tracer              *BridgeTracer
+	skipDeferHook       bool
+	extraBaggageItemsMu sync.Mutex
+	extraBaggageItems   map[string]string
 }
 
 var _ ot.Span = &bridgeSpan{}
@@ -242,6 +243,9 @@ func (s *bridgeSpan) setBaggageItemOnly(restrictedKey, value string) {
 }
 
 func (s *bridgeSpan) updateOTelContext(restrictedKey, value string) {
+	s.extraBaggageItemsMu.Lock()
+	defer s.extraBaggageItemsMu.Unlock()
+
 	if s.extraBaggageItems == nil {
 		s.extraBaggageItems = make(map[string]string)
 	}
@@ -391,6 +395,9 @@ func (t *BridgeTracer) baggageGetHook(ctx context.Context, list iBaggage.List) i
 		)
 		return list
 	}
+	bSpan.extraBaggageItemsMu.Lock()
+	defer bSpan.extraBaggageItemsMu.Unlock()
+
 	items := bSpan.extraBaggageItems
 	if len(items) == 0 {
 		return list
