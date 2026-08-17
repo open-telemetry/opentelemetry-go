@@ -12,6 +12,7 @@ import (
 )
 
 // Exporter handles the delivery of log records to external receivers.
+// An Exporter instance must not be shared between multiple [Processor] instances.
 type Exporter interface {
 	// Export transmits log records to a receiver.
 	//
