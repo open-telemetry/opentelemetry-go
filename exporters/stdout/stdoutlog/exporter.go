@@ -6,6 +6,7 @@ package stdoutlog
 import (
 	"context"
 	"encoding/json"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/counter"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/observ"
@@ -17,9 +18,8 @@ var _ log.Exporter = &Exporter{}
 
 // Exporter writes JSON-encoded log records to an [io.Writer] ([os.Stdout] by default).
 // Exporter must be created with [New].
-// Exporter methods must not be called concurrently.
 type Exporter struct {
-	encoder    *json.Encoder
+	encoder    atomic.Pointer[json.Encoder]
 	timestamps bool
 	inst       *observ.Instrumentation
 }
@@ -34,9 +34,9 @@ func New(options ...Option) (*Exporter, error) {
 	}
 
 	e := &Exporter{
-		encoder:    enc,
 		timestamps: cfg.Timestamps,
 	}
+	e.encoder.Store(enc)
 
 	var err error
 	e.inst, err = observ.NewInstrumentation(counter.NextExporterID())
@@ -45,7 +45,7 @@ func New(options ...Option) (*Exporter, error) {
 
 // Export exports log records to writer.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error) {
-	enc := e.encoder
+	enc := e.encoder.Load()
 	if enc == nil {
 		return nil
 	}
@@ -77,7 +77,7 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error)
 // Shutdown shuts down the Exporter.
 // Calls to Export will perform no operation after this is called.
 func (e *Exporter) Shutdown(context.Context) error {
-	e.encoder = nil
+	e.encoder.Store(nil)
 	return nil
 }
 

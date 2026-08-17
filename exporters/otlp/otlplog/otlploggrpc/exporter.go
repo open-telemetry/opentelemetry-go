@@ -5,6 +5,8 @@ package otlploggrpc
 
 import (
 	"context"
+	"sync"
+	"sync/atomic"
 
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 
@@ -20,10 +22,12 @@ type logClient interface {
 // Exporter is a OpenTelemetry log Exporter. It transports log data encoded as
 // OTLP protobufs using gRPC.
 // All Exporters must be created with [New].
-// Exporter methods must not be called concurrently.
 type Exporter struct {
-	client  logClient
-	stopped bool
+	// Ensure synchronous access to the client across all functionality.
+	clientMu sync.Mutex
+	client   logClient
+
+	stopped atomic.Bool
 }
 
 // Compile-time check Exporter implements [log.Exporter].
@@ -43,7 +47,9 @@ func New(_ context.Context, options ...Option) (*Exporter, error) {
 }
 
 func newExporter(c logClient) *Exporter {
-	return &Exporter{client: c}
+	var e Exporter
+	e.client = c
+	return &e
 }
 
 var transformResourceLogs = transform.ResourceLogs
@@ -53,7 +59,7 @@ var transformResourceLogs = transform.ResourceLogs
 // This method returns nil and drops records if called after Shutdown.
 // This method returns an error if the method is canceled by the passed context.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
-	if e.stopped {
+	if e.stopped.Load() {
 		return nil
 	}
 
@@ -62,16 +68,20 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 		return nil
 	}
 
+	e.clientMu.Lock()
+	defer e.clientMu.Unlock()
 	return e.client.UploadLogs(ctx, otlp)
 }
 
 // Shutdown shuts down the Exporter. Calls to Export or ForceFlush will perform
 // no operation after this is called.
 func (e *Exporter) Shutdown(ctx context.Context) error {
-	if e.stopped {
+	if e.stopped.Swap(true) {
 		return nil
 	}
-	e.stopped = true
+
+	e.clientMu.Lock()
+	defer e.clientMu.Unlock()
 
 	err := e.client.Shutdown(ctx)
 	e.client = newNoopClient()

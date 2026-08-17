@@ -6,6 +6,9 @@ package otlploggrpc
 import (
 	"context"
 	"errors"
+	"runtime"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
@@ -112,6 +115,39 @@ func TestExporterForceFlush(t *testing.T) {
 	require.NoError(t, err, "New")
 
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush")
+}
+
+func TestExporterConcurrentSafe(t *testing.T) {
+	e := newExporter(&mockClient{})
+
+	const goroutines = 10
+
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(t.Context())
+	var runs atomic.Uint64
+	for range goroutines {
+		wg.Go(func() {
+			r := make([]sdklog.Record, 1)
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					_ = e.Export(ctx, r)
+					_ = e.ForceFlush(ctx)
+					runs.Add(1)
+				}
+			}
+		})
+	}
+
+	for runs.Load() == 0 {
+		runtime.Gosched()
+	}
+
+	_ = e.Shutdown(ctx)
+	cancel()
+	wg.Wait()
 }
 
 // TestExporter runs integration test against the real OTLP collector.

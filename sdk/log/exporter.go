@@ -13,10 +13,12 @@ import (
 
 // Exporter handles the delivery of log records to external receivers.
 //
-// The SDK's built-in processors call Exporter methods serially and never
-// concurrently. Exporter implementations do not need to be safe for concurrent
-// use. An Exporter instance must not be shared between multiple [Processor]
-// instances.
+// Each of the SDK's built-in processors calls Exporter methods serially and
+// never concurrently. Calls made by different [Processor] instances are not
+// synchronized with each other. Exporter implementations do not need to be
+// safe for concurrent use. An Exporter may be shared between Processors only
+// if it supports concurrent use and its lifecycle is coordinated by the
+// application.
 type Exporter interface {
 	// Export transmits log records to a receiver.
 	//
