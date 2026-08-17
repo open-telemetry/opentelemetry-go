@@ -329,7 +329,7 @@ func BenchmarkRecordingSpanAttributes(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for range b.N {
+			for b.Loop() {
 				benchmarkRecordingSpanAttributes = s.Attributes()
 			}
 		})
@@ -344,7 +344,7 @@ func BenchmarkRecordingSpanAttributes(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for range b.N {
+			for b.Loop() {
 				s.SetAttributes(updates...)
 				benchmarkRecordingSpanAttributes = s.Attributes()
 			}
