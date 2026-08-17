@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
@@ -602,6 +603,277 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 		assert.Len(t, rm.ScopeMetrics[0].Metrics, 1) {
 		assert.Equal(t, int64(2), rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints[0].Value)
 	}
+}
+
+func TestCallbackCanUnregisterDuringCollect(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	counter, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+
+	var called atomic.Int64
+	var reg metric.Registration
+	reg, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+		called.Add(1)
+		o.ObserveInt64(counter, 1)
+		return reg.Unregister()
+	}, counter)
+	require.NoError(t, err)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, int64(1), called.Load())
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+	rm = metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, int64(1), called.Load())
+	assert.Empty(t, rm.ScopeMetrics)
+}
+
+func TestUnregisterRemovesCallbackWithoutCollect(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	counter, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+
+	for range 10 {
+		reg, err := m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+			o.ObserveInt64(counter, 1)
+			return nil
+		}, counter)
+		require.NoError(t, err)
+		require.NoError(t, reg.Unregister())
+	}
+
+	pipe := mp.pipes[0]
+	pipe.Lock()
+	defer pipe.Unlock()
+	assert.Empty(t, pipe.multiCallbacks)
+}
+
+func TestUnregisterDuringCollectRemovesCallback(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	counter, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+
+	var calls atomic.Int64
+	started := make(chan struct{})
+	release := make(chan struct{})
+	reg, err := m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+		if calls.Add(1) == 1 {
+			close(started)
+			<-release
+		}
+		o.ObserveInt64(counter, 1)
+		return nil
+	}, counter)
+	require.NoError(t, err)
+
+	collectDone := make(chan error, 1)
+	go func() {
+		var rm metricdata.ResourceMetrics
+		collectDone <- reader.Collect(t.Context(), &rm)
+	}()
+	<-started
+
+	unregDone := make(chan error, 1)
+	go func() { unregDone <- reg.Unregister() }()
+	select {
+	case err := <-unregDone:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Unregister blocked on an in-flight callback")
+	}
+
+	pipe := mp.pipes[0]
+	pipe.Lock()
+	n := len(pipe.multiCallbacks)
+	pipe.Unlock()
+	assert.Equal(t, 0, n, "pipeline retained the callback after Unregister returned")
+
+	close(release)
+	require.NoError(t, <-collectDone)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, int64(1), calls.Load(), "callback ran after Unregister returned")
+}
+
+func TestCallbackCanUnregisterPeerDuringCollect(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	counter, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+
+	var aCalls, bCalls atomic.Int64
+	var regB metric.Registration
+	_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+		aCalls.Add(1)
+		o.ObserveInt64(counter, 1)
+		return regB.Unregister()
+	}, counter)
+	require.NoError(t, err)
+	regB, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+		bCalls.Add(1)
+		o.ObserveInt64(counter, 1)
+		return nil
+	}, counter)
+	require.NoError(t, err)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, int64(1), aCalls.Load())
+	assert.Equal(
+		t, int64(0), bCalls.Load(),
+		"callback ran in the same cycle after a peer callback unregistered it",
+	)
+
+	rm = metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, int64(2), aCalls.Load())
+	assert.Equal(t, int64(0), bCalls.Load())
+}
+
+func TestCallbackCanCallMeterMethods(t *testing.T) {
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	int64Observable, err := m.Int64ObservableCounter("int64-observable-counter")
+	require.NoError(t, err)
+	float64Observable, err := m.Float64ObservableCounter("float64-observable-counter")
+	require.NoError(t, err)
+
+	var called atomic.Bool
+	var reg metric.Registration
+	reg, err = m.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
+		called.Store(true)
+		o.ObserveInt64(int64Observable, 1)
+		o.ObserveFloat64(float64Observable, 1)
+
+		int64Counter, err := m.Int64Counter("int64-counter")
+		if err != nil {
+			return err
+		}
+		int64Counter.Add(ctx, 1)
+		_ = int64Counter.Enabled(ctx)
+
+		int64UpDownCounter, err := m.Int64UpDownCounter("int64-up-down-counter")
+		if err != nil {
+			return err
+		}
+		int64UpDownCounter.Add(ctx, 1)
+		_ = int64UpDownCounter.Enabled(ctx)
+
+		int64Histogram, err := m.Int64Histogram("int64-histogram")
+		if err != nil {
+			return err
+		}
+		int64Histogram.Record(ctx, 1)
+		_ = int64Histogram.Enabled(ctx)
+
+		int64Gauge, err := m.Int64Gauge("int64-gauge")
+		if err != nil {
+			return err
+		}
+		int64Gauge.Record(ctx, 1)
+		_ = int64Gauge.Enabled(ctx)
+
+		float64Counter, err := m.Float64Counter("float64-counter")
+		if err != nil {
+			return err
+		}
+		float64Counter.Add(ctx, 1)
+		_ = float64Counter.Enabled(ctx)
+
+		float64UpDownCounter, err := m.Float64UpDownCounter("float64-up-down-counter")
+		if err != nil {
+			return err
+		}
+		float64UpDownCounter.Add(ctx, 1)
+		_ = float64UpDownCounter.Enabled(ctx)
+
+		float64Histogram, err := m.Float64Histogram("float64-histogram")
+		if err != nil {
+			return err
+		}
+		float64Histogram.Record(ctx, 1)
+		_ = float64Histogram.Enabled(ctx)
+
+		float64Gauge, err := m.Float64Gauge("float64-gauge")
+		if err != nil {
+			return err
+		}
+		float64Gauge.Record(ctx, 1)
+		_ = float64Gauge.Enabled(ctx)
+
+		_, err = m.Int64ObservableCounter(
+			"int64-observable-counter-from-callback",
+			metric.WithInt64Callback(func(context.Context, metric.Int64Observer) error { return nil }),
+		)
+		if err != nil {
+			return err
+		}
+		_, err = m.Int64ObservableUpDownCounter(
+			"int64-observable-up-down-counter-from-callback",
+			metric.WithInt64Callback(func(context.Context, metric.Int64Observer) error { return nil }),
+		)
+		if err != nil {
+			return err
+		}
+		_, err = m.Int64ObservableGauge(
+			"int64-observable-gauge-from-callback",
+			metric.WithInt64Callback(func(context.Context, metric.Int64Observer) error { return nil }),
+		)
+		if err != nil {
+			return err
+		}
+		_, err = m.Float64ObservableCounter(
+			"float64-observable-counter-from-callback",
+			metric.WithFloat64Callback(func(context.Context, metric.Float64Observer) error { return nil }),
+		)
+		if err != nil {
+			return err
+		}
+		_, err = m.Float64ObservableUpDownCounter(
+			"float64-observable-up-down-counter-from-callback",
+			metric.WithFloat64Callback(func(context.Context, metric.Float64Observer) error { return nil }),
+		)
+		if err != nil {
+			return err
+		}
+		observable, err := m.Float64ObservableGauge("registered-observable-gauge")
+		if err != nil {
+			return err
+		}
+		innerReg, err := m.RegisterCallback(
+			func(context.Context, metric.Observer) error { return nil },
+			observable,
+		)
+		if err != nil {
+			return err
+		}
+		if err := innerReg.Unregister(); err != nil {
+			return err
+		}
+		return reg.Unregister()
+	}, int64Observable, float64Observable)
+	require.NoError(t, err)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.True(t, called.Load())
 }
 
 // TestPipelineProduceErrors tests the issue described in https://github.com/open-telemetry/opentelemetry-go/issues/6344.

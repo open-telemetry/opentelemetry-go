@@ -481,7 +481,13 @@ func warnRepeatedObservableCallbacks(id Instrument) {
 // instruments, asynchronous callbacks can "forget" attribute sets that are no
 // longer relevant by omitting the observation during the callback.
 //
-// The returned Registration can be used to unregister f.
+// The returned Registration can be used to unregister f. After Unregister
+// returns, f is not dispatched in any subsequent collection cycle, but
+// Unregister does not wait for a call of f a collection cycle has already
+// committed to: such a call may begin or complete after Unregister
+// returns, and callers that need to know f is not running must coordinate
+// with f explicitly. Not waiting makes it safe to call Unregister from
+// within f itself.
 func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) (metric.Registration, error) {
 	if len(insts) == 0 {
 		// Don't allocate a observer if not needed.
@@ -595,9 +601,9 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	set := resolveAttributes(c.Attributes(), rawKVs)
-	// Access to r.pipe.float64Measure is already guarded by a lock in pipeline.produce.
-	// TODO (#5946): Refactor pipeline and observable measures.
+	r.pipe.Lock()
 	measures := r.pipe.float64Measures[oImpl.observableID]
+	r.pipe.Unlock()
 	for _, m := range measures {
 		m(context.Background(), v, set)
 	}
@@ -628,9 +634,9 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	set := resolveAttributes(c.Attributes(), rawKVs)
-	// Access to r.pipe.int64Measures is already guarded b a lock in pipeline.produce.
-	// TODO (#5946): Refactor pipeline and observable measures.
+	r.pipe.Lock()
 	measures := r.pipe.int64Measures[oImpl.observableID]
+	r.pipe.Unlock()
 	for _, m := range measures {
 		m(context.Background(), v, set)
 	}

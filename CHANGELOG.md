@@ -19,6 +19,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Prevent deadlocks when metric callbacks call methods from `go.opentelemetry.io/otel/metric` during collection. (#8074)
+- Fix unbounded pipeline state growth in `go.opentelemetry.io/otel/sdk/metric` when callbacks are repeatedly registered and unregistered without a collection running: `Registration.Unregister` now releases the callback immediately instead of at the next collection. (#8074)
 - The simple span and log processors record `otel.sdk.processor.{span,log}.processed` when the record is submitted to the exporter instead of after the export completes, and no longer set `error.type` from the export outcome, in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log`. (#8705)
 
 <!-- Released section -->
