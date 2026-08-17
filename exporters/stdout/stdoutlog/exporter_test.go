@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 
@@ -339,50 +338,6 @@ func getRecord(now time.Time) sdklog.Record {
 	}
 
 	return rf.NewRecord()
-}
-
-func TestExporterConcurrentSafe(t *testing.T) {
-	testCases := []struct {
-		name     string
-		exporter *Exporter
-	}{
-		{
-			name:     "zero value",
-			exporter: &Exporter{},
-		},
-		{
-			name: "new",
-			exporter: func() *Exporter {
-				exporter, err := New()
-				require.NoError(t, err)
-				require.NotNil(t, exporter)
-
-				return exporter
-			}(),
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			exporter := tc.exporter
-
-			const goroutines = 10
-			var wg sync.WaitGroup
-			wg.Add(goroutines)
-			for range goroutines {
-				go func() {
-					defer wg.Done()
-					err := exporter.Export(t.Context(), []sdklog.Record{{}})
-					assert.NoError(t, err)
-					err = exporter.ForceFlush(t.Context())
-					assert.NoError(t, err)
-					err = exporter.Shutdown(t.Context())
-					assert.NoError(t, err)
-				}()
-			}
-			wg.Wait()
-		})
-	}
 }
 
 func TestObservability(t *testing.T) {

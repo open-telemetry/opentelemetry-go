@@ -6,11 +6,11 @@ package log_test
 import (
 	"context"
 	"errors"
-	"io"
+	"runtime"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -119,23 +119,37 @@ func TestSimpleProcessorForceFlush(t *testing.T) {
 	require.Equal(t, []string{"ForceFlush"}, e.calls, "exporter calls")
 }
 
-type writerExporter struct {
-	io.Writer
+type blockingExporter struct {
+	active    atomic.Int32
+	maxActive atomic.Int32
+	entered   chan string
+	release   <-chan struct{}
 }
 
-func (e *writerExporter) Export(_ context.Context, records []log.Record) error {
-	for _, r := range records {
-		_, _ = io.WriteString(e.Writer, r.Body().String())
+func (e *blockingExporter) call(name string) error {
+	active := e.active.Add(1)
+	for maxActive := e.maxActive.Load(); active > maxActive; maxActive = e.maxActive.Load() {
+		if e.maxActive.CompareAndSwap(maxActive, active) {
+			break
+		}
 	}
+	defer e.active.Add(-1)
+
+	e.entered <- name
+	<-e.release
 	return nil
 }
 
-func (*writerExporter) Shutdown(context.Context) error {
-	return nil
+func (e *blockingExporter) Export(context.Context, []log.Record) error {
+	return e.call("Export")
 }
 
-func (*writerExporter) ForceFlush(context.Context) error {
-	return nil
+func (e *blockingExporter) Shutdown(context.Context) error {
+	return e.call("Shutdown")
+}
+
+func (e *blockingExporter) ForceFlush(context.Context) error {
+	return e.call("ForceFlush")
 }
 
 func TestSimpleProcessorEmpty(t *testing.T) {
@@ -150,27 +164,49 @@ func TestSimpleProcessorEmpty(t *testing.T) {
 }
 
 func TestSimpleProcessorConcurrentSafe(t *testing.T) {
-	const goRoutineN = 10
+	release := make(chan struct{})
+	releaseOnce := sync.OnceFunc(func() { close(release) })
+	t.Cleanup(releaseOnce)
+	e := &blockingExporter{
+		entered: make(chan string, 4),
+		release: release,
+	}
+	s := log.NewSimpleProcessor(e)
 
 	var wg sync.WaitGroup
-	wg.Add(goRoutineN)
+	wg.Go(func() { _ = s.OnEmit(t.Context(), new(log.Record)) })
+	require.Equal(t, "Export", <-e.entered)
 
-	r := new(log.Record)
-	r.SetSeverityText("test")
-	ctx := t.Context()
-	e := &writerExporter{new(strings.Builder)}
-	s := log.NewSimpleProcessor(e)
-	for range goRoutineN {
-		go func() {
-			defer wg.Done()
-
-			_ = s.OnEmit(ctx, r)
-			_ = s.Shutdown(ctx)
-			_ = s.ForceFlush(ctx)
-		}()
+	started := make(chan struct{}, 2)
+	wg.Go(func() {
+		started <- struct{}{}
+		_ = s.ForceFlush(t.Context())
+	})
+	wg.Go(func() {
+		started <- struct{}{}
+		_ = s.Shutdown(t.Context())
+	})
+	<-started
+	<-started
+	assertNoExporterCall := func() {
+		for range 100 {
+			runtime.Gosched()
+		}
+		assert.Empty(t, e.entered, "exporter call started concurrently")
 	}
+	assertNoExporterCall()
 
+	release <- struct{}{}
+	calls := make([]string, 0, 3)
+	for range 3 {
+		calls = append(calls, <-e.entered)
+		assertNoExporterCall()
+		release <- struct{}{}
+	}
 	wg.Wait()
+	releaseOnce()
+	assert.ElementsMatch(t, []string{"ForceFlush", "ForceFlush", "Shutdown"}, calls)
+	assert.Equal(t, int32(1), e.maxActive.Load(), "maximum concurrent exporter calls")
 }
 
 func BenchmarkSimpleProcessorOnEmit(b *testing.B) {

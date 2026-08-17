@@ -138,9 +138,9 @@ func newGRPCDialOptions(cfg config) []grpc.DialOption {
 // Retryable errors from the server will be handled according to any
 // RetryConfig the client was created with.
 //
-// The otlplog.Exporter synchronizes access to client methods, and
-// ensures this is not called after the Exporter is shutdown. Only thing
-// to do here is send data.
+// Exporter calls are synchronized by its Processor, and the Exporter ensures
+// this is not called after it is shut down. The only thing to do here is send
+// data.
 func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uploadErr error) {
 	select {
 	case <-ctx.Done():
@@ -196,9 +196,9 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 // WithGRPCConn will not be closed. It is the caller's responsibility to
 // handle cleanup of that resource.
 //
-// The otlplog.Exporter synchronizes access to client methods and
-// ensures this is called only once. The only thing that needs to be done
-// here is to release any computational resources the client holds.
+// Exporter calls are synchronized by its Processor, and the Exporter ensures
+// this is called only once. The only thing to do here is release any
+// computational resources the client holds.
 func (c *client) Shutdown(ctx context.Context) error {
 	c.metadata = nil
 	c.requestFunc = nil

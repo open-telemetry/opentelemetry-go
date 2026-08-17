@@ -5,7 +5,6 @@ package otlploghttp
 
 import (
 	"context"
-	"sync/atomic"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/transform"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -14,9 +13,10 @@ import (
 // Exporter is a OpenTelemetry log Exporter. It transports log data encoded as
 // OTLP protobufs using HTTP.
 // Exporter must be created with [New].
+// Exporter methods must not be called concurrently.
 type Exporter struct {
-	client  atomic.Pointer[client]
-	stopped atomic.Bool
+	client  *client
+	stopped bool
 }
 
 // Compile-time check Exporter implements [log.Exporter].
@@ -36,9 +36,7 @@ func New(ctx context.Context, options ...Option) (*Exporter, error) {
 }
 
 func newExporter(c *client, _ config) (*Exporter, error) {
-	e := &Exporter{}
-	e.client.Store(c)
-	return e, nil
+	return &Exporter{client: c}, nil
 }
 
 // Used for testing.
@@ -46,24 +44,25 @@ var transformResourceLogs = transform.ResourceLogs
 
 // Export transforms and transmits log records to an OTLP receiver.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
-	if e.stopped.Load() {
+	if e.stopped {
 		return nil
 	}
 	otlp := transformResourceLogs(records)
 	if otlp == nil {
 		return nil
 	}
-	return e.client.Load().UploadLogs(ctx, otlp)
+	return e.client.UploadLogs(ctx, otlp)
 }
 
 // Shutdown shuts down the Exporter. Calls to Export or ForceFlush will perform
 // no operation after this is called.
 func (e *Exporter) Shutdown(context.Context) error {
-	if e.stopped.Swap(true) {
+	if e.stopped {
 		return nil
 	}
+	e.stopped = true
 
-	e.client.Store(newNoopClient())
+	e.client = newNoopClient()
 	return nil
 }
 
