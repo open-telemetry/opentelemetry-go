@@ -17,8 +17,7 @@ import (
 // never concurrently. Calls made by different [Processor] instances are not
 // synchronized with each other. Exporter implementations do not need to be
 // safe for concurrent use. An Exporter may be shared between Processors only
-// if it supports concurrent use and its lifecycle is coordinated by the
-// application.
+// if it supports concurrent use.
 type Exporter interface {
 	// Export transmits log records to a receiver.
 	//
