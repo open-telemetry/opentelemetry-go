@@ -79,17 +79,3 @@ func TestExporterForceFlush(t *testing.T) {
 
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush")
 }
-
-func BenchmarkExporterExport(b *testing.B) {
-	c := &client{uploadLogs: func(context.Context, []*logpb.ResourceLogs) error { return nil }}
-	e, err := newExporter(c, config{})
-	require.NoError(b, err)
-	records := make([]log.Record, 1)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for b.Loop() {
-		err = e.Export(b.Context(), records)
-	}
-	_ = err
-}

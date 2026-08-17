@@ -114,19 +114,6 @@ func TestExporterForceFlush(t *testing.T) {
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush")
 }
 
-func BenchmarkExporterExport(b *testing.B) {
-	e := newExporter(&mockClient{})
-	records := make([]sdklog.Record, 1)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	var err error
-	for b.Loop() {
-		err = e.Export(b.Context(), records)
-	}
-	_ = err
-}
-
 // TestExporter runs integration test against the real OTLP collector.
 func TestExporter(t *testing.T) {
 	t.Run("ExporterHonorsContextErrors", func(t *testing.T) {
