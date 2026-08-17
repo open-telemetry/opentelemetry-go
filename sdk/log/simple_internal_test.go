@@ -38,11 +38,9 @@ func TestSimpleProcessorConcurrentSafe(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for range 10 {
-		wg.Go(func() {
-			_ = s.OnEmit(t.Context(), new(Record))
-			_ = s.ForceFlush(t.Context())
-			_ = s.Shutdown(t.Context())
-		})
+		wg.Go(func() { _ = s.OnEmit(t.Context(), new(Record)) })
+		wg.Go(func() { _ = s.ForceFlush(t.Context()) })
+		wg.Go(func() { _ = s.Shutdown(t.Context()) })
 	}
 	wg.Wait()
 
