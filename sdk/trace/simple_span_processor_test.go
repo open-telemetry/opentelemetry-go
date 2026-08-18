@@ -391,3 +391,62 @@ func TestSimpleSpanProcessorProcessedBeforeExport(t *testing.T) {
 	assert.Equal(t, int64(1), duringExport,
 		"processed must be recorded before the span is submitted to the exporter")
 }
+
+// TestSimpleSpanProcessorProcessedAlreadyShutdown asserts a span ended after
+// the processor has been shut down is counted as processed with
+// error.type=already_shutdown and is not submitted to the exporter.
+func TestSimpleSpanProcessorProcessedAlreadyShutdown(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	original := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(original) })
+	t.Cleanup(func() { simpleProcessorIDCounter.Store(0) })
+
+	r := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(r), metric.WithView(dropSpanMetricsView))
+	otel.SetMeterProvider(mp)
+
+	exp := &simpleTestExporter{}
+	ssp := NewSimpleSpanProcessor(exp)
+	tp := basicTracerProvider(t)
+	tp.RegisterSpanProcessor(ssp)
+
+	require.NoError(t, ssp.Shutdown(t.Context()))
+	startSpan(tp, "test").End()
+
+	assert.Empty(t, exp.spans, "span must not be submitted to the exporter after shutdown")
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, r.Collect(t.Context(), &rm))
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/otel/sdk/trace/internal/observ",
+			Version:   sdk.Version(),
+			SchemaURL: semconv.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKProcessorSpanProcessed{}.Name(),
+				Description: otelconv.SDKProcessorSpanProcessed{}.Description(),
+				Unit:        otelconv.SDKProcessorSpanProcessed{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								semconv.OTelComponentName("simple_span_processor/0"),
+								semconv.OTelComponentTypeKey.String("simple_span_processor"),
+								semconv.ErrorTypeKey.String("already_shutdown"),
+							),
+						},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			},
+		},
+	}
+	require.Len(t, rm.ScopeMetrics, 1)
+	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0],
+		metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+}
