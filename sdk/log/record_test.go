@@ -656,7 +656,9 @@ func TestRecordInvalidAttributes(t *testing.T) {
 			}
 
 			r.AddAttributes(upper)
-			r.AddAttributes(invalid, lower)
+			r.AddAttributes(invalid)
+			assert.Equal(t, []attribute.KeyValue{upper}, attributes())
+			r.AddAttributes(lower)
 			assert.Equal(t, []attribute.KeyValue{upper, lower}, attributes())
 			assert.Zero(t, r.DroppedAttributes())
 

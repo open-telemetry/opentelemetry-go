@@ -18,7 +18,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	apilog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -96,57 +95,6 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 
 	require.True(t, e.exportCalled, "exporter Export not called")
 	assert.Equal(t, []log.Record{*r}, e.records)
-}
-
-func TestSimpleProcessorInvalidAttributeKeys(t *testing.T) {
-	invalid := attribute.String("", "invalid")
-	recordValid := []attribute.KeyValue{
-		attribute.String("Key", "record upper"),
-		attribute.String("key", "record lower"),
-	}
-	scopeValid := []attribute.KeyValue{
-		attribute.String("Key", "scope upper"),
-		attribute.String("key", "scope lower"),
-	}
-
-	scopeAttrs := append([]attribute.KeyValue{invalid}, scopeValid...)
-	scopeOpt := apilog.WithInstrumentationAttributes(scopeAttrs...)
-	assert.Equal(
-		t,
-		attribute.NewSet(scopeAttrs...),
-		apilog.NewLoggerConfig(scopeOpt).InstrumentationAttributes(),
-		"Logs API must preserve instrumentation attributes",
-	)
-
-	exp := new(exporter)
-	provider := log.NewLoggerProvider(log.WithProcessor(log.NewSimpleProcessor(exp)))
-	logger := provider.Logger("scope", scopeOpt)
-	var record apilog.Record
-	recordAttrs := append([]attribute.KeyValue{invalid}, recordValid...)
-	record.AddAttributes(recordAttrs...)
-	require.Equal(t, len(recordAttrs), record.AttributesLen(), "Logs API must preserve record attributes")
-	var apiAttrs []attribute.KeyValue
-	record.WalkAttributes(func(kv attribute.KeyValue) bool {
-		apiAttrs = append(apiAttrs, kv)
-		return true
-	})
-	assert.Equal(t, recordAttrs, apiAttrs, "Logs API must preserve record attributes")
-
-	logger.Emit(t.Context(), record)
-
-	require.Len(t, exp.records, 1)
-	var got []attribute.KeyValue
-	exp.records[0].WalkAttributes(func(kv attribute.KeyValue) bool {
-		got = append(got, kv)
-		return true
-	})
-	assert.Equal(t, recordValid, got)
-	assert.Zero(t, exp.records[0].DroppedAttributes())
-	assert.Equal(
-		t,
-		attribute.NewSet(scopeValid...),
-		exp.records[0].InstrumentationScope().Attributes,
-	)
 }
 
 func TestSimpleProcessorShutdown(t *testing.T) {

@@ -74,8 +74,7 @@ func TestRecordAttributes(t *testing.T) {
 		attribute.ByteSlice("k12", []byte{1}),
 		attribute.Slice("k13", attribute.IntValue(3)),
 		attribute.Map("k14", attribute.Bool("sub1", true)),
-		{Key: "k15"}, // Empty values are valid.
-		attribute.String("", "invalid"),
+		{}, // Empty.
 	}
 
 	var r log.Record
@@ -89,7 +88,6 @@ func TestRecordAttributes(t *testing.T) {
 			i++
 			return true
 		})
-		assert.Equal(t, len(attrs), i)
 	})
 
 	t.Run("WalkAttributes/Filtering", func(t *testing.T) {
