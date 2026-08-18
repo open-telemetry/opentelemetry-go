@@ -44,10 +44,11 @@ func newExporter(c *client, _ config) (*Exporter, error) {
 // Used for testing.
 var transformResourceLogs = transform.ResourceLogs
 
-// Export transforms and transmits log records to an OTLP receiver.
+// Export transforms and transmits log records to an OTLP receiver. It returns
+// [log.ErrExporterShutdown] if called after Shutdown.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if e.stopped.Load() {
-		return nil
+		return log.ErrExporterShutdown
 	}
 	otlp := transformResourceLogs(records)
 	if otlp == nil {
@@ -56,8 +57,8 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	return e.client.Load().UploadLogs(ctx, otlp)
 }
 
-// Shutdown shuts down the Exporter. Calls to Export or ForceFlush will perform
-// no operation after this is called.
+// Shutdown shuts down the Exporter. Calls to Export after Shutdown return
+// [log.ErrExporterShutdown]. Calls to ForceFlush perform no operation.
 func (e *Exporter) Shutdown(context.Context) error {
 	if e.stopped.Swap(true) {
 		return nil

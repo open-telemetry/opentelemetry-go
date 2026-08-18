@@ -101,10 +101,8 @@ func TestExporterShutdown(t *testing.T) {
 	require.NoError(t, err, "New")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown Exporter")
 
-	// After Shutdown is called, calls to Export, Shutdown, or ForceFlush
-	// should perform no operation and return nil error.
 	r := make([]sdklog.Record, 1)
-	assert.NoError(t, e.Export(ctx, r), "Export on Shutdown Exporter")
+	assert.ErrorIs(t, e.Export(ctx, r), sdklog.ErrExporterShutdown, "Export on Shutdown Exporter")
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush on Shutdown Exporter")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown on Shutdown Exporter")
 }
