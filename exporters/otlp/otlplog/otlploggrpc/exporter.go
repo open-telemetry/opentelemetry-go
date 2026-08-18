@@ -70,6 +70,10 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 
 	e.clientMu.Lock()
 	defer e.clientMu.Unlock()
+
+	if e.stopped.Load() {
+		return log.ErrExporterShutdown
+	}
 	return e.client.UploadLogs(ctx, otlp)
 }
 

@@ -47,11 +47,11 @@ func New(options ...Option) (*Exporter, error) {
 // Export exports log records to writer. It returns [log.ErrExporterShutdown]
 // if called after Shutdown.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error) {
+	enc := e.encoder.Load()
 	if e.stopped.Load() {
 		return log.ErrExporterShutdown
 	}
 
-	enc := e.encoder.Load()
 	if enc == nil {
 		return nil
 	}
@@ -83,6 +83,8 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error)
 // Shutdown shuts down the Exporter. Calls to Export after Shutdown return
 // [log.ErrExporterShutdown].
 func (e *Exporter) Shutdown(context.Context) error {
+	// Store stopped first so Export cannot observe a cleared encoder while the
+	// Exporter still appears active.
 	e.stopped.Store(true)
 	e.encoder.Store(nil)
 	return nil

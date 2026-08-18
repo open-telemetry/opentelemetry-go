@@ -54,7 +54,12 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if otlp == nil {
 		return nil
 	}
-	return e.client.Load().UploadLogs(ctx, otlp)
+
+	c := e.client.Load()
+	if e.stopped.Load() {
+		return log.ErrExporterShutdown
+	}
+	return c.UploadLogs(ctx, otlp)
 }
 
 // Shutdown shuts down the Exporter. Calls to Export after Shutdown return

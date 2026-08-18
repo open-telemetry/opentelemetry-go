@@ -73,6 +73,42 @@ func TestExporterShutdown(t *testing.T) {
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown on Shutdown Exporter")
 }
 
+func TestExporterExportConcurrentShutdown(t *testing.T) {
+	var uploads int
+	c := &client{
+		uploadLogs: func(context.Context, []*logpb.ResourceLogs) error {
+			uploads++
+			return nil
+		},
+	}
+
+	started := make(chan struct{})
+	resume := make(chan struct{})
+	orig := transformResourceLogs
+	transformResourceLogs = func([]log.Record) []*logpb.ResourceLogs {
+		close(started)
+		<-resume
+		return make([]*logpb.ResourceLogs, 1)
+	}
+	t.Cleanup(func() { transformResourceLogs = orig })
+
+	e, err := newExporter(c, config{})
+	require.NoError(t, err, "New")
+
+	ctx := t.Context()
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- e.Export(ctx, make([]log.Record, 1))
+	}()
+
+	<-started
+	assert.NoError(t, e.Shutdown(ctx), "Shutdown Exporter")
+	close(resume)
+
+	assert.ErrorIs(t, <-errCh, log.ErrExporterShutdown)
+	assert.Zero(t, uploads, "client UploadLogs calls")
+}
+
 func TestExporterForceFlush(t *testing.T) {
 	ctx := t.Context()
 	e, err := New(ctx)
