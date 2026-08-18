@@ -161,7 +161,7 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: defaultAttrValLenLim,
 					attributeCountLimit:       0,
 					scope:                     &attrLimitScope,
-					dropped:                   2,
+					dropped:                   4,
 				},
 			},
 		},
@@ -190,7 +190,7 @@ func TestLoggerEmit(t *testing.T) {
 					attributeValueLengthLimit: defaultAttrValLenLim,
 					attributeCountLimit:       0,
 					scope:                     &attrLimitScope,
-					dropped:                   2,
+					dropped:                   4,
 				},
 			},
 		},
@@ -502,7 +502,7 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 		assert.Contains(t, gotAttrs, attribute.String(string(semconv.ExceptionMessageKey), "boom"))
 	})
 
-	t.Run("ShortCircuitsAtAttributeLimit", func(t *testing.T) {
+	t.Run("OneSlotLeft", func(t *testing.T) {
 		var in log.Record
 		in.SetBody(attribute.StringValue("boom"))
 		in.SetSeverity(log.SeverityError)
@@ -525,6 +525,7 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 
 		assert.Empty(t, gotType)
 		assert.Equal(t, "boom", gotMessage)
+		assert.Equal(t, 1, got.DroppedAttributes())
 	})
 
 	t.Run("NoSlotsLeft", func(t *testing.T) {
@@ -549,6 +550,47 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 
 		assert.Empty(t, gotType)
 		assert.Empty(t, gotMessage)
+		assert.Equal(t, 2, got.DroppedAttributes())
+	})
+
+	t.Run("EmptyMessageWithNoSlotsLeft", func(t *testing.T) {
+		var in log.Record
+		in.SetErr(errWithType{typ: "custom.type"})
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(0)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
+
+		assert.Zero(t, got.AttributesLen())
+		assert.Equal(t, 1, got.DroppedAttributes())
+	})
+
+	t.Run("CallerProvidedAttributesWithNoSlotsLeft", func(t *testing.T) {
+		var in log.Record
+		in.SetErr(errors.New("boom"))
+		in.AddAttributes(
+			exceptionMessageKey.String("message"),
+			exceptionTypeKey.String("type"),
+		)
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(0)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
+
+		assert.Zero(t, got.AttributesLen())
+		assert.Equal(t, 2, got.DroppedAttributes())
+	})
+
+	t.Run("CallerProvidedTypeFillsCapacity", func(t *testing.T) {
+		var in log.Record
+		in.SetErr(errors.New("boom"))
+		in.AddAttributes(exceptionTypeKey.String("type"))
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(1)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
+
+		assert.Equal(t, 1, got.AttributesLen())
+		assert.Equal(t, 1, got.DroppedAttributes())
+		got.WalkAttributes(func(kv attribute.KeyValue) bool {
+			assert.Equal(t, exceptionTypeKey, kv.Key)
+			assert.Equal(t, "type", kv.Value.AsString())
+			return true
+		})
 	})
 }
 
