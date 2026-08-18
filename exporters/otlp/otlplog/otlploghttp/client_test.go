@@ -13,6 +13,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -41,6 +42,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/observ"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/otlpjson"
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -192,15 +194,6 @@ func (s *storage) Dump() []*lpb.ResourceLogs {
 	return data
 }
 
-var emptyExportLogsServiceResponse = func() []byte {
-	body := collogpb.ExportLogsServiceResponse{}
-	r, err := proto.Marshal(&body)
-	if err != nil {
-		panic(err)
-	}
-	return r
-}()
-
 type httpResponseError struct {
 	Err    error
 	Status int
@@ -323,13 +316,13 @@ func (c *httpCollector) Headers() map[string][]string {
 }
 
 func (c *httpCollector) handler(w http.ResponseWriter, r *http.Request) {
-	c.respond(w, c.record(r))
+	ct := r.Header.Get("Content-Type")
+	c.respond(w, c.record(r, ct), ct)
 }
 
-func (c *httpCollector) record(r *http.Request) exportResult {
-	// Currently only supports protobuf.
-	if v := r.Header.Get("Content-Type"); v != "application/x-protobuf" {
-		err := fmt.Errorf("content-type not supported: %s", v)
+func (c *httpCollector) record(r *http.Request, ct string) exportResult {
+	if ct != contentTypeProto && ct != contentTypeJSON {
+		err := fmt.Errorf("content-type not supported: %s", ct)
 		return exportResult{Err: err}
 	}
 
@@ -338,7 +331,12 @@ func (c *httpCollector) record(r *http.Request) exportResult {
 		return exportResult{Err: err}
 	}
 	pbRequest := &collogpb.ExportLogsServiceRequest{}
-	err = proto.Unmarshal(body, pbRequest)
+	switch ct {
+	case contentTypeJSON:
+		err = otlpjson.UnmarshalExportLogsServiceRequest(body, pbRequest)
+	default:
+		err = proto.Unmarshal(body, pbRequest)
+	}
 	if err != nil {
 		return exportResult{
 			Err: &httpResponseError{
@@ -398,7 +396,7 @@ func (*httpCollector) readBody(r *http.Request) (body []byte, err error) {
 	return body, err
 }
 
-func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
+func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult, ct string) {
 	if resp.Err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -425,17 +423,29 @@ func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/x-protobuf")
-	w.WriteHeader(http.StatusOK)
-	if resp.Response == nil {
-		_, _ = w.Write(emptyExportLogsServiceResponse)
-	} else {
-		r, err := proto.Marshal(resp.Response)
+	respMsg := resp.Response
+	if respMsg == nil {
+		respMsg = &collogpb.ExportLogsServiceResponse{}
+	}
+
+	if ct == contentTypeJSON {
+		w.Header().Set("Content-Type", contentTypeJSON)
+		w.WriteHeader(http.StatusOK)
+		r, err := otlpjson.MarshalExportLogsServiceResponse(respMsg)
 		if err != nil {
 			panic(err)
 		}
 		_, _ = w.Write(r)
+		return
 	}
+
+	w.Header().Set("Content-Type", contentTypeProto)
+	w.WriteHeader(http.StatusOK)
+	r, err := proto.Marshal(respMsg)
+	if err != nil {
+		panic(err)
+	}
+	_, _ = w.Write(r)
 }
 
 // newWeakCertificate is based on
@@ -564,6 +574,117 @@ func TestClient(t *testing.T) {
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
 	})
+}
+
+func TestClientJSON(t *testing.T) {
+	factory := func(rCh <-chan exportResult) (*client, *httpCollector) {
+		coll, err := newHTTPCollector("", rCh)
+		require.NoError(t, err)
+
+		addr := coll.Addr().String()
+		opts := []Option{WithEndpoint(addr), WithInsecure(), WithEncoding(JSONEncoding)}
+		cfg := newConfig(opts)
+		client, err := newHTTPClient(t.Context(), cfg)
+		require.NoError(t, err)
+		return client, coll
+	}
+
+	t.Run("uploadLogs", func(t *testing.T) {
+		ctx := t.Context()
+		client, coll := factory(nil)
+
+		require.NoError(t, client.uploadLogs(ctx, resourceLogs))
+		got := coll.Collect().Dump()
+		require.Len(t, got, 1, "upload of one ResourceLogs")
+		diff := cmp.Diff(got[0], resourceLogs[0], cmp.Comparer(proto.Equal))
+		if diff != "" {
+			t.Fatalf("unexpected ResourceLogs:\n%s", diff)
+		}
+	})
+
+	t.Run("PartialSuccess", func(t *testing.T) {
+		const n, msg = 2, "bad data"
+		rCh := make(chan exportResult, 3)
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{
+				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+					RejectedLogRecords: n,
+					ErrorMessage:       msg,
+				},
+			},
+		}
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{
+				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+					RejectedLogRecords: 0,
+					ErrorMessage:       "",
+				},
+			},
+		}
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{},
+		}
+
+		ctx := t.Context()
+		client, _ := factory(rCh)
+
+		assert.ErrorIs(t, client.UploadLogs(ctx, resourceLogs), internal.PartialSuccess{})
+		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
+		assert.NoError(t, client.UploadLogs(ctx, resourceLogs))
+	})
+}
+
+func TestClientJSONWireFormat(t *testing.T) {
+	// Assert the actual serialized OTLP/JSON shape: hex IDs and integer enums.
+	var sawBody []byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, contentTypeJSON, r.Header.Get("Content-Type"))
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		sawBody = body
+		w.Header().Set("Content-Type", contentTypeJSON)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("{}"))
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithEncoding(JSONEncoding),
+		WithRetry(RetryConfig{Enabled: false}),
+	}
+	cfg := newConfig(opts)
+	c, err := newHTTPClient(t.Context(), cfg)
+	require.NoError(t, err)
+
+	require.NoError(t, c.UploadLogs(t.Context(), resourceLogs))
+	require.NotEmpty(t, sawBody)
+
+	// Round-trip through generic JSON to inspect wire types.
+	dec := json.NewDecoder(bytes.NewReader(sawBody))
+	dec.UseNumber()
+	var root map[string]any
+	require.NoError(t, dec.Decode(&root))
+
+	rl := root["resourceLogs"].([]any)
+	sl := rl[0].(map[string]any)["scopeLogs"].([]any)
+	rec := sl[0].(map[string]any)["logRecords"].([]any)[0].(map[string]any)
+
+	traceID, ok := rec["traceId"].(string)
+	require.True(t, ok, "traceId must be a hex string on the wire")
+	assert.Len(t, traceID, 32)
+	assert.NotContains(t, traceID, "+", "traceId must not be base64")
+	assert.NotContains(t, traceID, "/", "traceId must not be base64")
+
+	spanID, ok := rec["spanId"].(string)
+	require.True(t, ok, "spanId must be a hex string on the wire")
+	assert.Len(t, spanID, 16)
+
+	sev, ok := rec["severityNumber"].(json.Number)
+	require.True(t, ok, "severityNumber must be an integer, got %T", rec["severityNumber"])
+	_, err = sev.Int64()
+	require.NoError(t, err)
 }
 
 func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
@@ -1173,6 +1294,66 @@ func TestRequestBodySizeLimit(t *testing.T) {
 	err = c.UploadLogs(t.Context(), []*lpb.ResourceLogs{{}})
 	assert.ErrorContains(t, err, "request body too large")
 	assert.Equal(t, 0, calls, "oversized request must fail before sending")
+}
+
+func TestPartialSuccessContentTypeWithParameters(t *testing.T) {
+	// Ensure Content-Type parameters (e.g. charset) do not prevent parsing
+	// partial-success responses for either encoding.
+	const n, msg = 2, "bad data"
+	respMsg := &collogpb.ExportLogsServiceResponse{
+		PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+			RejectedLogRecords: n,
+			ErrorMessage:       msg,
+		},
+	}
+
+	tests := []struct {
+		name        string
+		encoding    Encoding
+		contentType string
+		marshal     func(proto.Message) ([]byte, error)
+	}{
+		{
+			name:        "proto with charset",
+			encoding:    ProtoEncoding,
+			contentType: "application/x-protobuf; charset=utf-8",
+			marshal:     proto.Marshal,
+		},
+		{
+			name:        "json with charset",
+			encoding:    JSONEncoding,
+			contentType: "application/json; charset=utf-8",
+			marshal: func(m proto.Message) ([]byte, error) {
+				return otlpjson.MarshalExportLogsServiceResponse(m.(*collogpb.ExportLogsServiceResponse))
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			body, err := tc.marshal(respMsg)
+			require.NoError(t, err)
+
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", tc.contentType)
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write(body)
+			}))
+			t.Cleanup(srv.Close)
+
+			opts := []Option{
+				WithEndpoint(srv.Listener.Addr().String()),
+				WithInsecure(),
+				WithEncoding(tc.encoding),
+				WithRetry(RetryConfig{Enabled: false}),
+			}
+			cfg := newConfig(opts)
+			c, err := newHTTPClient(t.Context(), cfg)
+			require.NoError(t, err)
+
+			err = c.UploadLogs(t.Context(), resourceLogs)
+			assert.ErrorIs(t, err, internal.PartialSuccess{})
+		})
+	}
 }
 
 func BenchmarkExporterExportLogs(b *testing.B) {

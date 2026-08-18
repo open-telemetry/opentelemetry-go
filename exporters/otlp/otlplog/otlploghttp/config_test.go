@@ -514,6 +514,9 @@ func TestNewConfig(t *testing.T) {
 			if !tc.want.maxRequestSize.Set {
 				tc.want.maxRequestSize = newSetting(64 * 1024 * 1024)
 			}
+			if !tc.want.encoding.Set {
+				tc.want.encoding = newSetting(ProtoEncoding)
+			}
 
 			// Do not compare pointer values.
 			assertTLSConfig(t, tc.want.tlsCfg, c.tlsCfg)
@@ -530,6 +533,92 @@ func TestNewConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWithEncoding(t *testing.T) {
+	t.Run("Default", func(t *testing.T) {
+		c := newConfig(nil)
+		assert.Equal(t, ProtoEncoding, c.encoding.Value)
+	})
+
+	t.Run("JSON", func(t *testing.T) {
+		c := newConfig([]Option{WithEncoding(JSONEncoding)})
+		assert.Equal(t, JSONEncoding, c.encoding.Value)
+	})
+
+	t.Run("Proto", func(t *testing.T) {
+		c := newConfig([]Option{WithEncoding(ProtoEncoding)})
+		assert.Equal(t, ProtoEncoding, c.encoding.Value)
+	})
+
+	t.Run("EnvLogsProtocolJSON", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL", "http/json")
+		c := newConfig(nil)
+		assert.Equal(t, JSONEncoding, c.encoding.Value)
+	})
+
+	t.Run("EnvProtocolJSON", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/json")
+		c := newConfig(nil)
+		assert.Equal(t, JSONEncoding, c.encoding.Value)
+	})
+
+	t.Run("EnvLogsProtocolProtobuf", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL", "http/protobuf")
+		c := newConfig(nil)
+		assert.Equal(t, ProtoEncoding, c.encoding.Value)
+	})
+
+	t.Run("EnvPrecedence", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL", "http/json")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+		c := newConfig(nil)
+		assert.Equal(t, JSONEncoding, c.encoding.Value)
+	})
+
+	t.Run("EnvGeneralWhenLogsUnset", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/json")
+		t.Setenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL", "")
+		c := newConfig(nil)
+		assert.Equal(t, JSONEncoding, c.encoding.Value)
+	})
+
+	t.Run("OptionPrecedenceOverEnv", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL", "http/json")
+		c := newConfig([]Option{WithEncoding(ProtoEncoding)})
+		assert.Equal(t, ProtoEncoding, c.encoding.Value)
+	})
+
+	t.Run("InvalidEnvFallsBackToDefault", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL", "grpc")
+		var got error
+		t.Cleanup(func(orig otel.ErrorHandler) func() {
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+				got = errors.Join(got, e)
+			}))
+			return func() { otel.SetErrorHandler(orig) }
+		}(otel.GetErrorHandler()))
+
+		c := newConfig(nil)
+		assert.Equal(t, ProtoEncoding, c.encoding.Value)
+		assert.ErrorContains(t, got, "invalid OTEL_EXPORTER_OTLP_LOGS_PROTOCOL value grpc")
+	})
+
+	t.Run("InvalidLogsFallsBackToGeneral", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL", "not-a-protocol")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/json")
+		var got error
+		t.Cleanup(func(orig otel.ErrorHandler) func() {
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+				got = errors.Join(got, e)
+			}))
+			return func() { otel.SetErrorHandler(orig) }
+		}(otel.GetErrorHandler()))
+
+		c := newConfig(nil)
+		assert.Equal(t, JSONEncoding, c.encoding.Value)
+		assert.ErrorContains(t, got, "invalid OTEL_EXPORTER_OTLP_LOGS_PROTOCOL value not-a-protocol")
+	})
 }
 
 func assertTLSConfig(t *testing.T, want, got setting[*tls.Config]) {
