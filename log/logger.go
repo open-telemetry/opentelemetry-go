@@ -34,10 +34,16 @@ type Logger interface {
 	// Enabled reports whether the Logger emits for the given context and
 	// param.
 	//
-	// This is useful for users that want to know if a [Record]
-	// will be processed or dropped before they perform complex operations to
-	// construct the [Record]. Callers should invoke Enabled before each call
-	// to [Logger.Emit] because the enabled state may change over time.
+	// Calling Enabled is optional. It is not required before calling
+	// [Logger.Emit].
+	//
+	// Enabled is useful when constructing a [Record] is expensive. A caller can
+	// call Enabled first and skip record construction when it returns false.
+	// When constructing the Record is inexpensive, a caller can emit it
+	// directly.
+	//
+	// The returned value is not static and may change over time. A cached value
+	// can become stale.
 	//
 	// The passed param is likely to be a partial record information being
 	// provided (e.g a param with only the Severity set).
