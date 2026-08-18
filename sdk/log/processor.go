@@ -16,6 +16,9 @@ import (
 // or each other. It is the responsibility of the Processor to manage this
 // concurrency.
 //
+// A Processor that uses an [Exporter] is responsible for ensuring the calls it
+// makes to the exporter's methods are not concurrent.
+//
 // A Processor must be registered only once and with a single
 // [LoggerProvider]. Registering the same Processor with multiple providers or
 // multiple times with the same provider is not supported.

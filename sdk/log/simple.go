@@ -26,6 +26,9 @@ type SimpleProcessor struct {
 
 // NewSimpleProcessor is a simple Processor adapter.
 //
+// Calls to the exporter's Export, ForceFlush, and Shutdown methods are
+// synchronized and never invoked concurrently.
+//
 // This Processor is not recommended for production use due to its synchronous
 // nature, which makes it suitable for testing, debugging, or demonstrating
 // other features, but can lead to slow performance and high computational
@@ -86,6 +89,9 @@ func (s *SimpleProcessor) Shutdown(ctx context.Context) error {
 		return nil
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	return shutdownExporter(ctx, s.exporter)
 }
 
@@ -94,6 +100,9 @@ func (s *SimpleProcessor) ForceFlush(ctx context.Context) error {
 	if s.exporter == nil {
 		return nil
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	return s.exporter.ForceFlush(ctx)
 }

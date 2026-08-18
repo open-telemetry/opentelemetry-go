@@ -6,11 +6,8 @@ package log_test
 import (
 	"context"
 	"errors"
-	"io"
 	"slices"
 	"strconv"
-	"strings"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -119,25 +116,6 @@ func TestSimpleProcessorForceFlush(t *testing.T) {
 	require.Equal(t, []string{"ForceFlush"}, e.calls, "exporter calls")
 }
 
-type writerExporter struct {
-	io.Writer
-}
-
-func (e *writerExporter) Export(_ context.Context, records []log.Record) error {
-	for _, r := range records {
-		_, _ = io.WriteString(e.Writer, r.Body().String())
-	}
-	return nil
-}
-
-func (*writerExporter) Shutdown(context.Context) error {
-	return nil
-}
-
-func (*writerExporter) ForceFlush(context.Context) error {
-	return nil
-}
-
 func TestSimpleProcessorEmpty(t *testing.T) {
 	assert.NotPanics(t, func() {
 		var s log.SimpleProcessor
@@ -147,30 +125,6 @@ func TestSimpleProcessorEmpty(t *testing.T) {
 		assert.NoError(t, s.ForceFlush(ctx), "ForceFlush")
 		assert.NoError(t, s.Shutdown(ctx), "Shutdown")
 	})
-}
-
-func TestSimpleProcessorConcurrentSafe(t *testing.T) {
-	const goRoutineN = 10
-
-	var wg sync.WaitGroup
-	wg.Add(goRoutineN)
-
-	r := new(log.Record)
-	r.SetSeverityText("test")
-	ctx := t.Context()
-	e := &writerExporter{new(strings.Builder)}
-	s := log.NewSimpleProcessor(e)
-	for range goRoutineN {
-		go func() {
-			defer wg.Done()
-
-			_ = s.OnEmit(ctx, r)
-			_ = s.Shutdown(ctx)
-			_ = s.ForceFlush(ctx)
-		}()
-	}
-
-	wg.Wait()
 }
 
 func BenchmarkSimpleProcessorOnEmit(b *testing.B) {

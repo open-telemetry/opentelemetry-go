@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Lazily evaluate filtered and dropped attributes on measurement hot paths in `go.opentelemetry.io/otel/sdk/metric` to avoid unnecessary attribute set allocations. (#8598)
+- The built-in processors in `go.opentelemetry.io/otel/sdk/log` now synchronize all exporter method calls. `Exporter` implementations are no longer required to support concurrent calls. Applications sharing an exporter between processors must use an implementation that supports concurrent use. (#8766)
 
 ### Fixed
 
