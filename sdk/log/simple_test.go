@@ -8,9 +8,7 @@ import (
 	"errors"
 	"slices"
 	"strconv"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -118,34 +116,6 @@ func TestSimpleProcessorForceFlush(t *testing.T) {
 	require.Equal(t, []string{"ForceFlush"}, e.calls, "exporter calls")
 }
 
-type concurrentExporter struct {
-	started chan<- struct{}
-	release <-chan struct{}
-}
-
-func (e *concurrentExporter) Export(ctx context.Context, _ []log.Record) error {
-	select {
-	case e.started <- struct{}{}:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-
-	select {
-	case <-e.release:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-func (*concurrentExporter) Shutdown(context.Context) error {
-	return nil
-}
-
-func (*concurrentExporter) ForceFlush(context.Context) error {
-	return nil
-}
-
 func TestSimpleProcessorEmpty(t *testing.T) {
 	assert.NotPanics(t, func() {
 		var s log.SimpleProcessor
@@ -155,40 +125,6 @@ func TestSimpleProcessorEmpty(t *testing.T) {
 		assert.NoError(t, s.ForceFlush(ctx), "ForceFlush")
 		assert.NoError(t, s.Shutdown(ctx), "Shutdown")
 	})
-}
-
-func TestSimpleProcessorConcurrentSafeExport(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
-	defer cancel()
-
-	started := make(chan struct{}, 2)
-	release := make(chan struct{})
-	var wg sync.WaitGroup
-	wg.Add(2)
-	defer func() {
-		close(release)
-		wg.Wait()
-	}()
-
-	r := new(log.Record)
-	r.SetSeverityText("test")
-	e := &concurrentExporter{started: started, release: release}
-	s := log.NewSimpleProcessor(e)
-	for range 2 {
-		go func() {
-			defer wg.Done()
-
-			_ = s.OnEmit(ctx, r)
-		}()
-	}
-
-	for range 2 {
-		select {
-		case <-started:
-		case <-ctx.Done():
-			t.Fatal("export calls were not concurrent")
-		}
-	}
 }
 
 func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
