@@ -61,12 +61,13 @@ func TestWithInstrumentationAttributeSet(t *testing.T) {
 	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
 }
 
-func TestInstrumentationAttributesInvalidKey(t *testing.T) {
-	valid := []attribute.KeyValue{
+func TestInstrumentationAttributesPreserveInvalidKey(t *testing.T) {
+	attrs := []attribute.KeyValue{
+		attribute.String("", "invalid"),
 		attribute.String("Key", "upper"),
 		attribute.String("key", "lower"),
 	}
-	attrs := append([]attribute.KeyValue{attribute.String("", "invalid")}, valid...)
+	want := attribute.NewSet(attrs...)
 
 	tests := []struct {
 		name string
@@ -78,14 +79,14 @@ func TestInstrumentationAttributesInvalidKey(t *testing.T) {
 		},
 		{
 			name: "AttributeSet",
-			opt:  log.WithInstrumentationAttributeSet(attribute.NewSet(attrs...)),
+			opt:  log.WithInstrumentationAttributeSet(want),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cfg := log.NewLoggerConfig(test.opt)
-			assert.Equal(t, attribute.NewSet(valid...), cfg.InstrumentationAttributes())
+			assert.Equal(t, want, cfg.InstrumentationAttributes())
 		})
 	}
 }

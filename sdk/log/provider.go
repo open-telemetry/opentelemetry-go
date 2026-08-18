@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -115,6 +116,8 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 //
 // Calls made after [LoggerProvider.Shutdown] starts return a [noop.Logger].
 //
+// Instrumentation scope attributes with invalid keys are ignored.
+//
 // This method can be called concurrently.
 func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	if name == "" {
@@ -127,6 +130,10 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 
 	cfg := log.NewLoggerConfig(opts...)
 	attrs := cfg.InstrumentationAttributes()
+	attrs, invalid := attrs.Filter(attribute.KeyValue.Valid)
+	if len(invalid) > 0 {
+		logInvalidAttribute()
+	}
 	if !p.allowDupKeys {
 		attrs, _ = attrnorm.Set(attrs)
 	}
