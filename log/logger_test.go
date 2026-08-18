@@ -61,6 +61,35 @@ func TestWithInstrumentationAttributeSet(t *testing.T) {
 	assert.Equal(t, attrs, c.InstrumentationAttributes(), "instrumentation attributes")
 }
 
+func TestInstrumentationAttributesInvalidKey(t *testing.T) {
+	valid := []attribute.KeyValue{
+		attribute.String("Key", "upper"),
+		attribute.String("key", "lower"),
+	}
+	attrs := append([]attribute.KeyValue{attribute.String("", "invalid")}, valid...)
+
+	tests := []struct {
+		name string
+		opt  log.LoggerOption
+	}{
+		{
+			name: "Attributes",
+			opt:  log.WithInstrumentationAttributes(attrs...),
+		},
+		{
+			name: "AttributeSet",
+			opt:  log.WithInstrumentationAttributeSet(attribute.NewSet(attrs...)),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cfg := log.NewLoggerConfig(test.opt)
+			assert.Equal(t, attribute.NewSet(valid...), cfg.InstrumentationAttributes())
+		})
+	}
+}
+
 func TestWithInstrumentationAttributesMerge(t *testing.T) {
 	aliceAttr := attribute.String("user", "Alice")
 	bobAttr := attribute.String("user", "Bob")

@@ -140,16 +140,48 @@ func (r *Record) WalkAttributes(f func(attribute.KeyValue) bool) {
 }
 
 // AddAttributes adds attributes to the log record.
+// Attributes with invalid keys are ignored.
 func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
 		a := attrs[i]
+		if !a.Valid() {
+			continue
+		}
 		r.front[r.nFront] = a
 		r.nFront++
 	}
 
-	r.back = slices.Grow(r.back, len(attrs[i:]))
-	r.back = append(r.back, attrs[i:]...)
+	r.back = appendValid(r.back, attrs[i:])
+}
+
+func appendValid(dst, attrs []attribute.KeyValue) []attribute.KeyValue {
+	firstInvalid := -1
+	for i, attr := range attrs {
+		if !attr.Valid() {
+			firstInvalid = i
+			break
+		}
+	}
+	if firstInvalid < 0 {
+		dst = slices.Grow(dst, len(attrs))
+		return append(dst, attrs...)
+	}
+
+	valid := firstInvalid
+	for _, attr := range attrs[firstInvalid+1:] {
+		if attr.Valid() {
+			valid++
+		}
+	}
+	dst = slices.Grow(dst, valid)
+	dst = append(dst, attrs[:firstInvalid]...)
+	for _, attr := range attrs[firstInvalid+1:] {
+		if attr.Valid() {
+			dst = append(dst, attr)
+		}
+	}
+	return dst
 }
 
 // AttributesLen returns the number of attributes in the log record.

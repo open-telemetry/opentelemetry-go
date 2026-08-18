@@ -18,6 +18,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	apilog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -95,6 +96,49 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 
 	require.True(t, e.exportCalled, "exporter Export not called")
 	assert.Equal(t, []log.Record{*r}, e.records)
+}
+
+func TestSimpleProcessorInvalidAttributeKeys(t *testing.T) {
+	recordValid := []attribute.KeyValue{
+		attribute.String("Key", "record upper"),
+		attribute.String("key", "record lower"),
+	}
+	scopeValid := []attribute.KeyValue{
+		attribute.String("Key", "scope upper"),
+		attribute.String("key", "scope lower"),
+	}
+
+	exp := new(exporter)
+	provider := log.NewLoggerProvider(log.WithProcessor(log.NewSimpleProcessor(exp)))
+	logger := provider.Logger(
+		"scope",
+		apilog.WithInstrumentationAttributes(
+			attribute.String("", "invalid"),
+			scopeValid[0],
+			scopeValid[1],
+		),
+	)
+	var record apilog.Record
+	record.AddAttributes(
+		attribute.String("", "invalid"),
+		recordValid[0],
+		recordValid[1],
+	)
+	logger.Emit(t.Context(), record)
+
+	require.Len(t, exp.records, 1)
+	var got []attribute.KeyValue
+	exp.records[0].WalkAttributes(func(kv attribute.KeyValue) bool {
+		got = append(got, kv)
+		return true
+	})
+	assert.Equal(t, recordValid, got)
+	assert.Zero(t, exp.records[0].DroppedAttributes())
+	assert.Equal(
+		t,
+		attribute.NewSet(scopeValid...),
+		exp.records[0].InstrumentationScope().Attributes,
+	)
 }
 
 func TestSimpleProcessorShutdown(t *testing.T) {

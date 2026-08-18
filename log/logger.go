@@ -151,6 +151,7 @@ func mergeSets(a, b attribute.Set) attribute.Set {
 // If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
 // options are passed, the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
+// Attributes with invalid keys are ignored.
 func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
 	set := attribute.NewSet(slices.Clone(attr)...)
 	return WithInstrumentationAttributeSet(set)
@@ -162,7 +163,9 @@ func WithInstrumentationAttributes(attr ...attribute.KeyValue) LoggerOption {
 // If multiple [WithInstrumentationAttributes] or [WithInstrumentationAttributeSet]
 // options are passed, the attributes will be merged together in the order
 // they are passed. Attributes with duplicate keys will use the last value passed.
+// Attributes with invalid keys are ignored.
 func WithInstrumentationAttributeSet(set attribute.Set) LoggerOption {
+	set, _ = set.Filter(attribute.KeyValue.Valid)
 	if set.Len() == 0 {
 		return loggerOptionFunc(func(config LoggerConfig) LoggerConfig {
 			return config

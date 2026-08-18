@@ -59,7 +59,7 @@ func TestRecordBody(t *testing.T) {
 }
 
 func TestRecordAttributes(t *testing.T) {
-	attrs := []attribute.KeyValue{
+	want := []attribute.KeyValue{
 		attribute.String("k1", "str"),
 		attribute.Float64("k2", 1.0),
 		attribute.Int("k3", 2),
@@ -74,24 +74,30 @@ func TestRecordAttributes(t *testing.T) {
 		attribute.ByteSlice("k12", []byte{1}),
 		attribute.Slice("k13", attribute.IntValue(3)),
 		attribute.Map("k14", attribute.Bool("sub1", true)),
-		{}, // Empty.
+		{Key: "k15"}, // Empty values are valid.
 	}
+	first := append([]attribute.KeyValue{}, want[:3]...)
+	first = append(first, attribute.String("", "invalid"))
+	first = append(first, want[3:9]...)
+	second := append([]attribute.KeyValue{{}}, want[9:]...)
 
 	var r log.Record
-	r.AddAttributes(attrs...)
-	require.Equal(t, len(attrs), r.AttributesLen())
+	r.AddAttributes(first...)
+	r.AddAttributes(second...)
+	require.Equal(t, len(want), r.AttributesLen())
 
 	t.Run("Correctness", func(t *testing.T) {
 		var i int
 		r.WalkAttributes(func(kv attribute.KeyValue) bool {
-			assert.Equal(t, attrs[i], kv)
+			assert.Equal(t, want[i], kv)
 			i++
 			return true
 		})
+		assert.Equal(t, len(want), i)
 	})
 
 	t.Run("WalkAttributes/Filtering", func(t *testing.T) {
-		for i := 1; i <= len(attrs); i++ {
+		for i := 1; i <= len(want); i++ {
 			var j int
 			r.WalkAttributes(func(attribute.KeyValue) bool {
 				j++

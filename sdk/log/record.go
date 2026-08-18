@@ -35,6 +35,10 @@ var logKeyValuePairDropped = sync.OnceFunc(func() {
 	global.Warn("key duplication: dropping key-value pair")
 })
 
+var logInvalidAttribute = sync.OnceFunc(func() {
+	global.Warn("invalid attribute: dropping attribute with empty key")
+})
+
 // uniquePool is a pool of unique attributes used for attributes de-duplication.
 var uniquePool = sync.Pool{
 	New: func() any { return new([]attribute.KeyValue) },
@@ -216,7 +220,9 @@ func (r *Record) WalkAttributes(f func(attribute.KeyValue) bool) {
 
 // AddAttributes adds attributes to the log record.
 // Attributes in attrs will overwrite any attribute already added to r with the same key.
+// Attributes with invalid keys are ignored.
 func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
+	attrs = filterInvalid(attrs)
 	n := r.AttributesLen()
 	if n == 0 {
 		// Avoid the more complex duplicate map lookups below.
@@ -340,7 +346,9 @@ func (r *Record) addAttrs(attrs []attribute.KeyValue) {
 }
 
 // SetAttributes sets (and overrides) attributes to the log record.
+// Attributes with invalid keys are ignored.
 func (r *Record) SetAttributes(attrs ...attribute.KeyValue) {
+	attrs = filterInvalid(attrs)
 	var drop int
 	r.dropped = 0
 	if !r.allowDupKeys {
@@ -365,6 +373,32 @@ func (r *Record) SetAttributes(attrs ...attribute.KeyValue) {
 	for i, a := range r.back {
 		r.back[i] = r.applyAttrLimitsAndDedup(a)
 	}
+}
+
+// filterInvalid returns attrs without invalid attributes. The original slice is
+// returned when all attributes are valid.
+func filterInvalid(attrs []attribute.KeyValue) []attribute.KeyValue {
+	valid := 0
+	for _, attr := range attrs {
+		if attr.Valid() {
+			valid++
+		}
+	}
+	if valid == len(attrs) {
+		return attrs
+	}
+	logInvalidAttribute()
+	if valid == 0 {
+		return nil
+	}
+
+	filtered := make([]attribute.KeyValue, 0, valid)
+	for _, attr := range attrs {
+		if attr.Valid() {
+			filtered = append(filtered, attr)
+		}
+	}
+	return filtered
 }
 
 // head returns the attributes r can retain along with the number dropped.
@@ -418,7 +452,7 @@ func (r *Record) AttributesLen() int {
 }
 
 // DroppedAttributes returns the number of attributes dropped due to limits
-// being reached.
+// being reached. Invalid attributes are ignored and not counted.
 func (r *Record) DroppedAttributes() int {
 	return r.dropped
 }
