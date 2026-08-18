@@ -153,8 +153,7 @@ var ourTransport = &http.Transport{
 }
 
 func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs) (uploadErr error) {
-	// The Exporter synchronizes access to client methods. This is not called
-	// after the Exporter is shutdown. Only thing to do here is send data.
+	// The client is immutable after construction and supports concurrent uploads.
 
 	pbRequest := &collogpb.ExportLogsServiceRequest{ResourceLogs: data}
 	body, err := proto.Marshal(pbRequest)

@@ -6,12 +6,11 @@ package log_test
 import (
 	"context"
 	"errors"
-	"io"
 	"slices"
 	"strconv"
-	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -119,22 +118,31 @@ func TestSimpleProcessorForceFlush(t *testing.T) {
 	require.Equal(t, []string{"ForceFlush"}, e.calls, "exporter calls")
 }
 
-type writerExporter struct {
-	io.Writer
+type concurrentExporter struct {
+	started chan<- struct{}
+	release <-chan struct{}
 }
 
-func (e *writerExporter) Export(_ context.Context, records []log.Record) error {
-	for _, r := range records {
-		_, _ = io.WriteString(e.Writer, r.Body().String())
+func (e *concurrentExporter) Export(ctx context.Context, _ []log.Record) error {
+	select {
+	case e.started <- struct{}{}:
+	case <-ctx.Done():
+		return ctx.Err()
 	}
+
+	select {
+	case <-e.release:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (*concurrentExporter) Shutdown(context.Context) error {
 	return nil
 }
 
-func (*writerExporter) Shutdown(context.Context) error {
-	return nil
-}
-
-func (*writerExporter) ForceFlush(context.Context) error {
+func (*concurrentExporter) ForceFlush(context.Context) error {
 	return nil
 }
 
@@ -149,28 +157,38 @@ func TestSimpleProcessorEmpty(t *testing.T) {
 	})
 }
 
-func TestSimpleProcessorConcurrentSafe(t *testing.T) {
-	const goRoutineN = 10
+func TestSimpleProcessorConcurrentSafeExport(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
 
+	started := make(chan struct{}, 2)
+	release := make(chan struct{})
 	var wg sync.WaitGroup
-	wg.Add(goRoutineN)
+	wg.Add(2)
+	defer func() {
+		close(release)
+		wg.Wait()
+	}()
 
 	r := new(log.Record)
 	r.SetSeverityText("test")
-	ctx := t.Context()
-	e := &writerExporter{new(strings.Builder)}
+	e := &concurrentExporter{started: started, release: release}
 	s := log.NewSimpleProcessor(e)
-	for range goRoutineN {
+	for range 2 {
 		go func() {
 			defer wg.Done()
 
 			_ = s.OnEmit(ctx, r)
-			_ = s.Shutdown(ctx)
-			_ = s.ForceFlush(ctx)
 		}()
 	}
 
-	wg.Wait()
+	for range 2 {
+		select {
+		case <-started:
+		case <-ctx.Done():
+			t.Fatal("export calls were not concurrent")
+		}
+	}
 }
 
 func BenchmarkSimpleProcessorOnEmit(b *testing.B) {

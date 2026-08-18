@@ -6,6 +6,7 @@ package stdoutlog
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/counter"
@@ -19,6 +20,7 @@ var _ log.Exporter = &Exporter{}
 // Exporter writes JSON-encoded log records to an [io.Writer] ([os.Stdout] by default).
 // Exporter must be created with [New].
 type Exporter struct {
+	exportMu   sync.Mutex
 	encoder    atomic.Pointer[json.Encoder]
 	timestamps bool
 	inst       *observ.Instrumentation
@@ -45,6 +47,9 @@ func New(options ...Option) (*Exporter, error) {
 
 // Export exports log records to writer.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error) {
+	e.exportMu.Lock()
+	defer e.exportMu.Unlock()
+
 	enc := e.encoder.Load()
 	if enc == nil {
 		return nil

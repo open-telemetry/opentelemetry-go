@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -17,7 +18,7 @@ import (
 )
 
 func ExampleRecordFactory() {
-	exp := exporter{os.Stdout}
+	exp := &exporter{Writer: os.Stdout}
 	rf := logtest.RecordFactory{
 		InstrumentationScope: &instrumentation.Scope{Name: "myapp"},
 	}
@@ -36,11 +37,17 @@ func ExampleRecordFactory() {
 }
 
 // Compile time check exporter implements log.Exporter.
-var _ log.Exporter = exporter{}
+var _ log.Exporter = (*exporter)(nil)
 
-type exporter struct{ io.Writer }
+type exporter struct {
+	mu sync.Mutex
+	io.Writer
+}
 
-func (e exporter) Export(_ context.Context, records []log.Record) error {
+func (e *exporter) Export(_ context.Context, records []log.Record) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	for i, r := range records {
 		if i != 0 {
 			if _, err := e.Write([]byte("\n")); err != nil {
@@ -54,11 +61,11 @@ func (e exporter) Export(_ context.Context, records []log.Record) error {
 	return nil
 }
 
-func (exporter) Shutdown(context.Context) error {
+func (*exporter) Shutdown(context.Context) error {
 	return nil
 }
 
 // appropriate error should be returned in these situations.
-func (exporter) ForceFlush(context.Context) error {
+func (*exporter) ForceFlush(context.Context) error {
 	return nil
 }

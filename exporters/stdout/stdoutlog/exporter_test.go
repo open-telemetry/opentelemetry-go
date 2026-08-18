@@ -385,6 +385,33 @@ func TestExporterConcurrentSafe(t *testing.T) {
 	}
 }
 
+func TestExporterConcurrentSafeExport(t *testing.T) {
+	var out bytes.Buffer
+	exporter, err := New(WithWriter(&out), WithPrettyPrint())
+	require.NoError(t, err)
+
+	const goroutines = 10
+	start := make(chan struct{})
+	errs := make(chan error, goroutines)
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for range goroutines {
+		go func() {
+			defer wg.Done()
+			<-start
+			errs <- exporter.Export(t.Context(), []sdklog.Record{{}})
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		assert.NoError(t, err)
+	}
+	assert.NotEmpty(t, out.Bytes())
+}
+
 func TestObservability(t *testing.T) {
 	tests := []struct {
 		name    string

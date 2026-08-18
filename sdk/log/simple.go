@@ -14,11 +14,11 @@ import (
 // Compile-time check SimpleProcessor implements Processor.
 var _ Processor = (*SimpleProcessor)(nil)
 
-// SimpleProcessor is an processor that synchronously exports log records.
+// SimpleProcessor is a processor that synchronously exports log records.
+// Calls to the configured Exporter's Export method may be concurrent.
 //
 // Use [NewSimpleProcessor] to create a SimpleProcessor.
 type SimpleProcessor struct {
-	mu       sync.Mutex
 	exporter Exporter
 	inst     *observ.SLP
 	noCmp    [0]func() //nolint: unused  // This is indeed used.
@@ -61,9 +61,6 @@ func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	if s.exporter == nil {
 		return nil
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	records := simpleProcRecordsPool.Get().(*[]Record)
 	defer func() {
