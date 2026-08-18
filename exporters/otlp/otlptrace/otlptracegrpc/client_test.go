@@ -131,7 +131,7 @@ func TestWithEndpointURL(t *testing.T) {
 	mc := runMockCollector(t)
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, "", []otlptracegrpc.Option{
+	exp := newGRPCExporter(ctx, t, "", []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpointURL("http://" + mc.endpoint),
 	}...)
 	t.Cleanup(func() {
@@ -146,8 +146,8 @@ func TestWithEndpointURL(t *testing.T) {
 }
 
 func newGRPCExporter(
-	tb testing.TB,
 	ctx context.Context,
+	tb testing.TB,
 	endpoint string,
 	additionalOpts ...otlptracegrpc.Option,
 ) *otlptrace.Exporter {
@@ -170,7 +170,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlptracegrpc.Option
 	mc := runMockCollector(t)
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, mc.endpoint, additionalOpts...)
+	exp := newGRPCExporter(ctx, t, mc.endpoint, additionalOpts...)
 	t.Cleanup(func() {
 		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
 		defer cancel()
@@ -200,7 +200,7 @@ func TestNewInvokeStartThenStopManyTimes(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	exp := newGRPCExporter(ctx, t, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	// Invoke Start numerous times, should return errAlreadyStarted
@@ -239,7 +239,7 @@ func TestNewCollectorOnBadConnection(t *testing.T) {
 
 	endpoint := fmt.Sprintf("localhost:%s", collectorPortStr)
 	ctx := t.Context()
-	exp := newGRPCExporter(t, ctx, endpoint)
+	exp := newGRPCExporter(ctx, t, endpoint)
 	require.NoError(t, exp.Shutdown(ctx))
 }
 
@@ -248,7 +248,7 @@ func TestNewWithEndpoint(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := t.Context()
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	exp := newGRPCExporter(ctx, t, mc.endpoint)
 	require.NoError(t, exp.Shutdown(ctx))
 }
 
@@ -259,7 +259,7 @@ func TestNewWithHeaders(t *testing.T) {
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	additionalKey := "additional-custom-header"
 	ctx = metadata.AppendToOutgoingContext(ctx, additionalKey, "additional-value")
-	exp := newGRPCExporter(t, ctx, mc.endpoint,
+	exp := newGRPCExporter(ctx, t, mc.endpoint,
 		otlptracegrpc.WithHeaders(map[string]string{"header1": "value1"}))
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 	require.NoError(t, exp.ExportSpans(ctx, roSpans))
@@ -282,8 +282,8 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	exp := newGRPCExporter(
-		t,
 		ctx,
+		t,
 		mc.endpoint,
 		otlptracegrpc.WithTimeout(1*time.Nanosecond),
 		otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}),
@@ -305,8 +305,8 @@ func TestExportSpansRequestSizeLimit(t *testing.T) {
 
 	ctx := t.Context()
 	exp := newGRPCExporter(
-		t,
 		ctx,
+		t,
 		mc.endpoint,
 		otlptracegrpc.WithMaxRequestSize(1),
 		otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}),
@@ -329,7 +329,7 @@ func TestNewWithMultipleAttributeTypes(t *testing.T) {
 	ctx, cancel := contextWithTimeout(context.Background(), t, 10*time.Second)
 	t.Cleanup(cancel)
 
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	exp := newGRPCExporter(ctx, t, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	tp := sdktrace.NewTracerProvider(
@@ -446,7 +446,7 @@ func TestEmptyData(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	exp := newGRPCExporter(ctx, t, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	assert.NoError(t, exp.ExportSpans(ctx, nil))
@@ -462,7 +462,7 @@ func TestPartialSuccess(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	exp := newGRPCExporter(ctx, t, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	err := exp.ExportSpans(ctx, roSpans)
@@ -476,7 +476,7 @@ func TestCustomUserAgent(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, mc.endpoint,
+	exp := newGRPCExporter(ctx, t, mc.endpoint,
 		otlptracegrpc.WithDialOption(grpc.WithUserAgent(customUserAgent)))
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 	require.NoError(t, exp.ExportSpans(ctx, roSpans))
@@ -512,7 +512,7 @@ func TestClientInstrumentation(t *testing.T) {
 	})
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	exp := newGRPCExporter(t, t.Context(), mc.endpoint)
+	exp := newGRPCExporter(t.Context(), t, mc.endpoint)
 	localSpans := tracetest.SpanStubs{{Name: "Span 0"}, {Name: "Span 1"}}.Snapshots()
 	err := exp.ExportSpans(t.Context(), localSpans)
 	assert.ErrorIs(t, err, internal.TracePartialSuccessError(n, msg))
@@ -617,7 +617,7 @@ func BenchmarkExporterExportSpans(b *testing.B) {
 		})
 		b.Cleanup(func() { require.NoError(b, mc.stop()) })
 
-		exp := newGRPCExporter(b, b.Context(), mc.endpoint)
+		exp := newGRPCExporter(b.Context(), b, mc.endpoint)
 		b.Cleanup(func() {
 			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 			assert.NoError(b, exp.Shutdown(context.Background()))
