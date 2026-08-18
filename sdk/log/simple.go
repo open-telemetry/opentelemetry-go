@@ -15,7 +15,6 @@ import (
 var _ Processor = (*SimpleProcessor)(nil)
 
 // SimpleProcessor is a processor that synchronously exports log records.
-// Calls to the configured Exporter's Export method may be concurrent.
 //
 // Use [NewSimpleProcessor] to create a SimpleProcessor.
 type SimpleProcessor struct {
