@@ -282,3 +282,190 @@ func (m *limitedSyncMap[V]) Len() int {
 	defer m.lenMux.Unlock()
 	return m.len
 }
+
+// syncMap is a type-safe wrapper around sync.Map.
+type syncMap[V any] struct {
+	sync.Map
+	len int
+}
+
+func (m *syncMap[V]) Load(key attribute.Distinct) (V, bool) {
+	val, ok := m.Map.Load(key)
+	if !ok {
+		var zero V
+		return zero, false
+	}
+	return val.(V), true
+}
+
+func (m *syncMap[V]) Store(key attribute.Distinct, val V) {
+	m.Map.Store(key, val)
+}
+
+func (m *syncMap[V]) Range(f func(key any, value V) bool) {
+	m.Map.Range(func(k, v any) bool {
+		return f(k, v.(V))
+	})
+}
+
+func (m *syncMap[V]) Clear() {
+	m.Map.Clear()
+	m.len = 0
+}
+
+// hotColdMap manages two maps for hot/cold swapping and a pinned registry.
+type hotColdMap[V any] struct {
+	hcwg          hotColdWaitGroup
+	hotColdValMap [2]syncMap[V]
+
+	mu     sync.Mutex
+	pinned map[attribute.Distinct]V
+	limit  int
+	count  atomic.Int64
+}
+
+func newHotColdMap[V any](limit int) *hotColdMap[V] {
+	return &hotColdMap[V]{
+		pinned: make(map[attribute.Distinct]V),
+		limit:  limit,
+	}
+}
+
+// Bind stores a value in the pinned registry, enforcing limits.
+// If an entry for attrs already exists in hotColdValMap (from an earlier WriteUnbound),
+// onBind is called on the existing value to promote it, avoiding duplicate entries.
+func (m *hotColdMap[V]) Bind(attrs attribute.Set, newValue func(attribute.Set) V, onBind func(V)) V {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	d := attrs.Equivalent()
+	if val, ok := m.pinned[d]; ok {
+		return val
+	}
+
+	if m.limit > 0 && m.count.Load() >= int64(m.limit-1) {
+		attrs = overflowSet
+		d = attrs.Equivalent()
+		if val, ok := m.pinned[d]; ok {
+			return val
+		}
+	}
+
+	var val V
+	var found bool
+	if v, ok := m.hotColdValMap[0].Load(d); ok {
+		val = v
+		found = true
+	} else if v, ok := m.hotColdValMap[1].Load(d); ok {
+		val = v
+		found = true
+	}
+
+	if found {
+		if onBind != nil {
+			onBind(val)
+		}
+	} else {
+		val = newValue(attrs)
+		m.count.Add(1)
+	}
+
+	m.pinned[d] = val
+	m.hotColdValMap[0].Store(d, val)
+	m.hotColdValMap[1].Store(d, val)
+	return val
+}
+
+// WriteUnbound executes write for the value associated with lazy attributes in the current hot map.
+// It ensures the write is completed before the reader can swap and collect the value.
+func (m *hotColdMap[V]) WriteUnbound(lazy lazyFilteredAttributes, newValue func(attribute.Set) V, write func(V)) {
+	hotIdx := m.hcwg.start()
+	defer m.hcwg.done(hotIdx)
+
+	d := lazy.Distinct()
+	if val, ok := m.hotColdValMap[hotIdx].Load(d); ok {
+		write(val)
+		return
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Re-check hot map
+	if val, ok := m.hotColdValMap[hotIdx].Load(d); ok {
+		write(val)
+		return
+	}
+
+	// Check pinned registry
+	if val, ok := m.pinned[d]; ok {
+		m.hotColdValMap[hotIdx].Store(d, val)
+		m.hotColdValMap[hotIdx].len++
+		write(val)
+		return
+	}
+
+	var fltrAttr attribute.Set
+	// Handle limit and overflow
+	if m.limit > 0 && m.count.Load() >= int64(m.limit-1) {
+		fltrAttr = overflowSet
+		d = overflowSet.Equivalent()
+		if val, ok := m.pinned[d]; ok {
+			m.hotColdValMap[hotIdx].Store(d, val)
+			m.hotColdValMap[hotIdx].len++
+			write(val)
+			return
+		}
+		if val, ok := m.hotColdValMap[hotIdx].Load(d); ok {
+			write(val)
+			return
+		}
+	} else {
+		fltrAttr = lazy.Set()
+	}
+
+	val := newValue(fltrAttr)
+	m.hotColdValMap[hotIdx].Store(d, val)
+	m.hotColdValMap[hotIdx].len++
+	m.count.Add(1)
+	write(val)
+}
+
+// SwapHotAndWait swaps the hot and cold maps and waits for active writers to finish.
+func (m *hotColdMap[V]) SwapHotAndWait() uint64 {
+	return m.hcwg.swapHotAndWait()
+}
+
+// Len returns the length of the specified map.
+func (m *hotColdMap[V]) Len(readIdx uint64) int {
+	return m.hotColdValMap[readIdx].len
+}
+
+// Collect ranges over the cold map, skipping pinned entries, and clears it.
+func (m *hotColdMap[V]) Collect(readIdx uint64, isPinned func(V) bool, f func(key any, val V) bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	unboundDeleted := 0
+	m.hotColdValMap[readIdx].Range(func(k any, val V) bool {
+		if isPinned(val) {
+			return true // skip
+		}
+		unboundDeleted++
+		return f(k, val)
+	})
+
+	m.hotColdValMap[readIdx].Clear()
+	m.count.Add(-int64(unboundDeleted))
+}
+
+// RangePinned ranges over the pinned registry.
+func (m *hotColdMap[V]) RangePinned(f func(key any, val V) bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for k, v := range m.pinned {
+		if !f(k, v) {
+			break
+		}
+	}
+}

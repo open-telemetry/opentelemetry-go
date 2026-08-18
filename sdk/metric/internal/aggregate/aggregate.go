@@ -18,6 +18,14 @@ var now = time.Now
 // Measure receives measurements to be aggregated.
 type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
 
+// BoundMeasure receives measurements for a pinned attribute set.
+type BoundMeasure[N int64 | float64] func(context.Context, N)
+
+// Binder allows binding a specific attribute set to a BoundMeasure.
+type Binder[N int64 | float64] interface {
+	Bind(attrs attribute.Set) BoundMeasure[N]
+}
+
 // ComputeAggregation stores the aggregate of measurements into dest and
 // returns the number of aggregate data-points output.
 type ComputeAggregation func(dest *metricdata.Aggregation) int
@@ -108,15 +116,31 @@ func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], ComputeAggregati
 	}
 }
 
+type binderFunc[N int64 | float64] func(attribute.Set) BoundMeasure[N]
+
+func (f binderFunc[N]) Bind(attrs attribute.Set) BoundMeasure[N] {
+	return f(attrs)
+}
+
+func (b Builder[N]) bind(bnd Binder[N]) Binder[N] {
+	if b.Filter != nil {
+		return binderFunc[N](func(attrs attribute.Set) BoundMeasure[N] {
+			fltrAttrs, _ := attrs.Filter(b.Filter)
+			return bnd.Bind(fltrAttrs)
+		})
+	}
+	return bnd
+}
+
 // Sum returns a sum aggregate function input and output.
-func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
+func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation, Binder[N]) {
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
 		s := newDeltaSum[N](monotonic, b.AggregationLimit, b.resFunc())
-		return b.filter(s.measure), s.collect
+		return b.filter(s.measure), s.collect, b.bind(s)
 	default:
 		s := newCumulativeSum[N](monotonic, b.AggregationLimit, b.resFunc())
-		return b.filter(s.measure), s.collect
+		return b.filter(s.measure), s.collect, b.bind(s)
 	}
 }
 

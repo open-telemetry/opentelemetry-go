@@ -434,6 +434,11 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 			fn:       benchPrecomputedWithUnsafeAttributes,
 		},
 		{
+			name:     "NoFilter/Precomputed/Bound",
+			provider: noFilterProvider,
+			fn:       benchPrecomputedBound,
+		},
+		{
 			name:     "NoFilter/Dynamic/WithAttributeSet",
 			provider: noFilterProvider,
 			fn:       benchDynamicWithAttributeSet,
@@ -449,6 +454,11 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 			fn:       benchDynamicWithUnsafeAttributes,
 		},
 		{
+			name:     "NoFilter/Dynamic/Bound",
+			provider: noFilterProvider,
+			fn:       benchDynamicBound,
+		},
+		{
 			name:     "NoFilter/Naive/WithAttributes",
 			provider: noFilterProvider,
 			fn:       benchNaiveWithAttributes,
@@ -459,9 +469,19 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 			fn:       benchPrecomputedWithAttributeSet,
 		},
 		{
+			name:     "Filtered/Precomputed/Bound",
+			provider: filteredProvider,
+			fn:       benchPrecomputedBound,
+		},
+		{
 			name:     "Filtered/Dynamic/WithAttributeSet",
 			provider: filteredProvider,
 			fn:       benchDynamicWithAttributeSet,
+		},
+		{
+			name:     "Filtered/Dynamic/Bound",
+			provider: filteredProvider,
+			fn:       benchDynamicBound,
 		},
 	}
 
@@ -649,6 +669,49 @@ func benchDynamicWithUnsafeAttributes(b *testing.B, ctx context.Context, counter
 				}
 				*addOpt = append(*addOpt, opt)
 				counter.Add(ctx, 1, *addOpt...)
+			}()
+		}
+	})
+}
+
+func benchPrecomputedBound(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
+	binder, ok := counter.(x.Float64Binder)
+	if !ok {
+		b.Fatal("counter does not implement x.Float64Binder")
+	}
+	bound := binder.Bind(attributes()...)
+	b.ReportAllocs()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			bound.Add(ctx, 1)
+		}
+	})
+}
+
+func benchDynamicBound(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
+	binder, ok := counter.(x.Float64Binder)
+	if !ok {
+		b.Fatal("counter does not implement x.Float64Binder")
+	}
+	attrPool := &sync.Pool{
+		New: func() any {
+			s := make([]attribute.KeyValue, 0, endToEndAttrsLen)
+			return &s
+		},
+	}
+	b.ReportAllocs()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			func() {
+				attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
+				defer func() {
+					clear(*attrsSlice)
+					*attrsSlice = (*attrsSlice)[:0]
+					attrPool.Put(attrsSlice)
+				}()
+				*attrsSlice = appendAttributes(*attrsSlice)
+				bound := binder.Bind(*attrsSlice...)
+				bound.Add(ctx, 1)
 			}()
 		}
 	})
