@@ -277,8 +277,8 @@ func (e ExportOp) recordOption(err error, code int) metric.RecordOption {
 	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
 }
 
-// successful returns the number of successful log exports among count
-// attempts, based on err.
+// successful returns the number of successfully exported log records from a
+// batch of count records, as determined from err.
 //
 // If err is nil, count is returned. All logs were successfully exported.
 //
@@ -302,8 +302,8 @@ var errPool = sync.Pool{
 	},
 }
 
-// rejected returns the number of rejected log exports among n attempts, based
-// on the non-nil err.
+// rejected returns the number of rejected log records from a batch of n
+// records, as determined from the non-nil err.
 func rejected(n int64, err error) int64 {
 	ps := errPool.Get().(*internal.PartialSuccess)
 	defer func() {

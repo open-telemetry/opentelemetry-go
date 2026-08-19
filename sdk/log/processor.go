@@ -73,7 +73,7 @@ type Processor interface {
 	// Implementations may synchronously modify the record so that the changes
 	// are visible in the next registered processor.
 	//
-	// Note that Record is not concurrency-safe. Therefore, asynchronous
+	// Note that Record is not concurrent-safe. Therefore, asynchronous
 	// processing may cause race conditions. Use Record.Clone
 	// to create a copy that shares no state with the original.
 	OnEmit(ctx context.Context, record *Record) error
