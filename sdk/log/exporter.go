@@ -44,8 +44,7 @@ type Exporter interface {
 	// Shutdown may be called concurrently with itself or with other methods.
 	Shutdown(ctx context.Context) error
 
-	// ForceFlush exports any log records that have not yet been exported to the
-	// configured Exporter.
+	// ForceFlush flushes any log records held by the Exporter.
 	//
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.

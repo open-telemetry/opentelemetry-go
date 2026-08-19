@@ -118,8 +118,8 @@ type Record struct {
 	attributeValueLengthLimit int
 	attributeCountLimit       int
 
-	// allowDupKeys specifies whether key-value collections should be
-	// deduplicated.
+	// allowDupKeys specifies whether duplicate keys are allowed in key-value
+	// collections.
 	allowDupKeys bool
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
@@ -219,8 +219,9 @@ func (r *Record) WalkAttributes(f func(attribute.KeyValue) bool) {
 }
 
 // AddAttributes adds attributes to the log record.
-// An attribute in attrs overwrites any attribute already added to r with the
-// same key.
+// Unless key duplication is enabled with [WithAllowKeyDuplication], an
+// attribute in attrs overwrites any attribute already added to r with the same
+// key.
 func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 	n := r.AttributesLen()
 	if n == 0 {
@@ -307,7 +308,7 @@ func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 // attrIndex returns an index map for all attributes in the Record r. The index
 // maps the attribute key to the location where the attribute is stored. If the
 // value is < 0, then -(value + 1) (e.g., -1 -> 0, -2 -> 1, -3 -> 2) represents
-// the index in r.nFront. Otherwise, the value is the exact index in r.back.
+// the index in r.front. Otherwise, the value is the exact index in r.back.
 //
 // The returned index is taken from the indexPool. It is the caller's
 // responsibility to return the index to that pool (putIndex) when done.

@@ -40,7 +40,7 @@ func Example() {
 	}()
 
 	// Register it as the global logger provider so that it can be used via
-	// global.Meter and accessed using global.GetMeterProvider.
+	// global.Logger and accessed using global.GetLoggerProvider.
 	// Most log bridges use the global logger provider by default.
 	// If the global logger provider is not set, then a no-op implementation
 	// is used, which fails to generate data.

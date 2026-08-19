@@ -56,7 +56,7 @@ func (*SimpleProcessor) Enabled(context.Context, EnabledParameters) bool {
 	return true
 }
 
-// OnEmit batches the provided log record.
+// OnEmit synchronously exports the provided log record.
 func (s *SimpleProcessor) OnEmit(ctx context.Context, r *Record) error {
 	if s.exporter == nil {
 		return nil
