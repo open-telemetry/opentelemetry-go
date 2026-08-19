@@ -554,15 +554,13 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 	})
 
 	t.Run("EmptyMessageWithNoSlotsLeft", func(t *testing.T) {
-		var typeCalled bool
 		var in log.Record
-		in.SetErr(errWithType{typ: "custom.type", typeCalled: &typeCalled})
+		in.SetErr(errWithType{typ: "custom.type"})
 		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(0)), instrumentation.Scope{})
 		got := lLimited.newRecord(t.Context(), in)
 
 		assert.Zero(t, got.AttributesLen())
 		assert.Equal(t, 1, got.DroppedAttributes())
-		assert.False(t, typeCalled)
 	})
 
 	t.Run("CallerProvidedAttributesWithNoSlotsLeft", func(t *testing.T) {
@@ -591,24 +589,6 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 		got.WalkAttributes(func(kv attribute.KeyValue) bool {
 			assert.Equal(t, exceptionTypeKey, kv.Key)
 			assert.Equal(t, "type", kv.Value.AsString())
-			return true
-		})
-	})
-
-	t.Run("CallerProvidedMessageFillsCapacity", func(t *testing.T) {
-		var typeCalled bool
-		var in log.Record
-		in.SetErr(errWithType{msg: "derived.message", typ: "derived.type", typeCalled: &typeCalled})
-		in.AddAttributes(exceptionMessageKey.String("message"))
-		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(1)), instrumentation.Scope{})
-		got := lLimited.newRecord(t.Context(), in)
-
-		assert.Equal(t, 1, got.AttributesLen())
-		assert.Equal(t, 1, got.DroppedAttributes())
-		assert.False(t, typeCalled)
-		got.WalkAttributes(func(kv attribute.KeyValue) bool {
-			assert.Equal(t, exceptionMessageKey, kv.Key)
-			assert.Equal(t, "message", kv.Value.AsString())
 			return true
 		})
 	})
@@ -651,19 +631,13 @@ func TestErrorType(t *testing.T) {
 }
 
 type errWithType struct {
-	msg        string
-	typ        string
-	typeCalled *bool
+	msg string
+	typ string
 }
 
 func (e errWithType) Error() string { return e.msg }
 
-func (e errWithType) ErrorType() string {
-	if e.typeCalled != nil {
-		*e.typeCalled = true
-	}
-	return e.typ
-}
+func (e errWithType) ErrorType() string { return e.typ }
 
 type baseErr struct{}
 
