@@ -102,7 +102,7 @@ func TestExporterShutdown(t *testing.T) {
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown Exporter")
 
 	// After Shutdown is called, calls to Export, Shutdown, or ForceFlush
-	// should perform no operation and return nil error.
+	// should perform no operation and return nil.
 	r := make([]sdklog.Record, 1)
 	assert.NoError(t, e.Export(ctx, r), "Export on Shutdown Exporter")
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush on Shutdown Exporter")
@@ -150,7 +150,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 	wg.Wait()
 }
 
-// TestExporter runs integration test against the real OTLP collector.
+// TestExporter runs an integration test against the real OTLP collector.
 func TestExporter(t *testing.T) {
 	t.Run("ExporterHonorsContextErrors", func(t *testing.T) {
 		t.Run("Export", testCtxErrs(func() func(context.Context) error {

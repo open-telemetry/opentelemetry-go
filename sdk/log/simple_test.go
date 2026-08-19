@@ -384,7 +384,7 @@ func processedLogCount(t *testing.T, r metric.Reader) int64 {
 
 // TestSimpleProcessorProcessedBeforeExport asserts the record is counted as
 // processed at the point it is submitted to the exporter, not after the export
-// completes (semantic-conventions requirement).
+// completes, as required by the semantic conventions.
 func TestSimpleProcessorProcessedBeforeExport(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 

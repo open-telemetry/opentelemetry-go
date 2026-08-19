@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
-// Exporter is a OpenTelemetry log Exporter. It transports log data encoded as
+// Exporter is an OpenTelemetry log exporter. It transports log data encoded as
 // OTLP protobufs using HTTP.
 // Exporter must be created with [New].
 type Exporter struct {
@@ -19,13 +19,13 @@ type Exporter struct {
 	stopped atomic.Bool
 }
 
-// Compile-time check Exporter implements [log.Exporter].
+// This is a compile-time check that Exporter implements [log.Exporter].
 var _ log.Exporter = (*Exporter)(nil)
 
 // New returns a new [Exporter].
 //
-// It is recommended to use it with a [BatchProcessor]
-// or other processor exporting records asynchronously.
+// Use the Exporter with a [log.BatchProcessor] or another processor that
+// exports records asynchronously.
 func New(ctx context.Context, options ...Option) (*Exporter, error) {
 	cfg := newConfig(options)
 	c, err := newHTTPClient(ctx, cfg)

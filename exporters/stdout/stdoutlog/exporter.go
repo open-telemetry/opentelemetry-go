@@ -43,7 +43,7 @@ func New(options ...Option) (*Exporter, error) {
 	return e, err
 }
 
-// Export exports log records to writer.
+// Export exports log records to the writer.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error) {
 	enc := e.encoder.Load()
 	if enc == nil {
