@@ -201,11 +201,11 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 			}
 		}
 		if !hasExceptionType {
+			if hasLimit && remaining <= n {
+				newRecord.addDropped(1)
+				goto flush
+			}
 			if errType := errorType(err); errType != "" {
-				if hasLimit && remaining <= n {
-					newRecord.addDropped(1)
-					goto flush
-				}
 				attrs[n] = exceptionTypeKey.String(errType)
 				n++
 			}
