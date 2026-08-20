@@ -554,13 +554,15 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 	})
 
 	t.Run("EmptyMessageWithNoSlotsLeft", func(t *testing.T) {
+		err := &errWithType{typ: "custom.type"}
 		var in log.Record
-		in.SetErr(errWithType{typ: "custom.type"})
+		in.SetErr(err)
 		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(0)), instrumentation.Scope{})
 		got := lLimited.newRecord(t.Context(), in)
 
 		assert.Zero(t, got.AttributesLen())
 		assert.Equal(t, 1, got.DroppedAttributes())
+		assert.False(t, err.typeCalled)
 	})
 
 	t.Run("CallerProvidedAttributesWithNoSlotsLeft", func(t *testing.T) {
@@ -596,13 +598,13 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 
 func TestErrorType(t *testing.T) {
 	t.Run("UsesErrorTypeMethod", func(t *testing.T) {
-		err := errWithType{msg: "boom", typ: "custom.type"}
+		err := &errWithType{msg: "boom", typ: "custom.type"}
 		assert.Equal(t, "custom.type", errorType(err))
 	})
 
 	t.Run("FallsBackWhenErrorTypeEmpty", func(t *testing.T) {
-		err := errWithType{msg: "boom", typ: ""}
-		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.errWithType", errorType(err))
+		err := &errWithType{msg: "boom", typ: ""}
+		assert.Equal(t, "*log.errWithType", errorType(err))
 	})
 
 	t.Run("NilError", func(t *testing.T) {
@@ -615,12 +617,12 @@ func TestErrorType(t *testing.T) {
 	})
 
 	t.Run("FmtWrappedFallsBackToWrappedType", func(t *testing.T) {
-		err := fmt.Errorf("wrapped: %w", errWithType{msg: "boom", typ: ""})
-		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.errWithType", errorType(err))
+		err := fmt.Errorf("wrapped: %w", &errWithType{msg: "boom", typ: ""})
+		assert.Equal(t, "*log.errWithType", errorType(err))
 	})
 
 	t.Run("CustomWrapperStaysTopLevel", func(t *testing.T) {
-		err := wrappedErr{err: errWithType{msg: "boom", typ: ""}}
+		err := wrappedErr{err: &errWithType{msg: "boom", typ: ""}}
 		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.wrappedErr", errorType(err))
 	})
 
@@ -631,13 +633,17 @@ func TestErrorType(t *testing.T) {
 }
 
 type errWithType struct {
-	msg string
-	typ string
+	msg        string
+	typ        string
+	typeCalled bool
 }
 
 func (e errWithType) Error() string { return e.msg }
 
-func (e errWithType) ErrorType() string { return e.typ }
+func (e *errWithType) ErrorType() string {
+	e.typeCalled = true
+	return e.typ
+}
 
 type baseErr struct{}
 
