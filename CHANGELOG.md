@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Lazily evaluate filtered and dropped attributes on measurement hot paths in `go.opentelemetry.io/otel/sdk/metric` to avoid unnecessary attribute set allocations. (#8598)
+- Add `ErrExporterShutdown` to `go.opentelemetry.io/otel/sdk/log` and return it from the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` exporters when `Export` is called after `Shutdown`. (#8773)
 - Clarify in `go.opentelemetry.io/otel/log` that calling `Logger.Enabled` is optional and that cached results can become stale. (#8764)
 
 ### Fixed
@@ -24,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix a data race when span attributes are read concurrently in `go.opentelemetry.io/otel/sdk/trace`. (#8706)
 - Prevent a panic in `(*Set).Filter` when called on a nil receiver in `go.opentelemetry.io/otel/attribute`. (#8792)
 - The simple span and log processors record `otel.sdk.processor.{span,log}.processed` when the record is submitted to the exporter instead of after the export completes, and no longer set `error.type` from the export outcome, in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log`. (#8705)
+- Prevent `Resource.MarshalLog` from panicking on nil resources in `go.opentelemetry.io/otel/sdk/resource`. (#8758)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

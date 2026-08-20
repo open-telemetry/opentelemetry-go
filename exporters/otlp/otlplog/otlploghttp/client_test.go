@@ -164,18 +164,18 @@ type exportResult struct {
 	Err      error
 }
 
-// storage stores uploaded OTLP log data in their proto form.
+// storage stores uploaded OTLP log data in protobuf form.
 type storage struct {
 	dataMu sync.Mutex
 	data   []*lpb.ResourceLogs
 }
 
-// newStorage returns a configure storage ready to store received requests.
+// newStorage returns a configured storage instance ready to store received requests.
 func newStorage() *storage {
 	return &storage{}
 }
 
-// Add adds the request to the Storage.
+// Add adds the request to the storage.
 func (s *storage) Add(request *collogpb.ExportLogsServiceRequest) {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
@@ -226,19 +226,18 @@ type httpCollector struct {
 	srv      *http.Server
 }
 
-// newHTTPCollector returns a *HTTPCollector that is listening at the provided
+// newHTTPCollector returns a *httpCollector that is listening at the provided
 // endpoint.
 //
-// If endpoint is an empty string, the returned collector will be listening on
-// the localhost interface at an OS chosen port, not use TLS, and listen at the
-// default OTLP log endpoint path ("/v1/logs"). If the endpoint contains a
-// prefix of "https" the server will generate weak self-signed TLS certificates
-// and use them to server data. If the endpoint contains a path, that path will
-// be used instead of the default OTLP metric endpoint path.
+// If endpoint is an empty string, the returned collector will listen on the
+// localhost interface at an OS-chosen port without TLS and use the default OTLP
+// log endpoint path ("/v1/logs"). If the endpoint begins with "https", the
+// server will generate weak self-signed TLS certificates
+// and use them to serve data. If the endpoint contains a path, that path will
+// be used instead of the default OTLP log endpoint path.
 //
-// If errCh is not nil, the collector will respond to HTTP requests with errors
-// sent on that channel. This means that if errCh is not nil Export calls will
-// block until an error is received.
+// If resultCh is not nil, each request blocks until an exportResult is received
+// and the collector responds with that result.
 func newHTTPCollector(
 	endpoint string,
 	resultCh <-chan exportResult,
@@ -291,26 +290,26 @@ func newHTTPCollector(
 	return c, nil
 }
 
-// withHTTPCollectorRespondingPlainText makes the HTTPCollector return
-// a plaintext, instead of protobuf, response.
+// withHTTPCollectorRespondingPlainText makes the httpCollector return a
+// plaintext response instead of a protobuf response.
 func withHTTPCollectorRespondingPlainText() func(*httpCollector) {
 	return func(s *httpCollector) {
 		s.plainTextResponse = true
 	}
 }
 
-// Shutdown shuts down the HTTP server closing all open connections and
+// Shutdown shuts down the HTTP server, closing all open connections and
 // listeners.
 func (c *httpCollector) Shutdown(ctx context.Context) error {
 	return c.srv.Shutdown(ctx)
 }
 
-// Addr returns the net.Addr c is listening at.
+// Addr returns the net.Addr on which c is listening.
 func (c *httpCollector) Addr() net.Addr {
 	return c.listener.Addr()
 }
 
-// Collect returns the Storage holding all collected requests.
+// Collect returns the storage holding all collected requests.
 func (c *httpCollector) Collect() *storage {
 	return c.storage
 }
@@ -439,8 +438,9 @@ func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
 	}
 }
 
-// Based on https://golang.org/src/crypto/tls/generate_cert.go,
-// simplified and weakened.
+// newWeakCertificate is based on
+// https://golang.org/src/crypto/tls/generate_cert.go, with simplifications and
+// weaker security.
 func newWeakCertificate() (tls.Certificate, error) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
