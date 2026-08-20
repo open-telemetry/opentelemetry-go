@@ -9,6 +9,7 @@
 package transform
 
 import (
+	"math"
 	"time"
 
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -97,7 +98,7 @@ func LogRecord(record log.Record) *lpb.LogRecord {
 		Body:                 AttrValue(record.Body()),
 		Attributes:           make([]*cpb.KeyValue, 0, record.AttributesLen()),
 		Flags:                uint32(record.TraceFlags()),
-		// TODO: DroppedAttributesCount: /* ... */,
+		DroppedAttributesCount: clampUint32(record.DroppedAttributes()),
 	}
 	record.WalkAttributes(func(kv attribute.KeyValue) bool {
 		r.Attributes = append(r.Attributes, Attr(kv))
@@ -118,6 +119,16 @@ func LogRecord(record log.Record) *lpb.LogRecord {
 // or after the year 2262). For representable times before the Unix epoch, and
 // for the zero [time.Time] value, timeUnixNano returns 0. The result does not
 // depend on the location associated with t.
+func clampUint32(v int) uint32 {
+	if v < 0 {
+		return 0
+	}
+	if int64(v) > math.MaxUint32 {
+		return math.MaxUint32
+	}
+	return uint32(v) // nolint: gosec  // Overflow/Underflow checked.
+}
+
 func timeUnixNano(t time.Time) uint64 {
 	nano := t.UnixNano()
 	if nano < 0 {
