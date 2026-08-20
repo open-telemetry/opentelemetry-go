@@ -13,11 +13,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
-// Initialize OpenTelemetry Logs SDK and setup logging using a log bridge.
+// Initialize the OpenTelemetry Logs SDK and set up logging using a log bridge.
 func Example() {
 	// Create an exporter that will emit log records.
-	// E.g. use go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp
-	// to send logs using OTLP over HTTP:
+	// For example, use
+	// go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp to send logs
+	// using OTLP over HTTP:
 	// exporter, err := otlploghttp.New(ctx)
 	var exporter log.Exporter
 
@@ -38,15 +39,16 @@ func Example() {
 		}
 	}()
 
-	// Register as global logger provider so that it can be used via global.Meter
-	// and accessed using global.GetMeterProvider.
-	// Most log bridges use the global logger provider as default.
-	// If the global logger provider is not set then a no-op implementation
+	// Register it as the global logger provider so that it can be used via
+	// global.Logger and accessed using global.GetLoggerProvider.
+	// Most log bridges use the global logger provider by default.
+	// If the global logger provider is not set, then a no-op implementation
 	// is used, which fails to generate data.
 	global.SetLoggerProvider(provider)
 
-	// Use a bridge so that you can emit logs using your Go logging library of preference.
-	// E.g. use go.opentelemetry.io/contrib/bridges/otelslog so that you can use log/slog:
+	// Use a bridge so that you can emit logs using your preferred Go logging
+	// library. For example, use go.opentelemetry.io/contrib/bridges/otelslog so
+	// that you can use log/slog:
 	// slog.SetDefault(otelslog.NewLogger("my/pkg/name", otelslog.WithLoggerProvider(provider)))
 }
 
@@ -56,7 +58,7 @@ func ExampleProcessor_contextFilter() {
 	var processor log.Processor = log.NewBatchProcessor(nil)
 
 	// Wrap the processor so that it ignores processing log records
-	// when a context deriving from WithIgnoreLogs is passed
+	// when a context derived from WithIgnoreLogs is passed
 	// to the logging methods.
 	processor = &ContextFilterProcessor{Processor: processor}
 
@@ -71,13 +73,13 @@ type key struct{}
 
 var ignoreLogsKey key
 
-// WithIgnoreLogs returns a context which is used by [ContextFilterProcessor]
+// WithIgnoreLogs returns a context that is used by [ContextFilterProcessor]
 // to filter out log records.
 func WithIgnoreLogs(ctx context.Context) context.Context {
 	return context.WithValue(ctx, ignoreLogsKey, true)
 }
 
-// ContextFilterProcessor filters out logs when a context deriving from
+// ContextFilterProcessor filters out logs when a context derived from
 // [WithIgnoreLogs] is passed to its methods.
 type ContextFilterProcessor struct {
 	log.Processor
@@ -99,7 +101,8 @@ func ignoreLogs(ctx context.Context) bool {
 	return ok
 }
 
-// Use a processor which sets EventName on log records having "otel.event.name" string attribute.
+// Use a processor that sets EventName on log records with an "otel.event.name"
+// string attribute.
 // This is useful for users of logging libraries that do not support
 // setting the event name on log records, but do support attributes.
 func ExampleProcessor_eventName() {
@@ -119,7 +122,7 @@ func ExampleProcessor_eventName() {
 }
 
 // EventNameProcessor is a [log.Processor] that sets the EventName
-// on log records having "otel.event.name" string attribute.
+// on log records with an "otel.event.name" string attribute.
 // It is useful for logging libraries that do not support
 // setting the event name on log records,
 // but do support attributes.
@@ -130,8 +133,8 @@ func (*EventNameProcessor) Enabled(context.Context, log.EnabledParameters) bool 
 	return true
 }
 
-// OnEmit sets the EventName on log records having an "otel.event.name" string attribute.
-// The original attribute is not removed.
+// OnEmit sets the EventName on log records with an "otel.event.name" string
+// attribute. The original attribute is not removed.
 func (*EventNameProcessor) OnEmit(_ context.Context, record *log.Record) error {
 	record.WalkAttributes(func(kv attribute.KeyValue) bool {
 		if kv.Key == "otel.event.name" && kv.Value.Type() == attribute.STRING {
@@ -152,7 +155,7 @@ func (*EventNameProcessor) ForceFlush(context.Context) error {
 	return nil
 }
 
-// Use a processor which redacts sensitive data from some attributes.
+// Use a processor that redacts sensitive data from some attributes.
 func ExampleProcessor_redact() {
 	// Existing processor that emits telemetry.
 	var processor log.Processor = log.NewBatchProcessor(nil)
@@ -179,7 +182,7 @@ func (*RedactTokensProcessor) Enabled(context.Context, log.EnabledParameters) bo
 }
 
 // OnEmit redacts values from attributes containing "token" in the key
-// by replacing them with a REDACTED value.
+// by replacing them with a "REDACTED" value.
 func (*RedactTokensProcessor) OnEmit(_ context.Context, record *log.Record) error {
 	record.WalkAttributes(func(kv attribute.KeyValue) bool {
 		key := string(kv.Key)

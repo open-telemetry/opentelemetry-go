@@ -175,7 +175,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 	wg.Wait()
 }
 
-// TestExporter runs integration test against the real OTLP collector.
+// TestExporter runs an integration test against the real OTLP collector.
 func TestExporter(t *testing.T) {
 	t.Run("ExporterHonorsContextErrors", func(t *testing.T) {
 		t.Run("Export", testCtxErrs(func() func(context.Context) error {

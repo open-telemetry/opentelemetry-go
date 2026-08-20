@@ -44,7 +44,7 @@ func New(options ...Option) (*Exporter, error) {
 	return e, err
 }
 
-// Export exports log records to writer. It returns [log.ErrExporterShutdown]
+// Export exports log records to the writer. It returns [log.ErrExporterShutdown]
 // if called after Shutdown.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error) {
 	enc := e.encoder.Load()

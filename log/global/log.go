@@ -22,7 +22,7 @@ import (
 // If this is called before a global LoggerProvider is configured, the returned
 // Logger will be a No-Op implementation of a Logger. When a global
 // LoggerProvider is registered for the first time, the returned Logger is
-// updated in-place to report to this new LoggerProvider. There is no need to
+// updated in place to report to this new LoggerProvider. There is no need to
 // call this function again for an updated instance.
 //
 // This is a convenience function. It is equivalent to:
@@ -35,9 +35,9 @@ func Logger(name string, options ...log.LoggerOption) log.Logger {
 // GetLoggerProvider returns the globally configured [log.LoggerProvider].
 //
 // If a global LoggerProvider has not been configured with [SetLoggerProvider],
-// the returned Logger will be a No-Op implementation of a LoggerProvider. When
+// the returned LoggerProvider will be a No-Op implementation. When
 // a global LoggerProvider is registered for the first time, the returned
-// LoggerProvider and all of its created Loggers are updated in-place. There is
+// LoggerProvider and all Loggers it has created are updated in place. There is
 // no need to call this function again for an updated instance.
 func GetLoggerProvider() log.LoggerProvider {
 	return global.GetLoggerProvider()
