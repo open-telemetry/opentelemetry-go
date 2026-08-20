@@ -245,11 +245,28 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	defer cancel()
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
+	var sdkLen int
+	var collectedLen int
 	defer func() {
-		*rm = metricdata.ResourceMetrics{} // erase fields to allow GC to collect them.
+		// Retain the underlying array capacity for the next flush.
+		// pipeline.produce() overwrites ScopeMetrics entries via ReuseSlice,
+		// so clearing is not needed and would break data reuse inside produce.
+
+		// Clear producer-owned entries to avoid ownership boundary leaks.
+		if collectedLen > len(rm.ScopeMetrics) {
+			rm.ScopeMetrics = rm.ScopeMetrics[:collectedLen]
+		}
+		for i := sdkLen; i < collectedLen; i++ {
+			rm.ScopeMetrics[i] = metricdata.ScopeMetrics{}
+		}
+
+		rm.ScopeMetrics = rm.ScopeMetrics[:0]
+		rm.Resource = nil
 		r.rmPool.Put(rm)
 	}()
-	err := r.Collect(ctx, rm)
+	var err error
+	sdkLen, err = r.collect(ctx, r.sdkProducer.Load(), rm)
+	collectedLen = len(rm.ScopeMetrics)
 	if err == nil {
 		if r.batcher.size > 0 {
 			batches := r.batcher.splitResourceMetrics(rm)
@@ -280,11 +297,13 @@ func (r *PeriodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMet
 		return errors.New("periodic reader: *metricdata.ResourceMetrics is nil")
 	}
 	// TODO (#3047): When collect is updated to accept output as param, pass rm.
-	return r.collect(ctx, r.sdkProducer.Load(), rm)
+	_, err := r.collect(ctx, r.sdkProducer.Load(), rm)
+	return err
 }
 
 // collect unwraps p as a produceHolder and returns its produce results.
-func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.ResourceMetrics) error {
+// It also returns the number of ScopeMetrics produced by the SDK (sdkLen).
+func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.ResourceMetrics) (int, error) {
 	var err error
 	if r.inst != nil {
 		cp := r.inst.CollectMetrics(ctx)
@@ -293,7 +312,7 @@ func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.Reso
 
 	if p == nil {
 		err = ErrReaderNotRegistered
-		return err
+		return 0, err
 	}
 
 	ph, ok := p.(produceHolder)
@@ -303,13 +322,14 @@ func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.Reso
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
 		err = fmt.Errorf("periodic reader: invalid producer: %T", p)
-		return err
+		return 0, err
 	}
 
 	err = ph.produce(ctx, rm)
 	if err != nil {
-		return err
+		return 0, err
 	}
+	sdkLen := len(rm.ScopeMetrics)
 	for _, producer := range r.externalProducers.Load().([]Producer) {
 		externalMetrics, e := producer.Produce(ctx)
 		if e != nil {
@@ -320,7 +340,7 @@ func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.Reso
 
 	global.Debug("PeriodicReader collection", "Data", rm)
 
-	return err
+	return sdkLen, err
 }
 
 // export exports metric data m using r's exporter.
@@ -389,7 +409,9 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 		if ph != nil { // Reader was registered.
 			// Flush pending telemetry.
 			m := r.rmPool.Get().(*metricdata.ResourceMetrics)
-			err = r.collect(ctx, ph, m)
+			var sdkLen int
+			sdkLen, err = r.collect(ctx, ph, m)
+			collectedLen := len(m.ScopeMetrics)
 			if err == nil {
 				if r.batcher.size > 0 {
 					batches := r.batcher.splitResourceMetrics(m)
@@ -410,6 +432,16 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 					err = r.exporter.Export(ctx, m)
 				}
 			}
+			// Retain the underlying array capacity for the next flush.
+			// Clear producer-owned entries to avoid ownership boundary leaks.
+			if collectedLen > len(m.ScopeMetrics) {
+				m.ScopeMetrics = m.ScopeMetrics[:collectedLen]
+			}
+			for i := sdkLen; i < collectedLen; i++ {
+				m.ScopeMetrics[i] = metricdata.ScopeMetrics{}
+			}
+			m.ScopeMetrics = m.ScopeMetrics[:0]
+			m.Resource = nil
 			r.rmPool.Put(m)
 		}
 
