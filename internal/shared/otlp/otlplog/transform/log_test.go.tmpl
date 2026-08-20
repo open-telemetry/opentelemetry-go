@@ -7,6 +7,7 @@
 package transform
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -322,6 +323,24 @@ func TestSeverityNumber(t *testing.T) {
 		want := lpb.SeverityNumber(i)
 		want += lpb.SeverityNumber_SEVERITY_NUMBER_UNSPECIFIED
 		assert.Equal(t, want, SeverityNumber(api.Severity(i)))
+	}
+}
+
+func TestLogRecordDroppedAttributes(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		dropped int
+		want    uint32
+	}{
+		{name: "zero", want: 0},
+		{name: "positive", dropped: 42, want: 42},
+		{name: "negative", dropped: -1, want: 0},
+		{name: "overflow", dropped: int(math.MaxUint32) + 100, want: math.MaxUint32},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := logtest.RecordFactory{DroppedAttributes: tc.dropped}.NewRecord()
+			assert.Equal(t, tc.want, LogRecord(rec).DroppedAttributesCount)
+		})
 	}
 }
 
