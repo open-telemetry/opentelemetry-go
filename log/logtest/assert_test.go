@@ -20,7 +20,7 @@ var (
 	errBoom = errors.New("boom")
 )
 
-// Compile-time check to ensure testing structs implement TestingT.
+// These compile-time checks ensure that the testing structs implement TestingT.
 var (
 	_ TestingT = (*testing.T)(nil)
 	_ TestingT = (*testing.B)(nil)
