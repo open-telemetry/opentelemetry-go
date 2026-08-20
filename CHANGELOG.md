@@ -8,8 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release is the last to support [Go 1.25].
+The next release will require at least [Go 1.26].
+
 ### Added
 
+- Support testing of [Go 1.27].
 - Support `http/json` in `otlptracehttp` (#8273)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
 
@@ -3904,6 +3908,7 @@ It contains api and sdk for trace and meter.
 
 <!-- Released section ended -->
 
+[Go 1.27]: https://go.dev/doc/go1.27
 [Go 1.26]: https://go.dev/doc/go1.26
 [Go 1.25]: https://go.dev/doc/go1.25
 [Go 1.24]: https://go.dev/doc/go1.24
