@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/internal/tools
 
-go 1.25.8
+go 1.26.0
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -234,7 +234,7 @@ require (
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260814151720-d8c169486af1 // indirect
+	golang.org/x/telemetry v0.0.0-20260819180204-f79da969f323 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
