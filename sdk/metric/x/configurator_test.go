@@ -133,6 +133,22 @@ func TestMeterConfiguratorHandleSetNoConfigurator(t *testing.T) {
 	assert.True(t, cfg.Enabled(), "zero MeterConfig must be enabled")
 }
 
+func TestWithMeterConfiguratorNilHandle(t *testing.T) {
+	opt := WithMeterConfigurator(nil)
+	ex := opt.(meterConfiguratorOptionExtractor)
+
+	// nil handle must not panic; must behave as if the option were omitted.
+	result := ex.MeterConfigurator()(instrumentation.Scope{Name: "test"})
+	cfg, ok := result.(interface{ Enabled() bool })
+	require.True(t, ok)
+	assert.True(t, cfg.Enabled(), "nil handle must fall back to zero MeterConfig")
+
+	// RegisterOnUpdate on a nil handle must not panic.
+	assert.NotPanics(t, func() {
+		opt.(meterConfiguratorOnUpdateRegistrar).RegisterOnUpdate(func() {})
+	})
+}
+
 func TestMeterConfiguratorHandleSetNilClears(t *testing.T) {
 	h := NewMeterConfiguratorHandle()
 	opt := WithMeterConfigurator(h)

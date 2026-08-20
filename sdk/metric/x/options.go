@@ -72,6 +72,8 @@ func (meterConfiguratorProviderOption) Experimental() {}
 // [MeterConfiguratorHandle.Set] are only supported when a handle is registered
 // here. Providers created without this option cannot have a configurator added
 // later.
+//
+// A nil h is a no-op, equivalent to omitting this option entirely.
 func WithMeterConfigurator(h *MeterConfiguratorHandle) sdkmetric.Option {
 	return meterConfiguratorProviderOption{handle: h}
 }
@@ -80,6 +82,9 @@ func WithMeterConfigurator(h *MeterConfiguratorHandle) sdkmetric.Option {
 // it via duck-type without importing this package.
 func (o meterConfiguratorProviderOption) MeterConfigurator() func(instrumentation.Scope) any {
 	return func(s instrumentation.Scope) any {
+		if o.handle == nil {
+			return MeterConfig{}
+		}
 		if p := o.handle.configurator.Load(); p != nil {
 			return (*p)(s)
 		}
@@ -91,5 +96,8 @@ func (o meterConfiguratorProviderOption) MeterConfigurator() func(instrumentatio
 // to register the cache walk callback. Called once at construction; subsequent
 // [MeterConfiguratorHandle.Set] calls trigger it.
 func (o meterConfiguratorProviderOption) RegisterOnUpdate(fn func()) {
+	if o.handle == nil {
+		return
+	}
 	o.handle.onUpdate.Store(&fn)
 }
