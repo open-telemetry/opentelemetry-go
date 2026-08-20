@@ -95,31 +95,35 @@ func nextExporterID() int64 {
 
 func newGRPCDialOptions(cfg config) []grpc.DialOption {
 	userAgent := "OTel Go OTLP over gRPC logs exporter/" + Version()
-	dialOpts := []grpc.DialOption{grpc.WithUserAgent(userAgent)}
-	dialOpts = append(dialOpts, cfg.dialOptions.Value...)
+	// dialOptsPrefix holds the internally computed defaults. It is prepended
+	// to the user-supplied dial options so that a raw grpc.DialOption passed via
+	// WithDialOption always takes precedence: grpc.DialOption values are opaque
+	// closures, so this code has no way to detect a conflicting user-supplied
+	// option and defer to it instead.
+	dialOptsPrefix := []grpc.DialOption{grpc.WithUserAgent(userAgent)}
 
 	// Convert other grpc configs to the dial options.
 	// Service config
 	if cfg.serviceConfig.Value != "" {
-		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(cfg.serviceConfig.Value))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithDefaultServiceConfig(cfg.serviceConfig.Value))
 	}
 	// Prioritize configured credentials over Insecure (passing both is an error).
 	switch {
 	case cfg.gRPCCredentials.Value != nil:
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(cfg.gRPCCredentials.Value))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithTransportCredentials(cfg.gRPCCredentials.Value))
 	case cfg.tlsCfg.Value != nil:
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(cfg.tlsCfg.Value)))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithTransportCredentials(credentials.NewTLS(cfg.tlsCfg.Value)))
 	case cfg.insecure.Value:
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	default:
 		// Default to using the host's root CA.
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithTransportCredentials(
 			credentials.NewTLS(nil),
 		))
 	}
 	// Compression
 	if cfg.compression.Value == GzipCompression {
-		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 	}
 	// Reconnection period
 	if cfg.reconnectionPeriod.Value != 0 {
@@ -127,8 +131,9 @@ func newGRPCDialOptions(cfg config) []grpc.DialOption {
 			Backoff:           backoff.DefaultConfig,
 			MinConnectTimeout: cfg.reconnectionPeriod.Value,
 		}
-		dialOpts = append(dialOpts, grpc.WithConnectParams(p))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithConnectParams(p))
 	}
+	dialOpts := append(dialOptsPrefix, cfg.dialOptions.Value...)
 
 	return dialOpts
 }
