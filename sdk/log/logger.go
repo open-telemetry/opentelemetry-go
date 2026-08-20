@@ -26,7 +26,7 @@ const (
 	exceptionMessageKey = semconv.ExceptionMessageKey
 )
 
-// Compile-time check logger implements log.Logger.
+// This is a compile-time check that logger implements log.Logger.
 var _ log.Logger = (*logger)(nil)
 
 type logger struct {
@@ -95,13 +95,15 @@ func (l *logger) recordCreated(ctx context.Context) {
 }
 
 // Enabled returns true if at least one Processor held by the LoggerProvider
-// that created the logger will process for the provided context and param.
+// that created the logger will process a record for the provided context and
+// param.
 //
-// Enabled returns false after the LoggerProvider that created l starts shutdown.
+// Enabled returns false after the LoggerProvider that created l starts shutting
+// down.
 //
-// If it is not possible to definitively determine the record will be
+// If it is not possible to definitively determine whether the record will be
 // processed, true will be returned by default. A value of false will only be
-// returned if it can be positively verified that no Processor will process.
+// returned if it can be positively verified that no Processor will process it.
 func (l *logger) Enabled(ctx context.Context, param log.EnabledParameters) bool {
 	p := EnabledParameters{
 		InstrumentationScope: l.instrumentationScope,

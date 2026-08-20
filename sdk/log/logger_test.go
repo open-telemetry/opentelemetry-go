@@ -431,6 +431,30 @@ func TestLoggerEmit(t *testing.T) {
 	}
 }
 
+func TestLoggerEmitInvalidAttributes(t *testing.T) {
+	want := []attribute.KeyValue{
+		attribute.String("Key", "upper"),
+		attribute.String("key", "lower"),
+	}
+
+	var record log.Record
+	record.AddAttributes(want[0], attribute.String("", "invalid"), want[1])
+	require.Equal(t, 3, record.AttributesLen())
+
+	processor := newProcessor("processor")
+	provider := NewLoggerProvider(WithProcessor(processor))
+	provider.Logger("logger").Emit(t.Context(), record)
+
+	require.Len(t, processor.records, 1)
+	var got []attribute.KeyValue
+	processor.records[0].WalkAttributes(func(kv attribute.KeyValue) bool {
+		got = append(got, kv)
+		return true
+	})
+	assert.Equal(t, want, got)
+	assert.Zero(t, processor.records[0].DroppedAttributes())
+}
+
 func TestLoggerEmitErrorHandlerShutdown(t *testing.T) {
 	proc := newProcessor("processor")
 	proc.onEmitFunc = func(context.Context, *Record) error { return assert.AnError }
