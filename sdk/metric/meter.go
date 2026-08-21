@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
@@ -27,8 +28,9 @@ var ErrInstrumentName = errors.New("invalid instrument name")
 type meter struct {
 	embedded.Meter
 
-	scope instrumentation.Scope
-	pipes pipelines
+	scope   instrumentation.Scope
+	pipes   pipelines
+	enabled atomic.Bool
 
 	int64Insts             *cacheWithErr[instID, *int64Inst]
 	float64Insts           *cacheWithErr[instID, *float64Inst]
@@ -59,6 +61,10 @@ func newMeter(s instrumentation.Scope, p pipelines) *meter {
 		int64Resolver:          newResolver[int64](p, &viewCache),
 		float64Resolver:        newResolver[float64](p, &viewCache),
 	}
+}
+
+func (m *meter) setEnabled(enabled bool) {
+	m.enabled.Store(enabled)
 }
 
 // Compile-time check meter implements metric.Meter.
@@ -163,7 +169,7 @@ func (m *meter) int64ObservableInstrument(
 			// is not part of the pipeline.
 			insert.pipeline.addInt64Measure(inst.observableID, in)
 			for _, cback := range callbacks {
-				inst := int64Observer{measures: in}
+				inst := int64Observer{measures: in, meter: m}
 				fn := cback
 				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
 			}
@@ -346,7 +352,7 @@ func (m *meter) float64ObservableInstrument(
 			// is not part of the pipeline.
 			insert.pipeline.addFloat64Measure(inst.observableID, in)
 			for _, cback := range callbacks {
-				inst := float64Observer{measures: in}
+				inst := float64Observer{measures: in, meter: m}
 				fn := cback
 				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
 			}
@@ -592,6 +598,9 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 		}
 		return
 	}
+	if !oImpl.meter.enabled.Load() {
+		return
+	}
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	set := resolveAttributes(c.Attributes(), rawKVs)
@@ -623,6 +632,9 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 				"number", fmt.Sprintf("%T", int64(0)),
 			)
 		}
+		return
+	}
+	if !oImpl.meter.enabled.Load() {
 		return
 	}
 	c := metric.NewObserveConfig(opts)
@@ -695,7 +707,7 @@ func (p int64InstProvider) lookup(
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
 		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
-		return &int64Inst{measures: aggs}, err
+		return &int64Inst{measures: aggs, meter: p.meter}, err
 	})
 }
 
@@ -712,7 +724,7 @@ func (p int64InstProvider) lookupHistogram(
 		Kind:        InstrumentKindHistogram,
 	}, func() (*int64Inst, error) {
 		aggs, err := p.histogramAggs(name, cfg, allowedKeys)
-		return &int64Inst{measures: aggs}, err
+		return &int64Inst{measures: aggs, meter: p.meter}, err
 	})
 }
 
@@ -769,7 +781,7 @@ func (p float64InstProvider) lookup(
 		Kind:        kind,
 	}, func() (*float64Inst, error) {
 		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
-		return &float64Inst{measures: aggs}, err
+		return &float64Inst{measures: aggs, meter: p.meter}, err
 	})
 }
 
@@ -786,16 +798,21 @@ func (p float64InstProvider) lookupHistogram(
 		Kind:        InstrumentKindHistogram,
 	}, func() (*float64Inst, error) {
 		aggs, err := p.histogramAggs(name, cfg, allowedKeys)
-		return &float64Inst{measures: aggs}, err
+		return &float64Inst{measures: aggs, meter: p.meter}, err
 	})
 }
 
 type int64Observer struct {
 	embedded.Int64Observer
 	measures[int64]
+
+	meter *meter
 }
 
 func (o int64Observer) Observe(val int64, opts ...metric.ObserveOption) {
+	if !o.meter.enabled.Load() {
+		return
+	}
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	o.observe(val, resolveAttributes(c.Attributes(), rawKVs))
@@ -804,9 +821,14 @@ func (o int64Observer) Observe(val int64, opts ...metric.ObserveOption) {
 type float64Observer struct {
 	embedded.Float64Observer
 	measures[float64]
+
+	meter *meter
 }
 
 func (o float64Observer) Observe(val float64, opts ...metric.ObserveOption) {
+	if !o.meter.enabled.Load() {
+		return
+	}
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	o.observe(val, resolveAttributes(c.Attributes(), rawKVs))
