@@ -1312,6 +1312,19 @@ func TestRecordErrorAllowsReentrantErrorFormatting(t *testing.T) {
 	}
 }
 
+func TestRecordErrorAfterEnd(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+	_, span := tp.Tracer(t.Name()).Start(t.Context(), "span")
+
+	span.End()
+	span.RecordError(errors.New("ignored"))
+
+	got := te.Spans()
+	require.Len(t, got, 1)
+	assert.Empty(t, got[0].events)
+}
+
 func TestRecordErrorWithStackTrace(t *testing.T) {
 	err := newTestError("test error")
 	typ := "go.opentelemetry.io/otel/sdk/trace.testError"
