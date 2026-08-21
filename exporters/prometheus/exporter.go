@@ -638,7 +638,6 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 			kv := itr.Attribute()
 			key, err := labelNamer.Build(string(kv.Key))
 			if err != nil {
-				// TODO(#7066) Handle this error better.
 				return nil, nil, err
 			}
 			if _, ok := keysMap[key]; !ok {
@@ -680,7 +679,6 @@ func getScopeAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([
 		kv := itr.Attribute()
 		key, err := labelNamer.Build(string(kv.Key))
 		if err != nil {
-			// TODO(#7066) Handle this error better.
 			return nil, nil, err
 		}
 		if isReservedScopeLabel(key) {
