@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 env:
-  DEFAULT_GO_VERSION: "~1.26.0"
+  DEFAULT_GO_VERSION: "~1.27.0"
 jobs:
   # Related issue: https://github.com/CodSpeedHQ/codspeed-go/issues/51
   sharding-benchmark:
