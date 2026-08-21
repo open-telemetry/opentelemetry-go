@@ -676,6 +676,26 @@ func TestConfig(t *testing.T) {
 		require.Contains(t, got, additionalKey)
 		assert.Equal(t, []string{headers[key]}, got[key])
 	})
+
+	// A raw grpc.DialOption passed via WithDialOption must not be overridden by the
+	// internally computed default credentials, which kick in absent
+	// WithInsecure and WithTLSCredentials.
+	t.Run("WithDialOptionCredentialsTakePrecedence", func(t *testing.T) {
+		coll, err := newGRPCCollector(t.Context(), "", nil)
+		require.NoError(t, err)
+		t.Cleanup(coll.srv.Stop)
+
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		exp, err := New(ctx,
+			WithEndpoint(coll.listener.Addr().String()),
+			WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
+		)
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
 }
 
 // SetExporterID sets the exporter ID counter to v and returns the previous
