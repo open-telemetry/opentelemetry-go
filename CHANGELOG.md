@@ -25,6 +25,7 @@ The next release will require at least [Go 1.26].
 
 ### Fixed
 
+- Encode `NaN` and infinite double attribute values as strings in OTLP/HTTP JSON requests from `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8775)
 - Prevent log record and instrumentation scope attributes with empty keys from reaching processors and exporters in `go.opentelemetry.io/otel/sdk/log`. (#8797)
 - Fix a data race when span attributes are read concurrently in `go.opentelemetry.io/otel/sdk/trace`. (#8706)
 - Prevent a panic in `(*Set).Filter` when called on a nil receiver in `go.opentelemetry.io/otel/attribute`. (#8792)
