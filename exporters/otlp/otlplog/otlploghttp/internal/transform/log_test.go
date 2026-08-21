@@ -7,6 +7,7 @@
 package transform
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -336,12 +337,12 @@ func TestLogRecordDroppedAttributesCount(t *testing.T) {
 		{name: "positive", dropped: 7, want: 7},
 		{name: "negative", dropped: -1, want: 0},
 	}
-	if ^uint(0) > uint(^uint32(0)) {
-		aboveMax := uint64(^uint32(0)) + 1
+	if ^uint(0) > uint(math.MaxUint32) {
+		overflow := uint64(math.MaxUint32) + 1
 		tests = append(tests, testCase{
-			name:    "above max",
-			dropped: int(aboveMax),
-			want:    ^uint32(0),
+			name:    "overflow",
+			dropped: int(overflow),
+			want:    math.MaxUint32,
 		})
 	}
 
