@@ -8,8 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release is the last to support [Go 1.25].
+The next release will require at least [Go 1.26].
+
 ### Added
 
+- Support testing of [Go 1.27]. (#8811)
 - Support `http/json` in `otlptracehttp` (#8273)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
 
@@ -21,9 +25,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Count exception attributes omitted due to the attribute count limit as dropped in `go.opentelemetry.io/otel/sdk/log`. (#8796)
+- Encode `NaN` and infinite double attribute values as strings in OTLP/HTTP JSON requests from `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8775)
+- Prevent log record and instrumentation scope attributes with empty keys from reaching processors and exporters in `go.opentelemetry.io/otel/sdk/log`. (#8797)
 - Fix a data race when span attributes are read concurrently in `go.opentelemetry.io/otel/sdk/trace`. (#8706)
 - Prevent a panic in `(*Set).Filter` when called on a nil receiver in `go.opentelemetry.io/otel/attribute`. (#8792)
 - The simple span and log processors record `otel.sdk.processor.{span,log}.processed` when the record is submitted to the exporter instead of after the export completes, and no longer set `error.type` from the export outcome, in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log`. (#8705)
+- Prevent `Resource.MarshalLog` from panicking on nil resources in `go.opentelemetry.io/otel/sdk/resource`. (#8758)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -3904,6 +3912,7 @@ It contains api and sdk for trace and meter.
 
 <!-- Released section ended -->
 
+[Go 1.27]: https://go.dev/doc/go1.27
 [Go 1.26]: https://go.dev/doc/go1.26
 [Go 1.25]: https://go.dev/doc/go1.25
 [Go 1.24]: https://go.dev/doc/go1.24

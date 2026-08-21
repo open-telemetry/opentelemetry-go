@@ -6,6 +6,7 @@ package otlpjson
 import (
 	"bytes"
 	"encoding/json"
+	"math"
 	"regexp"
 	"testing"
 
@@ -185,6 +186,41 @@ func TestMarshalInt64AsDecimalString(t *testing.T) {
 	intVal, ok := val["intValue"].(string)
 	require.True(t, ok, "intValue must be a JSON string, got %T", val["intValue"])
 	assert.Equal(t, "-42", intVal)
+}
+
+func TestMarshalNonFiniteDoubleValuesAsStrings(t *testing.T) {
+	tests := []struct {
+		name  string
+		value float64
+		want  string
+	}{
+		{name: "NaN", value: math.NaN(), want: "NaN"},
+		{name: "positive infinity", value: math.Inf(1), want: "Infinity"},
+		{name: "negative infinity", value: math.Inf(-1), want: "-Infinity"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := &coltracepb.ExportTraceServiceRequest{
+				ResourceSpans: []*tracepb.ResourceSpans{{
+					Resource: &resourcepb.Resource{
+						Attributes: []*commonpb.KeyValue{{
+							Key: "non-finite",
+							Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{
+								DoubleValue: test.value,
+							}},
+						}},
+					},
+				}},
+			}
+
+			data, err := MarshalExportTraceServiceRequest(req)
+			require.NoError(t, err)
+
+			want := `{"resourceSpans":[{"resource":{"attributes":[{"key":"non-finite","value":{"doubleValue":"` + test.want + `"}}]}}]}`
+			assert.JSONEq(t, want, string(data))
+		})
+	}
 }
 
 func TestMarshalFieldNamesAreCamelCase(t *testing.T) {
@@ -396,6 +432,27 @@ func TestAnyValueRoundTrip(t *testing.T) {
 			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: 3.14}},
 			check: func(t *testing.T, got *commonpb.AnyValue) {
 				assert.InEpsilon(t, 3.14, got.GetDoubleValue(), 1e-9)
+			},
+		},
+		{
+			name:  "NaN",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: math.NaN()}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				assert.True(t, math.IsNaN(got.GetDoubleValue()))
+			},
+		},
+		{
+			name:  "positive_infinity",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: math.Inf(1)}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				assert.True(t, math.IsInf(got.GetDoubleValue(), 1))
+			},
+		},
+		{
+			name:  "negative_infinity",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: math.Inf(-1)}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				assert.True(t, math.IsInf(got.GetDoubleValue(), -1))
 			},
 		},
 		{
