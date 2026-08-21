@@ -578,6 +578,7 @@ func TestHistogramMinMaxUnset(t *testing.T) {
 		noSum:    false,
 		bounds:   []float64{1, 5},
 		start:    time.Now(),
+		vals:     newHotColdMap[*histogramPoint[int64]](0),
 	}
 
 	hPt := &histogramPoint[int64]{
@@ -589,12 +590,15 @@ func TestHistogramMinMaxUnset(t *testing.T) {
 	}
 	// hPt.minMax.set is false by default
 
-	h.hotColdValMap[0].LoadOrStoreAttr(
+	hotIdx := h.vals.start()
+	h.vals.LoadOrStoreAttr(
+		hotIdx,
 		newLazyFilteredAttributes(alice, nil),
 		func(attribute.Set) *histogramPoint[int64] {
 			return hPt
 		},
 	)
+	h.vals.done(hotIdx)
 
 	var dest metricdata.Aggregation
 	h.collect(&dest)
