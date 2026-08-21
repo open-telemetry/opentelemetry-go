@@ -5,6 +5,7 @@ package trace
 
 import (
 	"errors"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -31,6 +32,7 @@ func (e errUnsupportedSampler) Error() string {
 var (
 	errNegativeTraceIDRatio       = errors.New("invalid trace ID ratio: less than 0.0")
 	errGreaterThanOneTraceIDRatio = errors.New("invalid trace ID ratio: greater than 1.0")
+	errNaNNotAllowed              = errors.New("invalid trace ID ratio: NaN (not a number)")
 )
 
 type samplerArgParseError struct {
@@ -90,6 +92,9 @@ func parseTraceIDRatio(arg string) (Sampler, error) {
 	}
 	if v > 1.0 {
 		return TraceIDRatioBased(1.0), errGreaterThanOneTraceIDRatio
+	}
+	if math.IsNaN(v) {
+		return TraceIDRatioBased(1.0), errNaNNotAllowed
 	}
 
 	return TraceIDRatioBased(v), nil

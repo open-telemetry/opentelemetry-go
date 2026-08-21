@@ -5,6 +5,7 @@ package trace
 
 import (
 	"fmt"
+	"math"
 	"math/rand/v2"
 	"testing"
 
@@ -318,4 +319,13 @@ func TestDescriptions(t *testing.T) {
 	assert.Equal(t, "TraceIDRatioBased{1}", TraceIDRatioBased(1.5).Description())
 	assert.Equal(t, "TraceIDRatioBased{0}", TraceIDRatioBased(0).Description())
 	assert.Equal(t, "TraceIDRatioBased{0}", TraceIDRatioBased(-0.5).Description())
+	assert.Equal(t, "TraceIDRatioBased{0}", TraceIDRatioBased(math.NaN()).Description())
+}
+
+func TestTraceIDRatioBasedNaN(t *testing.T) {
+	traceID, err := trace.TraceIDFromHex("0000000000000000ffffffffffffffff")
+	require.NoError(t, err)
+
+	decision := TraceIDRatioBased(math.NaN()).ShouldSample(SamplingParameters{TraceID: traceID}).Decision
+	assert.Equal(t, Drop, decision)
 }
