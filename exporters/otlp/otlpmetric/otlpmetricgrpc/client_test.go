@@ -254,6 +254,26 @@ func TestConfig(t *testing.T) {
 		assert.Contains(t, got[key][0], customerUserAgent)
 	})
 
+	t.Run("WithServiceConfig", func(t *testing.T) {
+		exp, coll := factoryFunc(nil, WithServiceConfig("{}"))
+		t.Cleanup(coll.Shutdown)
+		ctx := t.Context()
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		require.NoError(t, exp.Shutdown(ctx))
+
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
+	t.Run("WithReconnectionPeriod", func(t *testing.T) {
+		exp, coll := factoryFunc(nil, WithReconnectionPeriod(50*time.Millisecond))
+		t.Cleanup(coll.Shutdown)
+		ctx := t.Context()
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		require.NoError(t, exp.Shutdown(ctx))
+
+		assert.Len(t, coll.Collect().Dump(), 1)
+	})
+
 	// A raw grpc.DialOption passed via WithDialOption must not be overridden by the
 	// internally computed default credentials, which kick in absent
 	// WithInsecure and WithTLSCredentials.
