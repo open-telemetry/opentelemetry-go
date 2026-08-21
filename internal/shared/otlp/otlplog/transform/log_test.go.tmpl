@@ -325,6 +325,37 @@ func TestSeverityNumber(t *testing.T) {
 	}
 }
 
+func TestLogRecordDroppedAttributesCount(t *testing.T) {
+	type testCase struct {
+		name    string
+		dropped int
+		want    uint32
+	}
+	tests := []testCase{
+		{name: "zero", dropped: 0, want: 0},
+		{name: "positive", dropped: 7, want: 7},
+		{name: "negative", dropped: -1, want: 0},
+	}
+	if ^uint(0) > uint(^uint32(0)) {
+		aboveMax := uint64(^uint32(0)) + 1
+		tests = append(tests, testCase{
+			name:    "above max",
+			dropped: int(aboveMax),
+			want:    ^uint32(0),
+		})
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			record := logtest.RecordFactory{
+				DroppedAttributes: test.dropped,
+			}.NewRecord()
+			got := LogRecord(record)
+			assert.Equal(t, test.want, got.DroppedAttributesCount)
+		})
+	}
+}
+
 func BenchmarkResourceLogs(b *testing.B) {
 	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
