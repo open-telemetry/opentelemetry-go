@@ -13,6 +13,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -251,6 +252,26 @@ func TestConfig(t *testing.T) {
 
 		got := coll.Headers()
 		assert.Contains(t, got[key][0], customerUserAgent)
+	})
+
+	// A raw grpc.DialOption passed via WithDialOption must not be overridden by the
+	// internally computed default credentials, which kick in absent
+	// WithInsecure and WithTLSCredentials.
+	t.Run("WithDialOptionCredentialsTakePrecedence", func(t *testing.T) {
+		coll, err := otest.NewGRPCCollector("", nil)
+		require.NoError(t, err)
+		t.Cleanup(coll.Shutdown)
+
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		exp, err := New(ctx,
+			WithEndpoint(coll.Addr().String()),
+			WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
+		)
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
 	t.Run("WithMaxRequestSize", func(t *testing.T) {
