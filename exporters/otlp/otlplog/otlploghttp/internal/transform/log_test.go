@@ -337,6 +337,8 @@ func TestLogRecordDroppedAttributesCount(t *testing.T) {
 		{name: "positive", dropped: 7, want: 7},
 		{name: "negative", dropped: -1, want: 0},
 	}
+	// ^uint(0) is the maximum uint; only 64-bit platforms can represent
+	// math.MaxUint32+1 as an int.
 	if ^uint(0) > uint(math.MaxUint32) {
 		overflow := uint64(math.MaxUint32) + 1
 		tests = append(tests, testCase{
