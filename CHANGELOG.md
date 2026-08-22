@@ -25,6 +25,7 @@ The next release will require at least [Go 1.26].
 
 ### Fixed
 
+- Ignore attempts to unregister unknown span processors in `go.opentelemetry.io/otel/sdk/trace`. (#8840)
 - Name span events created from OpenTracing logs after the `event` log field, falling back to `log`, instead of always using an empty name in `go.opentelemetry.io/otel/bridge/opentracing`. (#8648)
 - Count exception attributes omitted due to the attribute count limit as dropped in `go.opentelemetry.io/otel/sdk/log`. (#8796)
 - Encode `NaN` and infinite double attribute values as strings in OTLP/HTTP JSON requests from `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8775)
