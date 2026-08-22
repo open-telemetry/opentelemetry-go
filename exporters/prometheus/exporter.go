@@ -409,12 +409,13 @@ func addExponentialHistogramMetric[N int64 | float64](
 		scale := dp.Scale
 		if scale < -4 {
 			// Reject scales below -4 as they cannot be represented in Prometheus
+			scaleErr := fmt.Errorf("%w: %d (min -4)", errEHScaleBelowMin, scale)
 			reportError(
 				ch,
 				desc,
-				fmt.Errorf("%w: %d (min -4)", errEHScaleBelowMin, scale),
+				scaleErr,
 			)
-			err = errors.Join(err, e)
+			err = errors.Join(err, scaleErr)
 			continue
 		}
 
