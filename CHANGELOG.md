@@ -22,6 +22,7 @@ The next release will require at least [Go 1.26].
 - Lazily evaluate filtered and dropped attributes on measurement hot paths in `go.opentelemetry.io/otel/sdk/metric` to avoid unnecessary attribute set allocations. (#8598)
 - Add `ErrExporterShutdown` to `go.opentelemetry.io/otel/sdk/log` and return it from the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` exporters when `Export` is called after `Shutdown`. (#8773)
 - Clarify in `go.opentelemetry.io/otel/log` that calling `Logger.Enabled` is optional and that cached results can become stale. (#8764)
+- Decode `traceparent` using a hex lookup table in `go.opentelemetry.io/otel/propagation`, which rejects the specification-disallowed upper-case characters without a separate scan of the header. (#8739)
 
 ### Fixed
 
