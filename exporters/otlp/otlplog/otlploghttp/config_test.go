@@ -108,20 +108,48 @@ func TestNewConfig(t *testing.T) {
 				WithCompression(GzipCompression),
 				WithHeaders(headers),
 				WithMaxRequestSize(1),
+				WithMaxResponseBodySize(2),
 				WithTimeout(time.Second),
 				WithRetry(RetryConfig(rc)),
 				// Do not test WithProxy. Requires func comparison.
 			},
 			want: config{
-				endpoint:       newSetting("test"),
-				path:           newSetting("/path"),
-				insecure:       newSetting(true),
-				tlsCfg:         newSetting(tlsCfg),
-				headers:        newSetting(headers),
-				compression:    newSetting(GzipCompression),
-				maxRequestSize: newSetting(1),
-				timeout:        newSetting(time.Second),
-				retryCfg:       newSetting(rc),
+				endpoint:            newSetting("test"),
+				path:                newSetting("/path"),
+				insecure:            newSetting(true),
+				tlsCfg:              newSetting(tlsCfg),
+				headers:             newSetting(headers),
+				compression:         newSetting(GzipCompression),
+				maxRequestSize:      newSetting(1),
+				maxResponseBodySize: newSetting(int64(2)),
+				timeout:             newSetting(time.Second),
+				retryCfg:            newSetting(rc),
+			},
+		},
+		{
+			name: "Non-positive max response body size retains default",
+			options: []Option{
+				WithMaxResponseBodySize(0),
+			},
+			want: config{
+				endpoint:            newSetting(defaultEndpoint),
+				path:                newSetting(defaultPath),
+				maxResponseBodySize: newSetting(defaultMaxResponseBodySize),
+				timeout:             newSetting(defaultTimeout),
+				retryCfg:            newSetting(defaultRetryCfg),
+			},
+		},
+		{
+			name: "Negative max response body size retains default",
+			options: []Option{
+				WithMaxResponseBodySize(-1),
+			},
+			want: config{
+				endpoint:            newSetting(defaultEndpoint),
+				path:                newSetting(defaultPath),
+				maxResponseBodySize: newSetting(defaultMaxResponseBodySize),
+				timeout:             newSetting(defaultTimeout),
+				retryCfg:            newSetting(defaultRetryCfg),
 			},
 		},
 		{
@@ -513,6 +541,9 @@ func TestNewConfig(t *testing.T) {
 			c := newConfig(tc.options)
 			if !tc.want.maxRequestSize.Set {
 				tc.want.maxRequestSize = newSetting(64 * 1024 * 1024)
+			}
+			if !tc.want.maxResponseBodySize.Set {
+				tc.want.maxResponseBodySize = newSetting(defaultMaxResponseBodySize)
 			}
 
 			// Do not compare pointer values.

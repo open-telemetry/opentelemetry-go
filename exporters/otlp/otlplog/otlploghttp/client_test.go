@@ -1101,12 +1101,7 @@ func TestClientInstrumentation(t *testing.T) {
 }
 
 func TestResponseBodySizeLimit(t *testing.T) {
-	// Override the limit to 1 byte so any non-empty response body exceeds it.
-	orig := maxResponseBodySize
-	maxResponseBodySize = 1
-	t.Cleanup(func() { maxResponseBodySize = orig })
-
-	// largeBody is larger than the 1-byte limit.
+	// largeBody is larger than the configured 1-byte limit.
 	largeBody := []byte("xx")
 
 	tests := []struct {
@@ -1140,6 +1135,7 @@ func TestResponseBodySizeLimit(t *testing.T) {
 				WithEndpoint(srv.Listener.Addr().String()),
 				WithInsecure(),
 				WithRetry(RetryConfig{Enabled: false}),
+				WithMaxResponseBodySize(1),
 			}
 			cfg := newConfig(opts)
 			c, err := newHTTPClient(t.Context(), cfg)
