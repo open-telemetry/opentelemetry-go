@@ -48,12 +48,11 @@ func TestParallelCallbacksRunConcurrently(t *testing.T) {
 	for i := range n {
 		_, err := m.Int64ObservableCounter(
 			fmt.Sprintf("ctr%d", i),
-			mapi.WithInt64Callback(func(_ context.Context, o mapi.Int64Observer) error {
+			mapi.WithInt64Callback(func(ctx context.Context, o mapi.Int64Observer) error {
 				started.Done()
 				// Wait for all callbacks to start. Once they have, the release
 				// channel is closed, signaling that it is time to observe.
 				select {
-				case <-release:
 				case <-release:
 				case <-ctx.Done():
 					return ctx.Err()
