@@ -50,18 +50,16 @@ type (
 	HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 
 	SignalConfig struct {
-		Endpoint       string
-		Insecure       bool
-		TLSCfg         *tls.Config
-		Headers        map[string]string
-		Compression    Compression
-		Protocol       Protocol
-		MaxRequestSize int
-
+		Endpoint            string
+		Insecure            bool
+		TLSCfg              *tls.Config
+		Headers             map[string]string
+		Compression         Compression
+		Protocol            Protocol
+		MaxRequestSize      int
 		MaxResponseBodySize int64
-
-		Timeout time.Duration
-		URLPath string
+		Timeout             time.Duration
+		URLPath             string
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -90,15 +88,13 @@ type (
 func NewHTTPConfig(opts ...HTTPOption) Config {
 	cfg := Config{
 		Traces: SignalConfig{
-			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
-			URLPath:        DefaultTracesPath,
-			Compression:    NoCompression,
-			Protocol:       ProtocolHTTPProtobuf,
-			MaxRequestSize: DefaultMaxRequestSize,
-
+			Endpoint:            fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
+			URLPath:             DefaultTracesPath,
+			Compression:         NoCompression,
+			Protocol:            ProtocolHTTPProtobuf,
+			MaxRequestSize:      DefaultMaxRequestSize,
 			MaxResponseBodySize: DefaultMaxResponseBodySize,
-
-			Timeout: DefaultTimeout,
+			Timeout:             DefaultTimeout,
 		},
 		RetryConfig: retry.DefaultConfig,
 	}

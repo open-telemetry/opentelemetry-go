@@ -50,19 +50,26 @@ type (
 	HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 
 	SignalConfig struct {
-		Endpoint       string
+{{ if .isHTTP }}		Endpoint            string
+		Insecure            bool
+		TLSCfg              *tls.Config
+		Headers             map[string]string
+		Compression         Compression
+		Protocol            Protocol
+		MaxRequestSize      int
+		MaxResponseBodySize int64
+		Timeout             time.Duration
+		URLPath             string
+{{ else }}		Endpoint       string
 		Insecure       bool
 		TLSCfg         *tls.Config
 		Headers        map[string]string
 		Compression    Compression
 		Protocol       Protocol
 		MaxRequestSize int
-{{ if .isHTTP }}
-		MaxResponseBodySize int64
-{{ end }}
 		Timeout        time.Duration
 		URLPath        string
-
+{{ end }}
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
 
@@ -90,16 +97,20 @@ type (
 func NewHTTPConfig(opts ...HTTPOption) Config {
 	cfg := Config{
 		Traces: SignalConfig{
-			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
+{{ if .isHTTP }}			Endpoint:            fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
+			URLPath:             DefaultTracesPath,
+			Compression:         NoCompression,
+			Protocol:            ProtocolHTTPProtobuf,
+			MaxRequestSize:      DefaultMaxRequestSize,
+			MaxResponseBodySize: DefaultMaxResponseBodySize,
+			Timeout:             DefaultTimeout,
+{{ else }}			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:        DefaultTracesPath,
 			Compression:    NoCompression,
 			Protocol:       ProtocolHTTPProtobuf,
 			MaxRequestSize: DefaultMaxRequestSize,
-{{ if .isHTTP }}
-			MaxResponseBodySize: DefaultMaxResponseBodySize,
-{{ end }}
 			Timeout:        DefaultTimeout,
-		},
+{{ end }}		},
 		RetryConfig: retry.DefaultConfig,
 	}
 	cfg = ApplyHTTPEnvConfigs(cfg)
@@ -376,7 +387,6 @@ func WithMaxRequestSize(size int) GenericOption {
 		return cfg
 	})
 }
-
 {{ if .isHTTP }}
 func WithMaxResponseBodySize(size int64) HTTPOption {
 	return NewHTTPOption(func(cfg Config) Config {

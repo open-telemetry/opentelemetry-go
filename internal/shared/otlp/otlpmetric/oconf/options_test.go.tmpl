@@ -612,7 +612,6 @@ func asGRPCOptions(opts []GenericOption) []GRPCOption {
 	}
 	return converted
 }
-
 {{ if .isHTTP }}
 func TestMaxResponseBodySizeOption(t *testing.T) {
 	cfg := NewHTTPConfig(WithMaxResponseBodySize(2))

@@ -59,9 +59,8 @@ type (
 		Headers        map[string]string
 		Compression    Compression
 		MaxRequestSize int
-
-		Timeout time.Duration
-		URLPath string
+		Timeout        time.Duration
+		URLPath        string
 
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
@@ -93,13 +92,11 @@ type (
 func NewHTTPConfig(opts ...HTTPOption) Config {
 	cfg := Config{
 		Metrics: SignalConfig{
-			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
-			URLPath:        DefaultMetricsPath,
-			Compression:    NoCompression,
-			MaxRequestSize: DefaultMaxRequestSize,
-
-			Timeout: DefaultTimeout,
-
+			Endpoint:            fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
+			URLPath:             DefaultMetricsPath,
+			Compression:         NoCompression,
+			MaxRequestSize:      DefaultMaxRequestSize,
+			Timeout:             DefaultTimeout,
 			TemporalitySelector: metric.DefaultTemporalitySelector,
 			AggregationSelector: metric.DefaultAggregationSelector,
 		},

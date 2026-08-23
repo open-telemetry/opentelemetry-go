@@ -53,9 +53,8 @@ type (
 		Compression    Compression
 		Protocol       Protocol
 		MaxRequestSize int
-
-		Timeout time.Duration
-		URLPath string
+		Timeout        time.Duration
+		URLPath        string
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -89,8 +88,7 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			Compression:    NoCompression,
 			Protocol:       ProtocolHTTPProtobuf,
 			MaxRequestSize: DefaultMaxRequestSize,
-
-			Timeout: DefaultTimeout,
+			Timeout:        DefaultTimeout,
 		},
 		RetryConfig: retry.DefaultConfig,
 	}
