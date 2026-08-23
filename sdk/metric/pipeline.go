@@ -49,13 +49,7 @@ func newPipeline(
 	if res == nil {
 		res = resource.Empty()
 	}
-	var pool *callbackPool
-	if x.ParallelCallbacks.Enabled() {
-		// Callbacks are expected to be fast and local, so a small pool sized to
-		// GOMAXPROCS suffices.
-		pool = newCallbackPool(runtime.GOMAXPROCS(0))
-	}
-	return &pipeline{
+	p := &pipeline{
 		resource:         res,
 		reader:           reader,
 		views:            views,
@@ -63,9 +57,14 @@ func newPipeline(
 		float64Measures:  map[observableID[float64]][]aggregate.Measure[float64]{},
 		exemplarFilter:   exemplarFilter,
 		cardinalityLimit: cardinalityLimit,
-		pool:             pool,
 		// aggregations is lazy allocated when needed.
 	}
+	if x.ParallelCallbacks.Enabled() {
+		// Callbacks are expected to be fast and local, so a small pool sized to
+		// GOMAXPROCS suffices.
+		p.pool.Store(newCallbackPool(runtime.GOMAXPROCS(0)))
+	}
+	return p
 }
 
 // pipeline connects all of the instruments created by a meter provider to a Reader.
@@ -90,9 +89,9 @@ type pipeline struct {
 	cardinalityLimit int
 
 	// pool runs observable callbacks concurrently during produce when the
-	// experimental parallel-callbacks feature is enabled; it is nil otherwise.
-	// stop resets it to nil on shutdown.
-	pool *callbackPool
+	// experimental parallel-callbacks feature is enabled; it holds nil
+	// otherwise.
+	pool atomic.Pointer[callbackPool]
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
@@ -186,10 +185,11 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 }
 
 func (p *pipeline) runCallbacks(ctx context.Context) error {
-	if p.pool == nil {
+	pool := p.pool.Load()
+	if pool == nil {
 		return p.runCallbacksSequential(ctx)
 	}
-	return p.runCallbacksParallel(ctx)
+	return p.runCallbacksParallel(ctx, pool)
 }
 
 func (p *pipeline) runCallbacksSequential(ctx context.Context) error {
@@ -207,8 +207,7 @@ func (p *pipeline) runCallbacksSequential(ctx context.Context) error {
 	return err
 }
 
-func (p *pipeline) runCallbacksParallel(ctx context.Context) error {
-	pool := p.pool
+func (p *pipeline) runCallbacksParallel(ctx context.Context, pool *callbackPool) error {
 	// produce holds p's lock for the whole batch and stop takes that lock before
 	// tearing the pool down, so only one produce call ever uses the pool at a
 	// time; that is what makes reusing batch/err/ctx safe. ctx is published to
@@ -234,13 +233,17 @@ func (p *pipeline) runCallbacksParallel(ctx context.Context) error {
 
 // stop tears down this pipeline's resources on shutdown.
 func (p *pipeline) stop(ctx context.Context) error {
+	// Without a pool there is nothing to tear down. Check without the lock so an
+	// in-flight collection cannot make Shutdown wait on the default path.
+	if p.pool.Load() == nil {
+		return nil
+	}
 	// TryLock guards against an already-canceled ctx. If it succeeds, no
 	// collection is running, so teardown is fast and completes regardless of
 	// ctx. Racing ctx here instead would report failure on a clean shutdown
 	// whose ctx just happened to be already done.
 	if p.TryLock() {
-		pool := p.pool
-		p.pool = nil
+		pool := p.pool.Swap(nil)
 		// Unlock before pool.stop waits on the workers so a concurrent produce
 		// is not blocked while they exit.
 		p.Unlock()
@@ -255,8 +258,7 @@ func (p *pipeline) stop(ctx context.Context) error {
 	done := make(chan struct{})
 	go func() {
 		p.Lock()
-		pool := p.pool
-		p.pool = nil
+		pool := p.pool.Swap(nil)
 		p.Unlock()
 		if pool != nil {
 			pool.stop()

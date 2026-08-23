@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric_test // import "go.opentelemetry.io/otel/sdk/metric"
+package metric_test
 
 import (
 	"bytes"
@@ -260,6 +260,51 @@ func TestParallelCallbacksShutdownIdempotent(t *testing.T) {
 	mp := metric.NewMeterProvider(metric.WithReader(metric.NewManualReader()))
 	require.NoError(t, mp.Shutdown(t.Context()))
 	assert.NotPanics(t, func() { _ = mp.Shutdown(t.Context()) })
+}
+
+// TestShutdownDoesNotBlockOnInFlightCollectWithoutPool verifies that with the
+// feature disabled (no callback pool), Shutdown does not wait on an in-flight
+// collection. Pipeline teardown must be a no-op without a pool, preserving the
+// default behavior where Shutdown never touched the collection lock.
+func TestShutdownDoesNotBlockOnInFlightCollectWithoutPool(t *testing.T) {
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	m := mp.Meter("test")
+
+	inCallback := make(chan struct{})
+	release := make(chan struct{})
+	_, err := m.Int64ObservableCounter("ctr",
+		mapi.WithInt64Callback(func(_ context.Context, o mapi.Int64Observer) error {
+			close(inCallback)
+			<-release
+			o.Observe(1)
+			return nil
+		}))
+	require.NoError(t, err)
+
+	collectDone := make(chan struct{})
+	go func() {
+		var rm metricdata.ResourceMetrics
+		_ = reader.Collect(t.Context(), &rm)
+		close(collectDone)
+	}()
+
+	// The collection is running its callback and holds the pipeline lock.
+	<-inCallback
+
+	shutdownDone := make(chan error, 1)
+	go func() { shutdownDone <- mp.Shutdown(t.Context()) }()
+
+	select {
+	case err := <-shutdownDone:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("Shutdown blocked on an in-flight collection without a callback pool")
+	}
+
+	// Let the collection finish so no goroutine is leaked.
+	close(release)
+	<-collectDone
 }
 
 // BenchmarkRunCallbacks compares the cost of a collection's callback phase with

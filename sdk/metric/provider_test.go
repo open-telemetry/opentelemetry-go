@@ -40,6 +40,11 @@ func TestMeterConcurrentSafe(*testing.T) {
 // deadline instead of blocking on an in-flight collection that holds the
 // pipeline lock.
 func TestShutdownHonorsContextDeadline(t *testing.T) {
+	// Only a callback pool makes Shutdown wait on an in-flight collection; with
+	// the feature disabled there is nothing to tear down and Shutdown returns
+	// immediately, so enable it to exercise the deadline path.
+	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
+
 	reader := NewManualReader()
 	mp := NewMeterProvider(WithReader(reader))
 	m := mp.Meter("test")
