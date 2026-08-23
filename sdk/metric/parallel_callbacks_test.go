@@ -54,7 +54,9 @@ func TestParallelCallbacksRunConcurrently(t *testing.T) {
 				// channel is closed, signaling that it is time to observe.
 				select {
 				case <-release:
-				case <-time.After(2 * time.Second):
+				case <-release:
+				case <-ctx.Done():
+					return ctx.Err()
 				}
 				o.Observe(1)
 				return nil
