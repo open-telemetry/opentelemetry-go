@@ -5,6 +5,9 @@ package main
 
 import (
 	"bytes"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -87,6 +90,64 @@ func TestNoInvalidObservableHistogramTypes(t *testing.T) {
 				t.Errorf("%s: contains forbidden substring %q", path, term)
 			}
 		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("WalkDir(%q) error = %v", semconvDir, err)
+	}
+}
+
+func TestGeneratedMetricHelpersReturnAfterEmptyAttrs(t *testing.T) {
+	t.Parallel()
+
+	semconvDir := filepath.Join("..", "..", "..", "semconv")
+	fset := token.NewFileSet()
+
+	err := filepath.WalkDir(semconvDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() ||
+			filepath.Base(path) != "metric.go" ||
+			!strings.HasSuffix(filepath.Base(filepath.Dir(path)), "conv") {
+			return nil
+		}
+
+		file, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			return err
+		}
+
+		ast.Inspect(file, func(node ast.Node) bool {
+			ifStmt, ok := node.(*ast.IfStmt)
+			if !ok {
+				return true
+			}
+
+			condition, ok := ifStmt.Cond.(*ast.BinaryExpr)
+			if !ok || condition.Op != token.EQL {
+				return true
+			}
+			call, ok := condition.X.(*ast.CallExpr)
+			zero, zeroOK := condition.Y.(*ast.BasicLit)
+			if !ok || !zeroOK || zero.Kind != token.INT || zero.Value != "0" || len(call.Args) != 1 {
+				return true
+			}
+			fn, ok := call.Fun.(*ast.Ident)
+			arg, argOK := call.Args[0].(*ast.Ident)
+			if !ok || !argOK || fn.Name != "len" || arg.Name != "attrs" {
+				return true
+			}
+
+			if len(ifStmt.Body.List) == 0 {
+				t.Errorf("%s:%d: empty attrs fast path has no body", path, fset.Position(ifStmt.Pos()).Line)
+				return true
+			}
+			if _, ok := ifStmt.Body.List[len(ifStmt.Body.List)-1].(*ast.ReturnStmt); !ok {
+				t.Errorf("%s:%d: empty attrs fast path does not return", path, fset.Position(ifStmt.Pos()).Line)
+			}
+			return true
+		})
 		return nil
 	})
 	if err != nil {
