@@ -1095,3 +1095,11 @@ func BenchmarkPeriodicReaderInstrumentation(b *testing.B) {
 		run(b, true)
 	})
 }
+
+func TestNewPeriodicReaderConcurrentSafe(t *testing.T) {
+	for range 50 {
+		r := NewPeriodicReader(new(fnExporter), WithInterval(time.Nanosecond))
+		r.register(testSDKProducer{})
+		_ = r.Shutdown(t.Context())
+	}
+}

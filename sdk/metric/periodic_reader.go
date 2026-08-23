@@ -132,11 +132,6 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 	}
 	r.externalProducers.Store(conf.producers)
 
-	go func() {
-		defer func() { close(r.done) }()
-		r.run(ctx, conf.interval)
-	}()
-
 	var err error
 	r.inst, err = observ.NewInstrumentation(
 		semconv.OTelComponentTypePeriodicMetricReader.Value.AsString(),
@@ -145,6 +140,11 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 	if err != nil {
 		otel.Handle(err)
 	}
+
+	go func() {
+		defer func() { close(r.done) }()
+		r.run(ctx, conf.interval)
+	}()
 
 	return r
 }
