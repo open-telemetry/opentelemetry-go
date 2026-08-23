@@ -173,6 +173,34 @@ func TestExportWithOptions(t *testing.T) {
 	}
 }
 
+func TestWithoutTimestampsDoesNotMutateInput(t *testing.T) {
+	start := time.Unix(1, 0).UTC()
+	end := time.Unix(2, 0).UTC()
+	rm := &metricdata.ResourceMetrics{
+		ScopeMetrics: []metricdata.ScopeMetrics{{
+			Metrics: []metricdata.Metrics{{
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{{
+						StartTime: start,
+						Time:      end,
+						Value:     1,
+					}},
+				},
+			}},
+		}},
+	}
+	exp, err := stdoutmetric.New(
+		stdoutmetric.WithWriter(io.Discard),
+		stdoutmetric.WithoutTimestamps(),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, exp.Export(t.Context(), rm))
+	got := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Gauge[int64]).DataPoints[0]
+	assert.Equal(t, start, got.StartTime)
+	assert.Equal(t, end, got.Time)
+}
+
 func TestTemporalitySelector(t *testing.T) {
 	exp, err := stdoutmetric.New(
 		testEncoderOption(),
