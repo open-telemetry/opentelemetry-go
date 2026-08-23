@@ -34,22 +34,18 @@ const (
 
 func (n *atomicCounter[N]) load() N {
 	var value N
-	switch any(value).(type) {
-	case int64:
+	if _, ok := any(value).(int64); ok {
 		return N(n.nInt.Load())
-	case float64:
-		for {
-			if n.writerState.Load() != 0 {
-				continue
-			}
-			fbits := n.nFloatBits.Load()
-			ival := n.nInt.Load()
-			if fbits == n.nFloatBits.Load() && n.writerState.Load() == 0 {
-				return N(math.Float64frombits(fbits) + float64(ival))
-			}
+	}
+	for {
+		if n.writerState.Load() != 0 {
+			continue
 		}
-	default:
-		panic("unsupported type")
+		fbits := n.nFloatBits.Load()
+		ival := n.nInt.Load()
+		if fbits == n.nFloatBits.Load() && n.writerState.Load() == 0 {
+			return N(math.Float64frombits(fbits) + float64(ival))
+		}
 	}
 }
 
