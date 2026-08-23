@@ -483,6 +483,12 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 		return
 	}
 
+	// Evaluate the caller-provided error before acquiring the span mutex.
+	// err.Error() is arbitrary user code and may call back into this span
+	// (e.g. AddEvent), which would deadlock on the non-reentrant mutex below.
+	errType := typeStr(err)
+	errMsg := err.Error()
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.isRecording() {
@@ -490,8 +496,8 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 	}
 
 	opts = append(opts, trace.WithAttributes(
-		semconv.ExceptionType(typeStr(err)),
-		semconv.ExceptionMessage(err.Error()),
+		semconv.ExceptionType(errType),
+		semconv.ExceptionMessage(errMsg),
 	))
 
 	c := trace.NewEventConfig(opts...)
