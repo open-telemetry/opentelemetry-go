@@ -13,6 +13,7 @@ The next release will require at least [Go 1.26].
 
 ### Added
 
+- Add configurable response body size limits to the OTLP/HTTP trace, metric, and log exporters. (#8847)
 - Support testing of [Go 1.27]. (#8811)
 - Support `http/json` in `otlptracehttp` (#8273)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
