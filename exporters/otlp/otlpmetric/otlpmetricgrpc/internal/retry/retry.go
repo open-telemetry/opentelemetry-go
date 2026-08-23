@@ -106,7 +106,7 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 			delay := max(throttle, bOff)
 
 			elapsed := time.Since(startTime)
-			if maxElapsedTime != 0 && elapsed+throttle > maxElapsedTime {
+			if maxElapsedTime != 0 && elapsed+delay > maxElapsedTime {
 				return fmt.Errorf("max retry time would elapse: %w", err)
 			}
 

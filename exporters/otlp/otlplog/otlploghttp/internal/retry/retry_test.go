@@ -226,6 +226,24 @@ func TestThrottledRetryGreaterThanMaxElapsedTime(t *testing.T) {
 	}).Error(), "max retry time would elapse: ")
 }
 
+func TestBackoffGreaterThanMaxElapsedTime(t *testing.T) {
+	origWait := waitFunc
+	waitErr := errors.New("wait should not be called")
+	waitFunc = func(context.Context, time.Duration) error { return waitErr }
+	t.Cleanup(func() { waitFunc = origWait })
+
+	reqFunc := Config{
+		Enabled:         true,
+		InitialInterval: time.Second,
+		MaxInterval:     time.Second,
+		MaxElapsedTime:  10 * time.Millisecond,
+	}.RequestFunc(func(error) (bool, time.Duration) { return true, 0 })
+
+	err := reqFunc(t.Context(), func(context.Context) error { return assert.AnError })
+	assert.ErrorContains(t, err, "max retry time would elapse")
+	assert.NotErrorIs(t, err, waitErr)
+}
+
 func TestMaxElapsedTime(t *testing.T) {
 	ev := func(error) (bool, time.Duration) { return true, 0 }
 	delay := time.Nanosecond
