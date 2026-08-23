@@ -299,18 +299,23 @@ func newCallbackPool(workers int) *callbackPool {
 	ctx, cancel := context.WithCancel(context.Background())
 	p := &callbackPool{jobs: make(chan func(context.Context) error), cancel: cancel}
 	for range workers {
-		p.wg.Go(func() {
-			for {
-				select {
-				case cb := <-p.jobs:
-					p.runJob(cb)
-				case <-ctx.Done():
-					return
-				}
-			}
-		})
+		p.wg.Go(func() { p.worker(ctx) })
 	}
 	return p
+}
+
+// worker runs the pool's job loop until ctx is canceled by stop. It is a named
+// method so tests can count live workers by a stable symbol in a goroutine
+// profile; a closure's ordinal name would break as closures are added or moved.
+func (p *callbackPool) worker(ctx context.Context) {
+	for {
+		select {
+		case cb := <-p.jobs:
+			p.runJob(cb)
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func (p *callbackPool) runJob(cb func(context.Context) error) {

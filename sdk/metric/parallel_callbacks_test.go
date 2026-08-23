@@ -211,7 +211,7 @@ func countPoolWorkers(t *testing.T) int {
 	t.Helper()
 	var buf bytes.Buffer
 	require.NoError(t, pprof.Lookup("goroutine").WriteTo(&buf, 2))
-	return strings.Count(buf.String(), "newCallbackPool.func1")
+	return strings.Count(buf.String(), "(*callbackPool).worker")
 }
 
 // TestParallelCallbacksShutdownStopsWorkers verifies that enabling the feature
