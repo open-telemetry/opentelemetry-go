@@ -5,6 +5,7 @@ package aggregate
 
 import (
 	"math"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -48,6 +49,36 @@ func TestAtomicSumAddIntConcurrentSafe(t *testing.T) {
 	}
 	wg.Wait()
 	assert.Equal(t, int64(15), aSum.load())
+}
+
+func TestAtomicCounterLoadConcurrentSnapshot(t *testing.T) {
+	if runtime.GOMAXPROCS(0) < 2 {
+		t.Skip("requires concurrent execution")
+	}
+
+	var counter atomicCounter[float64]
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range 10_000_000 {
+			counter.add(0.5)
+			counter.add(1)
+		}
+	}()
+
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			got := int64(counter.load() * 2)
+			// Valid prefixes of the .5, 1 sequence are congruent to 0 or 1
+			// modulo 3. A remainder of 2 is a mixed snapshot.
+			if got%3 == 2 {
+				t.Fatalf("observed impossible cumulative sum: %v", float64(got)/2)
+			}
+		}
+	}
 }
 
 func BenchmarkAtomicCounter(b *testing.B) {
