@@ -25,6 +25,7 @@ The next release will require at least [Go 1.26].
 
 ### Fixed
 
+- Ensure metric helpers in `go.opentelemetry.io/otel/semconv/v1.32.0`, `go.opentelemetry.io/otel/semconv/v1.33.0`, and `go.opentelemetry.io/otel/semconv/v1.34.0` record measurements only once when no attributes are provided. (#8849)
 - Name span events created from OpenTracing logs after the `event` log field, falling back to `log`, instead of always using an empty name in `go.opentelemetry.io/otel/bridge/opentracing`. (#8648)
 - Count exception attributes omitted due to the attribute count limit as dropped in `go.opentelemetry.io/otel/sdk/log`. (#8796)
 - Encode `NaN` and infinite double attribute values as strings in OTLP/HTTP JSON requests from `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8775)
