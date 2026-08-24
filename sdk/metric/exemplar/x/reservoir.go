@@ -25,12 +25,18 @@ func FixedSizeRoundRobinReservoirProvider(size int) exemplar.ReservoirProvider {
 	}
 }
 
-// FixedSizeRoundRobinReservoir is a [exemplar.Reservoir] that samples at most
+// FixedSizeRoundRobinReservoir is an [exemplar.Reservoir] that samples at most
 // a fixed number of exemplars using a round-robin strategy to distribute
 // measurements across independent buckets, each using Algorithm L for sampling.
 //
-// This reservoir can be used as a drop-in replacement for a [exemplar.FixedSizeReservoir]
-// when better concurrent performance is needed, and some sampling bias is acceptable.
+// This reservoir provides improved concurrent performance by sharding state
+// across multiple buckets. Dispatch rotates continuously across collection cycles,
+// distributing measurements evenly and preventing bucket fossilization. For
+// cumulative metrics with fewer measurements per cycle than the reservoir size,
+// exemplars from previous cycles may be retained until overwritten.
+//
+// A sampling bias may be introduced if measurement patterns are periodic and
+// coincide with the reservoir size.
 type FixedSizeRoundRobinReservoir struct {
 	exemplar.ConcurrentSafe
 	storage
