@@ -23,7 +23,7 @@ type BoundMeasure[N int64 | float64] func(context.Context, N)
 
 // Binder allows binding a specific attribute set to a BoundMeasure.
 type Binder[N int64 | float64] interface {
-	Bind(attrs attribute.Set) BoundMeasure[N]
+	Bind(attrs attribute.Set, dropped []attribute.KeyValue) BoundMeasure[N]
 }
 
 // ComputeAggregation stores the aggregate of measurements into dest and
@@ -116,17 +116,20 @@ func (b Builder[N]) PrecomputedSum(monotonic bool) (Measure[N], ComputeAggregati
 	}
 }
 
-type binderFunc[N int64 | float64] func(attribute.Set) BoundMeasure[N]
+type binderFunc[N int64 | float64] func(attribute.Set, []attribute.KeyValue) BoundMeasure[N]
 
-func (f binderFunc[N]) Bind(attrs attribute.Set) BoundMeasure[N] {
-	return f(attrs)
+func (f binderFunc[N]) Bind(attrs attribute.Set, dropped []attribute.KeyValue) BoundMeasure[N] {
+	return f(attrs, dropped)
 }
 
 func (b Builder[N]) bind(bnd Binder[N]) Binder[N] {
 	if b.Filter != nil {
-		return binderFunc[N](func(attrs attribute.Set) BoundMeasure[N] {
-			fltrAttrs, _ := attrs.Filter(b.Filter)
-			return bnd.Bind(fltrAttrs)
+		return binderFunc[N](func(attrs attribute.Set, dropped []attribute.KeyValue) BoundMeasure[N] {
+			fltrAttrs, extraDropped := attrs.Filter(b.Filter)
+			if len(extraDropped) > 0 {
+				dropped = append(dropped, extraDropped...)
+			}
+			return bnd.Bind(fltrAttrs, dropped)
 		})
 	}
 	return bnd

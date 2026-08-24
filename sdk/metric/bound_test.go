@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	metricapi "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/x"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
@@ -522,4 +523,40 @@ func TestBindDoesNotMutateAttributeSlice(t *testing.T) {
 
 	_ = counter.(x.Int64Binder).Bind(attrs...)
 	assert.Equal(t, original, attrs, "Bind mutated the caller's attribute slice")
+}
+
+func TestBoundInstrumentExemplarDroppedAttributes(t *testing.T) {
+	r := NewManualReader()
+	mp := NewMeterProvider(
+		WithReader(r),
+		WithView(NewView(
+			Instrument{Name: "test.counter"},
+			Stream{AttributeFilter: attribute.NewAllowKeysFilter("keep")},
+		)),
+		WithExemplarFilter(exemplar.AlwaysOnFilter),
+	)
+	meter := mp.Meter("test")
+
+	counter, err := meter.Int64Counter("test.counter")
+	require.NoError(t, err)
+
+	bound := counter.(x.Int64Binder).Bind(
+		attribute.String("keep", "value1"),
+		attribute.String("drop", "value2"),
+	)
+	bound.Add(t.Context(), 10)
+
+	var rm metricdata.ResourceMetrics
+	err = r.Collect(t.Context(), &rm)
+	require.NoError(t, err)
+
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 1)
+	dp := sum.DataPoints[0]
+	assert.Equal(t, attribute.NewSet(attribute.String("keep", "value1")), dp.Attributes)
+	require.Len(t, dp.Exemplars, 1)
+	assert.Equal(t, []attribute.KeyValue{attribute.String("drop", "value2")}, dp.Exemplars[0].FilteredAttributes)
 }

@@ -26,14 +26,14 @@ type sumValue[N int64 | float64] struct {
 // decision is made once here rather than per-measurement so the returned
 // hot path does not read v's fields, which share a cache line with the
 // concurrently written counter.
-func (v *sumValue[N]) boundMeasure() BoundMeasure[N] {
+func (v *sumValue[N]) boundMeasure(dropped []attribute.KeyValue) BoundMeasure[N] {
 	if v.dropExemplars {
 		n := &v.n
 		return func(_ context.Context, val N) {
 			n.add(val)
 		}
 	}
-	lazy := newLazyFilteredAttributes(v.attrs, nil)
+	lazy := newLazyPreboundAttributes(v.attrs, dropped)
 	return func(ctx context.Context, val N) {
 		v.n.add(val)
 		v.res.Offer(ctx, val, lazy)
@@ -166,7 +166,7 @@ func (s *deltaSum[N]) collect(
 	return len(dPts)
 }
 
-func (s *deltaSum[N]) Bind(attrs attribute.Set) BoundMeasure[N] {
+func (s *deltaSum[N]) Bind(attrs attribute.Set, dropped []attribute.KeyValue) BoundMeasure[N] {
 	sv := s.vals.Bind(attrs, func(attr attribute.Set) *sumValue[N] {
 		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
@@ -180,7 +180,7 @@ func (s *deltaSum[N]) Bind(attrs attribute.Set) BoundMeasure[N] {
 	}, func(val *sumValue[N]) {
 		val.isBound = true
 	})
-	return sv.boundMeasure()
+	return sv.boundMeasure(dropped)
 }
 
 // newCumulativeSum returns an aggregator that summarizes a set of measurements
@@ -281,7 +281,7 @@ func (s *cumulativeSum[N]) collect(
 	return i
 }
 
-func (s *cumulativeSum[N]) Bind(attrs attribute.Set) BoundMeasure[N] {
+func (s *cumulativeSum[N]) Bind(attrs attribute.Set, dropped []attribute.KeyValue) BoundMeasure[N] {
 	sv := s.values.LoadOrStoreAttr(newLazyFilteredAttributes(attrs, nil), func(attr attribute.Set) *sumValue[N] {
 		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
@@ -293,7 +293,7 @@ func (s *cumulativeSum[N]) Bind(attrs attribute.Set) BoundMeasure[N] {
 			isBound:       true,
 		}
 	})
-	return sv.boundMeasure()
+	return sv.boundMeasure(dropped)
 }
 
 // newPrecomputedSum returns an aggregator that summarizes a set of

@@ -502,7 +502,7 @@ func (i *float64Inst) Bind(attrs ...attribute.KeyValue) metric.Float64Counter {
 	measures := make([]aggregate.BoundMeasure[float64], 0, len(i.measures))
 	for idx, meas := range i.measures {
 		if idx < len(i.aggregators) && i.aggregators[idx] != nil {
-			if m := i.aggregators[idx].Bind(preboundSet); m != nil {
+			if m := i.aggregators[idx].Bind(preboundSet, nil); m != nil {
 				measures = append(measures, m)
 				continue
 			}
@@ -525,7 +525,7 @@ func (i *int64Inst) Bind(attrs ...attribute.KeyValue) metric.Int64Counter {
 	measures := make([]aggregate.BoundMeasure[int64], 0, len(i.measures))
 	for idx, meas := range i.measures {
 		if idx < len(i.aggregators) && i.aggregators[idx] != nil {
-			if m := i.aggregators[idx].Bind(preboundSet); m != nil {
+			if m := i.aggregators[idx].Bind(preboundSet, nil); m != nil {
 				measures = append(measures, m)
 				continue
 			}
