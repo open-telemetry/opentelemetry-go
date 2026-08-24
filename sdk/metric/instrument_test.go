@@ -17,6 +17,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
+var (
+	_ x.Int64Binder   = (*int64Inst)(nil)
+	_ x.Float64Binder = (*float64Inst)(nil)
+)
+
 func BenchmarkInstrument(b *testing.B) {
 	attr := func(id int) attribute.Set {
 		return attribute.NewSet(
