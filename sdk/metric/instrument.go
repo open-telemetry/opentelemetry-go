@@ -498,7 +498,9 @@ func (b *boundInt64Counter) Enabled(ctx context.Context) bool {
 
 // Bind implements x.Float64Binder for float64Inst.
 func (i *float64Inst) Bind(attrs ...attribute.KeyValue) metric.Float64Counter {
-	preboundSet := attribute.NewSet(slices.Clone(attrs)...)
+	cloned := slices.Clone(attrs)
+	normKVs, _ := attrnorm.KeyValues(cloned)
+	preboundSet := attribute.NewSet(normKVs...)
 	measures := make([]aggregate.BoundMeasure[float64], 0, len(i.measures))
 	for idx, meas := range i.measures {
 		if idx < len(i.aggregators) && i.aggregators[idx] != nil {
@@ -521,7 +523,9 @@ func (i *float64Inst) Bind(attrs ...attribute.KeyValue) metric.Float64Counter {
 
 // Bind implements x.Int64Binder for int64Inst.
 func (i *int64Inst) Bind(attrs ...attribute.KeyValue) metric.Int64Counter {
-	preboundSet := attribute.NewSet(slices.Clone(attrs)...)
+	cloned := slices.Clone(attrs)
+	normKVs, _ := attrnorm.KeyValues(cloned)
+	preboundSet := attribute.NewSet(normKVs...)
 	measures := make([]aggregate.BoundMeasure[int64], 0, len(i.measures))
 	for idx, meas := range i.measures {
 		if idx < len(i.aggregators) && i.aggregators[idx] != nil {

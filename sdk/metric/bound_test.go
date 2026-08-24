@@ -560,3 +560,32 @@ func TestBoundInstrumentExemplarDroppedAttributes(t *testing.T) {
 	require.Len(t, dp.Exemplars, 1)
 	assert.Equal(t, []attribute.KeyValue{attribute.String("drop", "value2")}, dp.Exemplars[0].FilteredAttributes)
 }
+
+func TestBoundInstrumentAttributeNormalization(t *testing.T) {
+	r := NewManualReader()
+	mp := NewMeterProvider(WithReader(r))
+	meter := mp.Meter("test")
+
+	counter, err := meter.Int64Counter("test.counter")
+	require.NoError(t, err)
+
+	dup := attribute.Map(
+		"map",
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	bound := counter.(x.Int64Binder).Bind(dup)
+	bound.Add(t.Context(), 1)
+
+	var rm metricdata.ResourceMetrics
+	err = r.Collect(t.Context(), &rm)
+	require.NoError(t, err)
+
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 1)
+	dp := sum.DataPoints[0]
+	assert.Equal(t, attribute.NewSet(attribute.Map("map", attribute.String("key", "second"))), dp.Attributes)
+}
