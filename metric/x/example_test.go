@@ -18,18 +18,14 @@ func ExampleInt64CounterBinder() {
 		attribute.String("handler", "orders"),
 	}
 
-	isBound := false
+	var opts []metric.AddOption
 	if b, ok := counter.(x.Int64CounterBinder); ok {
 		counter = b.Bind(attrs...)
-		isBound = true
+	} else {
+		opts = append(opts, metric.WithAttributeSet(attribute.NewSet(attrs...)))
 	}
-	attrOpt := metric.WithAttributeSet(attribute.NewSet(attrs...))
 
 	http.HandleFunc("/orders", func(_ http.ResponseWriter, r *http.Request) {
-		if isBound {
-			counter.Add(r.Context(), 1)
-		} else {
-			counter.Add(r.Context(), 1, attrOpt)
-		}
+		counter.Add(r.Context(), 1, opts...)
 	})
 }
