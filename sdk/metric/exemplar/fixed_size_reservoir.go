@@ -34,8 +34,7 @@ func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
 }
 
 var (
-	_ Reservoir          = &FixedSizeReservoir{}
-	_ MergeableReservoir = &FixedSizeReservoir{}
+	_ Reservoir = &FixedSizeReservoir{}
 )
 
 // FixedSizeReservoir is a [Reservoir] that samples at most k exemplars. If

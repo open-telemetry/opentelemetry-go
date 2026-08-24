@@ -82,6 +82,11 @@ func (f *filteredExemplarReservoir[N]) Collect(dest *[]exemplar.Exemplar) {
 	f.reservoir.Collect(dest)
 }
 
+type mergeableReservoir interface {
+	Merge(other exemplar.Reservoir)
+	Reset()
+}
+
 func (f *filteredExemplarReservoir[N]) Merge(other FilteredExemplarReservoir[N]) {
 	if f == nil || other == nil || f == other {
 		return
@@ -90,7 +95,7 @@ func (f *filteredExemplarReservoir[N]) Merge(other FilteredExemplarReservoir[N])
 	if !ok || o == nil {
 		return
 	}
-	if mr, ok := f.reservoir.(exemplar.MergeableReservoir); ok {
+	if mr, ok := f.reservoir.(mergeableReservoir); ok {
 		switch {
 		case !f.concurrentSafe && !o.concurrentSafe:
 			if uintptr(unsafe.Pointer(f)) < uintptr(unsafe.Pointer(o)) {
@@ -119,7 +124,7 @@ func (f *filteredExemplarReservoir[N]) Reset() {
 	if f == nil {
 		return
 	}
-	if mr, ok := f.reservoir.(exemplar.MergeableReservoir); ok {
+	if mr, ok := f.reservoir.(mergeableReservoir); ok {
 		if !f.concurrentSafe {
 			f.reservoirMux.Lock()
 			defer f.reservoirMux.Unlock()
@@ -132,6 +137,6 @@ func (f *filteredExemplarReservoir[N]) IsMergeable() bool {
 	if f == nil {
 		return false
 	}
-	_, ok := f.reservoir.(exemplar.MergeableReservoir)
+	_, ok := f.reservoir.(mergeableReservoir)
 	return ok
 }

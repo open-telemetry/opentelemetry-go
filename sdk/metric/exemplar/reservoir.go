@@ -31,24 +31,6 @@ type Reservoir interface {
 	Collect(dest *[]Exemplar)
 }
 
-// MergeableReservoir is an optional interface that a [Reservoir] can implement
-// to support merging another reservoir's sampled exemplars into itself.
-type MergeableReservoir interface {
-	Reservoir
-
-	// Merge merges the sampled exemplars from other into this reservoir.
-	//
-	// Merge must be safe for concurrent use. If other is nil, equal to this
-	// reservoir, or of an incompatible concrete reservoir type, Merge should
-	// perform no action.
-	Merge(other Reservoir)
-
-	// Reset resets the reservoir's stored exemplars and sampling state.
-	//
-	// Reset must be safe for concurrent use.
-	Reset()
-}
-
 // ReservoirProvider creates new [Reservoir]s.
 //
 // The attributes provided are attributes which are kept by the aggregation, and

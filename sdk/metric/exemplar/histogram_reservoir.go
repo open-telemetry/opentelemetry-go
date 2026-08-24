@@ -47,8 +47,7 @@ func NewHistogramReservoir(bounds []float64) *HistogramReservoir {
 }
 
 var (
-	_ Reservoir          = &HistogramReservoir{}
-	_ MergeableReservoir = &HistogramReservoir{}
+	_ Reservoir = &HistogramReservoir{}
 )
 
 // HistogramReservoir is a [Reservoir] that samples
