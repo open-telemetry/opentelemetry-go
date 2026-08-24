@@ -179,10 +179,24 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.False(t, c.Traces.Insecure)
 				if grpcOption {
-					assert.Equal(t, "env.endpoint/prefix", c.Traces.Endpoint)
+					assert.Equal(t, "env.endpoint", c.Traces.Endpoint)
 				} else {
 					assert.Equal(t, "env.endpoint", c.Traces.Endpoint)
 					assert.Equal(t, "/prefix/v1/traces", c.Traces.URLPath)
+				}
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Endpoint With Path",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":        "https://overrode.by.signal.specific/env/var",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://env.traces.endpoint/prefix",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Traces.Insecure)
+				assert.Equal(t, "env.traces.endpoint", c.Traces.Endpoint)
+				if !grpcOption {
+					assert.Equal(t, "/prefix", c.Traces.URLPath)
 				}
 			},
 		},
@@ -197,6 +211,18 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, "env.traces.endpoint", c.Traces.Endpoint)
 				if !grpcOption {
 					assert.Equal(t, "/", c.Traces.URLPath)
+				}
+			},
+		},
+		{
+			name: "Test Environment Unix Endpoint",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "unix:///tmp/otel.sock",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Traces.Insecure)
+				if grpcOption {
+					assert.Equal(t, "unix:///tmp/otel.sock", c.Traces.Endpoint)
 				}
 			},
 		},
