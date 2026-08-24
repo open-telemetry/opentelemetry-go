@@ -3000,9 +3000,37 @@ func TestMeterDefaultAttributes(t *testing.T) {
 			metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 
-		t.Run(tt.name+"_ViewOverride", func(t *testing.T) {
+		t.Run(tt.name+"_ViewWithoutFilter", func(t *testing.T) {
 			rdr := NewManualReader()
-			view := NewView(Instrument{Name: "*"}, Stream{}) // Match all instruments, override filter
+			view := NewView(
+				Instrument{Name: "*"},
+				Stream{Description: "updated"},
+			) // Match all instruments, no attribute filter
+			m := NewMeterProvider(WithReader(rdr), WithView(view)).Meter("test")
+			tt.record(t, m)
+
+			rm := metricdata.ResourceMetrics{}
+			err := rdr.Collect(t.Context(), &rm)
+			require.NoError(t, err)
+
+			require.Len(t, rm.ScopeMetrics, 1)
+			sm := rm.ScopeMetrics[0]
+			require.Len(t, sm.Metrics, 1)
+			got := sm.Metrics[0]
+
+			want := metricdata.Metrics{
+				Name:        tt.instName,
+				Description: "updated",
+				Data:        tt.wantData(alice),
+			}
+			metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+		})
+
+		t.Run(tt.name+"_ViewWithFilterOverride", func(t *testing.T) {
+			rdr := NewManualReader()
+			view := NewView(Instrument{Name: "*"}, Stream{
+				AttributeFilter: attribute.NewAllowKeysFilter(k1, k2),
+			}) // Match all instruments, override filter
 			m := NewMeterProvider(WithReader(rdr), WithView(view)).Meter("test")
 			tt.record(t, m)
 
