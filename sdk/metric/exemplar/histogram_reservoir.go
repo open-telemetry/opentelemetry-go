@@ -46,9 +46,7 @@ func NewHistogramReservoir(bounds []float64) *HistogramReservoir {
 	}
 }
 
-var (
-	_ Reservoir = &HistogramReservoir{}
-)
+var _ Reservoir = &HistogramReservoir{}
 
 // HistogramReservoir is a [Reservoir] that samples
 // measurements that fall within a histogram bucket using Algorithm L. The

@@ -32,9 +32,7 @@ func NewFixedSizeReservoir(k int) *FixedSizeReservoir {
 	return r
 }
 
-var (
-	_ Reservoir = &FixedSizeReservoir{}
-)
+var _ Reservoir = &FixedSizeReservoir{}
 
 // FixedSizeReservoir is a [Reservoir] that samples at most k exemplars. If
 // there are k or less measurements made, the Reservoir will sample each one.

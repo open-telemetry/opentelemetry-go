@@ -732,7 +732,7 @@ func TestCumulativeHistogram_ConcurrentExemplarOfferCollect(t *testing.T) {
 				assert.NotEmpty(t, ex.Time)
 				idx := sort.SearchFloat64s(bounds, float64(ex.Value))
 				require.Less(t, idx, len(dp.BucketCounts))
-				assert.Greater(t, dp.BucketCounts[idx], uint64(0), "bucket containing exemplar must have count > 0")
+				assert.Positive(t, dp.BucketCounts[idx], "bucket containing exemplar must have count > 0")
 			}
 		}
 	}
