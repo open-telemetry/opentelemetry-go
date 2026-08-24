@@ -149,10 +149,10 @@ func (s *deltaSum[N]) collect(
 	// The delta collection cycle resets.
 	s.start = t
 
-	sData.DataPoints = dPts
+	sData.DataPoints = dPts[:i]
 	*dest = sData
 
-	return len(dPts)
+	return i
 }
 
 // newCumulativeSum returns an aggregator that summarizes a set of measurements
@@ -290,10 +290,10 @@ func (s *precomputedSum[N]) delta(
 	// The delta collection cycle resets.
 	s.start = t
 
-	sData.DataPoints = dPts
+	sData.DataPoints = dPts[:i]
 	*dest = sData
 
-	return len(dPts)
+	return i
 }
 
 func (s *precomputedSum[N]) cumulative(
@@ -328,8 +328,8 @@ func (s *precomputedSum[N]) cumulative(
 	s.hotColdValMap[readIdx].values.Clear()
 	s.lastCollect = t
 
-	sData.DataPoints = dPts
+	sData.DataPoints = dPts[:i]
 	*dest = sData
 
-	return len(dPts)
+	return i
 }

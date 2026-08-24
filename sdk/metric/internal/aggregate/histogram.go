@@ -244,10 +244,10 @@ func (s *deltaHistogram[N]) collect(
 	// The delta collection cycle resets.
 	s.start = t
 
-	h.DataPoints = hDPts
+	h.DataPoints = hDPts[:i]
 	*dest = h
 
-	return n
+	return i
 }
 
 // cumulativeHistogram summarizes a set of measurements as an histogram with explicitly
