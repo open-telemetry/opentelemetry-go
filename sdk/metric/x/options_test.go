@@ -57,7 +57,7 @@ func TestWithViewMatchingMode(t *testing.T) {
 }
 
 func TestViewMatchingModeStringUnknown(t *testing.T) {
-	assert.Equal(t, "independent", ViewMatchingMode(99).String())
+	assert.Equal(t, "unknown(99)", ViewMatchingMode(99).String())
 }
 
 func TestMeterProviderIntegration(t *testing.T) {

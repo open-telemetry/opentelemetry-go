@@ -6,6 +6,7 @@ package metric
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -100,8 +101,8 @@ func newConfig(options []Option) config {
 	for _, o := range options {
 		if modeOpt, ok := o.(viewMatchingModeOption); ok {
 			mode := modeOpt.ViewMatchingMode()
-			if mode < 0 || mode > 1 {
-				otel.Handle(errors.New("unsupported view matching mode, falling back to independent"))
+			if mode < int(viewMatchingModeIndependent) || mode > int(viewMatchingModeComposable) {
+				otel.Handle(fmt.Errorf("unsupported view matching mode %d, falling back to independent", mode))
 				conf.viewMatchingMode = viewMatchingModeIndependent
 			} else {
 				conf.viewMatchingMode = viewMatchingMode(mode)
