@@ -18,7 +18,7 @@ const (
 	ViewMatchingModeIndependent ViewMatchingMode = iota
 
 	// ViewMatchingModeComposable specifies that matching Views are combined
-	// (merged) to modify metric streams.
+	// (merged) to modify metric streams rather than creating independent streams.
 	ViewMatchingModeComposable
 )
 
