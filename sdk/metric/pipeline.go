@@ -260,6 +260,7 @@ func (i *inserter[N]) Instrument(
 		if len(matches) > 0 {
 			return i.composableInstrument(inst, matches, allowedKeys, optIn, readerAggregation, i.newStreamAggregation)
 		}
+		return i.defaultInstrument(inst, allowedKeys, readerAggregation)
 	}
 	var measures []aggregate.Measure[N]
 	err := i.forEachStream(
