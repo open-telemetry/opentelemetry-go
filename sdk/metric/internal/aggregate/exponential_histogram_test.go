@@ -1736,3 +1736,23 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 		})
 	}
 }
+
+func TestExpoBucketsCapacityReuseAfterClear(t *testing.T) {
+	var b expoBuckets
+	b.record(10)
+	b.record(12)
+	require.NotEmpty(t, b.counts)
+	origCap := cap(b.counts)
+	require.Greater(t, origCap, 0)
+
+	b.clear()
+	assert.Empty(t, b.counts)
+	assert.Equal(t, origCap, cap(b.counts))
+	assert.Equal(t, int32(0), b.startBin)
+
+	// Recording again exercises the len(b.counts) == 0 && cap(b.counts) > 0 capacity reuse path.
+	b.record(15)
+	assert.Len(t, b.counts, 1)
+	assert.Equal(t, uint64(1), b.counts[0].Load())
+	assert.Equal(t, int32(15), b.startBin)
+}
