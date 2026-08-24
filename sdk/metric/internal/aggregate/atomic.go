@@ -306,13 +306,9 @@ type hotColdMap[V any] struct {
 	hotColdValMap [2]limitedSyncMap[V]
 }
 
-func newHotColdMap[V any](limit int) hotColdMap[V] {
-	return hotColdMap[V]{
-		hotColdValMap: [2]limitedSyncMap[V]{
-			{aggLimit: limit},
-			{aggLimit: limit},
-		},
-	}
+func (m *hotColdMap[V]) init(limit int) {
+	m.hotColdValMap[0].aggLimit = limit
+	m.hotColdValMap[1].aggLimit = limit
 }
 
 // LoadOrStoreAttr returns the existing value for lazy in the hot map at hotIdx,

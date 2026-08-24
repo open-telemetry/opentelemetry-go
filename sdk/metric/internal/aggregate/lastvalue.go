@@ -25,11 +25,12 @@ func newDeltaLastValue[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *deltaLastValue[N] {
-	return &deltaLastValue[N]{
+	s := &deltaLastValue[N]{
 		newRes: r,
 		start:  now(),
-		vals:   newHotColdMap[*lastValuePoint[N]](limit),
 	}
+	s.vals.init(limit)
+	return s
 }
 
 // deltaLastValue summarizes a set of measurements as the last one made.

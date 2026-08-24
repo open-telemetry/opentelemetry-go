@@ -28,12 +28,13 @@ func newDeltaSum[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *deltaSum[N] {
-	return &deltaSum[N]{
+	s := &deltaSum[N]{
 		monotonic: monotonic,
 		start:     now(),
-		vals:      newHotColdMap[*sumValue[N]](limit),
 		newRes:    r,
 	}
+	s.vals.init(limit)
+	return s
 }
 
 // deltaSum is the storage for sums which resets every collection interval.

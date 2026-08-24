@@ -152,14 +152,15 @@ func newDeltaHistogram[N int64 | float64](
 	// complete control over the fix.
 	b := slices.Clone(boundaries)
 	slices.Sort(b)
-	return &deltaHistogram[N]{
+	h := &deltaHistogram[N]{
 		start:    now(),
 		noMinMax: noMinMax,
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		vals:     newHotColdMap[*histogramPoint[N]](limit),
 	}
+	h.vals.init(limit)
+	return h
 }
 
 func (s *deltaHistogram[N]) collect(

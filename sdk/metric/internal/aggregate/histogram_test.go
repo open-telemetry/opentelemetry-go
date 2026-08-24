@@ -578,8 +578,8 @@ func TestHistogramMinMaxUnset(t *testing.T) {
 		noSum:    false,
 		bounds:   []float64{1, 5},
 		start:    time.Now(),
-		vals:     newHotColdMap[*histogramPoint[int64]](0),
 	}
+	h.vals.init(0)
 
 	hPt := &histogramPoint[int64]{
 		attrs: alice,
