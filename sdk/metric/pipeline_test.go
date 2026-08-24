@@ -819,17 +819,6 @@ func TestViewMatchingModeComposable(t *testing.T) {
 			wantCount: 1,
 			wantDesc:  "fallback desc",
 		},
-		{
-			name: "ExemplarReservoirProviderSelectorLastWins",
-			views: []View{
-				NewView(
-					Instrument{Name: "foo"},
-					Stream{ExemplarReservoirProviderSelector: DefaultExemplarReservoirProviderSelector},
-				),
-			},
-			inst:      Instrument{Name: "foo", Kind: InstrumentKindCounter},
-			wantCount: 1,
-		},
 	}
 
 	for _, tt := range testcases {
@@ -856,6 +845,33 @@ func TestViewMatchingModeComposable(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestViewMatchingModeComposableExemplarSelectorLastWins(t *testing.T) {
+	var called1, called2 bool
+	sel1 := func(agg Aggregation) exemplar.ReservoirProvider {
+		called1 = true
+		return DefaultExemplarReservoirProviderSelector(agg)
+	}
+	sel2 := func(agg Aggregation) exemplar.ReservoirProvider {
+		called2 = true
+		return DefaultExemplarReservoirProviderSelector(agg)
+	}
+
+	views := []View{
+		NewView(Instrument{Name: "foo"}, Stream{ExemplarReservoirProviderSelector: sel1}),
+		NewView(Instrument{Name: "foo"}, Stream{ExemplarReservoirProviderSelector: sel2}),
+	}
+
+	r := NewManualReader()
+	p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+	var vc cache[string, instID]
+	ins := newInserter[int64](p, &vc)
+	got, err := ins.Instrument(Instrument{Name: "foo", Kind: InstrumentKindCounter}, nil, DefaultAggregationSelector(InstrumentKindCounter))
+	require.NoError(t, err)
+	assert.Len(t, got, 1)
+	assert.False(t, called1, "first selector should not be called")
+	assert.True(t, called2, "second selector should be called (last-wins)")
 }
 
 func TestComposeAttributeFilters(t *testing.T) {
