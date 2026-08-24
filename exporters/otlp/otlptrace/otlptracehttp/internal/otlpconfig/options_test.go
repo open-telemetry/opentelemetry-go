@@ -187,6 +187,21 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test Environment Endpoint Without Scheme With Path",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "//env.endpoint:4317/prefix",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.False(t, c.Traces.Insecure)
+				if grpcOption {
+					assert.Equal(t, "env.endpoint:4317/prefix", c.Traces.Endpoint)
+				} else {
+					assert.Equal(t, "env.endpoint:4317", c.Traces.Endpoint)
+					assert.Equal(t, "/prefix/v1/traces", c.Traces.URLPath)
+				}
+			},
+		},
+		{
 			name: "Test Environment Signal Specific Endpoint With Path",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT":        "https://overrode.by.signal.specific/env/var",
