@@ -43,8 +43,10 @@ type FixedSizeRoundRobinReservoir struct {
 	count atomic.Int64
 }
 
-var _ exemplar.Reservoir = &FixedSizeRoundRobinReservoir{}
-var _ exemplar.ConcurrentSafe = &FixedSizeRoundRobinReservoir{}
+var (
+	_ exemplar.Reservoir      = &FixedSizeRoundRobinReservoir{}
+	_ exemplar.ConcurrentSafe = &FixedSizeRoundRobinReservoir{}
+)
 
 // NewFixedSizeRoundRobinReservoir returns a [FixedSizeRoundRobinReservoir] that
 // samples at most size exemplars.
