@@ -199,6 +199,11 @@ func (l *hotColdWaitGroup) done(hotIdx uint64) {
 	l.endedCounts[hotIdx].Add(1)
 }
 
+// currentHot returns the current hot index (0 or 1) without incrementing the active count.
+func (l *hotColdWaitGroup) currentHot() uint64 {
+	return l.startedCountAndHotIdx.Load() >> 63
+}
+
 // swapHotAndWait swaps the hot bit, waits for all start() calls to be done(),
 // and then returns the now-cold index for the reader to read from. The
 // returned index is 0 or 1. swapHotAndWait must not be called concurrently.
@@ -321,7 +326,6 @@ type hotColdMap[V any] struct {
 	mu     sync.Mutex
 	pinned map[attribute.Distinct]V
 	limit  int
-	count  atomic.Int64
 }
 
 func newHotColdMap[V any](limit int) *hotColdMap[V] {
@@ -332,7 +336,7 @@ func newHotColdMap[V any](limit int) *hotColdMap[V] {
 }
 
 // Bind stores a value in the pinned registry, enforcing limits.
-// If an entry for attrs already exists in hotColdValMap (from an earlier WriteUnbound),
+// If an entry for attrs already exists in the hot or cold map,
 // onBind is called on the existing value to promote it, avoiding duplicate entries.
 func (m *hotColdMap[V]) Bind(attrs attribute.Set, newValue func(attribute.Set) V, onBind func(V)) V {
 	m.mu.Lock()
@@ -343,7 +347,7 @@ func (m *hotColdMap[V]) Bind(attrs attribute.Set, newValue func(attribute.Set) V
 		return val
 	}
 
-	if m.limit > 0 && m.count.Load() >= int64(m.limit-1) {
+	if m.limit > 0 && len(m.pinned) >= m.limit-1 {
 		attrs = overflowSet
 		d = attrs.Equivalent()
 		if val, ok := m.pinned[d]; ok {
@@ -351,12 +355,13 @@ func (m *hotColdMap[V]) Bind(attrs attribute.Set, newValue func(attribute.Set) V
 		}
 	}
 
+	hotIdx := m.hcwg.currentHot()
 	var val V
 	var found bool
-	if v, ok := m.hotColdValMap[0].Load(d); ok {
+	if v, ok := m.hotColdValMap[hotIdx].Load(d); ok {
 		val = v
 		found = true
-	} else if v, ok := m.hotColdValMap[1].Load(d); ok {
+	} else if v, ok := m.hotColdValMap[1-hotIdx].Load(d); ok {
 		val = v
 		found = true
 	}
@@ -367,12 +372,12 @@ func (m *hotColdMap[V]) Bind(attrs attribute.Set, newValue func(attribute.Set) V
 		}
 	} else {
 		val = newValue(attrs)
-		m.count.Add(1)
 	}
 
 	m.pinned[d] = val
-	m.hotColdValMap[0].Store(d, val)
-	m.hotColdValMap[1].Store(d, val)
+	if _, loaded := m.hotColdValMap[hotIdx].LoadOrStore(d, val); !loaded {
+		m.hotColdValMap[hotIdx].len++
+	}
 	return val
 }
 
@@ -411,12 +416,13 @@ func (m *hotColdMap[V]) LoadOrStoreHot(hotIdx uint64, lazy lazyFilteredAttribute
 
 	var fltrAttr attribute.Set
 	// Handle limit and overflow
-	if m.limit > 0 && m.count.Load() >= int64(m.limit-1) {
+	if m.limit > 0 && m.hotColdValMap[hotIdx].len >= m.limit-1 {
 		fltrAttr = overflowSet
 		d = overflowSet.Equivalent()
 		if val, ok := m.pinned[d]; ok {
-			m.hotColdValMap[hotIdx].Store(d, val)
-			m.hotColdValMap[hotIdx].len++
+			if _, loaded := m.hotColdValMap[hotIdx].LoadOrStore(d, val); !loaded {
+				m.hotColdValMap[hotIdx].len++
+			}
 			return val
 		}
 		if val, ok := m.hotColdValMap[hotIdx].Load(d); ok {
@@ -429,7 +435,6 @@ func (m *hotColdMap[V]) LoadOrStoreHot(hotIdx uint64, lazy lazyFilteredAttribute
 	val := newValue(fltrAttr)
 	m.hotColdValMap[hotIdx].Store(d, val)
 	m.hotColdValMap[hotIdx].len++
-	m.count.Add(1)
 	return val
 }
 
@@ -443,22 +448,27 @@ func (m *hotColdMap[V]) Len(readIdx uint64) int {
 	return m.hotColdValMap[readIdx].len
 }
 
-// Collect ranges over the cold map, skipping pinned entries, and clears it.
-func (m *hotColdMap[V]) Collect(readIdx uint64, isPinned func(V) bool, f func(key any, val V) bool) {
+// PinnedLen returns the number of pinned series.
+func (m *hotColdMap[V]) PinnedLen() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	return len(m.pinned)
+}
 
-	unboundDeleted := 0
+// Collect ranges over the cold map, skipping pinned entries, and clears it.
+func (m *hotColdMap[V]) Collect(readIdx uint64, isPinned func(V) bool, f func(key any, val V) bool) {
 	m.hotColdValMap[readIdx].Range(func(k any, val V) bool {
 		if isPinned(val) {
 			return true // skip
 		}
-		unboundDeleted++
 		return f(k, val)
 	})
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.hotColdValMap[readIdx].Clear()
-	m.count.Add(-int64(unboundDeleted))
+	m.hotColdValMap[readIdx].len = 0
 }
 
 // RangePinned ranges over the pinned registry.

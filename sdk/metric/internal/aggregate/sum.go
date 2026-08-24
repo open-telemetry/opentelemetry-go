@@ -99,18 +99,29 @@ func (s *deltaSum[N]) collect(
 
 	readIdx := s.vals.SwapHotAndWait()
 
-	dPts := reset(sData.DataPoints, 0, s.vals.Len(readIdx))
+	n := s.vals.Len(readIdx) + s.vals.PinnedLen()
+	dPts := reset(sData.DataPoints, n, n)
 
+	var i int
 	// 1. Collect from cold map (unbound only)
 	s.vals.Collect(readIdx, func(val *sumValue[N]) bool { return val.isBound }, func(_ any, val *sumValue[N]) bool {
-		newPt := metricdata.DataPoint[N]{
-			Attributes: val.attrs,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      val.n.load(),
+		if i < len(dPts) {
+			dPts[i].Attributes = val.attrs
+			dPts[i].StartTime = s.start
+			dPts[i].Time = t
+			dPts[i].Value = val.n.load()
+			collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		} else {
+			newPt := metricdata.DataPoint[N]{
+				Attributes: val.attrs,
+				StartTime:  s.start,
+				Time:       t,
+				Value:      val.n.load(),
+			}
+			collectExemplars(&newPt.Exemplars, val.res.Collect)
+			dPts = append(dPts, newPt)
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
-		dPts = append(dPts, newPt)
+		i++
 		return true
 	})
 
@@ -122,18 +133,29 @@ func (s *deltaSum[N]) collect(
 			return true
 		}
 
-		newPt := metricdata.DataPoint[N]{
-			Attributes: val.attrs,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      delta,
+		if i < len(dPts) {
+			dPts[i].Attributes = val.attrs
+			dPts[i].StartTime = s.start
+			dPts[i].Time = t
+			dPts[i].Value = delta
+			collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		} else {
+			newPt := metricdata.DataPoint[N]{
+				Attributes: val.attrs,
+				StartTime:  s.start,
+				Time:       t,
+				Value:      delta,
+			}
+			collectExemplars(&newPt.Exemplars, val.res.Collect)
+			dPts = append(dPts, newPt)
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
-		dPts = append(dPts, newPt)
+		i++
 
 		val.lastReported = n // Update reported value inside entry
 		return true
 	})
+
+	dPts = dPts[:i]
 
 	// The delta collection cycle resets.
 	s.start = t
@@ -219,7 +241,8 @@ func (s *cumulativeSum[N]) collect(
 
 	// Values are being concurrently written while we iterate, so only use the
 	// current length for capacity.
-	dPts := reset(sData.DataPoints, 0, s.values.Len())
+	n := s.values.Len()
+	dPts := reset(sData.DataPoints, n, n)
 
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
@@ -231,21 +254,26 @@ func (s *cumulativeSum[N]) collect(
 		if perSeriesStartTimeEnabled {
 			startTime = val.startTime
 		}
-		newPt := metricdata.DataPoint[N]{
-			Attributes: val.attrs,
-			StartTime:  startTime,
-			Time:       t,
-			Value:      val.n.load(),
+		if i < len(dPts) {
+			dPts[i].Attributes = val.attrs
+			dPts[i].StartTime = startTime
+			dPts[i].Time = t
+			dPts[i].Value = val.n.load()
+			collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		} else {
+			newPt := metricdata.DataPoint[N]{
+				Attributes: val.attrs,
+				StartTime:  startTime,
+				Time:       t,
+				Value:      val.n.load(),
+			}
+			collectExemplars(&newPt.Exemplars, val.res.Collect)
+			dPts = append(dPts, newPt)
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
-		dPts = append(dPts, newPt)
-		// TODO (#3006): This will use an unbounded amount of memory if there
-		// are unbounded number of attribute sets being aggregated. Attribute
-		// sets that become "stale" need to be forgotten so this will not
-		// overload the system.
 		i++
 		return true
 	})
+	dPts = dPts[:i]
 
 	sData.DataPoints = dPts
 	*dest = sData
@@ -302,23 +330,34 @@ func (s *precomputedSum[N]) delta(
 
 	readIdx := s.vals.SwapHotAndWait()
 	n := s.vals.Len(readIdx)
-	dPts := reset(sData.DataPoints, 0, n)
+	dPts := reset(sData.DataPoints, n, n)
 
+	var i int
 	s.vals.Collect(readIdx, func(*sumValue[N]) bool { return false }, func(key any, val *sumValue[N]) bool {
 		n := val.n.load()
 		delta := n - s.reported[key]
 
-		newPt := metricdata.DataPoint[N]{
-			Attributes: val.attrs,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      delta,
+		if i < len(dPts) {
+			dPts[i].Attributes = val.attrs
+			dPts[i].StartTime = s.start
+			dPts[i].Time = t
+			dPts[i].Value = delta
+			collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		} else {
+			newPt := metricdata.DataPoint[N]{
+				Attributes: val.attrs,
+				StartTime:  s.start,
+				Time:       t,
+				Value:      delta,
+			}
+			collectExemplars(&newPt.Exemplars, val.res.Collect)
+			dPts = append(dPts, newPt)
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
-		dPts = append(dPts, newPt)
+		i++
 		newReported[key] = n
 		return true
 	})
+	dPts = dPts[:i]
 	s.reported = newReported
 	// The delta collection cycle resets.
 	s.start = t
@@ -342,19 +381,30 @@ func (s *precomputedSum[N]) cumulative(
 
 	readIdx := s.vals.SwapHotAndWait()
 	n := s.vals.Len(readIdx)
-	dPts := reset(sData.DataPoints, 0, n)
+	dPts := reset(sData.DataPoints, n, n)
 
+	var i int
 	s.vals.Collect(readIdx, func(*sumValue[N]) bool { return false }, func(_ any, val *sumValue[N]) bool {
-		newPt := metricdata.DataPoint[N]{
-			Attributes: val.attrs,
-			StartTime:  s.start,
-			Time:       t,
-			Value:      val.n.load(),
+		if i < len(dPts) {
+			dPts[i].Attributes = val.attrs
+			dPts[i].StartTime = s.start
+			dPts[i].Time = t
+			dPts[i].Value = val.n.load()
+			collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		} else {
+			newPt := metricdata.DataPoint[N]{
+				Attributes: val.attrs,
+				StartTime:  s.start,
+				Time:       t,
+				Value:      val.n.load(),
+			}
+			collectExemplars(&newPt.Exemplars, val.res.Collect)
+			dPts = append(dPts, newPt)
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
-		dPts = append(dPts, newPt)
+		i++
 		return true
 	})
+	dPts = dPts[:i]
 
 	sData.DataPoints = dPts
 	*dest = sData
