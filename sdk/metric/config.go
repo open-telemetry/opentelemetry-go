@@ -83,6 +83,8 @@ type experimentalOption interface {
 	Experimental()
 }
 
+// viewMatchingModeOption is structurally matched with options from the
+// experimental sdk/metric/x module across module boundaries.
 type viewMatchingModeOption interface {
 	ViewMatchingMode() int
 	Experimental()
