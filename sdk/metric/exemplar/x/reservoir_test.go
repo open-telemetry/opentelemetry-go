@@ -126,7 +126,52 @@ func TestFixedSizeRoundRobinReservoirDistribution(t *testing.T) {
 	var dest []exemplar.Exemplar
 	r.Collect(&dest)
 
-	assert.Len(t, dest, size, "Should have filled the reservoir")
+	require.Len(t, dest, size, "Should have filled the reservoir")
+
+	// In round-robin sampling across size=3 shards, each shard receives
+	// offers with value congruent to its index modulo size. Verify each
+	// collected exemplar has a unique modulo value.
+	seenMod := make(map[int64]bool)
+	for _, ex := range dest {
+		val := ex.Value.Int64()
+		mod := val % int64(size)
+		assert.False(t, seenMod[mod], "duplicate residue class in collected exemplars: %d", mod)
+		seenMod[mod] = true
+	}
+	assert.Len(t, seenMod, size, "expected all shards to contribute an exemplar")
+}
+
+func TestFixedSizeRoundRobinReservoirProvider(t *testing.T) {
+	provider := FixedSizeRoundRobinReservoirProvider(3)
+	r := provider(attribute.NewSet())
+	require.NotNil(t, r)
+	assert.IsType(t, &FixedSizeRoundRobinReservoir{}, r)
+}
+
+func TestFixedSizeRoundRobinReservoirAllFields(t *testing.T) {
+	r := NewFixedSizeRoundRobinReservoir(1)
+	ctx := t.Context()
+
+	tID, sID := trace.TraceID{0x01, 0x02, 0x03}, trace.SpanID{0x04, 0x05}
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    tID,
+		SpanID:     sID,
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx = trace.ContextWithSpanContext(ctx, sc)
+
+	attr := attribute.String("key", "value")
+	r.Offer(ctx, staticTime, exemplar.NewValue[int64](42), []attribute.KeyValue{attr})
+
+	var dest []exemplar.Exemplar
+	r.Collect(&dest)
+
+	require.Len(t, dest, 1)
+	assert.Equal(t, staticTime, dest[0].Time)
+	assert.Equal(t, exemplar.NewValue[int64](42), dest[0].Value)
+	assert.Equal(t, []attribute.KeyValue{attr}, dest[0].FilteredAttributes)
+	assert.Equal(t, sID[:], dest[0].SpanID)
+	assert.Equal(t, tID[:], dest[0].TraceID)
 }
 
 func TestResetHelperReuseSlice(t *testing.T) {
