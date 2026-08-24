@@ -126,9 +126,6 @@ func (r *HistogramReservoir) Merge(other Reservoir) {
 		ob.mu.Lock()
 		valid := ob.valid
 		m := ob.measurement
-		if valid {
-			m.FilteredAttributes = slices.Clone(ob.FilteredAttributes)
-		}
 		ob.mu.Unlock()
 
 		if !valid {

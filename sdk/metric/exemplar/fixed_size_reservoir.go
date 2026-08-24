@@ -5,7 +5,6 @@ package exemplar
 
 import (
 	"context"
-	"slices"
 	"sync"
 	"time"
 
@@ -130,9 +129,7 @@ func (r *FixedSizeReservoir) Merge(other Reservoir) {
 	o.mu.Lock()
 	for i := range o.storage {
 		if o.storage[i].valid {
-			m := o.storage[i]
-			m.FilteredAttributes = slices.Clone(m.FilteredAttributes)
-			items = append(items, indexedMeasurement{idx: i, m: m})
+			items = append(items, indexedMeasurement{idx: i, m: o.storage[i]})
 		}
 	}
 	o.mu.Unlock()
