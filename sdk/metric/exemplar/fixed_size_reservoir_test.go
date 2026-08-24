@@ -121,19 +121,23 @@ func TestFixedSizeReservoirMergeDifferentCapacity(t *testing.T) {
 	assert.Equal(t, float64(1), dest[0].Value.Float64())
 }
 
-func TestFixedSizeReservoirMergePreservesSamplingState(t *testing.T) {
-	r1 := NewFixedSizeReservoir(2)
-	for i := range 10 {
-		r1.Offer(t.Context(), staticTime, NewValue(float64(i)), nil)
-	}
-	countBefore := r1.nt.count
+func TestFixedSizeReservoirMergeSlotOverwrite(t *testing.T) {
+	r1 := NewFixedSizeReservoir(3)
+	r1.Offer(t.Context(), staticTime, NewValue(float64(10)), nil)
+	r1.Offer(t.Context(), staticTime, NewValue(float64(20)), nil)
+	r1.Offer(t.Context(), staticTime, NewValue(float64(30)), nil)
 
-	r2 := NewFixedSizeReservoir(2)
+	r2 := NewFixedSizeReservoir(3)
 	r2.Offer(t.Context(), staticTime, NewValue(float64(100)), nil)
 
 	r1.Merge(r2)
 
-	assert.Equal(t, countBefore, r1.nt.count, "Merge should preserve target reservoir's sampling state")
+	var dest []Exemplar
+	r1.Collect(&dest)
+	require.Len(t, dest, 3)
+	assert.Equal(t, float64(100), dest[0].Value.Float64(), "delta slot 0 should overwrite target slot 0")
+	assert.Equal(t, float64(20), dest[1].Value.Float64(), "target slot 1 should be preserved")
+	assert.Equal(t, float64(30), dest[2].Value.Float64(), "target slot 2 should be preserved")
 }
 
 func TestFixedSizeReservoirResetNil(t *testing.T) {
