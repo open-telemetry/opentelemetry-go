@@ -7,7 +7,6 @@ import (
 	"context"
 	"sync"
 	"time"
-	"unsafe"
 
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal/reservoir"
@@ -96,23 +95,11 @@ func (f *filteredExemplarReservoir[N]) Merge(other FilteredExemplarReservoir[N])
 		return
 	}
 	if mr, ok := f.reservoir.(mergeableReservoir); ok {
-		switch {
-		case !f.concurrentSafe && !o.concurrentSafe:
-			if uintptr(unsafe.Pointer(f)) < uintptr(unsafe.Pointer(o)) {
-				f.reservoirMux.Lock()
-				defer f.reservoirMux.Unlock()
-				o.reservoirMux.Lock()
-				defer o.reservoirMux.Unlock()
-			} else {
-				o.reservoirMux.Lock()
-				defer o.reservoirMux.Unlock()
-				f.reservoirMux.Lock()
-				defer f.reservoirMux.Unlock()
-			}
-		case !f.concurrentSafe:
+		if !f.concurrentSafe {
 			f.reservoirMux.Lock()
 			defer f.reservoirMux.Unlock()
-		case !o.concurrentSafe:
+		}
+		if !o.concurrentSafe {
 			o.reservoirMux.Lock()
 			defer o.reservoirMux.Unlock()
 		}
