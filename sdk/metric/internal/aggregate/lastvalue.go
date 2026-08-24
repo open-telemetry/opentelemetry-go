@@ -113,7 +113,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 	// Do not report stale values.
 	s.vals.Clear(readIdx)
 
-	gData.DataPoints = dPts
+	gData.DataPoints = dPts[:i]
 	*dest = gData
 	return i
 }
