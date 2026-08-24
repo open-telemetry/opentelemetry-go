@@ -3056,29 +3056,94 @@ func TestMeterDefaultAttributes_FilterAll(t *testing.T) {
 	k1 := attribute.Key("k1")
 	k2 := attribute.Key("k2")
 
-	rdr := NewManualReader()
-	m := NewMeterProvider(WithReader(rdr)).Meter("test")
+	t.Run("DefaultBehavior", func(t *testing.T) {
+		rdr := NewManualReader()
+		m := NewMeterProvider(WithReader(rdr)).Meter("test")
 
-	ctr, err := m.Int64Counter("sint", x.WithDefaultAttributes())
-	require.NoError(t, err)
-	ctr.Add(t.Context(), 3, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
+		ctr, err := m.Int64Counter("sint", x.WithDefaultAttributes())
+		require.NoError(t, err)
+		ctr.Add(t.Context(), 3, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
 
-	rm := metricdata.ResourceMetrics{}
-	err = rdr.Collect(t.Context(), &rm)
-	require.NoError(t, err)
+		rm := metricdata.ResourceMetrics{}
+		err = rdr.Collect(t.Context(), &rm)
+		require.NoError(t, err)
 
-	require.Len(t, rm.ScopeMetrics, 1)
-	sm := rm.ScopeMetrics[0]
-	require.Len(t, sm.Metrics, 1)
-	got := sm.Metrics[0]
+		require.Len(t, rm.ScopeMetrics, 1)
+		sm := rm.ScopeMetrics[0]
+		require.Len(t, sm.Metrics, 1)
+		got := sm.Metrics[0]
 
-	want := metricdata.Metrics{
-		Name: "sint",
-		Data: metricdata.Sum[int64]{
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
-			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attribute.NewSet(), Value: 3}},
-		},
-	}
-	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+		want := metricdata.Metrics{
+			Name: "sint",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: true,
+				DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attribute.NewSet(), Value: 3}},
+			},
+		}
+		metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+	})
+
+	t.Run("ViewWithoutFilter", func(t *testing.T) {
+		rdr := NewManualReader()
+		view := NewView(Instrument{Name: "*"}, Stream{Description: "updated"})
+		m := NewMeterProvider(WithReader(rdr), WithView(view)).Meter("test")
+
+		ctr, err := m.Int64Counter("sint", x.WithDefaultAttributes())
+		require.NoError(t, err)
+		ctr.Add(t.Context(), 3, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
+
+		rm := metricdata.ResourceMetrics{}
+		err = rdr.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		sm := rm.ScopeMetrics[0]
+		require.Len(t, sm.Metrics, 1)
+		got := sm.Metrics[0]
+
+		want := metricdata.Metrics{
+			Name:        "sint",
+			Description: "updated",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: true,
+				DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attribute.NewSet(), Value: 3}},
+			},
+		}
+		metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+	})
+
+	t.Run("ViewWithFilterOverride", func(t *testing.T) {
+		rdr := NewManualReader()
+		view := NewView(Instrument{Name: "*"}, Stream{
+			AttributeFilter: attribute.NewAllowKeysFilter(k1),
+		})
+		m := NewMeterProvider(WithReader(rdr), WithView(view)).Meter("test")
+
+		ctr, err := m.Int64Counter("sint", x.WithDefaultAttributes())
+		require.NoError(t, err)
+		ctr.Add(t.Context(), 3, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
+
+		rm := metricdata.ResourceMetrics{}
+		err = rdr.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		sm := rm.ScopeMetrics[0]
+		require.Len(t, sm.Metrics, 1)
+		got := sm.Metrics[0]
+
+		want := metricdata.Metrics{
+			Name: "sint",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: true,
+				DataPoints: []metricdata.DataPoint[int64]{
+					{Attributes: attribute.NewSet(k1.String("alice")), Value: 3},
+				},
+			},
+		}
+		metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+	})
 }
