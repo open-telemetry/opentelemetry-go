@@ -5,6 +5,7 @@ package x
 
 import (
 	"errors"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
@@ -203,10 +204,12 @@ const (
 // String returns the string representation of the ViewMatchingMode.
 func (m ViewMatchingMode) String() string {
 	switch m {
+	case ViewMatchingModeIndependent:
+		return "independent"
 	case ViewMatchingModeComposable:
 		return "composable"
 	default:
-		return "independent"
+		return "unknown(" + strconv.Itoa(int(m)) + ")"
 	}
 }
 
