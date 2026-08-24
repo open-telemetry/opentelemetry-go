@@ -500,3 +500,26 @@ func TestBoundInstrumentFloat64(t *testing.T) {
 		assert.True(t, histFound, "expected Histogram metric stream")
 	})
 }
+
+func TestBindDoesNotMutateAttributeSlice(t *testing.T) {
+	r := NewManualReader()
+	mp := NewMeterProvider(WithReader(r))
+	meter := mp.Meter("test")
+
+	counter, err := meter.Int64Counter("test.counter")
+	require.NoError(t, err)
+
+	attrs := []attribute.KeyValue{
+		attribute.Int("b", 2),
+		attribute.Int("a", 1),
+		attribute.Int("a", 3),
+	}
+	original := []attribute.KeyValue{
+		attribute.Int("b", 2),
+		attribute.Int("a", 1),
+		attribute.Int("a", 3),
+	}
+
+	_ = counter.(x.Int64Binder).Bind(attrs...)
+	assert.Equal(t, original, attrs, "Bind mutated the caller's attribute slice")
+}
