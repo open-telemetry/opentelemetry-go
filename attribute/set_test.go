@@ -254,6 +254,26 @@ func TestFiltering(t *testing.T) {
 	}
 }
 
+func TestSetFilterNilReceiver(t *testing.T) {
+	var set *attribute.Set
+
+	t.Run("KeepAll", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			got, dropped := set.Filter(func(attribute.KeyValue) bool { return true })
+			assert.Empty(t, got.ToSlice())
+			assert.Nil(t, dropped)
+		})
+	})
+
+	t.Run("NilFilter", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			got, dropped := set.Filter(nil)
+			assert.Empty(t, got.ToSlice())
+			assert.Nil(t, dropped)
+		})
+	})
+}
+
 func TestUniqueness(t *testing.T) {
 	short := []attribute.KeyValue{
 		attribute.String("A", "0"),

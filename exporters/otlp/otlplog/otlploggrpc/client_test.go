@@ -435,18 +435,18 @@ type exportResult struct {
 	Err      error
 }
 
-// storage stores uploaded OTLP log data in their proto form.
+// storage stores uploaded OTLP log data in protobuf form.
 type storage struct {
 	dataMu sync.Mutex
 	data   []*lpb.ResourceLogs
 }
 
-// newStorage returns a configure storage ready to store received requests.
+// newStorage returns a configured storage instance ready to store received requests.
 func newStorage() *storage {
 	return &storage{}
 }
 
-// Add adds the request to the Storage.
+// Add adds the request to the storage.
 func (s *storage) Add(request *collogpb.ExportLogsServiceRequest) {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
@@ -482,11 +482,10 @@ var _ collogpb.LogsServiceServer = (*grpcCollector)(nil)
 // endpoint.
 //
 // If endpoint is an empty string, the returned collector will be listening on
-// the localhost interface at an OS chosen port.
+// the localhost interface at an OS-chosen port.
 //
-// If errCh is not nil, the collector will respond to Export calls with errors
-// sent on that channel. This means that if errCh is not nil Export calls will
-// block until an error is received.
+// If resultCh is not nil, each request blocks until an exportResult is received
+// and the collector responds with that result.
 func newGRPCCollector(
 	ctx context.Context,
 	endpoint string,
@@ -515,7 +514,7 @@ func newGRPCCollector(
 	return c, nil
 }
 
-// Export handles the export req.
+// Export handles the export request.
 func (c *grpcCollector) Export(
 	ctx context.Context,
 	req *collogpb.ExportLogsServiceRequest,
@@ -538,7 +537,7 @@ func (c *grpcCollector) Export(
 	return &collogpb.ExportLogsServiceResponse{}, nil
 }
 
-// Collect returns the Storage holding all collected requests.
+// Collect returns the storage holding all collected requests.
 func (c *grpcCollector) Collect() *storage {
 	return c.storage
 }
