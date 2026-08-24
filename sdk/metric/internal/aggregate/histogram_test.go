@@ -727,9 +727,12 @@ func TestCumulativeHistogram_ConcurrentExemplarOfferCollect(t *testing.T) {
 		comp(&dest)
 		h, ok := dest.(metricdata.Histogram[int64])
 		require.True(t, ok)
-		if len(h.DataPoints) > 0 {
-			for _, ex := range h.DataPoints[0].Exemplars {
+		for _, dp := range h.DataPoints {
+			for _, ex := range dp.Exemplars {
 				assert.NotEmpty(t, ex.Time)
+				idx := sort.SearchFloat64s(bounds, float64(ex.Value))
+				require.Less(t, idx, len(dp.BucketCounts))
+				assert.Greater(t, dp.BucketCounts[idx], uint64(0), "bucket containing exemplar must have count > 0")
 			}
 		}
 	}
