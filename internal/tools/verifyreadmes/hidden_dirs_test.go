@@ -6,6 +6,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -22,8 +23,12 @@ func TestVerifyReadmeIgnoresHiddenDotDirectories(t *testing.T) {
 		t.Fatalf("WriteFile(%q) error = %v", goMod, err)
 	}
 
-	if err := verifyReadme(goMod, dirEntry(t, goMod), nil); err != nil {
-		t.Fatalf("verifyReadme(%q) error = %v, want nil", goMod, err)
+	// Use a backslash-separated walk path so this exercises normalization on
+	// every test runner, not only on Windows.
+	walkPath := strings.ReplaceAll(filepath.ToSlash(goMod), "/", "\\")
+
+	if err := verifyReadme(walkPath, dirEntry(t, goMod), nil); err != nil {
+		t.Fatalf("verifyReadme(%q) error = %v, want nil", walkPath, err)
 	}
 }
 

@@ -34,7 +34,7 @@ func verifyReadme(path string, d fs.DirEntry, err error) error {
 		return nil
 	}
 
-	path = filepath.ToSlash(path)
+	path = strings.ReplaceAll(filepath.ToSlash(path), "\\", "/")
 	for _, dir := range excludedDirs {
 		if strings.Contains(path, dir) {
 			return nil
