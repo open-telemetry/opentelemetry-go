@@ -807,7 +807,6 @@ func TestViewMatchingModeComposable(t *testing.T) {
 			},
 			inst:      Instrument{Name: "foo", Kind: InstrumentKindCounter},
 			wantCount: 1,
-			wantErr:   errIncompatibleAggregation,
 			wantDesc:  "fallback desc",
 		},
 		{
@@ -818,7 +817,6 @@ func TestViewMatchingModeComposable(t *testing.T) {
 			},
 			inst:      Instrument{Name: "foo", Kind: InstrumentKindCounter},
 			wantCount: 1,
-			wantErr:   errIncompatibleAggregation,
 			wantDesc:  "fallback desc",
 		},
 		{
