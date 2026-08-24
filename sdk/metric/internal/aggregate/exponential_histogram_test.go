@@ -1743,7 +1743,7 @@ func TestExpoBucketsCapacityReuseAfterClear(t *testing.T) {
 	b.record(12)
 	require.NotEmpty(t, b.counts)
 	origCap := cap(b.counts)
-	require.Greater(t, origCap, 0)
+	require.Positive(t, origCap)
 
 	b.clear()
 	assert.Empty(t, b.counts)
