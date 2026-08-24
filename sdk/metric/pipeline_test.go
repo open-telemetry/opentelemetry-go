@@ -867,7 +867,11 @@ func TestViewMatchingModeComposableExemplarSelectorLastWins(t *testing.T) {
 	p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
 	var vc cache[string, instID]
 	ins := newInserter[int64](p, &vc)
-	got, err := ins.Instrument(Instrument{Name: "foo", Kind: InstrumentKindCounter}, nil, DefaultAggregationSelector(InstrumentKindCounter))
+	got, err := ins.Instrument(
+		Instrument{Name: "foo", Kind: InstrumentKindCounter},
+		nil,
+		DefaultAggregationSelector(InstrumentKindCounter),
+	)
 	require.NoError(t, err)
 	assert.Len(t, got, 1)
 	assert.False(t, called1, "first selector should not be called")
@@ -957,7 +961,11 @@ func TestViewMatchingModeComposableDefaultAttributes(t *testing.T) {
 	var vc cache[string, instID]
 	ins := newInserter[int64](p, &vc)
 	allowed := []attribute.Key{"k1"}
-	got, err := ins.Instrument(Instrument{Name: "foo", Kind: InstrumentKindCounter}, allowed, DefaultAggregationSelector(InstrumentKindCounter))
+	got, err := ins.Instrument(
+		Instrument{Name: "foo", Kind: InstrumentKindCounter},
+		allowed,
+		DefaultAggregationSelector(InstrumentKindCounter),
+	)
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 
@@ -965,10 +973,21 @@ func TestViewMatchingModeComposableDefaultAttributes(t *testing.T) {
 	viewsWithFilter := []View{
 		NewView(Instrument{Name: "foo"}, Stream{AttributeFilter: attribute.NewAllowKeysFilter("k2")}),
 	}
-	pWithFilter := newPipeline(resource.Empty(), r, viewsWithFilter, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+	pWithFilter := newPipeline(
+		resource.Empty(),
+		r,
+		viewsWithFilter,
+		exemplar.AlwaysOffFilter,
+		0,
+		viewMatchingModeComposable,
+	)
 	var vc2 cache[string, instID]
 	ins2 := newInserter[int64](pWithFilter, &vc2)
-	got2, err2 := ins2.Instrument(Instrument{Name: "foo", Kind: InstrumentKindCounter}, allowed, DefaultAggregationSelector(InstrumentKindCounter))
+	got2, err2 := ins2.Instrument(
+		Instrument{Name: "foo", Kind: InstrumentKindCounter},
+		allowed,
+		DefaultAggregationSelector(InstrumentKindCounter),
+	)
 	require.NoError(t, err2)
 	require.Len(t, got2, 1)
 }
