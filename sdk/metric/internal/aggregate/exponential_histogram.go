@@ -634,6 +634,7 @@ func (cp *doubleBufferedCumulativePoint[N]) measure(ctx context.Context, value N
 func (cp *doubleBufferedCumulativePoint[N]) collect(
 	dp *metricdata.ExponentialHistogramDataPoint[N],
 	t, defaultStartTime time.Time,
+	perSeriesStartTimeEnabled bool,
 ) {
 	val := cp.cumulative
 	// swapHotAndWait makes sure all active writes to coldIdx are done before merge runs,
@@ -647,7 +648,7 @@ func (cp *doubleBufferedCumulativePoint[N]) collect(
 	delta.reset(t, cp.maxScale)
 
 	startTime := defaultStartTime
-	if x.PerSeriesStartTimestamps.Enabled() {
+	if perSeriesStartTimeEnabled {
 		startTime = val.startTime
 	}
 
@@ -710,6 +711,8 @@ func (e *doubleBufferedCumulativeExpoHistogram[N]) collect(
 	n := e.values.Len()
 	hDPts := reset(h.DataPoints, n, n)
 
+	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
+
 	var i int
 	e.values.Range(func(_, value any) bool {
 		cp := value.(*doubleBufferedCumulativePoint[N])
@@ -719,7 +722,7 @@ func (e *doubleBufferedCumulativeExpoHistogram[N]) collect(
 		}
 		dp := &hDPts[i]
 
-		cp.collect(dp, t, e.start)
+		cp.collect(dp, t, e.start, perSeriesStartTimeEnabled)
 		i++
 		return true
 	})
