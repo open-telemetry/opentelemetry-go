@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Retain instrument advisory attributes (`metric/x.WithDefaultAttributes`) when a matching View does not specify an attribute filter in `go.opentelemetry.io/otel/sdk/metric`. (#8859)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
