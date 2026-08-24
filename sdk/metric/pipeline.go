@@ -435,7 +435,6 @@ func (i *inserter[N]) composableInstrument(
 						"instrument", inst.Name,
 						"aggregation", s.Aggregation,
 					)
-					err = errors.Join(err, e)
 					continue
 				}
 				chosenAgg = s.Aggregation
