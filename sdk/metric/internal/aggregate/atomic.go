@@ -183,6 +183,14 @@ type hotColdWaitGroup struct {
 	endedCounts [2]atomic.Uint64
 }
 
+// hotIdx represents an index (0 or 1) to the currently active "hot" buffer
+// where concurrent writes are accepted.
+//
+// coldIdx represents an index (0 or 1) to the "cold" buffer where collection
+// reads and resets occur after a swap.
+//
+// These distinct types enforce at compile time that hot (write) and cold (read)
+// indices are not accidentally interchanged across call boundaries.
 type (
 	hotIdx  uint64
 	coldIdx uint64
