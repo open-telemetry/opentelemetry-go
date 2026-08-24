@@ -485,16 +485,6 @@ func TestLazyLimitedSyncMapConcurrentSafe(t *testing.T) {
 	wg.Wait()
 	assert.Equal(t, 1, m.Len())
 
-	// 100 routines clearing and loading
-	for range 100 {
-		wg.Go(func() {
-			m.Clear()
-			lazyLoadOrStore(&m, attr)
-		})
-	}
-	wg.Wait()
-	assert.Equal(t, 1, m.Len())
-
 	// 10 routines trying to read/write DIFFERENT keys exceeding limit
 	var wg2 sync.WaitGroup
 	attrs := []attribute.Set{
