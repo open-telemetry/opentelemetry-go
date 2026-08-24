@@ -422,6 +422,10 @@ func (s *cumulativeHistogram[N]) collect(
 
 		if !val.dropExemplars {
 			if val.isMergeable {
+				// Double-buffered exemplar collection for cumulative explicit histograms ensures
+				// all exemplars collected for this cycle correspond to measurements counted in
+				// the readIdx epoch, preventing exemplars from appearing in buckets whose reported
+				// count is zero.
 				val.cumulativeRes.Merge(val.hotColdRes[readIdx])
 				val.hotColdRes[readIdx].Reset()
 			}
