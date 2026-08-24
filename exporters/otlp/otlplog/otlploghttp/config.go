@@ -56,6 +56,11 @@ var (
 		"OTEL_EXPORTER_OTLP_COMPRESSION",
 	}
 
+	envEncoding = []string{
+		"OTEL_EXPORTER_OTLP_LOGS_PROTOCOL",
+		"OTEL_EXPORTER_OTLP_PROTOCOL",
+	}
+
 	envTimeout = []string{
 		"OTEL_EXPORTER_OTLP_LOGS_TIMEOUT",
 		"OTEL_EXPORTER_OTLP_TIMEOUT",
@@ -96,6 +101,7 @@ type config struct {
 	tlsCfg         setting[*tls.Config]
 	headers        setting[map[string]string]
 	compression    setting[Compression]
+	encoding       setting[Encoding]
 	maxRequestSize setting[int]
 	timeout        setting[time.Duration]
 	proxy          setting[HTTPTransportProxyFunc]
@@ -130,6 +136,10 @@ func newConfig(options []Option) config {
 	)
 	c.compression = c.compression.Resolve(
 		getenv[Compression](envCompression, convCompression),
+	)
+	c.encoding = c.encoding.Resolve(
+		getenv[Encoding](envEncoding, convEncoding),
+		fallback[Encoding](ProtoEncoding),
 	)
 	c.timeout = c.timeout.Resolve(
 		getenv[time.Duration](envTimeout, convDuration),
@@ -223,6 +233,35 @@ const (
 func WithCompression(compression Compression) Option {
 	return fnOpt(func(c config) config {
 		c.compression = newSetting(compression)
+		return c
+	})
+}
+
+// Encoding describes the encoding of exported payloads.
+type Encoding int
+
+const (
+	// ProtoEncoding uses protobuf binary serialization with the
+	// "application/x-protobuf" Content-Type.
+	ProtoEncoding Encoding = iota
+	// JSONEncoding uses OTLP/JSON serialization with the
+	// "application/json" Content-Type.
+	JSONEncoding
+)
+
+// WithEncoding sets the encoding the Exporter will use to serialize the
+// OTLP payload.
+//
+// If the OTEL_EXPORTER_OTLP_PROTOCOL or OTEL_EXPORTER_OTLP_LOGS_PROTOCOL
+// environment variable is set, and this option is not passed, that variable
+// value will be used. Supported values are "http/protobuf" and "http/json".
+// If both are set, OTEL_EXPORTER_OTLP_LOGS_PROTOCOL will take precedence.
+//
+// By default, if an environment variable is not set, and this option is not
+// passed, ProtoEncoding is used.
+func WithEncoding(encoding Encoding) Option {
+	return fnOpt(func(c config) config {
+		c.encoding = newSetting(encoding)
 		return c
 	})
 }
@@ -654,6 +693,18 @@ func convCompression(s string) (Compression, error) {
 		return NoCompression, nil
 	}
 	return NoCompression, fmt.Errorf("unknown compression: %s", s)
+}
+
+// convEncoding returns the parsed encoding encoded in s. ProtoEncoding
+// and an error are returned if s is unknown.
+func convEncoding(s string) (Encoding, error) {
+	switch s {
+	case "http/protobuf":
+		return ProtoEncoding, nil
+	case "http/json":
+		return JSONEncoding, nil
+	}
+	return ProtoEncoding, fmt.Errorf("unknown encoding: %s", s)
 }
 
 // convDuration interprets s as a number of milliseconds and returns the
