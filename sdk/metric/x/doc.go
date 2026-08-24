@@ -5,4 +5,25 @@
 //
 // These features are experimental and under development. They may be changed
 // in backwards-incompatible ways or removed in future releases.
+//
+// # Composable View Matching
+//
+// Composable view matching (configured via [WithViewMatchingMode] with
+// [ViewMatchingModeComposable]) merges matching views for an instrument rather
+// than creating independent metric streams:
+//
+//   - Views matching an instrument are grouped by target stream name. Non-renaming
+//     views apply across each stream group for the instrument.
+//   - A view that sets Stream.Name, Description, or Unit to the instrument's own
+//     value is treated as leaving that property unspecified.
+//   - Scalar properties (Description, Unit, ExemplarReservoirProviderSelector)
+//     follow last-wins precedence among matching views.
+//   - Aggregations follow last-wins precedence. If an incompatible aggregation is
+//     specified, the SDK logs a warning and falls back to preceding matching views
+//     or the reader default.
+//   - Attribute filters across matching views in a group are combined using logical
+//     AND. If no matching view in the group specifies an AttributeFilter, any
+//     instrument-level default attributes (e.g. from WithDefaultAttributes) act as
+//     the baseline filter. An explicit AttributeFilter in a matching view overrides
+//     the baseline.
 package x
