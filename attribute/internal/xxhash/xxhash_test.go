@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStringUint64HashCorrectness(t *testing.T) {
+func TestIntegrity(t *testing.T) {
 	// Verify hashing a string prefix and a uint64 suffix produces the same
 	// digest as hashing the equivalent byte sequence directly. This ensures
 	// Uint64 uses the expected little-endian byte encoding.
