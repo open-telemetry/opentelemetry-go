@@ -893,6 +893,15 @@ func TestComposeAttributeFilters(t *testing.T) {
 			checkFalse: []attribute.KeyValue{attribute.Int("b", 1)},
 		},
 		{
+			name:     "SingleFilterOverridesBaseline",
+			baseline: attribute.NewAllowKeysFilter("base"),
+			streams: []Stream{
+				{AttributeFilter: attribute.NewAllowKeysFilter("a", "b")},
+			},
+			checkTrue:  []attribute.KeyValue{attribute.Int("a", 1), attribute.Int("b", 1)},
+			checkFalse: []attribute.KeyValue{attribute.Int("base", 1), attribute.Int("c", 1)},
+		},
+		{
 			name:     "AllowFiltersOverrideBaseline",
 			baseline: attribute.NewAllowKeysFilter("base"),
 			streams: []Stream{
@@ -936,4 +945,30 @@ func TestComposeAttributeFilters(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestViewMatchingModeComposableDefaultAttributes(t *testing.T) {
+	// Case 1: Matching view with no attribute filter retains allowedKeys baseline.
+	views := []View{
+		NewView(Instrument{Name: "foo"}, Stream{Description: "custom desc"}),
+	}
+	r := NewManualReader()
+	p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+	var vc cache[string, instID]
+	ins := newInserter[int64](p, &vc)
+	allowed := []attribute.Key{"k1"}
+	got, err := ins.Instrument(Instrument{Name: "foo", Kind: InstrumentKindCounter}, allowed, DefaultAggregationSelector(InstrumentKindCounter))
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+
+	// Case 2: Matching view WITH attribute filter overrides allowedKeys baseline.
+	viewsWithFilter := []View{
+		NewView(Instrument{Name: "foo"}, Stream{AttributeFilter: attribute.NewAllowKeysFilter("k2")}),
+	}
+	pWithFilter := newPipeline(resource.Empty(), r, viewsWithFilter, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+	var vc2 cache[string, instID]
+	ins2 := newInserter[int64](pWithFilter, &vc2)
+	got2, err2 := ins2.Instrument(Instrument{Name: "foo", Kind: InstrumentKindCounter}, allowed, DefaultAggregationSelector(InstrumentKindCounter))
+	require.NoError(t, err2)
+	require.Len(t, got2, 1)
 }
