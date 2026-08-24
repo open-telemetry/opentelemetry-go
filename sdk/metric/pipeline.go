@@ -219,10 +219,11 @@ func newInserter[N int64 | float64](p *pipeline, vc *cache[string, instID]) *ins
 	}
 }
 
-// Instrument inserts the instrument inst with instUnit into a pipeline. All
-// views the pipeline contains are matched against, and any matching view that
-// creates a unique aggregate function will have its output inserted into the
-// pipeline and its input included in the returned slice.
+// Instrument inserts the instrument inst into a pipeline using the configured
+// view matching mode. In independent mode (default), all views the pipeline
+// contains are matched against, and each matching view that creates a unique
+// aggregate function has its output inserted into the pipeline. In composable
+// mode, matching views are combined to produce merged output metric streams.
 //
 // The returned aggregate function inputs are ensured to be deduplicated and
 // unique. If another view in another pipeline that is cached by this
@@ -236,8 +237,9 @@ func newInserter[N int64 | float64](p *pipeline, vc *cache[string, instID]) *ins
 // the OTel global logger.
 //
 // If the passed instrument would result in an incompatible aggregate function,
-// an error is returned and that aggregate function output is not inserted nor
-// is its input returned.
+// an error is returned in independent mode (in composable mode it falls back to
+// preceding views or reader default) and that aggregate function output is not
+// inserted nor is its input returned.
 //
 // If an instrument is determined to use a Drop aggregation, that instrument is
 // not inserted nor returned.
@@ -261,6 +263,7 @@ func (i *inserter[N]) Instrument(
 	return i.independentInstrument(inst, allowedKeys, readerAggregation)
 }
 
+// defaultInstrument resolves the implicit default stream when no views match.
 func (i *inserter[N]) defaultInstrument(
 	inst Instrument,
 	allowedKeys []attribute.Key,
@@ -287,6 +290,7 @@ func (i *inserter[N]) defaultInstrument(
 	return nil, nil
 }
 
+// independentInstrument resolves views using independent matching semantics.
 func (i *inserter[N]) independentInstrument(
 	inst Instrument,
 	allowedKeys []attribute.Key,
