@@ -256,8 +256,29 @@ func (i *inserter[N]) Instrument(
 		if len(matches) > 0 {
 			return i.composableInstrument(inst, matches, allowedKeys, readerAggregation)
 		}
+		return i.defaultInstrument(inst, allowedKeys, readerAggregation)
 	}
 	return i.independentInstrument(inst, allowedKeys, readerAggregation)
+}
+
+func (i *inserter[N]) defaultInstrument(
+	inst Instrument,
+	allowedKeys []attribute.Key,
+	readerAggregation Aggregation,
+) ([]aggregate.Measure[N], error) {
+	stream := Stream{
+		Name:        inst.Name,
+		Description: inst.Description,
+		Unit:        inst.Unit,
+	}
+	in, _, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, allowedKeys, readerAggregation)
+	if e != nil {
+		return nil, errors.Join(errCreatingAggregators, e)
+	}
+	if in != nil {
+		return []aggregate.Measure[N]{in}, nil
+	}
+	return nil, nil
 }
 
 func (i *inserter[N]) independentInstrument(
@@ -301,23 +322,11 @@ func (i *inserter[N]) independentInstrument(
 		return measures, err
 	}
 
-	// Apply implicit default view if no explicit matched.
-	stream := Stream{
-		Name:        inst.Name,
-		Description: inst.Description,
-		Unit:        inst.Unit,
+	defMeasures, defErr := i.defaultInstrument(inst, allowedKeys, readerAggregation)
+	if defErr != nil {
+		err = errors.Join(err, defErr)
 	}
-	in, _, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, allowedKeys, readerAggregation)
-	if e != nil {
-		if err == nil {
-			err = errCreatingAggregators
-		}
-		err = errors.Join(err, e)
-	}
-	if in != nil {
-		// Ensured to have not seen given matched was false.
-		measures = append(measures, in)
-	}
+	measures = append(measures, defMeasures...)
 	return measures, err
 }
 
@@ -439,7 +448,7 @@ func (i *inserter[N]) composableInstrument(
 
 		resolved.AttributeFilter = composeAttributeFilters(baseline, groupStreams)
 
-		in, id, e := i.cachedAggregator(inst.Scope, inst.Kind, resolved, readerAggregation)
+		in, id, e := i.cachedAggregator(inst.Scope, inst.Kind, resolved, allowedKeys, readerAggregation)
 		if e != nil {
 			err = errors.Join(err, e)
 		}
