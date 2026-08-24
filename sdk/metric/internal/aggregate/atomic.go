@@ -220,8 +220,8 @@ func (l *hotColdWaitGroup) swapHotAndWait() uint64 {
 }
 
 // entry wraps the user value with a cycle counter to enable lazy deletion.
-type entry struct {
-	value atomic.Value
+type entry[V any] struct {
+	value V
 	cycle atomic.Uint64
 }
 
@@ -251,18 +251,18 @@ func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes) V {
 	actual, loaded := m.m.Load(distinct)
 	currentCycle := m.cycle.Load()
 	if loaded {
-		ent := actual.(*entry)
+		ent := actual.(*entry[V])
 		if ent.cycle.Load() == currentCycle {
-			return ent.value.Load().(V)
+			return ent.value
 		}
 	}
 
 	// If the overflow set exists and is active in current cycle, assume we overflowed.
 	actualOverflow, loadedOverflow := m.m.Load(overflowSet.Equivalent())
 	if loadedOverflow {
-		ent := actualOverflow.(*entry)
+		ent := actualOverflow.(*entry[V])
 		if ent.cycle.Load() == currentCycle {
-			return ent.value.Load().(V)
+			return ent.value
 		}
 	}
 
@@ -274,9 +274,9 @@ func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes) V {
 	currentCycle = m.cycle.Load()
 	actual, loaded = m.m.Load(distinct)
 	if loaded {
-		ent := actual.(*entry)
+		ent := actual.(*entry[V])
 		if ent.cycle.Load() == currentCycle {
-			return ent.value.Load().(V)
+			return ent.value
 		}
 	}
 
@@ -288,17 +288,17 @@ func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes) V {
 		targetDistinct = overflowSet.Equivalent()
 		actual, loaded = m.m.Load(targetDistinct)
 		if loaded {
-			ent := actual.(*entry)
+			ent := actual.(*entry[V])
 			if ent.cycle.Load() == currentCycle {
-				return ent.value.Load().(V)
+				return ent.value
 			}
 		}
 	}
 
 	if loaded {
 		// reuse existing stale entry
-		ent := actual.(*entry)
-		existingVal := ent.value.Load().(V)
+		ent := actual.(*entry[V])
+		existingVal := ent.value
 		ent.cycle.Store(currentCycle)
 		m.len++
 		return existingVal
@@ -309,13 +309,12 @@ func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes) V {
 		fltrAttr = lazy.Set()
 	}
 	newVal := m.newValue(fltrAttr)
-	newEnt := &entry{}
-	newEnt.value.Store(newVal)
+	newEnt := &entry[V]{value: newVal}
 	newEnt.cycle.Store(currentCycle)
 	actual, loaded = m.m.LoadOrStore(targetDistinct, newEnt)
 	if loaded {
-		ent := actual.(*entry)
-		return ent.value.Load().(V)
+		ent := actual.(*entry[V])
+		return ent.value
 	}
 	m.len++
 	return newVal
@@ -330,14 +329,14 @@ func (m *lazyLimitedSyncMap[V]) Clear() {
 	currentCycle := m.cycle.Load()
 
 	m.m.Range(func(key, value any) bool {
-		ent := value.(*entry)
+		ent := value.(*entry[V])
 		c := ent.cycle.Load()
 		if currentCycle >= c+2 {
 			m.m.Delete(key)
 			return true
 		}
 		if m.resetFunc != nil {
-			m.resetFunc(ent.value.Load().(V))
+			m.resetFunc(ent.value)
 		}
 		return true
 	})
@@ -352,10 +351,10 @@ func (m *lazyLimitedSyncMap[V]) Len() int {
 func (m *lazyLimitedSyncMap[V]) Range(f func(key, value any) bool) {
 	currentCycle := m.cycle.Load()
 	m.m.Range(func(key, value any) bool {
-		ent := value.(*entry)
+		ent := value.(*entry[V])
 		c := ent.cycle.Load()
 		if c == currentCycle {
-			return f(key, ent.value.Load())
+			return f(key, ent.value)
 		}
 		return true
 	})
