@@ -67,7 +67,10 @@ type deltaSum[N int64 | float64] struct {
 }
 
 func (s *deltaSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAttributes) {
-	s.vals.WriteUnbound(lazy, func(attr attribute.Set) *sumValue[N] {
+	hotIdx := s.vals.start()
+	defer s.vals.done(hotIdx)
+
+	sv := s.vals.LoadOrStoreHot(hotIdx, lazy, func(attr attribute.Set) *sumValue[N] {
 		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
 		return &sumValue[N]{
@@ -76,12 +79,11 @@ func (s *deltaSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAtt
 			startTime:     now(),
 			dropExemplars: isDrop,
 		}
-	}, func(sv *sumValue[N]) {
-		sv.n.add(value)
-		if !sv.dropExemplars {
-			sv.res.Offer(ctx, value, lazy)
-		}
 	})
+	sv.n.add(value)
+	if !sv.dropExemplars {
+		sv.res.Offer(ctx, value, lazy)
+	}
 }
 
 func (s *deltaSum[N]) collect(

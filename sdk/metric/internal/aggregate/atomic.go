@@ -376,16 +376,22 @@ func (m *hotColdMap[V]) Bind(attrs attribute.Set, newValue func(attribute.Set) V
 	return val
 }
 
-// WriteUnbound executes write for the value associated with lazy attributes in the current hot map.
-// It ensures the write is completed before the reader can swap and collect the value.
-func (m *hotColdMap[V]) WriteUnbound(lazy lazyFilteredAttributes, newValue func(attribute.Set) V, write func(V)) {
-	hotIdx := m.hcwg.start()
-	defer m.hcwg.done(hotIdx)
+// start increments the active writer count for the current hot map and returns its index.
+func (m *hotColdMap[V]) start() uint64 {
+	return m.hcwg.start()
+}
 
+// done decrements the active writer count for hot map hotIdx.
+func (m *hotColdMap[V]) done(hotIdx uint64) {
+	m.hcwg.done(hotIdx)
+}
+
+// LoadOrStoreHot resolves the value for lazy in hot map hotIdx, creating it (or the
+// overflow entry) if absent. The caller must hold a start()/done() pair for hotIdx.
+func (m *hotColdMap[V]) LoadOrStoreHot(hotIdx uint64, lazy lazyFilteredAttributes, newValue func(attribute.Set) V) V {
 	d := lazy.Distinct()
 	if val, ok := m.hotColdValMap[hotIdx].Load(d); ok {
-		write(val)
-		return
+		return val
 	}
 
 	m.mu.Lock()
@@ -393,16 +399,14 @@ func (m *hotColdMap[V]) WriteUnbound(lazy lazyFilteredAttributes, newValue func(
 
 	// Re-check hot map
 	if val, ok := m.hotColdValMap[hotIdx].Load(d); ok {
-		write(val)
-		return
+		return val
 	}
 
 	// Check pinned registry
 	if val, ok := m.pinned[d]; ok {
 		m.hotColdValMap[hotIdx].Store(d, val)
 		m.hotColdValMap[hotIdx].len++
-		write(val)
-		return
+		return val
 	}
 
 	var fltrAttr attribute.Set
@@ -413,12 +417,10 @@ func (m *hotColdMap[V]) WriteUnbound(lazy lazyFilteredAttributes, newValue func(
 		if val, ok := m.pinned[d]; ok {
 			m.hotColdValMap[hotIdx].Store(d, val)
 			m.hotColdValMap[hotIdx].len++
-			write(val)
-			return
+			return val
 		}
 		if val, ok := m.hotColdValMap[hotIdx].Load(d); ok {
-			write(val)
-			return
+			return val
 		}
 	} else {
 		fltrAttr = lazy.Set()
@@ -428,7 +430,7 @@ func (m *hotColdMap[V]) WriteUnbound(lazy lazyFilteredAttributes, newValue func(
 	m.hotColdValMap[hotIdx].Store(d, val)
 	m.hotColdValMap[hotIdx].len++
 	m.count.Add(1)
-	write(val)
+	return val
 }
 
 // SwapHotAndWait swaps the hot and cold maps and waits for active writers to finish.
