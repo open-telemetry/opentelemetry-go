@@ -1622,3 +1622,117 @@ func TestExponentialHistogramCumulativeExemplarPreservedAcrossCollections(t *tes
 	require.Len(t, eh.DataPoints[0].Exemplars, 1)
 	assert.Equal(t, int64(42), eh.DataPoints[0].Exemplars[0].Value)
 }
+
+func TestExpoHistogramDataPointMerge(t *testing.T) {
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	testCases := []struct {
+		name     string
+		maxSize  int
+		maxScale int32
+		pVals    []float64
+		oVals    []float64
+		check    func(t *testing.T, p *expoHistogramDataPoint[float64])
+	}{
+		{
+			name:     "positive downscale on merge",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    []float64{1.0},
+			oVals:    []float64{1000.0},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(2), p.count())
+				assert.LessOrEqual(t, len(p.posBuckets.counts), 4)
+				assert.Empty(t, p.negBuckets.counts)
+				assert.InDelta(t, 1001.0, p.sum.load(), 1e-9)
+			},
+		},
+		{
+			name:     "negative downscale on merge",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    []float64{-1.0},
+			oVals:    []float64{-1000.0},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(2), p.count())
+				assert.LessOrEqual(t, len(p.negBuckets.counts), 4)
+				assert.Empty(t, p.posBuckets.counts)
+				assert.InDelta(t, -1001.0, p.sum.load(), 1e-9)
+			},
+		},
+		{
+			name:     "positive on p and negative on other",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    []float64{10.0},
+			oVals:    []float64{-10.0},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(2), p.count())
+				assert.NotEmpty(t, p.posBuckets.counts)
+				assert.NotEmpty(t, p.negBuckets.counts)
+				assert.InDelta(t, 0.0, p.sum.load(), 1e-9)
+			},
+		},
+		{
+			name:     "both positive and negative with downscaling",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    []float64{1.0, -1.0},
+			oVals:    []float64{10000.0, -10000.0},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(4), p.count())
+				assert.LessOrEqual(t, len(p.posBuckets.counts), 4)
+				assert.LessOrEqual(t, len(p.negBuckets.counts), 4)
+			},
+		},
+		{
+			name:     "p empty other populated",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    nil,
+			oVals:    []float64{2.0, -3.0, 0.0},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(3), p.count())
+				assert.Equal(t, uint64(1), p.zeroCount.Load())
+			},
+		},
+		{
+			name:     "other empty p populated",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    []float64{2.0, -3.0, 0.0},
+			oVals:    nil,
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(3), p.count())
+				assert.Equal(t, uint64(1), p.zeroCount.Load())
+			},
+		},
+		{
+			name:     "maxSize 3 extreme range merge",
+			maxSize:  3,
+			maxScale: 20,
+			pVals:    []float64{math.MaxFloat64},
+			oVals:    []float64{smallestNonZeroNormalFloat64},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(2), p.count())
+				assert.GreaterOrEqual(t, p.scale.Load(), int32(expoMinScale))
+				assert.LessOrEqual(t, len(p.posBuckets.counts), 3)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := newExpoHistogramDataPoint[float64](alice, tc.maxSize, tc.maxScale, false, false, nil, now())
+			for _, v := range tc.pVals {
+				p.record(v)
+			}
+			o := newExpoHistogramDataPoint[float64](alice, tc.maxSize, tc.maxScale, false, false, nil, now())
+			for _, v := range tc.oVals {
+				o.record(v)
+			}
+			p.merge(o)
+			tc.check(t, p)
+		})
+	}
+}
