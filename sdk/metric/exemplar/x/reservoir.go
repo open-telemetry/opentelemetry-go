@@ -17,6 +17,14 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// FixedSizeRoundRobinReservoirProvider returns an [exemplar.ReservoirProvider] that
+// creates [FixedSizeRoundRobinReservoir] instances sampling at most size exemplars.
+func FixedSizeRoundRobinReservoirProvider(size int) exemplar.ReservoirProvider {
+	return func(attribute.Set) exemplar.Reservoir {
+		return NewFixedSizeRoundRobinReservoir(size)
+	}
+}
+
 // FixedSizeRoundRobinReservoir is a [exemplar.Reservoir] that samples at most
 // a fixed number of exemplars using a round-robin strategy to distribute
 // measurements across independent buckets, each using Algorithm L for sampling.
@@ -25,9 +33,12 @@ import (
 // when better concurrent performance is needed, and some sampling bias is acceptable.
 type FixedSizeRoundRobinReservoir struct {
 	exemplar.ConcurrentSafe
-	*storage
+	storage
 	count atomic.Int64
 }
+
+var _ exemplar.Reservoir = &FixedSizeRoundRobinReservoir{}
+var _ exemplar.ConcurrentSafe = &FixedSizeRoundRobinReservoir{}
 
 // NewFixedSizeRoundRobinReservoir returns a [FixedSizeRoundRobinReservoir] that
 // samples at most size exemplars.
@@ -44,12 +55,12 @@ func (r *FixedSizeRoundRobinReservoir) Offer(
 	n exemplar.Value,
 	a []attribute.KeyValue,
 ) {
-	if cap(r.measurements) == 0 {
+	if len(r.measurements) == 0 {
 		return
 	}
 	count := r.count.Add(1)
-	idx := int((count - 1) % int64(cap(r.measurements)))
-	r.storage.measurements[idx].offer(ctx, t, n, a)
+	idx := int((count - 1) % int64(len(r.measurements)))
+	r.measurements[idx].offer(ctx, t, n, a)
 }
 
 // Collect returns all the held exemplars.
@@ -65,8 +76,8 @@ type storage struct {
 	measurements []measurement
 }
 
-func newStorage(n int) *storage {
-	s := &storage{measurements: make([]measurement, n)}
+func newStorage(n int) storage {
+	s := storage{measurements: make([]measurement, n)}
 	s.reset()
 	return s
 }
