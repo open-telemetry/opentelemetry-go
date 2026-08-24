@@ -391,7 +391,8 @@ func BenchmarkSyncMap(b *testing.B) {
 
 func TestHotColdMap(t *testing.T) {
 	t.Run("BasicWriteAndCollect", func(t *testing.T) {
-		m := newHotColdMap[int](10)
+		var m hotColdMap[int]
+		m.init(10)
 		set := attribute.NewSet(attribute.String("k", "v"))
 		lazy := newLazyFilteredAttributes(set, nil)
 
@@ -414,7 +415,8 @@ func TestHotColdMap(t *testing.T) {
 	})
 
 	t.Run("LimitEnforcement", func(t *testing.T) {
-		m := newHotColdMap[int](2) // Limit of 2: 1 normal + 1 overflow
+		var m hotColdMap[int]
+		m.init(2) // Limit of 2: 1 normal + 1 overflow
 		set1 := attribute.NewSet(attribute.String("k", "1"))
 		set2 := attribute.NewSet(attribute.String("k", "2"))
 		set3 := attribute.NewSet(attribute.String("k", "3"))
@@ -446,7 +448,8 @@ func TestHotColdMap(t *testing.T) {
 	})
 
 	t.Run("ConcurrentAccess", func(t *testing.T) {
-		m := newHotColdMap[int](100)
+		var m hotColdMap[int]
+		m.init(100)
 		set := attribute.NewSet(attribute.String("k", "v"))
 		lazy := newLazyFilteredAttributes(set, nil)
 
