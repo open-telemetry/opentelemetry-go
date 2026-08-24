@@ -97,6 +97,18 @@ func (r *FixedSizeReservoir) Collect(dest *[]Exemplar) {
 	r.nt.reset()
 }
 
+type indexedMeasurement struct {
+	idx int
+	m   measurement
+}
+
+var indexedMeasurementPool = sync.Pool{
+	New: func() any {
+		s := make([]indexedMeasurement, 0, 16)
+		return &s
+	},
+}
+
 // Merge merges the newly sampled exemplars from other (delta) into r (cumulative accumulator).
 func (r *FixedSizeReservoir) Merge(other Reservoir) {
 	if r == nil || other == nil || r == other {
@@ -107,12 +119,15 @@ func (r *FixedSizeReservoir) Merge(other Reservoir) {
 		return
 	}
 
+	ptr := indexedMeasurementPool.Get().(*[]indexedMeasurement)
+	items := (*ptr)[:0]
+	defer func() {
+		clear(items)
+		*ptr = items[:0]
+		indexedMeasurementPool.Put(ptr)
+	}()
+
 	o.mu.Lock()
-	type indexedMeasurement struct {
-		idx int
-		m   measurement
-	}
-	items := make([]indexedMeasurement, 0, len(o.storage))
 	for i := range o.storage {
 		if o.storage[i].valid {
 			m := o.storage[i]
