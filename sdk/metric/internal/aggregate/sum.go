@@ -50,23 +50,7 @@ func (s *deltaSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAtt
 	hotIdx := s.vals.start()
 	defer s.vals.done(hotIdx)
 
-	sv := s.vals.LoadOrStoreAttr(hotIdx, lazy, func(attr attribute.Set) *sumValue[N] {
-		r := s.newRes(attr)
-		_, isDrop := r.(*dropRes[N])
-		return &sumValue[N]{
-			res:           r,
-			attrs:         attr,
-			startTime:     now(),
-			dropExemplars: isDrop,
-		}
-	})
-	sv.n.add(value)
-	// It is possible for collection to race with measurement and observe the
-	// exemplar in the batch of metrics after the add() for delta sums.
-	// This is an accepted tradeoff to avoid locking during measurement.
-	if !sv.dropExemplars {
-		sv.res.Offer(ctx, value, lazy)
-	}
+	measureSum(ctx, s.vals.hot(hotIdx), s.newRes, value, lazy)
 }
 
 func (s *deltaSum[N]) collect(
@@ -136,8 +120,18 @@ type cumulativeSum[N int64 | float64] struct {
 }
 
 func (s *cumulativeSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAttributes) {
-	sv := s.values.LoadOrStoreAttr(lazy, func(attr attribute.Set) *sumValue[N] {
-		r := s.newRes(attr)
+	measureSum(ctx, &s.values, s.newRes, value, lazy)
+}
+
+func measureSum[N int64 | float64](
+	ctx context.Context,
+	dest *limitedSyncMap[*sumValue[N]],
+	newRes func(attribute.Set) FilteredExemplarReservoir[N],
+	value N,
+	lazy lazyFilteredAttributes,
+) {
+	sv := dest.LoadOrStoreAttr(lazy, func(attr attribute.Set) *sumValue[N] {
+		r := newRes(attr)
 		_, isDrop := r.(*dropRes[N])
 		return &sumValue[N]{
 			res:           r,
@@ -148,7 +142,7 @@ func (s *cumulativeSum[N]) measure(ctx context.Context, value N, lazy lazyFilter
 	})
 	sv.n.add(value)
 	// It is possible for collection to race with measurement and observe the
-	// exemplar in the batch of metrics after the add() for cumulative sums.
+	// exemplar in the batch of metrics after the add().
 	// This is an accepted tradeoff to avoid locking during measurement.
 	if !sv.dropExemplars {
 		sv.res.Offer(ctx, value, lazy)
