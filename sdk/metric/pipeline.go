@@ -418,15 +418,9 @@ func (i *inserter[N]) composableInstrument(
 			if s.Description != "" && s.Description != inst.Description {
 				resolved.Description = s.Description
 			}
-		}
-
-		for _, s := range groupStreams {
 			if s.Unit != "" && s.Unit != inst.Unit {
 				resolved.Unit = s.Unit
 			}
-		}
-
-		for _, s := range groupStreams {
 			if s.ExemplarReservoirProviderSelector != nil {
 				resolved.ExemplarReservoirProviderSelector = s.ExemplarReservoirProviderSelector
 			}
