@@ -283,15 +283,19 @@ func (m *limitedSyncMap[V]) Len() int {
 	return m.len
 }
 
-// hotColdMap manages two [limitedSyncMap] instances for hot/cold swapping.
+// hotColdMap manages two [limitedSyncMap] instances for lockless concurrent
+// writes and hot/cold swapping during collection.
 //
-// hotColdMap's measure is implemented without locking, even when called
-// concurrently with collect. This is done by maintaining two separate maps:
-// one "hot" which is concurrently updated by measure(), and one "cold", which
-// is read and reset by collect(). The embedded [hotColdWaitGroup] allows collect() to
-// swap the hot and cold maps, and wait for updates to the cold map to complete
-// prior to reading. The caller can then read and Clear the cold map so that
-// unused attribute sets do not report in subsequent collect() calls.
+// Writes are performed without locking via [hotColdMap.LoadOrStoreAttr] to the
+// currently hot map index returned by [hotColdWaitGroup.start]. Collection is
+// performed by calling [hotColdWaitGroup.swapHotAndWait] to atomically swap
+// the hot and cold maps and wait for in-flight writes to the cold map to
+// complete. The caller can then read the cold map via [hotColdMap.Range] and
+// must call [hotColdMap.Clear] on the cold index so that unused attribute sets
+// do not report in subsequent collection cycles and the cardinality limit
+// budget is reset.
+//
+// swapHotAndWait must not be called concurrently.
 type hotColdMap[V any] struct {
 	hotColdWaitGroup
 	hotColdValMap [2]limitedSyncMap[V]
