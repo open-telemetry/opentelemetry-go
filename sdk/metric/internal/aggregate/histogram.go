@@ -389,7 +389,7 @@ func (s *cumulativeHistogram[N]) collect(
 		}
 		// Once we've read the point, merge it back into the hot histogram
 		// point since it is cumulative.
-		hotIdx := (readIdx + 1) % 2
+		hotIdx := hotIdx((readIdx + 1) % 2)
 		val.hotColdPoint[readIdx].mergeIntoAndReset(&val.hotColdPoint[hotIdx], s.noMinMax, s.noSum)
 
 		collectExemplars(&dp.Exemplars, val.res.Collect)
