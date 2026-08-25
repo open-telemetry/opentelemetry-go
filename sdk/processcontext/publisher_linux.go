@@ -231,6 +231,13 @@ func allocMapping(size int) (mem []byte, hasMemfd bool, err error) {
 			return nil, false, fmt.Errorf("processcontext: mmap (anonymous): %w", err)
 		}
 	}
+	// MADV_DONTFORK prevents child processes from inheriting a stale copy of
+	// this mapping after fork. The Go runtime does not survive a bare fork
+	// (without exec), so a failure here is not treated as a publish failure
+	// for Go processes. If fork support is ever added to Go, or if this code
+	// is ported to a language that does support fork, this should become a
+	// hard error so that forked processes do not expose an inconsistent view
+	// of the context.
 	_ = unix.Madvise(mem, unix.MADV_DONTFORK)
 	return mem, hasMemfd, nil
 }
