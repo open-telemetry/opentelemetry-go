@@ -37,6 +37,20 @@ func readTS(mem []byte) uint64 {
 	return atomic.LoadUint64((*uint64)(unsafe.Pointer(&mem[offTimestamp])))
 }
 
+// readPayload returns a copy of the payload bytes from a live publisher.
+func readPayload(p *publisher) []byte {
+	sz := int(binary.LittleEndian.Uint32(p.headerMem[offPayloadSz:]))
+	var src []byte
+	if p.payloadMem != nil {
+		src = p.payloadMem[:sz]
+	} else {
+		src = p.headerMem[headerSize : headerSize+sz]
+	}
+	out := make([]byte, sz)
+	copy(out, src)
+	return out
+}
+
 // ---- Basic creation ----------------------------------------------------
 
 func TestNewPublisher(t *testing.T) {
@@ -137,8 +151,9 @@ func TestPublisherPayloadSizeMatchesEncoded(t *testing.T) {
 
 	expected, err := encodeProcessContext(r)
 	require.NoError(t, err)
-	got := binary.LittleEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
-	assert.Equal(t, uint32(len(expected)), got)
+	sz := binary.LittleEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
+	assert.Equal(t, uint32(len(expected)), sz)
+	assert.Equal(t, expected, readPayload(pub.impl))
 }
 
 // ---- Update ------------------------------------------------------------
@@ -161,6 +176,7 @@ func TestPublisherUpdate(t *testing.T) {
 	require.NoError(t, err)
 	sz := binary.LittleEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
 	assert.Equal(t, uint32(len(expected)), sz)
+	assert.Equal(t, expected, readPayload(pub.impl))
 }
 
 func TestPublisherUpdatePayloadTooLarge(t *testing.T) {
