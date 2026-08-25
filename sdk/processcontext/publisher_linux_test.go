@@ -102,11 +102,15 @@ func TestPublisherHeaderSignatureAndVersion(t *testing.T) {
 
 func TestPublisherTimestampNonZero(t *testing.T) {
 	r := makeResource(t, attribute.String("k", "v"))
+	before := monotonicNs()
 	pub, err := NewPublisher(r)
 	require.NoError(t, err)
 	defer pub.Shutdown(t.Context()) //nolint:errcheck
 
-	assert.NotZero(t, readTS(pub.impl.headerMem))
+	ts := readTS(pub.impl.headerMem)
+	after := monotonicNs()
+	assert.GreaterOrEqual(t, ts, before, "timestamp must not predate publisher creation")
+	assert.LessOrEqual(t, ts, after, "timestamp must not exceed current time")
 }
 
 func TestPublisherPayloadPtrPointsIntoMapping(t *testing.T) {
