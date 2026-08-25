@@ -468,8 +468,8 @@ var readFile = os.ReadFile
 
 // loadCertPool loads and returns the *x509.CertPool found at path if it exists
 // and is valid. Otherwise, nil and an error are returned.
-func loadCertPool(path string) (*x509.CertPool, error) {
-	b, err := readFile(path)
+func loadCertPool(filePath string) (*x509.CertPool, error) {
+	b, err := readFile(filePath)
 	if err != nil {
 		return nil, err
 	}
