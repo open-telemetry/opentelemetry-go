@@ -431,11 +431,19 @@ func (i *inserter[N]) composableInstrument(
 		}
 
 		// The last matching view that specifies an aggregation takes precedence. If that
-		// aggregation is incompatible with the instrument kind, fall back to preceding
+		// aggregation is invalid or incompatible with the instrument kind, fall back to preceding
 		// matching views in reverse registration order before falling back to the reader default.
 		var chosenAgg Aggregation
 		for _, s := range slices.Backward(groupStreams) {
 			if s.Aggregation != nil {
+				if e := s.Aggregation.err(); e != nil {
+					global.Error(
+						e, "invalid aggregation in composable view, falling back",
+						"instrument", inst.Name,
+						"aggregation", s.Aggregation,
+					)
+					continue
+				}
 				if e := isAggregatorCompatible(inst.Kind, s.Aggregation); e != nil {
 					global.Error(
 						e, "incompatible aggregation in composable view, falling back",
