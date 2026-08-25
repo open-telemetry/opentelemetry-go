@@ -102,7 +102,7 @@ func (s *deltaHistogram[N]) measure(
 	hotIdx := s.vals.start()
 	defer s.vals.done(hotIdx)
 
-	h := s.vals.LoadOrStoreAttr(hotIdx, lazy, func(attr attribute.Set) *histogramPoint[N] {
+	h := s.vals.hot(hotIdx).LoadOrStoreAttr(lazy, func(attr attribute.Set) *histogramPoint[N] {
 		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
 		return &histogramPoint[N]{
