@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -380,9 +381,10 @@ func (i *inserter[N]) composableInstrument(
 	var explicitNames []string
 	seenNames := make(map[string]struct{})
 	for _, m := range matches {
-		if m.Name != "" && m.Name != inst.Name {
-			if _, ok := seenNames[m.Name]; !ok {
-				seenNames[m.Name] = struct{}{}
+		if m.Name != "" && !strings.EqualFold(m.Name, inst.Name) {
+			norm := strings.ToLower(m.Name)
+			if _, ok := seenNames[norm]; !ok {
+				seenNames[norm] = struct{}{}
 				explicitNames = append(explicitNames, m.Name)
 			}
 		}
@@ -407,7 +409,7 @@ func (i *inserter[N]) composableInstrument(
 	for _, name := range targetNames {
 		var groupStreams []Stream
 		for _, m := range matches {
-			if m.Name == name || m.Name == inst.Name || m.Name == "" {
+			if strings.EqualFold(m.Name, name) || strings.EqualFold(m.Name, inst.Name) || m.Name == "" {
 				groupStreams = append(groupStreams, m)
 			}
 		}
