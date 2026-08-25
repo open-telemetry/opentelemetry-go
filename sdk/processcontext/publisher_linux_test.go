@@ -38,7 +38,7 @@ func readTS(mem []byte) uint64 {
 
 // readPayload returns a copy of the payload bytes from a live publisher.
 func readPayload(p *publisher) []byte {
-	sz := int(binary.LittleEndian.Uint32(p.headerMem[offPayloadSz:]))
+	sz := int(binary.NativeEndian.Uint32(p.headerMem[offPayloadSz:]))
 	var src []byte
 	if p.payloadMem != nil {
 		src = p.payloadMem[:sz]
@@ -110,7 +110,7 @@ func TestPublisherHeaderSignatureAndVersion(t *testing.T) {
 	hdr := pub.impl.headerMem
 	require.GreaterOrEqual(t, len(hdr), headerSize)
 	assert.Equal(t, []byte("OTEL_CTX"), hdr[0:8])
-	assert.Equal(t, uint32(2), binary.LittleEndian.Uint32(hdr[offVersion:]))
+	assert.Equal(t, uint32(2), binary.NativeEndian.Uint32(hdr[offVersion:]))
 }
 
 func TestPublisherTimestampNonZero(t *testing.T) {
@@ -133,7 +133,7 @@ func TestPublisherPayloadPtrPointsIntoMapping(t *testing.T) {
 	defer pub.Shutdown(t.Context()) //nolint:errcheck
 
 	hdr := pub.impl.headerMem
-	payloadPtr := binary.LittleEndian.Uint64(hdr[offPayloadPtr:])
+	payloadPtr := binary.NativeEndian.Uint64(hdr[offPayloadPtr:])
 	hdrStart := uint64(uintptr(unsafe.Pointer(&hdr[0])))
 	hdrEnd := hdrStart + uint64(len(hdr))
 
@@ -150,7 +150,7 @@ func TestPublisherPayloadSizeMatchesEncoded(t *testing.T) {
 
 	expected, err := encodeProcessContext(r)
 	require.NoError(t, err)
-	sz := binary.LittleEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
+	sz := binary.NativeEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
 	assert.Equal(t, uint32(len(expected)), sz)
 	assert.Equal(t, expected, readPayload(pub.impl))
 }
@@ -173,7 +173,7 @@ func TestPublisherUpdate(t *testing.T) {
 
 	expected, err := encodeProcessContext(r2)
 	require.NoError(t, err)
-	sz := binary.LittleEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
+	sz := binary.NativeEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
 	assert.Equal(t, uint32(len(expected)), sz)
 	assert.Equal(t, expected, readPayload(pub.impl))
 }
@@ -253,14 +253,14 @@ func TestPublisherPayloadSpill(t *testing.T) {
 	assert.GreaterOrEqual(t, len(pub.impl.payloadMem), len(payload2))
 
 	// PayloadPtr must point into the separate payload mapping.
-	payloadPtr := binary.LittleEndian.Uint64(pub.impl.headerMem[offPayloadPtr:])
+	payloadPtr := binary.NativeEndian.Uint64(pub.impl.headerMem[offPayloadPtr:])
 	pmStart := uint64(uintptr(unsafe.Pointer(&pub.impl.payloadMem[0])))
 	pmEnd := pmStart + uint64(len(pub.impl.payloadMem))
 	assert.GreaterOrEqual(t, payloadPtr, pmStart)
 	assert.Less(t, payloadPtr, pmEnd)
 
 	assert.NotZero(t, readTS(pub.impl.headerMem))
-	got := binary.LittleEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
+	got := binary.NativeEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
 	assert.Equal(t, uint32(len(payload2)), got)
 }
 
@@ -310,7 +310,7 @@ func TestMonotonicNs(t *testing.T) {
 func TestAtomicStore64(t *testing.T) {
 	mem := make([]byte, 64)
 	atomicStore64(mem, 16, 0xDEADBEEFCAFEBABE)
-	got := binary.LittleEndian.Uint64(mem[16:])
+	got := binary.NativeEndian.Uint64(mem[16:])
 	assert.Equal(t, uint64(0xDEADBEEFCAFEBABE), got)
 }
 

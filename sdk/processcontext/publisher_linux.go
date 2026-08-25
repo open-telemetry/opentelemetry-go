@@ -170,7 +170,7 @@ func (p *publisher) shutdown() {
 // Timestamp is written last to atomically signal readiness to readers.
 func (p *publisher) writeInitial(payload []byte) {
 	copy(p.headerMem[0:8], signatureStr)
-	binary.LittleEndian.PutUint32(p.headerMem[offVersion:], formatVersion)
+	binary.NativeEndian.PutUint32(p.headerMem[offVersion:], formatVersion)
 	p.writePayload(payload)
 	atomicStore64(p.headerMem, offTimestamp, p.nextTS())
 }
@@ -182,7 +182,7 @@ func (p *publisher) writeInitial(payload []byte) {
 func (p *publisher) writePayload(payload []byte) {
 	// len(payload) is always <= MaxPayloadSize (65536), checked by callers.
 	sz := uint32(len(payload)) //nolint:gosec // G115: bounded by MaxPayloadSize check
-	binary.LittleEndian.PutUint32(p.headerMem[offPayloadSz:], sz)
+	binary.NativeEndian.PutUint32(p.headerMem[offPayloadSz:], sz)
 
 	var dest []byte
 	if p.payloadMem != nil {
