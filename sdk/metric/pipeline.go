@@ -433,10 +433,24 @@ func (i *inserter[N]) composableInstrument(
 			}
 		}
 
+<<<<<<< HEAD
+=======
+		// The last matching view that specifies an aggregation takes precedence. If that
+		// aggregation is invalid or incompatible with the instrument kind, fall back to preceding
+		// matching views in reverse registration order before falling back to the reader default.
+>>>>>>> a7218cd (Address review comment: validate aggregation config and handle direct view fallback)
 		var chosenAgg Aggregation
 		for j := len(groupStreams) - 1; j >= 0; j-- {
 			s := groupStreams[j]
 			if s.Aggregation != nil {
+				if e := s.Aggregation.err(); e != nil {
+					global.Error(
+						e, "invalid aggregation in composable view, falling back",
+						"instrument", inst.Name,
+						"aggregation", s.Aggregation,
+					)
+					continue
+				}
 				if e := isAggregatorCompatible(inst.Kind, s.Aggregation); e != nil {
 					global.Error(
 						e, "incompatible aggregation in composable view, falling back",
