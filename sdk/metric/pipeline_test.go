@@ -991,3 +991,56 @@ func TestViewMatchingModeComposableDefaultAttributes(t *testing.T) {
 	require.NoError(t, err2)
 	require.Len(t, got2, 1)
 }
+
+func TestViewMatchingModeComposableInvalidAggregationDirectView(t *testing.T) {
+	// A custom View can return an invalid AggregationBase2ExponentialHistogram (MaxSize: 0)
+	// without passing through NewView. In composable mode, it should be rejected and fall back
+	// to preceding valid views or default aggregation, and measurement recording should work.
+	invalidView := View(func(inst Instrument) (Stream, bool) {
+		if inst.Name == "foo" {
+			return Stream{
+				Aggregation: AggregationBase2ExponentialHistogram{MaxSize: 0},
+				Description: "direct view desc",
+			}, true
+		}
+		return Stream{}, false
+	})
+	precedingView := NewView(
+		Instrument{Name: "foo"},
+		Stream{Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{1, 5, 10}}},
+	)
+
+	r := NewManualReader()
+	p := newPipeline(
+		resource.Empty(),
+		r,
+		[]View{precedingView, invalidView},
+		exemplar.AlwaysOffFilter,
+		0,
+		viewMatchingModeComposable,
+	)
+	r.register(p)
+	var vc cache[string, instID]
+	ins := newInserter[int64](p, &vc)
+	got, err := ins.Instrument(
+		Instrument{Name: "foo", Kind: InstrumentKindCounter},
+		nil,
+		DefaultAggregationSelector(InstrumentKindCounter),
+	)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+
+	// Record a value to ensure aggregator operates correctly without underflow error.
+	got[0](t.Context(), 3, *attribute.EmptySet())
+
+	var data metricdata.ResourceMetrics
+	err = r.Collect(t.Context(), &data)
+	require.NoError(t, err)
+	require.Len(t, data.ScopeMetrics, 1)
+	require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+	m := data.ScopeMetrics[0].Metrics[0]
+	assert.Equal(t, "direct view desc", m.Description)
+	// Verify it fell back to ExplicitBucketHistogram from precedingView.
+	_, ok := m.Data.(metricdata.Histogram[int64])
+	assert.True(t, ok, "expected Histogram aggregation from preceding view")
+}
