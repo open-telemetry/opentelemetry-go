@@ -1097,6 +1097,10 @@ func BenchmarkPeriodicReaderInstrumentation(b *testing.B) {
 }
 
 func TestNewPeriodicReaderConcurrentSafe(t *testing.T) {
+	origErrorHandler := otel.GetErrorHandler()
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(error) {}))
+	t.Cleanup(func() { otel.SetErrorHandler(origErrorHandler) })
+
 	for range 50 {
 		r := NewPeriodicReader(new(fnExporter), WithInterval(time.Nanosecond))
 		r.register(testSDKProducer{})
