@@ -259,6 +259,19 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "OTLPEnvironmentVariablesTrailingSlash",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://env.endpoint:8080/prefix/",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				path:     newSetting("/prefix/v1/logs"),
+				insecure: newSetting(true),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+		},
+		{
 			name: "OTLPEndpointEnvironmentVariablesDefaultPath",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://env.endpoint",

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -560,7 +561,7 @@ func convPath(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return u.Path + "/v1/logs", nil
+	return path.Join(u.Path, defaultPath), nil
 }
 
 // convInsecure converts s from a string to a bool without case sensitivity.
