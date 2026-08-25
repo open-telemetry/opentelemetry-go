@@ -22,6 +22,8 @@ import (
 type atomicCounter[N int64 | float64] struct {
 	// nFloatBits contains the non-integer portion of the value.
 	nFloatBits atomic.Uint64
+	// fractionalWriteGeneration changes for every completed fractional write.
+	fractionalWriteGeneration atomic.Uint64
 	// nInt contains the integer portion of the value.
 	nInt atomic.Int64
 	// writerState contains the number of active fractional writes.
@@ -41,9 +43,12 @@ func (n *atomicCounter[N]) load() N {
 		if n.writerState.Load() != 0 {
 			continue
 		}
+		generation := n.fractionalWriteGeneration.Load()
 		fbits := n.nFloatBits.Load()
 		ival := n.nInt.Load()
-		if fbits == n.nFloatBits.Load() && n.writerState.Load() == 0 {
+		if fbits == n.nFloatBits.Load() &&
+			generation == n.fractionalWriteGeneration.Load() &&
+			n.writerState.Load() == 0 {
 			return N(math.Float64frombits(fbits) + float64(ival))
 		}
 	}
@@ -65,6 +70,7 @@ func addFractional[N int64 | float64](n *atomicCounter[N], value N) {
 		oldBits := n.nFloatBits.Load()
 		newBits := math.Float64bits(math.Float64frombits(oldBits) + float64(value))
 		if n.nFloatBits.CompareAndSwap(oldBits, newBits) {
+			n.fractionalWriteGeneration.Add(1)
 			n.writerState.Add(atomicCounterWriteDone)
 			return
 		}
@@ -74,6 +80,7 @@ func addFractional[N int64 | float64](n *atomicCounter[N], value N) {
 // reset resets the internal state, and is not safe to call concurrently.
 func (n *atomicCounter[N]) reset() {
 	n.nFloatBits.Store(0)
+	n.fractionalWriteGeneration.Store(0)
 	n.nInt.Store(0)
 	n.writerState.Store(0)
 }

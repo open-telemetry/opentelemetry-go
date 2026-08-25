@@ -81,6 +81,38 @@ func TestAtomicCounterLoadConcurrentSnapshot(t *testing.T) {
 	}
 }
 
+func TestAtomicCounterLoadConcurrentSnapshotCancellation(t *testing.T) {
+	if runtime.GOMAXPROCS(0) < 2 {
+		t.Skip("requires concurrent execution")
+	}
+
+	var counter atomicCounter[float64]
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range 10_000_000 {
+			counter.add(0.5)
+			counter.add(1)
+			counter.add(1)
+			counter.add(-0.5)
+		}
+	}()
+
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			got := int64(counter.load() * 2)
+			// Valid prefixes of the .5, 1, 1, -.5 sequence are congruent
+			// to 0, 1, or 3 modulo 4. A remainder of 2 is a mixed snapshot.
+			if got%4 == 2 {
+				t.Fatalf("observed impossible cumulative sum: %v", float64(got)/2)
+			}
+		}
+	}
+}
+
 func BenchmarkAtomicCounter(b *testing.B) {
 	b.Run("Int64", benchmarkAtomicCounter[int64])
 	b.Run("Float64", benchmarkAtomicCounter[float64])
