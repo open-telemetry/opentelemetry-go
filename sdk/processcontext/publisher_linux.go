@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Header layout — 32 bytes, all fields little-endian:
+// Header layout — 32 bytes
 //
 //	[0:8]   Signature              [8]byte  "OTEL_CTX"
 //	[8:12]  Version                uint32   2
