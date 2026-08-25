@@ -58,9 +58,8 @@ func TestNewPublisherPayloadTooLarge(t *testing.T) {
 	r := makeResource(t, attrs...)
 	payload, encErr := encodeProcessContext(r)
 	require.NoError(t, encErr)
-	if len(payload) <= MaxPayloadSize {
-		t.Skip("encoded payload fits; increase attribute count to trigger the error path")
-	}
+	require.Greater(t, len(payload), MaxPayloadSize,
+		"encoded payload must exceed MaxPayloadSize; increase attribute count if this fails")
 	_, err := NewPublisher(r)
 	assert.Error(t, err)
 }
@@ -176,9 +175,8 @@ func TestPublisherUpdatePayloadTooLarge(t *testing.T) {
 	r2 := makeResource(t, attrs...)
 	payload, encErr := encodeProcessContext(r2)
 	require.NoError(t, encErr)
-	if len(payload) <= MaxPayloadSize {
-		t.Skip("payload fits; increase attribute count")
-	}
+	require.Greater(t, len(payload), MaxPayloadSize,
+		"encoded payload must exceed MaxPayloadSize; increase attribute count if this fails")
 
 	err = pub.Update(r2)
 	assert.Error(t, err)
@@ -222,9 +220,8 @@ func TestPublisherPayloadSpill(t *testing.T) {
 	r2 := makeResource(t, attrs...)
 	payload2, encErr := encodeProcessContext(r2)
 	require.NoError(t, encErr)
-	if headerSize+len(payload2) <= len(pub.impl.headerMem) {
-		t.Skip("payload fits inline; no spill will occur — try a larger attribute count")
-	}
+	require.Greater(t, headerSize+len(payload2), len(pub.impl.headerMem),
+		"payload must exceed the inline area; increase attribute count if this fails")
 
 	require.NoError(t, pub.Update(r2))
 
@@ -441,9 +438,8 @@ func TestUpdateSpillAllocFails(t *testing.T) {
 	r2 := makeResource(t, attrs...)
 	payload, encErr := encodeProcessContext(r2)
 	require.NoError(t, encErr)
-	if headerSize+len(payload) <= len(pub.impl.headerMem) {
-		t.Skip("payload fits inline; increase attribute count to trigger spill")
-	}
+	require.Greater(t, headerSize+len(payload), len(pub.impl.headerMem),
+		"payload must exceed the inline area; increase attribute count if this fails")
 
 	origMemfd := memfdCreateFunc
 	memfdCreateFunc = func(_ string, _ int) (int, error) { return -1, unix.ENOSYS }
