@@ -109,8 +109,8 @@ func TestPublisherHeaderSignatureAndVersion(t *testing.T) {
 
 	hdr := pub.impl.headerMem
 	require.GreaterOrEqual(t, len(hdr), headerSize)
-	assert.Equal(t, []byte(signatureStr), hdr[0:8])
-	assert.Equal(t, formatVersion, binary.LittleEndian.Uint32(hdr[offVersion:]))
+	assert.Equal(t, []byte("OTEL_CTX"), hdr[0:8])
+	assert.Equal(t, uint32(2), binary.LittleEndian.Uint32(hdr[offVersion:]))
 }
 
 func TestPublisherTimestampNonZero(t *testing.T) {
