@@ -285,7 +285,6 @@ func TestPublisherUpdateAfterShutdown(t *testing.T) {
 	assert.Error(t, pub.Update(r))
 }
 
-
 // ---- Internal helpers --------------------------------------------------
 
 func TestPageAlign(t *testing.T) {
