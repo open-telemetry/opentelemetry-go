@@ -195,10 +195,23 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.False(t, c.Metrics.Insecure)
 				if grpcOption {
-					assert.Equal(t, "env.endpoint/prefix", c.Metrics.Endpoint)
+					assert.Equal(t, "env.endpoint", c.Metrics.Endpoint)
 				} else {
 					assert.Equal(t, "env.endpoint", c.Metrics.Endpoint)
 					assert.Equal(t, "/prefix/v1/metrics", c.Metrics.URLPath)
+				}
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Endpoint with path",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "http://env.metrics.endpoint/prefix",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Metrics.Insecure)
+				assert.Equal(t, "env.metrics.endpoint", c.Metrics.Endpoint)
+				if !grpcOption {
+					assert.Equal(t, "/prefix", c.Metrics.URLPath)
 				}
 			},
 		},
@@ -283,6 +296,30 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.Equal(t, "env_metrics_endpoint", c.Metrics.Endpoint)
 				assert.True(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Endpoint with unix scheme",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "unix:///tmp/grpc.sock",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Metrics.Insecure)
+				if grpcOption {
+					assert.Equal(t, "unix:///tmp/grpc.sock", c.Metrics.Endpoint)
+				}
+			},
+		},
+		{
+			name: "Test Environment Endpoint with unix-abstract scheme",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "unix-abstract:///grpc.sock",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Metrics.Insecure)
+				if grpcOption {
+					assert.Equal(t, "unix-abstract:///grpc.sock", c.Metrics.Endpoint)
+				}
 			},
 		},
 

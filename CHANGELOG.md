@@ -25,6 +25,7 @@ The next release will require at least [Go 1.26].
 
 ### Fixed
 
+- Ignore HTTP URL paths when building OTLP/gRPC metric exporter targets from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`, while preserving `unix://` and `unix-abstract://` targets in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`.
 - Accept quoted finite double values in OTLP/HTTP JSON requests in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8831)
 - Export dropped attribute counts in OTLP log records from `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8829)
 - Name span events created from OpenTracing logs after the `event` log field, falling back to `log`, instead of always using an empty name in `go.opentelemetry.io/otel/bridge/opentracing`. (#8648)
