@@ -68,6 +68,11 @@ func newPublisher(r *resource.Resource, _ config) (*publisher, error) {
 		return nil, err
 	}
 
+	p := &publisher{mem: mem}
+	p.writeInitial(payload)
+
+	// nameVMA is called last: a profiler that hooks prctl to detect publication
+	// must see a fully-initialised mapping.
 	prctlErr := nameVMA(mem)
 	if !hasMemfd && prctlErr != nil {
 		_ = unix.Munmap(mem)
@@ -76,8 +81,6 @@ func newPublisher(r *resource.Resource, _ config) (*publisher, error) {
 		)
 	}
 
-	p := &publisher{mem: mem}
-	p.writeInitial(payload)
 	return p, nil
 }
 
