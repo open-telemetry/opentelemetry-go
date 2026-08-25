@@ -18,9 +18,12 @@
 //     value is treated as leaving that property unspecified.
 //   - Scalar properties (Description, Unit, ExemplarReservoirProviderSelector)
 //     follow last-wins precedence among matching views.
-//   - Aggregations follow last-wins precedence. If an incompatible aggregation is
-//     specified, the SDK logs a warning and falls back to preceding matching views
-//     or the reader default.
+//   - Aggregations follow last-wins precedence. If an invalid or incompatible
+//     aggregation is specified, the SDK logs a warning and falls back to
+//     preceding matching views or the reader default.
+//   - Per-view cardinality limits (aggregation_cardinality_limit) are not yet
+//     supported on [go.opentelemetry.io/otel/sdk/metric.Stream]; cardinality
+//     limits continue to be configured at the Reader or MeterProvider level.
 //   - Attribute filters across matching views in a group are combined using logical
 //     AND. If no matching view in the group specifies an AttributeFilter, any
 //     instrument-level default attributes (e.g. from WithDefaultAttributes) act as
