@@ -107,7 +107,7 @@ jobs:
           # Job containers do not run systemd. Without this override,
           # CodSpeed tries to start the benchmark using systemd-run.
           CODSPEED_ISOLATION: "false"
-        uses: CodSpeedHQ/action@47f7cebbb775826a36a232a61a211f8cf498f936 # v5.2.0
+        uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v5.2.1
         with:
           mode: walltime
           allow-empty: true
