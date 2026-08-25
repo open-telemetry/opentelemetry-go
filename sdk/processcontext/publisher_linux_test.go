@@ -393,7 +393,7 @@ func TestNextTSForcedIncrement(t *testing.T) {
 // ---- Injectable-var error paths ----------------------------------------
 
 // TestAllocMappingFtruncateError exercises the ftruncate-failure branch in
-// allocMapping (lines 202-205) by injecting a ftruncate error.
+// allocMapping by injecting a ftruncate error.
 func TestAllocMappingFtruncateError(t *testing.T) {
 	orig := ftruncateFunc
 	ftruncateFunc = func(_ int, _ int64) error { return unix.ENOSPC }
@@ -405,7 +405,7 @@ func TestAllocMappingFtruncateError(t *testing.T) {
 }
 
 // TestAllocMappingMmapMemfdError exercises the mmap-failure branch in
-// allocMapping when memfd is available (lines 208-210).
+// allocMapping when memfd is available.
 func TestAllocMappingMmapMemfdError(t *testing.T) {
 	orig := mmapFunc
 	mmapFunc = func(_ int, _ int64, _, _, _ int) ([]byte, error) {
@@ -419,8 +419,8 @@ func TestAllocMappingMmapMemfdError(t *testing.T) {
 }
 
 // TestNewPublisherAllocMappingFails exercises the anonymous-mmap-failure branch
-// (lines 213-215) and the resulting error return in newPublisher (lines 67-69)
-// by making both memfd_create and mmap fail.
+// in allocMapping and the resulting error return in newPublisher by making both
+// memfd_create and mmap fail.
 func TestNewPublisherAllocMappingFails(t *testing.T) {
 	origMemfd := memfdCreateFunc
 	memfdCreateFunc = func(_ string, _ int) (int, error) { return -1, unix.ENOSYS }
