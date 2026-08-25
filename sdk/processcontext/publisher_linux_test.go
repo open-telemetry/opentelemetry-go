@@ -95,10 +95,10 @@ func TestPublisherHeaderSignatureAndVersion(t *testing.T) {
 	require.NoError(t, err)
 	defer pub.Shutdown(t.Context()) //nolint:errcheck
 
-	mem := pub.impl.mem
-	require.GreaterOrEqual(t, len(mem), headerSize)
-	assert.Equal(t, []byte(signatureStr), mem[0:8])
-	assert.Equal(t, formatVersion, binary.LittleEndian.Uint32(mem[offVersion:]))
+	hdr := pub.impl.headerMem
+	require.GreaterOrEqual(t, len(hdr), headerSize)
+	assert.Equal(t, []byte(signatureStr), hdr[0:8])
+	assert.Equal(t, formatVersion, binary.LittleEndian.Uint32(hdr[offVersion:]))
 }
 
 func TestPublisherTimestampNonZero(t *testing.T) {
@@ -107,7 +107,7 @@ func TestPublisherTimestampNonZero(t *testing.T) {
 	require.NoError(t, err)
 	defer pub.Shutdown(t.Context()) //nolint:errcheck
 
-	assert.NotZero(t, readTS(pub.impl.mem))
+	assert.NotZero(t, readTS(pub.impl.headerMem))
 }
 
 func TestPublisherPayloadPtrPointsIntoMapping(t *testing.T) {
@@ -116,13 +116,14 @@ func TestPublisherPayloadPtrPointsIntoMapping(t *testing.T) {
 	require.NoError(t, err)
 	defer pub.Shutdown(t.Context()) //nolint:errcheck
 
-	mem := pub.impl.mem
-	payloadPtr := binary.LittleEndian.Uint64(mem[offPayloadPtr:])
-	mappingStart := uint64(uintptr(unsafe.Pointer(&mem[0])))
-	mappingEnd := mappingStart + uint64(len(mem))
+	hdr := pub.impl.headerMem
+	payloadPtr := binary.LittleEndian.Uint64(hdr[offPayloadPtr:])
+	hdrStart := uint64(uintptr(unsafe.Pointer(&hdr[0])))
+	hdrEnd := hdrStart + uint64(len(hdr))
 
-	assert.GreaterOrEqual(t, payloadPtr, mappingStart+headerSize)
-	assert.Less(t, payloadPtr, mappingEnd)
+	// Small resource: payload fits inline, so PayloadPtr is within the header page.
+	assert.GreaterOrEqual(t, payloadPtr, hdrStart+headerSize)
+	assert.Less(t, payloadPtr, hdrEnd)
 }
 
 func TestPublisherPayloadSizeMatchesEncoded(t *testing.T) {
@@ -133,7 +134,7 @@ func TestPublisherPayloadSizeMatchesEncoded(t *testing.T) {
 
 	expected, err := encodeProcessContext(r)
 	require.NoError(t, err)
-	got := binary.LittleEndian.Uint32(pub.impl.mem[offPayloadSz:])
+	got := binary.LittleEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
 	assert.Equal(t, uint32(len(expected)), got)
 }
 
@@ -145,17 +146,17 @@ func TestPublisherUpdate(t *testing.T) {
 	require.NoError(t, err)
 	defer pub.Shutdown(t.Context()) //nolint:errcheck
 
-	ts1 := readTS(pub.impl.mem)
+	ts1 := readTS(pub.impl.headerMem)
 
 	r2 := makeResource(t, attribute.String("service.name", "v2"))
 	require.NoError(t, pub.Update(r2))
 
-	ts2 := readTS(pub.impl.mem)
+	ts2 := readTS(pub.impl.headerMem)
 	assert.Greater(t, ts2, ts1, "timestamp must increase on update")
 
 	expected, err := encodeProcessContext(r2)
 	require.NoError(t, err)
-	sz := binary.LittleEndian.Uint32(pub.impl.mem[offPayloadSz:])
+	sz := binary.LittleEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
 	assert.Equal(t, uint32(len(expected)), sz)
 }
 
@@ -189,28 +190,28 @@ func TestPublisherTimestampStrictlyIncreasing(t *testing.T) {
 	require.NoError(t, err)
 	defer pub.Shutdown(t.Context()) //nolint:errcheck
 
-	prev := readTS(pub.impl.mem)
+	prev := readTS(pub.impl.headerMem)
 	for i := range 20 {
 		require.NoError(t, pub.Update(r))
-		ts := readTS(pub.impl.mem)
+		ts := readTS(pub.impl.headerMem)
 		assert.Greater(t, ts, prev, "iteration %d: timestamp must be strictly increasing", i)
 		prev = ts
 	}
 }
 
-// TestPublisherRemap verifies that a publisher correctly reallocates its
-// mapping when the updated payload no longer fits within the original region.
-func TestPublisherRemap(t *testing.T) {
-	// Start with a minimal resource to get the smallest possible mapping.
+// TestPublisherPayloadSpill verifies that when the updated payload no longer
+// fits inline in the header page the publisher spills it to a separate mapping
+// while keeping the header mapping address stable.
+func TestPublisherPayloadSpill(t *testing.T) {
 	r1 := makeResource(t, attribute.String("k", "v"))
 	pub, err := NewPublisher(r1)
 	require.NoError(t, err)
 	defer pub.Shutdown(t.Context()) //nolint:errcheck
 
-	initialAddr := uintptr(unsafe.Pointer(&pub.impl.mem[0]))
-	initialLen := len(pub.impl.mem)
+	headerAddr := uintptr(unsafe.Pointer(&pub.impl.headerMem[0]))
+	assert.Nil(t, pub.impl.payloadMem, "initially no separate payload mapping")
 
-	// Build a resource whose encoded payload exceeds the initial mapping.
+	// Build a resource whose encoded payload exceeds the inline area.
 	attrs := make([]attribute.KeyValue, 0, 500)
 	for i := range 500 {
 		attrs = append(attrs, attribute.String(
@@ -221,20 +222,30 @@ func TestPublisherRemap(t *testing.T) {
 	r2 := makeResource(t, attrs...)
 	payload2, encErr := encodeProcessContext(r2)
 	require.NoError(t, encErr)
-	if headerSize+len(payload2) <= initialLen {
-		t.Skip("payload fits in current mapping; no remap will occur — try larger attribute count")
+	if headerSize+len(payload2) <= len(pub.impl.headerMem) {
+		t.Skip("payload fits inline; no spill will occur — try a larger attribute count")
 	}
 
 	require.NoError(t, pub.Update(r2))
 
-	newAddr := uintptr(unsafe.Pointer(&pub.impl.mem[0]))
-	assert.NotEqual(t, initialAddr, newAddr, "remap should produce a new mapping address")
-	assert.GreaterOrEqual(t, len(pub.impl.mem), headerSize+len(payload2))
-	assert.NotZero(t, readTS(pub.impl.mem))
+	// Header mapping address must be unchanged.
+	assert.Equal(t, headerAddr, uintptr(unsafe.Pointer(&pub.impl.headerMem[0])),
+		"header mapping address must remain stable after payload spill")
 
-	expected := uint32(len(payload2))
-	got := binary.LittleEndian.Uint32(pub.impl.mem[offPayloadSz:])
-	assert.Equal(t, expected, got)
+	// A separate payload mapping must now exist.
+	require.NotNil(t, pub.impl.payloadMem, "payload must spill to a separate mapping")
+	assert.GreaterOrEqual(t, len(pub.impl.payloadMem), len(payload2))
+
+	// PayloadPtr must point into the separate payload mapping.
+	payloadPtr := binary.LittleEndian.Uint64(pub.impl.headerMem[offPayloadPtr:])
+	pmStart := uint64(uintptr(unsafe.Pointer(&pub.impl.payloadMem[0])))
+	pmEnd := pmStart + uint64(len(pub.impl.payloadMem))
+	assert.GreaterOrEqual(t, payloadPtr, pmStart)
+	assert.Less(t, payloadPtr, pmEnd)
+
+	assert.NotZero(t, readTS(pub.impl.headerMem))
+	got := binary.LittleEndian.Uint32(pub.impl.headerMem[offPayloadSz:])
+	assert.Equal(t, uint32(len(payload2)), got)
 }
 
 // ---- Shutdown ----------------------------------------------------------
@@ -281,7 +292,7 @@ func TestPublisherConcurrentUpdate(t *testing.T) {
 	for i, err := range errs {
 		assert.NoError(t, err, "goroutine %d: unexpected error", i)
 	}
-	assert.NotZero(t, readTS(pub.impl.mem))
+	assert.NotZero(t, readTS(pub.impl.headerMem))
 }
 
 // ---- Internal helpers --------------------------------------------------
@@ -345,7 +356,7 @@ func TestAllocMappingAnonymousFallback(t *testing.T) {
 	defer pub.Shutdown(t.Context()) //nolint:errcheck
 
 	assert.True(t, mappingInMaps(), "anonymous+prctl mapping must appear in /proc/self/maps")
-	assert.NotZero(t, readTS(pub.impl.mem))
+	assert.NotZero(t, readTS(pub.impl.headerMem))
 }
 
 // TestNextTSForcedIncrement covers the branch where the clock value does not
@@ -411,64 +422,15 @@ func TestNewPublisherAllocMappingFails(t *testing.T) {
 	assert.Contains(t, err.Error(), "mmap (anonymous)")
 }
 
-// TestRemapAllocFails exercises the allocMapping-failure branch in remap
-// (lines 156-158) by calling remap directly with injected alloc failures.
-func TestRemapAllocFails(t *testing.T) {
-	r := makeResource(t, attribute.String("k", "v"))
-	pub, err := NewPublisher(r)
-	require.NoError(t, err)
-	defer pub.Shutdown(t.Context()) //nolint:errcheck
-
-	origMemfd := memfdCreateFunc
-	memfdCreateFunc = func(_ string, _ int) (int, error) { return -1, unix.ENOSYS }
-	origMmap := mmapFunc
-	mmapFunc = func(_ int, _ int64, _, _, _ int) ([]byte, error) {
-		return nil, unix.ENOMEM
-	}
-	defer func() {
-		memfdCreateFunc = origMemfd
-		mmapFunc = origMmap
-	}()
-
-	remapErr := pub.impl.remap(1)
-	require.Error(t, remapErr)
-	assert.Contains(t, remapErr.Error(), "processcontext: remap:")
-}
-
-// TestRemapNotDiscoverable exercises the !hasMemfd && prctlErr != nil branch in
-// remap (lines 160-163) by injecting memfd and prctl failures.
-func TestRemapNotDiscoverable(t *testing.T) {
-	r := makeResource(t, attribute.String("k", "v"))
-	pub, err := NewPublisher(r)
-	require.NoError(t, err)
-	defer pub.Shutdown(t.Context()) //nolint:errcheck
-
-	origMemfd := memfdCreateFunc
-	memfdCreateFunc = func(_ string, _ int) (int, error) { return -1, unix.ENOSYS }
-	origSyscall6 := syscall6Func
-	syscall6Func = func(_, _, _, _, _, _, _ uintptr) (uintptr, uintptr, unix.Errno) {
-		return 0, 0, unix.EINVAL
-	}
-	defer func() {
-		memfdCreateFunc = origMemfd
-		syscall6Func = origSyscall6
-	}()
-
-	remapErr := pub.impl.remap(1)
-	require.Error(t, remapErr)
-	assert.Contains(t, remapErr.Error(), "mapping not discoverable")
-}
-
-// TestUpdateRemapFails exercises the remap-failure return in update
-// (lines 101-103) by triggering a remap via a large payload and injecting
-// alloc failures so the remap itself fails.
-func TestUpdateRemapFails(t *testing.T) {
+// TestUpdateSpillAllocFails exercises the allocMapping-failure branch in update
+// when the payload overflows the inline area and the spill allocation fails.
+func TestUpdateSpillAllocFails(t *testing.T) {
 	r1 := makeResource(t, attribute.String("k", "v"))
 	pub, err := NewPublisher(r1)
 	require.NoError(t, err)
 	defer pub.Shutdown(t.Context()) //nolint:errcheck
 
-	// Build a resource large enough to exceed the current one-page mapping.
+	// Build a resource large enough to exceed the inline area of the header page.
 	attrs := make([]attribute.KeyValue, 0, 200)
 	for i := range 200 {
 		attrs = append(attrs, attribute.String(
@@ -479,8 +441,8 @@ func TestUpdateRemapFails(t *testing.T) {
 	r2 := makeResource(t, attrs...)
 	payload, encErr := encodeProcessContext(r2)
 	require.NoError(t, encErr)
-	if headerSize+len(payload) <= len(pub.impl.mem) {
-		t.Skip("payload fits in current mapping; increase attribute count to trigger remap")
+	if headerSize+len(payload) <= len(pub.impl.headerMem) {
+		t.Skip("payload fits inline; increase attribute count to trigger spill")
 	}
 
 	origMemfd := memfdCreateFunc
@@ -496,7 +458,7 @@ func TestUpdateRemapFails(t *testing.T) {
 
 	updateErr := pub.Update(r2)
 	require.Error(t, updateErr)
-	assert.Contains(t, updateErr.Error(), "remap")
+	assert.Contains(t, updateErr.Error(), "spill")
 }
 
 // TestNameVMASuccess exercises the success return path in nameVMA (line 238)

@@ -44,10 +44,11 @@ const (
 )
 
 type publisher struct {
-	mu     sync.Mutex
-	mem    []byte
-	lastTS uint64
-	closed bool
+	mu         sync.Mutex
+	headerMem  []byte // always one OS page; contains the 32-byte header and, while it fits, inline payload
+	payloadMem []byte // non-nil after the payload outgrows the inline area; freed and replaced on further growth
+	lastTS     uint64
+	closed     bool
 }
 
 func newPublisher(r *resource.Resource, _ config) (*publisher, error) {
@@ -62,20 +63,36 @@ func newPublisher(r *resource.Resource, _ config) (*publisher, error) {
 		)
 	}
 
-	size := pageAlign(headerSize + len(payload))
-	mem, hasMemfd, err := allocMapping(size)
+	// Always allocate exactly one page for the header mapping. Its address
+	// never changes, allowing external readers to cache it safely.
+	headerMem, hasMemfd, err := allocMapping(pageAlign(headerSize))
 	if err != nil {
 		return nil, err
 	}
 
-	p := &publisher{mem: mem}
+	p := &publisher{headerMem: headerMem}
+
+	// If the initial payload doesn't fit in the inline area of the header page,
+	// allocate a separate payload mapping immediately.
+	if headerSize+len(payload) > len(headerMem) {
+		payloadMem, _, err := allocMapping(pageAlign(len(payload)))
+		if err != nil {
+			_ = unix.Munmap(headerMem)
+			return nil, fmt.Errorf("processcontext: spill: %w", err)
+		}
+		p.payloadMem = payloadMem
+	}
+
 	p.writeInitial(payload)
 
 	// nameVMA is called last: a profiler that hooks prctl to detect publication
-	// must see a fully-initialised mapping.
-	prctlErr := nameVMA(mem)
+	// must see a fully-initialized mapping.
+	prctlErr := nameVMA(headerMem)
 	if !hasMemfd && prctlErr != nil {
-		_ = unix.Munmap(mem)
+		_ = unix.Munmap(headerMem)
+		if p.payloadMem != nil {
+			_ = unix.Munmap(p.payloadMem)
+		}
 		return nil, errors.New(
 			"processcontext: mapping not discoverable: memfd_create and prctl PR_SET_VMA both failed",
 		)
@@ -100,18 +117,35 @@ func (p *publisher) update(r *resource.Resource) error {
 		return fmt.Errorf("processcontext: payload %d bytes exceeds MaxPayloadSize (%d)", len(payload), MaxPayloadSize)
 	}
 
-	if headerSize+len(payload) > len(p.mem) {
-		if err := p.remap(len(payload)); err != nil {
-			return err
+	// When the payload no longer fits in the inline area and the existing
+	// separate mapping (if any) is also too small, allocate a larger one.
+	// The header mapping address never changes, preserving cached reader state.
+	if headerSize+len(payload) > len(p.headerMem) && (p.payloadMem == nil || len(payload) > len(p.payloadMem)) {
+		newPayloadMem, _, err := allocMapping(pageAlign(len(payload)))
+		if err != nil {
+			return fmt.Errorf("processcontext: spill: %w", err)
 		}
+		oldPayloadMem := p.payloadMem
+		p.payloadMem = newPayloadMem
+
+		// Seqlock update protocol: zero timestamp → write fields → new timestamp.
+		atomicStore64(p.headerMem, offTimestamp, 0)
+		p.writePayload(payload)
+		atomicStore64(p.headerMem, offTimestamp, p.nextTS())
+
+		// Release the old separate mapping only after the seqlock timestamp is
+		// live; any reader that raced on the old pointer will have retried.
+		if oldPayloadMem != nil {
+			_ = unix.Munmap(oldPayloadMem)
+		}
+	} else {
+		// Payload fits inline or in the existing separate mapping.
+		atomicStore64(p.headerMem, offTimestamp, 0)
+		p.writePayload(payload)
+		atomicStore64(p.headerMem, offTimestamp, p.nextTS())
 	}
 
-	// Seqlock update protocol: zero timestamp → write fields → new timestamp.
-	atomicStore64(p.mem, offTimestamp, 0)
-	p.writePayload(payload)
-	atomicStore64(p.mem, offTimestamp, p.nextTS())
-
-	_ = nameVMA(p.mem) // re-name per spec update protocol; failure is ignored
+	_ = nameVMA(p.headerMem) // re-name per spec update protocol; failure is ignored
 	return nil
 }
 
@@ -123,57 +157,44 @@ func (p *publisher) shutdown() {
 		return
 	}
 	p.closed = true
-	atomicStore64(p.mem, offTimestamp, 0)
-	_ = unix.Munmap(p.mem)
-	p.mem = nil
+	atomicStore64(p.headerMem, offTimestamp, 0)
+	_ = unix.Munmap(p.headerMem)
+	p.headerMem = nil
+	if p.payloadMem != nil {
+		_ = unix.Munmap(p.payloadMem)
+		p.payloadMem = nil
+	}
 }
 
 // writeInitial populates the header and payload on a freshly-zeroed mapping.
 // Timestamp is written last to atomically signal readiness to readers.
 func (p *publisher) writeInitial(payload []byte) {
-	copy(p.mem[0:8], signatureStr)
-	binary.LittleEndian.PutUint32(p.mem[offVersion:], formatVersion)
+	copy(p.headerMem[0:8], signatureStr)
+	binary.LittleEndian.PutUint32(p.headerMem[offVersion:], formatVersion)
 	p.writePayload(payload)
-	atomicStore64(p.mem, offTimestamp, p.nextTS())
+	atomicStore64(p.headerMem, offTimestamp, p.nextTS())
 }
 
 // writePayload updates PayloadSize, PayloadPtr, and the payload bytes.
-// Caller must hold p.mu and ensure the mapping is large enough.
+// When p.payloadMem is non-nil the payload is written there; otherwise it is
+// written inline into headerMem immediately after the header.
+// Caller must hold p.mu (or be in newPublisher before p is shared).
 func (p *publisher) writePayload(payload []byte) {
 	// len(payload) is always <= MaxPayloadSize (65536), checked by callers.
 	sz := uint32(len(payload)) //nolint:gosec // G115: bounded by MaxPayloadSize check
-	binary.LittleEndian.PutUint32(p.mem[offPayloadSz:], sz)
+	binary.LittleEndian.PutUint32(p.headerMem[offPayloadSz:], sz)
+
+	var dest []byte
+	if p.payloadMem != nil {
+		dest = p.payloadMem
+	} else {
+		dest = p.headerMem[headerSize:]
+	}
+	copy(dest, payload)
+
 	// PayloadPtr is a virtual address in this process that external readers use.
-	addr := uint64(uintptr(unsafe.Pointer(&p.mem[headerSize])))
-	atomicStore64(p.mem, offPayloadPtr, addr)
-	copy(p.mem[headerSize:], payload)
-}
-
-// remap replaces the current mapping with a larger one capable of holding
-// payloadLen bytes. Allocates the new mapping before freeing the old one so
-// that the old mapping remains readable until the swap is committed. Must be
-// called with p.mu held.
-func (p *publisher) remap(payloadLen int) error {
-	size := pageAlign(headerSize + payloadLen)
-	newMem, hasMemfd, err := allocMapping(size)
-	if err != nil {
-		return fmt.Errorf("processcontext: remap: %w", err)
-	}
-	prctlErr := nameVMA(newMem)
-	if !hasMemfd && prctlErr != nil {
-		_ = unix.Munmap(newMem)
-		return errors.New("processcontext: remap: mapping not discoverable")
-	}
-
-	// Zero old timestamp before discarding; new mapping already has ts=0.
-	atomicStore64(p.mem, offTimestamp, 0)
-	_ = unix.Munmap(p.mem)
-
-	// Initialize static header fields on the new mapping.
-	copy(newMem[0:8], signatureStr)
-	binary.LittleEndian.PutUint32(newMem[offVersion:], formatVersion)
-	p.mem = newMem
-	return nil
+	addr := uint64(uintptr(unsafe.Pointer(&dest[0])))
+	atomicStore64(p.headerMem, offPayloadPtr, addr)
 }
 
 // nextTS returns a monotonically strictly increasing timestamp. Must be called
