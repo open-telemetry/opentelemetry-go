@@ -17,6 +17,9 @@ var ErrExporterShutdown = errors.New("exporter is shutdown")
 
 // Exporter handles the delivery of log records to external receivers.
 type Exporter interface {
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+
 	// Export transmits log records to a receiver.
 	//
 	// The deadline or cancellation of the passed context must be honored. An
@@ -37,6 +40,8 @@ type Exporter interface {
 	// Export should never be called concurrently with other Export calls.
 	// However, it may be called concurrently with other methods.
 	Export(ctx context.Context, records []Record) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the exporter should be done in this call.
@@ -50,6 +55,8 @@ type Exporter interface {
 	//
 	// Shutdown may be called concurrently with itself or with other methods.
 	Shutdown(ctx context.Context) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// ForceFlush flushes any log records held by the Exporter.
 	//
@@ -58,6 +65,8 @@ type Exporter interface {
 	//
 	// ForceFlush may be called concurrently with itself or with other methods.
 	ForceFlush(ctx context.Context) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 }
 
 var defaultNoopExporter = &noopExporter{}
