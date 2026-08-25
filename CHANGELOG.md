@@ -25,6 +25,7 @@ The next release will require at least [Go 1.26].
 
 ### Fixed
 
+- Normalize global `OTEL_EXPORTER_OTLP_ENDPOINT` path joining in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` so trailing-slash base URLs do not produce double-slash log export paths. (#8864)
 - Accept quoted finite double values in OTLP/HTTP JSON requests in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8831)
 - Export dropped attribute counts in OTLP log records from `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8829)
 - Name span events created from OpenTracing logs after the `event` log field, falling back to `log`, instead of always using an empty name in `go.opentelemetry.io/otel/bridge/opentracing`. (#8648)
