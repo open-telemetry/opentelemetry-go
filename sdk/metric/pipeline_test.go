@@ -1044,3 +1044,39 @@ func TestViewMatchingModeComposableInvalidAggregationDirectView(t *testing.T) {
 	_, ok := m.Data.(metricdata.Histogram[int64])
 	assert.True(t, ok, "expected Histogram aggregation from preceding view")
 }
+
+func TestViewMatchingModeComposableCaseVariantTargetNames(t *testing.T) {
+	views := []View{
+		NewView(Instrument{Name: "foo"}, Stream{Name: "RENAMED", Description: "first desc"}),
+		NewView(Instrument{Name: "foo"}, Stream{Name: "renamed", Description: "second desc", Unit: "ms"}),
+	}
+
+	r := NewManualReader()
+	p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+	r.register(p)
+	var vc cache[string, instID]
+	ins := newInserter[int64](p, &vc)
+	got, err := ins.Instrument(
+		Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "1", Description: "orig"},
+		nil,
+		DefaultAggregationSelector(InstrumentKindCounter),
+	)
+	require.NoError(t, err)
+	assert.Len(t, got, 1)
+
+	cached := vc.Lookup("renamed", func() instID { return instID{} })
+	assert.Equal(t, "RENAMED", cached.Name, "first-seen spelling should be preserved")
+	assert.Equal(t, "second desc", cached.Description, "last-wins description should apply")
+	assert.Equal(t, "ms", cached.Unit, "last-wins unit should apply")
+
+	// Verify single metric stream is collected with first-seen name casing
+	got[0](t.Context(), 5, *attribute.EmptySet())
+	var data metricdata.ResourceMetrics
+	err = r.Collect(t.Context(), &data)
+	require.NoError(t, err)
+	require.Len(t, data.ScopeMetrics, 1)
+	require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+	assert.Equal(t, "RENAMED", data.ScopeMetrics[0].Metrics[0].Name)
+	assert.Equal(t, "second desc", data.ScopeMetrics[0].Metrics[0].Description)
+	assert.Equal(t, "ms", data.ScopeMetrics[0].Metrics[0].Unit)
+}
