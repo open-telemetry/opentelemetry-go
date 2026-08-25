@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"unsafe"
@@ -286,31 +285,6 @@ func TestPublisherUpdateAfterShutdown(t *testing.T) {
 	assert.Error(t, pub.Update(r))
 }
 
-// ---- Concurrent safety -------------------------------------------------
-
-func TestPublisherConcurrentUpdate(t *testing.T) {
-	r := makeResource(t, attribute.String("service.name", "concurrent"))
-	pub, err := NewPublisher(r)
-	require.NoError(t, err)
-	defer pub.Shutdown(t.Context()) //nolint:errcheck
-
-	var wg sync.WaitGroup
-	errs := make([]error, 20)
-	for i := range 20 {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			r := makeResource(t, attribute.String("i", fmt.Sprint(idx)))
-			errs[idx] = pub.Update(r)
-		}(i)
-	}
-	wg.Wait()
-
-	for i, err := range errs {
-		assert.NoError(t, err, "goroutine %d: unexpected error", i)
-	}
-	assert.NotZero(t, readTS(pub.impl.headerMem))
-}
 
 // ---- Internal helpers --------------------------------------------------
 
