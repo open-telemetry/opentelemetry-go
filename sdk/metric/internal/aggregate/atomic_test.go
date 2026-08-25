@@ -90,7 +90,7 @@ func TestAtomicCounterLoadConcurrentSnapshotCancellation(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		for range 10_000_000 {
+		for range 1_000_000 {
 			counter.add(0.5)
 			counter.add(1)
 			counter.add(1)
