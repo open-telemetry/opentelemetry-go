@@ -57,11 +57,7 @@ func (h *MeterConfiguratorHandle) Set(fn MeterConfigurator) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	v := h.version.Add(1)
-	if fn == nil {
-		h.configurator.Store(nil)
-	} else {
-		h.configurator.Store(&versionedConfigurator{fn: fn, version: v})
-	}
+	h.configurator.Store(&versionedConfigurator{fn: fn, version: v})
 	if cb := h.onUpdate.Load(); cb != nil {
 		(*cb)()
 	}
@@ -104,7 +100,12 @@ func (o meterConfiguratorProviderOption) MeterConfiguratorSnapshot() func() (fun
 		}
 		vc := o.handle.configurator.Load()
 		if vc == nil {
+			// Set has never been called on this handle.
 			return defaultFn, 0
+		}
+		if vc.fn == nil {
+			// Set(nil) was called; the version it bumped still applies.
+			return defaultFn, vc.version
 		}
 		return func(s instrumentation.Scope) any { return vc.fn(s) }, vc.version
 	}

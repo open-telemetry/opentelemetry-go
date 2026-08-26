@@ -173,11 +173,7 @@ func TestMeterConfiguratorHandleSetNilClears(t *testing.T) {
 	// on a nil func call.
 	snapshot := ex.MeterConfiguratorSnapshot()
 	fn, version := snapshot()
-	// TODO: this is 0, not 2, because Set(nil) stores a bare nil pointer
-	// rather than a versionedConfigurator, so its version is lost. See
-	// discussion: this undercounts and can let a stale write win a CAS
-	// against a meter that already observed a later real version.
-	assert.Equal(t, uint64(0), version)
+	assert.Equal(t, uint64(2), version, "Set(nil) must still bump and report its own version")
 	result := fn(instrumentation.Scope{Name: "disabled"})
 	cfg, ok := result.(interface{ Enabled() bool })
 	require.True(t, ok)
