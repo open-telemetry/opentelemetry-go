@@ -125,16 +125,23 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 		"Attributes", s.Attributes,
 	)
 
-	return mp.meters.Lookup(s, func() *meter {
+	var meterCreated bool
+	m := mp.meters.Lookup(s, func() *meter {
+		meterCreated = true
 		m := newMeter(s, mp.pipes)
 		m.setEnabled(true)
-		if mp.configurator != nil {
-			if cr, ok := mp.configurator(s).(meterConfigReader); ok {
-				m.setEnabled(cr.Enabled())
-			}
-		}
 		return m
 	})
+	// Apply the configurator outside the cache lock: it runs arbitrary user
+	// code, and a configurator that calls Meter for the same MeterProvider
+	// would deadlock on the cache's non-reentrant lock otherwise.
+	// An already-cached meter either already has it applied, or will get it from a concurrent Set walk.
+	if meterCreated && mp.configurator != nil {
+		if cr, ok := mp.configurator(s).(meterConfigReader); ok {
+			m.setEnabled(cr.Enabled())
+		}
+	}
+	return m
 }
 
 // ForceFlush flushes all pending telemetry.
