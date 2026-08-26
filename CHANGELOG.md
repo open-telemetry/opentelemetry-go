@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Treat empty `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` values as unset in `go.opentelemetry.io/otel/sdk/trace`.
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
