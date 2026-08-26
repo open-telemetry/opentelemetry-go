@@ -9,6 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -113,9 +114,65 @@ func TestAtomicCounterLoadConcurrentSnapshotCancellation(t *testing.T) {
 	}
 }
 
+func TestAtomicCounterLoadMakesProgressWithFractionalContention(t *testing.T) {
+	if runtime.GOMAXPROCS(0) < 2 {
+		t.Skip("requires concurrent execution")
+	}
+
+	var counter atomicCounter[float64]
+	start := make(chan struct{})
+	stop := make(chan struct{})
+	var started atomic.Uint32
+	var writers sync.WaitGroup
+	for range 2 {
+		writers.Go(func() {
+			<-start
+			counter.add(0.5)
+			started.Add(1)
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+					counter.add(0.5)
+				}
+			}
+		})
+	}
+	close(start)
+	for started.Load() != 2 {
+		runtime.Gosched()
+	}
+	t.Cleanup(func() {
+		close(stop)
+		writers.Wait()
+	})
+
+	loaded := make(chan struct{})
+	go func() {
+		counter.load()
+		close(loaded)
+	}()
+
+	select {
+	case <-loaded:
+	case <-time.After(time.Second):
+		t.Fatal("load did not complete while fractional measurements continued")
+	}
+}
+
 func BenchmarkAtomicCounter(b *testing.B) {
 	b.Run("Int64", benchmarkAtomicCounter[int64])
 	b.Run("Float64", benchmarkAtomicCounter[float64])
+}
+
+func BenchmarkAtomicCounterFractionalAdd(b *testing.B) {
+	var counter atomicCounter[float64]
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			counter.add(0.5)
+		}
+	})
 }
 
 func benchmarkAtomicCounter[N int64 | float64](b *testing.B) {
