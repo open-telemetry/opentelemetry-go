@@ -1080,3 +1080,155 @@ func TestViewMatchingModeComposableCaseVariantTargetNames(t *testing.T) {
 	assert.Equal(t, "second desc", data.ScopeMetrics[0].Metrics[0].Description)
 	assert.Equal(t, "ms", data.ScopeMetrics[0].Metrics[0].Unit)
 }
+
+func TestViewMatchingModeComposableDirectViewZeroedFields(t *testing.T) {
+	t.Run("DirectViewZerosDescriptionAndUnit", func(t *testing.T) {
+		views := []View{
+			NewView(Instrument{Name: "foo"}, Stream{Aggregation: AggregationSum{}}),
+			View(func(inst Instrument) (Stream, bool) {
+				if inst.Name == "foo" {
+					return Stream{Name: inst.Name, Description: "", Unit: ""}, true
+				}
+				return Stream{}, false
+			}),
+		}
+
+		r := NewManualReader()
+		p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+		r.register(p)
+		var vc cache[string, instID]
+		ins := newInserter[int64](p, &vc)
+		got, err := ins.Instrument(
+			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
+			nil,
+			DefaultAggregationSelector(InstrumentKindCounter),
+		)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+
+		got[0](t.Context(), 1, *attribute.EmptySet())
+		var data metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &data)
+		require.NoError(t, err)
+		require.Len(t, data.ScopeMetrics, 1)
+		require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+		m := data.ScopeMetrics[0].Metrics[0]
+		assert.Equal(t, "foo", m.Name)
+		assert.Empty(t, m.Description, "direct view should explicitly clear description")
+		assert.Empty(t, m.Unit, "direct view should explicitly clear unit")
+	})
+
+	t.Run("DirectViewZerosName", func(t *testing.T) {
+		views := []View{
+			View(func(inst Instrument) (Stream, bool) {
+				if inst.Name == "foo" {
+					return Stream{Name: "", Description: "cleared name", Unit: "1"}, true
+				}
+				return Stream{}, false
+			}),
+		}
+
+		r := NewManualReader()
+		p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+		r.register(p)
+		var vc cache[string, instID]
+		ins := newInserter[int64](p, &vc)
+		got, err := ins.Instrument(
+			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
+			nil,
+			DefaultAggregationSelector(InstrumentKindCounter),
+		)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+
+		got[0](t.Context(), 1, *attribute.EmptySet())
+		var data metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &data)
+		require.NoError(t, err)
+		require.Len(t, data.ScopeMetrics, 1)
+		require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+		m := data.ScopeMetrics[0].Metrics[0]
+		assert.Empty(t, m.Name, "direct view should explicitly clear name")
+		assert.Equal(t, "cleared name", m.Description)
+		assert.Equal(t, "1", m.Unit)
+	})
+
+	t.Run("SubsequentNewViewDoesNotRevertZeroedFieldsUnlessMaskSet", func(t *testing.T) {
+		views := []View{
+			// Direct view clears description and unit
+			View(func(inst Instrument) (Stream, bool) {
+				if inst.Name == "foo" {
+					return Stream{Name: inst.Name, Description: "", Unit: ""}, true
+				}
+				return Stream{}, false
+			}),
+			// Subsequent NewView with no description/unit in mask should NOT restore instrument defaults
+			NewView(
+				Instrument{Name: "foo"},
+				Stream{
+					Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{1, 5}},
+				},
+			),
+		}
+
+		r := NewManualReader()
+		p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+		r.register(p)
+		var vc cache[string, instID]
+		ins := newInserter[int64](p, &vc)
+		got, err := ins.Instrument(
+			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
+			nil,
+			DefaultAggregationSelector(InstrumentKindCounter),
+		)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+
+		got[0](t.Context(), 1, *attribute.EmptySet())
+		var data metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &data)
+		require.NoError(t, err)
+		require.Len(t, data.ScopeMetrics, 1)
+		require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+		m := data.ScopeMetrics[0].Metrics[0]
+		assert.Empty(t, m.Description, "subsequent NewView without description in mask should not restore default")
+		assert.Empty(t, m.Unit, "subsequent NewView without unit in mask should not restore default")
+	})
+
+	t.Run("SubsequentNewViewExplicitMaskOverridesZeroedField", func(t *testing.T) {
+		views := []View{
+			// Direct view clears description
+			View(func(inst Instrument) (Stream, bool) {
+				if inst.Name == "foo" {
+					return Stream{Name: inst.Name, Description: "", Unit: ""}, true
+				}
+				return Stream{}, false
+			}),
+			// Subsequent NewView explicitly sets Description in mask (last-wins)
+			NewView(Instrument{Name: "foo"}, Stream{Description: "new explicit desc"}),
+		}
+
+		r := NewManualReader()
+		p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+		r.register(p)
+		var vc cache[string, instID]
+		ins := newInserter[int64](p, &vc)
+		got, err := ins.Instrument(
+			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
+			nil,
+			DefaultAggregationSelector(InstrumentKindCounter),
+		)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+
+		got[0](t.Context(), 1, *attribute.EmptySet())
+		var data metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &data)
+		require.NoError(t, err)
+		require.Len(t, data.ScopeMetrics, 1)
+		require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+		m := data.ScopeMetrics[0].Metrics[0]
+		assert.Equal(t, "new explicit desc", m.Description, "explicit NewView mask should override previous view")
+		assert.Empty(t, m.Unit, "unit should remain zeroed from earlier direct view")
+	})
+}
