@@ -51,15 +51,16 @@ func NewMeterConfiguratorHandle() *MeterConfiguratorHandle {
 // not reentrant.
 //
 // Passing a nil fn clears the configurator, reverting to the same default
-// behavior as a handle that has never had Set called on it.
+// behavior as a handle that has never had Set called on it (the Meter
+// enabled; see [MeterConfig]'s zero value).
 func (h *MeterConfiguratorHandle) Set(fn MeterConfigurator) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.version.Add(1)
+	v := h.version.Add(1)
 	if fn == nil {
 		h.configurator.Store(nil)
 	} else {
-		h.configurator.Store(&versionedConfigurator{fn: fn})
+		h.configurator.Store(&versionedConfigurator{fn: fn, version: v})
 	}
 	if cb := h.onUpdate.Load(); cb != nil {
 		(*cb)()
