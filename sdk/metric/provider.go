@@ -144,10 +144,9 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	// would deadlock on the cache's non-reentrant lock otherwise.
 	// An already-cached meter either already has it applied, or will get it from a concurrent Set walk.
 	if meterCreated && mp.configurator != nil {
-		// TODO: version discarded; see revised step 4.
-		fn, _ := mp.configurator()
+		fn, version := mp.configurator()
 		if cr, ok := fn(s).(meterConfigReader); ok {
-			m.setEnabled(cr.Enabled())
+			m.setEnabledIfNewer(version, cr.Enabled())
 		}
 	}
 	return m

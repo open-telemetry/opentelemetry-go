@@ -70,6 +70,12 @@ func (m *meter) setEnabled(enabled bool) {
 	m.enabled.StoreIfNewer(0, enabled)
 }
 
+// setEnabledIfNewer applies enabled if version is at least as new as the
+// version already stored; see versionedEnabled.StoreIfNewer.
+func (m *meter) setEnabledIfNewer(version uint64, enabled bool) { // nolint:revive  // enabled is not a control flag.
+	m.enabled.StoreIfNewer(version, enabled)
+}
+
 // versionedEnabled holds an enabled bool and the version it was last set
 // under.
 type versionedEnabled struct {
