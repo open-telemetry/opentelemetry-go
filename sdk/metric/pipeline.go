@@ -380,7 +380,7 @@ func (i *inserter[N]) composableInstrument(
 	var explicitNames []string
 	seenNames := make(map[string]struct{})
 	for _, m := range matches {
-		if m.Name != "" && !strings.EqualFold(m.Name, inst.Name) {
+		if !strings.EqualFold(m.Name, inst.Name) {
 			norm := strings.ToLower(m.Name)
 			if _, ok := seenNames[norm]; !ok {
 				seenNames[norm] = struct{}{}
@@ -408,7 +408,7 @@ func (i *inserter[N]) composableInstrument(
 	for _, name := range targetNames {
 		var groupStreams []Stream
 		for _, m := range matches {
-			if strings.EqualFold(m.Name, name) || strings.EqualFold(m.Name, inst.Name) || m.Name == "" {
+			if strings.EqualFold(m.Name, name) || strings.EqualFold(m.Name, inst.Name) {
 				groupStreams = append(groupStreams, m)
 			}
 		}
@@ -420,10 +420,10 @@ func (i *inserter[N]) composableInstrument(
 		}
 
 		for _, s := range groupStreams {
-			if s.Description != "" && s.Description != inst.Description {
+			if s.Description != inst.Description {
 				resolved.Description = s.Description
 			}
-			if s.Unit != "" && s.Unit != inst.Unit {
+			if s.Unit != inst.Unit {
 				resolved.Unit = s.Unit
 			}
 			if s.ExemplarReservoirProviderSelector != nil {
