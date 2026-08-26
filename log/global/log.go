@@ -14,8 +14,6 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-// Deprecated: Use [otel.Logger] instead.
-//
 // Logger returns a [log.Logger] configured with the provided name and options
 // from the globally configured [log.LoggerProvider].
 //
@@ -28,12 +26,12 @@ import (
 // This is a convenience function. It is equivalent to:
 //
 //	GetLoggerProvider().Logger(name, options...)
+//
+// Deprecated: Use [otel.Logger] instead.
 func Logger(name string, options ...log.LoggerOption) log.Logger {
 	return otel.Logger(name, options...)
 }
 
-// Deprecated: Use [otel.GetLoggerProvider] instead.
-//
 // GetLoggerProvider returns the globally configured [log.LoggerProvider].
 //
 // If a global LoggerProvider has not been configured with [SetLoggerProvider],
@@ -41,13 +39,15 @@ func Logger(name string, options ...log.LoggerOption) log.Logger {
 // a global LoggerProvider is registered for the first time, the returned
 // LoggerProvider and all Loggers it has created are updated in place. There is
 // no need to call this function again for an updated instance.
+//
+// Deprecated: Use [otel.GetLoggerProvider] instead.
 func GetLoggerProvider() log.LoggerProvider {
 	return otel.GetLoggerProvider()
 }
 
-// Deprecated: Use [otel.SetLoggerProvider] instead.
-//
 // SetLoggerProvider configures provider as the global [log.LoggerProvider].
+//
+// Deprecated: Use [otel.SetLoggerProvider] instead.
 func SetLoggerProvider(provider log.LoggerProvider) {
 	otel.SetLoggerProvider(provider)
 }
