@@ -34,7 +34,7 @@ jobs:
         fix: false
         globs: |
           **/*.md
-      continue-on-error: true
+      continue-on-error: ${{ github.event_name == 'schedule' }}
 
   report:
     if: github.event_name == 'schedule'
@@ -47,16 +47,17 @@ jobs:
       if: github.event_name == 'schedule'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        LINT_OUTCOME: ${{ needs.lint-markdown.outputs.lint_outcome }}
       run: |
         number=$(gh issue list --search "in:title Workflow failed: $GITHUB_WORKFLOW" --limit 1 --json number -q .[].number)
 
         echo $number
 
         if [[ $number ]]; then
-          if [[ "${{ steps.markdownlint.outcome }}" != "failure" ]]; then
+          if [[ $LINT_OUTCOME != "failure" ]]; then
             gh issue close $number
           fi
-        elif [[ "${{ steps.markdownlint.outcome }}" == "failure"  ]]; then
+        elif [[ $LINT_OUTCOME == "failure"  ]]; then
           gh issue create --title "Workflow failed: $GITHUB_WORKFLOW (#$GITHUB_RUN_NUMBER)" \
                           --body "See [$GITHUB_WORKFLOW #$GITHUB_RUN_NUMBER](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)." \
                           --label "report,bot-generated"
