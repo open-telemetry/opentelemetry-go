@@ -30,7 +30,9 @@ type testConfiguratorOpt struct {
 
 func (testConfiguratorOpt) Experimental() {}
 
-func (o testConfiguratorOpt) MeterConfigurator() func(instrumentation.Scope) any { return o.fn }
+func (o testConfiguratorOpt) MeterConfiguratorSnapshot() func() (func(instrumentation.Scope) any, uint64) {
+	return func() (func(instrumentation.Scope) any, uint64) { return o.fn, 0 }
+}
 
 func (o testConfiguratorOpt) RegisterOnUpdate(cb func()) {
 	if o.onUpdate != nil {
@@ -135,8 +137,10 @@ func TestConfiguratorCacheWalkUpdatesCachedMeter(t *testing.T) {
 	assert.True(t, cachedMeter.enabled.Load(), "meter should be enabled before configurator update")
 
 	// Swap configurator to disable all scopes and simulate handle.Set().
-	mp.configurator = func(_ instrumentation.Scope) any {
-		return testMeterConfig{enabled: false}
+	mp.configurator = func() (func(instrumentation.Scope) any, uint64) {
+		return func(_ instrumentation.Scope) any {
+			return testMeterConfig{enabled: false}
+		}, 0
 	}
 	if storedCallback != nil {
 		storedCallback()
@@ -227,8 +231,10 @@ func TestInstrumentEnabledReflectsConfigurator(t *testing.T) {
 
 	// Re-enable via configurator update; Enabled() should reflect the live
 	// meter state rather than a value captured at instrument-creation time.
-	mp.configurator = func(instrumentation.Scope) any {
-		return testMeterConfig{enabled: true}
+	mp.configurator = func() (func(instrumentation.Scope) any, uint64) {
+		return func(instrumentation.Scope) any {
+			return testMeterConfig{enabled: true}
+		}, 0
 	}
 	require.NotNil(t, storedCallback)
 	storedCallback()
@@ -256,8 +262,10 @@ func TestInstrumentAddGatedByConfigurator(t *testing.T) {
 	assert.Empty(t, rm.ScopeMetrics, "Add on a disabled meter should not reach the aggregator")
 
 	// Re-enable and confirm Add() now reaches the aggregator.
-	mp.configurator = func(instrumentation.Scope) any {
-		return testMeterConfig{enabled: true}
+	mp.configurator = func() (func(instrumentation.Scope) any, uint64) {
+		return func(instrumentation.Scope) any {
+			return testMeterConfig{enabled: true}
+		}, 0
 	}
 	require.NotNil(t, storedCallback)
 	storedCallback()
@@ -294,8 +302,10 @@ func TestObservableCallbackGatedByConfigurator(t *testing.T) {
 	assert.Empty(t, rm.ScopeMetrics, "callback Observe on a disabled meter should not reach the aggregator")
 
 	// Re-enable and confirm the callback's Observe() now reaches the aggregator.
-	mp.configurator = func(instrumentation.Scope) any {
-		return testMeterConfig{enabled: true}
+	mp.configurator = func() (func(instrumentation.Scope) any, uint64) {
+		return func(instrumentation.Scope) any {
+			return testMeterConfig{enabled: true}
+		}, 0
 	}
 	require.NotNil(t, storedCallback)
 	storedCallback()
@@ -332,8 +342,10 @@ func TestObserverObserveGatedByConfigurator(t *testing.T) {
 	assert.Empty(t, rm.ScopeMetrics, "ObserveInt64 on a disabled meter should not reach the aggregator")
 
 	// Re-enable and confirm ObserveInt64 now reaches the aggregator.
-	mp.configurator = func(instrumentation.Scope) any {
-		return testMeterConfig{enabled: true}
+	mp.configurator = func() (func(instrumentation.Scope) any, uint64) {
+		return func(instrumentation.Scope) any {
+			return testMeterConfig{enabled: true}
+		}, 0
 	}
 	require.NotNil(t, storedCallback)
 	storedCallback()

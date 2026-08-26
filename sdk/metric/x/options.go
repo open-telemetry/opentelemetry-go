@@ -89,17 +89,24 @@ func WithMeterConfigurator(h *MeterConfiguratorHandle) sdkmetric.Option {
 	return meterConfiguratorProviderOption{handle: h}
 }
 
-// MeterConfigurator returns a closure over the handle so sdk/metric can call
-// it via duck-type without importing this package.
-func (o meterConfiguratorProviderOption) MeterConfigurator() func(instrumentation.Scope) any {
-	return func(s instrumentation.Scope) any {
+// MeterConfiguratorSnapshot returns a closure over the handle so sdk/metric
+// can call it via duck-type without importing this package. Calling the
+// returned function takes one atomic snapshot of the currently installed
+// configurator and the version it was set under. Callers evaluating multiple
+// scopes against the same snapshot should call it once and reuse the
+// returned per-scope function and version, rather than calling it again per
+// scope.
+func (o meterConfiguratorProviderOption) MeterConfiguratorSnapshot() func() (func(instrumentation.Scope) any, uint64) {
+	defaultFn := func(instrumentation.Scope) any { return MeterConfig{} }
+	return func() (func(instrumentation.Scope) any, uint64) {
 		if o.handle == nil {
-			return MeterConfig{}
+			return defaultFn, 0
 		}
-		if vc := o.handle.configurator.Load(); vc != nil {
-			return vc.fn(s)
+		vc := o.handle.configurator.Load()
+		if vc == nil {
+			return defaultFn, 0
 		}
-		return MeterConfig{}
+		return func(s instrumentation.Scope) any { return vc.fn(s) }, vc.version
 	}
 }
 

@@ -15,13 +15,17 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
 )
 
-type meterConfigurator func(instrumentation.Scope) any
+// meterConfiguratorSnapshotFunc snapshots the currently installed configurator
+// and the version it was set under. Callers evaluating multiple scopes against
+// the same snapshot should call it once and reuse the returned per-scope
+// function and version, rather than calling it again per scope.
+type meterConfiguratorSnapshotFunc func() (func(instrumentation.Scope) any, uint64)
 
 type meterConfigReader interface{ Enabled() bool }
 
 type meterConfiguratorOption interface {
 	Experimental()
-	MeterConfigurator() func(instrumentation.Scope) any
+	MeterConfiguratorSnapshot() func() (func(instrumentation.Scope) any, uint64)
 	RegisterOnUpdate(func())
 }
 
@@ -37,7 +41,7 @@ type MeterProvider struct {
 	// configurator is written once, in NewMeterProvider before mp is returned to
 	// any caller, and never reassigned after. No synchronization is needed for
 	// that single write or the reads that follow it.
-	configurator meterConfigurator
+	configurator meterConfiguratorSnapshotFunc
 
 	forceFlush, shutdown func(context.Context) error
 	stopped              atomic.Bool
@@ -69,10 +73,13 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 		}
 	}
 	if mco != nil {
-		mp.configurator = mco.MeterConfigurator()
+		mp.configurator = mco.MeterConfiguratorSnapshot()
 		mco.RegisterOnUpdate(func() {
 			mp.meters.Range(func(s instrumentation.Scope, m *meter) {
-				if cr, ok := mp.configurator(s).(meterConfigReader); ok {
+				// TODO: snapshotting per meter, not once per walk; see
+				// revised step 5.
+				fn, _ := mp.configurator()
+				if cr, ok := fn(s).(meterConfigReader); ok {
 					m.setEnabled(cr.Enabled())
 				}
 			})
@@ -137,7 +144,9 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	// would deadlock on the cache's non-reentrant lock otherwise.
 	// An already-cached meter either already has it applied, or will get it from a concurrent Set walk.
 	if meterCreated && mp.configurator != nil {
-		if cr, ok := mp.configurator(s).(meterConfigReader); ok {
+		// TODO: version discarded; see revised step 4.
+		fn, _ := mp.configurator()
+		if cr, ok := fn(s).(meterConfigReader); ok {
 			m.setEnabled(cr.Enabled())
 		}
 	}

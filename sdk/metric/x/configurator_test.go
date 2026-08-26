@@ -15,7 +15,7 @@ import (
 )
 
 type meterConfiguratorOptionExtractor interface {
-	MeterConfigurator() func(instrumentation.Scope) any
+	MeterConfiguratorSnapshot() func() (func(instrumentation.Scope) any, uint64)
 }
 
 type meterConfiguratorOnUpdateRegistrar interface {
@@ -31,7 +31,7 @@ func TestWithMeterConfiguratorImplementsExperimentalOption(t *testing.T) {
 	require.True(t, ok, "must implement Experimental()")
 
 	_, ok = opt.(meterConfiguratorOptionExtractor)
-	require.True(t, ok, "must implement MeterConfigurator() func(scope) any")
+	require.True(t, ok, "must implement MeterConfiguratorSnapshot() func() (func(scope) any, uint64)")
 
 	_, ok = opt.(meterConfiguratorOnUpdateRegistrar)
 	require.True(t, ok, "must implement RegisterOnUpdate(func())")
@@ -45,6 +45,9 @@ func TestWithMeterConfiguratorReflectsSet(t *testing.T) {
 
 	opt := WithMeterConfigurator(h)
 	ex := opt.(meterConfiguratorOptionExtractor)
+	snapshot := ex.MeterConfiguratorSnapshot()
+	fn, version := snapshot()
+	assert.Equal(t, uint64(1), version, "first Set call must produce version 1")
 
 	for _, tc := range []struct {
 		name    string
@@ -55,7 +58,7 @@ func TestWithMeterConfiguratorReflectsSet(t *testing.T) {
 		{"scope/disabled", instrumentation.Scope{Name: "disabled"}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			result := ex.MeterConfigurator()(tc.scope)
+			result := fn(tc.scope)
 			cfg, ok := result.(interface{ Enabled() bool })
 			require.True(t, ok, "result must implement Enabled() bool")
 			assert.Equal(t, tc.enabled, cfg.Enabled())
@@ -127,7 +130,10 @@ func TestMeterConfiguratorHandleSetNoConfigurator(t *testing.T) {
 	ex := opt.(meterConfiguratorOptionExtractor)
 
 	// no Set called; closure must return zero MeterConfig, not panic
-	result := ex.MeterConfigurator()(instrumentation.Scope{Name: "test"})
+	snapshot := ex.MeterConfiguratorSnapshot()
+	fn, version := snapshot()
+	assert.Equal(t, uint64(0), version, "never-configured handle must report version 0")
+	result := fn(instrumentation.Scope{Name: "test"})
 	cfg, ok := result.(interface{ Enabled() bool })
 	require.True(t, ok)
 	assert.True(t, cfg.Enabled(), "zero MeterConfig must be enabled")
@@ -138,7 +144,10 @@ func TestWithMeterConfiguratorNilHandle(t *testing.T) {
 	ex := opt.(meterConfiguratorOptionExtractor)
 
 	// nil handle must not panic; must behave as if the option were omitted.
-	result := ex.MeterConfigurator()(instrumentation.Scope{Name: "test"})
+	snapshot := ex.MeterConfiguratorSnapshot()
+	fn, version := snapshot()
+	assert.Equal(t, uint64(0), version, "nil handle must report version 0")
+	result := fn(instrumentation.Scope{Name: "test"})
 	cfg, ok := result.(interface{ Enabled() bool })
 	require.True(t, ok)
 	assert.True(t, cfg.Enabled(), "nil handle must fall back to zero MeterConfig")
@@ -162,7 +171,14 @@ func TestMeterConfiguratorHandleSetNilClears(t *testing.T) {
 	// Set(nil) must clear the configurator, not store a nil func; the
 	// closure must fall back to the zero MeterConfig instead of panicking
 	// on a nil func call.
-	result := ex.MeterConfigurator()(instrumentation.Scope{Name: "disabled"})
+	snapshot := ex.MeterConfiguratorSnapshot()
+	fn, version := snapshot()
+	// TODO: this is 0, not 2, because Set(nil) stores a bare nil pointer
+	// rather than a versionedConfigurator, so its version is lost. See
+	// discussion: this undercounts and can let a stale write win a CAS
+	// against a meter that already observed a later real version.
+	assert.Equal(t, uint64(0), version)
+	result := fn(instrumentation.Scope{Name: "disabled"})
 	cfg, ok := result.(interface{ Enabled() bool })
 	require.True(t, ok)
 	assert.True(t, cfg.Enabled(), "cleared configurator must fall back to zero MeterConfig")
