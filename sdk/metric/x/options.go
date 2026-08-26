@@ -17,8 +17,17 @@ import (
 // immediately across all existing meters via a synchronous cache walk.
 type MeterConfiguratorHandle struct {
 	mu           sync.Mutex // serializes Set calls; see Set's doc comment
-	configurator atomic.Pointer[MeterConfigurator]
+	configurator atomic.Pointer[versionedConfigurator]
 	onUpdate     atomic.Pointer[func()] // To avoid race between handle.Set() and RegisterOnUpdate
+	version      atomic.Uint64          // bumped once per Set call; see Set
+}
+
+// versionedConfigurator pairs a MeterConfigurator with the version it was set
+// under, so the two are always stored and read together and can never be
+// observed mismatched.
+type versionedConfigurator struct {
+	fn      MeterConfigurator
+	version uint64
 }
 
 // NewMeterConfiguratorHandle returns a new [MeterConfiguratorHandle] with no
@@ -46,10 +55,11 @@ func NewMeterConfiguratorHandle() *MeterConfiguratorHandle {
 func (h *MeterConfiguratorHandle) Set(fn MeterConfigurator) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	h.version.Add(1)
 	if fn == nil {
 		h.configurator.Store(nil)
 	} else {
-		h.configurator.Store(&fn)
+		h.configurator.Store(&versionedConfigurator{fn: fn})
 	}
 	if cb := h.onUpdate.Load(); cb != nil {
 		(*cb)()
@@ -85,8 +95,8 @@ func (o meterConfiguratorProviderOption) MeterConfigurator() func(instrumentatio
 		if o.handle == nil {
 			return MeterConfig{}
 		}
-		if p := o.handle.configurator.Load(); p != nil {
-			return (*p)(s)
+		if vc := o.handle.configurator.Load(); vc != nil {
+			return vc.fn(s)
 		}
 		return MeterConfig{}
 	}
