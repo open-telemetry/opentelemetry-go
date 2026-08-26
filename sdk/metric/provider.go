@@ -75,12 +75,10 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 	if mco != nil {
 		mp.configurator = mco.MeterConfiguratorSnapshot()
 		mco.RegisterOnUpdate(func() {
+			fn, version := mp.configurator()
 			mp.meters.Range(func(s instrumentation.Scope, m *meter) {
-				// TODO: snapshotting per meter, not once per walk; see
-				// revised step 5.
-				fn, _ := mp.configurator()
 				if cr, ok := fn(s).(meterConfigReader); ok {
-					m.setEnabled(cr.Enabled())
+					m.setEnabledIfNewer(version, cr.Enabled())
 				}
 			})
 		})
