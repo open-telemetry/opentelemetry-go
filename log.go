@@ -1,21 +1,13 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-/*
-Package global provides access to a global implementation of the OpenTelemetry
-Logs API.
-
-Deprecated: Use the equivalent APIs in [go.opentelemetry.io/otel].
-*/
-package global
+package otel
 
 import (
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 )
 
-// Deprecated: Use [otel.Logger] instead.
-//
 // Logger returns a [log.Logger] configured with the provided name and options
 // from the globally configured [log.LoggerProvider].
 //
@@ -29,11 +21,9 @@ import (
 //
 //	GetLoggerProvider().Logger(name, options...)
 func Logger(name string, options ...log.LoggerOption) log.Logger {
-	return otel.Logger(name, options...)
+	return GetLoggerProvider().Logger(name, options...)
 }
 
-// Deprecated: Use [otel.GetLoggerProvider] instead.
-//
 // GetLoggerProvider returns the globally configured [log.LoggerProvider].
 //
 // If a global LoggerProvider has not been configured with [SetLoggerProvider],
@@ -42,12 +32,10 @@ func Logger(name string, options ...log.LoggerOption) log.Logger {
 // LoggerProvider and all Loggers it has created are updated in place. There is
 // no need to call this function again for an updated instance.
 func GetLoggerProvider() log.LoggerProvider {
-	return otel.GetLoggerProvider()
+	return global.LoggerProvider()
 }
 
-// Deprecated: Use [otel.SetLoggerProvider] instead.
-//
 // SetLoggerProvider configures provider as the global [log.LoggerProvider].
 func SetLoggerProvider(provider log.LoggerProvider) {
-	otel.SetLoggerProvider(provider)
+	global.SetLoggerProvider(provider)
 }

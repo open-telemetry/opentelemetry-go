@@ -30,6 +30,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/otel/log v0.22.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 )
@@ -45,3 +46,5 @@ replace go.opentelemetry.io/otel/trace => ../../trace
 replace go.opentelemetry.io/otel/metric => ../../metric
 
 replace go.opentelemetry.io/otel/metric/x => ../../metric/x
+
+replace go.opentelemetry.io/otel/log => ../../log
