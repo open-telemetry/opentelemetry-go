@@ -4,6 +4,7 @@
 package otel
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,13 +14,26 @@ import (
 	"go.opentelemetry.io/otel/log/noop"
 )
 
-type testLoggerProvider struct{ embedded.LoggerProvider }
+type testLoggerProvider struct {
+	embedded.LoggerProvider
+
+	logger log.Logger
+}
 
 var _ log.LoggerProvider = &testLoggerProvider{}
 
-func (*testLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
+func (p *testLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
+	if p.logger != nil {
+		return p.logger
+	}
 	return noop.NewLoggerProvider().Logger("")
 }
+
+type testLogger struct{ embedded.Logger }
+
+func (*testLogger) Emit(context.Context, log.Record) {}
+
+func (*testLogger) Enabled(context.Context, log.EnabledParameters) bool { return false }
 
 func TestMultipleGlobalLoggerProvider(t *testing.T) {
 	p1 := testLoggerProvider{}
@@ -28,4 +42,11 @@ func TestMultipleGlobalLoggerProvider(t *testing.T) {
 	SetLoggerProvider(p2)
 
 	assert.Equal(t, p2, GetLoggerProvider())
+}
+
+func TestLogger(t *testing.T) {
+	provider := &testLoggerProvider{logger: &testLogger{}}
+	SetLoggerProvider(provider)
+
+	assert.Same(t, provider.logger, Logger("test"))
 }
