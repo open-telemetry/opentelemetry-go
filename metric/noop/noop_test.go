@@ -99,8 +99,7 @@ func TestImplementationNoPanics(t *testing.T) {
 
 func assertAllExportedMethodNoPanic(rVal reflect.Value, rType reflect.Type) func(*testing.T) {
 	return func(t *testing.T) {
-		for n := 0; n < rType.NumMethod(); n++ {
-			mType := rType.Method(n)
+		for mType := range rType.Methods() {
 			if !mType.IsExported() {
 				t.Logf("ignoring unexported %s", mType.Name)
 				continue

@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `Logger`, `GetLoggerProvider`, and `SetLoggerProvider` to `go.opentelemetry.io/otel`. (#8874)
+
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/otel/log/global`; use the equivalent APIs in `go.opentelemetry.io/otel`. (#8874)
+
+### Removed
+
+- Drop support for [Go 1.25]. (#8876)
+
 ### Fixed
 
 - Treat empty `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` values as unset in `go.opentelemetry.io/otel/sdk/trace`.

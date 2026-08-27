@@ -218,8 +218,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
 			if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-				var maxBytesErr *http.MaxBytesError
-				if errors.As(err, &maxBytesErr) {
+				if maxBytesErr, ok := errors.AsType[*http.MaxBytesError](err); ok {
 					return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
 				}
 				return err
@@ -260,8 +259,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		// debugging the actual issue.
 		var respData bytes.Buffer
 		if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-			var maxBytesErr *http.MaxBytesError
-			if errors.As(err, &maxBytesErr) {
+			if maxBytesErr, ok := errors.AsType[*http.MaxBytesError](err); ok {
 				return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
 			}
 			return err
