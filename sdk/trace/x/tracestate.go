@@ -56,7 +56,15 @@ func tracestateRandomness(otts string) (randomness uint64, hasRandomness bool) {
 		return 0, false
 	}
 
-	rv, err := strconv.ParseUint(otts[start:start+14], 16, 56)
+	rvStr := otts[start : start+14]
+	for i := range len(rvStr) {
+		c := rvStr[i]
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return 0, false
+		}
+	}
+
+	rv, err := strconv.ParseUint(rvStr, 16, 56)
 	if err != nil {
 		return 0, false
 	}

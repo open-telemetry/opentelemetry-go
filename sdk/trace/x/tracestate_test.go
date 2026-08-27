@@ -29,6 +29,7 @@ func TestTracestateRandomness(t *testing.T) {
 		{"rv value too short", "rv:0123456789abc", 0, false},
 		{"rv value too long", "rv:0123456789abcdef", 0, false},
 		{"rv with invalid hex", "rv:0123456789abcg", 0, false},
+		{"rv with uppercase hex", "rv:FFFFFFFFFFFFFF", 0, false},
 	}
 
 	for _, tc := range testCases {
