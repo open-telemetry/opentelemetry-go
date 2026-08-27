@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/sdk
 
-go 1.25.0
+go 1.26.0
 
 replace go.opentelemetry.io/otel => ../
 
@@ -21,6 +21,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/otel/log v0.22.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 )
 
@@ -31,3 +32,5 @@ replace go.opentelemetry.io/otel/metric => ../metric
 replace go.opentelemetry.io/otel/sdk/metric => ./metric
 
 replace go.opentelemetry.io/otel/metric/x => ../metric/x
+
+replace go.opentelemetry.io/otel/log => ../log
