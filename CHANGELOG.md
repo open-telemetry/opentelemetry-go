@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `Logger`, `GetLoggerProvider`, and `SetLoggerProvider` to `go.opentelemetry.io/otel`. (#8874)
+
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/otel/log/global`; use the equivalent APIs in `go.opentelemetry.io/otel`. (#8874)
+
+### Removed
+
+- Drop support for [Go 1.25]. (#8876)
+
 ### Fixed
 
 - Ignore HTTP(S) paths when deriving gRPC trace exporter endpoints from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#8852)
