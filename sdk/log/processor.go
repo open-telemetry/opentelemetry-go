@@ -24,6 +24,9 @@ import (
 // OnEmit, or ForceFlush when shutdown starts. Callers that use a Processor
 // directly are responsible for coordinating those calls with Shutdown.
 type Processor interface {
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
+
 	// Enabled reports whether the Processor will process a Record for the given
 	// context and param.
 	//
@@ -52,6 +55,8 @@ type Processor interface {
 	// return false. Otherwise, it returns true.
 	//
 	Enabled(ctx context.Context, param EnabledParameters) bool
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// OnEmit is called when a Record is emitted.
 	//
@@ -77,6 +82,8 @@ type Processor interface {
 	// processing may cause race conditions. Use Record.Clone
 	// to create a copy that shares no state with the original.
 	OnEmit(ctx context.Context, record *Record) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// Shutdown is called when the SDK shuts down. Any cleanup or release of
 	// resources held by the Processor (and any underlying Exporter) should be
@@ -95,6 +102,8 @@ type Processor interface {
 	// After Shutdown is called, calls to OnEmit, Shutdown, or ForceFlush
 	// should perform no operation and return nil.
 	Shutdown(ctx context.Context) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 
 	// ForceFlush exports any log records that have not yet been exported to the
 	// configured Exporter.
@@ -102,6 +111,8 @@ type Processor interface {
 	// The deadline or cancellation of the passed context must be honored. An
 	// appropriate error should be returned in these situations.
 	ForceFlush(ctx context.Context) error
+	// DO NOT CHANGE: any modification will not be backwards compatible and
+	// must never be done outside of a new major release.
 }
 
 // EnabledParameters represents the payload for [Processor.Enabled].

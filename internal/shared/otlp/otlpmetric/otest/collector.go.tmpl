@@ -376,8 +376,7 @@ func (c *HTTPCollector) respond(w http.ResponseWriter, resp ExportResult) {
 	if resp.Err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		var e *HTTPResponseError
-		if errors.As(resp.Err, &e) {
+		if e, ok := errors.AsType[*HTTPResponseError](resp.Err); ok {
 			for k, vals := range e.Header {
 				for _, v := range vals {
 					w.Header().Add(k, v)
