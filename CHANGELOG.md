@@ -13,7 +13,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [1.47.0-rc.1] - 2026-08-27
 
-This release is a release candidate for the Logs API and SDK.
+This is a release candidate for the v1.47.0 release.
+That release is expected to include the `v1` release of the OpenTelemetry Go Logs API and SDK and will provide stability guarantees for the following modules:
+
+- `go.opentelemetry.io/otel/log`
+- `go.opentelemetry.io/otel/sdk/log`
+
+See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
 
 ### Added
 
