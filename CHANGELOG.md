@@ -23,6 +23,10 @@ This release is a release candidate for the Logs API and SDK.
 
 - Deprecate `go.opentelemetry.io/otel/log/global`; use the equivalent APIs in `go.opentelemetry.io/otel`. (#8874)
 
+### Removed
+
+- Drop support for [Go 1.25]. (#8876)
+
 ## [1.46.0/0.68.0/0.22.0/0.0.19] - 2026-08-25
 
 This release is the last to support [Go 1.25].
