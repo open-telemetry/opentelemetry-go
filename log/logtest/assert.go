@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package logtest // import "go.opentelemetry.io/otel/log/logtest"
+package logtest
 
 import (
 	"context"
@@ -19,7 +19,8 @@ type TestingT interface {
 	Errorf(format string, args ...any)
 }
 
-// AssertEqual asserts that the two concrete data-types from the logtest package are equal.
+// AssertEqual asserts that the two concrete data types from the logtest package
+// are equal.
 func AssertEqual[T Recording | Record](t TestingT, want, got T, opts ...AssertOption) bool {
 	if h, ok := t.(interface{ Helper() }); ok {
 		h.Helper()
@@ -63,7 +64,7 @@ type assertConfig struct {
 	args    []any
 }
 
-// AssertOption allows for fine grain control over how AssertEqual operates.
+// AssertOption allows for fine-grained control over how AssertEqual operates.
 type AssertOption interface {
 	apply(cfg assertConfig) assertConfig
 }
@@ -74,9 +75,8 @@ func (fn fnOption) apply(cfg assertConfig) assertConfig {
 	return fn(cfg)
 }
 
-// Transform applies a transformation f function that
-// converts values of a certain type into that of another.
-// f must not mutate A in any way.
+// Transform applies the transformation function f, which converts values of
+// one type to another. f must not mutate values of type A in any way.
 func Transform[A, B any](f func(A) B) AssertOption {
 	return fnOption(func(cfg assertConfig) assertConfig {
 		cfg.cmpOpts = append(cfg.cmpOpts, cmp.Transformer("", f))

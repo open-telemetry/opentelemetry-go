@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 var (
@@ -401,6 +401,15 @@ func TestMarshalJSON(t *testing.T) {
 	require.JSONEq(t,
 		`[{"Key":"A","Value":{"Type":"INT64","Value":1}},{"Key":"C","Value":{"Type":"STRING","Value":"D"}}]`,
 		string(data))
+}
+
+func TestMarshalLogNilResource(t *testing.T) {
+	var r *resource.Resource
+	var got any
+	require.NotPanics(t, func() {
+		got = r.MarshalLog()
+	})
+	assert.Equal(t, resource.Empty().MarshalLog(), got)
 }
 
 func TestNew(t *testing.T) {

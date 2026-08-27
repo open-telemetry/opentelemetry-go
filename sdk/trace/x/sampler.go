@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package x contains experimental trace features.
-package x // import "go.opentelemetry.io/otel/sdk/trace/x"
+package x
 
 import (
 	"encoding/binary"

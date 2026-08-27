@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package log // import "go.opentelemetry.io/otel/sdk/log"
+package log
 
 import (
 	"context"
@@ -24,8 +24,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
-	"go.opentelemetry.io/otel/semconv/v1.42.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -73,6 +73,12 @@ func TestLoggerEmit(t *testing.T) {
 		attribute.Int64("1", 3),
 	))
 
+	rWithErr := r
+	rWithErr.SetErr(errors.New("boom"))
+
+	attrLimitResource := resource.NewSchemaless(attribute.String("key", "value"))
+	attrLimitScope := instrumentation.Scope{Name: "scope"}
+
 	contextWithSpanContext := trace.ContextWithSpanContext(
 		t.Context(),
 		trace.NewSpanContext(trace.SpanContextConfig{
@@ -84,26 +90,30 @@ func TestLoggerEmit(t *testing.T) {
 
 	testCases := []struct {
 		name            string
-		logger          *logger
+		loggerFn        func(*testing.T) *logger
 		ctx             context.Context
 		record          log.Record
 		expectedRecords []Record
 	}{
 		{
-			name:   "NoProcessors",
-			logger: newLogger(NewLoggerProvider(), instrumentation.Scope{}),
+			name: "NoProcessors",
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(), instrumentation.Scope{})
+			},
 			ctx:    t.Context(),
 			record: r,
 		},
 		{
 			name: "WithProcessors",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(3),
-				WithAttributeCountLimit(2),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(3),
+					WithAttributeCountLimit(2),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    t.Context(),
 			record: r,
 			expectedRecords: []Record{
@@ -127,24 +137,121 @@ func TestLoggerEmit(t *testing.T) {
 			},
 		},
 		{
+			name: "ZeroAttributeCountLimitOption",
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(defaultAttrValLenLim),
+					WithAttributeCountLimit(0),
+					WithResource(attrLimitResource),
+				), attrLimitScope)
+			},
+			ctx:    t.Context(),
+			record: rWithErr,
+			expectedRecords: []Record{
+				{
+					eventName:                 rWithErr.EventName(),
+					timestamp:                 rWithErr.Timestamp(),
+					body:                      rWithErr.Body(),
+					severity:                  rWithErr.Severity(),
+					severityText:              rWithErr.SeverityText(),
+					observedTimestamp:         rWithErr.ObservedTimestamp(),
+					resource:                  attrLimitResource,
+					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeCountLimit:       0,
+					scope:                     &attrLimitScope,
+					dropped:                   4,
+				},
+			},
+		},
+		{
+			name: "ZeroAttributeCountLimitEnvironment",
+			loggerFn: func(t *testing.T) *logger {
+				t.Setenv(envarAttrCntLim, "0")
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(defaultAttrValLenLim),
+					WithResource(attrLimitResource),
+				), attrLimitScope)
+			},
+			ctx:    t.Context(),
+			record: rWithErr,
+			expectedRecords: []Record{
+				{
+					eventName:                 rWithErr.EventName(),
+					timestamp:                 rWithErr.Timestamp(),
+					body:                      rWithErr.Body(),
+					severity:                  rWithErr.Severity(),
+					severityText:              rWithErr.SeverityText(),
+					observedTimestamp:         rWithErr.ObservedTimestamp(),
+					resource:                  attrLimitResource,
+					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeCountLimit:       0,
+					scope:                     &attrLimitScope,
+					dropped:                   4,
+				},
+			},
+		},
+		{
+			name: "NegativeAttributeCountLimit",
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(defaultAttrValLenLim),
+					WithAttributeCountLimit(-1),
+					WithResource(attrLimitResource),
+				), attrLimitScope)
+			},
+			ctx:    t.Context(),
+			record: rWithErr,
+			expectedRecords: []Record{
+				{
+					eventName:                 rWithErr.EventName(),
+					timestamp:                 rWithErr.Timestamp(),
+					body:                      rWithErr.Body(),
+					severity:                  rWithErr.Severity(),
+					severityText:              rWithErr.SeverityText(),
+					observedTimestamp:         rWithErr.ObservedTimestamp(),
+					resource:                  attrLimitResource,
+					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeCountLimit:       -1,
+					scope:                     &attrLimitScope,
+					front: [attributesInlineCount]attribute.KeyValue{
+						attribute.String("k1", "str"),
+						attribute.Float64("k2", 1.0),
+						exceptionMessageKey.String("boom"),
+						exceptionTypeKey.String("*errors.errorString"),
+					},
+					nFront: 4,
+				},
+			},
+		},
+		{
 			name: "WithProcessorsWithError",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p2WithError),
-				WithAttributeValueLengthLimit(3),
-				WithAttributeCountLimit(2),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p2WithError),
+					WithAttributeValueLengthLimit(3),
+					WithAttributeCountLimit(2),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx: t.Context(),
 		},
 		{
 			name: "WithTraceSpanInContext",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(3),
-				WithAttributeCountLimit(2),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(3),
+					WithAttributeCountLimit(2),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    contextWithSpanContext,
 			record: r,
 			expectedRecords: []Record{
@@ -172,13 +279,15 @@ func TestLoggerEmit(t *testing.T) {
 		},
 		{
 			name: "WithNilContext",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(3),
-				WithAttributeCountLimit(2),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(3),
+					WithAttributeCountLimit(2),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    t.Context(),
 			record: r,
 			expectedRecords: []Record{
@@ -203,13 +312,15 @@ func TestLoggerEmit(t *testing.T) {
 		},
 		{
 			name: "NoObservedTimestamp",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(3),
-				WithAttributeCountLimit(2),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(3),
+					WithAttributeCountLimit(2),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    t.Context(),
 			record: rWithNoObservedTimestamp,
 			expectedRecords: []Record{
@@ -234,14 +345,16 @@ func TestLoggerEmit(t *testing.T) {
 		},
 		{
 			name: "WithAllowKeyDuplication",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(5),
-				WithAttributeCountLimit(5),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-				WithAllowKeyDuplication(),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(5),
+					WithAttributeCountLimit(5),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+					WithAllowKeyDuplication(),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    t.Context(),
 			record: rWithAllowKeyDuplication,
 			expectedRecords: []Record{
@@ -268,13 +381,15 @@ func TestLoggerEmit(t *testing.T) {
 		},
 		{
 			name: "WithDuplicatesInBody",
-			logger: newLogger(NewLoggerProvider(
-				WithProcessor(p0),
-				WithProcessor(p1),
-				WithAttributeValueLengthLimit(5),
-				WithAttributeCountLimit(5),
-				WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
-			), instrumentation.Scope{Name: "scope"}),
+			loggerFn: func(*testing.T) *logger {
+				return newLogger(NewLoggerProvider(
+					WithProcessor(p0),
+					WithProcessor(p1),
+					WithAttributeValueLengthLimit(5),
+					WithAttributeCountLimit(5),
+					WithResource(resource.NewSchemaless(attribute.String("key", "value"))),
+				), instrumentation.Scope{Name: "scope"})
+			},
 			ctx:    t.Context(),
 			record: rWithDuplicatesInBody,
 			expectedRecords: []Record{
@@ -308,12 +423,86 @@ func TestLoggerEmit(t *testing.T) {
 			p0.records = nil
 			p1.records = nil
 
-			tc.logger.Emit(tc.ctx, tc.record)
+			tc.loggerFn(t).Emit(tc.ctx, tc.record)
 
 			assert.Equal(t, tc.expectedRecords, p0.records)
 			assert.Equal(t, tc.expectedRecords, p1.records)
 		})
 	}
+}
+
+func TestLoggerEmitInvalidAttributes(t *testing.T) {
+	want := []attribute.KeyValue{
+		attribute.String("Key", "upper"),
+		attribute.String("key", "lower"),
+	}
+
+	var record log.Record
+	record.AddAttributes(want[0], attribute.String("", "invalid"), want[1])
+	require.Equal(t, 3, record.AttributesLen())
+
+	processor := newProcessor("processor")
+	provider := NewLoggerProvider(WithProcessor(processor))
+	provider.Logger("logger").Emit(t.Context(), record)
+
+	require.Len(t, processor.records, 1)
+	var got []attribute.KeyValue
+	processor.records[0].WalkAttributes(func(kv attribute.KeyValue) bool {
+		got = append(got, kv)
+		return true
+	})
+	assert.Equal(t, want, got)
+	assert.Zero(t, processor.records[0].DroppedAttributes())
+}
+
+func TestLoggerEmitErrorHandlerShutdown(t *testing.T) {
+	proc := newProcessor("processor")
+	proc.onEmitFunc = func(context.Context, *Record) error { return assert.AnError }
+	provider := NewLoggerProvider(WithProcessor(proc))
+	logger := provider.Logger("logger")
+	ctx := t.Context()
+
+	orig := otel.GetErrorHandler()
+	t.Cleanup(func() { otel.SetErrorHandler(orig) })
+
+	var (
+		handledErr  error
+		shutdownErr error
+	)
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		handledErr = err
+		shutdownErr = provider.Shutdown(ctx)
+	}))
+
+	done := make(chan struct{})
+	go func() {
+		logger.Emit(ctx, log.Record{})
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("Emit deadlocked when the error handler called Shutdown")
+	}
+
+	assert.ErrorIs(t, handledErr, assert.AnError)
+	assert.NoError(t, shutdownErr)
+	assert.Equal(t, 1, proc.shutdownCalls)
+}
+
+func TestLoggerEmitAfterProviderShutdown(t *testing.T) {
+	proc := newProcessor("processor")
+	provider := NewLoggerProvider(WithProcessor(proc))
+	logger := provider.Logger("logger")
+
+	logger.Emit(t.Context(), log.Record{})
+	require.Len(t, proc.records, 1)
+
+	require.NoError(t, provider.Shutdown(t.Context()))
+	logger.Emit(t.Context(), log.Record{})
+
+	assert.Len(t, proc.records, 1)
 }
 
 func TestNewRecordAddsExceptionAttrs(t *testing.T) {
@@ -337,7 +526,7 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 		assert.Contains(t, gotAttrs, attribute.String(string(semconv.ExceptionMessageKey), "boom"))
 	})
 
-	t.Run("ShortCircuitsAtAttributeLimit", func(t *testing.T) {
+	t.Run("OneSlotLeft", func(t *testing.T) {
 		var in log.Record
 		in.SetBody(attribute.StringValue("boom"))
 		in.SetSeverity(log.SeverityError)
@@ -360,6 +549,7 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 
 		assert.Empty(t, gotType)
 		assert.Equal(t, "boom", gotMessage)
+		assert.Equal(t, 1, got.DroppedAttributes())
 	})
 
 	t.Run("NoSlotsLeft", func(t *testing.T) {
@@ -384,18 +574,61 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 
 		assert.Empty(t, gotType)
 		assert.Empty(t, gotMessage)
+		assert.Equal(t, 2, got.DroppedAttributes())
+	})
+
+	t.Run("EmptyMessageWithNoSlotsLeft", func(t *testing.T) {
+		err := &errWithType{typ: "custom.type"}
+		var in log.Record
+		in.SetErr(err)
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(0)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
+
+		assert.Zero(t, got.AttributesLen())
+		assert.Equal(t, 1, got.DroppedAttributes())
+		assert.False(t, err.typeCalled)
+	})
+
+	t.Run("CallerProvidedAttributesWithNoSlotsLeft", func(t *testing.T) {
+		var in log.Record
+		in.SetErr(errors.New("boom"))
+		in.AddAttributes(
+			exceptionMessageKey.String("message"),
+			exceptionTypeKey.String("type"),
+		)
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(0)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
+
+		assert.Zero(t, got.AttributesLen())
+		assert.Equal(t, 2, got.DroppedAttributes())
+	})
+
+	t.Run("CallerProvidedTypeFillsCapacity", func(t *testing.T) {
+		var in log.Record
+		in.SetErr(errors.New("boom"))
+		in.AddAttributes(exceptionTypeKey.String("type"))
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(1)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
+
+		assert.Equal(t, 1, got.AttributesLen())
+		assert.Equal(t, 1, got.DroppedAttributes())
+		got.WalkAttributes(func(kv attribute.KeyValue) bool {
+			assert.Equal(t, exceptionTypeKey, kv.Key)
+			assert.Equal(t, "type", kv.Value.AsString())
+			return true
+		})
 	})
 }
 
 func TestErrorType(t *testing.T) {
 	t.Run("UsesErrorTypeMethod", func(t *testing.T) {
-		err := errWithType{msg: "boom", typ: "custom.type"}
+		err := &errWithType{msg: "boom", typ: "custom.type"}
 		assert.Equal(t, "custom.type", errorType(err))
 	})
 
 	t.Run("FallsBackWhenErrorTypeEmpty", func(t *testing.T) {
-		err := errWithType{msg: "boom", typ: ""}
-		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.errWithType", errorType(err))
+		err := &errWithType{msg: "boom", typ: ""}
+		assert.Equal(t, "*log.errWithType", errorType(err))
 	})
 
 	t.Run("NilError", func(t *testing.T) {
@@ -408,12 +641,12 @@ func TestErrorType(t *testing.T) {
 	})
 
 	t.Run("FmtWrappedFallsBackToWrappedType", func(t *testing.T) {
-		err := fmt.Errorf("wrapped: %w", errWithType{msg: "boom", typ: ""})
-		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.errWithType", errorType(err))
+		err := fmt.Errorf("wrapped: %w", &errWithType{msg: "boom", typ: ""})
+		assert.Equal(t, "*log.errWithType", errorType(err))
 	})
 
 	t.Run("CustomWrapperStaysTopLevel", func(t *testing.T) {
-		err := wrappedErr{err: errWithType{msg: "boom", typ: ""}}
+		err := wrappedErr{err: &errWithType{msg: "boom", typ: ""}}
 		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.wrappedErr", errorType(err))
 	})
 
@@ -424,13 +657,17 @@ func TestErrorType(t *testing.T) {
 }
 
 type errWithType struct {
-	msg string
-	typ string
+	msg        string
+	typ        string
+	typeCalled bool
 }
 
 func (e errWithType) Error() string { return e.msg }
 
-func (e errWithType) ErrorType() string { return e.typ }
+func (e *errWithType) ErrorType() string {
+	e.typeCalled = true
+	return e.typ
+}
 
 type baseErr struct{}
 
@@ -444,56 +681,90 @@ func (e wrappedErr) Error() string { return "wrapped: " + e.err.Error() }
 
 func (e wrappedErr) Unwrap() error { return e.err }
 
-func TestNewRecordSkipsExceptionWhenPresent(t *testing.T) {
+type derivationError struct{}
+
+func (*derivationError) Error() string {
+	return "derived.message"
+}
+
+func (*derivationError) ErrorType() string {
+	return "derived.type"
+}
+
+func TestNewRecordExceptionAttributePrecedence(t *testing.T) {
 	l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
 
-	t.Run("ExistingMessage", func(t *testing.T) {
-		var r log.Record
-		r.SetBody(attribute.StringValue("boom"))
-		r.SetSeverity(log.SeverityError)
-		r.SetErr(errors.New("boom"))
-		r.AddAttributes(attribute.String(string(semconv.ExceptionMessageKey), "existing.message"))
+	testCases := []struct {
+		name           string
+		attrs          []attribute.KeyValue
+		wantMessage    string
+		wantType       string
+		wantStacktrace string
+	}{
+		{
+			name: "ExistingMessage",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionMessageKey), "existing.message"),
+			},
+			wantMessage: "existing.message",
+			wantType:    "derived.type",
+		},
+		{
+			name: "ExistingType",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionTypeKey), "existing.type"),
+			},
+			wantMessage: "derived.message",
+			wantType:    "existing.type",
+		},
+		{
+			name: "ExistingMessageAndType",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionMessageKey), "existing.message"),
+				attribute.String(string(semconv.ExceptionTypeKey), "existing.type"),
+			},
+			wantMessage: "existing.message",
+			wantType:    "existing.type",
+		},
+		{
+			name: "ExistingStacktrace",
+			attrs: []attribute.KeyValue{
+				attribute.String(string(semconv.ExceptionStacktraceKey), "existing.stacktrace"),
+			},
+			wantMessage:    "derived.message",
+			wantType:       "derived.type",
+			wantStacktrace: "existing.stacktrace",
+		},
+	}
 
-		got := l.newRecord(t.Context(), r)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var r log.Record
+			r.SetBody(attribute.StringValue("boom"))
+			r.SetSeverity(log.SeverityError)
+			r.SetErr(new(derivationError))
+			r.AddAttributes(tc.attrs...)
 
-		var gotType, gotMessage string
-		got.WalkAttributes(func(kv attribute.KeyValue) bool {
-			switch kv.Key {
-			case semconv.ExceptionTypeKey:
-				gotType = kv.Value.AsString()
-			case semconv.ExceptionMessageKey:
-				gotMessage = kv.Value.AsString()
-			}
-			return true
+			got := l.newRecord(t.Context(), r)
+
+			var gotType, gotMessage, gotStacktrace string
+			got.WalkAttributes(func(kv attribute.KeyValue) bool {
+				switch kv.Key {
+				case semconv.ExceptionTypeKey:
+					gotType = kv.Value.AsString()
+				case semconv.ExceptionMessageKey:
+					gotMessage = kv.Value.AsString()
+				case semconv.ExceptionStacktraceKey:
+					gotStacktrace = kv.Value.AsString()
+				}
+				return true
+			})
+
+			assert.Equal(t, tc.wantMessage, gotMessage)
+			assert.Equal(t, tc.wantType, gotType)
+			assert.Equal(t, tc.wantStacktrace, gotStacktrace)
 		})
-
-		assert.Equal(t, "existing.message", gotMessage)
-		assert.Empty(t, gotType)
-	})
-
-	t.Run("ExistingType", func(t *testing.T) {
-		var r log.Record
-		r.SetBody(attribute.StringValue("boom"))
-		r.SetSeverity(log.SeverityError)
-		r.SetErr(errors.New("boom"))
-		r.AddAttributes(attribute.String(string(semconv.ExceptionTypeKey), "existing.type"))
-
-		got := l.newRecord(t.Context(), r)
-
-		var gotType, gotMessage string
-		got.WalkAttributes(func(kv attribute.KeyValue) bool {
-			switch kv.Key {
-			case semconv.ExceptionTypeKey:
-				gotType = kv.Value.AsString()
-			case semconv.ExceptionMessageKey:
-				gotMessage = kv.Value.AsString()
-			}
-			return true
-		})
-
-		assert.Equal(t, "existing.type", gotType)
-		assert.Empty(t, gotMessage)
-	})
+	}
 }
 
 func TestLoggerEnabled(t *testing.T) {
@@ -584,10 +855,24 @@ func TestLoggerEnabled(t *testing.T) {
 	}
 }
 
+func TestLoggerEnabledAfterProviderShutdown(t *testing.T) {
+	proc := newFltrProcessor("processor", true)
+	provider := NewLoggerProvider(WithProcessor(proc))
+	logger := provider.Logger("logger")
+
+	require.True(t, logger.Enabled(t.Context(), log.EnabledParameters{}))
+	require.Len(t, proc.params, 1)
+
+	require.NoError(t, provider.Shutdown(t.Context()))
+	assert.False(t, logger.Enabled(t.Context(), log.EnabledParameters{}))
+	assert.Len(t, proc.params, 1)
+}
+
 func TestLoggerObservability(t *testing.T) {
 	testCases := []struct {
 		name               string
 		enabled            bool
+		shutdown           bool
 		records            []log.Record
 		wantLogRecordCount int64
 	}{
@@ -603,6 +888,12 @@ func TestLoggerObservability(t *testing.T) {
 			records:            []log.Record{{}, {}, {}, {}, {}},
 			wantLogRecordCount: 5,
 		},
+		{
+			name:     "EnabledAfterProviderShutdown",
+			enabled:  true,
+			shutdown: true,
+			records:  []log.Record{{}, {}},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -615,7 +906,11 @@ func TestLoggerObservability(t *testing.T) {
 			r := sdkmetric.NewManualReader()
 			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(r))
 			otel.SetMeterProvider(mp)
-			l := newLogger(NewLoggerProvider(), instrumentation.Scope{})
+			provider := NewLoggerProvider()
+			l := newLogger(provider, instrumentation.Scope{})
+			if tc.shutdown {
+				require.NoError(t, provider.Shutdown(t.Context()))
+			}
 
 			for _, record := range tc.records {
 				l.Emit(t.Context(), record)

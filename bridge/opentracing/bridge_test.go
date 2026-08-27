@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	ot "github.com/opentracing/opentracing-go"
@@ -20,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -894,6 +896,109 @@ func TestBridgeSpan_LogFields(t *testing.T) {
 	}
 }
 
+func TestBridgeSpan_LogEventName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		log      func(*bridgeSpan)
+		expected string
+	}{
+		{
+			name:     "LogFields with an event field",
+			log:      func(s *bridgeSpan) { s.LogFields(otlog.Event("cache.miss"), otlog.Int("keys", 3)) },
+			expected: "cache.miss",
+		},
+		{
+			name:     "LogFields without an event field",
+			log:      func(s *bridgeSpan) { s.LogFields(otlog.Int("keys requested", 3)) },
+			expected: "log",
+		},
+		{
+			name:     "LogFields with an empty event field",
+			log:      func(s *bridgeSpan) { s.LogFields(otlog.Event("")) },
+			expected: "log",
+		},
+		{
+			name:     "LogFields with a non-string event field",
+			log:      func(s *bridgeSpan) { s.LogFields(otlog.Int("event", 42)) },
+			expected: "42",
+		},
+		{
+			name: "LogFields with a lazily emitted event field",
+			log: func(s *bridgeSpan) {
+				s.LogFields(otlog.Lazy(func(e otlog.Encoder) { e.EmitString("event", "lazy") }))
+			},
+			expected: "lazy",
+		},
+		{
+			name:     "LogFields with duplicate event fields",
+			log:      func(s *bridgeSpan) { s.LogFields(otlog.Event("first"), otlog.Event("last")) },
+			expected: "last",
+		},
+		{
+			name:     "LogFields with duplicate event fields last empty",
+			log:      func(s *bridgeSpan) { s.LogFields(otlog.Event("first"), otlog.Event("")) },
+			expected: "log",
+		},
+		{
+			name:     "LogKV with an event key",
+			log:      func(s *bridgeSpan) { s.LogKV("event", "kv") },
+			expected: "kv",
+		},
+		{
+			name:     "LogKV without an event key",
+			log:      func(s *bridgeSpan) { s.LogKV("keys requested", 3) },
+			expected: "log",
+		},
+		{
+			name:     "LogEvent",
+			log:      func(s *bridgeSpan) { s.LogEvent("logged") },
+			expected: "logged",
+		},
+		{
+			name:     "LogEventWithPayload",
+			log:      func(s *bridgeSpan) { s.LogEventWithPayload("logged", "payload") },
+			expected: "logged",
+		},
+		{
+			name:     "Log",
+			log:      func(s *bridgeSpan) { s.Log(ot.LogData{Event: "logged"}) },
+			expected: "logged",
+		},
+		{
+			name: "FinishWithOptions log record with an event field",
+			log: func(s *bridgeSpan) {
+				s.FinishWithOptions(ot.FinishOptions{
+					LogRecords: []ot.LogRecord{{Fields: []otlog.Field{otlog.Event("finished")}}},
+				})
+			},
+			expected: "finished",
+		},
+		{
+			name: "FinishWithOptions log record without an event field",
+			log: func(s *bridgeSpan) {
+				s.FinishWithOptions(ot.FinishOptions{
+					LogRecords: []ot.LogRecord{{Fields: []otlog.Field{otlog.Int("keys", 3)}}},
+				})
+			},
+			expected: "log",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tracer := newMockTracer()
+			b, _ := NewTracerPair(tracer)
+			span := b.StartSpan("test").(*bridgeSpan)
+
+			tc.log(span)
+
+			mockSpan := span.otelSpan.(*mockSpan)
+			require.Len(t, mockSpan.Events, 1)
+			assert.Equal(t, tc.expected, mockSpan.Events[0].Name)
+		})
+	}
+}
+
 func TestBridgeSpan_LogKV(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -1013,6 +1118,31 @@ func TestBridgeSpan_BaggageItem(t *testing.T) {
 		assert.Equal(t, "val", v)
 		return true
 	})
+}
+
+func TestBridgeSpan_BaggageHookConcurrentSafe(t *testing.T) {
+	tracer := NewBridgeTracer()
+	span := tracer.StartSpan("span")
+	ctx := tracer.NewHookedContext(ot.ContextWithSpan(t.Context(), span))
+
+	const iterations = 10
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for range iterations {
+			span.SetBaggageItem("key", "value")
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for range iterations {
+			_ = baggage.FromContext(ctx)
+		}
+	}()
+	wg.Wait()
+
+	assert.Equal(t, "value", baggage.FromContext(ctx).Member("key").Value())
 }
 
 func TestBridgeSpan_LogEventMethods(t *testing.T) {

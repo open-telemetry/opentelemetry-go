@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package logtest // import "go.opentelemetry.io/otel/log/logtest"
+package logtest
 
 import (
 	"context"
@@ -41,7 +41,8 @@ type optFunc func(config) config
 
 func (f optFunc) apply(c config) config { return f(c) }
 
-// WithEnabledFunc allows configuring whether the [Recorder] is enabled for specific log entries or not.
+// WithEnabledFunc configures whether the [Recorder] is enabled for specific
+// log entries.
 //
 // By default, the Recorder is enabled for every log entry.
 func WithEnabledFunc(fn func(context.Context, log.EnabledParameters) bool) Option {
@@ -60,7 +61,7 @@ func NewRecorder(options ...Option) *Recorder {
 	}
 }
 
-// Recording represents the recorded log records snapshot.
+// Recording represents a snapshot of recorded log records.
 type Recording map[Scope][]Record
 
 // Scope represents the instrumentation scope.
@@ -70,13 +71,13 @@ type Scope struct {
 	Name string
 	// Version is the version of the instrumentation scope.
 	Version string
-	// SchemaURL of the telemetry emitted by the scope.
+	// SchemaURL is the schema URL of the telemetry emitted by the scope.
 	SchemaURL string
-	// Attributes of the telemetry emitted by the scope.
+	// Attributes are the attributes of the telemetry emitted by the scope.
 	Attributes attribute.Set
 }
 
-// Record represents the record alongside its context.
+// Record represents a log record together with its context.
 type Record struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	_ [0]func()
@@ -92,7 +93,7 @@ type Record struct {
 	Attributes        []attribute.KeyValue
 }
 
-// Recorder stores all received log records in-memory.
+// Recorder stores all received log records in memory.
 // Recorder implements [log.LoggerProvider].
 type Recorder struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
@@ -103,11 +104,11 @@ type Recorder struct {
 	mu      sync.Mutex
 	loggers map[Scope]*logger
 
-	// enabledFn decides whether the recorder should enable logging of a record or not
+	// enabledFn determines whether the recorder is enabled for a log record.
 	enabledFn enabledFn
 }
 
-// Compile-time check Recorder implements log.LoggerProvider.
+// This compile-time check ensures that Recorder implements log.LoggerProvider.
 var _ log.LoggerProvider = (*Recorder)(nil)
 
 // Clone returns a deep copy.
@@ -119,8 +120,7 @@ func (a Record) Clone() Record {
 	return b
 }
 
-// Logger returns a copy of Recorder as a [log.Logger] with the provided scope
-// information.
+// Logger returns a [log.Logger] with the provided scope information.
 func (r *Recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	cfg := log.NewLoggerConfig(opts...)
 	scope := Scope{
@@ -158,7 +158,7 @@ func (r *Recorder) Reset() {
 	}
 }
 
-// Result returns a deep copy of the current in-memory recorded log records.
+// Result returns a deep copy of the log records currently stored in memory.
 func (r *Recorder) Result() Recording {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -188,7 +188,7 @@ type logger struct {
 	mu      sync.Mutex
 	records []*Record
 
-	// enabledFn decides whether the recorder should enable logging of a record or not.
+	// enabledFn determines whether the recorder is enabled for a log record.
 	enabledFn enabledFn
 }
 

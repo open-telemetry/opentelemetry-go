@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package resource // import "go.opentelemetry.io/otel/sdk/resource"
+package resource
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/internal/x"
 )
 
@@ -90,7 +90,7 @@ func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
 		return &Resource{}
 	}
 
-	attrs, _ = attrdedup.KeyValues(attrs)
+	attrs, _ = attrnorm.KeyValues(attrs)
 
 	// Ensure attributes comply with the specification:
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/common/README.md#attribute
@@ -120,6 +120,9 @@ func (r *Resource) String() string {
 
 // MarshalLog is the marshaling function used by the logging system to represent this Resource.
 func (r *Resource) MarshalLog() any {
+	if r == nil {
+		r = Empty()
+	}
 	return struct {
 		Attributes attribute.Set
 		SchemaURL  string

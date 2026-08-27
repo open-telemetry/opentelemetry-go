@@ -1,29 +1,27 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package log // import "go.opentelemetry.io/otel/sdk/log"
+package log
 
 import (
 	"slices"
-	"strings"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/log/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/log/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
 
 const (
 	// attributesInlineCount is the number of attributes that are efficiently
-	// stored in an array within a Record. This value is borrowed from slog which
-	// performed a quantitative survey of log library use and found this value to
-	// cover 95% of all use-cases (https://go.dev/blog/slog#performance).
+	// stored in an array within a Record. This value is borrowed from slog, which
+	// performed a quantitative survey of log library use and found that this
+	// value covers 95% of all use cases (https://go.dev/blog/slog#performance).
 	attributesInlineCount = 5
 	// maxUniqueSize helps reduce peak allocation.
 	maxUniqueSize = 1028
@@ -37,7 +35,11 @@ var logKeyValuePairDropped = sync.OnceFunc(func() {
 	global.Warn("key duplication: dropping key-value pair")
 })
 
-// uniquePool is a pool of unique attributes used for attributes de-duplication.
+var logInvalidAttribute = sync.OnceFunc(func() {
+	global.Warn("invalid attribute: dropping attribute with empty key")
+})
+
+// uniquePool is a pool of unique attributes used for attribute deduplication.
 var uniquePool = sync.Pool{
 	New: func() any { return new([]attribute.KeyValue) },
 }
@@ -54,7 +56,7 @@ func putUnique(v *[]attribute.KeyValue) {
 	}
 }
 
-// indexPool is a pool of index maps used for attributes de-duplication.
+// indexPool is a pool of index maps used for attribute deduplication.
 var indexPool = sync.Pool{
 	New: func() any { return make(map[attribute.Key]int) },
 }
@@ -69,13 +71,13 @@ func putIndex(index map[attribute.Key]int) {
 }
 
 // Record is a log record emitted by the Logger.
-// A log record with non-empty event name is interpreted as an event record.
+// A log record with a non-empty event name is interpreted as an event record.
 //
 // Do not create instances of Record on your own in production code.
 // You can use [go.opentelemetry.io/otel/sdk/log/logtest.RecordFactory]
 // for testing purposes.
 type Record struct {
-	// Do not embed the log.Record. Attributes need to be overwrite-able and
+	// Do not embed the log.Record. Attributes need to be overwritable, and
 	// deep-copying needs to be possible.
 
 	eventName         string
@@ -100,7 +102,7 @@ type Record struct {
 	// The list of attributes except for those in front.
 	// Invariants:
 	//   - len(back) > 0 if nFront == len(front)
-	//   - Unused array elements are zero-ed. Used to detect mistakes.
+	//   - Unused array elements are zeroed to detect mistakes.
 	back []attribute.KeyValue
 
 	// dropped is the count of attributes that have been dropped when limits
@@ -120,7 +122,8 @@ type Record struct {
 	attributeValueLengthLimit int
 	attributeCountLimit       int
 
-	// specifies whether we should deduplicate any key value collections or not
+	// allowDupKeys specifies whether duplicate keys are allowed in key-value
+	// collections.
 	allowDupKeys bool
 
 	noCmp [0]func() //nolint: unused  // This is indeed used.
@@ -134,13 +137,13 @@ func (r *Record) addDropped(n int) {
 }
 
 // EventName returns the event name.
-// A log record with non-empty event name is interpreted as an event record.
+// A log record with a non-empty event name is interpreted as an event record.
 func (r *Record) EventName() string {
 	return r.eventName
 }
 
 // SetEventName sets the event name.
-// A log record with non-empty event name is interpreted as an event record.
+// A log record with a non-empty event name is interpreted as an event record.
 func (r *Record) SetEventName(s string) {
 	r.eventName = s
 }
@@ -175,14 +178,16 @@ func (r *Record) SetSeverity(level log.Severity) {
 	r.severity = level
 }
 
-// SeverityText returns severity (also known as log level) text. This is the
-// original string representation of the severity as it is known at the source.
+// SeverityText returns the text of the severity (also known as the log level).
+// This is the original string representation of the severity as it is known at
+// the source.
 func (r *Record) SeverityText() string {
 	return r.severityText
 }
 
-// SetSeverityText sets severity (also known as log level) text. This is the
-// original string representation of the severity as it is known at the source.
+// SetSeverityText sets the text of the severity (also known as the log level).
+// This is the original string representation of the severity as it is known at
+// the source.
 func (r *Record) SetSeverityText(text string) {
 	r.severityText = text
 }
@@ -195,14 +200,15 @@ func (r *Record) Body() attribute.Value {
 // SetBody sets the body of the log record.
 func (r *Record) SetBody(v attribute.Value) {
 	if !r.allowDupKeys {
-		r.body, _ = attrdedup.Value(v)
+		r.body, _ = attrnorm.Value(v)
 	} else {
 		r.body = v
 	}
 }
 
-// WalkAttributes walks all attributes the log record holds by calling f for
-// each on each [attribute.KeyValue] in the [Record]. Iteration stops if f returns false.
+// WalkAttributes walks through all attributes held by the log record, calling
+// f for each [attribute.KeyValue] in the [Record]. Iteration stops if f returns
+// false.
 func (r *Record) WalkAttributes(f func(attribute.KeyValue) bool) {
 	for i := 0; i < r.nFront; i++ {
 		if !f(r.front[i]) {
@@ -217,8 +223,11 @@ func (r *Record) WalkAttributes(f func(attribute.KeyValue) bool) {
 }
 
 // AddAttributes adds attributes to the log record.
-// Attributes in attrs will overwrite any attribute already added to r with the same key.
+// Unless key duplication is enabled with [WithAllowKeyDuplication], an
+// attribute in attrs overwrites any attribute already added to r with the same
+// key. Attributes with invalid keys are ignored.
 func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
+	attrs = filterInvalid(attrs)
 	n := r.AttributesLen()
 	if n == 0 {
 		// Avoid the more complex duplicate map lookups below.
@@ -230,7 +239,7 @@ func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 			}
 		}
 
-		attrs, drop := head(attrs, r.attributeCountLimit)
+		attrs, drop := r.head(attrs)
 		r.addDropped(drop)
 
 		r.addAttrs(attrs)
@@ -288,7 +297,7 @@ func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 		}
 	}
 
-	if r.attributeCountLimit > 0 && n+len(attrs) > r.attributeCountLimit {
+	if r.hasAttributeCountLimit() && n+len(attrs) > r.attributeCountLimit {
 		// Truncate the now unique attributes to comply with limit.
 		//
 		// Do not use head(attrs, r.attributeCountLimit - n) here. If
@@ -302,11 +311,11 @@ func (r *Record) AddAttributes(attrs ...attribute.KeyValue) {
 }
 
 // attrIndex returns an index map for all attributes in the Record r. The index
-// maps the attribute key to location the attribute is stored. If the value is
-// < 0 then -(value + 1) (e.g. -1 -> 0, -2 -> 1, -3 -> 2) represents the index
-// in r.nFront. Otherwise, the index is the exact index of r.back.
+// maps the attribute key to the location where the attribute is stored. If the
+// value is < 0, then -(value + 1) (e.g., -1 -> 0, -2 -> 1, -3 -> 2) represents
+// the index in r.front. Otherwise, the value is the exact index in r.back.
 //
-// The returned index is taken from the indexPool. It is the callers
+// The returned index is taken from the indexPool. It is the caller's
 // responsibility to return the index to that pool (putIndex) when done.
 func (r *Record) attrIndex() map[attribute.Key]int {
 	index := getIndex()
@@ -322,8 +331,8 @@ func (r *Record) attrIndex() map[attribute.Key]int {
 }
 
 // addAttrs adds attrs to the Record r. This does not validate any limits or
-// duplication of attributes, these tasks are left to the caller to handle
-// prior to calling.
+// attribute duplication; these tasks are left to the caller to handle before
+// calling addAttrs.
 func (r *Record) addAttrs(attrs []attribute.KeyValue) {
 	var i int
 	for i = 0; i < len(attrs) && r.nFront < len(r.front); i++ {
@@ -341,8 +350,10 @@ func (r *Record) addAttrs(attrs []attribute.KeyValue) {
 	}
 }
 
-// SetAttributes sets (and overrides) attributes to the log record.
+// SetAttributes sets (and overrides) attributes on the log record.
+// Attributes with invalid keys are ignored.
 func (r *Record) SetAttributes(attrs ...attribute.KeyValue) {
+	attrs = filterInvalid(attrs)
 	var drop int
 	r.dropped = 0
 	if !r.allowDupKeys {
@@ -352,7 +363,7 @@ func (r *Record) SetAttributes(attrs ...attribute.KeyValue) {
 		}
 	}
 
-	attrs, drop = head(attrs, r.attributeCountLimit)
+	attrs, drop = r.head(attrs)
 	r.addDropped(drop)
 
 	r.nFront = 0
@@ -369,13 +380,45 @@ func (r *Record) SetAttributes(attrs ...attribute.KeyValue) {
 	}
 }
 
-// head returns the first n values of kvs along with the number of elements
-// dropped. If n is less than or equal to zero, kvs is returned with 0.
-func head(kvs []attribute.KeyValue, n int) (out []attribute.KeyValue, dropped int) {
-	if n > 0 && len(kvs) > n {
-		return kvs[:n], len(kvs) - n
+// filterInvalid returns attrs without invalid attributes. The original slice is
+// returned when all attributes are valid.
+func filterInvalid(attrs []attribute.KeyValue) []attribute.KeyValue {
+	valid := 0
+	for _, attr := range attrs {
+		if attr.Valid() {
+			valid++
+		}
 	}
-	return kvs, 0
+	if valid == len(attrs) {
+		return attrs
+	}
+	logInvalidAttribute()
+	if valid == 0 {
+		return nil
+	}
+
+	filtered := make([]attribute.KeyValue, 0, valid)
+	for _, attr := range attrs {
+		if attr.Valid() {
+			filtered = append(filtered, attr)
+		}
+	}
+	return filtered
+}
+
+// head returns the attributes r can retain along with the number dropped.
+func (r *Record) head(kvs []attribute.KeyValue) (out []attribute.KeyValue, dropped int) {
+	if r.attributeCountLimit < 0 || len(kvs) <= r.attributeCountLimit {
+		return kvs, 0
+	}
+	if r.attributeCountLimit == 0 {
+		return nil, len(kvs)
+	}
+	return kvs[:r.attributeCountLimit], len(kvs) - r.attributeCountLimit
+}
+
+func (r *Record) hasAttributeCountLimit() bool {
+	return r.attributeCountLimit >= 0
 }
 
 // dedup deduplicates kvs front-to-back with the last value saved.
@@ -414,12 +457,12 @@ func (r *Record) AttributesLen() int {
 }
 
 // DroppedAttributes returns the number of attributes dropped due to limits
-// being reached.
+// being reached. Invalid attributes are ignored and not counted.
 func (r *Record) DroppedAttributes() int {
 	return r.dropped
 }
 
-// TraceID returns the trace ID or empty array.
+// TraceID returns the trace ID or an empty array.
 func (r *Record) TraceID() trace.TraceID {
 	return r.traceID
 }
@@ -429,7 +472,7 @@ func (r *Record) SetTraceID(id trace.TraceID) {
 	r.traceID = id
 }
 
-// SpanID returns the span ID or empty array.
+// SpanID returns the span ID or an empty array.
 func (r *Record) SpanID() trace.SpanID {
 	return r.spanID
 }
@@ -473,175 +516,11 @@ func (r *Record) Clone() Record {
 func (r *Record) applyAttrLimitsAndDedup(attr attribute.KeyValue) attribute.KeyValue {
 	if !r.allowDupKeys {
 		var changed bool
-		attr, changed = attrdedup.KeyValue(attr)
+		attr, changed = attrnorm.KeyValue(attr)
 		if changed {
 			logKeyValuePairDropped()
 		}
 	}
-	attr.Value = truncateValue(r.attributeValueLengthLimit, attr.Value)
+	attr.Value = attrnorm.TruncateValue(r.attributeValueLengthLimit, attr.Value)
 	return attr
-}
-
-// truncateValue returns a truncated version of v. Only string, string slice,
-// byte slice, and (recursively) slice and map values are modified.
-//
-// No truncation is performed for a negative limit.
-func truncateValue(limit int, v attribute.Value) attribute.Value {
-	if limit < 0 {
-		return v
-	}
-
-	switch v.Type() {
-	case attribute.STRING:
-		return attribute.StringValue(truncate(limit, v.AsString()))
-	case attribute.STRINGSLICE:
-		ss := v.AsStringSlice()
-		for i := range ss {
-			ss[i] = truncate(limit, ss[i])
-		}
-		return attribute.StringSliceValue(ss)
-	case attribute.BYTESLICE:
-		// len(v.AsString()) is identical to len(v.AsByteSlice()) but
-		// avoids allocating the full slice before truncation.
-		s := v.AsString()
-		if limit >= 0 && len(s) > limit {
-			return attribute.ByteSliceValue([]byte(s[:limit]))
-		}
-	case attribute.SLICE:
-		sl := v.AsSlice()
-		if !slices.ContainsFunc(sl, func(e attribute.Value) bool { return needsTruncation(limit, e) }) {
-			return v
-		}
-		newSl := make([]attribute.Value, len(sl))
-		for i, elem := range sl {
-			newSl[i] = truncateValue(limit, elem)
-		}
-		return attribute.SliceValue(newSl...)
-	case attribute.MAP:
-		m := v.AsMap()
-		if !slices.ContainsFunc(m, func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) }) {
-			return v
-		}
-		newM := make([]attribute.KeyValue, len(m))
-		for i, elem := range m {
-			elem.Value = truncateValue(limit, elem.Value)
-			newM[i] = elem
-		}
-		return attribute.MapValue(newM...)
-	}
-	return v
-}
-
-// stringNeedsTruncation reports whether s would be modified by truncate for the
-// given limit.
-func stringNeedsTruncation(limit int, s string) bool {
-	if limit < 0 || len(s) <= limit {
-		return false
-	}
-	return utf8.RuneCountInString(s) > limit || !utf8.ValidString(s)
-}
-
-// needsTruncation reports whether v would be modified by truncateValue for the
-// given limit.
-func needsTruncation(limit int, v attribute.Value) bool {
-	switch v.Type() {
-	case attribute.STRING:
-		return stringNeedsTruncation(limit, v.AsString())
-	case attribute.BYTESLICE:
-		// len(v.AsString()) is identical to len(v.AsByteSlice()) but
-		// avoids memory allocation.
-		if limit >= 0 && len(v.AsString()) > limit {
-			return true
-		}
-	case attribute.STRINGSLICE:
-		for _, s := range v.AsStringSlice() {
-			if stringNeedsTruncation(limit, s) {
-				return true
-			}
-		}
-	case attribute.SLICE:
-		return slices.ContainsFunc(v.AsSlice(), func(e attribute.Value) bool { return needsTruncation(limit, e) })
-	case attribute.MAP:
-		return slices.ContainsFunc(
-			v.AsMap(),
-			func(kv attribute.KeyValue) bool { return needsTruncation(limit, kv.Value) },
-		)
-	}
-	return false
-}
-
-// truncate returns a truncated version of s such that it contains less than
-// the limit number of characters. Truncation is applied by returning the limit
-// number of valid characters contained in s.
-//
-// If limit is negative, it returns the original string.
-//
-// UTF-8 is supported. When truncating, all invalid characters are dropped
-// before applying truncation.
-//
-// If s already contains less than the limit number of bytes, it is returned
-// unchanged. No invalid characters are removed.
-func truncate(limit int, s string) string {
-	// This prioritize performance in the following order based on the most
-	// common expected use-cases.
-	//
-	//  - Short values less than the default limit (128).
-	//  - Strings with valid encodings that exceed the limit.
-	//  - No limit.
-	//  - Strings with invalid encodings that exceed the limit.
-	if limit < 0 || len(s) <= limit {
-		return s
-	}
-
-	// Optimistically, assume all valid UTF-8.
-	var b strings.Builder
-	count := 0
-	for i, c := range s {
-		if c != utf8.RuneError {
-			count++
-			if count > limit {
-				return s[:i]
-			}
-			continue
-		}
-
-		_, size := utf8.DecodeRuneInString(s[i:])
-		if size == 1 {
-			// Invalid encoding.
-			b.Grow(len(s) - 1)
-			_, _ = b.WriteString(s[:i])
-			s = s[i:]
-			break
-		}
-	}
-
-	// Fast-path, no invalid input.
-	if b.Cap() == 0 {
-		return s
-	}
-
-	// Truncate while validating UTF-8.
-	for i := 0; i < len(s) && count < limit; {
-		c := s[i]
-		if c < utf8.RuneSelf {
-			// Optimization for single byte runes (common case).
-			_ = b.WriteByte(c)
-			i++
-			count++
-			continue
-		}
-
-		_, size := utf8.DecodeRuneInString(s[i:])
-		if size == 1 {
-			// We checked for all 1-byte runes above, this is a RuneError.
-			i++
-			continue
-		}
-
-		_, _ = b.WriteString(s[i : i+size])
-		i += size
-		count++
-	}
-
-	return b.String()
 }

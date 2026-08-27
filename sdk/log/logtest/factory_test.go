@@ -18,7 +18,21 @@ import (
 )
 
 func TestRecordFactoryEmpty(t *testing.T) {
-	assert.Equal(t, sdklog.Record{}, RecordFactory{}.NewRecord())
+	got := RecordFactory{}.NewRecord()
+
+	assert.Empty(t, got.EventName())
+	assert.True(t, got.Timestamp().IsZero())
+	assert.True(t, got.ObservedTimestamp().IsZero())
+	assert.Equal(t, log.SeverityUndefined, got.Severity())
+	assert.Empty(t, got.SeverityText())
+	assert.Equal(t, attribute.Value{}, got.Body())
+	assert.Equal(t, 0, got.AttributesLen())
+	assert.Equal(t, 0, got.DroppedAttributes())
+	assert.Equal(t, trace.TraceID{}, got.TraceID())
+	assert.Equal(t, trace.SpanID{}, got.SpanID())
+	assert.Equal(t, trace.TraceFlags(0), got.TraceFlags())
+	assert.Nil(t, got.Resource())
+	assert.Equal(t, instrumentation.Scope{}, got.InstrumentationScope())
 }
 
 func TestRecordFactory(t *testing.T) {
@@ -71,6 +85,16 @@ func TestRecordFactory(t *testing.T) {
 	assert.Equal(t, traceFlags, got.TraceFlags())
 	assert.Equal(t, scope, got.InstrumentationScope())
 	assert.Equal(t, r, got.Resource())
+}
+
+func TestRecordFactoryKeepsAddedAttributesUnlimited(t *testing.T) {
+	got := RecordFactory{}.NewRecord()
+	attrs := []attribute.KeyValue{attribute.String("str", "0123456789")}
+
+	got.AddAttributes(attrs...)
+
+	assertAttributes(t, attrs, got)
+	assert.Equal(t, 0, got.DroppedAttributes())
 }
 
 func TestRecordFactoryMultiple(t *testing.T) {

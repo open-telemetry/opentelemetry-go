@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package stdoutlog // import "go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
+package stdoutlog
 
 import (
 	"bytes"
@@ -28,8 +28,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
-	"go.opentelemetry.io/otel/semconv/v1.42.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -100,7 +100,7 @@ func TestExporter(t *testing.T) {
 
 			// Export a record after shutdown, this should not be written
 			err = exporter.Export(t.Context(), []sdklog.Record{record})
-			assert.NoError(t, err)
+			assert.ErrorIs(t, err, sdklog.ErrExporterShutdown)
 
 			// Check the writer
 			assert.Equal(t, tc.want, buf.String())
@@ -373,7 +373,9 @@ func TestExporterConcurrentSafe(t *testing.T) {
 				go func() {
 					defer wg.Done()
 					err := exporter.Export(t.Context(), []sdklog.Record{{}})
-					assert.NoError(t, err)
+					if err != nil {
+						assert.ErrorIs(t, err, sdklog.ErrExporterShutdown)
+					}
 					err = exporter.ForceFlush(t.Context())
 					assert.NoError(t, err)
 					err = exporter.Shutdown(t.Context())

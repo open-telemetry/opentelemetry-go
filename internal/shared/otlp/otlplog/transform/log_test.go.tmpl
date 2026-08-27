@@ -7,6 +7,7 @@
 package transform
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -22,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/log/logtest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -322,6 +323,39 @@ func TestSeverityNumber(t *testing.T) {
 		want := lpb.SeverityNumber(i)
 		want += lpb.SeverityNumber_SEVERITY_NUMBER_UNSPECIFIED
 		assert.Equal(t, want, SeverityNumber(api.Severity(i)))
+	}
+}
+
+func TestLogRecordDroppedAttributesCount(t *testing.T) {
+	type testCase struct {
+		name    string
+		dropped int
+		want    uint32
+	}
+	tests := []testCase{
+		{name: "zero", dropped: 0, want: 0},
+		{name: "positive", dropped: 7, want: 7},
+		{name: "negative", dropped: -1, want: 0},
+	}
+	// ^uint(0) is the maximum uint; only 64-bit platforms can represent
+	// math.MaxUint32+1 as an int.
+	if ^uint(0) > uint(math.MaxUint32) {
+		overflow := uint64(math.MaxUint32) + 1
+		tests = append(tests, testCase{
+			name:    "overflow",
+			dropped: int(overflow),
+			want:    math.MaxUint32,
+		})
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			record := logtest.RecordFactory{
+				DroppedAttributes: test.dropped,
+			}.NewRecord()
+			got := LogRecord(record)
+			assert.Equal(t, test.want, got.DroppedAttributesCount)
+		})
 	}
 }
 

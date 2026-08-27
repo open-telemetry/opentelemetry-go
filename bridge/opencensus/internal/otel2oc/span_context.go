@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package otel2oc provides conversions from OpenTelemetry to OpenCensus.
-package otel2oc // import "go.opentelemetry.io/otel/bridge/opencensus/internal/otel2oc"
+package otel2oc
 
 import (
 	octrace "go.opencensus.io/trace"
@@ -11,6 +11,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// SpanContext converts an OpenTelemetry SpanContext into an OpenCensus
+// SpanContext.
 func SpanContext(sc trace.SpanContext) octrace.SpanContext {
 	var to octrace.TraceOptions
 	if sc.IsSampled() {

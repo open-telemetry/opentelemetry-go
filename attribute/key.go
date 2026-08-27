@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package attribute // import "go.opentelemetry.io/otel/attribute"
+package attribute
 
 // Key represents the key part in key-value pairs. It's a string. The
 // allowed character set in the key depends on the use of the key.
