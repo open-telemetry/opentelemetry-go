@@ -380,7 +380,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	i := newInserter[int64](pipe, &vc)
 
 	readerAggregation := i.readerDefaultAggregation(kind)
-	_, origID, err := i.cachedAggregator(scope, kind, stream, readerAggregation)
+	_, _, _, origID, err := i.cachedAggregator(scope, kind, stream, readerAggregation)
 	require.NoError(t, err)
 
 	require.Len(t, pipe.aggregations, 1)
@@ -390,7 +390,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	require.Equal(t, name, iSync[0].name)
 
 	stream.Name = "RequestCount"
-	_, id, err := i.cachedAggregator(scope, kind, stream, readerAggregation)
+	_, _, _, id, err := i.cachedAggregator(scope, kind, stream, readerAggregation)
 	require.NoError(t, err)
 	assert.Equal(t, origID, id, "multiple aggregators for equivalent name")
 

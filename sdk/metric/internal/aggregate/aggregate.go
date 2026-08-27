@@ -18,6 +18,22 @@ var now = time.Now
 // Measure receives measurements to be aggregated.
 type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
 
+// BoundMeasure records measurements for an attribute set resolved by a
+// Binder. It does not perform attribute processing or lookup during Measure.
+type BoundMeasure[N int64 | float64] interface {
+	Measure(context.Context, N)
+}
+
+// Binder resolves an attribute set to a BoundMeasure.
+type Binder[N int64 | float64] interface {
+	Bind(attribute.Set) BoundMeasure[N]
+}
+
+// Finisher ends the active lifetime of an exact attribute set.
+type Finisher interface {
+	Finish(attribute.Set)
+}
+
 // ComputeAggregation stores the aggregate of measurements into dest and
 // returns the number of aggregate data-points output.
 type ComputeAggregation func(dest *metricdata.Aggregation) int
@@ -119,6 +135,16 @@ func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
 		s := newCumulativeSum[N](monotonic, b.AggregationLimit, b.resFunc())
 		return b.filter(s.measure), s.collect
 	}
+}
+
+// BoundSum returns a Sum input and output with independent binding and
+// finishing capabilities. It is used only by the experimental SDK facade.
+func (b Builder[N]) BoundSum(
+	monotonic bool,
+) (Measure[N], ComputeAggregation, Binder[N], Finisher) {
+	s := newBoundSum(monotonic, b.Temporality, b.AggregationLimit, b.resFunc())
+	return b.filter(s.measure), s.collect, boundSumBinder[N]{store: s, filter: b.Filter},
+		boundSumFinisher[N]{store: s, filter: b.Filter}
 }
 
 // ExplicitBucketHistogram returns a histogram aggregate function input and

@@ -37,9 +37,10 @@ type meter struct {
 
 	int64Resolver   resolver[int64]
 	float64Resolver resolver[float64]
+	int64Wrapper    int64CounterWrapper
 }
 
-func newMeter(s instrumentation.Scope, p pipelines) *meter {
+func newMeter(s instrumentation.Scope, p pipelines, wrapper int64CounterWrapper) *meter {
 	// viewCache ensures instrument conflicts, including number conflicts, this
 	// meter is asked to create are logged to the user.
 	var viewCache cache[string, instID]
@@ -58,6 +59,7 @@ func newMeter(s instrumentation.Scope, p pipelines) *meter {
 		float64ObservableInsts: &float64ObservableInsts,
 		int64Resolver:          newResolver[int64](p, &viewCache),
 		float64Resolver:        newResolver[float64](p, &viewCache),
+		int64Wrapper:           wrapper,
 	}
 }
 
@@ -74,6 +76,9 @@ func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) 
 	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options))
 	if err != nil {
 		return i, err
+	}
+	if m.int64Wrapper != nil {
+		return m.int64Wrapper.WrapInt64Counter(i, i.bind, i.finish), validateInstrumentName(name)
 	}
 
 	return i, validateInstrumentName(name)
@@ -660,6 +665,21 @@ func (p int64InstProvider) aggs(
 	return p.int64Resolver.Aggregators(inst, allowedKeys)
 }
 
+func (p int64InstProvider) aggsWithCapabilities(
+	kind InstrumentKind,
+	name, desc, u string,
+	allowedKeys []attribute.Key,
+) (resolvedAggregators[int64], error) {
+	inst := Instrument{
+		Name:        name,
+		Description: desc,
+		Unit:        u,
+		Kind:        kind,
+		Scope:       p.scope,
+	}
+	return p.int64Resolver.aggregatorsWithCapabilities(inst, allowedKeys)
+}
+
 func (p int64InstProvider) histogramAggs(
 	name string,
 	cfg metric.Int64HistogramConfig,
@@ -694,6 +714,15 @@ func (p int64InstProvider) lookup(
 		Unit:        u,
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
+		if p.int64Wrapper != nil && kind == InstrumentKindCounter {
+			aggs, err := p.aggsWithCapabilities(kind, name, desc, u, allowedKeys)
+			return &int64Inst{
+				measures:         aggs.measures,
+				fallbackMeasures: aggs.fallbackMeasures,
+				binders:          aggs.binders,
+				finishers:        aggs.finishers,
+			}, err
+		}
 		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
 		return &int64Inst{measures: aggs}, err
 	})

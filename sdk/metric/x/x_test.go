@@ -38,6 +38,12 @@ func TestBoundCounterCumulativeAndDelta(t *testing.T) {
 	}
 	attrs := []attribute.KeyValue{attribute.String("route", "/orders")}
 	bound := binder.Bind(attrs...)
+	if _, ok := bound.(metricx.Int64CounterBinder); ok {
+		t.Error("bound counter implements Int64CounterBinder")
+	}
+	if _, ok := bound.(metricx.Finisher); ok {
+		t.Error("bound counter implements Finisher")
+	}
 	attrs[0] = attribute.String("route", "/mutated")
 	bound.Add(t.Context(), 2)
 	counter.Add(t.Context(), 3, metric.WithAttributes(attribute.String("route", "/orders")))
@@ -48,6 +54,36 @@ func TestBoundCounterCumulativeAndDelta(t *testing.T) {
 	bound.Add(t.Context(), 1)
 	assertSum(t, collect(t, cumulative), metricdata.CumulativeTemporality, "/orders", 6)
 	assertSum(t, collect(t, delta), metricdata.DeltaTemporality, "/orders", 1)
+}
+
+func TestProviderAcceptsStableReader(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetricx.NewMeterProvider(sdkmetricx.WithReader(reader))
+	counter, err := provider.Meter("test").Int64Counter("requests")
+	if err != nil {
+		t.Fatal(err)
+	}
+	counter.Add(t.Context(), 1)
+	points := sumPoints(t, collect(t, reader))
+	if len(points) != 1 || points[0].Value != 1 {
+		t.Fatalf("unexpected points: %#v", points)
+	}
+}
+
+func TestProviderRetainsStableInstrumentSupport(t *testing.T) {
+	reader := sdkmetricx.NewManualReader()
+	provider := sdkmetricx.NewMeterProvider(sdkmetricx.WithReader(reader))
+	counter, err := provider.Meter("test").Int64UpDownCounter("active")
+	if err != nil {
+		t.Fatal(err)
+	}
+	counter.Add(t.Context(), -1)
+
+	rm := collect(t, reader)
+	points := sumPoints(t, rm)
+	if len(points) != 1 || points[0].Value != -1 {
+		t.Fatalf("unexpected points: %#v", points)
+	}
 }
 
 func TestFinishAndLazyReactivation(t *testing.T) {
@@ -96,6 +132,35 @@ func TestViewFilteringAndRecordTimeFallback(t *testing.T) {
 		attribute.String("other", "drop"),
 	))
 	assertSum(t, collect(t, reader), metricdata.CumulativeTemporality, "/new", 1)
+}
+
+func TestBoundCounterNonSumFallback(t *testing.T) {
+	reader := sdkmetricx.NewManualReader()
+	view := sdkmetricx.NewView(
+		sdkmetricx.Instrument{Name: "requests"},
+		sdkmetricx.Stream{
+			Aggregation: sdkmetricx.AggregationExplicitBucketHistogram{
+				Boundaries: []float64{0, 10},
+			},
+		},
+	)
+	provider := sdkmetricx.NewMeterProvider(
+		sdkmetricx.WithReader(reader),
+		sdkmetricx.WithView(view),
+		sdkmetricx.WithExemplarFilter(exemplar.AlwaysOffFilter),
+	)
+	counter, _ := provider.Meter("test").Int64Counter("requests")
+	bound := counter.(metricx.Int64CounterBinder).Bind(attribute.String("route", "/orders"))
+	bound.Add(t.Context(), 5)
+
+	rm := collect(t, reader)
+	histogram, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64])
+	if !ok {
+		t.Fatalf("data is %T, want metricdata.Histogram[int64]", rm.ScopeMetrics[0].Metrics[0].Data)
+	}
+	if len(histogram.DataPoints) != 1 || histogram.DataPoints[0].Count != 1 || histogram.DataPoints[0].Sum != 5 {
+		t.Fatalf("unexpected histogram: %#v", histogram.DataPoints)
+	}
 }
 
 func TestCardinalityFinishAndOverflow(t *testing.T) {

@@ -1,50 +1,58 @@
 # Bound Instrument PoC Design Notes
 
-This module tests whether experimental metric SDK behavior can be developed
-without adding provisional methods to `go.opentelemetry.io/otel/sdk/metric`.
-It intentionally has its own MeterProvider, Reader contract, pipelines, and
-aggregation state. A stable SDK Reader cannot implement the local Reader
-interface because its registration methods are package-private.
+This module evaluates experimental bound instruments without adding their
+methods to regular `go.opentelemetry.io/otel/sdk/metric` instruments. It is a
+thin facade over one stable SDK provider, not a second SDK implementation.
 
-## Implemented seam
+## Runtime seam
 
-The public façade reuses stable `Instrument`, `Stream`, `View`, aggregation,
-exemplar, resource, and `metricdata` types. The bound Sum state is generated
-from `internal/shared/metricx`, so it can be rendered into another module
-without importing a parent module's `internal` packages. The generated state
-owns cardinality, cumulative and delta collection, exemplars, direct handles,
-finished-series tombstones, and lazy reactivation.
+`sdk/metric/x.NewMeterProvider` delegates to `sdk/metric.NewMeterProvider` and
+injects an experimental option. The stable SDK discovers that option through a
+structural type assertion and uses its wrapper only while constructing
+`Int64Counter` instruments. The stable SDK does not import the experimental
+module.
 
-The stable SDK package is not changed and its instrument method sets remain
-unchanged. This is the most important compatibility property of the
-experiment.
+Readers, views, pipelines, aggregation selection, resources, cardinality,
+exemplars, collection, and shutdown therefore use the regular SDK machinery.
+Stable Readers and reader options are accepted directly by this facade. Other
+instrument kinds retain their complete stable implementations.
+
+The stable aggregation package models binding and finishing as independent
+internal capabilities. An experimental Sum supplies both. Bind resolves and
+filters attributes, applies cardinality, and returns a direct measurement
+target for each reader and view. The bound Add hot path updates those targets
+without attribute processing or map lookup. Finish independently retires the
+exact filtered series.
+
+Regular stable providers do not enable the experimental aggregation path.
+Their counters do not implement `metric/x.Int64CounterBinder` or
+`metric/x.Finisher`, and their existing measurement path is unchanged.
 
 ## Deliberate vertical-slice limits
 
-- Only `Int64Counter` with Sum aggregation is implemented. Other instrument
-  methods are inherited from the API no-op implementation.
-- Stable PeriodicReader, exporter, and external Producer integration are not
-  included. ManualReader is sufficient to exercise cumulative and delta
-  pipelines in the same provider.
+- Only `Int64Counter` receives experimental methods.
+- Sum has the direct bound implementation and exact Finish support.
+- Compatible non-Sum views record bound values through their normal
+  fixed-attribute measurement function, but do not yet remove series on
+  Finish.
 - A shared overflow point cannot be finished because its value may contain
   contributions from several original attribute sets.
 - If a finished set is reactivated before collection, its final lifetime is
   exported in that collection and its new lifetime starts exporting in the
-  next collection. This avoids duplicate data points with identical attributes.
-- Expanding templates to the stable provider, reader, meter, and all
-  aggregations would duplicate most of the SDK source in this PoC. That work is
-  deferred until the API and lifecycle experiment demonstrates sufficient
-  value to justify the larger refactor.
+  following collection. This avoids duplicate points with identical
+  attributes in one batch.
 
 ## Rejected alternatives
 
-- Importing `sdk/metric/internal` from this module would compile because of the
-  directory layout, but would couple independently versioned modules to an
-  unstable internal implementation.
-- Wrapping a stable MeterProvider cannot provide bound handles because the
-  stable Reader and pipeline contracts are sealed by package-private methods.
-- Running a second provider for bound measurements would require merging
-  batches and would apply views, cardinality, and collection lifecycles
-  independently.
-- Reflection, `unsafe`, and linkname-based bridges would make the prototype
-  fragile and unsuitable as a migration path.
+- Duplicating a provider, Reader, pipeline, and aggregation stack would test a
+  separate SDK whose behavior could drift from the stable implementation.
+- Templates with only one generated consumer add indirection without sharing
+  implementation. Generating the entire SDK twice would preserve a source of
+  truth but produce a much larger experimental surface.
+- Importing `sdk/metric/internal` directly would couple independently selected
+  module versions to an unstable internal API. The structural option keeps the
+  dependency in the normal `sdk/metric/x` to `sdk/metric` direction.
+- Running two providers would require merging batches and would apply views,
+  cardinality, and collection lifecycles independently.
+- Reflection, `unsafe`, and linkname-based bridges would be fragile migration
+  paths.

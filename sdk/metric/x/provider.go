@@ -5,91 +5,39 @@ package x // import "go.opentelemetry.io/otel/sdk/metric/x"
 
 import (
 	"context"
-	"sync"
-	"sync/atomic"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/noop"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/metric/embedded"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
-// MeterProvider is the experimental metric SDK provider. It owns one local
-// pipeline for each configured experimental Reader.
+// MeterProvider is the experimental metric SDK facade. Its stable delegate
+// owns all readers, views, pipelines, and aggregation state.
 type MeterProvider struct {
-	noop.MeterProvider
-
-	mu      sync.Mutex
-	meters  map[instrumentation.Scope]*meter
-	pipes   []*pipeline
-	readers []Reader
-	stopped atomic.Bool
+	embedded.MeterProvider
+	delegate *sdkmetric.MeterProvider
 }
 
 var _ metric.MeterProvider = (*MeterProvider)(nil)
 
-// NewMeterProvider returns a configured experimental MeterProvider.
+// NewMeterProvider returns a stable-backed provider whose Int64Counter values
+// implement the experimental binding and finishing contracts.
 func NewMeterProvider(options ...Option) *MeterProvider {
-	cfg := newConfig(options)
-	provider := &MeterProvider{
-		meters:  make(map[instrumentation.Scope]*meter),
-		readers: cfg.readers,
-	}
-	for _, reader := range cfg.readers {
-		limit, fallback := reader.cardinalityLimit(InstrumentKindCounter)
-		if fallback {
-			limit = cfg.cardinalityLimit
-		}
-		pipe := newPipeline(cfg.resource, reader, cfg.views, cfg.exemplarFilter, limit)
-		provider.pipes = append(provider.pipes, pipe)
-		reader.register(pipe)
-	}
-	return provider
+	options = append(options, boundCounterOption{Option: sdkmetric.WithView()})
+	return &MeterProvider{delegate: sdkmetric.NewMeterProvider(options...)}
 }
 
-// Meter returns a Meter for name and options.
+// Meter returns a Meter backed by the stable SDK runtime.
 func (p *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
-	if p.stopped.Load() {
-		return noop.Meter{}
-	}
-	cfg := metric.NewMeterConfig(options...)
-	scope := instrumentation.Scope{
-		Name:       name,
-		Version:    cfg.InstrumentationVersion(),
-		SchemaURL:  cfg.SchemaURL(),
-		Attributes: cfg.InstrumentationAttributes(),
-	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if existing, ok := p.meters[scope]; ok {
-		return existing
-	}
-	meter := &meter{scope: scope, pipes: p.pipes, counters: make(map[counterID]*int64Counter)}
-	p.meters[scope] = meter
-	return meter
+	return p.delegate.Meter(name, options...)
 }
 
-// ForceFlush asks all Readers that support ForceFlush to flush.
+// ForceFlush flushes all configured Readers.
 func (p *MeterProvider) ForceFlush(ctx context.Context) error {
-	for _, reader := range p.readers {
-		if flusher, ok := reader.(interface{ ForceFlush(context.Context) error }); ok {
-			if err := flusher.ForceFlush(ctx); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	return p.delegate.ForceFlush(ctx)
 }
 
-// Shutdown shuts down all Readers. It is idempotent.
+// Shutdown shuts down the underlying stable SDK provider.
 func (p *MeterProvider) Shutdown(ctx context.Context) error {
-	if p.stopped.Swap(true) {
-		return nil
-	}
-	var first error
-	for _, reader := range p.readers {
-		if err := reader.Shutdown(ctx); err != nil && first == nil {
-			first = err
-		}
-	}
-	return first
+	return p.delegate.Shutdown(ctx)
 }

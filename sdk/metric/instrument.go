@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -222,7 +223,10 @@ func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) a
 }
 
 type int64Inst struct {
-	measures []aggregate.Measure[int64]
+	measures         []aggregate.Measure[int64]
+	fallbackMeasures []aggregate.Measure[int64]
+	binders          []aggregate.Binder[int64]
+	finishers        []aggregate.Finisher
 
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
@@ -261,6 +265,63 @@ func (i *int64Inst) aggregate(
 	for _, in := range i.measures {
 		in(ctx, val, s)
 	}
+}
+
+func (i *int64Inst) bind(attrs ...attribute.KeyValue) metric.Int64Counter {
+	set, _ := attrdedup.Set(attribute.NewSet(slices.Clone(attrs)...))
+	bound := &boundInt64Inst{instrument: i, attrs: set}
+	for _, binder := range i.binders {
+		bound.measures = append(bound.measures, binder.Bind(set))
+	}
+	return bound
+}
+
+func (i *int64Inst) finish(_ context.Context, attrs ...attribute.KeyValue) {
+	set, _ := attrdedup.Set(attribute.NewSet(slices.Clone(attrs)...))
+	for _, finisher := range i.finishers {
+		finisher.Finish(set)
+	}
+}
+
+type boundInt64Inst struct {
+	embedded.Int64Counter
+	instrument *int64Inst
+	attrs      attribute.Set
+	measures   []aggregate.BoundMeasure[int64]
+}
+
+var _ metric.Int64Counter = (*boundInt64Inst)(nil)
+
+func (i *boundInt64Inst) Enabled(ctx context.Context) bool {
+	return i.instrument.Enabled(ctx)
+}
+
+func (i *boundInt64Inst) Add(ctx context.Context, value int64, opts ...metric.AddOption) {
+	if len(opts) == 0 {
+		for _, measure := range i.measures {
+			measure.Measure(ctx, value)
+		}
+		for _, measure := range i.instrument.fallbackMeasures {
+			measure(ctx, value, i.attrs)
+		}
+		return
+	}
+	cfg := metric.NewAddConfig(opts)
+	extra := resolveAttributes(cfg.Attributes(), extractRawKVs(opts))
+	if extra.Len() == 0 {
+		for _, measure := range i.measures {
+			measure.Measure(ctx, value)
+		}
+		for _, measure := range i.instrument.fallbackMeasures {
+			measure(ctx, value, i.attrs)
+		}
+		return
+	}
+	merged := make([]attribute.KeyValue, 0, i.attrs.Len()+extra.Len())
+	merged = append(merged, i.attrs.ToSlice()...)
+	merged = append(merged, extra.ToSlice()...)
+	set, _ := attrdedup.Set(attribute.NewSet(merged...))
+	i.instrument.aggregate(ctx, value, set)
 }
 
 type float64Inst struct {

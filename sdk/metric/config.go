@@ -23,6 +23,7 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+	int64Wrapper     int64CounterWrapper
 }
 
 const defaultCardinalityLimit = 2000
@@ -85,6 +86,9 @@ func newConfig(options []Option) config {
 		conf = o.apply(conf)
 	}
 	for _, o := range options {
+		if wrapper, ok := o.(int64CounterWrapper); ok {
+			conf.int64Wrapper = wrapper
+		}
 		if _, ok := o.(experimentalOption); ok {
 			continue
 		}

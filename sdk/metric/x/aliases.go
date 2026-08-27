@@ -30,6 +30,20 @@ type (
 	View = sdkmetric.View
 	// ExemplarReservoirProviderSelector uses the stable selector contract.
 	ExemplarReservoirProviderSelector = sdkmetric.ExemplarReservoirProviderSelector
+	// Option configures an experimental MeterProvider.
+	Option = sdkmetric.Option
+	// Reader is the stable SDK Reader contract used by the experimental facade.
+	Reader = sdkmetric.Reader
+	// ManualReader collects metric data on demand.
+	ManualReader = sdkmetric.ManualReader
+	// ManualReaderOption configures a ManualReader.
+	ManualReaderOption = sdkmetric.ManualReaderOption
+	// TemporalitySelector selects temporality for an instrument kind.
+	TemporalitySelector = sdkmetric.TemporalitySelector
+	// AggregationSelector selects aggregation for an instrument kind.
+	AggregationSelector = sdkmetric.AggregationSelector
+	// CardinalityLimitSelector selects cardinality for an instrument kind.
+	CardinalityLimitSelector = sdkmetric.CardinalityLimitSelector
 )
 
 // InstrumentKindCounter and the related constants reuse stable instrument kinds.
@@ -56,4 +70,35 @@ var (
 	DefaultAggregationSelector = sdkmetric.DefaultAggregationSelector
 	// DefaultExemplarReservoirProviderSelector uses the stable SDK exemplar defaults.
 	DefaultExemplarReservoirProviderSelector = sdkmetric.DefaultExemplarReservoirProviderSelector
+	// NewManualReader returns a stable ManualReader for the experimental provider.
+	NewManualReader = sdkmetric.NewManualReader
+	// WithTemporalitySelector configures reader temporality.
+	WithTemporalitySelector = sdkmetric.WithTemporalitySelector
+	// WithAggregationSelector configures reader aggregation.
+	WithAggregationSelector = sdkmetric.WithAggregationSelector
+	// WithCardinalityLimitSelector configures reader cardinality.
+	WithCardinalityLimitSelector = sdkmetric.WithCardinalityLimitSelector
+	// CumulativeTemporalitySelector selects cumulative temporality.
+	CumulativeTemporalitySelector = sdkmetric.CumulativeTemporalitySelector
+	// DeltaTemporalitySelector selects delta temporality.
+	DeltaTemporalitySelector = sdkmetric.DeltaTemporalitySelector
+	// DefaultTemporalitySelector selects the default temporality.
+	DefaultTemporalitySelector = sdkmetric.DefaultTemporalitySelector
+	// WithResource associates a resource with a MeterProvider.
+	WithResource = sdkmetric.WithResource
+	// WithReader associates a Reader with a MeterProvider.
+	WithReader = sdkmetric.WithReader
+	// WithView associates views with a MeterProvider.
+	WithView = sdkmetric.WithView
+	// WithExemplarFilter configures exemplar filtering.
+	WithExemplarFilter = sdkmetric.WithExemplarFilter
+	// WithCardinalityLimit configures the provider cardinality limit.
+	WithCardinalityLimit = sdkmetric.WithCardinalityLimit
+)
+
+var (
+	// ErrReaderNotRegistered is returned before a Reader is registered.
+	ErrReaderNotRegistered = sdkmetric.ErrReaderNotRegistered
+	// ErrReaderShutdown is returned after a Reader is shut down.
+	ErrReaderShutdown = sdkmetric.ErrReaderShutdown
 )
