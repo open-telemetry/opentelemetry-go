@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
+	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -387,4 +388,32 @@ func TestExperimentalOptionSafe(t *testing.T) {
 	var opt testExperimentalOption
 
 	assert.NotPanics(t, func() { _ = newConfig([]Option{opt}) })
+}
+
+type testInt64CounterWrapper struct {
+	Option
+}
+
+func (*testInt64CounterWrapper) WrapInt64Counter(
+	counter api.Int64Counter,
+	_ func(...attribute.KeyValue) api.Int64Counter,
+	_ func(context.Context, ...attribute.KeyValue),
+) api.Int64Counter {
+	return counter
+}
+
+type testExperimentalInt64CounterWrapper struct {
+	*testInt64CounterWrapper
+}
+
+func (*testExperimentalInt64CounterWrapper) Experimental() {}
+
+func TestExperimentalInt64CounterWrapper(t *testing.T) {
+	unmarked := &testInt64CounterWrapper{Option: WithView()}
+	assert.Nil(t, newConfig([]Option{unmarked}).int64Wrapper)
+
+	marked := &testExperimentalInt64CounterWrapper{
+		testInt64CounterWrapper: &testInt64CounterWrapper{Option: WithView()},
+	}
+	assert.Same(t, marked, newConfig([]Option{marked}).int64Wrapper)
 }

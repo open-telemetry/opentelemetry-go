@@ -88,6 +88,7 @@ func newConfig(options []Option) config {
 	for _, o := range options {
 		if wrapper, ok := o.(int64CounterWrapper); ok {
 			conf.int64Wrapper = wrapper
+			continue
 		}
 		if _, ok := o.(experimentalOption); ok {
 			continue

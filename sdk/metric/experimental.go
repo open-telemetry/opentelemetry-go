@@ -15,6 +15,7 @@ import (
 // All operations passed to the wrapper are backed by this provider's own
 // pipelines and aggregation state.
 type int64CounterWrapper interface {
+	experimentalOption
 	WrapInt64Counter(
 		api.Int64Counter,
 		func(...attribute.KeyValue) api.Int64Counter,
