@@ -46,6 +46,7 @@ jobs:
     - name: Manage issue
       if: github.event_name == 'schedule'
       env:
+        GH_REPO: ${{ github.repository }}
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         LINT_OUTCOME: ${{ needs.lint-markdown.outputs.lint_outcome }}
       run: |
