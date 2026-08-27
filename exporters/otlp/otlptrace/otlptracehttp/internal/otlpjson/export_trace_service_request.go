@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -509,7 +510,11 @@ func (f *Float64) UnmarshalJSON(data []byte) error {
 		case "-Infinity":
 			*f = Float64(math.Inf(-1))
 		default:
-			return fmt.Errorf("invalid float value %q", str)
+			var value *float64
+			if str != strings.TrimSpace(str) || json.Unmarshal([]byte(str), &value) != nil || value == nil {
+				return fmt.Errorf("invalid float value %q", str)
+			}
+			*f = Float64(*value)
 		}
 		return nil
 	}
