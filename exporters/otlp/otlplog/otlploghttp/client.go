@@ -215,8 +215,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
 			if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-				var maxBytesErr *http.MaxBytesError
-				if errors.As(err, &maxBytesErr) {
+				if maxBytesErr, ok := errors.AsType[*http.MaxBytesError](err); ok {
 					return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
 				}
 				return err
@@ -250,8 +249,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		// debugging the actual issue.
 		var respData bytes.Buffer
 		if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-			var maxBytesErr *http.MaxBytesError
-			if errors.As(err, &maxBytesErr) {
+			if maxBytesErr, ok := errors.AsType[*http.MaxBytesError](err); ok {
 				return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
 			}
 			return err

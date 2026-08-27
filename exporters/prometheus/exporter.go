@@ -16,7 +16,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/otlptranslator"
-	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -796,8 +795,8 @@ func (c *collector) validateMetrics(name, description string, metricType *dto.Me
 
 	if !exist {
 		c.metricFamilies[name] = &dto.MetricFamily{
-			Name: proto.String(name),
-			Help: proto.String(description),
+			Name: new(name),
+			Help: new(description),
 			Type: metricType,
 		}
 		return false, ""
