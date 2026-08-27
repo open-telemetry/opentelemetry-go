@@ -402,8 +402,7 @@ func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
 	if resp.Err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		var e *httpResponseError
-		if errors.As(resp.Err, &e) {
+		if e, ok := errors.AsType[*httpResponseError](resp.Err); ok {
 			for k, vals := range e.Header {
 				for _, v := range vals {
 					w.Header().Add(k, v)

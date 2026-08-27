@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/trace
 
-go 1.25.0
+go 1.26.0
 
 replace go.opentelemetry.io/otel => ../
 
@@ -16,3 +16,5 @@ require (
 )
 
 replace go.opentelemetry.io/otel/metric => ../metric
+
+replace go.opentelemetry.io/otel/log => ../log
