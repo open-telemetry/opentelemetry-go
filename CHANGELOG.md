@@ -8,6 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.47.0-rc.1] - 2026-08-27
+
+This release is a release candidate for the Logs API and SDK.
+
 ### Added
 
 - Add `Logger`, `GetLoggerProvider`, and `SetLoggerProvider` to `go.opentelemetry.io/otel`. (#8874)
@@ -15,9 +22,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - Deprecate `go.opentelemetry.io/otel/log/global`; use the equivalent APIs in `go.opentelemetry.io/otel`. (#8874)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.46.0/0.68.0/0.22.0/0.0.19] - 2026-08-25
 
@@ -3818,7 +3822,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.46.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.47.0-rc.1...HEAD
+[1.47.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.47.0-rc.1
 [1.46.0/0.68.0/0.22.0/0.0.19]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.46.0
 [1.45.0/0.67.0/0.21.0/0.0.18]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.45.0
 [1.44.0/0.66.0/0.20.0/0.0.17]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.44.0
