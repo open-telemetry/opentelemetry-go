@@ -225,8 +225,8 @@ func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) a
 type int64Inst struct {
 	measures         []aggregate.Measure[int64]
 	fallbackMeasures []aggregate.Measure[int64]
-	binders          []aggregate.Binder[int64]
-	finishers        []aggregate.Finisher
+	binders          []func(attribute.Set) func(context.Context, int64)
+	finishers        []func(attribute.Set)
 
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
@@ -240,6 +240,29 @@ var (
 	_ metric.Int64Histogram     = (*int64Inst)(nil)
 	_ metric.Int64Gauge         = (*int64Inst)(nil)
 )
+
+func newExperimentalInt64Inst(
+	aggs []aggregate.Aggregator[int64],
+) *int64Inst {
+	i := &int64Inst{measures: make([]aggregate.Measure[int64], 0, len(aggs))}
+	for _, agg := range aggs {
+		measure := agg.Measure()
+		i.measures = append(i.measures, measure)
+		if binder, ok := agg.(interface {
+			Bind(attribute.Set) func(context.Context, int64)
+		}); ok {
+			i.binders = append(i.binders, binder.Bind)
+		} else {
+			i.fallbackMeasures = append(i.fallbackMeasures, measure)
+		}
+		if finisher, ok := agg.(interface {
+			Finish(attribute.Set)
+		}); ok {
+			i.finishers = append(i.finishers, finisher.Finish)
+		}
+	}
+	return i
+}
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
 	c := metric.NewAddConfig(opts)
@@ -270,8 +293,8 @@ func (i *int64Inst) aggregate(
 func (i *int64Inst) bind(attrs ...attribute.KeyValue) metric.Int64Counter {
 	set, _ := attrdedup.Set(attribute.NewSet(slices.Clone(attrs)...))
 	bound := &boundInt64Inst{instrument: i, attrs: set}
-	for _, binder := range i.binders {
-		bound.measures = append(bound.measures, binder.Bind(set))
+	for _, bind := range i.binders {
+		bound.measures = append(bound.measures, bind(set))
 	}
 	return bound
 }
@@ -279,7 +302,7 @@ func (i *int64Inst) bind(attrs ...attribute.KeyValue) metric.Int64Counter {
 func (i *int64Inst) finish(_ context.Context, attrs ...attribute.KeyValue) {
 	set, _ := attrdedup.Set(attribute.NewSet(slices.Clone(attrs)...))
 	for _, finisher := range i.finishers {
-		finisher.Finish(set)
+		finisher(set)
 	}
 }
 
@@ -287,7 +310,7 @@ type boundInt64Inst struct {
 	embedded.Int64Counter
 	instrument *int64Inst
 	attrs      attribute.Set
-	measures   []aggregate.BoundMeasure[int64]
+	measures   []func(context.Context, int64)
 }
 
 var _ metric.Int64Counter = (*boundInt64Inst)(nil)
@@ -299,7 +322,7 @@ func (i *boundInt64Inst) Enabled(ctx context.Context) bool {
 func (i *boundInt64Inst) Add(ctx context.Context, value int64, opts ...metric.AddOption) {
 	if len(opts) == 0 {
 		for _, measure := range i.measures {
-			measure.Measure(ctx, value)
+			measure(ctx, value)
 		}
 		for _, measure := range i.instrument.fallbackMeasures {
 			measure(ctx, value, i.attrs)
@@ -310,7 +333,7 @@ func (i *boundInt64Inst) Add(ctx context.Context, value int64, opts ...metric.Ad
 	extra := resolveAttributes(cfg.Attributes(), extractRawKVs(opts))
 	if extra.Len() == 0 {
 		for _, measure := range i.measures {
-			measure.Measure(ctx, value)
+			measure(ctx, value)
 		}
 		for _, measure := range i.instrument.fallbackMeasures {
 			measure(ctx, value, i.attrs)

@@ -263,27 +263,31 @@ func (s *boundSum[N]) collect(
 	return len(points)
 }
 
-type boundSumBinder[N int64 | float64] struct {
-	store  *boundSum[N]
-	filter attribute.Filter
+type boundSumAggregator[N int64 | float64] struct {
+	measure Measure[N]
+	store   *boundSum[N]
+	filter  attribute.Filter
 }
 
-func (b boundSumBinder[N]) Bind(attrs attribute.Set) BoundMeasure[N] {
+func (a *boundSumAggregator[N]) Measure() Measure[N] {
+	return a.measure
+}
+
+func (a *boundSumAggregator[N]) ComputeAggregation() ComputeAggregation {
+	return a.store.collect
+}
+
+func (a *boundSumAggregator[N]) Bind(attrs attribute.Set) func(context.Context, N) {
 	var dropped []attribute.KeyValue
-	if b.filter != nil {
-		attrs, dropped = attrs.Filter(b.filter)
+	if a.filter != nil {
+		attrs, dropped = attrs.Filter(a.filter)
 	}
-	return b.store.bind(attrs, dropped)
+	return a.store.bind(attrs, dropped).Measure
 }
 
-type boundSumFinisher[N int64 | float64] struct {
-	store  *boundSum[N]
-	filter attribute.Filter
-}
-
-func (f boundSumFinisher[N]) Finish(attrs attribute.Set) {
-	if f.filter != nil {
-		attrs, _ = attrs.Filter(f.filter)
+func (a *boundSumAggregator[N]) Finish(attrs attribute.Set) {
+	if a.filter != nil {
+		attrs, _ = attrs.Filter(a.filter)
 	}
-	f.store.finish(attrs)
+	a.store.finish(attrs)
 }

@@ -17,12 +17,13 @@ exemplars, collection, and shutdown therefore use the regular SDK machinery.
 Stable Readers and reader options are accepted directly by this facade. Other
 instrument kinds retain their complete stable implementations.
 
-The stable aggregation package models binding and finishing as independent
-internal capabilities. An experimental Sum supplies both. Bind resolves and
-filters attributes, applies cardinality, and returns a direct measurement
-target for each reader and view. The bound Add hot path updates those targets
-without attribute processing or map lookup. Finish independently retires the
-exact filtered series.
+The pipeline caches ordinary aggregation objects. The experimental Sum's
+concrete method set additionally provides Bind and Finish, which instrument
+construction discovers independently through structural type assertions. Bind
+resolves and filters attributes, applies cardinality, and returns a direct
+measurement target for each reader and view. The bound Add hot path updates
+those targets without attribute processing or map lookup. Finish independently
+retires the exact filtered series.
 
 Regular stable providers do not enable the experimental aggregation path.
 Their counters do not implement `metric/x.Int64CounterBinder` or

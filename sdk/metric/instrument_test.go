@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -79,6 +80,38 @@ func BenchmarkInstrument(b *testing.B) {
 			o.observe(int64(i), attr(i))
 		}
 	})
+}
+
+type testAggregator struct{}
+
+func (testAggregator) Measure() aggregate.Measure[int64] {
+	return func(context.Context, int64, attribute.Set) {}
+}
+
+func (testAggregator) ComputeAggregation() aggregate.ComputeAggregation {
+	return func(*metricdata.Aggregation) int { return 0 }
+}
+
+type bindOnlyAggregator struct{ testAggregator }
+
+func (bindOnlyAggregator) Bind(attribute.Set) func(context.Context, int64) {
+	return func(context.Context, int64) {}
+}
+
+type finishOnlyAggregator struct{ testAggregator }
+
+func (finishOnlyAggregator) Finish(attribute.Set) {}
+
+func TestExperimentalInt64InstDiscoversMethods(t *testing.T) {
+	inst := newExperimentalInt64Inst([]aggregate.Aggregator[int64]{
+		bindOnlyAggregator{},
+		finishOnlyAggregator{},
+	})
+
+	assert.Len(t, inst.measures, 2)
+	assert.Len(t, inst.binders, 1)
+	assert.Len(t, inst.finishers, 1)
+	assert.Len(t, inst.fallbackMeasures, 1)
 }
 
 func TestExtractRawKVs(t *testing.T) {

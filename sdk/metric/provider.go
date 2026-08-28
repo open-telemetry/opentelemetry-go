@@ -43,11 +43,6 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()
 	pipes := newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit)
-	if conf.int64Wrapper != nil {
-		for _, pipe := range pipes {
-			pipe.boundInt64 = true
-		}
-	}
 
 	mp := &MeterProvider{
 		pipes:        pipes,

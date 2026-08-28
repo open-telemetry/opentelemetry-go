@@ -665,11 +665,11 @@ func (p int64InstProvider) aggs(
 	return p.int64Resolver.Aggregators(inst, allowedKeys)
 }
 
-func (p int64InstProvider) aggsWithCapabilities(
+func (p int64InstProvider) experimentalCounterAggs(
 	kind InstrumentKind,
 	name, desc, u string,
 	allowedKeys []attribute.Key,
-) (resolvedAggregators[int64], error) {
+) ([]aggregate.Aggregator[int64], error) {
 	inst := Instrument{
 		Name:        name,
 		Description: desc,
@@ -677,7 +677,7 @@ func (p int64InstProvider) aggsWithCapabilities(
 		Kind:        kind,
 		Scope:       p.scope,
 	}
-	return p.int64Resolver.aggregatorsWithCapabilities(inst, allowedKeys)
+	return experimentalInt64CounterAggregators(p.int64Resolver, inst, allowedKeys)
 }
 
 func (p int64InstProvider) histogramAggs(
@@ -715,13 +715,8 @@ func (p int64InstProvider) lookup(
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
 		if p.int64Wrapper != nil && kind == InstrumentKindCounter {
-			aggs, err := p.aggsWithCapabilities(kind, name, desc, u, allowedKeys)
-			return &int64Inst{
-				measures:         aggs.measures,
-				fallbackMeasures: aggs.fallbackMeasures,
-				binders:          aggs.binders,
-				finishers:        aggs.finishers,
-			}, err
+			aggs, err := p.experimentalCounterAggs(kind, name, desc, u, allowedKeys)
+			return newExperimentalInt64Inst(aggs), err
 		}
 		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
 		return &int64Inst{measures: aggs}, err

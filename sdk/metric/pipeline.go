@@ -79,7 +79,6 @@ type pipeline struct {
 	multiCallbacks   list.List
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
-	boundInt64       bool
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
@@ -238,29 +237,21 @@ func newInserter[N int64 | float64](p *pipeline, vc *cache[string, instID]) *ins
 //
 // If an instrument is determined to use a Drop aggregation, that instrument is
 // not inserted nor returned.
-type resolvedAggregators[N int64 | float64] struct {
-	measures         []aggregate.Measure[N]
-	fallbackMeasures []aggregate.Measure[N]
-	binders          []aggregate.Binder[N]
-	finishers        []aggregate.Finisher
-}
-
-type capabilityMode uint8
-
-const (
-	omitCapabilities capabilityMode = iota
-	includeCapabilities
-)
+type aggregatorFactory[N int64 | float64] func(
+	aggregate.Builder[N],
+	Aggregation,
+	InstrumentKind,
+) (aggregate.Aggregator[N], error)
 
 func (i *inserter[N]) instrument(
 	inst Instrument,
 	allowedKeys []attribute.Key,
 	readerAggregation Aggregation,
-	capabilities capabilityMode,
-) (resolvedAggregators[N], error) {
+	factory aggregatorFactory[N],
+) ([]aggregate.Aggregator[N], error) {
 	var (
 		matched bool
-		result  resolvedAggregators[N]
+		result  []aggregate.Aggregator[N]
 	)
 
 	var err error
@@ -271,13 +262,13 @@ func (i *inserter[N]) instrument(
 			continue
 		}
 		matched = true
-		in, binder, finisher, id, e := i.cachedAggregator(
-			inst.Scope, inst.Kind, stream, readerAggregation,
+		agg, id, e := i.cachedAggregator(
+			inst.Scope, inst.Kind, stream, readerAggregation, factory,
 		)
 		if e != nil {
 			err = errors.Join(err, e)
 		}
-		if in == nil { // Drop aggregation.
+		if agg == nil { // Drop aggregation.
 			continue
 		}
 		if _, ok := seen[id]; ok {
@@ -285,17 +276,7 @@ func (i *inserter[N]) instrument(
 			continue
 		}
 		seen[id] = struct{}{}
-		result.measures = append(result.measures, in)
-		if capabilities == includeCapabilities {
-			if binder != nil {
-				result.binders = append(result.binders, binder)
-			} else {
-				result.fallbackMeasures = append(result.fallbackMeasures, in)
-			}
-			if finisher != nil {
-				result.finishers = append(result.finishers, finisher)
-			}
-		}
+		result = append(result, agg)
 	}
 
 	if err != nil {
@@ -318,8 +299,8 @@ func (i *inserter[N]) instrument(
 	if allowedKeys != nil {
 		stream.AttributeFilter = attribute.NewAllowKeysFilter(allowedKeys...)
 	}
-	in, binder, finisher, _, e := i.cachedAggregator(
-		inst.Scope, inst.Kind, stream, readerAggregation,
+	agg, _, e := i.cachedAggregator(
+		inst.Scope, inst.Kind, stream, readerAggregation, factory,
 	)
 	if e != nil {
 		if err == nil {
@@ -327,19 +308,9 @@ func (i *inserter[N]) instrument(
 		}
 		err = errors.Join(err, e)
 	}
-	if in != nil {
+	if agg != nil {
 		// Ensured to have not seen given matched was false.
-		result.measures = append(result.measures, in)
-		if capabilities == includeCapabilities {
-			if binder != nil {
-				result.binders = append(result.binders, binder)
-			} else {
-				result.fallbackMeasures = append(result.fallbackMeasures, in)
-			}
-			if finisher != nil {
-				result.finishers = append(result.finishers, finisher)
-			}
-		}
+		result = append(result, agg)
 	}
 	return result, err
 }
@@ -349,16 +320,12 @@ func (i *inserter[N]) Instrument(
 	allowedKeys []attribute.Key,
 	readerAggregation Aggregation,
 ) ([]aggregate.Measure[N], error) {
-	result, err := i.instrument(inst, allowedKeys, readerAggregation, omitCapabilities)
-	return result.measures, err
-}
-
-func (i *inserter[N]) instrumentWithCapabilities(
-	inst Instrument,
-	allowedKeys []attribute.Key,
-	readerAggregation Aggregation,
-) (resolvedAggregators[N], error) {
-	return i.instrument(inst, allowedKeys, readerAggregation, includeCapabilities)
+	aggs, err := i.instrument(inst, allowedKeys, readerAggregation, i.aggregateFunc)
+	measures := make([]aggregate.Measure[N], 0, len(aggs))
+	for _, agg := range aggs {
+		measures = append(measures, agg.Measure())
+	}
+	return measures, err
 }
 
 // addCallback registers a single instrument callback to be run when
@@ -373,11 +340,9 @@ var aggIDCount atomic.Uint64
 
 // aggVal is the cached value in an aggregators cache.
 type aggVal[N int64 | float64] struct {
-	ID       uint64
-	Measure  aggregate.Measure[N]
-	Binder   aggregate.Binder[N]
-	Finisher aggregate.Finisher
-	Err      error
+	ID         uint64
+	Aggregator aggregate.Aggregator[N]
+	Err        error
 }
 
 // readerDefaultAggregation returns the default aggregation for the instrument
@@ -424,10 +389,9 @@ func (i *inserter[N]) cachedAggregator(
 	kind InstrumentKind,
 	stream Stream,
 	readerAggregation Aggregation,
+	factory aggregatorFactory[N],
 ) (
-	meas aggregate.Measure[N],
-	binder aggregate.Binder[N],
-	finisher aggregate.Finisher,
+	agg aggregate.Aggregator[N],
 	aggID uint64,
 	err error,
 ) {
@@ -445,7 +409,7 @@ func (i *inserter[N]) cachedAggregator(
 	}
 
 	if err := isAggregatorCompatible(kind, stream.Aggregation); err != nil {
-		return nil, nil, nil, 0, fmt.Errorf(
+		return nil, 0, fmt.Errorf(
 			"creating aggregator with instrumentKind: %d, aggregation %v: %w",
 			kind, stream.Aggregation, err,
 		)
@@ -473,11 +437,11 @@ func (i *inserter[N]) cachedAggregator(
 		// A value less than or equal to zero will disable the aggregation
 		// limits for the builder (an all the created aggregates).
 		b.AggregationLimit = i.getCardinalityLimit(kind)
-		in, out, binder, finisher, err := i.aggregateFunc(b, stream.Aggregation, kind)
+		agg, err := factory(b, stream.Aggregation, kind)
 		if err != nil {
 			return aggVal[N]{Err: err}
 		}
-		if in == nil { // Drop aggregator.
+		if agg == nil { // Drop aggregator.
 			return aggVal[N]{}
 		}
 		i.pipeline.addSync(scope, instrumentSync{
@@ -486,18 +450,12 @@ func (i *inserter[N]) cachedAggregator(
 			name:        stream.Name,
 			description: stream.Description,
 			unit:        stream.Unit,
-			compAgg:     out,
+			compAgg:     agg.ComputeAggregation(),
 		})
 		id := aggIDCount.Add(1)
-		return aggVal[N]{
-			ID:       id,
-			Measure:  in,
-			Binder:   binder,
-			Finisher: finisher,
-			Err:      err,
-		}
+		return aggVal[N]{ID: id, Aggregator: agg, Err: err}
 	})
-	return cv.Measure, cv.Binder, cv.Finisher, cv.ID, cv.Err
+	return cv.Aggregator, cv.ID, cv.Err
 }
 
 // getCardinalityLimit returns the cardinality limit for the given instrument kind.
@@ -577,13 +535,12 @@ func (i *inserter[N]) aggregateFunc(
 	b aggregate.Builder[N],
 	agg Aggregation,
 	kind InstrumentKind,
-) (
-	meas aggregate.Measure[N],
-	comp aggregate.ComputeAggregation,
-	binder aggregate.Binder[N],
-	finisher aggregate.Finisher,
-	err error,
-) {
+) (aggregate.Aggregator[N], error) {
+	var (
+		meas aggregate.Measure[N]
+		comp aggregate.ComputeAggregation
+		err  error
+	)
 	switch a := agg.(type) {
 	case AggregationDefault:
 		return i.aggregateFunc(b, DefaultAggregationSelector(kind), kind)
@@ -597,13 +554,6 @@ func (i *inserter[N]) aggregateFunc(
 			meas, comp = b.PrecomputedLastValue()
 		}
 	case AggregationSum:
-		if i.pipeline.boundInt64 && kind == InstrumentKindCounter {
-			var n N
-			if _, ok := any(n).(int64); ok {
-				meas, comp, binder, finisher = b.BoundSum(true)
-				break
-			}
-		}
 		switch kind {
 		case InstrumentKindObservableCounter:
 			meas, comp = b.PrecomputedSum(true)
@@ -647,7 +597,31 @@ func (i *inserter[N]) aggregateFunc(
 		err = errUnknownAggregation
 	}
 
-	return meas, comp, binder, finisher, err
+	if meas == nil {
+		return nil, err
+	}
+	return aggregate.NewAggregator(meas, comp), err
+}
+
+func experimentalInt64CounterAggregateFunc(
+	i *inserter[int64],
+	b aggregate.Builder[int64],
+	agg Aggregation,
+	kind InstrumentKind,
+) (aggregate.Aggregator[int64], error) {
+	if kind != InstrumentKindCounter {
+		return i.aggregateFunc(b, agg, kind)
+	}
+	switch agg.(type) {
+	case AggregationDefault:
+		return experimentalInt64CounterAggregateFunc(
+			i, b, DefaultAggregationSelector(kind), kind,
+		)
+	case AggregationSum:
+		return b.BoundSum(true), nil
+	default:
+		return i.aggregateFunc(b, agg, kind)
+	}
 }
 
 // isAggregatorCompatible checks if the aggregation can be used by the instrument.
@@ -771,25 +745,30 @@ func (r resolver[N]) Aggregators(id Instrument, allowedKeys []attribute.Key) ([]
 	return measures, err
 }
 
-func (r resolver[N]) aggregatorsWithCapabilities(
+func experimentalInt64CounterAggregators(
+	r resolver[int64],
 	id Instrument,
 	allowedKeys []attribute.Key,
-) (resolvedAggregators[N], error) {
-	var result resolvedAggregators[N]
+) ([]aggregate.Aggregator[int64], error) {
+	var result []aggregate.Aggregator[int64]
 	var err error
 	for _, i := range r.inserters {
-		in, e := i.instrumentWithCapabilities(
+		in, e := i.instrument(
 			id,
 			allowedKeys,
 			i.readerDefaultAggregation(id.Kind),
+			func(
+				b aggregate.Builder[int64],
+				agg Aggregation,
+				kind InstrumentKind,
+			) (aggregate.Aggregator[int64], error) {
+				return experimentalInt64CounterAggregateFunc(i, b, agg, kind)
+			},
 		)
 		if e != nil {
 			err = errors.Join(err, e)
 		}
-		result.measures = append(result.measures, in.measures...)
-		result.fallbackMeasures = append(result.fallbackMeasures, in.fallbackMeasures...)
-		result.binders = append(result.binders, in.binders...)
-		result.finishers = append(result.finishers, in.finishers...)
+		result = append(result, in...)
 	}
 	return result, err
 }

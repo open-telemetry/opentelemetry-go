@@ -18,25 +18,36 @@ var now = time.Now
 // Measure receives measurements to be aggregated.
 type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
 
-// BoundMeasure records measurements for an attribute set resolved by a
-// Binder. It does not perform attribute processing or lookup during Measure.
-type BoundMeasure[N int64 | float64] interface {
-	Measure(context.Context, N)
-}
-
-// Binder resolves an attribute set to a BoundMeasure.
-type Binder[N int64 | float64] interface {
-	Bind(attribute.Set) BoundMeasure[N]
-}
-
-// Finisher ends the active lifetime of an exact attribute set.
-type Finisher interface {
-	Finish(attribute.Set)
-}
-
 // ComputeAggregation stores the aggregate of measurements into dest and
 // returns the number of aggregate data-points output.
 type ComputeAggregation func(dest *metricdata.Aggregation) int
+
+// Aggregator provides the input and output functions of an aggregation.
+type Aggregator[N int64 | float64] interface {
+	Measure() Measure[N]
+	ComputeAggregation() ComputeAggregation
+}
+
+type aggregator[N int64 | float64] struct {
+	measure Measure[N]
+	compute ComputeAggregation
+}
+
+// NewAggregator returns an Aggregator backed by measure and compute.
+func NewAggregator[N int64 | float64](
+	measure Measure[N],
+	compute ComputeAggregation,
+) Aggregator[N] {
+	return aggregator[N]{measure: measure, compute: compute}
+}
+
+func (a aggregator[N]) Measure() Measure[N] {
+	return a.measure
+}
+
+func (a aggregator[N]) ComputeAggregation() ComputeAggregation {
+	return a.compute
+}
 
 // Builder builds an aggregate function.
 type Builder[N int64 | float64] struct {
@@ -137,14 +148,15 @@ func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
 	}
 }
 
-// BoundSum returns a Sum input and output with independent binding and
-// finishing capabilities. It is used only by the experimental SDK facade.
-func (b Builder[N]) BoundSum(
-	monotonic bool,
-) (Measure[N], ComputeAggregation, Binder[N], Finisher) {
+// BoundSum returns a Sum aggregator that supports binding and finishing. It is
+// used only by the experimental SDK facade.
+func (b Builder[N]) BoundSum(monotonic bool) Aggregator[N] {
 	s := newBoundSum(monotonic, b.Temporality, b.AggregationLimit, b.resFunc())
-	return b.filter(s.measure), s.collect, boundSumBinder[N]{store: s, filter: b.Filter},
-		boundSumFinisher[N]{store: s, filter: b.Filter}
+	return &boundSumAggregator[N]{
+		measure: b.filter(s.measure),
+		store:   s,
+		filter:  b.Filter,
+	}
 }
 
 // ExplicitBucketHistogram returns a histogram aggregate function input and
