@@ -151,10 +151,10 @@ func (b Builder[N]) Sum(monotonic bool) (Measure[N], ComputeAggregation) {
 // BoundSum returns a Sum aggregator that supports binding and finishing. It is
 // used only by the experimental SDK facade.
 func (b Builder[N]) BoundSum(monotonic bool) Aggregator[N] {
-	s := newBoundSum(monotonic, b.Temporality, b.AggregationLimit, b.resFunc())
+	store := newLifecycleSum(monotonic, b.Temporality, b.AggregationLimit, b.resFunc())
 	return &boundSumAggregator[N]{
-		measure: b.filter(s.measure),
-		store:   s,
+		measure: b.filter(store.measure),
+		store:   store,
 		filter:  b.Filter,
 	}
 }

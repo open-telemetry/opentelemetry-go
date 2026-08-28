@@ -109,9 +109,9 @@ func TestExperimentalInt64InstDiscoversMethods(t *testing.T) {
 	})
 
 	assert.Len(t, inst.measures, 2)
-	assert.Len(t, inst.binders, 1)
-	assert.Len(t, inst.finishers, 1)
-	assert.Len(t, inst.fallbackMeasures, 1)
+	assert.Len(t, inst.experimental.binders, 1)
+	assert.Len(t, inst.experimental.finishers, 1)
+	assert.Len(t, inst.experimental.fallbackMeasures, 1)
 }
 
 func TestExtractRawKVs(t *testing.T) {

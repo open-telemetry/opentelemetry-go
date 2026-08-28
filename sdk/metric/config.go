@@ -25,8 +25,8 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
-	int64Binding     []int64CounterBindingWrapper
-	int64Finishing   []int64CounterFinishingWrapper
+	int64Binding     int64CounterBindingWrapper
+	int64Finishing   int64CounterFinishingWrapper
 }
 
 const defaultCardinalityLimit = 2000
@@ -74,10 +74,6 @@ func unifyShutdown(funcs []func(context.Context) error) func(context.Context) er
 	}
 }
 
-type experimentalOption interface {
-	Experimental()
-}
-
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
 	conf := config{
@@ -89,25 +85,26 @@ func newConfig(options []Option) config {
 		conf = o.apply(conf)
 	}
 	for _, o := range options {
+		var experimental bool
 		if wrapper, ok := o.(interface {
-			experimentalOption
 			WrapInt64CounterBinding(
 				api.Int64Counter,
 				func(...attribute.KeyValue) api.Int64Counter,
 			) api.Int64Counter
 		}); ok {
-			conf.int64Binding = append(conf.int64Binding, wrapper.WrapInt64CounterBinding)
+			conf.int64Binding = wrapper.WrapInt64CounterBinding
+			experimental = true
 		}
 		if wrapper, ok := o.(interface {
-			experimentalOption
 			WrapInt64CounterFinishing(
 				api.Int64Counter,
 				func(context.Context, ...attribute.KeyValue),
 			) api.Int64Counter
 		}); ok {
-			conf.int64Finishing = append(conf.int64Finishing, wrapper.WrapInt64CounterFinishing)
+			conf.int64Finishing = wrapper.WrapInt64CounterFinishing
+			experimental = true
 		}
-		if _, ok := o.(experimentalOption); ok {
+		if experimental {
 			continue
 		}
 		conf = o.apply(conf)

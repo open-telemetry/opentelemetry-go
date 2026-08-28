@@ -16,27 +16,16 @@ type bindingOption struct {
 	sdkmetric.Option
 }
 
-func (bindingOption) Experimental() {}
-
 func (bindingOption) WrapInt64CounterBinding(
 	counter metric.Int64Counter,
 	bind func(...attribute.KeyValue) metric.Int64Counter,
 ) metric.Int64Counter {
-	if finisher, ok := counter.(metricx.Finisher); ok {
-		return &bindingFinishingInt64Counter{
-			Int64Counter: counter,
-			bind:         bind,
-			finish:       finisher.Finish,
-		}
-	}
 	return &bindingInt64Counter{Int64Counter: counter, bind: bind}
 }
 
 type finishingOption struct {
 	sdkmetric.Option
 }
-
-func (finishingOption) Experimental() {}
 
 func (finishingOption) WrapInt64CounterFinishing(
 	counter metric.Int64Counter,

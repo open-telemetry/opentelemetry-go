@@ -24,8 +24,8 @@ type MeterProvider struct {
 
 	pipes          pipelines
 	meters         cache[instrumentation.Scope, *meter]
-	int64Binding   []int64CounterBindingWrapper
-	int64Finishing []int64CounterFinishingWrapper
+	int64Binding   int64CounterBindingWrapper
+	int64Finishing int64CounterFinishingWrapper
 
 	forceFlush, shutdown func(context.Context) error
 	stopped              atomic.Bool

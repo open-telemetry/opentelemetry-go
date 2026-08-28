@@ -37,15 +37,15 @@ type meter struct {
 
 	int64Resolver   resolver[int64]
 	float64Resolver resolver[float64]
-	int64Binding    []int64CounterBindingWrapper
-	int64Finishing  []int64CounterFinishingWrapper
+	int64Binding    int64CounterBindingWrapper
+	int64Finishing  int64CounterFinishingWrapper
 }
 
 func newMeter(
 	s instrumentation.Scope,
 	p pipelines,
-	binding []int64CounterBindingWrapper,
-	finishing []int64CounterFinishingWrapper,
+	binding int64CounterBindingWrapper,
+	finishing int64CounterFinishingWrapper,
 ) *meter {
 	// viewCache ensures instrument conflicts, including number conflicts, this
 	// meter is asked to create are logged to the user.
@@ -85,11 +85,11 @@ func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) 
 		return i, err
 	}
 	var counter metric.Int64Counter = i
-	for _, wrap := range m.int64Binding {
-		counter = wrap(counter, i.bind)
+	if m.int64Binding != nil {
+		counter = m.int64Binding(counter, i.bind)
 	}
-	for _, wrap := range m.int64Finishing {
-		counter = wrap(counter, i.finish)
+	if m.int64Finishing != nil {
+		counter = m.int64Finishing(counter, i.finish)
 	}
 	return counter, validateInstrumentName(name)
 }
@@ -724,7 +724,7 @@ func (p int64InstProvider) lookup(
 		Unit:        u,
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
-		if (len(p.int64Binding) != 0 || len(p.int64Finishing) != 0) && kind == InstrumentKindCounter {
+		if (p.int64Binding != nil || p.int64Finishing != nil) && kind == InstrumentKindCounter {
 			aggs, err := p.experimentalCounterAggs(kind, name, desc, u, allowedKeys)
 			return newExperimentalInt64Inst(aggs), err
 		}

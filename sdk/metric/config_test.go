@@ -378,18 +378,6 @@ func sample(parent context.Context) context.Context {
 	return trace.ContextWithSpanContext(parent, sc)
 }
 
-type testExperimentalOption struct {
-	Option
-}
-
-func (testExperimentalOption) Experimental() {}
-
-func TestExperimentalOptionSafe(t *testing.T) {
-	var opt testExperimentalOption
-
-	assert.NotPanics(t, func() { _ = newConfig([]Option{opt}) })
-}
-
 type testInt64CounterBindingWrapper struct {
 	Option
 }
@@ -401,17 +389,9 @@ func (*testInt64CounterBindingWrapper) WrapInt64CounterBinding(
 	return counter
 }
 
-type testExperimentalInt64CounterBindingWrapper struct {
-	*testInt64CounterBindingWrapper
-}
-
-func (*testExperimentalInt64CounterBindingWrapper) Experimental() {}
-
 type testExperimentalInt64CounterFinishingWrapper struct {
 	Option
 }
-
-func (*testExperimentalInt64CounterFinishingWrapper) Experimental() {}
 
 func (*testExperimentalInt64CounterFinishingWrapper) WrapInt64CounterFinishing(
 	counter api.Int64Counter,
@@ -421,14 +401,9 @@ func (*testExperimentalInt64CounterFinishingWrapper) WrapInt64CounterFinishing(
 }
 
 func TestExperimentalInt64CounterWrappers(t *testing.T) {
-	unmarked := &testInt64CounterBindingWrapper{Option: WithView()}
-	assert.Empty(t, newConfig([]Option{unmarked}).int64Binding)
-
-	binding := &testExperimentalInt64CounterBindingWrapper{
-		testInt64CounterBindingWrapper: &testInt64CounterBindingWrapper{Option: WithView()},
-	}
+	binding := &testInt64CounterBindingWrapper{Option: WithView()}
 	finishing := &testExperimentalInt64CounterFinishingWrapper{Option: WithView()}
 	conf := newConfig([]Option{binding, finishing})
-	assert.Len(t, conf.int64Binding, 1)
-	assert.Len(t, conf.int64Finishing, 1)
+	assert.NotNil(t, conf.int64Binding)
+	assert.NotNil(t, conf.int64Finishing)
 }

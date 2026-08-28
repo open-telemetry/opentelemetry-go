@@ -10,7 +10,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add experimental bound `Int64Counter` and exact-attribute series lifecycle support to `go.opentelemetry.io/otel/metric/x`, `go.opentelemetry.io/otel/sdk/metric`, and `go.opentelemetry.io/otel/sdk/metric/x`.
 - Add `Map` and `MapValue` functions for new `MAP` attribute type in `go.opentelemetry.io/otel/attribute`. (#8445)
 - Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#8453)
 - Support `MAP` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlplog`. (#8453)

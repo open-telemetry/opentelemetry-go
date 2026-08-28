@@ -9,12 +9,12 @@ thin facade over one stable SDK provider, not a second SDK implementation.
 `sdk/metric/x.WithBinding` and `sdk/metric/x.WithFinish` are independent options
 for `sdk/metric.NewMeterProvider`. Each embeds a no-op stable option to satisfy
 the stable package's sealed `Option` interface, then adds its own experimental
-marker and structural wrapper method. The stable SDK discovers those methods
-while constructing `Int64Counter` instruments without importing the
-experimental module.
+structural wrapper method. The stable SDK discovers those methods while
+constructing `Int64Counter` instruments without importing the experimental
+module.
 
-The stable SDK retains the wrapper methods as ordinary functions. It applies
-all binding wrappers before all finishing wrappers, making their composition
+The stable SDK retains one binding and one finishing wrapper as ordinary
+functions. It applies binding before finishing, making their composition
 independent of option order. A binding-only counter implements only
 `metric/x.Int64CounterBinder`, a finishing-only counter implements only
 `metric/x.Finisher`, and selecting both produces both method sets.
@@ -25,13 +25,14 @@ Callers configure the provider with stable Readers, Views, and options rather
 than aliases from this module. Other instrument kinds retain their complete
 stable implementations.
 
-The pipeline caches ordinary aggregation objects. The experimental Sum's
-concrete method set additionally provides Bind and Finish, which instrument
+The pipeline caches ordinary aggregation objects. Experimental Sum aggregation
+uses the SDK's existing accumulator and exemplar primitives in a
+lifecycle-aware store with Bind and Finish methods, which instrument
 construction discovers independently through structural type assertions. Bind
 resolves and filters attributes, applies cardinality, and returns a direct
 measurement target for each reader and view. The bound Add hot path updates
 those targets without attribute processing or map lookup. Finish independently
-retires the exact filtered series.
+retires the exact filtered series. Stable Sum storage remains unchanged.
 
 Stable providers without either option do not enable the experimental
 aggregation path.
