@@ -29,6 +29,10 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 - Deprecate `go.opentelemetry.io/otel/log/global`; use the equivalent APIs in `go.opentelemetry.io/otel`. (#8874)
 
+### Fixed
+
+- Ignore attempts to unregister unknown span processors in `go.opentelemetry.io/otel/sdk/trace`. (#8840)
+
 ### Removed
 
 - Drop support for [Go 1.25]. (#8876)
