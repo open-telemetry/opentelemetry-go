@@ -15,6 +15,11 @@ import (
 // runtime. Pass it to [WithMeterConfigurator] at [sdkmetric.MeterProvider]
 // construction. Calls to [MeterConfiguratorHandle.Set] are reflected
 // immediately across all existing meters via a synchronous cache walk.
+//
+// A Handle belongs to exactly one MeterProvider for its lifetime. Passing the
+// same Handle to more than one [WithMeterConfigurator] call is not supported:
+// only the most recently registered MeterProvider receives Set updates: an
+// earlier one silently stops receiving them.
 type MeterConfiguratorHandle struct {
 	mu           sync.Mutex // serializes Set calls; see Set's doc comment
 	configurator atomic.Pointer[versionedConfigurator]
@@ -84,6 +89,9 @@ func (meterConfiguratorProviderOption) Experimental() {}
 // [MeterConfiguratorHandle.Set] are only supported when a handle is registered
 // here. Providers created without this option cannot have a configurator added
 // later.
+//
+// Each Handle must be passed to at most one MeterProvider; see
+// [MeterConfiguratorHandle]'s doc comment.
 //
 // A nil h is a no-op, equivalent to omitting this option entirely.
 func WithMeterConfigurator(h *MeterConfiguratorHandle) sdkmetric.Option {
