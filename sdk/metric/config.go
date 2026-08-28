@@ -12,6 +12,8 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -23,7 +25,8 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
-	int64Wrapper     int64CounterWrapper
+	int64Binding     []int64CounterBindingWrapper
+	int64Finishing   []int64CounterFinishingWrapper
 }
 
 const defaultCardinalityLimit = 2000
@@ -86,9 +89,23 @@ func newConfig(options []Option) config {
 		conf = o.apply(conf)
 	}
 	for _, o := range options {
-		if wrapper, ok := o.(int64CounterWrapper); ok {
-			conf.int64Wrapper = wrapper
-			continue
+		if wrapper, ok := o.(interface {
+			experimentalOption
+			WrapInt64CounterBinding(
+				api.Int64Counter,
+				func(...attribute.KeyValue) api.Int64Counter,
+			) api.Int64Counter
+		}); ok {
+			conf.int64Binding = append(conf.int64Binding, wrapper.WrapInt64CounterBinding)
+		}
+		if wrapper, ok := o.(interface {
+			experimentalOption
+			WrapInt64CounterFinishing(
+				api.Int64Counter,
+				func(context.Context, ...attribute.KeyValue),
+			) api.Int64Counter
+		}); ok {
+			conf.int64Finishing = append(conf.int64Finishing, wrapper.WrapInt64CounterFinishing)
 		}
 		if _, ok := o.(experimentalOption); ok {
 			continue

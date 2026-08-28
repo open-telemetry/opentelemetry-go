@@ -37,10 +37,16 @@ type meter struct {
 
 	int64Resolver   resolver[int64]
 	float64Resolver resolver[float64]
-	int64Wrapper    int64CounterWrapper
+	int64Binding    []int64CounterBindingWrapper
+	int64Finishing  []int64CounterFinishingWrapper
 }
 
-func newMeter(s instrumentation.Scope, p pipelines, wrapper int64CounterWrapper) *meter {
+func newMeter(
+	s instrumentation.Scope,
+	p pipelines,
+	binding []int64CounterBindingWrapper,
+	finishing []int64CounterFinishingWrapper,
+) *meter {
 	// viewCache ensures instrument conflicts, including number conflicts, this
 	// meter is asked to create are logged to the user.
 	var viewCache cache[string, instID]
@@ -59,7 +65,8 @@ func newMeter(s instrumentation.Scope, p pipelines, wrapper int64CounterWrapper)
 		float64ObservableInsts: &float64ObservableInsts,
 		int64Resolver:          newResolver[int64](p, &viewCache),
 		float64Resolver:        newResolver[float64](p, &viewCache),
-		int64Wrapper:           wrapper,
+		int64Binding:           binding,
+		int64Finishing:         finishing,
 	}
 }
 
@@ -77,11 +84,14 @@ func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) 
 	if err != nil {
 		return i, err
 	}
-	if m.int64Wrapper != nil {
-		return m.int64Wrapper.WrapInt64Counter(i, i.bind, i.finish), validateInstrumentName(name)
+	var counter metric.Int64Counter = i
+	for _, wrap := range m.int64Binding {
+		counter = wrap(counter, i.bind)
 	}
-
-	return i, validateInstrumentName(name)
+	for _, wrap := range m.int64Finishing {
+		counter = wrap(counter, i.finish)
+	}
+	return counter, validateInstrumentName(name)
 }
 
 // Int64UpDownCounter returns a new instrument identified by name and
@@ -714,7 +724,7 @@ func (p int64InstProvider) lookup(
 		Unit:        u,
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
-		if p.int64Wrapper != nil && kind == InstrumentKindCounter {
+		if (len(p.int64Binding) != 0 || len(p.int64Finishing) != 0) && kind == InstrumentKindCounter {
 			aggs, err := p.experimentalCounterAggs(kind, name, desc, u, allowedKeys)
 			return newExperimentalInt64Inst(aggs), err
 		}

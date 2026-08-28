@@ -19,7 +19,7 @@ func BenchmarkInt64Counter(b *testing.B) {
 	attrs := attribute.NewSet(attribute.String("route", "/orders"))
 	b.Run("stable/unbound", func(b *testing.B) {
 		reader := sdkmetric.NewManualReader()
-		provider := sdkmetricx.NewMeterProvider(
+		provider := sdkmetric.NewMeterProvider(
 			sdkmetric.WithReader(reader),
 			sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 		)
@@ -32,7 +32,8 @@ func BenchmarkInt64Counter(b *testing.B) {
 	})
 	b.Run("experimental/unbound", func(b *testing.B) {
 		reader := sdkmetric.NewManualReader()
-		provider := sdkmetricx.NewMeterProvider(
+		provider := sdkmetric.NewMeterProvider(
+			sdkmetricx.WithBinding(),
 			sdkmetric.WithReader(reader),
 			sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 		)
@@ -45,7 +46,8 @@ func BenchmarkInt64Counter(b *testing.B) {
 	})
 	b.Run("experimental/bound", func(b *testing.B) {
 		reader := sdkmetric.NewManualReader()
-		provider := sdkmetricx.NewMeterProvider(
+		provider := sdkmetric.NewMeterProvider(
+			sdkmetricx.WithBinding(),
 			sdkmetric.WithReader(reader),
 			sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 		)
@@ -70,7 +72,8 @@ func BenchmarkBoundInt64CounterTemporalities(b *testing.B) {
 			reader := sdkmetric.NewManualReader(
 				sdkmetric.WithTemporalitySelector(benchmark.selector),
 			)
-			provider := sdkmetricx.NewMeterProvider(
+			provider := sdkmetric.NewMeterProvider(
+				sdkmetricx.WithBinding(),
 				sdkmetric.WithReader(reader),
 				sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 			)

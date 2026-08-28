@@ -14,7 +14,11 @@ import (
 
 func Example_boundCounter() {
 	reader := sdkmetric.NewManualReader()
-	provider := sdkmetricx.NewMeterProvider(sdkmetric.WithReader(reader))
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetricx.WithBinding(),
+		sdkmetricx.WithFinish(),
+	)
 	counter, _ := provider.Meter("example").Int64Counter("requests")
 
 	binder := counter.(metricx.Int64CounterBinder)

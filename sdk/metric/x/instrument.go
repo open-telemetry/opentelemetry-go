@@ -12,36 +12,90 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
-type boundCounterOption struct {
+type bindingOption struct {
 	sdkmetric.Option
 }
 
-func (boundCounterOption) Experimental() {}
+func (bindingOption) Experimental() {}
 
-func (boundCounterOption) WrapInt64Counter(
+func (bindingOption) WrapInt64CounterBinding(
 	counter metric.Int64Counter,
 	bind func(...attribute.KeyValue) metric.Int64Counter,
-	finish func(context.Context, ...attribute.KeyValue),
 ) metric.Int64Counter {
-	return &int64Counter{Int64Counter: counter, bind: bind, finish: finish}
+	if finisher, ok := counter.(metricx.Finisher); ok {
+		return &bindingFinishingInt64Counter{
+			Int64Counter: counter,
+			bind:         bind,
+			finish:       finisher.Finish,
+		}
+	}
+	return &bindingInt64Counter{Int64Counter: counter, bind: bind}
 }
 
-type int64Counter struct {
+type finishingOption struct {
+	sdkmetric.Option
+}
+
+func (finishingOption) Experimental() {}
+
+func (finishingOption) WrapInt64CounterFinishing(
+	counter metric.Int64Counter,
+	finish func(context.Context, ...attribute.KeyValue),
+) metric.Int64Counter {
+	if binder, ok := counter.(metricx.Int64CounterBinder); ok {
+		return &bindingFinishingInt64Counter{
+			Int64Counter: counter,
+			bind:         binder.Bind,
+			finish:       finish,
+		}
+	}
+	return &finishingInt64Counter{Int64Counter: counter, finish: finish}
+}
+
+type bindingInt64Counter struct {
+	metric.Int64Counter
+	bind func(...attribute.KeyValue) metric.Int64Counter
+}
+
+var (
+	_ metric.Int64Counter        = (*bindingInt64Counter)(nil)
+	_ metricx.Int64CounterBinder = (*bindingInt64Counter)(nil)
+)
+
+func (c *bindingInt64Counter) Bind(attrs ...attribute.KeyValue) metric.Int64Counter {
+	return c.bind(attrs...)
+}
+
+type finishingInt64Counter struct {
+	metric.Int64Counter
+	finish func(context.Context, ...attribute.KeyValue)
+}
+
+var (
+	_ metric.Int64Counter = (*finishingInt64Counter)(nil)
+	_ metricx.Finisher    = (*finishingInt64Counter)(nil)
+)
+
+func (c *finishingInt64Counter) Finish(ctx context.Context, attrs ...attribute.KeyValue) {
+	c.finish(ctx, attrs...)
+}
+
+type bindingFinishingInt64Counter struct {
 	metric.Int64Counter
 	bind   func(...attribute.KeyValue) metric.Int64Counter
 	finish func(context.Context, ...attribute.KeyValue)
 }
 
 var (
-	_ metric.Int64Counter        = (*int64Counter)(nil)
-	_ metricx.Int64CounterBinder = (*int64Counter)(nil)
-	_ metricx.Finisher           = (*int64Counter)(nil)
+	_ metric.Int64Counter        = (*bindingFinishingInt64Counter)(nil)
+	_ metricx.Int64CounterBinder = (*bindingFinishingInt64Counter)(nil)
+	_ metricx.Finisher           = (*bindingFinishingInt64Counter)(nil)
 )
 
-func (c *int64Counter) Bind(attrs ...attribute.KeyValue) metric.Int64Counter {
+func (c *bindingFinishingInt64Counter) Bind(attrs ...attribute.KeyValue) metric.Int64Counter {
 	return c.bind(attrs...)
 }
 
-func (c *int64Counter) Finish(ctx context.Context, attrs ...attribute.KeyValue) {
+func (c *bindingFinishingInt64Counter) Finish(ctx context.Context, attrs ...attribute.KeyValue) {
 	c.finish(ctx, attrs...)
 }

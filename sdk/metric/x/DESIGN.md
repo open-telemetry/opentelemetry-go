@@ -6,11 +6,18 @@ thin facade over one stable SDK provider, not a second SDK implementation.
 
 ## Runtime seam
 
-`sdk/metric/x.NewMeterProvider` injects an experimental option and returns the
-provider created by `sdk/metric.NewMeterProvider` directly. The stable SDK
-discovers that option through a structural type assertion and uses its wrapper
-only while constructing `Int64Counter` instruments. The stable SDK does not
-import the experimental module.
+`sdk/metric/x.WithBinding` and `sdk/metric/x.WithFinish` are independent options
+for `sdk/metric.NewMeterProvider`. Each embeds a no-op stable option to satisfy
+the stable package's sealed `Option` interface, then adds its own experimental
+marker and structural wrapper method. The stable SDK discovers those methods
+while constructing `Int64Counter` instruments without importing the
+experimental module.
+
+The stable SDK retains the wrapper methods as ordinary functions. It applies
+all binding wrappers before all finishing wrappers, making their composition
+independent of option order. A binding-only counter implements only
+`metric/x.Int64CounterBinder`, a finishing-only counter implements only
+`metric/x.Finisher`, and selecting both produces both method sets.
 
 Readers, views, pipelines, aggregation selection, resources, cardinality,
 exemplars, collection, and shutdown therefore use the regular SDK machinery.
@@ -26,7 +33,8 @@ measurement target for each reader and view. The bound Add hot path updates
 those targets without attribute processing or map lookup. Finish independently
 retires the exact filtered series.
 
-Regular stable providers do not enable the experimental aggregation path.
+Stable providers without either option do not enable the experimental
+aggregation path.
 Their counters do not implement `metric/x.Int64CounterBinder` or
 `metric/x.Finisher`, and their existing measurement path is unchanged.
 

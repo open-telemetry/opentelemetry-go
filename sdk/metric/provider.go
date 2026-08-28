@@ -22,9 +22,10 @@ import (
 type MeterProvider struct {
 	embedded.MeterProvider
 
-	pipes        pipelines
-	meters       cache[instrumentation.Scope, *meter]
-	int64Wrapper int64CounterWrapper
+	pipes          pipelines
+	meters         cache[instrumentation.Scope, *meter]
+	int64Binding   []int64CounterBindingWrapper
+	int64Finishing []int64CounterFinishingWrapper
 
 	forceFlush, shutdown func(context.Context) error
 	stopped              atomic.Bool
@@ -45,10 +46,11 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 	pipes := newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit)
 
 	mp := &MeterProvider{
-		pipes:        pipes,
-		int64Wrapper: conf.int64Wrapper,
-		forceFlush:   flush,
-		shutdown:     sdown,
+		pipes:          pipes,
+		int64Binding:   conf.int64Binding,
+		int64Finishing: conf.int64Finishing,
+		forceFlush:     flush,
+		shutdown:       sdown,
 	}
 	// Log after creation so all readers show correctly they are registered.
 	global.Info(
@@ -97,7 +99,7 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	)
 
 	return mp.meters.Lookup(s, func() *meter {
-		return newMeter(s, mp.pipes, mp.int64Wrapper)
+		return newMeter(s, mp.pipes, mp.int64Binding, mp.int64Finishing)
 	})
 }
 

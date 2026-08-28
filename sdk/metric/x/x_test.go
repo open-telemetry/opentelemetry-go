@@ -23,7 +23,8 @@ func TestBoundCounterCumulativeAndDelta(t *testing.T) {
 	delta := sdkmetric.NewManualReader(
 		sdkmetric.WithTemporalitySelector(sdkmetric.DeltaTemporalitySelector),
 	)
-	provider := sdkmetricx.NewMeterProvider(
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetricx.WithBinding(),
 		sdkmetric.WithReader(cumulative),
 		sdkmetric.WithReader(delta),
 		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
@@ -58,7 +59,10 @@ func TestBoundCounterCumulativeAndDelta(t *testing.T) {
 
 func TestProviderAcceptsStableReader(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
-	provider := sdkmetricx.NewMeterProvider(sdkmetric.WithReader(reader))
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetricx.WithBinding(),
+		sdkmetric.WithReader(reader),
+	)
 	counter, err := provider.Meter("test").Int64Counter("requests")
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +76,10 @@ func TestProviderAcceptsStableReader(t *testing.T) {
 
 func TestProviderRetainsStableInstrumentSupport(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
-	provider := sdkmetricx.NewMeterProvider(sdkmetric.WithReader(reader))
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetricx.WithBinding(),
+		sdkmetric.WithReader(reader),
+	)
 	counter, err := provider.Meter("test").Int64UpDownCounter("active")
 	if err != nil {
 		t.Fatal(err)
@@ -91,7 +98,9 @@ func TestFinishAndLazyReactivation(t *testing.T) {
 	delta := sdkmetric.NewManualReader(
 		sdkmetric.WithTemporalitySelector(sdkmetric.DeltaTemporalitySelector),
 	)
-	provider := sdkmetricx.NewMeterProvider(
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetricx.WithBinding(),
+		sdkmetricx.WithFinish(),
 		sdkmetric.WithReader(cumulative),
 		sdkmetric.WithReader(delta),
 		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
@@ -117,7 +126,8 @@ func TestViewFilteringAndRecordTimeFallback(t *testing.T) {
 		sdkmetric.Instrument{Name: "requests"},
 		sdkmetric.Stream{AttributeFilter: attribute.NewAllowKeysFilter("route")},
 	)
-	provider := sdkmetricx.NewMeterProvider(
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetricx.WithBinding(),
 		sdkmetric.WithReader(reader),
 		sdkmetric.WithView(view),
 		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
@@ -144,7 +154,8 @@ func TestBoundCounterNonSumFallback(t *testing.T) {
 			},
 		},
 	)
-	provider := sdkmetricx.NewMeterProvider(
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetricx.WithBinding(),
 		sdkmetric.WithReader(reader),
 		sdkmetric.WithView(view),
 		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
@@ -165,7 +176,9 @@ func TestBoundCounterNonSumFallback(t *testing.T) {
 
 func TestCardinalityFinishAndOverflow(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
-	provider := sdkmetricx.NewMeterProvider(
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetricx.WithBinding(),
+		sdkmetricx.WithFinish(),
 		sdkmetric.WithReader(reader),
 		sdkmetric.WithCardinalityLimit(2),
 		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
@@ -197,7 +210,8 @@ func TestCardinalityFinishAndOverflow(t *testing.T) {
 
 func TestDefaultAttributes(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
-	provider := sdkmetricx.NewMeterProvider(
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetricx.WithBinding(),
 		sdkmetric.WithReader(reader),
 		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 	)
@@ -224,7 +238,8 @@ func TestBoundCounterExemplarContext(t *testing.T) {
 		sdkmetric.Instrument{Name: "requests"},
 		sdkmetric.Stream{AttributeFilter: attribute.NewAllowKeysFilter("route")},
 	)
-	provider := sdkmetricx.NewMeterProvider(
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetricx.WithBinding(),
 		sdkmetric.WithReader(reader),
 		sdkmetric.WithView(view),
 		sdkmetric.WithExemplarFilter(exemplar.AlwaysOnFilter),
@@ -269,7 +284,9 @@ func TestStableCounterDoesNotImplementExperimentalInterfaces(t *testing.T) {
 
 func TestBoundCounterConcurrentSafe(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
-	provider := sdkmetricx.NewMeterProvider(
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetricx.WithBinding(),
+		sdkmetricx.WithFinish(),
 		sdkmetric.WithReader(reader),
 		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 	)

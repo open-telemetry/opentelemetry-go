@@ -390,30 +390,45 @@ func TestExperimentalOptionSafe(t *testing.T) {
 	assert.NotPanics(t, func() { _ = newConfig([]Option{opt}) })
 }
 
-type testInt64CounterWrapper struct {
+type testInt64CounterBindingWrapper struct {
 	Option
 }
 
-func (*testInt64CounterWrapper) WrapInt64Counter(
+func (*testInt64CounterBindingWrapper) WrapInt64CounterBinding(
 	counter api.Int64Counter,
 	_ func(...attribute.KeyValue) api.Int64Counter,
+) api.Int64Counter {
+	return counter
+}
+
+type testExperimentalInt64CounterBindingWrapper struct {
+	*testInt64CounterBindingWrapper
+}
+
+func (*testExperimentalInt64CounterBindingWrapper) Experimental() {}
+
+type testExperimentalInt64CounterFinishingWrapper struct {
+	Option
+}
+
+func (*testExperimentalInt64CounterFinishingWrapper) Experimental() {}
+
+func (*testExperimentalInt64CounterFinishingWrapper) WrapInt64CounterFinishing(
+	counter api.Int64Counter,
 	_ func(context.Context, ...attribute.KeyValue),
 ) api.Int64Counter {
 	return counter
 }
 
-type testExperimentalInt64CounterWrapper struct {
-	*testInt64CounterWrapper
-}
+func TestExperimentalInt64CounterWrappers(t *testing.T) {
+	unmarked := &testInt64CounterBindingWrapper{Option: WithView()}
+	assert.Empty(t, newConfig([]Option{unmarked}).int64Binding)
 
-func (*testExperimentalInt64CounterWrapper) Experimental() {}
-
-func TestExperimentalInt64CounterWrapper(t *testing.T) {
-	unmarked := &testInt64CounterWrapper{Option: WithView()}
-	assert.Nil(t, newConfig([]Option{unmarked}).int64Wrapper)
-
-	marked := &testExperimentalInt64CounterWrapper{
-		testInt64CounterWrapper: &testInt64CounterWrapper{Option: WithView()},
+	binding := &testExperimentalInt64CounterBindingWrapper{
+		testInt64CounterBindingWrapper: &testInt64CounterBindingWrapper{Option: WithView()},
 	}
-	assert.Same(t, marked, newConfig([]Option{marked}).int64Wrapper)
+	finishing := &testExperimentalInt64CounterFinishingWrapper{Option: WithView()}
+	conf := newConfig([]Option{binding, finishing})
+	assert.Len(t, conf.int64Binding, 1)
+	assert.Len(t, conf.int64Finishing, 1)
 }
