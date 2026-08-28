@@ -218,9 +218,14 @@ func (m *meter) int64ObservableInstrument(
 			// is not part of the pipeline.
 			insert.pipeline.addInt64Measure(inst.observableID, in)
 			for _, cback := range callbacks {
-				inst := int64Observer{measures: in, meter: m}
+				inst := int64Observer{measures: in}
 				fn := cback
-				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
+				insert.addCallback(func(ctx context.Context) error {
+					if !m.enabled.Load() {
+						return nil
+					}
+					return fn(ctx, inst)
+				})
 			}
 		}
 		return inst, validateInstrumentName(id.Name)
@@ -401,9 +406,14 @@ func (m *meter) float64ObservableInstrument(
 			// is not part of the pipeline.
 			insert.pipeline.addFloat64Measure(inst.observableID, in)
 			for _, cback := range callbacks {
-				inst := float64Observer{measures: in, meter: m}
+				inst := float64Observer{measures: in}
 				fn := cback
-				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
+				insert.addCallback(func(ctx context.Context) error {
+					if !m.enabled.Load() {
+						return nil
+					}
+					return fn(ctx, inst)
+				})
 			}
 		}
 		return inst, validateInstrumentName(id.Name)
@@ -589,7 +599,12 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 		}
 
 		// Some or all instruments were valid.
-		cBack := func(ctx context.Context) error { return f(ctx, reg) }
+		cBack := func(ctx context.Context) error {
+			if !m.enabled.Load() {
+				return nil
+			}
+			return f(ctx, reg)
+		}
 		unregs[ix] = pipe.addMultiCallback(cBack)
 	}
 
@@ -647,9 +662,6 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 		}
 		return
 	}
-	if !oImpl.meter.enabled.Load() {
-		return
-	}
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	set := resolveAttributes(c.Attributes(), rawKVs)
@@ -681,9 +693,6 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 				"number", fmt.Sprintf("%T", int64(0)),
 			)
 		}
-		return
-	}
-	if !oImpl.meter.enabled.Load() {
 		return
 	}
 	c := metric.NewObserveConfig(opts)
@@ -854,14 +863,9 @@ func (p float64InstProvider) lookupHistogram(
 type int64Observer struct {
 	embedded.Int64Observer
 	measures[int64]
-
-	meter *meter
 }
 
 func (o int64Observer) Observe(val int64, opts ...metric.ObserveOption) {
-	if !o.meter.enabled.Load() {
-		return
-	}
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	o.observe(val, resolveAttributes(c.Attributes(), rawKVs))
@@ -870,14 +874,9 @@ func (o int64Observer) Observe(val int64, opts ...metric.ObserveOption) {
 type float64Observer struct {
 	embedded.Float64Observer
 	measures[float64]
-
-	meter *meter
 }
 
 func (o float64Observer) Observe(val float64, opts ...metric.ObserveOption) {
-	if !o.meter.enabled.Load() {
-		return
-	}
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	o.observe(val, resolveAttributes(c.Attributes(), rawKVs))
