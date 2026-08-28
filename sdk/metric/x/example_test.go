@@ -8,12 +8,13 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	metricx "go.opentelemetry.io/otel/metric/x"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdkmetricx "go.opentelemetry.io/otel/sdk/metric/x"
 )
 
 func Example_boundCounter() {
-	reader := sdkmetricx.NewManualReader()
-	provider := sdkmetricx.NewMeterProvider(sdkmetricx.WithReader(reader))
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetricx.NewMeterProvider(sdkmetric.WithReader(reader))
 	counter, _ := provider.Meter("example").Int64Counter("requests")
 
 	binder := counter.(metricx.Int64CounterBinder)

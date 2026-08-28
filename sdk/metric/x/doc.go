@@ -4,7 +4,7 @@
 // Package x provides a stable-SDK-backed experimental facade with bound
 // Int64Counter and exact-attribute Finish support for Sum aggregation.
 //
-// Readers, views, exporters, and non-experimental instruments use
-// go.opentelemetry.io/otel/sdk/metric directly. Only counters obtained from
-// this package's MeterProvider implement the experimental lifecycle methods.
+// Configure the provider with options, readers, views, and exporters from
+// go.opentelemetry.io/otel/sdk/metric. Only counters obtained from the provider
+// returned by NewMeterProvider implement the experimental lifecycle methods.
 package x // import "go.opentelemetry.io/otel/sdk/metric/x"

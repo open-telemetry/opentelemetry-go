@@ -6,16 +6,17 @@ thin facade over one stable SDK provider, not a second SDK implementation.
 
 ## Runtime seam
 
-`sdk/metric/x.NewMeterProvider` delegates to `sdk/metric.NewMeterProvider` and
-injects an experimental option. The stable SDK discovers that option through a
-structural type assertion and uses its wrapper only while constructing
-`Int64Counter` instruments. The stable SDK does not import the experimental
-module.
+`sdk/metric/x.NewMeterProvider` injects an experimental option and returns the
+provider created by `sdk/metric.NewMeterProvider` directly. The stable SDK
+discovers that option through a structural type assertion and uses its wrapper
+only while constructing `Int64Counter` instruments. The stable SDK does not
+import the experimental module.
 
 Readers, views, pipelines, aggregation selection, resources, cardinality,
 exemplars, collection, and shutdown therefore use the regular SDK machinery.
-Stable Readers and reader options are accepted directly by this facade. Other
-instrument kinds retain their complete stable implementations.
+Callers configure the provider with stable Readers, Views, and options rather
+than aliases from this module. Other instrument kinds retain their complete
+stable implementations.
 
 The pipeline caches ordinary aggregation objects. The experimental Sum's
 concrete method set additionally provides Bind and Finish, which instrument

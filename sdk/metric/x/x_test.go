@@ -19,14 +19,14 @@ import (
 )
 
 func TestBoundCounterCumulativeAndDelta(t *testing.T) {
-	cumulative := sdkmetricx.NewManualReader()
-	delta := sdkmetricx.NewManualReader(
-		sdkmetricx.WithTemporalitySelector(sdkmetricx.DeltaTemporalitySelector),
+	cumulative := sdkmetric.NewManualReader()
+	delta := sdkmetric.NewManualReader(
+		sdkmetric.WithTemporalitySelector(sdkmetric.DeltaTemporalitySelector),
 	)
 	provider := sdkmetricx.NewMeterProvider(
-		sdkmetricx.WithReader(cumulative),
-		sdkmetricx.WithReader(delta),
-		sdkmetricx.WithExemplarFilter(exemplar.AlwaysOffFilter),
+		sdkmetric.WithReader(cumulative),
+		sdkmetric.WithReader(delta),
+		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 	)
 	counter, err := provider.Meter("test").Int64Counter("requests")
 	if err != nil {
@@ -58,7 +58,7 @@ func TestBoundCounterCumulativeAndDelta(t *testing.T) {
 
 func TestProviderAcceptsStableReader(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
-	provider := sdkmetricx.NewMeterProvider(sdkmetricx.WithReader(reader))
+	provider := sdkmetricx.NewMeterProvider(sdkmetric.WithReader(reader))
 	counter, err := provider.Meter("test").Int64Counter("requests")
 	if err != nil {
 		t.Fatal(err)
@@ -71,8 +71,8 @@ func TestProviderAcceptsStableReader(t *testing.T) {
 }
 
 func TestProviderRetainsStableInstrumentSupport(t *testing.T) {
-	reader := sdkmetricx.NewManualReader()
-	provider := sdkmetricx.NewMeterProvider(sdkmetricx.WithReader(reader))
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetricx.NewMeterProvider(sdkmetric.WithReader(reader))
 	counter, err := provider.Meter("test").Int64UpDownCounter("active")
 	if err != nil {
 		t.Fatal(err)
@@ -87,14 +87,14 @@ func TestProviderRetainsStableInstrumentSupport(t *testing.T) {
 }
 
 func TestFinishAndLazyReactivation(t *testing.T) {
-	cumulative := sdkmetricx.NewManualReader()
-	delta := sdkmetricx.NewManualReader(
-		sdkmetricx.WithTemporalitySelector(sdkmetricx.DeltaTemporalitySelector),
+	cumulative := sdkmetric.NewManualReader()
+	delta := sdkmetric.NewManualReader(
+		sdkmetric.WithTemporalitySelector(sdkmetric.DeltaTemporalitySelector),
 	)
 	provider := sdkmetricx.NewMeterProvider(
-		sdkmetricx.WithReader(cumulative),
-		sdkmetricx.WithReader(delta),
-		sdkmetricx.WithExemplarFilter(exemplar.AlwaysOffFilter),
+		sdkmetric.WithReader(cumulative),
+		sdkmetric.WithReader(delta),
+		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 	)
 	counter, _ := provider.Meter("test").Int64Counter("requests")
 	attrs := []attribute.KeyValue{attribute.String("route", "/orders")}
@@ -112,15 +112,15 @@ func TestFinishAndLazyReactivation(t *testing.T) {
 }
 
 func TestViewFilteringAndRecordTimeFallback(t *testing.T) {
-	reader := sdkmetricx.NewManualReader()
-	view := sdkmetricx.NewView(
-		sdkmetricx.Instrument{Name: "requests"},
-		sdkmetricx.Stream{AttributeFilter: attribute.NewAllowKeysFilter("route")},
+	reader := sdkmetric.NewManualReader()
+	view := sdkmetric.NewView(
+		sdkmetric.Instrument{Name: "requests"},
+		sdkmetric.Stream{AttributeFilter: attribute.NewAllowKeysFilter("route")},
 	)
 	provider := sdkmetricx.NewMeterProvider(
-		sdkmetricx.WithReader(reader),
-		sdkmetricx.WithView(view),
-		sdkmetricx.WithExemplarFilter(exemplar.AlwaysOffFilter),
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(view),
+		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 	)
 	counter, _ := provider.Meter("test").Int64Counter("requests")
 	bound := counter.(metricx.Int64CounterBinder).Bind(
@@ -135,19 +135,19 @@ func TestViewFilteringAndRecordTimeFallback(t *testing.T) {
 }
 
 func TestBoundCounterNonSumFallback(t *testing.T) {
-	reader := sdkmetricx.NewManualReader()
-	view := sdkmetricx.NewView(
-		sdkmetricx.Instrument{Name: "requests"},
-		sdkmetricx.Stream{
-			Aggregation: sdkmetricx.AggregationExplicitBucketHistogram{
+	reader := sdkmetric.NewManualReader()
+	view := sdkmetric.NewView(
+		sdkmetric.Instrument{Name: "requests"},
+		sdkmetric.Stream{
+			Aggregation: sdkmetric.AggregationExplicitBucketHistogram{
 				Boundaries: []float64{0, 10},
 			},
 		},
 	)
 	provider := sdkmetricx.NewMeterProvider(
-		sdkmetricx.WithReader(reader),
-		sdkmetricx.WithView(view),
-		sdkmetricx.WithExemplarFilter(exemplar.AlwaysOffFilter),
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(view),
+		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 	)
 	counter, _ := provider.Meter("test").Int64Counter("requests")
 	bound := counter.(metricx.Int64CounterBinder).Bind(attribute.String("route", "/orders"))
@@ -164,11 +164,11 @@ func TestBoundCounterNonSumFallback(t *testing.T) {
 }
 
 func TestCardinalityFinishAndOverflow(t *testing.T) {
-	reader := sdkmetricx.NewManualReader()
+	reader := sdkmetric.NewManualReader()
 	provider := sdkmetricx.NewMeterProvider(
-		sdkmetricx.WithReader(reader),
-		sdkmetricx.WithCardinalityLimit(2),
-		sdkmetricx.WithExemplarFilter(exemplar.AlwaysOffFilter),
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithCardinalityLimit(2),
+		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 	)
 	counter, _ := provider.Meter("test").Int64Counter("requests")
 	binder := counter.(metricx.Int64CounterBinder)
@@ -196,10 +196,10 @@ func TestCardinalityFinishAndOverflow(t *testing.T) {
 }
 
 func TestDefaultAttributes(t *testing.T) {
-	reader := sdkmetricx.NewManualReader()
+	reader := sdkmetric.NewManualReader()
 	provider := sdkmetricx.NewMeterProvider(
-		sdkmetricx.WithReader(reader),
-		sdkmetricx.WithExemplarFilter(exemplar.AlwaysOffFilter),
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 	)
 	counter, _ := provider.Meter("test").Int64Counter(
 		"requests",
@@ -219,15 +219,15 @@ func TestDefaultAttributes(t *testing.T) {
 }
 
 func TestBoundCounterExemplarContext(t *testing.T) {
-	reader := sdkmetricx.NewManualReader()
-	view := sdkmetricx.NewView(
-		sdkmetricx.Instrument{Name: "requests"},
-		sdkmetricx.Stream{AttributeFilter: attribute.NewAllowKeysFilter("route")},
+	reader := sdkmetric.NewManualReader()
+	view := sdkmetric.NewView(
+		sdkmetric.Instrument{Name: "requests"},
+		sdkmetric.Stream{AttributeFilter: attribute.NewAllowKeysFilter("route")},
 	)
 	provider := sdkmetricx.NewMeterProvider(
-		sdkmetricx.WithReader(reader),
-		sdkmetricx.WithView(view),
-		sdkmetricx.WithExemplarFilter(exemplar.AlwaysOnFilter),
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(view),
+		sdkmetric.WithExemplarFilter(exemplar.AlwaysOnFilter),
 	)
 	counter, _ := provider.Meter("test").Int64Counter("requests")
 	bound := counter.(metricx.Int64CounterBinder).Bind(
@@ -268,10 +268,10 @@ func TestStableCounterDoesNotImplementExperimentalInterfaces(t *testing.T) {
 }
 
 func TestBoundCounterConcurrentSafe(t *testing.T) {
-	reader := sdkmetricx.NewManualReader()
+	reader := sdkmetric.NewManualReader()
 	provider := sdkmetricx.NewMeterProvider(
-		sdkmetricx.WithReader(reader),
-		sdkmetricx.WithExemplarFilter(exemplar.AlwaysOffFilter),
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 	)
 	counter, _ := provider.Meter("test").Int64Counter("requests")
 	attrs := []attribute.KeyValue{attribute.String("route", "/orders")}
@@ -294,7 +294,7 @@ func TestBoundCounterConcurrentSafe(t *testing.T) {
 	wg.Wait()
 }
 
-func collect(t *testing.T, reader *sdkmetricx.ManualReader) metricdata.ResourceMetrics {
+func collect(t *testing.T, reader *sdkmetric.ManualReader) metricdata.ResourceMetrics {
 	t.Helper()
 	var rm metricdata.ResourceMetrics
 	if err := reader.Collect(t.Context(), &rm); err != nil {

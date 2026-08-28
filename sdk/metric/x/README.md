@@ -9,7 +9,9 @@ series lifetime management. It is a thin experimental facade over
 The provider uses the stable SDK's readers, views, pipelines, exporters, and
 aggregation state. All stable instruments remain available, but only
 `Int64Counter` implements the experimental binding and finishing contracts.
-Stable SDK Readers can be passed directly to this provider.
+Configure it directly with options, Readers, and Views from
+`go.opentelemetry.io/otel/sdk/metric`; this module does not re-export the stable
+SDK surface.
 
 Calling `Bind` performs attribute processing and cardinality selection once.
 Recording without additional attributes then uses a direct aggregation handle.

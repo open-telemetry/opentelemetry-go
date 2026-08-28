@@ -19,7 +19,7 @@ func BenchmarkInt64Counter(b *testing.B) {
 	attrs := attribute.NewSet(attribute.String("route", "/orders"))
 	b.Run("stable/unbound", func(b *testing.B) {
 		reader := sdkmetric.NewManualReader()
-		provider := sdkmetric.NewMeterProvider(
+		provider := sdkmetricx.NewMeterProvider(
 			sdkmetric.WithReader(reader),
 			sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 		)
@@ -31,10 +31,10 @@ func BenchmarkInt64Counter(b *testing.B) {
 		}
 	})
 	b.Run("experimental/unbound", func(b *testing.B) {
-		reader := sdkmetricx.NewManualReader()
+		reader := sdkmetric.NewManualReader()
 		provider := sdkmetricx.NewMeterProvider(
-			sdkmetricx.WithReader(reader),
-			sdkmetricx.WithExemplarFilter(exemplar.AlwaysOffFilter),
+			sdkmetric.WithReader(reader),
+			sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 		)
 		counter, _ := provider.Meter("bench").Int64Counter("requests")
 		option := metric.WithAttributeSet(attrs)
@@ -44,10 +44,10 @@ func BenchmarkInt64Counter(b *testing.B) {
 		}
 	})
 	b.Run("experimental/bound", func(b *testing.B) {
-		reader := sdkmetricx.NewManualReader()
+		reader := sdkmetric.NewManualReader()
 		provider := sdkmetricx.NewMeterProvider(
-			sdkmetricx.WithReader(reader),
-			sdkmetricx.WithExemplarFilter(exemplar.AlwaysOffFilter),
+			sdkmetric.WithReader(reader),
+			sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 		)
 		counter, _ := provider.Meter("bench").Int64Counter("requests")
 		bound := counter.(metricx.Int64CounterBinder).Bind(attribute.String("route", "/orders"))
@@ -61,18 +61,18 @@ func BenchmarkInt64Counter(b *testing.B) {
 func BenchmarkBoundInt64CounterTemporalities(b *testing.B) {
 	for _, benchmark := range []struct {
 		name     string
-		selector sdkmetricx.TemporalitySelector
+		selector sdkmetric.TemporalitySelector
 	}{
-		{name: "cumulative", selector: sdkmetricx.CumulativeTemporalitySelector},
-		{name: "delta", selector: sdkmetricx.DeltaTemporalitySelector},
+		{name: "cumulative", selector: sdkmetric.CumulativeTemporalitySelector},
+		{name: "delta", selector: sdkmetric.DeltaTemporalitySelector},
 	} {
 		b.Run(benchmark.name, func(b *testing.B) {
-			reader := sdkmetricx.NewManualReader(
-				sdkmetricx.WithTemporalitySelector(benchmark.selector),
+			reader := sdkmetric.NewManualReader(
+				sdkmetric.WithTemporalitySelector(benchmark.selector),
 			)
 			provider := sdkmetricx.NewMeterProvider(
-				sdkmetricx.WithReader(reader),
-				sdkmetricx.WithExemplarFilter(exemplar.AlwaysOffFilter),
+				sdkmetric.WithReader(reader),
+				sdkmetric.WithExemplarFilter(exemplar.AlwaysOffFilter),
 			)
 			counter, _ := provider.Meter("bench").Int64Counter("requests")
 			bound := counter.(metricx.Int64CounterBinder).Bind(
