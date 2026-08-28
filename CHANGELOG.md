@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `Logger`, `GetLoggerProvider`, and `SetLoggerProvider` to `go.opentelemetry.io/otel`. (#8874)
 
+### Changed
+
+- Clarify in `go.opentelemetry.io/otel/metric` that `Registration.Unregister` called from within a callback may return while a call of the callback is still in progress on another goroutine. (#8074)
+
 ### Deprecated
 
 - Deprecate `go.opentelemetry.io/otel/log/global`; use the equivalent APIs in `go.opentelemetry.io/otel`. (#8874)
@@ -19,8 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Ignore attempts to unregister unknown span processors in `go.opentelemetry.io/otel/sdk/trace`. (#8840)
-- Prevent deadlocks when metric callbacks call methods from `go.opentelemetry.io/otel/metric` during collection. (#8074)
-- Fix unbounded pipeline state growth in `go.opentelemetry.io/otel/sdk/metric` when callbacks are repeatedly registered and unregistered without a collection running: `Registration.Unregister` now releases the callback immediately instead of at the next collection. (#8074)
+- Prevent deadlocks in `go.opentelemetry.io/otel/sdk/metric` when a callback calls methods of `go.opentelemetry.io/otel/metric` during collection, including `Registration.Unregister` on its own registration. (#8074)
 
 ### Removed
 
