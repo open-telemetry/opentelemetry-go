@@ -25,13 +25,20 @@ func (c testMeterConfig) Enabled() bool { return c.enabled }
 type testConfiguratorOpt struct {
 	Option
 	fn       func(instrumentation.Scope) any
+	version  *atomic.Uint64 // nil => every snapshot reports version 0
 	onUpdate func(func())
 }
 
 func (testConfiguratorOpt) Experimental() {}
 
 func (o testConfiguratorOpt) MeterConfiguratorSnapshot() func() (func(instrumentation.Scope) any, uint64) {
-	return func() (func(instrumentation.Scope) any, uint64) { return o.fn, 0 }
+	return func() (func(instrumentation.Scope) any, uint64) {
+		var v uint64
+		if o.version != nil {
+			v = o.version.Load()
+		}
+		return o.fn, v
+	}
 }
 
 func (o testConfiguratorOpt) RegisterOnUpdate(cb func()) {
@@ -211,6 +218,66 @@ func TestConfiguratorNewMeterConvergesWithSetWalk(t *testing.T) {
 		assert.False(t, cachedMeter(mp, "race").enabled.Load(),
 			"meter created after the walk must read the updated configurator directly")
 	})
+}
+
+// TestConfiguratorStaleApplyLosesRaceToNewerSet exercises the case the
+// version-stamped CAS exists for: a new meter's creation-time apply step
+// reads an old configurator snapshot, then stalls before writing it, and only
+// resumes after a concurrent Set() walk has already landed a newer decision
+// for the same meter. The final state must match the newer Set() walk, never
+// the stale value the delayed apply step read.
+func TestConfiguratorStaleApplyLosesRaceToNewerSet(t *testing.T) {
+	version := new(atomic.Uint64)
+	version.Store(1) // the "old" configurator's version
+
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var firstCall atomic.Bool
+
+	fn := func(s instrumentation.Scope) any {
+		if s.Name != "race" {
+			return testMeterConfig{enabled: true}
+		}
+		if firstCall.CompareAndSwap(false, true) {
+			close(started)
+			<-release                             // hold until the concurrent Set() walk has fully landed
+			return testMeterConfig{enabled: true} // the old, now-stale decision
+		}
+		return testMeterConfig{enabled: false} // the newer Set()'s decision
+	}
+
+	var storedCallback func()
+	configuratorOpt := testConfiguratorOpt{
+		fn:       fn,
+		version:  version,
+		onUpdate: func(cb func()) { storedCallback = cb },
+	}
+
+	mp := NewMeterProvider(configuratorOpt)
+	defer mp.Shutdown(t.Context()) //nolint:errcheck
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = mp.Meter("race")
+	}()
+	<-started // creation's apply step captured version 1 and is now stalled
+
+	// test's stand-in for what a real handle.Set() does internally (h.version.Add(1))
+	version.Store(2)
+	require.NotNil(t, storedCallback)
+	// simulates the concurrent Set() walk: "race" is already
+	// cached, so it lands version 2 directly.
+	storedCallback()
+
+	close(release) // let the stale apply step resume and try to write version 1
+	<-done
+
+	cachedMeter := mp.meters.Lookup(instrumentation.Scope{Name: "race"}, func() *meter {
+		return newMeter(instrumentation.Scope{Name: "race"}, mp.pipes)
+	})
+	assert.False(t, cachedMeter.enabled.Load(),
+		"final state must match the newer Set() walk, not the stale value the delayed apply step read")
 }
 
 func TestInstrumentEnabledReflectsConfigurator(t *testing.T) {
