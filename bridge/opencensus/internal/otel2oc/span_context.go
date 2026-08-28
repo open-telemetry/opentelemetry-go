@@ -11,6 +11,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// SpanContext converts an OpenTelemetry SpanContext into an OpenCensus
+// SpanContext.
 func SpanContext(sc trace.SpanContext) octrace.SpanContext {
 	var to octrace.TraceOptions
 	if sc.IsSampled() {

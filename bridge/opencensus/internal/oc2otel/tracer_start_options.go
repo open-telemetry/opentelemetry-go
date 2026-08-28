@@ -11,6 +11,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// StartOptions converts OpenCensus span start options into OpenTelemetry
+// span start options. An error is returned if optFuncs configure a custom
+// sampler, which is not supported.
 func StartOptions(optFuncs []octrace.StartOption) ([]trace.SpanStartOption, error) {
 	var ocOpts octrace.StartOptions
 	for _, fn := range optFuncs {
