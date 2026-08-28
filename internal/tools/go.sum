@@ -602,8 +602,8 @@ golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.5.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.47.0 h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=
 golang.org/x/sys v0.47.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
-golang.org/x/telemetry v0.0.0-20260824150023-1f5465a7b7fb h1:u2wx6smkicd2/as9DfdcyWweWaV7tGvybRQdvPQ74Bw=
-golang.org/x/telemetry v0.0.0-20260824150023-1f5465a7b7fb/go.mod h1:/KSYFnLndIrA1A+Rs5r6vSifQhuFz75BPNN3J/hvzN0=
+golang.org/x/telemetry v0.0.0-20260827144034-9400fedf0e0c h1:O4RdQDHGGyS5V9EFowjpIIXJAsuJlQNYR0O2DO/3XM0=
+golang.org/x/telemetry v0.0.0-20260827144034-9400fedf0e0c/go.mod h1:/KSYFnLndIrA1A+Rs5r6vSifQhuFz75BPNN3J/hvzN0=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 golang.org/x/term v0.5.0/go.mod h1:jMB1sMXY+tzblOD4FWmEbocvup2/aLOaQEp7JmGp78k=
