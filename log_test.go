@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package global
+package otel
 
 import (
 	"context"
@@ -14,11 +14,30 @@ import (
 	"go.opentelemetry.io/otel/log/noop"
 )
 
+type testLoggerProvider struct {
+	embedded.LoggerProvider
+
+	logger log.Logger
+}
+
+var _ log.LoggerProvider = &testLoggerProvider{}
+
+func (p *testLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
+	if p.logger != nil {
+		return p.logger
+	}
+	return noop.NewLoggerProvider().Logger("")
+}
+
+type testLogger struct{ embedded.Logger }
+
+func (*testLogger) Emit(context.Context, log.Record) {}
+
+func (*testLogger) Enabled(context.Context, log.EnabledParameters) bool { return false }
+
 func TestMultipleGlobalLoggerProvider(t *testing.T) {
-	type provider struct{ log.LoggerProvider }
-
-	p1, p2 := provider{}, noop.NewLoggerProvider()
-
+	p1 := testLoggerProvider{}
+	p2 := noop.NewLoggerProvider()
 	SetLoggerProvider(&p1)
 	SetLoggerProvider(p2)
 
@@ -31,19 +50,3 @@ func TestLogger(t *testing.T) {
 
 	assert.Same(t, provider.logger, Logger("test"))
 }
-
-type testLoggerProvider struct {
-	embedded.LoggerProvider
-
-	logger log.Logger
-}
-
-func (p *testLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
-	return p.logger
-}
-
-type testLogger struct{ embedded.Logger }
-
-func (*testLogger) Emit(context.Context, log.Record) {}
-
-func (*testLogger) Enabled(context.Context, log.EnabledParameters) bool { return false }

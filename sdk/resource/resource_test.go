@@ -403,6 +403,15 @@ func TestMarshalJSON(t *testing.T) {
 		string(data))
 }
 
+func TestMarshalLogNilResource(t *testing.T) {
+	var r *resource.Resource
+	var got any
+	require.NotPanics(t, func() {
+		got = r.MarshalLog()
+	})
+	assert.Equal(t, resource.Empty().MarshalLog(), got)
+}
+
 func TestNew(t *testing.T) {
 	tc := []struct {
 		name      string

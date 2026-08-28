@@ -590,6 +590,9 @@ func TestRecordDroppedAttributes(t *testing.T) {
 
 		attrs := make([]attribute.KeyValue, i)
 		attrs[0] = attribute.Bool("only key different then the rest", true)
+		for j := 1; j < len(attrs); j++ {
+			attrs[j] = attribute.Bool("duplicate", true)
+		}
 
 		r.AddAttributes(attrs...)
 		// Deduplication doesn't count as dropped.
@@ -620,6 +623,57 @@ func TestRecordDroppedAttributes(t *testing.T) {
 	}
 }
 
+func TestRecordInvalidAttributes(t *testing.T) {
+	orig := logInvalidAttribute
+	t.Cleanup(func() { logInvalidAttribute = orig })
+	var diagnosticCalls int
+	logInvalidAttribute = sync.OnceFunc(func() { diagnosticCalls++ })
+
+	invalid := attribute.String("", "invalid")
+	upper := attribute.String("Key", "upper")
+	lower := attribute.String("key", "lower")
+	extra := attribute.String("extra", "over limit")
+
+	valid := Record{attributeCountLimit: -1, attributeValueLengthLimit: -1}
+	valid.AddAttributes(upper)
+	valid.SetAttributes(lower)
+	assert.Zero(t, diagnosticCalls)
+
+	for _, allowDup := range []bool{false, true} {
+		t.Run("AllowDuplicates="+strconv.FormatBool(allowDup), func(t *testing.T) {
+			r := Record{
+				attributeCountLimit:       2,
+				attributeValueLengthLimit: -1,
+				allowDupKeys:              allowDup,
+			}
+			attributes := func() []attribute.KeyValue {
+				var got []attribute.KeyValue
+				r.WalkAttributes(func(kv attribute.KeyValue) bool {
+					got = append(got, kv)
+					return true
+				})
+				return got
+			}
+
+			r.AddAttributes(upper)
+			r.AddAttributes(invalid)
+			assert.Equal(t, []attribute.KeyValue{upper}, attributes())
+			r.AddAttributes(lower)
+			assert.Equal(t, []attribute.KeyValue{upper, lower}, attributes())
+			assert.Zero(t, r.DroppedAttributes())
+
+			r.SetAttributes(invalid, upper, lower, extra)
+			assert.Equal(t, []attribute.KeyValue{upper, lower}, attributes())
+			assert.Equal(t, 1, r.DroppedAttributes())
+
+			r.SetAttributes(invalid)
+			assert.Empty(t, attributes())
+			assert.Zero(t, r.DroppedAttributes())
+		})
+	}
+	assert.Equal(t, 1, diagnosticCalls)
+}
+
 func TestRecordZeroAttributeCountLimit(t *testing.T) {
 	attrs := []attribute.KeyValue{
 		attribute.String("one", "1"),
@@ -646,7 +700,7 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 		{
 			name:  "EmptyKey",
 			attrs: make([]attribute.KeyValue, 10),
-			want:  make([]attribute.KeyValue, 10),
+			want:  nil,
 		},
 		{
 			name: "MapKey",
@@ -801,7 +855,7 @@ func TestRecordAttrDeduplication(t *testing.T) {
 		{
 			name:  "EmptyKey",
 			attrs: make([]attribute.KeyValue, 10),
-			want:  make([]attribute.KeyValue, 1),
+			want:  nil,
 		},
 		{
 			name: "NonEmptyKey",
