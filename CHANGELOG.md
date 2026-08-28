@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `Logger`, `GetLoggerProvider`, and `SetLoggerProvider` to `go.opentelemetry.io/otel`. (#8874)
+- Add `SyncClient` and `SyncExporter` with arena-backed OTLP serialization in `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#8860)
 
 ### Deprecated
 
