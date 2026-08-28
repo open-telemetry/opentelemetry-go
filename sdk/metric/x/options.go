@@ -43,6 +43,11 @@ func NewMeterConfiguratorHandle() *MeterConfiguratorHandle {
 // the MeterProvider and fn's own latency. See [MeterConfigurator] for the
 // requirements this places on fn.
 //
+// The walk only covers Meters that already exist when Set is called. A Meter
+// concurrently under construction may finish applying this call's result a
+// moment after Set has already returned to its caller; it still always
+// converges to this call's result or a newer one, never a stale value.
+//
 // Concurrent calls to Set are serialized: a Set call blocks until any
 // already-in-progress Set, including its cache walk, has completed. This
 // keeps one Set's cache walk from partially overwriting another's result
