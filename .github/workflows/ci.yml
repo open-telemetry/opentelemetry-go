@@ -12,7 +12,7 @@ env:
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
-  DEFAULT_GO_VERSION: "~1.26.0"
+  DEFAULT_GO_VERSION: "~1.27.0"
 # Declare default permissions as read only.
 permissions:
   contents: read
@@ -116,6 +116,25 @@ jobs:
       - name: Run benchmarks to check functionality
         run: make test-bench
 
+  test-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Environment
+        run: |
+          echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          cache-dependency-path: "**/go.sum"
+      - name: Run tests for internal tools
+        run: make test-tools
+
   test-race:
     runs-on: ubuntu-latest
     steps:
@@ -190,22 +209,22 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["1.26.0", "1.25.0"]
+        go-version: ["1.27.0", "1.26.0"]
         platform:
-          - os: ubuntu-latest
-            arch: "386"
-          - os: ubuntu-latest
-            arch: amd64
-          - os: ubuntu-22.04-arm
-            arch: arm64
-          - os: macos-latest
-            arch: amd64
-          - os: macos-latest
-            arch: arm64
-          - os: windows-latest
-            arch: "386"
-          - os: windows-latest
-            arch: amd64
+          - {os: ubuntu-latest, goos: aix, goarch: ppc64, target: cross-build}
+          - {os: macos-latest, goos: darwin, goarch: amd64, target: test-short}
+          - {os: macos-latest, goos: darwin, goarch: arm64, target: test-short}
+          - {os: ubuntu-latest, goos: js, goarch: wasm, target: cross-build}
+          - {os: ubuntu-latest, goos: linux, goarch: "386", target: test-short}
+          - {os: ubuntu-latest, goos: linux, goarch: amd64, target: test-short}
+          - {os: ubuntu-22.04-arm, goos: linux, goarch: arm64, target: test-short}
+          - {os: ubuntu-latest, goos: linux, goarch: ppc64le, target: cross-build}
+          - {os: ubuntu-latest, goos: linux, goarch: riscv64, target: cross-build}
+          - {os: ubuntu-latest, goos: linux, goarch: arm, goarm: "7", target: cross-build}
+          - {os: ubuntu-latest, goos: linux, goarch: s390x, target: cross-build}
+          - {os: windows-latest, goos: windows, goarch: "386", target: test-short}
+          - {os: windows-latest, goos: windows, goarch: amd64, target: test-short}
+          - {os: ubuntu-latest, goos: windows, goarch: arm64, target: cross-build}
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout code
@@ -218,10 +237,12 @@ jobs:
           go-version: ${{ matrix.go-version }}
           check-latest: true
           cache-dependency-path: "**/go.sum"
-      - name: Run tests
+      - name: Run compatibility check
         env:
-          GOARCH: ${{ matrix.platform.arch }}
-        run: make test-short
+          GOOS: ${{ matrix.platform.goos }}
+          GOARCH: ${{ matrix.platform.goarch }}
+          GOARM: ${{ matrix.platform.goarm }}
+        run: make ${{ matrix.platform.target }}
 
   test-compatibility:
     runs-on: ubuntu-latest
