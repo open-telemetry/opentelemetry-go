@@ -77,3 +77,83 @@ func TestBoundSumPreservesFinishedLifetimes(t *testing.T) {
 		})
 	}
 }
+
+func TestBoundSumUnboundDeltaAndOverflow(t *testing.T) {
+	agg := Builder[int64]{
+		Temporality:      metricdata.DeltaTemporality,
+		AggregationLimit: 2,
+		ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+			return new(retainingReservoir)
+		},
+	}.BoundSum(true)
+	measure := agg.Measure()
+	finisher := agg.(interface{ Finish(attribute.Set) })
+	a := attribute.NewSet(attribute.String("id", "a"))
+	b := attribute.NewSet(attribute.String("id", "b"))
+	c := attribute.NewSet(attribute.String("id", "c"))
+
+	measure(t.Context(), 1, a)
+	measure(t.Context(), 2, a)
+	measure(t.Context(), 3, b)
+	measure(t.Context(), 4, c)
+	finisher.Finish(b)
+	finisher.Finish(overflowSet)
+
+	var dest metricdata.Aggregation
+	require.Equal(t, 2, agg.ComputeAggregation()(&dest))
+	points := dest.(metricdata.Sum[int64]).DataPoints
+	assert.Equal(t, int64(3), boundSumAValue(points))
+	assert.Equal(t, int64(7), boundSumOverflowValue(points))
+
+	measure(t.Context(), 5, a)
+	require.Equal(t, 1, agg.ComputeAggregation()(&dest))
+	points = dest.(metricdata.Sum[int64]).DataPoints
+	assert.Equal(t, int64(5), boundSumAValue(points))
+}
+
+func TestBoundSumHandleReactivatesAfterFinish(t *testing.T) {
+	agg := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+			return new(retainingReservoir)
+		},
+	}.BoundSum(true)
+	binder := agg.(interface {
+		Bind(attribute.Set) func(context.Context, int64)
+	})
+	finisher := agg.(interface{ Finish(attribute.Set) })
+	attrs := attribute.NewSet(attribute.String("id", "a"))
+	handle := binder.Bind(attrs)
+
+	handle(t.Context(), 1)
+	finisher.Finish(attrs)
+	finisher.Finish(attrs)
+	handle(t.Context(), 2)
+	binder.Bind(attrs)(t.Context(), 3)
+
+	var dest metricdata.Aggregation
+	require.Equal(t, 1, agg.ComputeAggregation()(&dest))
+	points := dest.(metricdata.Sum[int64]).DataPoints
+	assert.Equal(t, int64(1), boundSumAValue(points))
+	require.Equal(t, 1, agg.ComputeAggregation()(&dest))
+	points = dest.(metricdata.Sum[int64]).DataPoints
+	assert.Equal(t, int64(5), boundSumAValue(points))
+}
+
+func boundSumAValue(points []metricdata.DataPoint[int64]) int64 {
+	for _, point := range points {
+		if got, ok := point.Attributes.Value("id"); ok && got.AsString() == "a" {
+			return point.Value
+		}
+	}
+	return 0
+}
+
+func boundSumOverflowValue(points []metricdata.DataPoint[int64]) int64 {
+	for _, point := range points {
+		if point.Attributes.Equals(&overflowSet) {
+			return point.Value
+		}
+	}
+	return 0
+}
