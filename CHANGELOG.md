@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add experimental support for enabling/disabling `Meter`s per instrumentation scope via `MeterConfigurator`, `MeterConfig`, and `MeterConfiguratorHandle` in `go.opentelemetry.io/otel/sdk/metric/x`. Configuration is set at `MeterProvider` construction via `WithMeterConfigurator` and can be updated live through `MeterConfiguratorHandle.Set`. This gates recording (`Add`/`Record`/`Observe`) only. (#8743)
+
 ### Fixed
 
 - Prevent a panic in `NewFixedSizeReservoir` and `FixedSizeReservoirProvider` when given a negative size in `go.opentelemetry.io/otel/sdk/metric/exemplar`; negative sizes are now clamped to zero, consistent with a size of zero. (#8832)
@@ -51,7 +55,6 @@ The next release will require at least [Go 1.26].
 - Support testing of [Go 1.27]. (#8811)
 - Support `http/json` protocol in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8273, #8775, #8831)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
-- Add experimental support for enabling/disabling `Meter`s per instrumentation scope via `MeterConfigurator`, `MeterConfig`, and `MeterConfiguratorHandle` in `go.opentelemetry.io/otel/sdk/metric/x`. Configuration is set at `MeterProvider` construction via `WithMeterConfigurator` and can be updated live through `MeterConfiguratorHandle.Set`. This gates recording (`Add`/`Record`/`Observe`) only. (#8743)
 
 ### Changed
 
