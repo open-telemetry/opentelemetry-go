@@ -28,6 +28,11 @@ type testConfiguratorOpt struct {
 	fn       func(instrumentation.Scope) any
 	version  *atomic.Uint64 // nil => every snapshot reports version 0
 	onUpdate func(func())
+	// rejectRegistration simulates RegisterOnUpdate finding the handle
+	// already claimed by another MeterProvider; zero value (false) claims
+	// normally, matching every pre-existing test.
+	rejectRegistration bool
+	unregister         func()
 }
 
 func (testConfiguratorOpt) Experimental() {}
@@ -42,9 +47,19 @@ func (o testConfiguratorOpt) MeterConfiguratorSnapshot() func() (func(instrument
 	}
 }
 
-func (o testConfiguratorOpt) RegisterOnUpdate(cb func()) {
+func (o testConfiguratorOpt) RegisterOnUpdate(cb func()) bool {
+	if o.rejectRegistration {
+		return false
+	}
 	if o.onUpdate != nil {
 		o.onUpdate(cb)
+	}
+	return true
+}
+
+func (o testConfiguratorOpt) Unregister() {
+	if o.unregister != nil {
+		o.unregister()
 	}
 }
 
@@ -129,6 +144,35 @@ func TestConfiguratorMultipleOptionsLastWins(t *testing.T) {
 	ctr, err := mp.Meter("any").Int64Counter("ctr")
 	require.NoError(t, err)
 	assert.True(t, ctr.Enabled(t.Context()), "provider must use the last configurator option, not the first")
+}
+
+func TestConfiguratorShutdownReleasesHandle(t *testing.T) {
+	var unregistered bool
+	configuratorOpt := testConfiguratorOpt{
+		fn:         disablingConfiguratorFn,
+		unregister: func() { unregistered = true },
+	}
+
+	mp := NewMeterProvider(configuratorOpt)
+	assert.False(t, unregistered, "Unregister must not run before Shutdown")
+
+	require.NoError(t, mp.Shutdown(t.Context()))
+	assert.True(t, unregistered, "Shutdown must release the configurator's claim on its handle")
+}
+
+// This test guards against a provider whose registration was rejected (handle already claimed
+// elsewhere) releasing someone else's active claim on its own Shutdown.
+func TestConfiguratorShutdownSkipsUnregisterWhenNotClaimed(t *testing.T) {
+	var unregistered bool
+	configuratorOpt := testConfiguratorOpt{
+		fn:                 disablingConfiguratorFn,
+		rejectRegistration: true,
+		unregister:         func() { unregistered = true },
+	}
+
+	mp := NewMeterProvider(configuratorOpt)
+	require.NoError(t, mp.Shutdown(t.Context()))
+	assert.False(t, unregistered, "Shutdown must not unregister a claim this provider never held")
 }
 
 func TestConfiguratorCacheWalkUpdatesCachedMeter(t *testing.T) {

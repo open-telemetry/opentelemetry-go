@@ -26,7 +26,8 @@ type meterConfigReader interface{ Enabled() bool }
 type meterConfiguratorOption interface {
 	Experimental()
 	MeterConfiguratorSnapshot() func() (func(instrumentation.Scope) any, uint64)
-	RegisterOnUpdate(func())
+	RegisterOnUpdate(func()) bool
+	Unregister()
 }
 
 // MeterProvider handles the creation and coordination of Meters. All Meters
@@ -42,6 +43,12 @@ type MeterProvider struct {
 	// any caller, and never reassigned after. No synchronization is needed for
 	// that single write or the reads that follow it.
 	configurator meterConfiguratorSnapshotFunc
+	// configuratorUnregister releases configurator's claim on its
+	// MeterConfiguratorHandle during Shutdown. It's nil if:
+	//  - no configurator was wired, or
+	//  - its RegisterOnUpdate call did not claim the handle. Same single-write-before-return
+	//    rule as configurator above.
+	configuratorUnregister func()
 
 	forceFlush, shutdown func(context.Context) error
 	stopped              atomic.Bool
@@ -74,7 +81,7 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 	}
 	if mco != nil {
 		mp.configurator = mco.MeterConfiguratorSnapshot()
-		mco.RegisterOnUpdate(func() {
+		claimed := mco.RegisterOnUpdate(func() {
 			fn, version := mp.configurator()
 			mp.meters.Range(func(s instrumentation.Scope, m *meter) {
 				if cr, ok := fn(s).(meterConfigReader); ok {
@@ -82,6 +89,9 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 				}
 			})
 		})
+		if claimed {
+			mp.configuratorUnregister = mco.Unregister
+		}
 	}
 
 	// Log after creation so all readers show correctly they are registered.
@@ -194,6 +204,9 @@ func (mp *MeterProvider) Shutdown(ctx context.Context) error {
 	// See https://go.dev/ref/mem#atomic and https://pkg.go.dev/sync/atomic.
 
 	mp.stopped.Store(true)
+	if mp.configuratorUnregister != nil {
+		mp.configuratorUnregister()
+	}
 	if mp.shutdown != nil {
 		return mp.shutdown(ctx)
 	}

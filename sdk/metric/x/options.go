@@ -4,9 +4,11 @@
 package x
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
@@ -16,16 +18,22 @@ import (
 // construction. Calls to [MeterConfiguratorHandle.Set] are reflected
 // immediately across all existing meters via a synchronous cache walk.
 //
-// A Handle belongs to exactly one MeterProvider for its lifetime. Passing the
-// same Handle to more than one [WithMeterConfigurator] call is not supported:
-// only the most recently registered MeterProvider receives Set updates: an
-// earlier one silently stops receiving them.
+// A Handle belongs to exactly one MeterProvider for its lifetime. Passing an
+// already-claimed Handle to another [WithMeterConfigurator] call is not
+// supported: the first MeterProvider keeps the claim, the later one does not
+// receive Set updates, and the attempt is logged as an error. A Handle whose
+// MeterProvider has been shut down is released and may be claimed again.
 type MeterConfiguratorHandle struct {
 	mu           sync.Mutex // serializes Set calls; see Set's doc comment
 	configurator atomic.Pointer[versionedConfigurator]
 	onUpdate     atomic.Pointer[func()] // To avoid race between handle.Set() and RegisterOnUpdate
 	version      atomic.Uint64          // bumped once per Set call; see Set
+	registered   atomic.Bool            // claimed by a MeterProvider; see RegisterOnUpdate/Unregister
 }
+
+// errHandleAlreadyRegistered is logged when a MeterConfiguratorHandle already
+// claimed by one MeterProvider is passed to WithMeterConfigurator for another.
+var errHandleAlreadyRegistered = errors.New("MeterConfiguratorHandle already registered with a MeterProvider")
 
 // versionedConfigurator pairs a MeterConfigurator with the version it was set
 // under, so the two are always stored and read together and can never be
@@ -124,12 +132,34 @@ func (o meterConfiguratorProviderOption) MeterConfiguratorSnapshot() func() (fun
 	}
 }
 
-// RegisterOnUpdate is called by sdk/metric during [sdkmetric.NewMeterProvider]
-// to register the cache walk callback. Called once at construction; subsequent
-// [MeterConfiguratorHandle.Set] calls trigger it.
-func (o meterConfiguratorProviderOption) RegisterOnUpdate(fn func()) {
+// RegisterOnUpdate is called once at construction by sdk/metric during [sdkmetric.NewMeterProvider]
+// to register the cache walk callback.
+// Subsequent [MeterConfiguratorHandle.Set] calls trigger it. Reports whether this call
+// claimed the handle (fn is not stored in both cases):
+//   - false if the handle is nil, or
+//   - already claimed by another MeterProvider (see [MeterConfiguratorHandle]'s doc comment).
+func (o meterConfiguratorProviderOption) RegisterOnUpdate(fn func()) bool {
+	if o.handle == nil {
+		return false
+	}
+	if !o.handle.registered.CompareAndSwap(false, true) {
+		global.Error(errHandleAlreadyRegistered, "did not register MeterConfiguratorHandle")
+		return false
+	}
+	o.handle.onUpdate.Store(&fn)
+	return true
+}
+
+// Unregister releases this option's claim on the handle, clearing onUpdate so
+// a Set call afterward no longer walks this (now presumably shut down) MeterProvider,
+// and allowing a future MeterProvider to claim the handle via RegisterOnUpdate.
+//
+// Called by sdk/metric during [sdkmetric.MeterProvider.Shutdown],
+// only for a provider whose RegisterOnUpdate call actually claimed it.
+func (o meterConfiguratorProviderOption) Unregister() {
 	if o.handle == nil {
 		return
 	}
-	o.handle.onUpdate.Store(&fn)
+	o.handle.onUpdate.Store(nil)
+	o.handle.registered.Store(false)
 }

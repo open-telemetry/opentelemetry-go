@@ -19,7 +19,11 @@ type meterConfiguratorOptionExtractor interface {
 }
 
 type meterConfiguratorOnUpdateRegistrar interface {
-	RegisterOnUpdate(func())
+	RegisterOnUpdate(func()) bool
+}
+
+type meterConfiguratorUnregistrar interface {
+	Unregister()
 }
 
 func TestWithMeterConfiguratorImplementsExperimentalOption(t *testing.T) {
@@ -34,7 +38,10 @@ func TestWithMeterConfiguratorImplementsExperimentalOption(t *testing.T) {
 	require.True(t, ok, "must implement MeterConfiguratorSnapshot() func() (func(scope) any, uint64)")
 
 	_, ok = opt.(meterConfiguratorOnUpdateRegistrar)
-	require.True(t, ok, "must implement RegisterOnUpdate(func())")
+	require.True(t, ok, "must implement RegisterOnUpdate(func()) bool")
+
+	_, ok = opt.(meterConfiguratorUnregistrar)
+	require.True(t, ok, "must implement Unregister()")
 }
 
 func TestWithMeterConfiguratorReflectsSet(t *testing.T) {
@@ -71,10 +78,65 @@ func TestMeterConfiguratorHandleSetTriggersOnUpdate(t *testing.T) {
 
 	walked := false
 	opt := WithMeterConfigurator(h)
-	opt.(meterConfiguratorOnUpdateRegistrar).RegisterOnUpdate(func() { walked = true })
+	claimed := opt.(meterConfiguratorOnUpdateRegistrar).RegisterOnUpdate(func() { walked = true })
+	require.True(t, claimed, "first registration on an unclaimed handle must succeed")
 
 	h.Set(func(_ instrumentation.Scope) MeterConfig { return MeterConfig{} })
 	assert.True(t, walked, "Set must trigger the registered onUpdate callback")
+}
+
+func TestMeterConfiguratorHandleRegisterOnUpdateRejectsSecondClaim(t *testing.T) {
+	h := NewMeterConfiguratorHandle()
+
+	var firstWalked, secondWalked bool
+	first := WithMeterConfigurator(h).(meterConfiguratorOnUpdateRegistrar)
+	claimed := first.RegisterOnUpdate(func() { firstWalked = true })
+	require.True(t, claimed, "first registration on an unclaimed handle must succeed")
+
+	second := WithMeterConfigurator(h).(meterConfiguratorOnUpdateRegistrar)
+	claimed = second.RegisterOnUpdate(func() { secondWalked = true })
+	assert.False(t, claimed, "second registration on an already-claimed handle must be rejected")
+
+	h.Set(func(_ instrumentation.Scope) MeterConfig { return MeterConfig{} })
+	assert.True(t, firstWalked, "the first (claiming) provider must keep receiving updates")
+	assert.False(t, secondWalked, "the second (rejected) provider must not receive updates")
+}
+
+func TestMeterConfiguratorHandleUnregisterReleasesClaim(t *testing.T) {
+	h := NewMeterConfiguratorHandle()
+
+	first := WithMeterConfigurator(h).(interface {
+		meterConfiguratorOnUpdateRegistrar
+		meterConfiguratorUnregistrar
+	})
+	require.True(t, first.RegisterOnUpdate(func() {}), "first registration must succeed")
+	first.Unregister()
+
+	var rewalked bool
+	second := WithMeterConfigurator(h).(meterConfiguratorOnUpdateRegistrar)
+	claimed := second.RegisterOnUpdate(func() { rewalked = true })
+	require.True(t, claimed, "registration after Unregister must succeed")
+
+	h.Set(func(_ instrumentation.Scope) MeterConfig { return MeterConfig{} })
+	assert.True(t, rewalked, "the newly-claiming provider must receive updates")
+}
+
+func TestMeterConfiguratorHandleUnregisterClearsOnUpdate(t *testing.T) {
+	h := NewMeterConfiguratorHandle()
+
+	walks := 0
+	opt := WithMeterConfigurator(h).(interface {
+		meterConfiguratorOnUpdateRegistrar
+		meterConfiguratorUnregistrar
+	})
+	require.True(t, opt.RegisterOnUpdate(func() { walks++ }))
+
+	h.Set(func(_ instrumentation.Scope) MeterConfig { return MeterConfig{} })
+	require.Equal(t, 1, walks)
+
+	opt.Unregister()
+	h.Set(func(_ instrumentation.Scope) MeterConfig { return MeterConfig{} })
+	assert.Equal(t, 1, walks, "Set after Unregister must not walk the released provider")
 }
 
 func TestMeterConfiguratorHandleSetSerializesConcurrentCalls(t *testing.T) {
@@ -155,6 +217,11 @@ func TestWithMeterConfiguratorNilHandle(t *testing.T) {
 	// RegisterOnUpdate on a nil handle must not panic.
 	assert.NotPanics(t, func() {
 		opt.(meterConfiguratorOnUpdateRegistrar).RegisterOnUpdate(func() {})
+	})
+
+	// Unregister on a nil handle must not panic.
+	assert.NotPanics(t, func() {
+		opt.(meterConfiguratorUnregistrar).Unregister()
 	})
 }
 
