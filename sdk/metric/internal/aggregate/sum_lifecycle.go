@@ -1,11 +1,10 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+package aggregate
 
 import (
 	"context"
-	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -40,7 +39,7 @@ func newLifecycleSumPoint[N int64 | float64](
 func (p *lifecycleSumPoint[N]) add(
 	ctx context.Context,
 	value N,
-	dropped []attribute.KeyValue,
+	lazy lazyFilteredAttributes,
 ) bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -48,7 +47,7 @@ func (p *lifecycleSumPoint[N]) add(
 		return false
 	}
 	p.value.add(value)
-	p.reservoir.Offer(ctx, value, dropped)
+	p.reservoir.Offer(ctx, value, lazy)
 	return true
 }
 
@@ -89,8 +88,8 @@ func newLifecycleSum[N int64 | float64](
 	}
 }
 
-func (s *lifecycleSum[N]) point(attrs attribute.Set) *lifecycleSumPoint[N] {
-	key := attrs.Equivalent()
+func (s *lifecycleSum[N]) point(lazy lazyFilteredAttributes) *lifecycleSumPoint[N] {
+	key := lazy.Distinct()
 	if point, ok := s.active[key]; ok {
 		return point
 	}
@@ -99,28 +98,31 @@ func (s *lifecycleSum[N]) point(attrs attribute.Set) *lifecycleSumPoint[N] {
 	if _, ok := s.active[overflowSet.Equivalent()]; ok {
 		concrete--
 	}
+	var attrs attribute.Set
 	if s.limit > 0 && concrete >= s.limit-1 {
 		attrs = overflowSet
 		key = attrs.Equivalent()
 		if point, ok := s.active[key]; ok {
 			return point
 		}
+	} else {
+		attrs = lazy.Set()
 	}
 	point := newLifecycleSumPoint(attrs, s.reservoir)
 	s.active[key] = point
 	return point
 }
 
-func (s *lifecycleSum[N]) acquire(attrs attribute.Set) *lifecycleSumPoint[N] {
+func (s *lifecycleSum[N]) acquire(lazy lazyFilteredAttributes) *lifecycleSumPoint[N] {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.point(attrs)
+	return s.point(lazy)
 }
 
-func (s *lifecycleSum[N]) bindPoint(attrs attribute.Set) *lifecycleSumPoint[N] {
+func (s *lifecycleSum[N]) bindPoint(lazy lazyFilteredAttributes) *lifecycleSumPoint[N] {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	point := s.point(attrs)
+	point := s.point(lazy)
 	point.bound.Store(true)
 	return point
 }
@@ -128,11 +130,10 @@ func (s *lifecycleSum[N]) bindPoint(attrs attribute.Set) *lifecycleSumPoint[N] {
 func (s *lifecycleSum[N]) measure(
 	ctx context.Context,
 	value N,
-	attrs attribute.Set,
-	dropped []attribute.KeyValue,
+	lazy lazyFilteredAttributes,
 ) {
 	for {
-		if s.acquire(attrs).add(ctx, value, dropped) {
+		if s.acquire(lazy).add(ctx, value, lazy) {
 			return
 		}
 	}
@@ -140,48 +141,40 @@ func (s *lifecycleSum[N]) measure(
 
 type lifecycleSumMeasure[N int64 | float64] struct {
 	store    *lifecycleSum[N]
-	attrs    attribute.Set
-	dropped  []attribute.KeyValue
+	lazy     lazyFilteredAttributes
 	point    atomic.Pointer[lifecycleSumPoint[N]]
 	slowPath sync.Mutex
 }
 
-func (s *lifecycleSum[N]) bind(
-	attrs attribute.Set,
-	dropped []attribute.KeyValue,
-) func(context.Context, N) {
+func (s *lifecycleSum[N]) bind(lazy lazyFilteredAttributes) func(context.Context, N) {
 	handle := &lifecycleSumMeasure[N]{
-		store:   s,
-		attrs:   attrs,
-		dropped: slices.Clone(dropped),
+		store: s,
+		lazy:  lazy,
 	}
-	handle.point.Store(s.bindPoint(attrs))
+	handle.point.Store(s.bindPoint(lazy))
 	return handle.measure
 }
 
 func (h *lifecycleSumMeasure[N]) measure(ctx context.Context, value N) {
 	point := h.point.Load()
-	if point != nil && point.add(ctx, value, h.dropped) {
+	if point != nil && point.add(ctx, value, h.lazy) {
 		return
 	}
 	h.slowPath.Lock()
 	defer h.slowPath.Unlock()
 	point = h.point.Load()
-	if point != nil && point.add(ctx, value, h.dropped) {
+	if point != nil && point.add(ctx, value, h.lazy) {
 		return
 	}
-	point = h.store.bindPoint(h.attrs)
+	point = h.store.bindPoint(h.lazy)
 	h.point.Store(point)
-	_ = point.add(ctx, value, h.dropped)
+	_ = point.add(ctx, value, h.lazy)
 }
 
-func (s *lifecycleSum[N]) finish(attrs attribute.Set) {
-	if attrs.Equals(&overflowSet) {
-		return
-	}
+func (s *lifecycleSum[N]) finish(lazy lazyFilteredAttributes) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	key := attrs.Equivalent()
+	key := lazy.Distinct()
 	point, ok := s.active[key]
 	if !ok || point.attrs.Equals(&overflowSet) {
 		return
@@ -293,16 +286,9 @@ func (a *boundSumAggregator[N]) ComputeAggregation() ComputeAggregation {
 }
 
 func (a *boundSumAggregator[N]) Bind(attrs attribute.Set) func(context.Context, N) {
-	var dropped []attribute.KeyValue
-	if a.filter != nil {
-		attrs, dropped = attrs.Filter(a.filter)
-	}
-	return a.store.bind(attrs, dropped)
+	return a.store.bind(newLazyFilteredAttributes(attrs, a.filter))
 }
 
 func (a *boundSumAggregator[N]) Finish(attrs attribute.Set) {
-	if a.filter != nil {
-		attrs, _ = attrs.Filter(a.filter)
-	}
-	a.store.finish(attrs)
+	a.store.finish(newLazyFilteredAttributes(attrs, a.filter))
 }

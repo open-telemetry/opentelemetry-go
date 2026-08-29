@@ -25,12 +25,12 @@ type retainingReservoir struct {
 func (r *retainingReservoir) Offer(
 	_ context.Context,
 	value int64,
-	attrs []attribute.KeyValue,
+	lazy lazyFilteredAttributes,
 ) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.exemplars = append(r.exemplars, exemplar.Exemplar{
-		FilteredAttributes: attrs,
+		FilteredAttributes: lazy.Dropped(),
 		Time:               time.Unix(value, 0),
 		Value:              exemplar.NewValue(value),
 	})

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package metric
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	api "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
-	"go.opentelemetry.io/otel/sdk/metric/internal/attrdedup"
+	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
 )
 
 type int64CounterBindingWrapper func(
@@ -56,7 +56,7 @@ func newExperimentalInt64Inst(aggs []aggregate.Aggregator[int64]) *int64Inst {
 }
 
 func lifecycleAttributes(attrs []attribute.KeyValue) attribute.Set {
-	set, _ := attrdedup.Set(attribute.NewSet(slices.Clone(attrs)...))
+	set, _ := attrnorm.Set(attribute.NewSet(slices.Clone(attrs)...))
 	return set
 }
 
@@ -108,7 +108,7 @@ func (i *boundInt64Inst) Add(ctx context.Context, value int64, opts ...api.AddOp
 	merged := make([]attribute.KeyValue, 0, i.attrs.Len()+extra.Len())
 	merged = append(merged, i.attrs.ToSlice()...)
 	merged = append(merged, extra.ToSlice()...)
-	set, _ := attrdedup.Set(attribute.NewSet(merged...))
+	set, _ := attrnorm.Set(attribute.NewSet(merged...))
 	i.instrument.aggregate(ctx, value, set)
 }
 

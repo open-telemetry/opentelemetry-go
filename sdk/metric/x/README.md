@@ -1,6 +1,6 @@
 # Experimental Metric SDK
 
-[![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/otel/sdk/metric/x)](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric/x)
+[![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/otel/sdk/metric/x)](https://pkg.go.dev/search?q=go.opentelemetry.io%2Fotel%2Fsdk%2Fmetric%2Fx)
 
 This module is a proof of concept for bound metric instruments and explicit
 series lifetime management. It is a thin experimental facade over
