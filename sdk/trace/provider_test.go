@@ -181,6 +181,21 @@ func TestUnregisterLast(t *testing.T) {
 	assert.Same(t, sp2, sps[1].sp)
 }
 
+func TestUnregisterUnknownSpanProcessor(t *testing.T) {
+	stp := NewTracerProvider()
+	sp1 := &basicSpanProcessor{}
+	sp2 := &basicSpanProcessor{}
+	stp.RegisterSpanProcessor(sp1)
+	stp.RegisterSpanProcessor(sp2)
+
+	stp.UnregisterSpanProcessor(&basicSpanProcessor{})
+
+	sps := stp.getSpanProcessors()
+	require.Len(t, sps, 2)
+	assert.Same(t, sp1, sps[0].sp)
+	assert.Same(t, sp2, sps[1].sp)
+}
+
 func TestShutdownTraceProvider(t *testing.T) {
 	stp := NewTracerProvider()
 	sp := &basicSpanProcessor{}
