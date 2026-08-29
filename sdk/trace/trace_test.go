@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,8 +30,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
-	"go.opentelemetry.io/otel/semconv/v1.42.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -1597,6 +1598,11 @@ func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 	}
 }
 
+const (
+	recordingSpanEndFrame      = "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End"
+	recordingSpanEndDeferFrame = "go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).End.deferwrap1"
+)
+
 func TestSpanCapturesPanic(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
@@ -1605,11 +1611,19 @@ func TestSpanCapturesPanic(t *testing.T) {
 		"span",
 	)
 
-	f := func() {
+	var stack string
+	func() {
+		defer func() {
+			recovered := recover()
+			require.EqualError(t, recovered.(error), "error message")
+			stack = string(debug.Stack())
+		}()
 		defer span.End()
 		panic(errors.New("error message"))
-	}
-	require.PanicsWithError(t, "error message", f)
+	}()
+	assert.Contains(t, stack, recordingSpanEndFrame)
+	assert.Contains(t, stack, recordingSpanEndDeferFrame)
+
 	spans := te.Spans()
 	require.Len(t, spans, 1)
 	require.Len(t, spans[0].Events(), 1)
@@ -1618,6 +1632,32 @@ func TestSpanCapturesPanic(t *testing.T) {
 		semconv.ExceptionType("*errors.errorString"),
 		semconv.ExceptionMessage("error message"),
 	}, spans[0].Events()[0].Attributes)
+}
+
+func TestSpanWithoutPanicRecording(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()), WithoutPanicRecording())
+	_, span := tp.Tracer("CatchPanic").Start(
+		t.Context(),
+		"span",
+	)
+
+	var stack string
+	func() {
+		defer func() {
+			recovered := recover()
+			require.EqualError(t, recovered.(error), "error message")
+			stack = string(debug.Stack())
+		}()
+		defer span.End()
+		panic(errors.New("error message"))
+	}()
+	assert.NotContains(t, stack, recordingSpanEndFrame)
+	assert.NotContains(t, stack, recordingSpanEndDeferFrame)
+
+	spans := te.Spans()
+	require.Len(t, spans, 1)
+	assert.Empty(t, spans[0].Events())
 }
 
 func TestSpanCapturesPanicWithStackTrace(t *testing.T) {

@@ -1,12 +1,13 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package opentracing // import "go.opentelemetry.io/otel/bridge/opentracing"
+package opentracing
 
 import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -76,11 +77,12 @@ func (c *bridgeSpanContext) baggageItem(restrictedKey string) baggage.Member {
 }
 
 type bridgeSpan struct {
-	otelSpan          trace.Span
-	ctx               *bridgeSpanContext
-	tracer            *BridgeTracer
-	skipDeferHook     bool
-	extraBaggageItems map[string]string
+	otelSpan            trace.Span
+	ctx                 *bridgeSpanContext
+	tracer              *BridgeTracer
+	skipDeferHook       bool
+	extraBaggageItemsMu sync.Mutex
+	extraBaggageItems   map[string]string
 }
 
 var _ ot.Span = &bridgeSpan{}
@@ -115,10 +117,11 @@ func (s *bridgeSpan) FinishWithOptions(opts ot.FinishOptions) {
 }
 
 func (s *bridgeSpan) logRecord(record ot.LogRecord) {
+	attrs := otLogFieldsToOTelAttrs(record.Fields)
 	s.otelSpan.AddEvent(
-		"",
+		otelEventName(attrs),
 		trace.WithTimestamp(record.Timestamp),
-		trace.WithAttributes(otLogFieldsToOTelAttrs(record.Fields)...),
+		trace.WithAttributes(attrs...),
 	)
 }
 
@@ -155,9 +158,10 @@ func (s *bridgeSpan) SetTag(key string, value any) ot.Span {
 }
 
 func (s *bridgeSpan) LogFields(fields ...otlog.Field) {
+	attrs := otLogFieldsToOTelAttrs(fields)
 	s.otelSpan.AddEvent(
-		"",
-		trace.WithAttributes(otLogFieldsToOTelAttrs(fields)...),
+		otelEventName(attrs),
+		trace.WithAttributes(attrs...),
 	)
 }
 
@@ -223,6 +227,31 @@ func otLogFieldsToOTelAttrs(fields []otlog.Field) []attribute.KeyValue {
 	return encoder.pairs
 }
 
+// eventNameKey is the OpenTracing log field conventionally carrying the name
+// of the logged event.
+const eventNameKey = attribute.Key("event")
+
+// defaultEventName is used when a log field set carries no usable
+// eventNameKey field.
+const defaultEventName = "log"
+
+// otelEventName returns the OTel event name for a set of converted OpenTracing
+// log fields: the value of the last eventNameKey attribute, falling back to
+// defaultEventName. An event name is semantically required to be non-empty, so
+// an empty value is treated as absent.
+func otelEventName(attrs []attribute.KeyValue) string {
+	for _, attr := range slices.Backward(attrs) {
+		if attr.Key != eventNameKey {
+			continue
+		}
+		if name := attr.Value.String(); name != "" {
+			return name
+		}
+		return defaultEventName
+	}
+	return defaultEventName
+}
+
 func (s *bridgeSpan) LogKV(alternatingKeyValues ...any) {
 	fields, err := otlog.InterleavedKVToFields(alternatingKeyValues...)
 	if err != nil {
@@ -242,6 +271,9 @@ func (s *bridgeSpan) setBaggageItemOnly(restrictedKey, value string) {
 }
 
 func (s *bridgeSpan) updateOTelContext(restrictedKey, value string) {
+	s.extraBaggageItemsMu.Lock()
+	defer s.extraBaggageItemsMu.Unlock()
+
 	if s.extraBaggageItems == nil {
 		s.extraBaggageItems = make(map[string]string)
 	}
@@ -391,6 +423,9 @@ func (t *BridgeTracer) baggageGetHook(ctx context.Context, list iBaggage.List) i
 		)
 		return list
 	}
+	bSpan.extraBaggageItemsMu.Lock()
+	defer bSpan.extraBaggageItemsMu.Unlock()
+
 	items := bSpan.extraBaggageItems
 	if len(items) == 0 {
 		return list

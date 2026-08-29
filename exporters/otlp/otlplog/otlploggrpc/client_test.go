@@ -1,10 +1,11 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otlploggrpc // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
+package otlploggrpc
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"net"
 	"sync"
@@ -37,8 +38,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
-	"go.opentelemetry.io/otel/semconv/v1.42.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 var (
@@ -384,23 +385,68 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
+func TestEnvTLSCredentials(t *testing.T) {
+	const certPath, keyPath = "cert_path", "key_path"
+	origReadFile := readFile
+	readFile = func(name string) ([]byte, error) {
+		switch name {
+		case certPath:
+			return []byte(weakCertificate), nil
+		case keyPath:
+			return []byte(weakPrivateKey), nil
+		default:
+			return nil, errors.New("unexpected certificate path")
+		}
+	}
+	t.Cleanup(func() { readFile = origReadFile })
+
+	tlsCfg, err := newTLSConf([]byte(weakCertificate), []byte(weakPrivateKey))
+	require.NoError(t, err)
+	serverCreds := credentials.NewTLS(&tls.Config{
+		Certificates: tlsCfg.Certificates,
+		ClientAuth:   tls.RequireAnyClientCert,
+	})
+	coll, err := newGRPCCollector(t.Context(), "localhost:0", nil, grpc.Creds(serverCreds))
+	require.NoError(t, err)
+	t.Cleanup(coll.srv.Stop)
+
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "https://"+coll.listener.Addr().String())
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE", certPath)
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE", certPath)
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY", keyPath)
+
+	cfg := newConfig(nil)
+	require.NotNil(t, cfg.tlsCfg.Value)
+	cfg.tlsCfg.Value.Time = func() time.Time {
+		return time.Date(2021, 4, 1, 14, 30, 0, 0, time.UTC)
+	}
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, client.Shutdown(t.Context())) }()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+	require.Len(t, coll.Collect().Dump(), 1)
+}
+
 type exportResult struct {
 	Response *collogpb.ExportLogsServiceResponse
 	Err      error
 }
 
-// storage stores uploaded OTLP log data in their proto form.
+// storage stores uploaded OTLP log data in protobuf form.
 type storage struct {
 	dataMu sync.Mutex
 	data   []*lpb.ResourceLogs
 }
 
-// newStorage returns a configure storage ready to store received requests.
+// newStorage returns a configured storage instance ready to store received requests.
 func newStorage() *storage {
 	return &storage{}
 }
 
-// Add adds the request to the Storage.
+// Add adds the request to the storage.
 func (s *storage) Add(request *collogpb.ExportLogsServiceRequest) {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
@@ -436,12 +482,16 @@ var _ collogpb.LogsServiceServer = (*grpcCollector)(nil)
 // endpoint.
 //
 // If endpoint is an empty string, the returned collector will be listening on
-// the localhost interface at an OS chosen port.
+// the localhost interface at an OS-chosen port.
 //
-// If errCh is not nil, the collector will respond to Export calls with errors
-// sent on that channel. This means that if errCh is not nil Export calls will
-// block until an error is received.
-func newGRPCCollector(ctx context.Context, endpoint string, resultCh <-chan exportResult) (*grpcCollector, error) {
+// If resultCh is not nil, each request blocks until an exportResult is received
+// and the collector responds with that result.
+func newGRPCCollector(
+	ctx context.Context,
+	endpoint string,
+	resultCh <-chan exportResult,
+	opts ...grpc.ServerOption,
+) (*grpcCollector, error) {
 	if endpoint == "" {
 		endpoint = "localhost:0"
 	}
@@ -457,14 +507,14 @@ func newGRPCCollector(ctx context.Context, endpoint string, resultCh <-chan expo
 		return nil, err
 	}
 
-	c.srv = grpc.NewServer()
+	c.srv = grpc.NewServer(opts...)
 	collogpb.RegisterLogsServiceServer(c.srv, c)
 	go func() { _ = c.srv.Serve(c.listener) }()
 
 	return c, nil
 }
 
-// Export handles the export req.
+// Export handles the export request.
 func (c *grpcCollector) Export(
 	ctx context.Context,
 	req *collogpb.ExportLogsServiceRequest,
@@ -487,7 +537,7 @@ func (c *grpcCollector) Export(
 	return &collogpb.ExportLogsServiceResponse{}, nil
 }
 
-// Collect returns the Storage holding all collected requests.
+// Collect returns the storage holding all collected requests.
 func (c *grpcCollector) Collect() *storage {
 	return c.storage
 }
