@@ -72,6 +72,8 @@ func TestParallelCallbacksRunConcurrently(t *testing.T) {
 	}()
 
 	var rm metricdata.ResourceMetrics
+	// An out-of-band watchdog, rather than a context deadline, fails fast with a
+	// clear message even if Collect wedges for a reason unrelated to cancellation.
 	done := make(chan error, 1)
 	go func() { done <- reader.Collect(t.Context(), &rm) }()
 	select {
