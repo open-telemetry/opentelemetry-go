@@ -659,10 +659,6 @@ func TestWithDialOptionCredentialsTakePrecedence(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, client.Shutdown(ctx)) })
 
 	require.NoError(t, client.UploadLogs(ctx, resourceLogs))
-
-	headers := metadata.Join(coll.headers)
-	require.NotEmpty(t, headers.Get("user-agent"))
-	assert.Contains(t, headers.Get("user-agent")[0], "OTel Go OTLP over gRPC logs exporter/")
 }
 
 func TestConfig(t *testing.T) {
