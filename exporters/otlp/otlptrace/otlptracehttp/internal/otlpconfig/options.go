@@ -88,12 +88,12 @@ type (
 func NewHTTPConfig(opts ...HTTPOption) Config {
 	cfg := Config{
 		Traces: SignalConfig{
-			Endpoint:            fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
-			URLPath:             DefaultTracesPath,
-			Compression:         NoCompression,
-			Protocol:            ProtocolHTTPProtobuf,
-			MaxRequestSize:      DefaultMaxRequestSize,
-			Timeout:             DefaultTimeout,
+			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
+			URLPath:        DefaultTracesPath,
+			Compression:    NoCompression,
+			Protocol:       ProtocolHTTPProtobuf,
+			MaxRequestSize: DefaultMaxRequestSize,
+			Timeout:        DefaultTimeout,
 		},
 		RetryConfig: retry.DefaultConfig,
 	}
