@@ -5,7 +5,6 @@ package metric
 
 import (
 	"context"
-	"errors"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/global"
@@ -147,11 +146,11 @@ func (mp *MeterProvider) Shutdown(ctx context.Context) error {
 	if mp.shutdown != nil {
 		err = mp.shutdown(ctx)
 	}
-	// Tear down each pipeline's resources. stop honors ctx and returns its error
-	// if it gave up, so an in-flight collection cannot block Shutdown past the
-	// caller's deadline.
+	// Tear down each pipeline's callback pool. stop never blocks on an in-flight
+	// collection, preserving the default behavior where Shutdown does not wait on
+	// produce.
 	for _, p := range mp.pipes {
-		err = errors.Join(err, p.stop(ctx))
+		p.stop()
 	}
 	return err
 }

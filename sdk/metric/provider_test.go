@@ -36,13 +36,15 @@ func TestMeterConcurrentSafe(*testing.T) {
 	<-done
 }
 
-// TestShutdownHonorsContextDeadline verifies Shutdown returns by the caller's
-// deadline instead of blocking on an in-flight collection that holds the
-// pipeline lock.
-func TestShutdownHonorsContextDeadline(t *testing.T) {
-	// Only a callback pool makes Shutdown wait on an in-flight collection; with
-	// the feature disabled there is nothing to tear down and Shutdown returns
-	// immediately, so enable it to exercise the deadline path.
+// TestShutdownReturnsPromptlyDuringInFlightCollect verifies Shutdown does not
+// block on an in-flight collection that holds the pipeline lock, matching the
+// sequential default. The callback pool is torn down asynchronously once the
+// collection releases the lock, so Shutdown returns promptly with no error
+// rather than waiting for teardown.
+func TestShutdownReturnsPromptlyDuringInFlightCollect(t *testing.T) {
+	// Only a callback pool can make Shutdown wait on an in-flight collection;
+	// with the feature disabled there is nothing to tear down, so enable it to
+	// exercise the contended teardown path.
 	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
 
 	reader := NewManualReader()
@@ -69,16 +71,14 @@ func TestShutdownHonorsContextDeadline(t *testing.T) {
 	}()
 	<-started
 
-	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
-	defer cancel()
 	shutdownDone := make(chan error, 1)
-	go func() { shutdownDone <- mp.Shutdown(ctx) }()
+	go func() { shutdownDone <- mp.Shutdown(t.Context()) }()
 
 	select {
 	case err := <-shutdownDone:
-		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.NoError(t, err)
 	case <-time.After(2 * time.Second):
-		t.Fatal("Shutdown blocked past its context deadline")
+		t.Fatal("Shutdown blocked on an in-flight collection")
 	}
 
 	// Release the callback so it frees the pipeline lock.

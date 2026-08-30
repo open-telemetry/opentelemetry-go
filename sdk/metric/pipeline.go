@@ -231,31 +231,32 @@ func (p *pipeline) runCallbacksParallel(ctx context.Context, pool *callbackPool)
 	return pool.takeErr()
 }
 
-// stop tears down this pipeline's resources on shutdown.
-func (p *pipeline) stop(ctx context.Context) error {
+// stop tears down this pipeline's callback pool on shutdown. It never
+// synchronously waits on an in-flight collection: the sequential default never
+// blocked Shutdown on produce, and enabling the pool must preserve that.
+func (p *pipeline) stop() {
 	// Without a pool there is nothing to tear down. Check without the lock so an
 	// in-flight collection cannot make Shutdown wait on the default path.
 	if p.pool.Load() == nil {
-		return nil
+		return
 	}
-	// TryLock guards against an already-canceled ctx. If it succeeds, no
-	// collection is running, so teardown is fast and completes regardless of
-	// ctx. Racing ctx here instead would report failure on a clean shutdown
-	// whose ctx just happened to be already done.
+	// If no collection is running, tear the pool down synchronously so Shutdown
+	// fully completes in the common case.
 	if p.TryLock() {
 		pool := p.pool.Swap(nil)
-		// Unlock before pool.stop waits on the workers so a concurrent produce
-		// is not blocked while they exit.
 		p.Unlock()
 		if pool != nil {
 			pool.stop()
 		}
-		return nil
+		return
 	}
-	// A collection holds the lock and cannot be interrupted. Wait for it on a
-	// separate goroutine so stop can return once ctx is done; the goroutine still
-	// finishes teardown after the collection releases the lock.
-	done := make(chan struct{})
+	// A collection holds the lock, so waiting here would block Shutdown on
+	// produce, which the sequential default never did. Detach the teardown so
+	// Shutdown returns now; the goroutine finishes it once produce releases the
+	// lock. If a callback never returns (e.g. it ignores ctx and blocks) the
+	// goroutine leaks, but the sequential default already leaks the collection
+	// for such a callback, and staying back-compatible, hence non-blocking,
+	// matters more.
 	go func() {
 		p.Lock()
 		pool := p.pool.Swap(nil)
@@ -263,14 +264,7 @@ func (p *pipeline) stop(ctx context.Context) error {
 		if pool != nil {
 			pool.stop()
 		}
-		close(done)
 	}()
-	select {
-	case <-done:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
 }
 
 // callbackPool is a fixed set of long-lived worker goroutines that execute

@@ -294,6 +294,50 @@ func TestParallelCallbacksShutdownIdempotent(t *testing.T) {
 	assert.NotPanics(t, func() { _ = mp.Shutdown(t.Context()) })
 }
 
+// TestParallelCallbacksReentrantShutdown verifies a callback may shut the
+// provider down without deadlocking, matching the sequential default where
+// Shutdown never waits on the in-flight collection. The callback uses a
+// non-cancellable context (context.Background) on purpose: it has no deadline to
+// fall back on, so only a Shutdown that refuses to wait on its own collection can
+// return. Both the reentrant Shutdown and the collection must complete.
+func TestParallelCallbacksReentrantShutdown(t *testing.T) {
+	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	m := mp.Meter("test")
+
+	shutdownDone := make(chan error, 1)
+	_, err := m.Int64ObservableCounter("ctr",
+		mapi.WithInt64Callback(func(_ context.Context, o mapi.Int64Observer) error {
+			// A non-cancellable context is the point: it cannot self-heal via a
+			// deadline, so it exercises the deadlock case.
+			shutdownDone <- mp.Shutdown(context.Background()) //nolint:usetesting
+			o.Observe(1)
+			return nil
+		}))
+	require.NoError(t, err)
+
+	collectDone := make(chan error, 1)
+	go func() {
+		var rm metricdata.ResourceMetrics
+		collectDone <- reader.Collect(t.Context(), &rm)
+	}()
+
+	// A deadlock hangs both the reentrant Shutdown and the collection until the
+	// package test timeout; the watchdog fails fast with a clear message instead.
+	for range 2 {
+		select {
+		case err := <-shutdownDone:
+			require.NoError(t, err)
+		case err := <-collectDone:
+			require.NoError(t, err)
+		case <-time.After(3 * time.Second):
+			t.Fatal("reentrant Shutdown from a callback deadlocked")
+		}
+	}
+}
+
 // TestShutdownDoesNotBlockOnInFlightCollectWithoutPool verifies that with the
 // feature disabled (no callback pool), Shutdown does not wait on an in-flight
 // collection. Pipeline teardown must be a no-op without a pool, preserving the
