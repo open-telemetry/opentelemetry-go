@@ -93,7 +93,6 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			Compression:         NoCompression,
 			Protocol:            ProtocolHTTPProtobuf,
 			MaxRequestSize:      DefaultMaxRequestSize,
-			MaxResponseBodySize: DefaultMaxResponseBodySize,
 			Timeout:             DefaultTimeout,
 		},
 		RetryConfig: retry.DefaultConfig,

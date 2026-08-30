@@ -101,7 +101,6 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			URLPath:             DefaultMetricsPath,
 			Compression:         NoCompression,
 			MaxRequestSize:      DefaultMaxRequestSize,
-			MaxResponseBodySize: DefaultMaxResponseBodySize,
 			Timeout:             DefaultTimeout,
 			TemporalitySelector: metric.DefaultTemporalitySelector,
 			AggregationSelector: metric.DefaultAggregationSelector,

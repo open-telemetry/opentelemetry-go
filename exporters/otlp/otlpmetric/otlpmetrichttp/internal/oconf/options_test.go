@@ -82,7 +82,7 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, 64*1024*1024, c.Metrics.MaxRequestSize)
 
 				if !grpcOption {
-					assert.Equal(t, int64(4*1024*1024), c.Metrics.MaxResponseBodySize)
+					assert.Equal(t, int64(0), c.Metrics.MaxResponseBodySize)
 				}
 
 				assert.Equal(t, 10*time.Second, c.Metrics.Timeout)
@@ -619,7 +619,7 @@ func TestMaxResponseBodySizeOption(t *testing.T) {
 
 	for _, size := range []int64{0, -1} {
 		cfg := NewHTTPConfig(WithMaxResponseBodySize(size))
-		assert.Equal(t, DefaultMaxResponseBodySize, cfg.Metrics.MaxResponseBodySize)
+		assert.Equal(t, int64(0), cfg.Metrics.MaxResponseBodySize)
 	}
 }
 

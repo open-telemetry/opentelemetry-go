@@ -65,6 +65,13 @@ func TestCopyResponseBodyReadErrors(t *testing.T) {
 	assert.ErrorIs(t, err, readErr)
 }
 
+func TestCopyResponseBodyMaxInt64StaysBounded(t *testing.T) {
+	var dst bytes.Buffer
+	err := copyResponseBody(&dst, io.NopCloser(bytes.NewReader([]byte("ok"))), 1<<63-1)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", dst.String())
+}
+
 func TestClientMarshalLogDoesNotIncludeEndpointConfig(t *testing.T) {
 	const sensitiveEndpoint = "user:pass@collector.internal:4318"
 

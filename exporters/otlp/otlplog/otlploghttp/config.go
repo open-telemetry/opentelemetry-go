@@ -141,7 +141,7 @@ func newConfig(options []Option) config {
 		fallback[int](defaultMaxRequestSize),
 	)
 	c.maxResponseBodySize = c.maxResponseBodySize.Resolve(
-		fallback[int64](defaultMaxResponseBodySize),
+		fallback[int64](maxResponseBodySize),
 	)
 	c.proxy = c.proxy.Resolve(
 		fallback[HTTPTransportProxyFunc](defaultProxy),

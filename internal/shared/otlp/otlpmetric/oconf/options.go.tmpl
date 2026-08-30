@@ -109,7 +109,6 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 			URLPath:             DefaultMetricsPath,
 			Compression:         NoCompression,
 			MaxRequestSize:      DefaultMaxRequestSize,
-			MaxResponseBodySize: DefaultMaxResponseBodySize,
 			Timeout:             DefaultTimeout,
 {{ else }}			Endpoint:            fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:             DefaultMetricsPath,

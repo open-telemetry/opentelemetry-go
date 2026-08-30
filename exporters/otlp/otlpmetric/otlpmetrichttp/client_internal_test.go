@@ -57,3 +57,10 @@ func TestCopyResponseBodyReadErrors(t *testing.T) {
 	err = copyResponseBody(&dst, io.NopCloser(&responseBodyErrorReader{err: readErr}), 1)
 	assert.ErrorIs(t, err, readErr)
 }
+
+func TestCopyResponseBodyMaxInt64StaysBounded(t *testing.T) {
+	var dst bytes.Buffer
+	err := copyResponseBody(&dst, io.NopCloser(bytes.NewReader([]byte("ok"))), 1<<63-1)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", dst.String())
+}

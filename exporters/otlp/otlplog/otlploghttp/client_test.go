@@ -402,8 +402,7 @@ func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
 	if resp.Err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		var e *httpResponseError
-		if errors.As(resp.Err, &e) {
+		if e, ok := errors.AsType[*httpResponseError](resp.Err); ok {
 			for k, vals := range e.Header {
 				for _, v := range vals {
 					w.Header().Add(k, v)
@@ -1146,6 +1145,35 @@ func TestResponseBodySizeLimit(t *testing.T) {
 			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 		})
 	}
+}
+
+func TestDefaultResponseBodySizeLimit(t *testing.T) {
+	orig := maxResponseBodySize
+	maxResponseBodySize = 1
+	t.Cleanup(func() { maxResponseBodySize = orig })
+
+	largeBody := []byte("xx")
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(largeBody)
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithRetry(RetryConfig{Enabled: false}),
+	}
+	cfg := newConfig(opts)
+	c, err := newHTTPClient(t.Context(), cfg)
+	require.NoError(t, err)
+
+	err = c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
+	assert.ErrorContains(t, err, "response body too large")
+	assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 }
 
 func TestRequestBodySizeLimit(t *testing.T) {

@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -32,15 +31,23 @@ import (
 
 type client struct {
 	// req is cloned for every upload the client makes.
-	req                 *http.Request
-	compression         Compression
-	maxRequestSize      int
-	maxResponseBodySize int64
-	requestFunc         retry.RequestFunc
-	httpClient          *http.Client
+	req               *http.Request
+	compression       Compression
+	maxRequestSize    int
+	responseBodyLimit int64
+	requestFunc       retry.RequestFunc
+	httpClient        *http.Client
 
 	inst *observ.Instrumentation
 }
+
+// maxResponseBodySize is the maximum number of bytes to read from a response
+// body. It is set to 4 MiB per the OTLP specification recommendation to
+// mitigate excessive memory usage caused by a misconfigured or malicious
+// server. If exceeded, the response is treated as a not-retryable error.
+// This is a variable to allow tests to override it. WithMaxResponseBodySize
+// overrides this default for a single exporter.
+var maxResponseBodySize int64 = 4 * 1024 * 1024
 
 // Keep it in sync with golang's DefaultTransport from net/http! We
 // have our own copy to avoid handling a situation where the
@@ -115,13 +122,13 @@ func newClient(cfg oconf.Config) (*client, error) {
 	inst, err := observ.NewInstrumentation(counter.NextExporterID(), cfg.Metrics.Endpoint)
 
 	return &client{
-		compression:         Compression(cfg.Metrics.Compression),
-		maxRequestSize:      cfg.Metrics.MaxRequestSize,
-		maxResponseBodySize: cfg.Metrics.MaxResponseBodySize,
-		req:                 req,
-		requestFunc:         cfg.RetryConfig.RequestFunc(evaluate),
-		httpClient:          httpClient,
-		inst:                inst,
+		compression:       Compression(cfg.Metrics.Compression),
+		maxRequestSize:    cfg.Metrics.MaxRequestSize,
+		responseBodyLimit: cfg.Metrics.MaxResponseBodySize,
+		req:               req,
+		requestFunc:       cfg.RetryConfig.RequestFunc(evaluate),
+		httpClient:        httpClient,
+		inst:              inst,
 	}, err
 }
 
@@ -200,7 +207,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if err := copyResponseBody(&respData, resp.Body, c.maxResponseBodySize); err != nil {
+			if err := copyResponseBody(&respData, resp.Body, c.responseBodyLimit); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
@@ -231,7 +238,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if err := copyResponseBody(&respData, resp.Body, c.maxResponseBodySize); err != nil {
+		if err := copyResponseBody(&respData, resp.Body, c.responseBodyLimit); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
@@ -327,31 +334,15 @@ func (r *request) reset(ctx context.Context) {
 	r.Request = r.WithContext(ctx)
 }
 
-type responseBodyTooLargeError struct {
-	limit int64
-}
-
-func (e responseBodyTooLargeError) Error() string {
-	return fmt.Sprintf("response body too large: exceeded %d bytes", e.limit)
-}
-
 func copyResponseBody(dst io.Writer, src io.ReadCloser, maxSize int64) error {
-	if maxSize <= 0 || maxSize == math.MaxInt64 {
-		_, err := io.Copy(dst, src)
-		return err
+	if maxSize <= 0 {
+		maxSize = maxResponseBodySize
 	}
-
-	if _, err := io.Copy(dst, io.LimitReader(src, maxSize)); err != nil {
+	if _, err := io.Copy(dst, http.MaxBytesReader(nil, src, maxSize)); err != nil {
+		if maxBytesErr, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
+		}
 		return err
-	}
-
-	var extra [1]byte
-	n, err := src.Read(extra[:])
-	if err != nil && err != io.EOF {
-		return err
-	}
-	if n > 0 {
-		return responseBodyTooLargeError{limit: maxSize}
 	}
 	return nil
 }

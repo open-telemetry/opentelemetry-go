@@ -699,6 +699,35 @@ func TestResponseBodySizeLimit(t *testing.T) {
 	}
 }
 
+func TestDefaultResponseBodySizeLimit(t *testing.T) {
+	orig := *otlptracehttp.MaxResponseBodySize
+	*otlptracehttp.MaxResponseBodySize = 1
+	t.Cleanup(func() { *otlptracehttp.MaxResponseBodySize = orig })
+
+	largeBody := []byte("xx")
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(largeBody)
+	}))
+	t.Cleanup(srv.Close)
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpointURL(srv.URL),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+	)
+	exporter, err := otlptrace.New(t.Context(), client)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = exporter.Shutdown(t.Context()) })
+
+	err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
+	assert.ErrorContains(t, err, "response body too large")
+	assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
+}
+
 func TestRequestBodySizeLimit(t *testing.T) {
 	var calls int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
