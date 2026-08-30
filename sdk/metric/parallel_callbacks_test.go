@@ -12,6 +12,7 @@ import (
 	"runtime/pprof"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -171,6 +172,34 @@ func TestCallbacksJoinErrors(t *testing.T) {
 			assert.ErrorIs(t, err, errMulti)
 		})
 	}
+}
+
+// TestParallelCallbacksErrorNotRetained verifies a callback error from one
+// collection does not leak into the next.
+func TestParallelCallbacksErrorNotRetained(t *testing.T) {
+	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	t.Cleanup(func() { _ = mp.Shutdown(t.Context()) })
+	m := mp.Meter("test")
+
+	errFirst := errors.New("first collection fails")
+	var calls atomic.Int64
+	_, err := m.Int64ObservableCounter("ctr",
+		mapi.WithInt64Callback(func(_ context.Context, o mapi.Int64Observer) error {
+			o.Observe(1)
+			if calls.Add(1) == 1 {
+				return errFirst
+			}
+			return nil
+		}))
+	require.NoError(t, err)
+
+	var rm metricdata.ResourceMetrics
+	require.ErrorIs(t, reader.Collect(t.Context(), &rm), errFirst)
+	// The second collection's callback succeeds.
+	require.NoError(t, reader.Collect(t.Context(), &rm))
 }
 
 // TestParallelCallbacksMoreCallbacksThanWorkers exercises the job-queueing path

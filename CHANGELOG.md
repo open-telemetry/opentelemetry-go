@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Support `http/json` in `otlptracehttp` (#8273)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
+- Add experimental support for running observable-instrument callbacks in parallel via a reused worker pool, enabled with the `OTEL_GO_X_PARALLEL_CALLBACKS=true` environment variable, in `go.opentelemetry.io/otel/sdk/metric`. (#8581)
 
 ### Changed
 
@@ -48,8 +49,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `go.opentelemetry.io/otel/semconv/v1.43.0` package.
   The package contains semantic conventions from the `v1.43.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.43.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.42.0`. (#8628)
-  See the [migration documentation](./semconv/v1.42.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.41.0`.
-- Add experimental support for running observable-instrument callbacks in parallel via a reused worker pool, enabled with the `OTEL_GO_X_PARALLEL_CALLBACKS=true` environment variable, in `go.opentelemetry.io/otel/sdk/metric`. (#8581)
 
 ### Changed
 
