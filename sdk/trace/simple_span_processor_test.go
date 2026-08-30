@@ -83,6 +83,9 @@ func TestNewSimpleSpanProcessorWithNilExporter(t *testing.T) {
 	if ssp := NewSimpleSpanProcessor(nil); ssp == nil {
 		t.Error("failed to create new SimpleSpanProcessor with nil exporter")
 	}
+	if err := ssp.Shutdown(t.Context()); err != nil {
+		t.Errorf("Shutdown with nil exporter should return nil, got %v", err)
+	}
 }
 
 func TestSimpleSpanProcessorOnEnd(t *testing.T) {
