@@ -80,7 +80,8 @@ func TestNewSimpleSpanProcessor(t *testing.T) {
 }
 
 func TestNewSimpleSpanProcessorWithNilExporter(t *testing.T) {
-	if ssp := NewSimpleSpanProcessor(nil); ssp == nil {
+	ssp := NewSimpleSpanProcessor(nil)
+	if ssp == nil {
 		t.Error("failed to create new SimpleSpanProcessor with nil exporter")
 	}
 	if err := ssp.Shutdown(t.Context()); err != nil {
