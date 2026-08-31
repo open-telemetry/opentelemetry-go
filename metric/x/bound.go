@@ -8,9 +8,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-// Bound instruments still accept attribute options (e.g., [metric.WithAttributes]
-// or [metric.WithAttributeSet]) when recording measurements, but passing
-// attributes at record time can negate the performance benefits of binding.
 type (
 	// Int64CounterBinder is an interface for instruments that support binding attributes ahead of time.
 	Int64CounterBinder interface {
