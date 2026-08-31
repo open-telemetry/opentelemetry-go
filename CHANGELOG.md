@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add the experimental `Finisher` synchronous metric instrument extension interface to `go.opentelemetry.io/otel/metric/x`.
+
 ### Fixed
 
 - Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)
