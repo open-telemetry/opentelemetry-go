@@ -1,6 +1,9 @@
 # Experimental Features
 
+<!--
+Adding/uncommenting the following after initial PR merge:
 [![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/otel/sdk/trace/x)](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/trace/x)
+-->
 
 The Trace SDK contains features that have not yet stabilized in the OpenTelemetry specification.
 These features are added to the OpenTelemetry Go Trace SDK prior to stabilization in the specification so that users can start experimenting with them and provide feedback.
