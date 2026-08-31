@@ -8,13 +8,48 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Prevent a panic in `NewFixedSizeReservoir` and `FixedSizeReservoirProvider` when given a negative size in `go.opentelemetry.io/otel/sdk/metric/exemplar`; negative sizes are now clamped to zero, consistent with a size of zero. (#8832)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.47.0-rc.1] - 2026-08-28
+
+This is a release candidate for the v1.47.0 release.
+That release is expected to include the `v1` release of the OpenTelemetry Go Logs API and SDK and will provide stability guarantees for the following modules:
+
+- `go.opentelemetry.io/otel/log`
+- `go.opentelemetry.io/otel/sdk/log`
+
+See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
+
+### Added
+
+- Add `Logger`, `GetLoggerProvider`, and `SetLoggerProvider` to `go.opentelemetry.io/otel`. (#8874)
+
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/otel/log/global`; use the equivalent APIs in `go.opentelemetry.io/otel`. (#8874)
+
+### Fixed
+
+- Ignore attempts to unregister unknown span processors in `go.opentelemetry.io/otel/sdk/trace`. (#8840)
+
+### Removed
+
+- Drop support for [Go 1.25]. (#8876)
+
+## [1.46.0/0.68.0/0.22.0/0.0.19] - 2026-08-25
+
 This release is the last to support [Go 1.25].
 The next release will require at least [Go 1.26].
 
 ### Added
 
 - Support testing of [Go 1.27]. (#8811)
-- Support `http/json` in `otlptracehttp` (#8273)
+- Support `http/json` protocol in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8273, #8775, #8831)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
 
 ### Changed
@@ -25,20 +60,15 @@ The next release will require at least [Go 1.26].
 
 ### Fixed
 
-- Accept quoted finite double values in OTLP/HTTP JSON requests in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8831)
 - Export dropped attribute counts in OTLP log records from `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8829)
 - Name span events created from OpenTracing logs after the `event` log field, falling back to `log`, instead of always using an empty name in `go.opentelemetry.io/otel/bridge/opentracing`. (#8648)
 - Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)
 - Count exception attributes omitted due to the attribute count limit as dropped in `go.opentelemetry.io/otel/sdk/log`. (#8796)
-- Encode `NaN` and infinite double attribute values as strings in OTLP/HTTP JSON requests from `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8775)
 - Prevent log record and instrumentation scope attributes with empty keys from reaching processors and exporters in `go.opentelemetry.io/otel/sdk/log`. (#8797)
 - Fix a data race when span attributes are read concurrently in `go.opentelemetry.io/otel/sdk/trace`. (#8706)
 - Prevent a panic in `(*Set).Filter` when called on a nil receiver in `go.opentelemetry.io/otel/attribute`. (#8792)
 - The simple span and log processors record `otel.sdk.processor.{span,log}.processed` when the record is submitted to the exporter instead of after the export completes, and no longer set `error.type` from the export outcome, in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log`. (#8705)
 - Prevent `Resource.MarshalLog` from panicking on nil resources in `go.opentelemetry.io/otel/sdk/resource`. (#8758)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.45.0/0.67.0/0.21.0/0.0.18] - 2026-08-03
 
@@ -3811,7 +3841,9 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.45.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.47.0-rc.1...HEAD
+[1.47.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.47.0-rc.1
+[1.46.0/0.68.0/0.22.0/0.0.19]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.46.0
 [1.45.0/0.67.0/0.21.0/0.0.18]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.45.0
 [1.44.0/0.66.0/0.20.0/0.0.17]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.44.0
 [1.43.0/0.65.0/0.19.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.43.0
