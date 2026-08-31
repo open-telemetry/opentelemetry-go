@@ -4,10 +4,10 @@
 package metric
 
 import (
-	"container/list"
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -72,11 +72,12 @@ type pipeline struct {
 	views  []View
 
 	sync.Mutex
+	produceMu        sync.Mutex
 	int64Measures    map[observableID[int64]][]aggregate.Measure[int64]
 	float64Measures  map[observableID[float64]][]aggregate.Measure[float64]
 	aggregations     map[instrumentation.Scope][]instrumentSync
 	callbacks        []func(context.Context) error
-	multiCallbacks   list.List
+	multiCallbacks   []*multiCallbackEntry
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
 }
@@ -112,16 +113,114 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 
 type multiCallback func(context.Context) error
 
+// multiCallbackEntry is the registration of a multiCallback with a pipeline.
+type multiCallbackEntry struct {
+	callback multiCallback
+
+	// retired reports whether the callback has been unregistered. It is
+	// guarded by the pipeline's Mutex.
+	retired bool
+	// inFlight tracks calls of callback that have started and not yet
+	// returned. produce increments it in the same critical section of the
+	// pipeline's Mutex in which it checks retired, so an unregister that
+	// sets retired is ordered with every call that will ever start: either
+	// the call started first and unregister waits for it, or unregister
+	// came first and the call is skipped.
+	inFlight sync.WaitGroup
+}
+
+// call runs the callback of e, tracking it as in flight. The caller must
+// have incremented e.inFlight.
+func (e *multiCallbackEntry) call(ctx context.Context) error {
+	defer e.inFlight.Done()
+	return runCallback(ctx, e.callback)
+}
+
 // addMultiCallback registers a multi-instrument callback to be run when
 // `produce()` is called.
+//
+// The returned unregister function removes the callback from the pipeline so
+// that no later collection calls it, and then waits for any call of the
+// callback that is in progress to return. Consequently, once unregister
+// returns the callback is not running and will not be called again.
+//
+// The wait is skipped when unregister is called from within a callback run
+// by produce: the in-progress call may be the caller itself, and waiting
+// inside a callback for one in progress on another reader could deadlock.
+// This allows a callback to unregister itself or a peer. A goroutine started
+// by a callback is not within the callback, so if it calls unregister it
+// waits for the callback to return; the callback must not wait for that
+// goroutine.
+//
+// unregister is idempotent and safe to call concurrently.
 func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
+	e := &multiCallbackEntry{callback: c}
 	p.Lock()
-	defer p.Unlock()
-	e := p.multiCallbacks.PushBack(c)
+	p.multiCallbacks = append(p.multiCallbacks, e)
+	p.Unlock()
 	return func() {
 		p.Lock()
-		p.multiCallbacks.Remove(e)
+		if !e.retired {
+			e.retired = true
+			// produce ranges over a snapshot of p.multiCallbacks without
+			// holding the lock. Rebuild the slice instead of deleting in
+			// place: elements below a live snapshot's length are never
+			// overwritten, and appends only ever write past a snapshot's
+			// length, so a snapshot never observes a mutation.
+			cbs := make([]*multiCallbackEntry, 0, len(p.multiCallbacks))
+			for _, o := range p.multiCallbacks {
+				if o != e {
+					cbs = append(cbs, o)
+				}
+			}
+			p.multiCallbacks = cbs
+		}
 		p.Unlock()
+
+		if inCallback() {
+			return
+		}
+		e.inFlight.Wait()
+	}
+}
+
+// runCallback calls c. produce calls every callback through runCallback,
+// which is kept out of line so that it is a frame on the stack of any
+// goroutine that is executing a callback; inCallback relies on that frame.
+//
+//go:noinline
+func runCallback(ctx context.Context, c func(context.Context) error) error {
+	return c(ctx)
+}
+
+// runCallbackName is the package path-qualified name of runCallback, which
+// runtime.Frame.Function reports for its frames.
+const runCallbackName = "go.opentelemetry.io/otel/sdk/metric.runCallback"
+
+// inCallback reports whether the calling goroutine is executing a callback
+// called by produce, by looking for the runCallback frame on the goroutine's
+// call stack.
+func inCallback() bool {
+	pcs := make([]uintptr, 64)
+	for {
+		// Skip the frames of runtime.Callers and inCallback.
+		n := runtime.Callers(2, pcs)
+		if n < len(pcs) {
+			pcs = pcs[:n]
+			break
+		}
+		// The stack may be deeper than pcs; retry with more room.
+		pcs = make([]uintptr, 2*len(pcs))
+	}
+	frames := runtime.CallersFrames(pcs)
+	for {
+		frame, more := frames.Next()
+		if frame.Function == runCallbackName {
+			return true
+		}
+		if !more {
+			return false
+		}
 	}
 }
 
@@ -137,23 +236,44 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		return err
 	}
 
+	p.produceMu.Lock()
+	defer p.produceMu.Unlock()
+
+	// Snapshot callbacks so they can call Meter methods that acquire p.Mutex.
 	p.Lock()
-	defer p.Unlock()
+	callbacks := p.callbacks
+	multiCallbacks := p.multiCallbacks
+	p.Unlock()
 
 	var err error
-	for _, c := range p.callbacks {
+	for _, c := range callbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		if e := c(ctx); e != nil {
+		if e := runCallback(ctx, c); e != nil {
 			err = errors.Join(err, e)
 		}
 	}
-	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+	for _, e := range multiCallbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(multiCallback)
-		if e := f(ctx); e != nil {
-			err = errors.Join(err, e)
+		// Check retirement and mark the call in flight in one critical
+		// section, so an unregister either happens before this and the
+		// callback is skipped, or after it and unregister waits for the
+		// call (see addMultiCallback).
+		p.Lock()
+		retired := e.retired
+		if !retired {
+			e.inFlight.Add(1)
+		}
+		p.Unlock()
+		if retired {
+			continue
+		}
+		if cErr := e.call(ctx); cErr != nil {
+			err = errors.Join(err, cErr)
 		}
 	}
+
+	p.Lock()
+	defer p.Unlock()
 
 	rm.Resource = p.resource
 	rm.ScopeMetrics = internal.ReuseSlice(rm.ScopeMetrics, len(p.aggregations))
