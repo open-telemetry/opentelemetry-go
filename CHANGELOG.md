@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)
 - Prevent a panic in `NewFixedSizeReservoir` and `FixedSizeReservoirProvider` when given a negative size in `go.opentelemetry.io/otel/sdk/metric/exemplar`; negative sizes are now clamped to zero, consistent with a size of zero. (#8832)
 
 <!-- Released section -->
@@ -62,7 +63,6 @@ The next release will require at least [Go 1.26].
 
 - Export dropped attribute counts in OTLP log records from `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8829)
 - Name span events created from OpenTracing logs after the `event` log field, falling back to `log`, instead of always using an empty name in `go.opentelemetry.io/otel/bridge/opentracing`. (#8648)
-- Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)
 - Count exception attributes omitted due to the attribute count limit as dropped in `go.opentelemetry.io/otel/sdk/log`. (#8796)
 - Prevent log record and instrumentation scope attributes with empty keys from reaching processors and exporters in `go.opentelemetry.io/otel/sdk/log`. (#8797)
 - Fix a data race when span attributes are read concurrently in `go.opentelemetry.io/otel/sdk/trace`. (#8706)
