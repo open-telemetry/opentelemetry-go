@@ -1,13 +1,13 @@
 module go.opentelemetry.io/otel/trace
 
-go 1.25.0
+go 1.26.0
 
 replace go.opentelemetry.io/otel => ../
 
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/otel v1.46.0
+	go.opentelemetry.io/otel v1.47.0-rc.1
 )
 
 require (
@@ -16,3 +16,5 @@ require (
 )
 
 replace go.opentelemetry.io/otel/metric => ../metric
+
+replace go.opentelemetry.io/otel/log => ../log
