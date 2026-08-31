@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Retain instrument advisory attributes (`metric/x.WithDefaultAttributes`) when a matching View does not specify an attribute filter in `go.opentelemetry.io/otel/sdk/metric`. (#8859)
 - Prevent a panic in `NewFixedSizeReservoir` and `FixedSizeReservoirProvider` when given a negative size in `go.opentelemetry.io/otel/sdk/metric/exemplar`; negative sizes are now clamped to zero, consistent with a size of zero. (#8832)
 
 <!-- Released section -->
