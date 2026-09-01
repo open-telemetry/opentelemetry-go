@@ -840,11 +840,6 @@ func BenchmarkTruncateAttr(b *testing.B) {
 	b.Run("ByteSlice/Unlimited", run(-1, bytesAttr))
 }
 
-var (
-	benchmarkTruncateKeyValueResult attribute.KeyValue
-	benchmarkTruncateValueResult    attribute.Value
-)
-
 func BenchmarkTruncateValue(b *testing.B) {
 	stringSlice := attribute.StringSliceValue([]string{"value-0", "value-1"})
 	type benchmark struct {
@@ -955,21 +950,17 @@ func BenchmarkTruncateValue(b *testing.B) {
 		b.Run(test.name, func(b *testing.B) {
 			b.Run("Value", func(b *testing.B) {
 				b.ReportAllocs()
-				var result attribute.Value
 				for b.Loop() {
-					result = TruncateValue(test.limit, test.value)
+					TruncateValue(test.limit, test.value)
 				}
-				benchmarkTruncateValueResult = result
 			})
 
 			b.Run("KeyValue", func(b *testing.B) {
 				b.ReportAllocs()
 				input := attribute.KeyValue{Key: "key", Value: test.value}
-				var result attribute.KeyValue
 				for b.Loop() {
-					result = Truncate(test.limit, input)
+					Truncate(test.limit, input)
 				}
-				benchmarkTruncateKeyValueResult = result
 			})
 		})
 	}
