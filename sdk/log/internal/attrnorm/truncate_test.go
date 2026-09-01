@@ -203,8 +203,7 @@ func TestTruncateAttr(t *testing.T) {
 		},
 		{
 			// STRINGSLICE within SLICE where all strings fit: no change.
-			// Exercises needsTruncation(STRINGSLICE) exhausting the loop without
-			// finding an over-limit string, returning false.
+			// Exercises a complete STRINGSLICE scan without allocating a copy.
 			limit: 7,
 			attr:  attribute.Slice(key, attribute.StringSliceValue([]string{"value-0", "value-1"})),
 			want:  attribute.Slice(key, attribute.StringSliceValue([]string{"value-0", "value-1"})),
@@ -228,9 +227,7 @@ func TestTruncateAttr(t *testing.T) {
 		},
 		{
 			// Nested SLICE (no truncation needed) alongside STRING (needs truncation).
-			// Exercises the TruncateValue SLICE branch early-return path: TruncateValue
-			// is called recursively on the nested SLICE but returns it unchanged because
-			// none of its elements require truncation.
+			// The unchanged nested value is retained while its sibling is truncated.
 			limit: 3,
 			attr: attribute.Slice(
 				key,
@@ -419,11 +416,261 @@ func TestTruncateValue(t *testing.T) {
 			value: attribute.MapValue(attribute.String("key", "value")),
 			want:  attribute.MapValue(attribute.String("key", "value")),
 		},
+		{
+			name:  "StringSliceInvalidUTF8Unchanged",
+			limit: 5,
+			value: attribute.StringSliceValue([]string{"ab\xff"}),
+			want:  attribute.StringSliceValue([]string{"ab\xff"}),
+		},
+		{
+			name:  "StringSliceInvalidUTF8Truncated",
+			limit: 2,
+			value: attribute.StringSliceValue([]string{"ab\xff"}),
+			want:  attribute.StringSliceValue([]string{"ab"}),
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			assert.Equal(t, test.want, TruncateValue(test.limit, test.value))
+		})
+	}
+}
+
+func TestTruncateNoopAllocationFree(t *testing.T) {
+	stringSlice := attribute.StringSliceValue([]string{"value-0", "value-1"})
+	values := []struct {
+		name  string
+		value attribute.Value
+	}{
+		{
+			name:  "StringSlice",
+			value: stringSlice,
+		},
+		{
+			name: "Slice",
+			value: attribute.SliceValue(
+				attribute.StringValue("value"),
+				attribute.BoolValue(true),
+			),
+		},
+		{
+			name: "Map",
+			value: attribute.MapValue(
+				attribute.String("string", "value"),
+				attribute.Bool("bool", true),
+			),
+		},
+		{
+			name:  "StringSliceWide",
+			value: attribute.StringSliceValue([]string{"0", "1", "2", "3", "4", "5"}),
+		},
+		{
+			name: "SliceWide",
+			value: attribute.SliceValue(
+				attribute.StringValue("0"),
+				attribute.StringValue("1"),
+				attribute.StringValue("2"),
+				attribute.StringValue("3"),
+				attribute.StringValue("4"),
+				attribute.StringValue("5"),
+			),
+		},
+		{
+			name: "MapWide",
+			value: attribute.MapValue(
+				attribute.String("0", "0"),
+				attribute.String("1", "1"),
+				attribute.String("2", "2"),
+				attribute.String("3", "3"),
+				attribute.String("4", "4"),
+				attribute.String("5", "5"),
+			),
+		},
+		{
+			name:  "Nested",
+			value: nestedBenchmarkValue(32, stringSlice),
+		},
+	}
+
+	for _, test := range values {
+		t.Run(test.name+"/Value", func(t *testing.T) {
+			var got attribute.Value
+			allocs := testing.AllocsPerRun(1000, func() {
+				got = TruncateValue(16, test.value)
+			})
+			assert.Zero(t, allocs)
+			assert.Equal(t, test.value, got)
+		})
+
+		t.Run(test.name+"/KeyValue", func(t *testing.T) {
+			input := attribute.KeyValue{Key: "key", Value: test.value}
+			var got attribute.KeyValue
+			allocs := testing.AllocsPerRun(1000, func() {
+				got = Truncate(16, input)
+			})
+			assert.Zero(t, allocs)
+			assert.Equal(t, input, got)
+		})
+	}
+}
+
+func TestTruncateStringSliceStorageShapes(t *testing.T) {
+	for length := range 7 {
+		values := make([]string, length)
+		for i := range values {
+			values[i] = "ok"
+		}
+		value := attribute.StringSliceValue(values)
+
+		t.Run(fmt.Sprintf("Length%d/NoTruncation", length), func(t *testing.T) {
+			assert.Equal(t, value, TruncateValue(2, value))
+		})
+
+		if length == 0 {
+			continue
+		}
+
+		values[length-1] = "toolong"
+		value = attribute.StringSliceValue(values)
+		wantValues := make([]string, length)
+		copy(wantValues, values)
+		wantValues[length-1] = "to"
+		want := attribute.StringSliceValue(wantValues)
+
+		t.Run(fmt.Sprintf("Length%d/Truncation", length), func(t *testing.T) {
+			assert.Equal(t, want, TruncateValue(2, value))
+			assert.Equal(t, values, value.AsStringSlice(), "input was modified")
+		})
+	}
+}
+
+func TestTruncateStringSliceChangePosition(t *testing.T) {
+	for _, position := range []int{0, 1, 2} {
+		values := []string{"ok", "ok", "ok"}
+		values[position] = "toolong"
+		value := attribute.StringSliceValue(values)
+		wantValues := []string{"ok", "ok", "ok"}
+		wantValues[position] = "to"
+
+		t.Run(fmt.Sprintf("Position%d", position), func(t *testing.T) {
+			got := TruncateValue(2, value)
+			assert.Equal(t, attribute.StringSliceValue(wantValues), got)
+			assert.Equal(t, values, value.AsStringSlice(), "input was modified")
+		})
+	}
+}
+
+func TestTruncateCompositeStorageShapes(t *testing.T) {
+	for length := range 7 {
+		values := make([]attribute.Value, length)
+		keyValues := make([]attribute.KeyValue, length)
+		for i := range length {
+			values[i] = attribute.IntValue(i)
+			keyValues[i] = attribute.Int(fmt.Sprintf("%02d", i), i)
+		}
+
+		sliceValue := attribute.SliceValue(values...)
+		mapValue := attribute.MapValue(keyValues...)
+		t.Run(fmt.Sprintf("Slice/Length%d/NoTruncation", length), func(t *testing.T) {
+			assert.Equal(t, sliceValue, TruncateValue(2, sliceValue))
+		})
+		t.Run(fmt.Sprintf("Map/Length%d/NoTruncation", length), func(t *testing.T) {
+			assert.Equal(t, mapValue, TruncateValue(2, mapValue))
+		})
+
+		if length == 0 {
+			continue
+		}
+
+		values[length-1] = attribute.StringValue("toolong")
+		keyValues[length-1] = attribute.String(fmt.Sprintf("%02d", length-1), "toolong")
+		sliceValue = attribute.SliceValue(values...)
+		mapValue = attribute.MapValue(keyValues...)
+		wantValues := make([]attribute.Value, length)
+		copy(wantValues, values)
+		wantValues[length-1] = attribute.StringValue("to")
+		wantKeyValues := make([]attribute.KeyValue, length)
+		copy(wantKeyValues, keyValues)
+		wantKeyValues[length-1].Value = attribute.StringValue("to")
+
+		t.Run(fmt.Sprintf("Slice/Length%d/Truncation", length), func(t *testing.T) {
+			want := attribute.SliceValue(wantValues...)
+			assert.Equal(t, want, TruncateValue(2, sliceValue))
+			assert.Equal(t, values, sliceValue.AsSlice(), "input was modified")
+		})
+		t.Run(fmt.Sprintf("Map/Length%d/Truncation", length), func(t *testing.T) {
+			want := attribute.MapValue(wantKeyValues...)
+			assert.Equal(t, want, TruncateValue(2, mapValue))
+			assert.Equal(t, keyValues, mapValue.AsMap(), "input was modified")
+		})
+	}
+}
+
+func TestTruncateDeepValue(t *testing.T) {
+	const depth = 1024
+	value := nestedBenchmarkValue(depth, attribute.StringValue("toolong"))
+	want := nestedBenchmarkValue(depth, attribute.StringValue("too"))
+	assert.Equal(t, want, TruncateValue(3, value))
+}
+
+func TestTruncateReflectionStorageAfterChange(t *testing.T) {
+	stringSlice := attribute.StringSliceValue([]string{"toolong", "1", "2", "3"})
+	wantStringSlice := attribute.StringSliceValue([]string{"to", "1", "2", "3"})
+	assert.Equal(t, wantStringSlice, TruncateValue(2, stringSlice))
+
+	slice := attribute.SliceValue(
+		attribute.StringValue("toolong"),
+		attribute.IntValue(1),
+		attribute.IntValue(2),
+		attribute.IntValue(3),
+		attribute.IntValue(4),
+		attribute.IntValue(5),
+	)
+	wantSlice := attribute.SliceValue(
+		attribute.StringValue("to"),
+		attribute.IntValue(1),
+		attribute.IntValue(2),
+		attribute.IntValue(3),
+		attribute.IntValue(4),
+		attribute.IntValue(5),
+	)
+	assert.Equal(t, wantSlice, TruncateValue(2, slice))
+
+	mapValue := attribute.MapValue(
+		attribute.String("0", "toolong"),
+		attribute.Int("1", 1),
+		attribute.Int("2", 2),
+		attribute.Int("3", 3),
+		attribute.Int("4", 4),
+		attribute.Int("5", 5),
+	)
+	wantMapValue := attribute.MapValue(
+		attribute.String("0", "to"),
+		attribute.Int("1", 1),
+		attribute.Int("2", 2),
+		attribute.Int("3", 3),
+		attribute.Int("4", 4),
+		attribute.Int("5", 5),
+	)
+	assert.Equal(t, wantMapValue, TruncateValue(2, mapValue))
+}
+
+func TestTruncateInvalidCompositeStorage(t *testing.T) {
+	value := attribute.StringValue("value")
+	tests := []struct {
+		name     string
+		truncate func(int, attribute.Value) (attribute.Value, bool)
+	}{
+		{name: "StringSlice", truncate: truncateStringSliceValue},
+		{name: "Slice", truncate: truncateSliceValue},
+		{name: "Map", truncate: truncateMapValue},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, changed := test.truncate(2, value)
+			assert.False(t, changed)
+			assert.Equal(t, value, got)
 		})
 	}
 }
@@ -594,6 +841,16 @@ func BenchmarkTruncateValue(b *testing.B) {
 		value attribute.Value
 	}
 	tests := []benchmark{
+		{
+			name:  "String/NoTruncation",
+			limit: 16,
+			value: attribute.StringValue("value"),
+		},
+		{
+			name:  "ByteSlice/NoTruncation",
+			limit: 16,
+			value: attribute.ByteSliceValue([]byte("value")),
+		},
 		{
 			name:  "StringSlice/NoTruncation",
 			limit: 16,

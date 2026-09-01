@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Reduce allocations when applying attribute value length limits in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log` by rebuilding composite values only when truncation is needed.
+
 ### Fixed
 
 - Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)
