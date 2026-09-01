@@ -27,10 +27,20 @@ func Truncate(limit int, attr attribute.KeyValue) attribute.KeyValue {
 		return attr
 	}
 
-	// truncateValue returns the original value on the no-op path, so assigning
-	// unconditionally keeps this hot wrapper small enough for the compiler to
-	// inline.
-	attr.Value, _ = truncateValue(limit, attr.Value)
+	// Keep scalar cases in this wrapper. Routing them through the recursive,
+	// multi-result transform adds measurable overhead to the dominant simple
+	// attribute path.
+	switch attr.Value.Type() {
+	case attribute.STRING:
+		attr.Value = attribute.StringValue(truncate(limit, attr.Value.AsString()))
+	case attribute.BYTESLICE:
+		s := attr.Value.AsString()
+		if len(s) > limit {
+			attr.Value = attribute.ByteSliceValue([]byte(s[:limit]))
+		}
+	case attribute.STRINGSLICE, attribute.SLICE, attribute.MAP:
+		attr.Value, _ = truncateValue(limit, attr.Value)
+	}
 	return attr
 }
 
@@ -43,7 +53,19 @@ func TruncateValue(limit int, v attribute.Value) attribute.Value {
 		return v
 	}
 
-	v, _ = truncateValue(limit, v)
+	// Match Truncate's direct scalar path to avoid paying for the recursive,
+	// multi-result transform when no composite traversal is needed.
+	switch v.Type() {
+	case attribute.STRING:
+		return attribute.StringValue(truncate(limit, v.AsString()))
+	case attribute.BYTESLICE:
+		s := v.AsString()
+		if len(s) > limit {
+			return attribute.ByteSliceValue([]byte(s[:limit]))
+		}
+	case attribute.STRINGSLICE, attribute.SLICE, attribute.MAP:
+		v, _ = truncateValue(limit, v)
+	}
 	return v
 }
 

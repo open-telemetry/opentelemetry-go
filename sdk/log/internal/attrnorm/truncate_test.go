@@ -405,6 +405,18 @@ func TestTruncateValue(t *testing.T) {
 			want:  attribute.StringValue("va"),
 		},
 		{
+			name:  "ByteSlice",
+			limit: 2,
+			value: attribute.ByteSliceValue([]byte("value")),
+			want:  attribute.ByteSliceValue([]byte("va")),
+		},
+		{
+			name:  "UnchangedByteSlice",
+			limit: 5,
+			value: attribute.ByteSliceValue([]byte("value")),
+			want:  attribute.ByteSliceValue([]byte("value")),
+		},
+		{
 			name:  "Map",
 			limit: 2,
 			value: attribute.MapValue(attribute.String("key", "value")),
