@@ -38,8 +38,12 @@ func Truncate(limit int, attr attribute.KeyValue) attribute.KeyValue {
 		if len(s) > limit {
 			attr.Value = attribute.ByteSliceValue([]byte(s[:limit]))
 		}
-	case attribute.STRINGSLICE, attribute.SLICE, attribute.MAP:
-		attr.Value, _ = truncateValue(limit, attr.Value)
+	case attribute.STRINGSLICE:
+		attr.Value, _ = truncateStringSliceValue(limit, attr.Value)
+	case attribute.SLICE:
+		attr.Value, _ = truncateSliceValue(limit, attr.Value)
+	case attribute.MAP:
+		attr.Value, _ = truncateMapValue(limit, attr.Value)
 	}
 	return attr
 }
@@ -63,8 +67,12 @@ func TruncateValue(limit int, v attribute.Value) attribute.Value {
 		if len(s) > limit {
 			return attribute.ByteSliceValue([]byte(s[:limit]))
 		}
-	case attribute.STRINGSLICE, attribute.SLICE, attribute.MAP:
-		v, _ = truncateValue(limit, v)
+	case attribute.STRINGSLICE:
+		v, _ = truncateStringSliceValue(limit, v)
+	case attribute.SLICE:
+		v, _ = truncateSliceValue(limit, v)
+	case attribute.MAP:
+		v, _ = truncateMapValue(limit, v)
 	}
 	return v
 }
