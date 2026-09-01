@@ -1485,6 +1485,7 @@ func (NodeCPUUsage) Description() string {
 func (m NodeCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1553,6 +1554,7 @@ func (NodeMemoryUsage) Description() string {
 func (m NodeMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1799,6 +1801,7 @@ func (NodeUptime) Description() string {
 func (m NodeUptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1937,6 +1940,7 @@ func (PodCPUUsage) Description() string {
 func (m PodCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2005,6 +2009,7 @@ func (PodMemoryUsage) Description() string {
 func (m PodMemoryUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -2251,6 +2256,7 @@ func (PodUptime) Description() string {
 func (m PodUptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

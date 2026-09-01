@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)
 - Prevent a panic in `NewFixedSizeReservoir` and `FixedSizeReservoirProvider` when given a negative size in `go.opentelemetry.io/otel/sdk/metric/exemplar`; negative sizes are now clamped to zero, consistent with a size of zero. (#8832)
+- Ensure metric helpers in `go.opentelemetry.io/otel/semconv/v1.32.0`, `go.opentelemetry.io/otel/semconv/v1.33.0`, and `go.opentelemetry.io/otel/semconv/v1.34.0` record measurements only once when no attributes are provided. (#8849)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
