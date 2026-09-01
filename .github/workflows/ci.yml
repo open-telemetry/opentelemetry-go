@@ -12,7 +12,7 @@ env:
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
-  DEFAULT_GO_VERSION: "~1.26.0"
+  DEFAULT_GO_VERSION: "~1.27.0"
 # Declare default permissions as read only.
 permissions:
   contents: read
@@ -209,7 +209,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["1.26.0", "1.25.0"]
+        go-version: ["1.27.0", "1.26.0"]
         platform:
           - {os: ubuntu-latest, goos: aix, goarch: ppc64, target: cross-build}
           - {os: macos-latest, goos: darwin, goarch: amd64, target: test-short}
