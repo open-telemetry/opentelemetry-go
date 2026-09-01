@@ -338,8 +338,7 @@ func TestLookup(t *testing.T) {
 func TestZeroSetExportedMethodsNoPanic(t *testing.T) {
 	rType := reflect.TypeFor[*attribute.Set]()
 	rVal := reflect.ValueOf(&attribute.Set{})
-	for n := 0; n < rType.NumMethod(); n++ {
-		mType := rType.Method(n)
+	for mType := range rType.Methods() {
 		if !mType.IsExported() {
 			t.Logf("ignoring unexported %s", mType.Name)
 			continue
