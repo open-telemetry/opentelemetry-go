@@ -10,7 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Ensure `grpc.DialOption` values passed via `WithDialOption` take precedence over conflicting internally-computed defaults in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#8805)
+- Ensure `grpc.DialOption` values passed via `WithDialOption` take precedence over conflicting internally-computed defaults in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#8834)
 - Ensure `grpc.DialOption` values passed via `WithDialOption` take precedence over conflicting internally-computed defaults in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#8836)
+- Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)
 - Prevent a panic in `NewFixedSizeReservoir` and `FixedSizeReservoirProvider` when given a negative size in `go.opentelemetry.io/otel/sdk/metric/exemplar`; negative sizes are now clamped to zero, consistent with a size of zero. (#8832)
 
 <!-- Released section -->
