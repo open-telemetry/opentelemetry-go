@@ -76,6 +76,9 @@ type Span struct {
 	// two spans with the same name may be distinguished using `CLIENT` (caller)
 	// and `SERVER` (callee) to identify queueing latency associated with the span.
 	Kind SpanKind `json:"kind,omitempty"`
+	// type identifies the semantic convention definition this span follows,
+	// for example "http.server.request" or "gen_ai.client.inference".
+	Type string `json:"type,omitempty"`
 	// start_time_unix_nano is the start time of the span. On the client side, this is the time
 	// kept by the local machine where the span execution starts. On the server side, this
 	// is the time when the server's application handler starts running.
@@ -199,6 +202,8 @@ func (s *Span) UnmarshalJSON(data []byte) error {
 			err = decoder.Decode(&s.Name)
 		case "kind":
 			err = decoder.Decode(&s.Kind)
+		case "type":
+			err = decoder.Decode(&s.Type)
 		case "startTimeUnixNano", "start_time_unix_nano":
 			var val protoUint64
 			err = decoder.Decode(&val)

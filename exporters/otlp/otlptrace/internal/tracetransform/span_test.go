@@ -440,6 +440,28 @@ func TestSpanDataNilResource(t *testing.T) {
 	})
 }
 
+func TestSpanTypeTransform(t *testing.T) {
+	sd := Spans(tracetest.SpanStubs{
+		{
+			SpanType: "http.server.request",
+			Attributes: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+			},
+		},
+	}.Snapshots())
+	require.Len(t, sd, 1)
+	scopeSpans := sd[0].GetScopeSpans()
+	require.Len(t, scopeSpans, 1)
+	spans := scopeSpans[0].GetSpans()
+	require.Len(t, spans, 1)
+
+	assert.Equal(t, "http.server.request", spans[0].GetType())
+	gotAttrs := spans[0].GetAttributes()
+	require.Len(t, gotAttrs, 1)
+	assert.Equal(t, "http.method", gotAttrs[0].GetKey())
+	assert.Equal(t, "GET", gotAttrs[0].GetValue().GetStringValue())
+}
+
 func BenchmarkSpans(b *testing.B) {
 	records := []tracesdk.ReadOnlySpan{
 		tracetest.SpanStub{

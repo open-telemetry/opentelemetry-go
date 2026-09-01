@@ -1721,7 +1721,8 @@ func TestReadOnlySpan(t *testing.T) {
 
 	st := time.Now()
 	ctx, s := tr.Start(ctx, "foo", trace.WithTimestamp(st),
-		trace.WithLinks(trace.Link{SpanContext: linked}))
+		trace.WithLinks(trace.Link{SpanContext: linked}),
+		trace.WithSpanType("http.server.request"))
 	s.SetAttributes(kv)
 	s.AddEvent("foo", trace.WithAttributes(kv))
 	s.SetStatus(codes.Ok, "foo")
@@ -1731,6 +1732,7 @@ func TestReadOnlySpan(t *testing.T) {
 	require.True(t, ok)
 
 	assert.Equal(t, "foo", ro.Name())
+	assert.Equal(t, "http.server.request", ro.SpanType())
 	assert.Equal(t, trace.SpanContextFromContext(ctx), ro.SpanContext())
 	assert.Equal(t, parent, ro.Parent())
 	assert.Equal(t, trace.SpanKindInternal, ro.SpanKind())
@@ -1757,6 +1759,7 @@ func TestReadOnlySpan(t *testing.T) {
 	// Verify snapshot() returns snapshots that are independent from the
 	// original span and from one another.
 	d1 := s.(*recordingSpan).snapshot()
+	assert.Equal(t, "http.server.request", d1.SpanType())
 	s.AddEvent("baz")
 	d2 := s.(*recordingSpan).snapshot()
 	for _, e := range d1.Events() {
@@ -3024,6 +3027,48 @@ func BenchmarkTraceStart(b *testing.B) {
 			b.StopTimer()
 			for i := 0; i < b.N; i++ {
 				spans[i].End()
+			}
+		})
+	}
+}
+
+func TestSpanTypeValidation(t *testing.T) {
+	longName := strings.Repeat("a", 256)
+
+	testCases := []struct {
+		spanType string
+		wantErr  bool
+	}{
+		{spanType: "", wantErr: false},
+		{spanType: "http.server.request", wantErr: false},
+		{spanType: "messaging.producer.send", wantErr: false},
+		{spanType: "gen_ai.client.inference", wantErr: false},
+		{spanType: "a", wantErr: false},
+		{spanType: "A", wantErr: false},
+		{spanType: "a_b-c.d/e0", wantErr: false},
+		{spanType: "1invalid", wantErr: true},
+		{spanType: "_invalid", wantErr: true},
+		{spanType: ".invalid", wantErr: true},
+		{spanType: "-invalid", wantErr: true},
+		{spanType: "/invalid", wantErr: true},
+		{spanType: "invalid space", wantErr: true},
+		{spanType: "invalid@char", wantErr: true},
+		{spanType: longName, wantErr: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.spanType, func(t *testing.T) {
+			handler.Reset()
+			tp := NewTracerProvider()
+			tr := tp.Tracer("test")
+			_, span := tr.Start(t.Context(), "test", trace.WithSpanType(tc.spanType))
+			span.End()
+
+			if tc.wantErr {
+				require.NotEmpty(t, handler.errs, "expected validation error for span type %q", tc.spanType)
+				assert.ErrorIs(t, handler.errs[len(handler.errs)-1], ErrInvalidSpanType)
+			} else {
+				assert.Empty(t, handler.errs, "unexpected validation error for span type %q", tc.spanType)
 			}
 		})
 	}

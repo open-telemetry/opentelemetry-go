@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithSpanType` option and `SpanConfig.SpanType` accessor in `go.opentelemetry.io/otel/trace` for OTEP 5233 span type support.
+- Add `ReadOnlySpan.SpanType`, `SamplingParameters.SpanType`, and span type syntax validation in `go.opentelemetry.io/otel/sdk/trace`.
+
 ### Fixed
 
 - Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)

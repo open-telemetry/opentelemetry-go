@@ -54,3 +54,5 @@ replace go.opentelemetry.io/otel/sdk/log/logtest => ../../../../sdk/log/logtest
 replace go.opentelemetry.io/otel/sdk/metric => ../../../../sdk/metric
 
 replace go.opentelemetry.io/otel/metric/x => ../../../../metric/x
+
+replace go.opentelemetry.io/proto/otlp => /tmp/gh_workspaces/opentelemetry-proto-go/otlp

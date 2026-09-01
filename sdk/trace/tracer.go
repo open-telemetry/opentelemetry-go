@@ -5,8 +5,11 @@ package trace
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	"go.opentelemetry.io/otel/trace"
@@ -106,11 +109,19 @@ func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanCo
 		sid = tr.provider.idGenerator.NewSpanID(ctx, tid)
 	}
 
+	spanType := config.SpanType()
+	if spanType != "" {
+		if err := validateSpanType(spanType); err != nil {
+			otel.Handle(err)
+		}
+	}
+
 	samplingResult := tr.provider.sampler.ShouldSample(SamplingParameters{
 		ParentContext: ctx,
 		TraceID:       tid,
 		Name:          name,
 		Kind:          config.SpanKind(),
+		SpanType:      spanType,
 		Attributes:    config.Attributes(),
 		Links:         config.Links(),
 	})
@@ -158,6 +169,7 @@ func (tr *tracer) newRecordingSpan(
 		parent:      psc,
 		spanContext: sc,
 		spanKind:    trace.ValidateSpanKind(config.SpanKind()),
+		spanType:    config.SpanType(),
 		name:        name,
 		startTime:   startTime,
 		events:      newEvictedQueueEvent(tr.provider.spanLimits.EventCountLimit),
@@ -185,4 +197,36 @@ func (tr *tracer) newRecordingSpan(
 // newNonRecordingSpan returns a new configured nonRecordingSpan.
 func (tr *tracer) newNonRecordingSpan(sc trace.SpanContext) nonRecordingSpan {
 	return nonRecordingSpan{tracer: tr, sc: sc}
+}
+
+// ErrInvalidSpanType indicates a span type does not conform to the syntax
+// defined by the OpenTelemetry specification.
+var ErrInvalidSpanType = errors.New("invalid span type")
+
+func validateSpanType(spanType string) error {
+	if len(spanType) > 255 {
+		return fmt.Errorf("%w: %s: longer than 255 characters", ErrInvalidSpanType, spanType)
+	}
+	if !isASCIIAlpha(spanType[0]) {
+		return fmt.Errorf("%w: %s: must start with an ASCII letter", ErrInvalidSpanType, spanType)
+	}
+	for i := 1; i < len(spanType); i++ {
+		b := spanType[i]
+		if !isASCIIAlphanumeric(b) && b != '_' && b != '.' && b != '-' && b != '/' {
+			return fmt.Errorf(
+				"%w: %s: must only contain ASCII letters, digits, _, ., -, or /",
+				ErrInvalidSpanType,
+				spanType,
+			)
+		}
+	}
+	return nil
+}
+
+func isASCIIAlpha(b byte) bool {
+	return ('a' <= b && b <= 'z') || ('A' <= b && b <= 'Z')
+}
+
+func isASCIIAlphanumeric(b byte) bool {
+	return isASCIIAlpha(b) || ('0' <= b && b <= '9')
 }

@@ -460,6 +460,16 @@ func TestSpanCreation(t *testing.T) {
 			},
 		},
 		{
+			TestName: "WithSpanType",
+			Options: []SpanStartOption{
+				WithSpanType("http.server.request"),
+			},
+			Eval: func(t *testing.T, _ context.Context, s *autoSpan) {
+				t.Run("Tracer", assertTracer(s.traces))
+				assert.Equal(t, "http.server.request", s.span.Type)
+			},
+		},
+		{
 			TestName: "WithTimestamp",
 			Options: []SpanStartOption{
 				WithTimestamp(ts),

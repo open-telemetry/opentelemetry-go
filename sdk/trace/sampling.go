@@ -35,6 +35,7 @@ type SamplingParameters struct {
 	TraceID       trace.TraceID
 	Name          string
 	Kind          trace.SpanKind
+	SpanType      string
 	Attributes    []attribute.KeyValue
 	Links         []trace.Link
 }

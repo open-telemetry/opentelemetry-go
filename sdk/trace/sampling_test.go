@@ -319,3 +319,28 @@ func TestDescriptions(t *testing.T) {
 	assert.Equal(t, "TraceIDRatioBased{0}", TraceIDRatioBased(0).Description())
 	assert.Equal(t, "TraceIDRatioBased{0}", TraceIDRatioBased(-0.5).Description())
 }
+
+func TestSamplingParametersSpanType(t *testing.T) {
+	var captured SamplingParameters
+	sampler := &testCaptureSampler{capture: func(p SamplingParameters) { captured = p }}
+	tp := NewTracerProvider(WithSampler(sampler))
+	tr := tp.Tracer("test")
+
+	_, span := tr.Start(t.Context(), "foo", trace.WithSpanType("http.server.request"))
+	defer span.End()
+
+	assert.Equal(t, "http.server.request", captured.SpanType)
+}
+
+type testCaptureSampler struct {
+	capture func(SamplingParameters)
+}
+
+func (s *testCaptureSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	if s.capture != nil {
+		s.capture(p)
+	}
+	return SamplingResult{Decision: RecordAndSample}
+}
+
+func (*testCaptureSampler) Description() string { return "testCaptureSampler" }

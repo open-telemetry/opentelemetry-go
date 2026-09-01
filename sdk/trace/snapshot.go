@@ -19,6 +19,7 @@ type snapshot struct {
 	spanContext           trace.SpanContext
 	parent                trace.SpanContext
 	spanKind              trace.SpanKind
+	spanType              string
 	startTime             time.Time
 	endTime               time.Time
 	attributes            []attribute.KeyValue
@@ -57,6 +58,12 @@ func (s snapshot) Parent() trace.SpanContext {
 // SpanKind returns the role the span plays in a Trace.
 func (s snapshot) SpanKind() trace.SpanKind {
 	return s.spanKind
+}
+
+// SpanType returns the span type identifying the semantic convention
+// definition the span follows.
+func (s snapshot) SpanType() string {
+	return s.spanType
 }
 
 // StartTime returns the time the span started recording.

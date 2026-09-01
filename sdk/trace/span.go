@@ -40,6 +40,9 @@ type ReadOnlySpan interface {
 	Parent() trace.SpanContext
 	// SpanKind returns the role the span plays in a Trace.
 	SpanKind() trace.SpanKind
+	// SpanType returns the span type identifying the semantic convention
+	// definition the span follows.
+	SpanType() string
 	// StartTime returns the time the span started recording.
 	StartTime() time.Time
 	// EndTime returns the time the span stopped recording. It will be zero if
@@ -109,6 +112,9 @@ type recordingSpan struct {
 
 	// spanKind represents the kind of this span as a trace.SpanKind.
 	spanKind trace.SpanKind
+
+	// spanType represents the span type identifying the semantic convention definition.
+	spanType string
 
 	// name is the name of this span.
 	name string
@@ -594,6 +600,13 @@ func (s *recordingSpan) SpanKind() trace.SpanKind {
 	return s.spanKind
 }
 
+// SpanType returns the span type of this span.
+func (s *recordingSpan) SpanType() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.spanType
+}
+
 // StartTime returns the time this span started.
 func (s *recordingSpan) StartTime() time.Time {
 	s.mu.Lock()
@@ -788,6 +801,7 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.resource = s.tracer.provider.resource
 	sd.spanContext = s.spanContext
 	sd.spanKind = s.spanKind
+	sd.spanType = s.spanType
 	sd.startTime = s.startTime
 	sd.status = s.status
 	sd.childSpanCount = s.childSpanCount

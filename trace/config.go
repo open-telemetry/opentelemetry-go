@@ -68,6 +68,7 @@ type SpanConfig struct {
 	links      []Link
 	newRoot    bool
 	spanKind   SpanKind
+	spanType   string
 	stackTrace bool
 }
 
@@ -101,6 +102,12 @@ func (cfg *SpanConfig) NewRoot() bool {
 // SpanKind is the role a Span has in a trace.
 func (cfg *SpanConfig) SpanKind() SpanKind {
 	return cfg.spanKind
+}
+
+// SpanType returns the span type identifying the semantic convention
+// definition the span follows.
+func (cfg *SpanConfig) SpanType() string {
+	return cfg.spanType
 }
 
 // NewSpanStartConfig applies all the options to a returned SpanConfig.
@@ -309,6 +316,15 @@ func WithNewRoot() SpanStartOption {
 func WithSpanKind(kind SpanKind) SpanStartOption {
 	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
 		cfg.spanKind = kind
+		return cfg
+	})
+}
+
+// WithSpanType sets the span type of a Span. It identifies the semantic
+// convention definition the span follows (e.g. "http.server.request", "messaging.producer.send").
+func WithSpanType(spanType string) SpanStartOption {
+	return spanOptionFunc(func(cfg SpanConfig) SpanConfig {
+		cfg.spanType = spanType
 		return cfg
 	})
 }

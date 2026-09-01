@@ -47,3 +47,5 @@ replace go.opentelemetry.io/otel/trace => ../../../../trace
 replace go.opentelemetry.io/otel/metric/x => ../../../../metric/x
 
 replace go.opentelemetry.io/otel/log => ../../../../log
+
+replace go.opentelemetry.io/proto/otlp => /tmp/gh_workspaces/opentelemetry-proto-go/otlp

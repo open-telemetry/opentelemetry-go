@@ -141,6 +141,24 @@ func TestNewSpanConfig(t *testing.T) {
 			},
 		},
 		{
+			[]SpanStartOption{
+				WithSpanType("http.server.request"),
+			},
+			SpanConfig{
+				spanType: "http.server.request",
+			},
+		},
+		{
+			[]SpanStartOption{
+				// Multiple calls overwrites with last-one-wins.
+				WithSpanType("http.client.request"),
+				WithSpanType("http.server.request"),
+			},
+			SpanConfig{
+				spanType: "http.server.request",
+			},
+		},
+		{
 			// Everything should work together.
 			[]SpanStartOption{
 				WithAttributes(k1v1),
@@ -148,6 +166,7 @@ func TestNewSpanConfig(t *testing.T) {
 				WithLinks(link1, link2),
 				WithNewRoot(),
 				WithSpanKind(SpanKindConsumer),
+				WithSpanType("messaging.consumer.process"),
 			},
 			SpanConfig{
 				attributes: []attribute.KeyValue{k1v1},
@@ -155,11 +174,14 @@ func TestNewSpanConfig(t *testing.T) {
 				links:      []Link{link1, link2},
 				newRoot:    true,
 				spanKind:   SpanKindConsumer,
+				spanType:   "messaging.consumer.process",
 			},
 		},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.expected, NewSpanStartConfig(test.options...))
+		cfg := NewSpanStartConfig(test.options...)
+		assert.Equal(t, test.expected, cfg)
+		assert.Equal(t, test.expected.spanType, cfg.SpanType())
 	}
 }
 
@@ -362,6 +384,12 @@ func BenchmarkNewSpanStartConfig(b *testing.B) {
 			name: "with span kind",
 			options: []SpanStartOption{
 				WithSpanKind(SpanKindClient),
+			},
+		},
+		{
+			name: "with span type",
+			options: []SpanStartOption{
+				WithSpanType("http.server.request"),
 			},
 		},
 	} {

@@ -17,6 +17,7 @@ func TestSpanEncoding(t *testing.T) {
 		Flags:        1,
 		Name:         "span.a",
 		Kind:         SpanKindClient,
+		Type:         "http.server.request",
 		StartTime:    y2k,
 		EndTime:      y2k.Add(time.Second),
 		Attrs:        []Attr{String("key", "val")},
@@ -43,6 +44,7 @@ func TestSpanEncoding(t *testing.T) {
 		"flags": 1,
 		"name": "span.a",
 		"kind": 3,
+		"type": "http.server.request",
 		"attributes": [
 			{
 				"key": "key",
@@ -81,6 +83,7 @@ func TestSpanEncoding(t *testing.T) {
 		"flags": 1,
 		"name": "span.a",
 		"kind": 3,
+		"type": "http.server.request",
 		"attributes": [
 			{
 				"key": "key",

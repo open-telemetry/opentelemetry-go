@@ -232,6 +232,10 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 		}
 	}
 
+	if spanType := data.SpanType(); spanType != "" {
+		m["otel.span.type"] = spanType
+	}
+
 	if len(m) == 0 {
 		return nil
 	}

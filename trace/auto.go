@@ -103,6 +103,7 @@ func (t autoTracer) traces(name string, cfg SpanConfig, sc, psc SpanContext) (*t
 		ParentSpanID: telemetry.SpanID(psc.SpanID()),
 		Name:         name,
 		Kind:         spanKind(cfg.SpanKind()),
+		Type:         cfg.SpanType(),
 	}
 
 	span.Attrs, span.DroppedAttrs = convCappedAttrs(maxSpan.Attrs, cfg.Attributes())

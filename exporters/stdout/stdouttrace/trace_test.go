@@ -131,6 +131,7 @@ func expectedJSON(now time.Time) string {
 		"Remote": false
 	},
 	"SpanKind": 1,
+	"SpanType": "",
 	"StartTime": ` + string(serializedNow) + `,
 	"EndTime": ` + string(serializedNow) + `,
 	"Attributes": [

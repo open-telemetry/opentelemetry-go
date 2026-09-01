@@ -49,6 +49,7 @@ type SpanStub struct {
 	SpanContext          trace.SpanContext
 	Parent               trace.SpanContext
 	SpanKind             trace.SpanKind
+	SpanType             string
 	StartTime            time.Time
 	EndTime              time.Time
 	Attributes           []attribute.KeyValue
@@ -77,6 +78,7 @@ func SpanStubFromReadOnlySpan(ro tracesdk.ReadOnlySpan) SpanStub {
 		SpanContext:            ro.SpanContext(),
 		Parent:                 ro.Parent(),
 		SpanKind:               ro.SpanKind(),
+		SpanType:               ro.SpanType(),
 		StartTime:              ro.StartTime(),
 		EndTime:                ro.EndTime(),
 		Attributes:             ro.Attributes(),
@@ -105,6 +107,7 @@ func (s SpanStub) Snapshot() tracesdk.ReadOnlySpan {
 		spanContext:          s.SpanContext,
 		parent:               s.Parent,
 		spanKind:             s.SpanKind,
+		spanType:             s.SpanType,
 		startTime:            s.StartTime,
 		endTime:              s.EndTime,
 		attributes:           s.Attributes,
@@ -128,6 +131,7 @@ type spanSnapshot struct {
 	spanContext          trace.SpanContext
 	parent               trace.SpanContext
 	spanKind             trace.SpanKind
+	spanType             string
 	startTime            time.Time
 	endTime              time.Time
 	attributes           []attribute.KeyValue
@@ -146,6 +150,7 @@ func (s spanSnapshot) Name() string                     { return s.name }
 func (s spanSnapshot) SpanContext() trace.SpanContext   { return s.spanContext }
 func (s spanSnapshot) Parent() trace.SpanContext        { return s.parent }
 func (s spanSnapshot) SpanKind() trace.SpanKind         { return s.spanKind }
+func (s spanSnapshot) SpanType() string                 { return s.spanType }
 func (s spanSnapshot) StartTime() time.Time             { return s.startTime }
 func (s spanSnapshot) EndTime() time.Time               { return s.endTime }
 func (s spanSnapshot) Attributes() []attribute.KeyValue { return s.attributes }

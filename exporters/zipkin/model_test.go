@@ -1440,3 +1440,13 @@ func TestServiceName(t *testing.T) {
 	attrs = append(attrs, semconv.ServiceName("my_service"))
 	assert.Equal(t, "my_service", getServiceName(attrs))
 }
+
+func TestSpanTypeZipkinTags(t *testing.T) {
+	data := tracetest.SpanStub{
+		SpanType: "http.server.request",
+		Resource: resource.Empty(),
+	}.Snapshot()
+
+	tags := toZipkinTags(data)
+	assert.Equal(t, "http.server.request", tags["otel.span.type"])
+}
