@@ -581,6 +581,146 @@ func BenchmarkTruncateAttr(b *testing.B) {
 	b.Run("ByteSlice/Unlimited", run(-1, bytesAttr))
 }
 
+var (
+	benchmarkTruncateKeyValueResult attribute.KeyValue
+	benchmarkTruncateValueResult    attribute.Value
+)
+
+func BenchmarkTruncateValue(b *testing.B) {
+	stringSlice := attribute.StringSliceValue([]string{"value-0", "value-1"})
+	type benchmark struct {
+		name  string
+		limit int
+		value attribute.Value
+	}
+	tests := []benchmark{
+		{
+			name:  "StringSlice/NoTruncation",
+			limit: 16,
+			value: stringSlice,
+		},
+		{
+			name:  "StringSlice/Truncation",
+			limit: 3,
+			value: stringSlice,
+		},
+		{
+			name:  "Slice/NoTruncation",
+			limit: 16,
+			value: attribute.SliceValue(
+				attribute.StringValue("ok"),
+				attribute.StringValue("value"),
+			),
+		},
+		{
+			name:  "Slice/Truncation",
+			limit: 3,
+			value: attribute.SliceValue(
+				attribute.StringValue("ok"),
+				attribute.StringValue("value"),
+			),
+		},
+		{
+			name:  "Map/NoTruncation",
+			limit: 16,
+			value: attribute.MapValue(
+				attribute.String("a", "ok"),
+				attribute.String("z", "value"),
+			),
+		},
+		{
+			name:  "Map/Truncation",
+			limit: 3,
+			value: attribute.MapValue(
+				attribute.String("a", "ok"),
+				attribute.String("z", "value"),
+			),
+		},
+		{
+			name:  "StringSliceWide/NoTruncation",
+			limit: 16,
+			value: attribute.StringSliceValue([]string{"0", "1", "2", "3", "4", "5"}),
+		},
+		{
+			name:  "SliceWide/NoTruncation",
+			limit: 16,
+			value: attribute.SliceValue(
+				attribute.StringValue("0"),
+				attribute.StringValue("1"),
+				attribute.StringValue("2"),
+				attribute.StringValue("3"),
+				attribute.StringValue("4"),
+				attribute.StringValue("5"),
+			),
+		},
+		{
+			name:  "MapWide/NoTruncation",
+			limit: 16,
+			value: attribute.MapValue(
+				attribute.String("0", "0"),
+				attribute.String("1", "1"),
+				attribute.String("2", "2"),
+				attribute.String("3", "3"),
+				attribute.String("4", "4"),
+				attribute.String("5", "5"),
+			),
+		},
+	}
+
+	for _, depth := range []int{1, 8, 32} {
+		tests = append(tests,
+			benchmark{
+				name:  fmt.Sprintf("Nested/NoTruncation/Depth%d", depth),
+				limit: 16,
+				value: nestedBenchmarkValue(depth, stringSlice),
+			},
+			benchmark{
+				name:  fmt.Sprintf("Nested/Truncation/Depth%d", depth),
+				limit: 3,
+				value: nestedBenchmarkValue(depth, stringSlice),
+			},
+		)
+	}
+
+	for _, test := range tests {
+		b.Run(test.name, func(b *testing.B) {
+			b.Run("Value", func(b *testing.B) {
+				b.ReportAllocs()
+				var result attribute.Value
+				for b.Loop() {
+					result = TruncateValue(test.limit, test.value)
+				}
+				benchmarkTruncateValueResult = result
+			})
+
+			b.Run("KeyValue", func(b *testing.B) {
+				b.ReportAllocs()
+				input := attribute.KeyValue{Key: "key", Value: test.value}
+				var result attribute.KeyValue
+				for b.Loop() {
+					result = Truncate(test.limit, input)
+				}
+				benchmarkTruncateKeyValueResult = result
+			})
+		})
+	}
+}
+
+func nestedBenchmarkValue(depth int, leaf attribute.Value) attribute.Value {
+	value := leaf
+	for i := range depth {
+		if i%2 == 0 {
+			value = attribute.SliceValue(attribute.StringValue("ok"), value)
+		} else {
+			value = attribute.MapValue(
+				attribute.String("a", "ok"),
+				attribute.KeyValue{Key: "z", Value: value},
+			)
+		}
+	}
+	return value
+}
+
 func BenchmarkTruncate(b *testing.B) {
 	run := func(limit int, input string) func(b *testing.B) {
 		return func(b *testing.B) {
