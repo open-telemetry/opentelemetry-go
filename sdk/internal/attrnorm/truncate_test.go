@@ -969,6 +969,7 @@ func BenchmarkTruncateValue(b *testing.B) {
 func nestedBenchmarkValue(depth int, leaf attribute.Value) attribute.Value {
 	value := leaf
 	for i := range depth {
+		// Alternate slice and map layers so deep benchmarks exercise both recursive paths.
 		if i%2 == 0 {
 			value = attribute.SliceValue(attribute.StringValue("ok"), value)
 		} else {
