@@ -16,8 +16,8 @@ dev.gaijin.team/go/exhaustruct/v5 v5.0.3 h1:yOeA7DNjlT8y4yfmN6nWWYYggA13N523YAj9
 dev.gaijin.team/go/exhaustruct/v5 v5.0.3/go.mod h1:KwtBsX8nHHH1YxhxkpiBq6bfsmw5WnazWpNvJPHgY9Y=
 dev.gaijin.team/go/golib v0.8.1 h1:JYju4x9BSo+QD/AYeHULVDcvEhiFg8wOi6pT0IaZF5E=
 dev.gaijin.team/go/golib v0.8.1/go.mod h1:c5fu7t1RSGMxSQgcUYO1sODbzsYnOCXJLmHeNG1Eb+0=
-github.com/4meepo/tagalign v1.4.3 h1:Bnu7jGWwbfpAie2vyl63Zup5KuRv21olsPIha53BJr8=
-github.com/4meepo/tagalign v1.4.3/go.mod h1:00WwRjiuSbrRJnSVeGWPLp2epS5Q/l4UEy0apLLS37c=
+github.com/4meepo/tagalign v1.4.4 h1:052JDGj2pBORc6NkD30dDXpsUpoYszDeUwr9/5YZuVA=
+github.com/4meepo/tagalign v1.4.4/go.mod h1:00WwRjiuSbrRJnSVeGWPLp2epS5Q/l4UEy0apLLS37c=
 github.com/Abirdcfly/dupword v0.1.8 h1:SrhcUuGsROBuChFxHALRYzyyPODWn9zwghmzPvD9Cd8=
 github.com/Abirdcfly/dupword v0.1.8/go.mod h1:XZrhVnI7YGpsTiWZANSQaBJ4QpL/Tq5vIEdKJJAs9WI=
 github.com/AdminBenni/iota-mixing v1.0.0 h1:Os6lpjG2dp/AE5fYBPAA1zfa2qMdCAWwPMCgpwKq7wo=
