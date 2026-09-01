@@ -1,20 +1,20 @@
 module go.opentelemetry.io/otel/exporters/stdout/stdoutlog
 
-go 1.25.0
+go 1.26.0
 
 // Contains broken dependency on go.opentelemetry.io/otel/sdk/log/logtest.
 retract v0.12.0
 
 require (
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/otel v1.46.0
-	go.opentelemetry.io/otel/log v0.22.0
-	go.opentelemetry.io/otel/metric v1.46.0
-	go.opentelemetry.io/otel/sdk v1.46.0
-	go.opentelemetry.io/otel/sdk/log v0.22.0
+	go.opentelemetry.io/otel v1.47.0-rc.1
+	go.opentelemetry.io/otel/log v1.47.0-rc.1
+	go.opentelemetry.io/otel/metric v1.47.0-rc.1
+	go.opentelemetry.io/otel/sdk v1.47.0-rc.1
+	go.opentelemetry.io/otel/sdk/log v1.47.0-rc.1
 	go.opentelemetry.io/otel/sdk/log/logtest v0.22.0
-	go.opentelemetry.io/otel/sdk/metric v1.46.0
-	go.opentelemetry.io/otel/trace v1.46.0
+	go.opentelemetry.io/otel/sdk/metric v1.47.0-rc.1
+	go.opentelemetry.io/otel/trace v1.47.0-rc.1
 )
 
 require (
