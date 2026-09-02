@@ -233,8 +233,8 @@ github.com/golangci/plugin-module-register v0.1.2 h1:e5WM6PO6NIAEcij3B053CohVp3H
 github.com/golangci/plugin-module-register v0.1.2/go.mod h1:1+QGTsKBvAIvPvoY/os+G5eoqxWn70HYDm2uvUyGuVw=
 github.com/golangci/revgrep v0.8.0 h1:EZBctwbVd0aMeRnNUsFogoyayvKHyxlV3CdUA46FX2s=
 github.com/golangci/revgrep v0.8.0/go.mod h1:U4R/s9dlXZsg8uJmaR1GrloUr14D7qDl8gi2iPXJH8k=
-github.com/golangci/rowserrcheck v0.0.0-20260801150524-d2031e3af752 h1:ivRL3tv3jTvJ6L9W3mdX8i+IuT8CxvEtsIfeH93Iqk4=
-github.com/golangci/rowserrcheck v0.0.0-20260801150524-d2031e3af752/go.mod h1:dGge5Cok/D3UixuSKYyrqg7QpdmTJrdHAqu9OiiYWiw=
+github.com/golangci/rowserrcheck v0.0.0-20260901154044-241134db7241 h1:0kPqfqytQizeQ9WBk487NcsGcRdS8YhHeUhXxkfEAhA=
+github.com/golangci/rowserrcheck v0.0.0-20260901154044-241134db7241/go.mod h1:lczq5oJ8PxpMESQG6dO3iFYTQPhpqoMOYw//n2FEnHA=
 github.com/golangci/swaggoswag v0.0.0-20250504205917-77f2aca3143e h1:ai0EfmVYE2bRA5htgAG9r7s3tHsfjIhN98WshBTJ9jM=
 github.com/golangci/swaggoswag v0.0.0-20250504205917-77f2aca3143e/go.mod h1:Vrn4B5oR9qRwM+f54koyeH3yzphlecwERs0el27Fr/s=
 github.com/golangci/unconvert v0.0.0-20250410112200-a129a6e6413e h1:gD6P7NEo7Eqtt0ssnqSJNNndxe69DOQ24A5h7+i3KpM=
