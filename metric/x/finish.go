@@ -12,10 +12,9 @@ import (
 // Finisher is implemented by synchronous instruments that support ending the
 // lifetime of a series identified by an exact attribute set.
 //
-// The set passed to [Finisher.Finish] is the same input set used when recording
-// measurements, before any SDK View attribute filtering. An empty set
-// identifies only the series recorded without attributes; it does not select
-// every series.
+// The set passed to [Finisher.Finish] is matched as a complete set, not as a
+// subset. An empty set identifies only the series recorded without attributes;
+// it does not select every series.
 //
 // Finishing an unknown, already-finished, dropped, or unsupported series is a
 // no-op. A set mapped to a shared cardinality-overflow series cannot be
@@ -29,10 +28,8 @@ import (
 type Finisher interface {
 	// Finish marks the series identified by set as finished. Its final
 	// aggregate is eligible for one collection before the series state is
-	// released. A measurement made before that collection cancels the pending
-	// finish and continues the existing series lifetime.
+	// released.
 	//
-	// Finish is safe to call concurrently with measurement and collection. It
-	// completes its in-process state transition before returning.
+	// Finish is safe to call concurrently with measurement and collection.
 	Finish(ctx context.Context, set attribute.Set)
 }
