@@ -223,6 +223,7 @@ func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) a
 
 type int64Inst struct {
 	measures []aggregate.Measure[int64]
+	meter    *meter
 
 	embedded.Int64Counter
 	embedded.Int64UpDownCounter
@@ -238,19 +239,25 @@ var (
 )
 
 func (i *int64Inst) Add(ctx context.Context, val int64, opts ...metric.AddOption) {
+	if !i.meter.enabled.Load() {
+		return
+	}
 	c := metric.NewAddConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *int64Inst) Record(ctx context.Context, val int64, opts ...metric.RecordOption) {
+	if !i.meter.enabled.Load() {
+		return
+	}
 	c := metric.NewRecordConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *int64Inst) Enabled(context.Context) bool {
-	return len(i.measures) != 0
+	return len(i.measures) != 0 && i.meter.enabled.Load()
 }
 
 func (i *int64Inst) aggregate(
@@ -265,6 +272,7 @@ func (i *int64Inst) aggregate(
 
 type float64Inst struct {
 	measures []aggregate.Measure[float64]
+	meter    *meter
 
 	embedded.Float64Counter
 	embedded.Float64UpDownCounter
@@ -280,19 +288,25 @@ var (
 )
 
 func (i *float64Inst) Add(ctx context.Context, val float64, opts ...metric.AddOption) {
+	if !i.meter.enabled.Load() {
+		return
+	}
 	c := metric.NewAddConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *float64Inst) Record(ctx context.Context, val float64, opts ...metric.RecordOption) {
+	if !i.meter.enabled.Load() {
+		return
+	}
 	c := metric.NewRecordConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	i.aggregate(ctx, val, resolveAttributes(c.Attributes(), rawKVs))
 }
 
 func (i *float64Inst) Enabled(context.Context) bool {
-	return len(i.measures) != 0
+	return len(i.measures) != 0 && i.meter.enabled.Load()
 }
 
 func (i *float64Inst) aggregate(ctx context.Context, val float64, s attribute.Set) {
