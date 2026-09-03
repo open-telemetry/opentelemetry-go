@@ -34,6 +34,11 @@ const (
 	// DefaultMaxRequestSize is the default maximum size of a serialized export
 	// request, before compression.
 	DefaultMaxRequestSize int = 64 * 1024 * 1024
+
+	// DefaultMaxResponseBodySize is the default maximum size of an OTLP/HTTP
+	// response body, including after decompression.
+	DefaultMaxResponseBodySize int64 = 4 * 1024 * 1024
+
 	// DefaultTimeout is a default max waiting time for the backend to process
 	// each span batch.
 	DefaultTimeout time.Duration = 10 * time.Second
@@ -45,15 +50,16 @@ type (
 	HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 
 	SignalConfig struct {
-		Endpoint       string
-		Insecure       bool
-		TLSCfg         *tls.Config
-		Headers        map[string]string
-		Compression    Compression
-		Protocol       Protocol
-		MaxRequestSize int
-		Timeout        time.Duration
-		URLPath        string
+		Endpoint            string
+		Insecure            bool
+		TLSCfg              *tls.Config
+		Headers             map[string]string
+		Compression         Compression
+		Protocol            Protocol
+		MaxRequestSize      int
+		MaxResponseBodySize int64
+		Timeout             time.Duration
+		URLPath             string
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -367,6 +373,15 @@ func WithTimeout(duration time.Duration) GenericOption {
 func WithMaxRequestSize(size int) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Traces.MaxRequestSize = size
+		return cfg
+	})
+}
+
+func WithMaxResponseBodySize(size int64) HTTPOption {
+	return NewHTTPOption(func(cfg Config) Config {
+		if size > 0 {
+			cfg.Traces.MaxResponseBodySize = size
+		}
 		return cfg
 	})
 }
