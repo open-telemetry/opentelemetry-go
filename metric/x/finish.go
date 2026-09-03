@@ -10,15 +10,17 @@ import (
 )
 
 // Finisher is implemented by synchronous instruments that support ending the
-// lifetime of a series identified by an exact attribute set.
+// lifetime of a series identified by exact attributes.
 //
-// The set passed to [Finisher.Finish] is matched as a complete set, not as a
-// subset. An empty set identifies only the series recorded without attributes;
-// it does not select every series.
+// The attributes passed to [Finisher.Finish] are matched as a complete
+// collection, not as a subset. Attribute order does not affect identity, and
+// duplicate keys use last-value-wins semantics. Calling Finish without
+// attributes identifies only the series recorded without attributes; it does
+// not select every series.
 //
 // Finishing an unknown, already-finished, dropped, or unsupported series is a
-// no-op. A set mapped to a shared cardinality-overflow series cannot be
-// individually finished and is also a no-op.
+// no-op. Finishing attributes mapped to a shared cardinality-overflow series
+// is also a no-op.
 //
 // Finisher is an optional interface. Callers should use a type assertion to
 // determine whether an instrument supports it. Instruments obtained from the
@@ -26,10 +28,12 @@ import (
 // optional method later. Callers that require this capability should obtain
 // their instruments directly from a configured MeterProvider.
 type Finisher interface {
-	// Finish marks the series identified by set as finished. Its final
+	// Finish marks the series identified by attrs as finished. Its final
 	// aggregate is eligible for one collection before the series state is
 	// released.
 	//
+	// Implementations must not retain or modify attrs.
+	//
 	// Finish is safe to call concurrently with measurement and collection.
-	Finish(ctx context.Context, set attribute.Set)
+	Finish(ctx context.Context, attrs ...attribute.KeyValue)
 }

@@ -17,15 +17,15 @@ func ExampleFinisher() {
 	var counter metric.Int64Counter = noop.Int64Counter{}
 	ctx := context.Background()
 
-	// Construct the set once and reuse it for recording and finishing.
-	attrs := attribute.NewSet(
+	// Reuse the attributes for recording and finishing.
+	attrs := []attribute.KeyValue{
 		attribute.String("service.name", "checkout"),
 		attribute.Int("service.port", 8080),
-	)
-	counter.Add(ctx, 1, metric.WithAttributeSet(attrs))
+	}
+	counter.Add(ctx, 1, metric.WithAttributes(attrs...))
 
 	if finisher, ok := counter.(x.Finisher); ok {
-		finisher.Finish(ctx, attrs)
+		finisher.Finish(ctx, attrs...)
 	}
 }
 
