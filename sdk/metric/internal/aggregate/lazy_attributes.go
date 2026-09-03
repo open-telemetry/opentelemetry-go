@@ -15,6 +15,17 @@ type lazyFilteredAttributes struct {
 	mask       uint64 // bitmask of kept attributes (bit i == 1 if kept) for len <= 64
 	bigMask    []bool // fallback decision slice for len > 64
 	hasDropped bool
+	preDropped []attribute.KeyValue
+}
+
+// newLazyPreboundAttributes creates a lazyFilteredAttributes with explicit dropped attributes.
+func newLazyPreboundAttributes(orig attribute.Set, dropped []attribute.KeyValue) lazyFilteredAttributes {
+	return lazyFilteredAttributes{
+		orig:       orig,
+		distinct:   orig.Equivalent(),
+		hasDropped: len(dropped) > 0,
+		preDropped: dropped,
+	}
 }
 
 // newLazyFilteredAttributes filters orig using filter and computes the distinct
@@ -125,6 +136,9 @@ func (l lazyFilteredAttributes) Set() attribute.Set {
 
 // Dropped constructs the dropped attribute slice using the recorded bitmask.
 func (l lazyFilteredAttributes) Dropped() []attribute.KeyValue {
+	if len(l.preDropped) > 0 {
+		return l.preDropped
+	}
 	if !l.hasDropped {
 		return nil
 	}

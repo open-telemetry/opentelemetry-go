@@ -17,6 +17,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
+var (
+	_ x.Int64Binder   = (*int64Inst)(nil)
+	_ x.Float64Binder = (*float64Inst)(nil)
+)
+
 func BenchmarkInstrument(b *testing.B) {
 	attr := func(id int) attribute.Set {
 		return attribute.NewSet(
@@ -39,11 +44,11 @@ func BenchmarkInstrument(b *testing.B) {
 		meas = append(meas, in)
 
 		build.Temporality = metricdata.CumulativeTemporality
-		in, _ = build.Sum(true)
+		in, _, _ = build.Sum(true)
 		meas = append(meas, in)
 
 		build.Temporality = metricdata.DeltaTemporality
-		in, _ = build.Sum(true)
+		in, _, _ = build.Sum(true)
 		meas = append(meas, in)
 
 		inst := int64Inst{measures: meas}
@@ -64,11 +69,11 @@ func BenchmarkInstrument(b *testing.B) {
 		meas = append(meas, in)
 
 		build.Temporality = metricdata.CumulativeTemporality
-		in, _ = build.Sum(true)
+		in, _, _ = build.Sum(true)
 		meas = append(meas, in)
 
 		build.Temporality = metricdata.DeltaTemporality
-		in, _ = build.Sum(true)
+		in, _, _ = build.Sum(true)
 		meas = append(meas, in)
 
 		o := observable[int64]{measures: meas}
