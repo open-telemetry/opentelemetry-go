@@ -147,6 +147,7 @@ The next release will require at least [Go 1.26].
 
 ### Added
 
+- Add `String` method for `Set` type in `go.opentelemetry.io/otel/attribute`. (#8347)
 - Add `ByteSlice` and `ByteSliceValue` functions for new `BYTESLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#7948)
 - Apply attribute value limit to the `KindBytes` attribute type in `go.opentelemetry.io/otel/sdk/log`. (#7990)
 - Apply attribute value limit to the `BYTESLICE` attribute type in `go.opentelemetry.io/otel/sdk/trace`. (#7990)
