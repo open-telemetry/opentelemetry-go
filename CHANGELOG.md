@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithViewMatchingMode` and `ViewMatchingMode` in `go.opentelemetry.io/otel/sdk/metric/x` to support composable view matching. (#8510)
+
 ### Fixed
 
 - Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)

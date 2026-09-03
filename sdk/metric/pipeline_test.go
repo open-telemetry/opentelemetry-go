@@ -44,7 +44,7 @@ func testSumAggregateOutput(
 }
 
 func TestNewPipeline(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(t.Context(), &output)
@@ -70,7 +70,7 @@ func TestNewPipeline(t *testing.T) {
 
 func TestPipelineUsesResource(t *testing.T) {
 	res := resource.NewWithAttributes("noSchema", attribute.String("test", "resource"))
-	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter, 0)
+	pipe := newPipeline(res, nil, nil, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent)
 
 	output := metricdata.ResourceMetrics{}
 	err := pipe.produce(t.Context(), &output)
@@ -79,7 +79,7 @@ func TestPipelineUsesResource(t *testing.T) {
 }
 
 func TestPipelineConcurrentSafe(t *testing.T) {
-	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0)
+	pipe := newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent)
 	ctx := t.Context()
 	var output metricdata.ResourceMetrics
 
@@ -138,13 +138,13 @@ func testDefaultViewImplicit[N int64 | float64]() func(t *testing.T) {
 		}{
 			{
 				name: "NoView",
-				pipe: newPipeline(nil, reader, nil, exemplar.AlwaysOffFilter, 0),
+				pipe: newPipeline(nil, reader, nil, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent),
 			},
 			{
 				name: "NoMatchingView",
 				pipe: newPipeline(nil, reader, []View{
 					NewView(Instrument{Name: "foo"}, Stream{Name: "bar"}),
-				}, exemplar.AlwaysOffFilter, 0),
+				}, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent),
 			},
 		}
 
@@ -229,7 +229,10 @@ func TestLogConflictName(t *testing.T) {
 			return instID{Name: tc.existing}
 		})
 
-		i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0), &vc)
+		i := newInserter[int64](
+			newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent),
+			&vc,
+		)
 		i.logConflict(instID{Name: tc.name})
 
 		if tc.conflict {
@@ -271,7 +274,7 @@ func TestLogConflictSuggestView(t *testing.T) {
 	var vc cache[string, instID]
 	name := strings.ToLower(orig.Name)
 	_ = vc.Lookup(name, func() instID { return orig })
-	i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0), &vc)
+	i := newInserter[int64](newPipeline(nil, nil, nil, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent), &vc)
 
 	viewSuggestion := func(inst instID, stream string) string {
 		return `"NewView(Instrument{` +
@@ -376,7 +379,7 @@ func TestInserterCachedAggregatorNameConflict(t *testing.T) {
 	}
 
 	var vc cache[string, instID]
-	pipe := newPipeline(nil, NewManualReader(), nil, exemplar.AlwaysOffFilter, 0)
+	pipe := newPipeline(nil, NewManualReader(), nil, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent)
 	i := newInserter[int64](pipe, &vc)
 
 	readerAggregation := i.readerDefaultAggregation(kind)
@@ -611,7 +614,7 @@ func TestPipelineWithMultipleReaders(t *testing.T) {
 func TestPipelineProduceErrors(t *testing.T) {
 	// Create a test pipeline with aggregations
 	pipeReader := NewManualReader()
-	pipe := newPipeline(nil, pipeReader, nil, exemplar.AlwaysOffFilter, 0)
+	pipe := newPipeline(nil, pipeReader, nil, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent)
 
 	// Set up an observable with callbacks
 	var testObsID observableID[int64]
@@ -731,5 +734,501 @@ func TestPipelineProduceErrors(t *testing.T) {
 		// the produce method
 		assert.Equal(t, [3]int{3, 3, 3}, callbackCounts)
 		assert.Equal(t, 3, aggCallCount)
+	})
+}
+
+func TestViewMatchingModeComposable(t *testing.T) {
+	testcases := []struct {
+		name        string
+		views       []View
+		inst        Instrument
+		allowedKeys []attribute.Key
+		wantCount   int
+		wantErr     error
+		wantDesc    string
+		wantUnit    string
+	}{
+		{
+			name: "ZeroViewsMatchAppliesDefault",
+			views: []View{
+				NewView(Instrument{Name: "other"}, Stream{Description: "other desc"}),
+			},
+			inst: Instrument{
+				Name:        "foo",
+				Description: "orig desc",
+				Unit:        "orig unit",
+				Kind:        InstrumentKindCounter,
+			},
+			wantCount: 1,
+			wantDesc:  "orig desc",
+			wantUnit:  "orig unit",
+		},
+		{
+			name: "SingleViewMatchAppliesMask",
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{Description: "view desc", Unit: "By"}),
+			},
+			inst:      Instrument{Name: "foo", Description: "orig desc", Unit: "1", Kind: InstrumentKindCounter},
+			wantCount: 1,
+			wantDesc:  "view desc",
+			wantUnit:  "By",
+		},
+		{
+			name: "MultipleViewsMergeScalarPropertiesLastWins",
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{Description: "first desc"}),
+				NewView(Instrument{Name: "foo"}, Stream{Description: "second desc", Unit: "ms"}),
+				NewView(Instrument{Name: "foo"}, Stream{Unit: "s"}),
+			},
+			inst:      Instrument{Name: "foo", Description: "orig desc", Unit: "1", Kind: InstrumentKindCounter},
+			wantCount: 1,
+			wantDesc:  "second desc",
+			wantUnit:  "s",
+		},
+		{
+			name: "MultipleViewsDistinctExplicitNames",
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{Name: "foo_ms", Unit: "ms"}),
+				NewView(Instrument{Name: "foo"}, Stream{Name: "foo_s", Unit: "s"}),
+				NewView(
+					Instrument{Name: "foo"},
+					Stream{Description: "common desc"},
+				), // Non-renaming view applies to each renamed stream group
+			},
+			inst:      Instrument{Name: "foo", Description: "orig desc", Unit: "1", Kind: InstrumentKindCounter},
+			wantCount: 2,
+		},
+		{
+			name: "IncompatibleAggregationFallbackToPrecedingView",
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{Aggregation: AggregationExplicitBucketHistogram{}}),
+				NewView(Instrument{Name: "foo"}, Stream{Aggregation: AggregationLastValue{}}),
+				NewView(Instrument{Name: "foo"}, Stream{Description: "fallback desc"}),
+			},
+			inst:      Instrument{Name: "foo", Kind: InstrumentKindCounter},
+			wantCount: 1,
+			wantDesc:  "fallback desc",
+		},
+		{
+			name: "IncompatibleAggregationFallbackToDefault",
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{Aggregation: AggregationLastValue{}}),
+				NewView(Instrument{Name: "foo"}, Stream{Description: "fallback desc"}),
+			},
+			inst:      Instrument{Name: "foo", Kind: InstrumentKindCounter},
+			wantCount: 1,
+			wantDesc:  "fallback desc",
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			r := NewManualReader()
+			p := newPipeline(resource.Empty(), r, tt.views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+			var vc cache[string, instID]
+			ins := newInserter[int64](p, &vc)
+			got, err := ins.Instrument(tt.inst, tt.allowedKeys, DefaultAggregationSelector(tt.inst.Kind))
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+			assert.Len(t, got, tt.wantCount)
+			if tt.wantDesc != "" || tt.wantUnit != "" {
+				cached := vc.Lookup(strings.ToLower(tt.inst.Name), func() instID { return instID{} })
+				if tt.wantDesc != "" {
+					assert.Equal(t, tt.wantDesc, cached.Description)
+				}
+				if tt.wantUnit != "" {
+					assert.Equal(t, tt.wantUnit, cached.Unit)
+				}
+			}
+		})
+	}
+}
+
+func TestViewMatchingModeComposableExemplarSelectorLastWins(t *testing.T) {
+	var called1, called2 bool
+	sel1 := func(agg Aggregation) exemplar.ReservoirProvider {
+		called1 = true
+		return DefaultExemplarReservoirProviderSelector(agg)
+	}
+	sel2 := func(agg Aggregation) exemplar.ReservoirProvider {
+		called2 = true
+		return DefaultExemplarReservoirProviderSelector(agg)
+	}
+
+	views := []View{
+		NewView(Instrument{Name: "foo"}, Stream{ExemplarReservoirProviderSelector: sel1}),
+		NewView(Instrument{Name: "foo"}, Stream{ExemplarReservoirProviderSelector: sel2}),
+	}
+
+	r := NewManualReader()
+	p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+	var vc cache[string, instID]
+	ins := newInserter[int64](p, &vc)
+	got, err := ins.Instrument(
+		Instrument{Name: "foo", Kind: InstrumentKindCounter},
+		nil,
+		DefaultAggregationSelector(InstrumentKindCounter),
+	)
+	require.NoError(t, err)
+	assert.Len(t, got, 1)
+	assert.False(t, called1, "first selector should not be called")
+	assert.True(t, called2, "second selector should be called (last-wins)")
+}
+
+func TestComposeAttributeFilters(t *testing.T) {
+	testcases := []struct {
+		name       string
+		baseline   attribute.Filter
+		streams    []Stream
+		checkTrue  []attribute.KeyValue
+		checkFalse []attribute.KeyValue
+	}{
+		{
+			name:     "NilFiltersUseBaseline",
+			baseline: attribute.NewAllowKeysFilter("base", "a"),
+			streams: []Stream{
+				{Name: "s1"},
+				{Name: "s2"},
+			},
+			checkTrue:  []attribute.KeyValue{attribute.Int("base", 1), attribute.Int("a", 1)},
+			checkFalse: []attribute.KeyValue{attribute.Int("b", 1)},
+		},
+		{
+			name:     "SingleFilterOverridesBaseline",
+			baseline: attribute.NewAllowKeysFilter("base"),
+			streams: []Stream{
+				{AttributeFilter: attribute.NewAllowKeysFilter("a", "b")},
+			},
+			checkTrue:  []attribute.KeyValue{attribute.Int("a", 1), attribute.Int("b", 1)},
+			checkFalse: []attribute.KeyValue{attribute.Int("base", 1), attribute.Int("c", 1)},
+		},
+		{
+			name:     "AllowFiltersOverrideBaseline",
+			baseline: attribute.NewAllowKeysFilter("base"),
+			streams: []Stream{
+				{AttributeFilter: attribute.NewAllowKeysFilter("a", "b", "c")},
+				{AttributeFilter: attribute.NewAllowKeysFilter("b", "c", "d")},
+			},
+			checkTrue:  []attribute.KeyValue{attribute.Int("b", 1), attribute.Int("c", 1)},
+			checkFalse: []attribute.KeyValue{attribute.Int("base", 1), attribute.Int("a", 1), attribute.Int("d", 1)},
+		},
+		{
+			name:     "DenyFiltersUnion",
+			baseline: nil,
+			streams: []Stream{
+				{AttributeFilter: attribute.NewDenyKeysFilter("x")},
+				{AttributeFilter: attribute.NewDenyKeysFilter("y")},
+			},
+			checkTrue:  []attribute.KeyValue{attribute.Int("a", 1), attribute.Int("z", 1)},
+			checkFalse: []attribute.KeyValue{attribute.Int("x", 1), attribute.Int("y", 1)},
+		},
+		{
+			name:     "AllowAndDenyCombined",
+			baseline: attribute.NewAllowKeysFilter("base"),
+			streams: []Stream{
+				{AttributeFilter: attribute.NewAllowKeysFilter("a", "b", "c")},
+				{AttributeFilter: attribute.NewDenyKeysFilter("b")},
+			},
+			checkTrue:  []attribute.KeyValue{attribute.Int("a", 1), attribute.Int("c", 1)},
+			checkFalse: []attribute.KeyValue{attribute.Int("base", 1), attribute.Int("b", 1), attribute.Int("d", 1)},
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			composed := composeAttributeFilters(tt.baseline, tt.streams)
+			require.NotNil(t, composed)
+			for _, kv := range tt.checkTrue {
+				assert.Truef(t, composed(kv), "expected true for %v", kv)
+			}
+			for _, kv := range tt.checkFalse {
+				assert.Falsef(t, composed(kv), "expected false for %v", kv)
+			}
+		})
+	}
+}
+
+func TestViewMatchingModeComposableDefaultAttributes(t *testing.T) {
+	// Case 1: Matching view with no attribute filter retains allowedKeys baseline.
+	views := []View{
+		NewView(Instrument{Name: "foo"}, Stream{Description: "custom desc"}),
+	}
+	r := NewManualReader()
+	p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+	var vc cache[string, instID]
+	ins := newInserter[int64](p, &vc)
+	allowed := []attribute.Key{"k1"}
+	got, err := ins.Instrument(
+		Instrument{Name: "foo", Kind: InstrumentKindCounter},
+		allowed,
+		DefaultAggregationSelector(InstrumentKindCounter),
+	)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+
+	// Case 2: Matching view WITH attribute filter overrides allowedKeys baseline.
+	viewsWithFilter := []View{
+		NewView(Instrument{Name: "foo"}, Stream{AttributeFilter: attribute.NewAllowKeysFilter("k2")}),
+	}
+	pWithFilter := newPipeline(
+		resource.Empty(),
+		r,
+		viewsWithFilter,
+		exemplar.AlwaysOffFilter,
+		0,
+		viewMatchingModeComposable,
+	)
+	var vc2 cache[string, instID]
+	ins2 := newInserter[int64](pWithFilter, &vc2)
+	got2, err2 := ins2.Instrument(
+		Instrument{Name: "foo", Kind: InstrumentKindCounter},
+		allowed,
+		DefaultAggregationSelector(InstrumentKindCounter),
+	)
+	require.NoError(t, err2)
+	require.Len(t, got2, 1)
+}
+
+func TestViewMatchingModeComposableInvalidAggregationDirectView(t *testing.T) {
+	// A custom View can return an invalid AggregationBase2ExponentialHistogram (MaxSize: 0)
+	// without passing through NewView. In composable mode, it should be rejected and fall back
+	// to preceding valid views or default aggregation, and measurement recording should work.
+	invalidView := View(func(inst Instrument) (Stream, bool) {
+		if inst.Name == "foo" {
+			return Stream{
+				Aggregation: AggregationBase2ExponentialHistogram{MaxSize: 0},
+				Description: "direct view desc",
+			}, true
+		}
+		return Stream{}, false
+	})
+	precedingView := NewView(
+		Instrument{Name: "foo"},
+		Stream{Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{1, 5, 10}}},
+	)
+
+	r := NewManualReader()
+	p := newPipeline(
+		resource.Empty(),
+		r,
+		[]View{precedingView, invalidView},
+		exemplar.AlwaysOffFilter,
+		0,
+		viewMatchingModeComposable,
+	)
+	r.register(p)
+	var vc cache[string, instID]
+	ins := newInserter[int64](p, &vc)
+	got, err := ins.Instrument(
+		Instrument{Name: "foo", Kind: InstrumentKindCounter},
+		nil,
+		DefaultAggregationSelector(InstrumentKindCounter),
+	)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+
+	// Record a value to ensure aggregator operates correctly without underflow error.
+	got[0](t.Context(), 3, *attribute.EmptySet())
+
+	var data metricdata.ResourceMetrics
+	err = r.Collect(t.Context(), &data)
+	require.NoError(t, err)
+	require.Len(t, data.ScopeMetrics, 1)
+	require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+	m := data.ScopeMetrics[0].Metrics[0]
+	assert.Equal(t, "direct view desc", m.Description)
+	// Verify it fell back to ExplicitBucketHistogram from precedingView.
+	_, ok := m.Data.(metricdata.Histogram[int64])
+	assert.True(t, ok, "expected Histogram aggregation from preceding view")
+}
+
+func TestViewMatchingModeComposableCaseVariantTargetNames(t *testing.T) {
+	views := []View{
+		NewView(Instrument{Name: "foo"}, Stream{Name: "RENAMED", Description: "first desc"}),
+		NewView(Instrument{Name: "foo"}, Stream{Name: "renamed", Description: "second desc", Unit: "ms"}),
+	}
+
+	r := NewManualReader()
+	p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+	r.register(p)
+	var vc cache[string, instID]
+	ins := newInserter[int64](p, &vc)
+	got, err := ins.Instrument(
+		Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "1", Description: "orig"},
+		nil,
+		DefaultAggregationSelector(InstrumentKindCounter),
+	)
+	require.NoError(t, err)
+	assert.Len(t, got, 1)
+
+	cached := vc.Lookup("renamed", func() instID { return instID{} })
+	assert.Equal(t, "RENAMED", cached.Name, "first-seen spelling should be preserved")
+	assert.Equal(t, "second desc", cached.Description, "last-wins description should apply")
+	assert.Equal(t, "ms", cached.Unit, "last-wins unit should apply")
+
+	// Verify single metric stream is collected with first-seen name casing
+	got[0](t.Context(), 5, *attribute.EmptySet())
+	var data metricdata.ResourceMetrics
+	err = r.Collect(t.Context(), &data)
+	require.NoError(t, err)
+	require.Len(t, data.ScopeMetrics, 1)
+	require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+	assert.Equal(t, "RENAMED", data.ScopeMetrics[0].Metrics[0].Name)
+	assert.Equal(t, "second desc", data.ScopeMetrics[0].Metrics[0].Description)
+	assert.Equal(t, "ms", data.ScopeMetrics[0].Metrics[0].Unit)
+}
+
+func TestViewMatchingModeComposableDirectViewZeroedFields(t *testing.T) {
+	t.Run("DirectViewZerosDescriptionAndUnit", func(t *testing.T) {
+		views := []View{
+			NewView(Instrument{Name: "foo"}, Stream{Aggregation: AggregationSum{}}),
+			View(func(inst Instrument) (Stream, bool) {
+				if inst.Name == "foo" {
+					return Stream{Name: inst.Name, Description: "", Unit: ""}, true
+				}
+				return Stream{}, false
+			}),
+		}
+
+		r := NewManualReader()
+		p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+		r.register(p)
+		var vc cache[string, instID]
+		ins := newInserter[int64](p, &vc)
+		got, err := ins.Instrument(
+			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
+			nil,
+			DefaultAggregationSelector(InstrumentKindCounter),
+		)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+
+		got[0](t.Context(), 1, *attribute.EmptySet())
+		var data metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &data)
+		require.NoError(t, err)
+		require.Len(t, data.ScopeMetrics, 1)
+		require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+		m := data.ScopeMetrics[0].Metrics[0]
+		assert.Equal(t, "foo", m.Name)
+		assert.Empty(t, m.Description, "direct view should explicitly clear description")
+		assert.Empty(t, m.Unit, "direct view should explicitly clear unit")
+	})
+
+	t.Run("DirectViewZerosName", func(t *testing.T) {
+		views := []View{
+			View(func(inst Instrument) (Stream, bool) {
+				if inst.Name == "foo" {
+					return Stream{Name: "", Description: "cleared name", Unit: "1"}, true
+				}
+				return Stream{}, false
+			}),
+		}
+
+		r := NewManualReader()
+		p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+		r.register(p)
+		var vc cache[string, instID]
+		ins := newInserter[int64](p, &vc)
+		got, err := ins.Instrument(
+			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
+			nil,
+			DefaultAggregationSelector(InstrumentKindCounter),
+		)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+
+		got[0](t.Context(), 1, *attribute.EmptySet())
+		var data metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &data)
+		require.NoError(t, err)
+		require.Len(t, data.ScopeMetrics, 1)
+		require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+		m := data.ScopeMetrics[0].Metrics[0]
+		assert.Empty(t, m.Name, "direct view should explicitly clear name")
+		assert.Equal(t, "cleared name", m.Description)
+		assert.Equal(t, "1", m.Unit)
+	})
+
+	t.Run("SubsequentNewViewDoesNotRevertZeroedFieldsUnlessMaskSet", func(t *testing.T) {
+		views := []View{
+			// Direct view clears description and unit
+			View(func(inst Instrument) (Stream, bool) {
+				if inst.Name == "foo" {
+					return Stream{Name: inst.Name, Description: "", Unit: ""}, true
+				}
+				return Stream{}, false
+			}),
+			// Subsequent NewView with no description/unit in mask should NOT restore instrument defaults
+			NewView(
+				Instrument{Name: "foo"},
+				Stream{
+					Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{1, 5}},
+				},
+			),
+		}
+
+		r := NewManualReader()
+		p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+		r.register(p)
+		var vc cache[string, instID]
+		ins := newInserter[int64](p, &vc)
+		got, err := ins.Instrument(
+			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
+			nil,
+			DefaultAggregationSelector(InstrumentKindCounter),
+		)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+
+		got[0](t.Context(), 1, *attribute.EmptySet())
+		var data metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &data)
+		require.NoError(t, err)
+		require.Len(t, data.ScopeMetrics, 1)
+		require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+		m := data.ScopeMetrics[0].Metrics[0]
+		assert.Empty(t, m.Description, "subsequent NewView without description in mask should not restore default")
+		assert.Empty(t, m.Unit, "subsequent NewView without unit in mask should not restore default")
+	})
+
+	t.Run("SubsequentNewViewExplicitMaskOverridesZeroedField", func(t *testing.T) {
+		views := []View{
+			// Direct view clears description
+			View(func(inst Instrument) (Stream, bool) {
+				if inst.Name == "foo" {
+					return Stream{Name: inst.Name, Description: "", Unit: ""}, true
+				}
+				return Stream{}, false
+			}),
+			// Subsequent NewView explicitly sets Description in mask (last-wins)
+			NewView(Instrument{Name: "foo"}, Stream{Description: "new explicit desc"}),
+		}
+
+		r := NewManualReader()
+		p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+		r.register(p)
+		var vc cache[string, instID]
+		ins := newInserter[int64](p, &vc)
+		got, err := ins.Instrument(
+			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
+			nil,
+			DefaultAggregationSelector(InstrumentKindCounter),
+		)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+
+		got[0](t.Context(), 1, *attribute.EmptySet())
+		var data metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &data)
+		require.NoError(t, err)
+		require.Len(t, data.ScopeMetrics, 1)
+		require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+		m := data.ScopeMetrics[0].Metrics[0]
+		assert.Equal(t, "new explicit desc", m.Description, "explicit NewView mask should override previous view")
+		assert.Empty(t, m.Unit, "unit should remain zeroed from earlier direct view")
 	})
 }
