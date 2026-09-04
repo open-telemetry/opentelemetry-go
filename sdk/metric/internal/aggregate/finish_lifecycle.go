@@ -63,7 +63,11 @@ func finishWithState(value uint64, state finishLifecycleState) uint64 {
 	return value&finishWriterMask | uint64(state)<<finishStateShift
 }
 
-func (l *finishLifecycle) startMeasurement() bool {
+// acquireMeasurement reserves this series lifetime for a measurement. If it
+// returns true, the caller must call releaseMeasurement exactly once after the
+// aggregate and exemplars have been updated. A false result means this lifetime
+// is retired and the caller must retry with the current series.
+func (l *finishLifecycle) acquireMeasurement() bool {
 measurement:
 	for {
 		// Do not join the writer count after collection closes admission. This
@@ -95,30 +99,30 @@ measurement:
 						return true
 					}
 				case lifecycleCollecting:
-					l.finishMeasurement()
+					l.releaseMeasurement()
 					for finishStateOf(l.state.Load()) == lifecycleCollecting {
 						runtime.Gosched()
 					}
 					continue measurement
 				default:
-					l.finishMeasurement()
+					l.releaseMeasurement()
 					return false
 				}
 			}
 		case lifecycleCollecting:
-			l.finishMeasurement()
+			l.releaseMeasurement()
 			for finishStateOf(l.state.Load()) == lifecycleCollecting {
 				runtime.Gosched()
 			}
 			continue measurement
 		default:
-			l.finishMeasurement()
+			l.releaseMeasurement()
 			return false
 		}
 	}
 }
 
-func (l *finishLifecycle) finishMeasurement() {
+func (l *finishLifecycle) releaseMeasurement() {
 	// Adding the maximum uint64 value is equivalent to subtracting one.
 	l.state.Add(^uint64(0))
 }

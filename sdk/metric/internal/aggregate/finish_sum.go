@@ -45,15 +45,15 @@ func (v *finishSumValue[N]) measure(
 	value N,
 	lazy lazyFilteredAttributes,
 ) bool {
-	if !v.lifecycle.startMeasurement() {
+	if !v.lifecycle.acquireMeasurement() {
 		return false
 	}
 	v.value.add(value)
 	if v.dropExemplars {
-		v.lifecycle.finishMeasurement()
+		v.lifecycle.releaseMeasurement()
 		return true
 	}
-	defer v.lifecycle.finishMeasurement()
+	defer v.lifecycle.releaseMeasurement()
 	v.reservoir.Offer(ctx, value, lazy)
 	return true
 }
