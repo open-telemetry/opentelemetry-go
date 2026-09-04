@@ -19,7 +19,7 @@ func TestFinishLifecycle(t *testing.T) {
 		assert.True(t, lifecycle.finish(y2kPlus(1)))
 		assert.False(t, lifecycle.finish(y2kPlus(2)))
 
-		decision := lifecycle.startCollection(y2kPlus(3), collectionKeepActive)
+		decision := lifecycle.startCumulativeCollection(y2kPlus(3))
 		assert.Equal(t, y2kPlus(1), decision.time)
 		assert.True(t, decision.emit)
 		assert.True(t, decision.retire)
@@ -33,7 +33,7 @@ func TestFinishLifecycle(t *testing.T) {
 
 		require.True(t, lifecycle.acquireMeasurement())
 		lifecycle.releaseMeasurement()
-		decision := lifecycle.startCollection(y2kPlus(2), collectionKeepActive)
+		decision := lifecycle.startCumulativeCollection(y2kPlus(2))
 		assert.Equal(t, y2kPlus(2), decision.time)
 		assert.True(t, decision.emit)
 		assert.False(t, decision.retire)
@@ -44,7 +44,7 @@ func TestFinishLifecycle(t *testing.T) {
 
 	t.Run("DeltaCollectionRetiresActive", func(t *testing.T) {
 		var lifecycle finishLifecycle
-		decision := lifecycle.startCollection(y2kPlus(1), collectionRetireActive)
+		decision := lifecycle.startDeltaCollection(y2kPlus(1))
 		assert.Equal(t, y2kPlus(1), decision.time)
 		assert.True(t, decision.emit)
 		assert.True(t, decision.retire)
@@ -59,7 +59,7 @@ func TestFinishLifecycle(t *testing.T) {
 
 		assert.False(t, lifecycle.finish(y2kPlus(1)))
 		assert.False(t, lifecycle.acquireMeasurement())
-		decision := lifecycle.startCollection(y2kPlus(2), collectionKeepActive)
+		decision := lifecycle.startCumulativeCollection(y2kPlus(2))
 		assert.False(t, decision.emit)
 		assert.False(t, decision.retire)
 	})
@@ -71,7 +71,7 @@ func TestFinishLifecycleCollectionWaitsForMeasurement(t *testing.T) {
 
 	collected := make(chan collectionDecision, 1)
 	go func() {
-		collected <- lifecycle.startCollection(y2k, collectionKeepActive)
+		collected <- lifecycle.startCumulativeCollection(y2k)
 	}()
 	for finishStateOf(lifecycle.state.Load()) != lifecycleCollecting {
 		runtime.Gosched()

@@ -28,13 +28,6 @@ const (
 	finishStateMask  = ^finishWriterMask
 )
 
-type collectionMode uint8
-
-const (
-	collectionKeepActive collectionMode = iota
-	collectionRetireActive
-)
-
 type collectionDecision struct {
 	time   time.Time
 	emit   bool
@@ -142,10 +135,21 @@ func (l *finishLifecycle) finish(at time.Time) bool {
 	return true
 }
 
-func (l *finishLifecycle) startCollection(
+func (l *finishLifecycle) startCumulativeCollection(
 	at time.Time,
-	mode collectionMode,
 ) collectionDecision {
+	return l.startCollection(at)
+}
+
+func (l *finishLifecycle) startDeltaCollection(at time.Time) collectionDecision {
+	decision := l.startCollection(at)
+	if decision.emit {
+		decision.retire = true
+	}
+	return decision
+}
+
+func (l *finishLifecycle) startCollection(at time.Time) collectionDecision {
 	state := finishStateOf(l.state.Load())
 	if state == lifecycleRetired {
 		return collectionDecision{}
@@ -159,9 +163,8 @@ func (l *finishLifecycle) startCollection(
 		return collectionDecision{time: l.finished, emit: true, retire: true}
 	}
 	return collectionDecision{
-		time:   at,
-		emit:   true,
-		retire: mode == collectionRetireActive,
+		time: at,
+		emit: true,
 	}
 }
 

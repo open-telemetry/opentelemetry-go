@@ -185,7 +185,7 @@ func TestFinishSumRetireAndDelete(t *testing.T) {
 	assert.Zero(t, store.values.Len())
 	assert.False(t, point.measure(t.Context(), 1, lazy))
 
-	_, emit, retire := point.collect(y2k, collectionKeepActive)
+	_, emit, retire := point.collectCumulative(y2k)
 	assert.False(t, emit)
 	assert.False(t, retire)
 }
