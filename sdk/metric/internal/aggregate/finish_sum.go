@@ -27,16 +27,18 @@ type finishSumValue[N int64 | float64] struct {
 func newFinishSumValue[N int64 | float64](
 	attrs attribute.Set,
 	reservoir func(attribute.Set) FilteredExemplarReservoir[N],
-) *finishSumValue[N] {
+) (*finishSumValue[N], finish.Measurement) {
 	r := reservoir(attrs)
 	_, drop := r.(*dropRes[N])
-	return &finishSumValue[N]{
+	point := &finishSumValue[N]{
 		attrs:         attrs,
 		start:         now(),
 		overflow:      attrs.Equals(&overflowSet),
 		dropExemplars: drop,
 		reservoir:     r,
 	}
+	measurement, _ := point.lifecycle.AcquireMeasurement()
+	return point, measurement
 }
 
 func (v *finishSumValue[N]) measure(
@@ -48,14 +50,23 @@ func (v *finishSumValue[N]) measure(
 	if !ok {
 		return false
 	}
+	v.measureAcquired(ctx, value, lazy, measurement)
+	return true
+}
+
+func (v *finishSumValue[N]) measureAcquired(
+	ctx context.Context,
+	value N,
+	lazy lazyFilteredAttributes,
+	measurement finish.Measurement,
+) {
 	v.value.add(value)
 	if v.dropExemplars {
 		measurement.Release()
-		return true
+		return
 	}
 	defer measurement.Release()
 	v.reservoir.Offer(ctx, value, lazy)
-	return true
 }
 
 func (v *finishSumValue[N]) finish(t time.Time) {
@@ -145,9 +156,21 @@ func (s *finishSum[N]) measure(
 		if s.stopped.Load() {
 			return
 		}
-		point := s.values.LoadOrStoreAttrReclaiming(lazy, func(attrs attribute.Set) *finishSumValue[N] {
-			return newFinishSumValue(attrs, s.reservoir)
+		var initial finish.Measurement
+		point, loaded := s.values.LoadOrStoreAttrReclaiming(lazy, func(
+			attrs attribute.Set,
+		) *finishSumValue[N] {
+			var point *finishSumValue[N]
+			point, initial = newFinishSumValue(attrs, s.reservoir)
+			return point
 		})
+		if !loaded {
+			point.measureAcquired(ctx, value, lazy, initial)
+			if s.stopped.Load() {
+				s.retireAndDelete(point)
+			}
+			return
+		}
 		if point.measure(ctx, value, lazy) {
 			if s.stopped.Load() {
 				s.retireAndDelete(point)

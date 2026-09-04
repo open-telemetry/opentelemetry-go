@@ -10,23 +10,13 @@ import (
 	"time"
 )
 
-type lifecycleState uint8
+type lifecycleState uint32
 
 const (
 	lifecycleActive lifecycleState = iota
 	lifecycleFinishPending
 	lifecycleRetired
 	lifecycleCollecting
-)
-
-const (
-	// Lifecycle.state packs the lifecycle state into the high two bits and the
-	// number of admitted measurements into the low 62 bits. Keeping both in one
-	// atomic value prevents collection from closing admission between a
-	// measurement's state check and its increment of the admitted count.
-	stateShift = 62
-	writerMask = uint64(1<<stateShift) - 1
-	stateMask  = ^writerMask
 )
 
 // Lifecycle coordinates measurements, explicit finishes, collections, and
@@ -42,7 +32,8 @@ const (
 // Retired is terminal.
 type Lifecycle struct {
 	control sync.Mutex
-	state   atomic.Uint64
+	state   atomic.Uint32
+	writers atomic.Uint64
 	// finished is meaningful only while a pending finish is being collected.
 	// Reactivation leaves the old value in place so measurements remain lock-free.
 	finished time.Time
@@ -93,16 +84,8 @@ func (c Collection) Complete() {
 		state = lifecycleRetired
 	}
 	c.lifecycle.finished = time.Time{}
-	c.lifecycle.state.Store(withState(0, state))
+	c.lifecycle.state.Store(uint32(state))
 	c.lifecycle.control.Unlock()
-}
-
-func stateOf(value uint64) lifecycleState {
-	return lifecycleState(value >> stateShift)
-}
-
-func withState(value uint64, state lifecycleState) uint64 {
-	return value&writerMask | uint64(state)<<stateShift
 }
 
 // AcquireMeasurement reserves this series lifetime for a measurement. It waits
@@ -110,48 +93,25 @@ func withState(value uint64, state lifecycleState) uint64 {
 // retired. A successful acquisition must be paired with exactly one call to
 // Measurement.Release after the aggregate and exemplars are updated.
 func (l *Lifecycle) AcquireMeasurement() (Measurement, bool) {
-measurement:
 	for {
-		// Do not join the writer count after collection closes admission. This
-		// lets collection drain the finite set of already-admitted measurements
-		// even when new measurements continue to arrive.
-		state := stateOf(l.state.Load())
-		if state == lifecycleCollecting {
-			l.waitForCollection()
-			continue
-		}
-		if state == lifecycleRetired {
-			return Measurement{}, false
-		}
-
-		previous := l.state.Add(1) - 1
-		switch stateOf(previous) {
+		// Increment before checking state so a collection either waits for this
+		// attempt or closes admission before the attempt can update the aggregate.
+		l.writers.Add(1)
+		switch lifecycleState(l.state.Load()) {
 		case lifecycleActive:
 			return Measurement{lifecycle: l}, true
 		case lifecycleFinishPending:
-			for {
-				current := l.state.Load()
-				switch stateOf(current) {
-				case lifecycleActive:
-					return Measurement{lifecycle: l}, true
-				case lifecycleFinishPending:
-					if l.state.CompareAndSwap(current, withState(current, lifecycleActive)) {
-						return Measurement{lifecycle: l}, true
-					}
-				case lifecycleCollecting:
-					l.releaseMeasurement()
-					l.waitForCollection()
-					continue measurement
-				default:
-					l.releaseMeasurement()
-					return Measurement{}, false
-				}
+			if l.state.CompareAndSwap(
+				uint32(lifecycleFinishPending),
+				uint32(lifecycleActive),
+			) {
+				return Measurement{lifecycle: l}, true
 			}
+			l.releaseMeasurement()
 		case lifecycleCollecting:
 			l.releaseMeasurement()
 			l.waitForCollection()
-			continue measurement
-		default:
+		case lifecycleRetired:
 			l.releaseMeasurement()
 			return Measurement{}, false
 		}
@@ -159,16 +119,16 @@ measurement:
 }
 
 func (l *Lifecycle) waitForCollection() {
-	for stateOf(l.state.Load()) == lifecycleCollecting {
+	for lifecycleState(l.state.Load()) == lifecycleCollecting {
 		runtime.Gosched()
 	}
 }
 
 func (l *Lifecycle) releaseMeasurement() {
 	// atomic.Uint64 has no subtraction operation. Adding MaxUint64 decrements
-	// the packed writer count modulo 2^64. A matching acquisition guarantees
-	// the count is nonzero, so the lifecycle bits are unaffected.
-	l.state.Add(^uint64(0))
+	// the writer count modulo 2^64. A matching acquisition guarantees the count
+	// is nonzero.
+	l.writers.Add(^uint64(0))
 }
 
 // Finish marks an active series lifetime to be retired by its next collection
@@ -177,14 +137,13 @@ func (l *Lifecycle) releaseMeasurement() {
 func (l *Lifecycle) Finish(at time.Time) bool {
 	l.control.Lock()
 	defer l.control.Unlock()
-	if stateOf(l.state.Load()) != lifecycleActive {
+	if lifecycleState(l.state.Load()) != lifecycleActive {
 		return false
 	}
 	l.finished = at
-	// The control lock keeps the lifecycle active until this atomic update.
-	// Measurements may concurrently change only the writer count; Or preserves
-	// those changes and is the linearization point for this finish.
-	l.state.Or(uint64(lifecycleFinishPending) << stateShift)
+	// The control lock serializes this transition with collection and retirement.
+	// Measurements that observe this store cancel it before updating the aggregate.
+	l.state.Store(uint32(lifecycleFinishPending))
 	return true
 }
 
@@ -215,12 +174,12 @@ func (l *Lifecycle) BeginDeltaCollection(at time.Time) Collection {
 }
 
 func (l *Lifecycle) beginCollection(at time.Time) Collection {
-	state := stateOf(l.state.Load())
+	state := lifecycleState(l.state.Load())
 	if state == lifecycleRetired {
 		return Collection{}
 	}
-	state = stateOf(l.state.Or(stateMask))
-	for l.state.Load()&writerMask != 0 {
+	state = lifecycleState(l.state.Swap(uint32(lifecycleCollecting)))
+	for l.writers.Load() != 0 {
 		runtime.Gosched()
 	}
 
@@ -241,13 +200,13 @@ func (l *Lifecycle) beginCollection(at time.Time) Collection {
 func (l *Lifecycle) Retire() {
 	l.control.Lock()
 	defer l.control.Unlock()
-	if stateOf(l.state.Load()) == lifecycleRetired {
+	if lifecycleState(l.state.Load()) == lifecycleRetired {
 		return
 	}
-	l.state.Or(stateMask)
-	for l.state.Load()&writerMask != 0 {
+	l.state.Store(uint32(lifecycleCollecting))
+	for l.writers.Load() != 0 {
 		runtime.Gosched()
 	}
 	l.finished = time.Time{}
-	l.state.Store(withState(0, lifecycleRetired))
+	l.state.Store(uint32(lifecycleRetired))
 }
