@@ -244,27 +244,36 @@ func BenchmarkFinishSum(b *testing.B) {
 	}))
 }
 
-func BenchmarkFinishSumParallelMeasure(b *testing.B) {
+func BenchmarkFinishSumMeasure(b *testing.B) {
 	benchmarks := []struct {
 		name    string
 		factory func() Measure[int64]
 	}{
-		{"Standard", func() Measure[int64] {
+		{"false", func() Measure[int64] {
 			measure, _ := Builder[int64]{Temporality: metricdata.CumulativeTemporality}.Sum(true)
 			return measure
 		}},
-		{"Finish", func() Measure[int64] {
+		{"true", func() Measure[int64] {
 			return Builder[int64]{Temporality: metricdata.CumulativeTemporality}.FinishSum(true).Measure
 		}},
 	}
 	for _, benchmark := range benchmarks {
-		b.Run(benchmark.name, func(b *testing.B) {
-			measure := benchmark.factory()
-			b.ReportAllocs()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
+		b.Run("finish="+benchmark.name, func(b *testing.B) {
+			b.Run("mode=serial", func(b *testing.B) {
+				measure := benchmark.factory()
+				b.ReportAllocs()
+				for b.Loop() {
 					measure(b.Context(), 1, alice)
 				}
+			})
+			b.Run("mode=parallel", func(b *testing.B) {
+				measure := benchmark.factory()
+				b.ReportAllocs()
+				b.RunParallel(func(pb *testing.PB) {
+					for pb.Next() {
+						measure(b.Context(), 1, alice)
+					}
+				})
 			})
 		})
 	}
