@@ -134,6 +134,10 @@ func (l *finishLifecycle) finish(at time.Time) bool {
 		return false
 	}
 	l.finished = at
+	// The caller serializes finish, collection, and retirement, so the lifecycle
+	// remains active until this atomic update. Measurements may concurrently
+	// change only the writer count; Or preserves those changes and is the
+	// linearization point for this finish.
 	l.state.Or(uint64(lifecycleFinishPending) << finishStateShift)
 	return true
 }
