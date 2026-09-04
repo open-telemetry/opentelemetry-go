@@ -15,21 +15,16 @@ import (
 )
 
 type finishSumValue[N int64 | float64] struct {
-	lifecycle finish.Lifecycle
-	value     atomicCounter[N]
-	attrs     attribute.Set
-	start     time.Time
-	// overflowMu serializes the one-way overflow promotion with Finish.
-	overflowMu sync.Mutex
-	// overflow remains atomic so promoted points use lock-free fast paths.
-	overflow      atomic.Bool
+	lifecycle     finish.Lifecycle
+	value         atomicCounter[N]
+	attrs         attribute.Set
+	start         time.Time
 	dropExemplars bool
 	reservoir     FilteredExemplarReservoir[N]
 }
 
 func newFinishSumValue[N int64 | float64](
 	attrs attribute.Set,
-	overflow bool,
 	reservoir func(attribute.Set) FilteredExemplarReservoir[N],
 ) *finishSumValue[N] {
 	r := reservoir(attrs)
@@ -40,7 +35,6 @@ func newFinishSumValue[N int64 | float64](
 		dropExemplars: drop,
 		reservoir:     r,
 	}
-	point.overflow.Store(overflow)
 	return point
 }
 
@@ -62,24 +56,7 @@ func (v *finishSumValue[N]) measureOverflow(
 	value N,
 	lazy lazyFilteredAttributes,
 ) bool {
-	// Overflow promotion is one-way. Keep subsequent overflow measurements on
-	// the ordinary lock-free measurement path.
-	if v.overflow.Load() {
-		return v.measure(ctx, value, lazy)
-	}
-
-	v.overflowMu.Lock()
-	if v.overflow.Load() {
-		v.overflowMu.Unlock()
-		return v.measure(ctx, value, lazy)
-	}
-	measurement, ok := v.lifecycle.AcquireMeasurement()
-	if ok {
-		// Admission cancels any pending finish before the point becomes shared
-		// overflow. Finish cannot pass its overflow check while this lock is held.
-		v.overflow.Store(true)
-	}
-	v.overflowMu.Unlock()
+	measurement, ok := v.lifecycle.AcquireSharedMeasurement()
 	if !ok {
 		return false
 	}
@@ -103,14 +80,6 @@ func (v *finishSumValue[N]) measureAcquired(
 }
 
 func (v *finishSumValue[N]) finish(t time.Time) {
-	if v.overflow.Load() {
-		return
-	}
-	v.overflowMu.Lock()
-	defer v.overflowMu.Unlock()
-	if v.overflow.Load() {
-		return
-	}
 	v.lifecycle.Finish(t)
 }
 
@@ -200,10 +169,14 @@ func (s *finishSum[N]) measure(
 			attrs attribute.Set,
 			overflow bool,
 		) *finishSumValue[N] {
-			point := newFinishSumValue(attrs, overflow, s.reservoir)
+			point := newFinishSumValue(attrs, s.reservoir)
 			// The point has not been published, so its new lifecycle cannot be
 			// retired and this initial measurement admission cannot fail.
-			initial, _ = point.lifecycle.AcquireMeasurement()
+			if overflow {
+				initial, _ = point.lifecycle.AcquireSharedMeasurement()
+			} else {
+				initial, _ = point.lifecycle.AcquireMeasurement()
+			}
 			return point
 		})
 		if !loaded {

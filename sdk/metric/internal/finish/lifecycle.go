@@ -14,6 +14,7 @@ type lifecycleState uint32
 
 const (
 	lifecycleActive lifecycleState = iota
+	lifecycleShared
 	lifecycleFinishPending
 	lifecycleRetired
 	lifecycleCollecting
@@ -26,10 +27,11 @@ const (
 // acquisition and an emitted collection must each be completed exactly once.
 // A Lifecycle must not be copied after first use.
 //
-// The valid transitions are active to finish-pending on Finish, finish-pending
-// to active on measurement, active or finish-pending to collecting on
-// collection, and collecting to active or retired when collection completes.
-// Retired is terminal.
+// The valid transitions are active to finish-pending on Finish, active or
+// finish-pending to shared on a shared measurement, finish-pending to active on
+// an ordinary measurement, any non-retired state to collecting on collection,
+// and collecting to its prior state or retired when collection completes.
+// Shared lifetimes ignore Finish. Retired is terminal.
 type Lifecycle struct {
 	control sync.Mutex
 	state   atomic.Uint32
@@ -57,6 +59,7 @@ func (m Measurement) Release() {
 type Collection struct {
 	lifecycle *Lifecycle
 	time      time.Time
+	restore   lifecycleState
 	emit      bool
 	retire    bool
 }
@@ -79,7 +82,7 @@ func (c Collection) ShouldRetire() bool {
 // Complete ends the exclusive collection phase. It must be called exactly once
 // for a Collection whose ShouldEmit method reports true.
 func (c Collection) Complete() {
-	state := lifecycleActive
+	state := c.restore
 	if c.retire {
 		state = lifecycleRetired
 	}
@@ -98,12 +101,51 @@ func (l *Lifecycle) AcquireMeasurement() (Measurement, bool) {
 		// attempt or closes admission before the attempt can update the aggregate.
 		l.writers.Add(1)
 		switch lifecycleState(l.state.Load()) {
-		case lifecycleActive:
+		case lifecycleActive, lifecycleShared:
 			return Measurement{lifecycle: l}, true
 		case lifecycleFinishPending:
 			if l.state.CompareAndSwap(
 				uint32(lifecycleFinishPending),
 				uint32(lifecycleActive),
+			) {
+				return Measurement{lifecycle: l}, true
+			}
+			l.releaseMeasurement()
+		case lifecycleCollecting:
+			l.releaseMeasurement()
+			l.waitForCollection()
+		case lifecycleRetired:
+			l.releaseMeasurement()
+			return Measurement{}, false
+		}
+	}
+}
+
+// AcquireSharedMeasurement reserves this series lifetime for a measurement and
+// atomically makes the lifetime shared. A shared lifetime cannot be finished.
+// It waits for an in-progress collection and returns false only if the lifetime
+// is retired. A successful acquisition must be paired with exactly one call to
+// Measurement.Release after the aggregate and exemplars are updated.
+func (l *Lifecycle) AcquireSharedMeasurement() (Measurement, bool) {
+	for {
+		// Increment before checking state so a collection either waits for this
+		// attempt or closes admission before the attempt can update the aggregate.
+		l.writers.Add(1)
+		switch lifecycleState(l.state.Load()) {
+		case lifecycleShared:
+			return Measurement{lifecycle: l}, true
+		case lifecycleActive:
+			if l.state.CompareAndSwap(
+				uint32(lifecycleActive),
+				uint32(lifecycleShared),
+			) {
+				return Measurement{lifecycle: l}, true
+			}
+			l.releaseMeasurement()
+		case lifecycleFinishPending:
+			if l.state.CompareAndSwap(
+				uint32(lifecycleFinishPending),
+				uint32(lifecycleShared),
 			) {
 				return Measurement{lifecycle: l}, true
 			}
@@ -132,24 +174,29 @@ func (l *Lifecycle) releaseMeasurement() {
 }
 
 // Finish marks an active series lifetime to be retired by its next collection
-// at the supplied time. It returns false if the lifetime is already pending or
-// retired. A measurement admitted after Finish reactivates the lifetime.
+// at the supplied time. It returns false if the lifetime is already pending,
+// shared, collecting, or retired. A measurement admitted after Finish
+// reactivates the lifetime.
 func (l *Lifecycle) Finish(at time.Time) bool {
 	l.control.Lock()
 	defer l.control.Unlock()
-	if lifecycleState(l.state.Load()) != lifecycleActive {
+	if !l.state.CompareAndSwap(
+		uint32(lifecycleActive),
+		uint32(lifecycleFinishPending),
+	) {
 		return false
 	}
+	// Collection also holds control, so it cannot observe finish-pending before
+	// its timestamp is available. A concurrent measurement may reactivate or
+	// share the lifetime; in that case the timestamp is intentionally ignored.
 	l.finished = at
-	// The control lock serializes this transition with collection and retirement.
-	// Measurements that observe this store cancel it before updating the aggregate.
-	l.state.Store(uint32(lifecycleFinishPending))
 	return true
 }
 
 // BeginCumulativeCollection closes measurement admission and waits for admitted
-// measurements to complete. An active lifetime remains active when the returned
-// Collection is completed; a finish-pending lifetime is retired.
+// measurements to complete. An active or shared lifetime returns to its prior
+// state when the returned Collection is completed; a finish-pending lifetime is
+// retired.
 func (l *Lifecycle) BeginCumulativeCollection(at time.Time) Collection {
 	l.control.Lock()
 	collection := l.beginCollection(at)
@@ -187,11 +234,12 @@ func (l *Lifecycle) beginCollection(at time.Time) Collection {
 		return Collection{
 			lifecycle: l,
 			time:      l.finished,
+			restore:   state,
 			emit:      true,
 			retire:    true,
 		}
 	}
-	return Collection{lifecycle: l, time: at, emit: true}
+	return Collection{lifecycle: l, time: at, restore: state, emit: true}
 }
 
 // Retire permanently closes the series lifetime. It waits for admitted
