@@ -602,6 +602,28 @@ func TestExpoHistogramOverflow(t *testing.T) {
 	}
 }
 
+func TestExpoHistogramOverflowAttributeBeforeLimit(t *testing.T) {
+	newRes := func(attribute.Set) FilteredExemplarReservoir[int64] {
+		return DropReservoir[int64](attribute.NewSet())
+	}
+	e := newExponentialHistogram(160, 20, false, false, 0, newRes)
+
+	attrs := []attribute.Set{
+		overflowSet,
+		attribute.NewSet(attribute.String("key", "a")),
+		attribute.NewSet(attribute.String("key", "b")),
+	}
+	for i, attr := range attrs {
+		e.measure(t.Context(), int64(i+1), newLazyFilteredAttributes(attr, nil))
+	}
+
+	e.valuesMu.Lock()
+	defer e.valuesMu.Unlock()
+	if len(e.values) != 3 {
+		t.Fatalf("expected 3 distinct streams, got %d", len(e.values))
+	}
+}
+
 func BenchmarkPrepend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		agg := newExpoHistogramDataPoint[float64](alice, 1024, 20, false, false)
