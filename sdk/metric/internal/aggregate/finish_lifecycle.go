@@ -28,14 +28,14 @@ const (
 	finishStateMask  = ^finishWriterMask
 )
 
-type finishCollectionMode uint8
+type collectionMode uint8
 
 const (
-	finishCollectionKeepActive finishCollectionMode = iota
-	finishCollectionRetireActive
+	collectionKeepActive collectionMode = iota
+	collectionRetireActive
 )
 
-type finishCollection struct {
+type collectionDecision struct {
 	time   time.Time
 	emit   bool
 	retire bool
@@ -144,11 +144,11 @@ func (l *finishLifecycle) finish(at time.Time) bool {
 
 func (l *finishLifecycle) startCollection(
 	at time.Time,
-	mode finishCollectionMode,
-) finishCollection {
+	mode collectionMode,
+) collectionDecision {
 	state := finishStateOf(l.state.Load())
 	if state == lifecycleRetired {
-		return finishCollection{}
+		return collectionDecision{}
 	}
 	state = finishStateOf(l.state.Or(finishStateMask))
 	for l.state.Load()&finishWriterMask != 0 {
@@ -156,18 +156,18 @@ func (l *finishLifecycle) startCollection(
 	}
 
 	if state == lifecycleFinishPending {
-		return finishCollection{time: l.finished, emit: true, retire: true}
+		return collectionDecision{time: l.finished, emit: true, retire: true}
 	}
-	return finishCollection{
+	return collectionDecision{
 		time:   at,
 		emit:   true,
-		retire: mode == finishCollectionRetireActive,
+		retire: mode == collectionRetireActive,
 	}
 }
 
-func (l *finishLifecycle) completeCollection(collection finishCollection) {
+func (l *finishLifecycle) completeCollection(decision collectionDecision) {
 	state := lifecycleActive
-	if collection.retire {
+	if decision.retire {
 		state = lifecycleRetired
 	}
 	l.finished = time.Time{}
