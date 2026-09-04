@@ -123,7 +123,9 @@ measurement:
 }
 
 func (l *finishLifecycle) releaseMeasurement() {
-	// Adding the maximum uint64 value is equivalent to subtracting one.
+	// atomic.Uint64 has no subtraction operation. Adding MaxUint64 decrements
+	// the packed writer count modulo 2^64. A matching acquisition guarantees
+	// the count is nonzero, so the lifecycle bits are unaffected.
 	l.state.Add(^uint64(0))
 }
 
