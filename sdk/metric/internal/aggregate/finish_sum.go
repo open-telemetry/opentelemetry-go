@@ -10,13 +10,12 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/internal/finish"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 type finishSumValue[N int64 | float64] struct {
-	mu sync.Mutex
-
-	lifecycle     finishLifecycle
+	lifecycle     finish.Lifecycle
 	value         atomicCounter[N]
 	attrs         attribute.Set
 	start         time.Time
@@ -45,65 +44,58 @@ func (v *finishSumValue[N]) measure(
 	value N,
 	lazy lazyFilteredAttributes,
 ) bool {
-	if !v.lifecycle.acquireMeasurement() {
+	measurement, ok := v.lifecycle.AcquireMeasurement()
+	if !ok {
 		return false
 	}
 	v.value.add(value)
 	if v.dropExemplars {
-		v.lifecycle.releaseMeasurement()
+		measurement.Release()
 		return true
 	}
-	defer v.lifecycle.releaseMeasurement()
+	defer measurement.Release()
 	v.reservoir.Offer(ctx, value, lazy)
 	return true
 }
 
 func (v *finishSumValue[N]) finish(t time.Time) {
-	v.mu.Lock()
-	defer v.mu.Unlock()
 	if !v.overflow {
-		v.lifecycle.finish(t)
+		v.lifecycle.Finish(t)
 	}
 }
 
 func (v *finishSumValue[N]) collectCumulative(
 	t time.Time,
 ) (metricdata.DataPoint[N], bool, bool) {
-	v.mu.Lock()
-	defer v.mu.Unlock()
-	return v.collect(v.lifecycle.startCumulativeCollection(t))
+	return v.collect(v.lifecycle.BeginCumulativeCollection(t))
 }
 
 func (v *finishSumValue[N]) collectDelta(
 	t time.Time,
 ) (metricdata.DataPoint[N], bool, bool) {
-	v.mu.Lock()
-	defer v.mu.Unlock()
-	return v.collect(v.lifecycle.startDeltaCollection(t))
+	return v.collect(v.lifecycle.BeginDeltaCollection(t))
 }
 
 func (v *finishSumValue[N]) collect(
-	decision collectionDecision,
+	collection finish.Collection,
 ) (metricdata.DataPoint[N], bool, bool) {
-	if !decision.emit {
+	if !collection.ShouldEmit() {
 		return metricdata.DataPoint[N]{}, false, false
 	}
-	defer v.lifecycle.completeCollection(decision)
+	defer collection.Complete()
 
 	dp := metricdata.DataPoint[N]{
 		Attributes: v.attrs,
 		StartTime:  v.start,
-		Time:       decision.time,
+		Time:       collection.Time(),
 		Value:      v.value.load(),
 	}
 	collectExemplars(&dp.Exemplars, v.reservoir.Collect)
-	return dp, true, decision.retire
+	return dp, true, collection.ShouldRetire()
 }
 
 func (v *finishSumValue[N]) shutdown() {
-	v.mu.Lock()
-	defer v.mu.Unlock()
-	v.lifecycle.retire()
+	v.lifecycle.Retire()
 }
 
 // FinishSum contains the operations of a finish-aware Sum aggregation.
