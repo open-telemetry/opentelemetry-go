@@ -650,7 +650,9 @@ func TestSubNormal(t *testing.T) {
 		maxSize: 4,
 	}
 	want.minMax.Update(math.SmallestNonzeroFloat64)
-	want.sum.add(3 * math.SmallestNonzeroFloat64)
+	want.sum.add(math.SmallestNonzeroFloat64)
+	want.sum.add(math.SmallestNonzeroFloat64)
+	want.sum.add(math.SmallestNonzeroFloat64)
 	want.scale.Store(20)
 	want.posBuckets = *newBucket(-1126170625, []uint64{3})
 
