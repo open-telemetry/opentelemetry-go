@@ -66,13 +66,25 @@ func (v *finishSumValue[N]) finish(t time.Time) {
 	}
 }
 
-func (v *finishSumValue[N]) collect(
+func (v *finishSumValue[N]) collectCumulative(
 	t time.Time,
-	mode collectionMode,
 ) (metricdata.DataPoint[N], bool, bool) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	decision := v.lifecycle.startCollection(t, mode)
+	return v.collect(v.lifecycle.startCumulativeCollection(t))
+}
+
+func (v *finishSumValue[N]) collectDelta(
+	t time.Time,
+) (metricdata.DataPoint[N], bool, bool) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	return v.collect(v.lifecycle.startDeltaCollection(t))
+}
+
+func (v *finishSumValue[N]) collect(
+	decision collectionDecision,
+) (metricdata.DataPoint[N], bool, bool) {
 	if !decision.emit {
 		return metricdata.DataPoint[N]{}, false, false
 	}
@@ -187,14 +199,16 @@ func (s *finishSum[N]) collect(
 	sData.Temporality = s.temporality
 	sData.IsMonotonic = s.monotonic
 	points := reset(sData.DataPoints, 0, s.values.Len())
-	mode := collectionKeepActive
-	if s.temporality == metricdata.DeltaTemporality {
-		mode = collectionRetireActive
-	}
 
 	s.values.Range(func(key, raw any) bool {
 		point := raw.(*finishSumValue[N])
-		dp, emit, retire := point.collect(t, mode)
+		var dp metricdata.DataPoint[N]
+		var emit, retire bool
+		if s.temporality == metricdata.DeltaTemporality {
+			dp, emit, retire = point.collectDelta(t)
+		} else {
+			dp, emit, retire = point.collectCumulative(t)
+		}
 		if !emit {
 			return true
 		}
