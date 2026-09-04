@@ -37,6 +37,35 @@ func TestLifecycle(t *testing.T) {
 		assert.False(t, ok)
 	})
 
+	t.Run("SharedCannotFinish", func(t *testing.T) {
+		var lifecycle Lifecycle
+		measurement, ok := lifecycle.AcquireSharedMeasurement()
+		require.True(t, ok)
+		measurement.Release()
+
+		assert.False(t, lifecycle.Finish(y2kPlus(1)))
+		collection := lifecycle.BeginCumulativeCollection(y2kPlus(2))
+		assert.Equal(t, y2kPlus(2), collection.Time())
+		assert.True(t, collection.ShouldEmit())
+		assert.False(t, collection.ShouldRetire())
+		collection.Complete()
+		assert.False(t, lifecycle.Finish(y2kPlus(3)))
+	})
+
+	t.Run("SharedCancelsPendingFinish", func(t *testing.T) {
+		var lifecycle Lifecycle
+		require.True(t, lifecycle.Finish(y2kPlus(1)))
+
+		measurement, ok := lifecycle.AcquireSharedMeasurement()
+		require.True(t, ok)
+		measurement.Release()
+		collection := lifecycle.BeginCumulativeCollection(y2kPlus(2))
+		assert.Equal(t, y2kPlus(2), collection.Time())
+		assert.True(t, collection.ShouldEmit())
+		assert.False(t, collection.ShouldRetire())
+		collection.Complete()
+	})
+
 	t.Run("Reactivate", func(t *testing.T) {
 		var lifecycle Lifecycle
 		require.True(t, lifecycle.Finish(y2kPlus(1)))
@@ -80,6 +109,47 @@ func TestLifecycle(t *testing.T) {
 		assert.False(t, collection.ShouldEmit())
 		assert.False(t, collection.ShouldRetire())
 	})
+}
+
+func TestLifecycleSharedMeasurementPrecedesBlockedFinish(t *testing.T) {
+	previous := runtime.GOMAXPROCS(1)
+	defer runtime.GOMAXPROCS(previous)
+
+	var lifecycle Lifecycle
+	lifecycle.control.Lock()
+	locked := true
+	defer func() {
+		if locked {
+			lifecycle.control.Unlock()
+		}
+	}()
+
+	started := make(chan struct{})
+	finished := make(chan bool, 1)
+	go func() {
+		close(started)
+		finished <- lifecycle.Finish(y2k)
+	}()
+	<-started
+	// With one P, Finish runs until it blocks on control.
+	runtime.Gosched()
+	select {
+	case <-finished:
+		t.Fatal("Finish did not block")
+	default:
+	}
+
+	measurement, ok := lifecycle.AcquireSharedMeasurement()
+	require.True(t, ok)
+	measurement.Release()
+	lifecycle.control.Unlock()
+	locked = false
+	assert.False(t, <-finished)
+
+	collection := lifecycle.BeginCumulativeCollection(y2kPlus(1))
+	assert.True(t, collection.ShouldEmit())
+	assert.False(t, collection.ShouldRetire())
+	collection.Complete()
 }
 
 func TestLifecycleMeasurementWaitsForCollection(t *testing.T) {

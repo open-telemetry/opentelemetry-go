@@ -4,7 +4,6 @@
 package aggregate
 
 import (
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -178,8 +177,10 @@ func TestFinishSumOverflowProvenance(t *testing.T) {
 		agg.Measure(t.Context(), 1, overflowSet)
 		agg.Measure(t.Context(), 2, alice)
 		agg.Measure(t.Context(), 3, bob)
-		agg.Measure(t.Context(), 4, carol) // Routed to the marker series.
 		agg.Finish(overflowSet.Equivalent(), y2k)
+		// Routing this measurement to the marker series promotes it to shared
+		// overflow and cancels its pending finish.
+		agg.Measure(t.Context(), 4, carol)
 
 		points := finishSumPoints(t, agg.ComputeAggregation)
 		require.Len(t, points, 3)
@@ -188,55 +189,8 @@ func TestFinishSumOverflowProvenance(t *testing.T) {
 	})
 }
 
-func TestFinishSumOverflowPromotionSerializesFinish(t *testing.T) {
-	previous := runtime.GOMAXPROCS(1)
-	defer runtime.GOMAXPROCS(previous)
-
-	point := newFinishSumValue(overflowSet, false, dropExemplars[int64])
-	point.overflowMu.Lock()
-	locked := true
-	defer func() {
-		if locked {
-			point.overflowMu.Unlock()
-		}
-	}()
-	measurement, ok := point.lifecycle.AcquireMeasurement()
-	require.True(t, ok)
-
-	started := make(chan struct{})
-	finished := make(chan struct{})
-	go func() {
-		close(started)
-		point.finish(y2k)
-		close(finished)
-	}()
-	<-started
-	// With one P, the finish goroutine runs until it blocks on overflowMu.
-	runtime.Gosched()
-	select {
-	case <-finished:
-		t.Fatal("finish was not serialized with overflow promotion")
-	default:
-	}
-
-	// Complete the measurement and promotion while holding the synchronization
-	// point that protects the false-to-true transition.
-	point.value.add(1)
-	point.overflow.Store(true)
-	measurement.Release()
-	point.overflowMu.Unlock()
-	locked = false
-	<-finished
-
-	collection := point.lifecycle.BeginCumulativeCollection(y2kPlus(1))
-	assert.True(t, collection.ShouldEmit())
-	assert.False(t, collection.ShouldRetire())
-	assert.Equal(t, int64(1), point.value.load())
-	collection.Complete()
-}
-
 func TestFinishSumInitialMeasurementAdmission(t *testing.T) {
-	point := newFinishSumValue(alice, false, dropExemplars[int64])
+	point := newFinishSumValue(alice, dropExemplars[int64])
 	measurement, ok := point.lifecycle.AcquireMeasurement()
 	require.True(t, ok)
 
@@ -410,6 +364,39 @@ func BenchmarkFinishSumMeasure(b *testing.B) {
 			})
 		})
 	}
+}
+
+func BenchmarkFinishSumOverflowMeasurement(b *testing.B) {
+	lazy := newLazyFilteredAttributes(overflowSet, nil)
+	b.Run("state=promotion", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			point := newFinishSumValue(overflowSet, dropExemplars[int64])
+			measurement, ok := point.lifecycle.AcquireMeasurement()
+			if !ok {
+				b.Fatal("initial measurement was not admitted")
+			}
+			measurement.Release()
+			if !point.measureOverflow(b.Context(), 1, lazy) {
+				b.Fatal("overflow measurement was not admitted")
+			}
+		}
+	})
+	b.Run("state=promoted", func(b *testing.B) {
+		point := newFinishSumValue(overflowSet, dropExemplars[int64])
+		measurement, ok := point.lifecycle.AcquireSharedMeasurement()
+		if !ok {
+			b.Fatal("shared measurement was not admitted")
+		}
+		measurement.Release()
+		b.ReportAllocs()
+		b.ResetTimer()
+		for b.Loop() {
+			if !point.measureOverflow(b.Context(), 1, lazy) {
+				b.Fatal("overflow measurement was not admitted")
+			}
+		}
+	})
 }
 
 func finishSumPoints(
