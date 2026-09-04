@@ -183,40 +183,53 @@ type hotColdWaitGroup struct {
 	endedCounts [2]atomic.Uint64
 }
 
+// hotIdx represents an index (0 or 1) to the currently active "hot" buffer
+// where concurrent writes are accepted.
+//
+// coldIdx represents an index (0 or 1) to the "cold" buffer where collection
+// reads and resets occur after a swap.
+//
+// These distinct types enforce at compile time that hot (write) and cold (read)
+// indices are not accidentally interchanged across call boundaries.
+type (
+	hotIdx  uint64
+	coldIdx uint64
+)
+
 // start returns the hot index that the writer should write to. The returned
 // hot index is 0 or 1. The caller must call done(hot index) after it finishes
 // its operation. start() is safe to call concurrently with other methods.
-func (l *hotColdWaitGroup) start() uint64 {
+func (l *hotColdWaitGroup) start() hotIdx {
 	// We increment h.startedCountAndHotIdx so that the counter in the lower
 	// 63 bits gets incremented. At the same time, we get the new value
 	// back, which we can use to return the currently-hot index.
-	return l.startedCountAndHotIdx.Add(1) >> 63
+	return hotIdx(l.startedCountAndHotIdx.Add(1) >> 63)
 }
 
 // done signals to the reader that an operation has fully completed.
 // done is safe to call concurrently.
-func (l *hotColdWaitGroup) done(hotIdx uint64) {
+func (l *hotColdWaitGroup) done(hotIdx hotIdx) {
 	l.endedCounts[hotIdx].Add(1)
 }
 
 // swapHotAndWait swaps the hot bit, waits for all start() calls to be done(),
 // and then returns the now-cold index for the reader to read from. The
 // returned index is 0 or 1. swapHotAndWait must not be called concurrently.
-func (l *hotColdWaitGroup) swapHotAndWait() uint64 {
+func (l *hotColdWaitGroup) swapHotAndWait() coldIdx {
 	n := l.startedCountAndHotIdx.Load()
-	coldIdx := (^n) >> 63
+	coldIdxVal := (^n) >> 63
 	// Swap the hot and cold index while resetting the started measurements
 	// count to zero.
-	n = l.startedCountAndHotIdx.Swap((coldIdx << 63))
-	hotIdx := n >> 63
+	n = l.startedCountAndHotIdx.Swap((coldIdxVal << 63))
+	hotIdxVal := n >> 63
 	startedCount := n & ((1 << 63) - 1)
 	// Wait for all measurements to the previously-hot map to finish.
-	for startedCount != l.endedCounts[hotIdx].Load() {
+	for startedCount != l.endedCounts[hotIdxVal].Load() {
 		runtime.Gosched() // Let measurements complete.
 	}
 	// reset the number of ended operations
-	l.endedCounts[hotIdx].Store(0)
-	return hotIdx
+	l.endedCounts[hotIdxVal].Store(0)
+	return coldIdx(hotIdxVal)
 }
 
 // limitedSyncMap is a sync.Map which enforces the aggregation limit on
@@ -281,4 +294,52 @@ func (m *limitedSyncMap[V]) Len() int {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
 	return m.len
+}
+
+// hotColdMap manages two [limitedSyncMap] instances for lockless concurrent
+// writes and hot/cold swapping during collection.
+//
+// Writes are performed without locking via [hotColdMap.LoadOrStoreAttr] to the
+// currently hot map index returned by [hotColdWaitGroup.start]. Collection is
+// performed by calling [hotColdWaitGroup.swapHotAndWait] to atomically swap
+// the hot and cold maps and wait for in-flight writes to the cold map to
+// complete. The caller can then read the cold map via [hotColdMap.Range] and
+// must call [hotColdMap.Clear] on the cold index so that unused attribute sets
+// do not report in subsequent collection cycles and the cardinality limit
+// budget is reset.
+//
+// swapHotAndWait must not be called concurrently.
+type hotColdMap[V any] struct {
+	hotColdWaitGroup
+	hotColdValMap [2]limitedSyncMap[V]
+}
+
+func (m *hotColdMap[V]) init(limit int) {
+	m.hotColdValMap[0].aggLimit = limit
+	m.hotColdValMap[1].aggLimit = limit
+}
+
+func (m *hotColdMap[V]) hot(i hotIdx) *limitedSyncMap[V] {
+	return &m.hotColdValMap[i]
+}
+
+// LoadOrStoreAttr returns the existing value for lazy in the hot map at hotIdx,
+// or constructs and stores a new value using newValue if it does not exist.
+func (m *hotColdMap[V]) LoadOrStoreAttr(hotIdx hotIdx, lazy lazyFilteredAttributes, newValue func(attribute.Set) V) V {
+	return m.hotColdValMap[hotIdx].LoadOrStoreAttr(lazy, newValue)
+}
+
+// Len returns the length of the specified map.
+func (m *hotColdMap[V]) Len(readIdx coldIdx) int {
+	return m.hotColdValMap[readIdx].Len()
+}
+
+// Range calls f sequentially for each key and value present in the map at readIdx.
+func (m *hotColdMap[V]) Range(readIdx coldIdx, f func(key, value any) bool) {
+	m.hotColdValMap[readIdx].Range(f)
+}
+
+// Clear clears the map at readIdx.
+func (m *hotColdMap[V]) Clear(readIdx coldIdx) {
+	m.hotColdValMap[readIdx].Clear()
 }
