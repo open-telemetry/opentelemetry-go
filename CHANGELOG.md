@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental `ProbabilitySampler` in `go.opentelemetry.io/otel/sdk/trace/x` that conforms to the [OpenTelemetry specification's threshold-based sampling algorithm](https://opentelemetry.io/docs/specs/otel/trace/sdk/#probabilitysampler). (#8123)
 - Add experimental `*Binder` extension interfaces in `go.opentelemetry.io/otel/metric/x` for instruments that support binding attributes ahead of time. (#8760)
 - Add the experimental `Finisher` synchronous metric instrument extension interface to `go.opentelemetry.io/otel/metric/x`. (#8906)
+- Add an internal finish-aware Sum aggregation to `go.opentelemetry.io/otel/sdk/metric`. (#8925)
 
 ### Fixed
 
