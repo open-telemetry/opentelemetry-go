@@ -73,7 +73,7 @@ func TestFinishLifecycleCollectionWaitsForMeasurement(t *testing.T) {
 	go func() {
 		collected <- lifecycle.startCollection(y2k, finishCollectionKeepActive)
 	}()
-	for finishStateOf(lifecycle.state.Load()) != finishCollecting {
+	for finishStateOf(lifecycle.state.Load()) != lifecycleCollecting {
 		runtime.Gosched()
 	}
 	select {
@@ -97,7 +97,7 @@ func TestFinishLifecycleRetireWaitsForMeasurement(t *testing.T) {
 		lifecycle.retire()
 		close(retired)
 	}()
-	for finishStateOf(lifecycle.state.Load()) != finishCollecting {
+	for finishStateOf(lifecycle.state.Load()) != lifecycleCollecting {
 		runtime.Gosched()
 	}
 	select {
