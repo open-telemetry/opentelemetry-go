@@ -188,7 +188,9 @@ func TestFinishSumOverflowProvenance(t *testing.T) {
 }
 
 func TestFinishSumInitialMeasurementAdmission(t *testing.T) {
-	point, measurement := newFinishSumValue(alice, false, dropExemplars[int64])
+	point := newFinishSumValue(alice, false, dropExemplars[int64])
+	measurement, ok := point.lifecycle.AcquireMeasurement()
+	require.True(t, ok)
 
 	type collectionResult struct {
 		point metricdata.DataPoint[int64]
