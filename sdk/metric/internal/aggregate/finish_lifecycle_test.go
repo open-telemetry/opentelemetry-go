@@ -14,8 +14,8 @@ import (
 func TestFinishLifecycle(t *testing.T) {
 	t.Run("FinishIsIdempotent", func(t *testing.T) {
 		var lifecycle finishLifecycle
-		require.True(t, lifecycle.startMeasurement())
-		lifecycle.finishMeasurement()
+		require.True(t, lifecycle.acquireMeasurement())
+		lifecycle.releaseMeasurement()
 		assert.True(t, lifecycle.finish(y2kPlus(1)))
 		assert.False(t, lifecycle.finish(y2kPlus(2)))
 
@@ -24,22 +24,22 @@ func TestFinishLifecycle(t *testing.T) {
 		assert.True(t, collection.emit)
 		assert.True(t, collection.retire)
 		lifecycle.completeCollection(collection)
-		assert.False(t, lifecycle.startMeasurement())
+		assert.False(t, lifecycle.acquireMeasurement())
 	})
 
 	t.Run("Reactivate", func(t *testing.T) {
 		var lifecycle finishLifecycle
 		require.True(t, lifecycle.finish(y2kPlus(1)))
 
-		require.True(t, lifecycle.startMeasurement())
-		lifecycle.finishMeasurement()
+		require.True(t, lifecycle.acquireMeasurement())
+		lifecycle.releaseMeasurement()
 		collection := lifecycle.startCollection(y2kPlus(2), finishCollectionKeepActive)
 		assert.Equal(t, y2kPlus(2), collection.time)
 		assert.True(t, collection.emit)
 		assert.False(t, collection.retire)
 		lifecycle.completeCollection(collection)
-		require.True(t, lifecycle.startMeasurement())
-		lifecycle.finishMeasurement()
+		require.True(t, lifecycle.acquireMeasurement())
+		lifecycle.releaseMeasurement()
 	})
 
 	t.Run("DeltaCollectionRetiresActive", func(t *testing.T) {
@@ -49,7 +49,7 @@ func TestFinishLifecycle(t *testing.T) {
 		assert.True(t, collection.emit)
 		assert.True(t, collection.retire)
 		lifecycle.completeCollection(collection)
-		assert.False(t, lifecycle.startMeasurement())
+		assert.False(t, lifecycle.acquireMeasurement())
 	})
 
 	t.Run("RetiredIsTerminal", func(t *testing.T) {
@@ -58,7 +58,7 @@ func TestFinishLifecycle(t *testing.T) {
 		lifecycle.retire()
 
 		assert.False(t, lifecycle.finish(y2kPlus(1)))
-		assert.False(t, lifecycle.startMeasurement())
+		assert.False(t, lifecycle.acquireMeasurement())
 		collection := lifecycle.startCollection(y2kPlus(2), finishCollectionKeepActive)
 		assert.False(t, collection.emit)
 		assert.False(t, collection.retire)
@@ -67,7 +67,7 @@ func TestFinishLifecycle(t *testing.T) {
 
 func TestFinishLifecycleCollectionWaitsForMeasurement(t *testing.T) {
 	var lifecycle finishLifecycle
-	require.True(t, lifecycle.startMeasurement())
+	require.True(t, lifecycle.acquireMeasurement())
 
 	collected := make(chan finishCollection, 1)
 	go func() {
@@ -82,7 +82,7 @@ func TestFinishLifecycleCollectionWaitsForMeasurement(t *testing.T) {
 	default:
 	}
 
-	lifecycle.finishMeasurement()
+	lifecycle.releaseMeasurement()
 	collection := <-collected
 	assert.True(t, collection.emit)
 	lifecycle.completeCollection(collection)
@@ -90,7 +90,7 @@ func TestFinishLifecycleCollectionWaitsForMeasurement(t *testing.T) {
 
 func TestFinishLifecycleRetireWaitsForMeasurement(t *testing.T) {
 	var lifecycle finishLifecycle
-	require.True(t, lifecycle.startMeasurement())
+	require.True(t, lifecycle.acquireMeasurement())
 
 	retired := make(chan struct{})
 	go func() {
@@ -106,7 +106,7 @@ func TestFinishLifecycleRetireWaitsForMeasurement(t *testing.T) {
 	default:
 	}
 
-	lifecycle.finishMeasurement()
+	lifecycle.releaseMeasurement()
 	<-retired
-	assert.False(t, lifecycle.startMeasurement())
+	assert.False(t, lifecycle.acquireMeasurement())
 }
