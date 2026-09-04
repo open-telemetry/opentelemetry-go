@@ -155,8 +155,40 @@ func TestFinishSumCardinality(t *testing.T) {
 	require.Len(t, finishSumPoints(t, agg.ComputeAggregation), 3)
 }
 
+func TestFinishSumOverflowProvenance(t *testing.T) {
+	t.Run("UnlimitedMarkerSeries", func(t *testing.T) {
+		agg := Builder[int64]{ReservoirFunc: dropExemplars[int64]}.FinishSum(true)
+		agg.Measure(t.Context(), 1, overflowSet)
+		agg.Finish(overflowSet.Equivalent(), y2k)
+
+		points := finishSumPoints(t, agg.ComputeAggregation)
+		require.Len(t, points, 1)
+		assert.Equal(t, int64(1), points[0].Value)
+		assert.Empty(t, finishSumPoints(t, agg.ComputeAggregation))
+	})
+
+	t.Run("MarkerSeriesBecomesOverflow", func(t *testing.T) {
+		agg := Builder[int64]{
+			AggregationLimit: 3,
+			ReservoirFunc:    dropExemplars[int64],
+		}.FinishSum(true)
+		carol := attribute.NewSet(userCarol)
+
+		agg.Measure(t.Context(), 1, overflowSet)
+		agg.Measure(t.Context(), 2, alice)
+		agg.Measure(t.Context(), 3, bob)
+		agg.Measure(t.Context(), 4, carol) // Routed to the marker series.
+		agg.Finish(overflowSet.Equivalent(), y2k)
+
+		points := finishSumPoints(t, agg.ComputeAggregation)
+		require.Len(t, points, 3)
+		assert.Equal(t, int64(5), pointWithAttrs(t, points, overflowSet).Value)
+		require.Len(t, finishSumPoints(t, agg.ComputeAggregation), 3)
+	})
+}
+
 func TestFinishSumInitialMeasurementAdmission(t *testing.T) {
-	point, measurement := newFinishSumValue(alice, dropExemplars[int64])
+	point, measurement := newFinishSumValue(alice, false, dropExemplars[int64])
 
 	type collectionResult struct {
 		point metricdata.DataPoint[int64]
