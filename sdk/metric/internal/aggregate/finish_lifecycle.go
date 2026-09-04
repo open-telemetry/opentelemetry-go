@@ -19,6 +19,10 @@ const (
 )
 
 const (
+	// finishLifecycle.state packs the lifecycle state into the high two bits and
+	// the number of admitted measurements into the low 62 bits. Keeping both in
+	// one atomic value prevents collection from closing admission between a
+	// measurement's state check and its increment of the admitted count.
 	finishStateShift = 62
 	finishWriterMask = uint64(1<<finishStateShift) - 1
 	finishStateMask  = ^finishWriterMask
