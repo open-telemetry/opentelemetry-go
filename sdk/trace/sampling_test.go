@@ -319,3 +319,88 @@ func TestDescriptions(t *testing.T) {
 	assert.Equal(t, "TraceIDRatioBased{0}", TraceIDRatioBased(0).Description())
 	assert.Equal(t, "TraceIDRatioBased{0}", TraceIDRatioBased(-0.5).Description())
 }
+
+func BenchmarkTraceIDRatioBasedShouldSample(b *testing.B) {
+	traceIDSample, err := trace.TraceIDFromHex("00000000000000000000000000000001")
+	if err != nil {
+		b.Fatalf("trace ID: %v", err)
+	}
+	traceIDDrop, err := trace.TraceIDFromHex("0000000000000000ffffffffffffffff")
+	if err != nil {
+		b.Fatalf("trace ID: %v", err)
+	}
+	spanID, err := trace.SpanIDFromHex("00f067aa0ba902b7")
+	if err != nil {
+		b.Fatalf("span ID: %v", err)
+	}
+
+	tracestate, err := trace.ParseTraceState("vendor=value")
+	if err != nil {
+		b.Fatalf("trace state: %v", err)
+	}
+
+	parentWithTracestate := trace.ContextWithSpanContext(
+		b.Context(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceIDSample,
+			SpanID:     spanID,
+			TraceState: tracestate,
+		}),
+	)
+
+	cases := []struct {
+		name    string
+		sampler Sampler
+		params  SamplingParameters
+	}{
+		{
+			name:    "record and sample",
+			sampler: TraceIDRatioBased(0.5),
+			params: SamplingParameters{
+				ParentContext: b.Context(),
+				TraceID:       traceIDSample,
+			},
+		},
+		{
+			name:    "drop",
+			sampler: TraceIDRatioBased(0.5),
+			params: SamplingParameters{
+				ParentContext: b.Context(),
+				TraceID:       traceIDDrop,
+			},
+		},
+		{
+			name:    "record and sample with existing tracestate",
+			sampler: TraceIDRatioBased(0.5),
+			params: SamplingParameters{
+				ParentContext: parentWithTracestate,
+				TraceID:       traceIDSample,
+			},
+		},
+		{
+			name:    "fraction one fast path",
+			sampler: TraceIDRatioBased(1),
+			params: SamplingParameters{
+				ParentContext: b.Context(),
+				TraceID:       traceIDSample,
+			},
+		},
+		{
+			name:    "fraction zero fast path",
+			sampler: TraceIDRatioBased(0),
+			params: SamplingParameters{
+				ParentContext: b.Context(),
+				TraceID:       traceIDDrop,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				_ = tc.sampler.ShouldSample(tc.params)
+			}
+		})
+	}
+}
