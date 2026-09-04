@@ -15,10 +15,13 @@ import (
 )
 
 type finishSumValue[N int64 | float64] struct {
-	lifecycle     finish.Lifecycle
-	value         atomicCounter[N]
-	attrs         attribute.Set
-	start         time.Time
+	lifecycle finish.Lifecycle
+	value     atomicCounter[N]
+	attrs     attribute.Set
+	start     time.Time
+	// overflowMu serializes the one-way overflow promotion with Finish.
+	overflowMu sync.Mutex
+	// overflow remains atomic so promoted points use lock-free fast paths.
 	overflow      atomic.Bool
 	dropExemplars bool
 	reservoir     FilteredExemplarReservoir[N]
@@ -54,6 +57,36 @@ func (v *finishSumValue[N]) measure(
 	return true
 }
 
+func (v *finishSumValue[N]) measureOverflow(
+	ctx context.Context,
+	value N,
+	lazy lazyFilteredAttributes,
+) bool {
+	// Overflow promotion is one-way. Keep subsequent overflow measurements on
+	// the ordinary lock-free measurement path.
+	if v.overflow.Load() {
+		return v.measure(ctx, value, lazy)
+	}
+
+	v.overflowMu.Lock()
+	if v.overflow.Load() {
+		v.overflowMu.Unlock()
+		return v.measure(ctx, value, lazy)
+	}
+	measurement, ok := v.lifecycle.AcquireMeasurement()
+	if ok {
+		// Admission cancels any pending finish before the point becomes shared
+		// overflow. Finish cannot pass its overflow check while this lock is held.
+		v.overflow.Store(true)
+	}
+	v.overflowMu.Unlock()
+	if !ok {
+		return false
+	}
+	v.measureAcquired(ctx, value, lazy, measurement)
+	return true
+}
+
 func (v *finishSumValue[N]) measureAcquired(
 	ctx context.Context,
 	value N,
@@ -70,9 +103,15 @@ func (v *finishSumValue[N]) measureAcquired(
 }
 
 func (v *finishSumValue[N]) finish(t time.Time) {
-	if !v.overflow.Load() {
-		v.lifecycle.Finish(t)
+	if v.overflow.Load() {
+		return
 	}
+	v.overflowMu.Lock()
+	defer v.overflowMu.Unlock()
+	if v.overflow.Load() {
+		return
+	}
+	v.lifecycle.Finish(t)
 }
 
 func (v *finishSumValue[N]) collectCumulative(
@@ -167,15 +206,21 @@ func (s *finishSum[N]) measure(
 			initial, _ = point.lifecycle.AcquireMeasurement()
 			return point
 		})
-		if overflowed {
-			point.overflow.Store(true)
-		}
 		if !loaded {
 			point.measureAcquired(ctx, value, lazy, initial)
 			if s.stopped.Load() {
 				s.retireAndDelete(point)
 			}
 			return
+		}
+		if overflowed {
+			if point.measureOverflow(ctx, value, lazy) {
+				if s.stopped.Load() {
+					s.retireAndDelete(point)
+				}
+				return
+			}
+			continue
 		}
 		if point.measure(ctx, value, lazy) {
 			if s.stopped.Load() {
