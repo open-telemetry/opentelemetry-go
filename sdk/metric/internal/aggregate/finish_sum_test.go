@@ -4,6 +4,7 @@
 package aggregate
 
 import (
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -185,6 +186,53 @@ func TestFinishSumOverflowProvenance(t *testing.T) {
 		assert.Equal(t, int64(5), pointWithAttrs(t, points, overflowSet).Value)
 		require.Len(t, finishSumPoints(t, agg.ComputeAggregation), 3)
 	})
+}
+
+func TestFinishSumOverflowPromotionSerializesFinish(t *testing.T) {
+	previous := runtime.GOMAXPROCS(1)
+	defer runtime.GOMAXPROCS(previous)
+
+	point := newFinishSumValue(overflowSet, false, dropExemplars[int64])
+	point.overflowMu.Lock()
+	locked := true
+	defer func() {
+		if locked {
+			point.overflowMu.Unlock()
+		}
+	}()
+	measurement, ok := point.lifecycle.AcquireMeasurement()
+	require.True(t, ok)
+
+	started := make(chan struct{})
+	finished := make(chan struct{})
+	go func() {
+		close(started)
+		point.finish(y2k)
+		close(finished)
+	}()
+	<-started
+	// With one P, the finish goroutine runs until it blocks on overflowMu.
+	runtime.Gosched()
+	select {
+	case <-finished:
+		t.Fatal("finish was not serialized with overflow promotion")
+	default:
+	}
+
+	// Complete the measurement and promotion while holding the synchronization
+	// point that protects the false-to-true transition.
+	point.value.add(1)
+	point.overflow.Store(true)
+	measurement.Release()
+	point.overflowMu.Unlock()
+	locked = false
+	<-finished
+
+	collection := point.lifecycle.BeginCumulativeCollection(y2kPlus(1))
+	assert.True(t, collection.ShouldEmit())
+	assert.False(t, collection.ShouldRetire())
+	assert.Equal(t, int64(1), point.value.load())
+	collection.Complete()
 }
 
 func TestFinishSumInitialMeasurementAdmission(t *testing.T) {
