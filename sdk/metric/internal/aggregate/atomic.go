@@ -273,15 +273,15 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes, newValu
 // LoadOrStoreAttrReclaiming is equivalent to LoadOrStoreAttr, except that a
 // slot released after overflow was created can be reused for a new attribute
 // set. The shared overflow entry remains available for measurements made while
-// all normal slots are occupied.
+// all normal slots are occupied. It reports whether the value was loaded.
 func (m *limitedSyncMap[V]) LoadOrStoreAttrReclaiming(
 	lazy lazyFilteredAttributes,
 	newValue func(attribute.Set) V,
-) V {
+) (value V, loaded bool) {
 	distinct := lazy.Distinct()
 	actual, loaded := m.Load(distinct)
 	if loaded {
-		return actual.(V)
+		return actual.(V), true
 	}
 
 	m.lenMux.Lock()
@@ -289,12 +289,12 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttrReclaiming(
 
 	actual, loaded = m.Load(distinct)
 	if loaded {
-		return actual.(V)
+		return actual.(V), true
 	}
 
 	overflow, hasOverflow := m.Load(overflowSet.Equivalent())
 	if m.aggLimit > 0 && hasOverflow && m.len >= m.aggLimit {
-		return overflow.(V)
+		return overflow.(V), true
 	}
 
 	var attrs attribute.Set
@@ -308,7 +308,7 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttrReclaiming(
 	if !loaded {
 		m.len++
 	}
-	return actual.(V)
+	return actual.(V), loaded
 }
 
 func (m *limitedSyncMap[V]) Clear() {

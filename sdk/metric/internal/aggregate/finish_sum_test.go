@@ -155,6 +155,34 @@ func TestFinishSumCardinality(t *testing.T) {
 	require.Len(t, finishSumPoints(t, agg.ComputeAggregation), 3)
 }
 
+func TestFinishSumInitialMeasurementAdmission(t *testing.T) {
+	point, measurement := newFinishSumValue(alice, dropExemplars[int64])
+
+	type collectionResult struct {
+		point metricdata.DataPoint[int64]
+		emit  bool
+	}
+	started := make(chan struct{})
+	collected := make(chan collectionResult, 1)
+	go func() {
+		close(started)
+		point, emit, _ := point.collectDelta(y2k)
+		collected <- collectionResult{point: point, emit: emit}
+	}()
+	<-started
+	select {
+	case <-collected:
+		t.Fatal("collection completed before the initial measurement")
+	case <-time.After(10 * time.Millisecond):
+	}
+
+	point.value.add(1)
+	measurement.Release()
+	result := <-collected
+	assert.True(t, result.emit)
+	assert.Equal(t, int64(1), result.point.Value)
+}
+
 func TestFinishSumShutdown(t *testing.T) {
 	agg := Builder[int64]{ReservoirFunc: dropExemplars[int64]}.FinishSum(true)
 	agg.Measure(t.Context(), 1, alice)

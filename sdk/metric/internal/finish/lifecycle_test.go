@@ -164,6 +164,8 @@ func TestLifecycleConcurrentDeltaCollection(t *testing.T) {
 
 		close(start)
 		wg.Wait()
+		assert.Equal(t, uint32(lifecycleRetired), lifecycle.state.Load())
+		assert.Zero(t, lifecycle.writers.Load())
 		_, ok := lifecycle.AcquireMeasurement()
 		assert.False(t, ok)
 	}
@@ -178,7 +180,7 @@ func TestLifecycleCollectionWaitsForMeasurement(t *testing.T) {
 	go func() {
 		collected <- lifecycle.BeginCumulativeCollection(y2k)
 	}()
-	for stateOf(lifecycle.state.Load()) != lifecycleCollecting {
+	for lifecycleState(lifecycle.state.Load()) != lifecycleCollecting {
 		runtime.Gosched()
 	}
 	select {
@@ -216,7 +218,7 @@ func TestLifecycleRetireWaitsForMeasurement(t *testing.T) {
 		lifecycle.Retire()
 		close(retired)
 	}()
-	for stateOf(lifecycle.state.Load()) != lifecycleCollecting {
+	for lifecycleState(lifecycle.state.Load()) != lifecycleCollecting {
 		runtime.Gosched()
 	}
 	select {
