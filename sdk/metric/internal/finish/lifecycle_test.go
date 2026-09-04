@@ -1,0 +1,232 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package finish
+
+import (
+	"runtime"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+var y2k = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+func y2kPlus(seconds int) time.Time {
+	return y2k.Add(time.Duration(seconds) * time.Second)
+}
+
+func TestLifecycle(t *testing.T) {
+	t.Run("FinishIsIdempotent", func(t *testing.T) {
+		var lifecycle Lifecycle
+		measurement, ok := lifecycle.AcquireMeasurement()
+		require.True(t, ok)
+		measurement.Release()
+		assert.True(t, lifecycle.Finish(y2kPlus(1)))
+		assert.False(t, lifecycle.Finish(y2kPlus(2)))
+
+		collection := lifecycle.BeginCumulativeCollection(y2kPlus(3))
+		assert.Equal(t, y2kPlus(1), collection.Time())
+		assert.True(t, collection.ShouldEmit())
+		assert.True(t, collection.ShouldRetire())
+		collection.Complete()
+		_, ok = lifecycle.AcquireMeasurement()
+		assert.False(t, ok)
+	})
+
+	t.Run("Reactivate", func(t *testing.T) {
+		var lifecycle Lifecycle
+		require.True(t, lifecycle.Finish(y2kPlus(1)))
+
+		measurement, ok := lifecycle.AcquireMeasurement()
+		require.True(t, ok)
+		measurement.Release()
+		collection := lifecycle.BeginCumulativeCollection(y2kPlus(2))
+		assert.Equal(t, y2kPlus(2), collection.Time())
+		assert.True(t, collection.ShouldEmit())
+		assert.False(t, collection.ShouldRetire())
+		collection.Complete()
+		measurement, ok = lifecycle.AcquireMeasurement()
+		require.True(t, ok)
+		measurement.Release()
+	})
+
+	t.Run("DeltaCollectionRetiresActive", func(t *testing.T) {
+		var lifecycle Lifecycle
+		collection := lifecycle.BeginDeltaCollection(y2kPlus(1))
+		assert.Equal(t, y2kPlus(1), collection.Time())
+		assert.True(t, collection.ShouldEmit())
+		assert.True(t, collection.ShouldRetire())
+		collection.Complete()
+		_, ok := lifecycle.AcquireMeasurement()
+		assert.False(t, ok)
+	})
+
+	t.Run("RetiredIsTerminal", func(t *testing.T) {
+		var lifecycle Lifecycle
+		lifecycle.Retire()
+		lifecycle.Retire()
+
+		assert.False(t, lifecycle.Finish(y2kPlus(1)))
+		_, ok := lifecycle.AcquireMeasurement()
+		assert.False(t, ok)
+		collection := lifecycle.BeginCumulativeCollection(y2kPlus(2))
+		assert.False(t, collection.ShouldEmit())
+		assert.False(t, collection.ShouldRetire())
+		collection = lifecycle.BeginDeltaCollection(y2kPlus(3))
+		assert.False(t, collection.ShouldEmit())
+		assert.False(t, collection.ShouldRetire())
+	})
+}
+
+func TestLifecycleMeasurementWaitsForCollection(t *testing.T) {
+	var lifecycle Lifecycle
+	collection := lifecycle.BeginCumulativeCollection(y2k)
+
+	acquired, started := make(chan Measurement, 1), make(chan struct{})
+	go func() {
+		close(started)
+		measurement, ok := lifecycle.AcquireMeasurement()
+		if ok {
+			acquired <- measurement
+		}
+	}()
+	<-started
+	select {
+	case <-acquired:
+		t.Fatal("measurement acquired during collection")
+	case <-time.After(10 * time.Millisecond):
+	}
+
+	collection.Complete()
+	measurement := <-acquired
+	measurement.Release()
+}
+
+func TestLifecycleConcurrentReactivation(t *testing.T) {
+	const measurements = 64
+
+	for range 10 {
+		var lifecycle Lifecycle
+		require.True(t, lifecycle.Finish(y2k))
+
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		wg.Add(measurements)
+		for range measurements {
+			go func() {
+				defer wg.Done()
+				<-start
+				measurement, ok := lifecycle.AcquireMeasurement()
+				if !ok {
+					t.Error("measurement was not admitted")
+					return
+				}
+				measurement.Release()
+			}()
+		}
+		close(start)
+		wg.Wait()
+
+		collection := lifecycle.BeginCumulativeCollection(y2kPlus(1))
+		assert.True(t, collection.ShouldEmit())
+		assert.False(t, collection.ShouldRetire())
+		collection.Complete()
+	}
+}
+
+func TestLifecycleConcurrentDeltaCollection(t *testing.T) {
+	for range 1_000 {
+		var lifecycle Lifecycle
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		go func() {
+			defer wg.Done()
+			<-start
+			measurement, ok := lifecycle.AcquireMeasurement()
+			if ok {
+				measurement.Release()
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			<-start
+			collection := lifecycle.BeginDeltaCollection(y2k)
+			if collection.ShouldEmit() {
+				collection.Complete()
+			}
+		}()
+
+		close(start)
+		wg.Wait()
+		_, ok := lifecycle.AcquireMeasurement()
+		assert.False(t, ok)
+	}
+}
+
+func TestLifecycleCollectionWaitsForMeasurement(t *testing.T) {
+	var lifecycle Lifecycle
+	measurement, ok := lifecycle.AcquireMeasurement()
+	require.True(t, ok)
+
+	collected := make(chan Collection, 1)
+	go func() {
+		collected <- lifecycle.BeginCumulativeCollection(y2k)
+	}()
+	for stateOf(lifecycle.state.Load()) != lifecycleCollecting {
+		runtime.Gosched()
+	}
+	select {
+	case <-collected:
+		t.Fatal("collection completed with a measurement in flight")
+	default:
+	}
+
+	measurement.Release()
+	collection := <-collected
+	assert.True(t, collection.ShouldEmit())
+	collection.Complete()
+}
+
+func TestLifecycleSerializesCollections(t *testing.T) {
+	var lifecycle Lifecycle
+	first := lifecycle.BeginCumulativeCollection(y2k)
+	assert.False(t, lifecycle.control.TryLock())
+	first.Complete()
+	require.True(t, lifecycle.control.TryLock())
+	lifecycle.control.Unlock()
+
+	second := lifecycle.BeginCumulativeCollection(y2kPlus(1))
+	assert.True(t, second.ShouldEmit())
+	second.Complete()
+}
+
+func TestLifecycleRetireWaitsForMeasurement(t *testing.T) {
+	var lifecycle Lifecycle
+	measurement, ok := lifecycle.AcquireMeasurement()
+	require.True(t, ok)
+
+	retired := make(chan struct{})
+	go func() {
+		lifecycle.Retire()
+		close(retired)
+	}()
+	for stateOf(lifecycle.state.Load()) != lifecycleCollecting {
+		runtime.Gosched()
+	}
+	select {
+	case <-retired:
+		t.Fatal("retirement completed with a measurement in flight")
+	default:
+	}
+
+	measurement.Release()
+	<-retired
+	_, ok = lifecycle.AcquireMeasurement()
+	assert.False(t, ok)
+}
