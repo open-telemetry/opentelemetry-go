@@ -9,13 +9,13 @@ import (
 	"time"
 )
 
-type finishState uint8
+type finishLifecycleState uint8
 
 const (
-	finishActive     finishState = 0
-	finishPending    finishState = 1
-	finishRetired    finishState = 2
-	finishCollecting finishState = 3
+	lifecycleActive finishLifecycleState = iota
+	lifecycleFinishPending
+	lifecycleRetired
+	lifecycleCollecting
 )
 
 const (
@@ -55,11 +55,11 @@ type finishLifecycle struct {
 	finished time.Time
 }
 
-func finishStateOf(value uint64) finishState {
-	return finishState(value >> finishStateShift)
+func finishStateOf(value uint64) finishLifecycleState {
+	return finishLifecycleState(value >> finishStateShift)
 }
 
-func finishWithState(value uint64, state finishState) uint64 {
+func finishWithState(value uint64, state finishLifecycleState) uint64 {
 	return value&finishWriterMask | uint64(state)<<finishStateShift
 }
 
@@ -70,33 +70,33 @@ measurement:
 		// lets collection drain the finite set of already-admitted measurements
 		// even when new measurements continue to arrive.
 		state := finishStateOf(l.state.Load())
-		if state == finishCollecting {
-			for finishStateOf(l.state.Load()) == finishCollecting {
+		if state == lifecycleCollecting {
+			for finishStateOf(l.state.Load()) == lifecycleCollecting {
 				runtime.Gosched()
 			}
 			continue
 		}
-		if state == finishRetired {
+		if state == lifecycleRetired {
 			return false
 		}
 
 		previous := l.state.Add(1) - 1
 		switch finishStateOf(previous) {
-		case finishActive:
+		case lifecycleActive:
 			return true
-		case finishPending:
+		case lifecycleFinishPending:
 			for {
 				current := l.state.Load()
 				switch finishStateOf(current) {
-				case finishActive:
+				case lifecycleActive:
 					return true
-				case finishPending:
-					if l.state.CompareAndSwap(current, finishWithState(current, finishActive)) {
+				case lifecycleFinishPending:
+					if l.state.CompareAndSwap(current, finishWithState(current, lifecycleActive)) {
 						return true
 					}
-				case finishCollecting:
+				case lifecycleCollecting:
 					l.finishMeasurement()
-					for finishStateOf(l.state.Load()) == finishCollecting {
+					for finishStateOf(l.state.Load()) == lifecycleCollecting {
 						runtime.Gosched()
 					}
 					continue measurement
@@ -105,9 +105,9 @@ measurement:
 					return false
 				}
 			}
-		case finishCollecting:
+		case lifecycleCollecting:
 			l.finishMeasurement()
-			for finishStateOf(l.state.Load()) == finishCollecting {
+			for finishStateOf(l.state.Load()) == lifecycleCollecting {
 				runtime.Gosched()
 			}
 			continue measurement
@@ -124,11 +124,11 @@ func (l *finishLifecycle) finishMeasurement() {
 }
 
 func (l *finishLifecycle) finish(at time.Time) bool {
-	if finishStateOf(l.state.Load()) != finishActive {
+	if finishStateOf(l.state.Load()) != lifecycleActive {
 		return false
 	}
 	l.finished = at
-	l.state.Or(uint64(finishPending) << finishStateShift)
+	l.state.Or(uint64(lifecycleFinishPending) << finishStateShift)
 	return true
 }
 
@@ -137,7 +137,7 @@ func (l *finishLifecycle) startCollection(
 	mode finishCollectionMode,
 ) finishCollection {
 	state := finishStateOf(l.state.Load())
-	if state == finishRetired {
+	if state == lifecycleRetired {
 		return finishCollection{}
 	}
 	state = finishStateOf(l.state.Or(finishStateMask))
@@ -145,7 +145,7 @@ func (l *finishLifecycle) startCollection(
 		runtime.Gosched()
 	}
 
-	if state == finishPending {
+	if state == lifecycleFinishPending {
 		return finishCollection{time: l.finished, emit: true, retire: true}
 	}
 	return finishCollection{
@@ -156,16 +156,16 @@ func (l *finishLifecycle) startCollection(
 }
 
 func (l *finishLifecycle) completeCollection(collection finishCollection) {
-	state := finishActive
+	state := lifecycleActive
 	if collection.retire {
-		state = finishRetired
+		state = lifecycleRetired
 	}
 	l.finished = time.Time{}
 	l.state.Store(finishWithState(0, state))
 }
 
 func (l *finishLifecycle) retire() {
-	if finishStateOf(l.state.Load()) == finishRetired {
+	if finishStateOf(l.state.Load()) == lifecycleRetired {
 		return
 	}
 	l.state.Or(finishStateMask)
@@ -173,5 +173,5 @@ func (l *finishLifecycle) retire() {
 		runtime.Gosched()
 	}
 	l.finished = time.Time{}
-	l.state.Store(finishWithState(0, finishRetired))
+	l.state.Store(finishWithState(0, lifecycleRetired))
 }
