@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Ensure `grpc.DialOption` values passed via `WithDialOption` take precedence over conflicting internally-computed defaults in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#8836)
 - Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)
 - Prevent a panic in `NewFixedSizeReservoir` and `FixedSizeReservoirProvider` when given a negative size in `go.opentelemetry.io/otel/sdk/metric/exemplar`; negative sizes are now clamped to zero, consistent with a size of zero. (#8832)
+- Normalize global `OTEL_EXPORTER_OTLP_ENDPOINT` path joining in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` so trailing-slash base URLs do not produce double-slash log export paths. (#8864)
 - Prevent `SimpleSpanProcessor.Shutdown` from panicking when constructed with a nil exporter in `go.opentelemetry.io/otel/sdk/trace`. (#8844)
 - Propagate invalid exponential histogram scale errors to Prometheus exporter self-observability metrics in `go.opentelemetry.io/otel/exporters/prometheus`. (#8839)
 
