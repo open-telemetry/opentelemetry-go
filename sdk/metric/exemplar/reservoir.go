@@ -38,3 +38,11 @@ type Reservoir interface {
 // attributes and the attributes passed to Offer is the complete set of
 // attributes a measurement was made with.
 type ReservoirProvider func(attr attribute.Set) Reservoir
+
+// ConcurrentSafe is an interface that can be embedded in a [Reservoir]
+// to indicate to the SDK that it is safe to invoke its methods concurrently.
+// If this interface is not embedded, the SDK assumes it is not safe to call
+// concurrently and locks around Reservoir methods.
+type ConcurrentSafe interface {
+	concurrentSafe()
+}
