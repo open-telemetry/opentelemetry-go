@@ -13,6 +13,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental `*Binder` extension interfaces in `go.opentelemetry.io/otel/metric/x` for instruments that support binding attributes ahead of time. (#8760)
 - Add the experimental `Finisher` synchronous metric instrument extension interface to `go.opentelemetry.io/otel/metric/x`. (#8906)
 
+### Changed
+
+- Reduce allocations when applying attribute value length limits in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log` by rebuilding composite values only when truncation is needed. (#8912)
+
+
 ### Fixed
 
 - Ensure `grpc.DialOption` values passed via `WithDialOption` take precedence over conflicting internally-computed defaults in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#8836)
