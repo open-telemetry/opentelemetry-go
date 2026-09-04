@@ -28,7 +28,7 @@ func newFinishSumValue[N int64 | float64](
 	attrs attribute.Set,
 	overflow bool,
 	reservoir func(attribute.Set) FilteredExemplarReservoir[N],
-) (*finishSumValue[N], finish.Measurement) {
+) *finishSumValue[N] {
 	r := reservoir(attrs)
 	_, drop := r.(*dropRes[N])
 	point := &finishSumValue[N]{
@@ -38,8 +38,7 @@ func newFinishSumValue[N int64 | float64](
 		reservoir:     r,
 	}
 	point.overflow.Store(overflow)
-	measurement, _ := point.lifecycle.AcquireMeasurement()
-	return point, measurement
+	return point
 }
 
 func (v *finishSumValue[N]) measure(
@@ -162,8 +161,10 @@ func (s *finishSum[N]) measure(
 			attrs attribute.Set,
 			overflow bool,
 		) *finishSumValue[N] {
-			var point *finishSumValue[N]
-			point, initial = newFinishSumValue(attrs, overflow, s.reservoir)
+			point := newFinishSumValue(attrs, overflow, s.reservoir)
+			// The point has not been published, so its new lifecycle cannot be
+			// retired and this initial measurement admission cannot fail.
+			initial, _ = point.lifecycle.AcquireMeasurement()
 			return point
 		})
 		if overflowed {
