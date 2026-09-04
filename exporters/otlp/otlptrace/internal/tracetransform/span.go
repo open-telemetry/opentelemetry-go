@@ -223,3 +223,142 @@ func spanKind(kind trace.SpanKind) tracepb.Span_SpanKind {
 		return tracepb.Span_SPAN_KIND_UNSPECIFIED
 	}
 }
+
+// SpansWithArena transforms a slice of OpenTelemetry spans into OTLP ResourceSpans
+// using the provided arena for allocation. The arena must not be reset until
+// the returned data is no longer referenced.
+func SpansWithArena(sdl []tracesdk.ReadOnlySpan, arena *Arena) []*tracepb.ResourceSpans {
+	if len(sdl) == 0 {
+		return nil
+	}
+
+	rsm := make(map[attribute.Distinct]*tracepb.ResourceSpans)
+
+	type key struct {
+		r  attribute.Distinct
+		is instrumentation.Scope
+	}
+	ssm := make(map[key]*tracepb.ScopeSpans)
+
+	var resources int
+	for _, sd := range sdl {
+		if sd == nil {
+			continue
+		}
+
+		rKey := sd.Resource().Equivalent()
+		scope := sd.InstrumentationScope()
+		k := key{
+			r:  rKey,
+			is: scope,
+		}
+		scopeSpan, iOk := ssm[k]
+		if !iOk {
+			scopeSpan = &tracepb.ScopeSpans{
+				Scope:     InstrumentationScopeWithArena(scope, arena),
+				Spans:     []*tracepb.Span{},
+				SchemaUrl: scope.SchemaURL,
+			}
+			ssm[k] = scopeSpan
+		}
+		scopeSpan.Spans = append(scopeSpan.Spans, spanWithArena(sd, arena))
+		ssm[k] = scopeSpan
+
+		rs, rOk := rsm[rKey]
+		if !rOk {
+			resources++
+			rs = &tracepb.ResourceSpans{
+				Resource:   ResourceWithArena(sd.Resource(), arena),
+				ScopeSpans: []*tracepb.ScopeSpans{scopeSpan},
+				SchemaUrl:  sd.Resource().SchemaURL(),
+			}
+			rsm[rKey] = rs
+			continue
+		}
+
+		if !iOk {
+			rs.ScopeSpans = append(rs.ScopeSpans, scopeSpan)
+		}
+	}
+
+	rss := make([]*tracepb.ResourceSpans, 0, resources)
+	for _, rs := range rsm {
+		rss = append(rss, rs)
+	}
+	return rss
+}
+
+func spanWithArena(sd tracesdk.ReadOnlySpan, arena *Arena) *tracepb.Span {
+	if sd == nil {
+		return nil
+	}
+
+	spanContext := sd.SpanContext()
+	tid := spanContext.TraceID()
+	sid := spanContext.SpanID()
+
+	sdStatus := sd.Status()
+	s := &tracepb.Span{
+		TraceId:                tid[:],
+		SpanId:                 sid[:],
+		TraceState:             spanContext.TraceState().String(),
+		Status:                 status(sdStatus.Code, sdStatus.Description),
+		StartTimeUnixNano:      uint64(max(0, sd.StartTime().UnixNano())), // nolint:gosec // Overflow checked.
+		EndTimeUnixNano:        uint64(max(0, sd.EndTime().UnixNano())),   // nolint:gosec // Overflow checked.
+		Links:                  linksWithArena(sd.Links(), arena),
+		Kind:                   spanKind(sd.SpanKind()),
+		Name:                   sd.Name(),
+		Attributes:             KeyValuesWithArena(sd.Attributes(), arena),
+		Events:                 spanEventsWithArena(sd.Events(), arena),
+		DroppedAttributesCount: clampUint32(sd.DroppedAttributes()),
+		DroppedEventsCount:     clampUint32(sd.DroppedEvents()),
+		DroppedLinksCount:      clampUint32(sd.DroppedLinks()),
+	}
+
+	sdParent := sd.Parent()
+	if psid := sdParent.SpanID(); psid.IsValid() {
+		s.ParentSpanId = psid[:]
+	}
+	s.Flags = buildSpanFlagsWith(spanContext.TraceFlags(), sdParent)
+
+	return s
+}
+
+func linksWithArena(links []tracesdk.Link, arena *Arena) []*tracepb.Span_Link {
+	if len(links) == 0 {
+		return nil
+	}
+
+	sl := make([]*tracepb.Span_Link, 0, len(links))
+	for _, otLink := range links {
+		tid := otLink.SpanContext.TraceID()
+		sid := otLink.SpanContext.SpanID()
+		flags := buildSpanFlagsWith(otLink.SpanContext.TraceFlags(), otLink.SpanContext)
+
+		sl = append(sl, &tracepb.Span_Link{
+			TraceId:                tid[:],
+			SpanId:                 sid[:],
+			Attributes:             KeyValuesWithArena(otLink.Attributes, arena),
+			DroppedAttributesCount: clampUint32(otLink.DroppedAttributeCount),
+			Flags:                  flags,
+		})
+	}
+	return sl
+}
+
+func spanEventsWithArena(es []tracesdk.Event, arena *Arena) []*tracepb.Span_Event {
+	if len(es) == 0 {
+		return nil
+	}
+
+	events := make([]*tracepb.Span_Event, len(es))
+	for i := range es {
+		events[i] = &tracepb.Span_Event{
+			Name:                   es[i].Name,
+			TimeUnixNano:           uint64(max(0, es[i].Time.UnixNano())), // nolint:gosec // Overflow checked.
+			Attributes:             KeyValuesWithArena(es[i].Attributes, arena),
+			DroppedAttributesCount: clampUint32(es[i].DroppedAttributeCount),
+		}
+	}
+	return events
+}
