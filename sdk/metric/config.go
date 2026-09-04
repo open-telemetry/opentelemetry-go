@@ -12,6 +12,8 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -22,6 +24,7 @@ type config struct {
 	readers          []Reader
 	views            []View
 	exemplarFilter   exemplar.Filter
+	metricFilter     metricFilter
 	cardinalityLimit int
 }
 
@@ -85,6 +88,9 @@ func newConfig(options []Option) config {
 		conf = o.apply(conf)
 	}
 	for _, o := range options {
+		if opt, ok := o.(metricFilter); ok {
+			conf.metricFilter = opt
+		}
 		if _, ok := o.(experimentalOption); ok {
 			continue
 		}
@@ -217,4 +223,13 @@ func cardinalityLimitFromEnv() int {
 		return defaultCardinalityLimit
 	}
 	return n
+}
+
+// metricFilter is an internal, private mirror of the experimental metricFilter
+// interface from the 'x' package. It is duplicated here to avoid package
+// import cycles and layer violations while leveraging Go's implicit interfaces.
+type metricFilter interface {
+	Experimental()
+	TestMetric(scope instrumentation.Scope, name string, kind InstrumentKind, unit string) int
+	TestAttributes(scope instrumentation.Scope, name string, kind InstrumentKind, unit string, attrs []attribute.KeyValue) int
 }
