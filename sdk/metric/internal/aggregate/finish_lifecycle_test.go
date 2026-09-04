@@ -87,3 +87,26 @@ func TestFinishLifecycleCollectionWaitsForMeasurement(t *testing.T) {
 	assert.True(t, collection.emit)
 	lifecycle.completeCollection(collection)
 }
+
+func TestFinishLifecycleRetireWaitsForMeasurement(t *testing.T) {
+	var lifecycle finishLifecycle
+	require.True(t, lifecycle.startMeasurement())
+
+	retired := make(chan struct{})
+	go func() {
+		lifecycle.retire()
+		close(retired)
+	}()
+	for finishStateOf(lifecycle.state.Load()) != finishCollecting {
+		runtime.Gosched()
+	}
+	select {
+	case <-retired:
+		t.Fatal("retirement completed with a measurement in flight")
+	default:
+	}
+
+	lifecycle.finishMeasurement()
+	<-retired
+	assert.False(t, lifecycle.startMeasurement())
+}
