@@ -9,6 +9,7 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 ## Features
 
 - [Metric Export Batch Size](#metric-export-batch-size)
+- [Parallel Callbacks](#parallel-callbacks)
 
 ### Metric Export Batch Size
 
@@ -30,6 +31,36 @@ Disable metric export batching.
 
 ```console
 unset OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE
+```
+
+### Parallel Callbacks
+
+Observable-instrument callbacks are run sequentially during a collection by default.
+This experimental feature runs them concurrently across a pool of reused worker
+goroutines sized to `GOMAXPROCS`, which can reduce collection latency when many
+observable callbacks are registered.
+
+This experimental feature can be enabled by setting the `OTEL_GO_X_PARALLEL_CALLBACKS`
+environment variable to the case-insensitive string value of `true`.
+All other values or an empty value result in the default behavior of running callbacks
+sequentially.
+
+When enabled, callbacks no longer run one at a time in registration order.
+Any state shared between callbacks, or shared with the rest of the application and
+read during a callback, must be safe for concurrent access.
+
+#### Examples
+
+Enable parallel callback execution.
+
+```console
+export OTEL_GO_X_PARALLEL_CALLBACKS=true
+```
+
+Disable parallel callback execution.
+
+```console
+unset OTEL_GO_X_PARALLEL_CALLBACKS
 ```
 
 ## Compatibility and Stability

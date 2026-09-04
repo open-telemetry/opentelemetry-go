@@ -62,6 +62,7 @@ The next release will require at least [Go 1.26].
 - Support testing of [Go 1.27]. (#8811)
 - Support `http/json` protocol in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8273, #8775, #8831)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
+- Add experimental support for running observable-instrument callbacks in parallel via a reused worker pool, enabled with the `OTEL_GO_X_PARALLEL_CALLBACKS=true` environment variable, in `go.opentelemetry.io/otel/sdk/metric`. (#8581)
 
 ### Changed
 
