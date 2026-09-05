@@ -54,13 +54,12 @@ func (m Measurement) Release() {
 }
 
 // Collection describes an exclusive collection phase for a metric-series
-// lifetime. If ShouldEmit reports true, Complete must be called exactly once
-// after the aggregate and exemplars are read.
+// lifetime. A Collection returned with true by a Lifecycle collection method
+// must be completed exactly once after the aggregate and exemplars are read.
 type Collection struct {
 	lifecycle *Lifecycle
 	time      time.Time
 	restore   lifecycleState
-	emit      bool
 	retire    bool
 }
 
@@ -69,18 +68,12 @@ func (c Collection) Time() time.Time {
 	return c.time
 }
 
-// ShouldEmit reports whether the collection should emit a point.
-func (c Collection) ShouldEmit() bool {
-	return c.emit
-}
-
 // ShouldRetire reports whether Complete will retire the series lifetime.
 func (c Collection) ShouldRetire() bool {
 	return c.retire
 }
 
-// Complete ends the exclusive collection phase. It must be called exactly once
-// for a Collection whose ShouldEmit method reports true.
+// Complete ends the exclusive collection phase. It must be called exactly once.
 func (c Collection) Complete() {
 	state := c.restore
 	if c.retire {
@@ -196,34 +189,36 @@ func (l *Lifecycle) Finish(at time.Time) bool {
 // BeginCumulativeCollection closes measurement admission and waits for admitted
 // measurements to complete. An active or shared lifetime returns to its prior
 // state when the returned Collection is completed; a finish-pending lifetime is
-// retired.
-func (l *Lifecycle) BeginCumulativeCollection(at time.Time) Collection {
+// retired. It returns false without a Collection if the lifetime is retired. A
+// returned Collection must be completed exactly once.
+func (l *Lifecycle) BeginCumulativeCollection(at time.Time) (Collection, bool) {
 	l.control.Lock()
-	collection := l.beginCollection(at)
-	if !collection.emit {
+	collection, ok := l.beginCollection(at)
+	if !ok {
 		l.control.Unlock()
 	}
-	return collection
+	return collection, ok
 }
 
 // BeginDeltaCollection closes measurement admission and waits for admitted
 // measurements to complete. Every emitted lifetime is retired when the returned
-// Collection is completed.
-func (l *Lifecycle) BeginDeltaCollection(at time.Time) Collection {
+// Collection is completed. It returns false without a Collection if the
+// lifetime is retired. A returned Collection must be completed exactly once.
+func (l *Lifecycle) BeginDeltaCollection(at time.Time) (Collection, bool) {
 	l.control.Lock()
-	collection := l.beginCollection(at)
-	if !collection.emit {
+	collection, ok := l.beginCollection(at)
+	if !ok {
 		l.control.Unlock()
-		return collection
+		return Collection{}, false
 	}
 	collection.retire = true
-	return collection
+	return collection, true
 }
 
-func (l *Lifecycle) beginCollection(at time.Time) Collection {
+func (l *Lifecycle) beginCollection(at time.Time) (Collection, bool) {
 	state := lifecycleState(l.state.Load())
 	if state == lifecycleRetired {
-		return Collection{}
+		return Collection{}, false
 	}
 	state = lifecycleState(l.state.Swap(uint32(lifecycleCollecting)))
 	for l.writers.Load() != 0 {
@@ -235,11 +230,10 @@ func (l *Lifecycle) beginCollection(at time.Time) Collection {
 			lifecycle: l,
 			time:      l.finished,
 			restore:   state,
-			emit:      true,
 			retire:    true,
-		}
+		}, true
 	}
-	return Collection{lifecycle: l, time: at, restore: state, emit: true}
+	return Collection{lifecycle: l, time: at, restore: state}, true
 }
 
 // Retire permanently closes the series lifetime. It waits for admitted
