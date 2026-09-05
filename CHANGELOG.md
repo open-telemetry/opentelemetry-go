@@ -67,6 +67,7 @@ The next release will require at least [Go 1.26].
 ### Changed
 
 - Lazily evaluate filtered and dropped attributes on measurement hot paths in `go.opentelemetry.io/otel/sdk/metric` to avoid unnecessary attribute set allocations. (#8598)
+- Improve the performance of measurements immediately after collection in `go.opentelemetry.io/otel/sdk/metric` for delta temporality by lazily clearing storage. (#8276)
 - Add `ErrExporterShutdown` to `go.opentelemetry.io/otel/sdk/log` and return it from the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` exporters when `Export` is called after `Shutdown`. (#8773)
 - Clarify in `go.opentelemetry.io/otel/log` that calling `Logger.Enabled` is optional and that cached results can become stale. (#8764)
 
