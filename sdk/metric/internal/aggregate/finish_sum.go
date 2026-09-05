@@ -86,21 +86,28 @@ func (v *finishSumValue[N]) finish(t time.Time) {
 func (v *finishSumValue[N]) collectCumulative(
 	t time.Time,
 ) (metricdata.DataPoint[N], bool, bool) {
-	return v.collect(v.lifecycle.BeginCumulativeCollection(t))
+	collection, ok := v.lifecycle.BeginCumulativeCollection(t)
+	if !ok {
+		return metricdata.DataPoint[N]{}, false, false
+	}
+	dp, retire := v.collect(collection)
+	return dp, true, retire
 }
 
 func (v *finishSumValue[N]) collectDelta(
 	t time.Time,
 ) (metricdata.DataPoint[N], bool, bool) {
-	return v.collect(v.lifecycle.BeginDeltaCollection(t))
+	collection, ok := v.lifecycle.BeginDeltaCollection(t)
+	if !ok {
+		return metricdata.DataPoint[N]{}, false, false
+	}
+	dp, retire := v.collect(collection)
+	return dp, true, retire
 }
 
 func (v *finishSumValue[N]) collect(
 	collection finish.Collection,
-) (metricdata.DataPoint[N], bool, bool) {
-	if !collection.ShouldEmit() {
-		return metricdata.DataPoint[N]{}, false, false
-	}
+) (metricdata.DataPoint[N], bool) {
 	defer collection.Complete()
 
 	dp := metricdata.DataPoint[N]{
@@ -110,7 +117,7 @@ func (v *finishSumValue[N]) collect(
 		Value:      v.value.load(),
 	}
 	collectExemplars(&dp.Exemplars, v.reservoir.Collect)
-	return dp, true, collection.ShouldRetire()
+	return dp, collection.ShouldRetire()
 }
 
 func (v *finishSumValue[N]) shutdown() {

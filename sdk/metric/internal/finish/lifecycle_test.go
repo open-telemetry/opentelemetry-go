@@ -28,9 +28,9 @@ func TestLifecycle(t *testing.T) {
 		assert.True(t, lifecycle.Finish(y2kPlus(1)))
 		assert.False(t, lifecycle.Finish(y2kPlus(2)))
 
-		collection := lifecycle.BeginCumulativeCollection(y2kPlus(3))
+		collection, ok := lifecycle.BeginCumulativeCollection(y2kPlus(3))
+		require.True(t, ok)
 		assert.Equal(t, y2kPlus(1), collection.Time())
-		assert.True(t, collection.ShouldEmit())
 		assert.True(t, collection.ShouldRetire())
 		collection.Complete()
 		_, ok = lifecycle.AcquireMeasurement()
@@ -44,9 +44,9 @@ func TestLifecycle(t *testing.T) {
 		measurement.Release()
 
 		assert.False(t, lifecycle.Finish(y2kPlus(1)))
-		collection := lifecycle.BeginCumulativeCollection(y2kPlus(2))
+		collection, ok := lifecycle.BeginCumulativeCollection(y2kPlus(2))
+		require.True(t, ok)
 		assert.Equal(t, y2kPlus(2), collection.Time())
-		assert.True(t, collection.ShouldEmit())
 		assert.False(t, collection.ShouldRetire())
 		collection.Complete()
 		assert.False(t, lifecycle.Finish(y2kPlus(3)))
@@ -59,9 +59,9 @@ func TestLifecycle(t *testing.T) {
 		measurement, ok := lifecycle.AcquireSharedMeasurement()
 		require.True(t, ok)
 		measurement.Release()
-		collection := lifecycle.BeginCumulativeCollection(y2kPlus(2))
+		collection, ok := lifecycle.BeginCumulativeCollection(y2kPlus(2))
+		require.True(t, ok)
 		assert.Equal(t, y2kPlus(2), collection.Time())
-		assert.True(t, collection.ShouldEmit())
 		assert.False(t, collection.ShouldRetire())
 		collection.Complete()
 	})
@@ -73,9 +73,9 @@ func TestLifecycle(t *testing.T) {
 		measurement, ok := lifecycle.AcquireMeasurement()
 		require.True(t, ok)
 		measurement.Release()
-		collection := lifecycle.BeginCumulativeCollection(y2kPlus(2))
+		collection, ok := lifecycle.BeginCumulativeCollection(y2kPlus(2))
+		require.True(t, ok)
 		assert.Equal(t, y2kPlus(2), collection.Time())
-		assert.True(t, collection.ShouldEmit())
 		assert.False(t, collection.ShouldRetire())
 		collection.Complete()
 		measurement, ok = lifecycle.AcquireMeasurement()
@@ -85,12 +85,12 @@ func TestLifecycle(t *testing.T) {
 
 	t.Run("DeltaCollectionRetiresActive", func(t *testing.T) {
 		var lifecycle Lifecycle
-		collection := lifecycle.BeginDeltaCollection(y2kPlus(1))
+		collection, ok := lifecycle.BeginDeltaCollection(y2kPlus(1))
+		require.True(t, ok)
 		assert.Equal(t, y2kPlus(1), collection.Time())
-		assert.True(t, collection.ShouldEmit())
 		assert.True(t, collection.ShouldRetire())
 		collection.Complete()
-		_, ok := lifecycle.AcquireMeasurement()
+		_, ok = lifecycle.AcquireMeasurement()
 		assert.False(t, ok)
 	})
 
@@ -102,12 +102,12 @@ func TestLifecycle(t *testing.T) {
 		assert.False(t, lifecycle.Finish(y2kPlus(1)))
 		_, ok := lifecycle.AcquireMeasurement()
 		assert.False(t, ok)
-		collection := lifecycle.BeginCumulativeCollection(y2kPlus(2))
-		assert.False(t, collection.ShouldEmit())
-		assert.False(t, collection.ShouldRetire())
-		collection = lifecycle.BeginDeltaCollection(y2kPlus(3))
-		assert.False(t, collection.ShouldEmit())
-		assert.False(t, collection.ShouldRetire())
+		collection, ok := lifecycle.BeginCumulativeCollection(y2kPlus(2))
+		assert.False(t, ok)
+		assert.Zero(t, collection)
+		collection, ok = lifecycle.BeginDeltaCollection(y2kPlus(3))
+		assert.False(t, ok)
+		assert.Zero(t, collection)
 	})
 }
 
@@ -146,15 +146,16 @@ func TestLifecycleSharedMeasurementPrecedesBlockedFinish(t *testing.T) {
 	locked = false
 	assert.False(t, <-finished)
 
-	collection := lifecycle.BeginCumulativeCollection(y2kPlus(1))
-	assert.True(t, collection.ShouldEmit())
+	collection, ok := lifecycle.BeginCumulativeCollection(y2kPlus(1))
+	require.True(t, ok)
 	assert.False(t, collection.ShouldRetire())
 	collection.Complete()
 }
 
 func TestLifecycleMeasurementWaitsForCollection(t *testing.T) {
 	var lifecycle Lifecycle
-	collection := lifecycle.BeginCumulativeCollection(y2k)
+	collection, ok := lifecycle.BeginCumulativeCollection(y2k)
+	require.True(t, ok)
 
 	acquired, started := make(chan Measurement, 1), make(chan struct{})
 	go func() {
@@ -201,8 +202,8 @@ func TestLifecycleConcurrentReactivation(t *testing.T) {
 		close(start)
 		wg.Wait()
 
-		collection := lifecycle.BeginCumulativeCollection(y2kPlus(1))
-		assert.True(t, collection.ShouldEmit())
+		collection, ok := lifecycle.BeginCumulativeCollection(y2kPlus(1))
+		require.True(t, ok)
 		assert.False(t, collection.ShouldRetire())
 		collection.Complete()
 	}
@@ -226,8 +227,8 @@ func TestLifecycleConcurrentDeltaCollection(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			<-start
-			collection := lifecycle.BeginDeltaCollection(y2k)
-			if collection.ShouldEmit() {
+			collection, ok := lifecycle.BeginDeltaCollection(y2k)
+			if ok {
 				collection.Complete()
 			}
 		}()
@@ -246,9 +247,14 @@ func TestLifecycleCollectionWaitsForMeasurement(t *testing.T) {
 	measurement, ok := lifecycle.AcquireMeasurement()
 	require.True(t, ok)
 
-	collected := make(chan Collection, 1)
+	type collectionResult struct {
+		collection Collection
+		ok         bool
+	}
+	collected := make(chan collectionResult, 1)
 	go func() {
-		collected <- lifecycle.BeginCumulativeCollection(y2k)
+		collection, ok := lifecycle.BeginCumulativeCollection(y2k)
+		collected <- collectionResult{collection: collection, ok: ok}
 	}()
 	for lifecycleState(lifecycle.state.Load()) != lifecycleCollecting {
 		runtime.Gosched()
@@ -260,21 +266,22 @@ func TestLifecycleCollectionWaitsForMeasurement(t *testing.T) {
 	}
 
 	measurement.Release()
-	collection := <-collected
-	assert.True(t, collection.ShouldEmit())
-	collection.Complete()
+	result := <-collected
+	require.True(t, result.ok)
+	result.collection.Complete()
 }
 
 func TestLifecycleSerializesCollections(t *testing.T) {
 	var lifecycle Lifecycle
-	first := lifecycle.BeginCumulativeCollection(y2k)
+	first, ok := lifecycle.BeginCumulativeCollection(y2k)
+	require.True(t, ok)
 	assert.False(t, lifecycle.control.TryLock())
 	first.Complete()
 	require.True(t, lifecycle.control.TryLock())
 	lifecycle.control.Unlock()
 
-	second := lifecycle.BeginCumulativeCollection(y2kPlus(1))
-	assert.True(t, second.ShouldEmit())
+	second, ok := lifecycle.BeginCumulativeCollection(y2kPlus(1))
+	require.True(t, ok)
 	second.Complete()
 }
 
