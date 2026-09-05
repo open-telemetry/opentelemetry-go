@@ -60,6 +60,7 @@ The next release will require at least [Go 1.26].
 
 ### Added
 
+- Add `go.opentelemetry.io/otel/sdk/processcontext` package implementing the SDK publishing side of the OTEL_CTX process context mechanism (OTEP 4719). A `Publisher` serializes resource attributes into a protobuf payload in a named memory-mapped region (`OTEL_CTX`) that external readers such as eBPF profilers can discover via `/proc/<pid>/maps`. Linux only. (#8731)
 - Support testing of [Go 1.27]. (#8811)
 - Support `http/json` protocol in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8273, #8775, #8831)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
