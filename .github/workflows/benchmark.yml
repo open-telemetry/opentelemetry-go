@@ -9,6 +9,9 @@ on:
       - '**/go.sum'
       - 'Makefile'
       - '.github/workflows/benchmark.yml'
+  schedule:
+    - cron: '17 8 * * 0'
+      timezone: America/Los_Angeles
   workflow_dispatch:
     inputs:
       full:
@@ -58,8 +61,20 @@ jobs:
           # For a manual workflow_dispatch run, neither field is set,
           # and the Makefile's default base ref kicks in.
           BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
-          ARGS: ${{ inputs.full && '-all' || '' }}
+          ARGS: ${{ (github.event_name == 'schedule' || inputs.full) && '-all' || '' }}
         run: |
+          # POSIX cron cannot express an every-other-week cadence. Run the
+          # scheduled workflow weekly, but emit no shards on alternate weeks.
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]]; then
+            # Use the first Sunday after this schedule was added as the anchor.
+            anchor=$(date -u --date='2026-09-13' +%s)
+            weeks_since_anchor=$(( ($(date -u +%s) - anchor) / 604800 ))
+            if (( weeks_since_anchor % 2 != 0 )); then
+              echo 'shards=[]' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
           shards=$(make print-affected-benchmarks)
           echo "shards=${shards}" >> "$GITHUB_OUTPUT"
 
