@@ -10,7 +10,7 @@ on:
       - 'Makefile'
       - '.github/workflows/benchmark.yml'
   schedule:
-    - cron: '17 8 * * 0'
+    - cron: '0 8 * * 0'
       timezone: America/Los_Angeles
   workflow_dispatch:
     inputs:
