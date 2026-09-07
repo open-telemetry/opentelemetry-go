@@ -68,19 +68,26 @@ func (a *Arena) Exceeds(maxSpans int) bool {
 	}
 	// Approximate capacity in spans.
 	maxCap := maxSpans * defaultAttributesPerSpan
-	if a.Cap() > maxCap {
+	// Cap rounds up to whole chunks, so a batch using exactly maxCap slots
+	// plus resource/scope overhead needs one more chunk. Allow that slack
+	// so a default-size batch is retained instead of discarded.
+	if a.Cap() > maxCap+a.kvs.chunkSize {
 		return true
 	}
-	if cap(a.avStrValues) > maxCap {
+	// Slices grow with Go append overshoot (up to ~25%) plus the same
+	// chunk rounding. Each span can hold up to 8 scalars of one type,
+	// so compare against maxCap rather than maxSpans.
+	slack := a.kvs.chunkSize + maxCap/4
+	if cap(a.avStrValues) > maxCap+slack {
 		return true
 	}
-	if cap(a.avBoolValues) > maxSpans {
+	if cap(a.avBoolValues) > maxCap+slack {
 		return true
 	}
-	if cap(a.avIntValues) > maxSpans {
+	if cap(a.avIntValues) > maxCap+slack {
 		return true
 	}
-	if cap(a.avFloatValues) > maxSpans {
+	if cap(a.avFloatValues) > maxCap+slack {
 		return true
 	}
 	return false

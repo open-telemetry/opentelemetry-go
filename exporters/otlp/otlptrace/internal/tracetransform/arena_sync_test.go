@@ -129,3 +129,22 @@ func TestArenaExceeds(t *testing.T) {
 	assert.True(t, arena.Exceeds(5))
 	assert.False(t, arena.Exceeds(1000))
 }
+
+func TestArenaExceedsDefaultBatch(t *testing.T) {
+	arena := NewArena(32)
+	res := resource.NewSchemaless(attribute.String("service.name", "test"))
+	spans := make([]tracesdk.ReadOnlySpan, 512)
+	for i := range spans {
+		attrs := make([]attribute.KeyValue, 8)
+		for j := range attrs {
+			attrs[j] = attribute.String("k", "v")
+		}
+		spans[i] = tracetest.SpanStub{
+			Name:       "s",
+			Attributes: attrs,
+			Resource:   res,
+		}.Snapshot()
+	}
+	_ = SpansWithArena(spans, arena)
+	assert.False(t, arena.Exceeds(512))
+}
