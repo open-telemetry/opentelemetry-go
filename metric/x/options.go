@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package x contains experimental metric options.
+// Package x contains experimental metric options and extension interfaces.
 package x
 
 import (

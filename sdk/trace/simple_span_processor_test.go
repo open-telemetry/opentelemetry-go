@@ -85,6 +85,11 @@ func TestNewSimpleSpanProcessorWithNilExporter(t *testing.T) {
 	}
 }
 
+func TestSimpleSpanProcessorShutdownWithNilExporter(t *testing.T) {
+	ssp := NewSimpleSpanProcessor(nil)
+	require.NoError(t, ssp.Shutdown(t.Context()))
+}
+
 func TestSimpleSpanProcessorOnEnd(t *testing.T) {
 	tp := basicTracerProvider(t)
 	te := simpleTestExporter{}
