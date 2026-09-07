@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+
 - Decode `traceparent` using a hex lookup table in `go.opentelemetry.io/otel/propagation`, which rejects the specification-disallowed upper-case characters without a separate scan of the header. (#8739)
 
 ### Added
