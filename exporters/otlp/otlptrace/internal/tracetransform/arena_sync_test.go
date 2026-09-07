@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -20,12 +21,16 @@ import (
 func TestSpansWithArenaMatchesSpans(t *testing.T) {
 	res := resource.NewSchemaless(attribute.String("service.name", "test"))
 	span := tracetest.SpanStub{
-		Name:        "test-span",
-		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID{1, 2, 3}, SpanID: trace.SpanID{4, 5, 6}}),
-		Parent:      trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID{1, 2, 3}, SpanID: trace.SpanID{7, 8, 9}}),
-		SpanKind:    trace.SpanKindServer,
-		StartTime:   time.Now(),
-		EndTime:     time.Now().Add(time.Second),
+		Name: "test-span",
+		SpanContext: trace.NewSpanContext(
+			trace.SpanContextConfig{TraceID: trace.TraceID{1, 2, 3}, SpanID: trace.SpanID{4, 5, 6}},
+		),
+		Parent: trace.NewSpanContext(
+			trace.SpanContextConfig{TraceID: trace.TraceID{1, 2, 3}, SpanID: trace.SpanID{7, 8, 9}},
+		),
+		SpanKind:  trace.SpanKindServer,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(time.Second),
 		Attributes: []attribute.KeyValue{
 			attribute.String("k", "v"),
 			attribute.Int("i", 42),
@@ -38,7 +43,12 @@ func TestSpansWithArenaMatchesSpans(t *testing.T) {
 			{Name: "event1", Attributes: []attribute.KeyValue{attribute.String("ek", "ev")}},
 		},
 		Links: []tracesdk.Link{
-			{SpanContext: trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID{9, 9, 9}, SpanID: trace.SpanID{8, 8, 8}}), Attributes: []attribute.KeyValue{attribute.String("lk", "lv")}},
+			{
+				SpanContext: trace.NewSpanContext(
+					trace.SpanContextConfig{TraceID: trace.TraceID{9, 9, 9}, SpanID: trace.SpanID{8, 8, 8}},
+				),
+				Attributes: []attribute.KeyValue{attribute.String("lk", "lv")},
+			},
 		},
 		Resource:             res,
 		InstrumentationScope: instrumentation.Scope{Name: "test", Version: "1.0"},
@@ -71,8 +81,10 @@ func TestArenaReuse(t *testing.T) {
 	arena := NewArena(2)
 
 	s1 := tracetest.SpanStub{
-		Name:                 "s1",
-		SpanContext:          trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID{1}, SpanID: trace.SpanID{1}}),
+		Name: "s1",
+		SpanContext: trace.NewSpanContext(
+			trace.SpanContextConfig{TraceID: trace.TraceID{1}, SpanID: trace.SpanID{1}},
+		),
 		Resource:             res,
 		InstrumentationScope: instrumentation.Scope{Name: "a"},
 	}.Snapshot()
@@ -83,8 +95,10 @@ func TestArenaReuse(t *testing.T) {
 	arena.Reset()
 
 	s2 := tracetest.SpanStub{
-		Name:                 "s2",
-		SpanContext:          trace.NewSpanContext(trace.SpanContextConfig{TraceID: trace.TraceID{2}, SpanID: trace.SpanID{2}}),
+		Name: "s2",
+		SpanContext: trace.NewSpanContext(
+			trace.SpanContextConfig{TraceID: trace.TraceID{2}, SpanID: trace.SpanID{2}},
+		),
 		Resource:             res,
 		InstrumentationScope: instrumentation.Scope{Name: "a"},
 	}.Snapshot()

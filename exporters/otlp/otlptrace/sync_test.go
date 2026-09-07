@@ -19,9 +19,9 @@ import (
 )
 
 type syncClient struct {
-	uploadErr   error
-	logEndpoint string
-	captured    [][]*tracepb.ResourceSpans
+	uploadErr        error
+	logEndpoint      string
+	captured         [][]*tracepb.ResourceSpans
 	uploadSyncCalled bool
 }
 
@@ -29,10 +29,11 @@ var _ otlptrace.SyncClient = &syncClient{}
 
 func (*syncClient) Start(context.Context) error { return nil }
 func (*syncClient) Stop(context.Context) error  { return nil }
-func (c *syncClient) UploadTraces(_ context.Context, _ []*tracepb.ResourceSpans) error {
+func (*syncClient) UploadTraces(_ context.Context, _ []*tracepb.ResourceSpans) error {
 	// Should not be called by SyncExporter; if it is, fail the test.
 	return assert.AnError
 }
+
 func (c *syncClient) UploadTracesSync(_ context.Context, rs []*tracepb.ResourceSpans) error {
 	c.uploadSyncCalled = true
 	// Capture shallow copy to test retention contract: caller should not
@@ -42,6 +43,7 @@ func (c *syncClient) UploadTracesSync(_ context.Context, rs []*tracepb.ResourceS
 	c.captured = append(c.captured, rs)
 	return c.uploadErr
 }
+
 func (c *syncClient) MarshalLog() any {
 	return struct{ Endpoint string }{Endpoint: c.logEndpoint}
 }
@@ -96,7 +98,12 @@ func TestSyncExporterMarshalLogDoesNotIncludeClientConfig(t *testing.T) {
 func TestSyncExporterArenaReuse(t *testing.T) {
 	ctx := t.Context()
 	client := &syncClient{}
-	exp, err := otlptrace.NewSync(ctx, client, otlptrace.WithInitialBatchSize(2), otlptrace.WithMaxRetainedBatchSize(10))
+	exp, err := otlptrace.NewSync(
+		ctx,
+		client,
+		otlptrace.WithInitialBatchSize(2),
+		otlptrace.WithMaxRetainedBatchSize(10),
+	)
 	require.NoError(t, err)
 
 	// First batch
@@ -144,7 +151,11 @@ func TestSyncExporterArenaReuse(t *testing.T) {
 func TestSyncExporterWithOptions(t *testing.T) {
 	ctx := t.Context()
 	client := &syncClient{}
-	exp := otlptrace.NewSyncUnstarted(client, otlptrace.WithInitialBatchSize(100), otlptrace.WithMaxRetainedBatchSize(1000))
+	exp := otlptrace.NewSyncUnstarted(
+		client,
+		otlptrace.WithInitialBatchSize(100),
+		otlptrace.WithMaxRetainedBatchSize(1000),
+	)
 	require.NotNil(t, exp)
 	require.NoError(t, exp.Start(ctx))
 	require.NoError(t, exp.Shutdown(ctx))

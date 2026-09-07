@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package tracetransform // import "go.opentelemetry.io/otel/exporters/otlp/otlptrace/internal/tracetransform"
+package tracetransform
 
 import (
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -29,11 +29,11 @@ func NewArena(size int) *Arena {
 	return &Arena{
 		kvs: chunkedStorage[commonpb.KeyValue]{
 			chunkSize: chunkSize,
-			resetFn: func(m *commonpb.KeyValue) { m.Reset() },
+			resetFn:   func(m *commonpb.KeyValue) { m.Reset() },
 		},
 		avs: chunkedStorage[commonpb.AnyValue]{
 			chunkSize: chunkSize,
-			resetFn: func(m *commonpb.AnyValue) { m.Reset() },
+			resetFn:   func(m *commonpb.AnyValue) { m.Reset() },
 		},
 		avStrValues:   make([]commonpb.AnyValue_StringValue, 0, chunkSize),
 		avBoolValues:  make([]commonpb.AnyValue_BoolValue, 0, size),
