@@ -144,30 +144,36 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 		cfg = opt.ApplyGRPCOption(cfg)
 	}
 
+	// dialOptsPrefix holds the internally computed defaults. It is prepended
+	// to cfg.DialOptions so that a raw grpc.DialOption supplied via WithDialOption
+	// always takes precedence: grpc.DialOption values are opaque closures, so this code has no way to
+	// detect a conflicting user-supplied option and defer to it instead.
+	var dialOptsPrefix []grpc.DialOption
 	if cfg.ServiceConfig != "" {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithDefaultServiceConfig(cfg.ServiceConfig))
 	}
 	// Prioritize GRPCCredentials over Insecure (passing both is an error).
 	if cfg.Metrics.GRPCCredentials != nil { //nolint:gocritic // if-else is clearer than switch
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(cfg.Metrics.GRPCCredentials))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithTransportCredentials(cfg.Metrics.GRPCCredentials))
 	} else if cfg.Metrics.Insecure {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	} else {
 		// Default to using the host's root CA.
 		creds := credentials.NewTLS(nil)
 		cfg.Metrics.GRPCCredentials = creds
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithTransportCredentials(creds))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithTransportCredentials(creds))
 	}
 	if cfg.Metrics.Compression == GzipCompression {
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 	}
 	if cfg.ReconnectionPeriod != 0 {
 		p := grpc.ConnectParams{
 			Backoff:           backoff.DefaultConfig,
 			MinConnectTimeout: cfg.ReconnectionPeriod,
 		}
-		cfg.DialOptions = append(cfg.DialOptions, grpc.WithConnectParams(p))
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithConnectParams(p))
 	}
+	cfg.DialOptions = append(dialOptsPrefix, cfg.DialOptions...)
 
 	return cfg
 }
