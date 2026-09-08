@@ -1118,11 +1118,11 @@ func TestViewMatchingModeComposableDirectViewZeroedFields(t *testing.T) {
 		assert.Empty(t, m.Unit, "direct view should explicitly clear unit")
 	})
 
-	t.Run("DirectViewZerosName", func(t *testing.T) {
+	t.Run("DirectViewUnsetNameJoinsInstrumentGroup", func(t *testing.T) {
 		views := []View{
 			View(func(inst Instrument) (Stream, bool) {
 				if inst.Name == "foo" {
-					return Stream{Name: "", Description: "cleared name", Unit: "1"}, true
+					return Stream{Name: "", Description: "updated desc", Unit: "1"}, true
 				}
 				return Stream{}, false
 			}),
@@ -1148,8 +1148,8 @@ func TestViewMatchingModeComposableDirectViewZeroedFields(t *testing.T) {
 		require.Len(t, data.ScopeMetrics, 1)
 		require.Len(t, data.ScopeMetrics[0].Metrics, 1)
 		m := data.ScopeMetrics[0].Metrics[0]
-		assert.Empty(t, m.Name, "direct view should explicitly clear name")
-		assert.Equal(t, "cleared name", m.Description)
+		assert.Equal(t, "foo", m.Name, "direct view with unset name should retain instrument name")
+		assert.Equal(t, "updated desc", m.Description)
 		assert.Equal(t, "1", m.Unit)
 	})
 
