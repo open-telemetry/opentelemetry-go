@@ -34,6 +34,11 @@ const (
 	// DefaultMaxRequestSize is the default maximum size of a serialized export
 	// request, before compression.
 	DefaultMaxRequestSize int = 64 * 1024 * 1024
+{{ if .isHTTP }}
+	// DefaultMaxResponseBodySize is the default maximum size of an OTLP/HTTP
+	// response body, including after decompression.
+	DefaultMaxResponseBodySize int64 = 4 * 1024 * 1024
+{{ end }}
 	// DefaultTimeout is a default max waiting time for the backend to process
 	// each span batch.
 	DefaultTimeout time.Duration = 10 * time.Second
@@ -45,7 +50,17 @@ type (
 	HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
 
 	SignalConfig struct {
-		Endpoint       string
+{{ if .isHTTP }}		Endpoint            string
+		Insecure            bool
+		TLSCfg              *tls.Config
+		Headers             map[string]string
+		Compression         Compression
+		Protocol            Protocol
+		MaxRequestSize      int
+		MaxResponseBodySize int64
+		Timeout             time.Duration
+		URLPath             string
+{{ else }}		Endpoint       string
 		Insecure       bool
 		TLSCfg         *tls.Config
 		Headers        map[string]string
@@ -54,7 +69,7 @@ type (
 		MaxRequestSize int
 		Timeout        time.Duration
 		URLPath        string
-
+{{ end }}
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
 
@@ -82,13 +97,19 @@ type (
 func NewHTTPConfig(opts ...HTTPOption) Config {
 	cfg := Config{
 		Traces: SignalConfig{
-			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
+{{ if .isHTTP }}			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
 			URLPath:        DefaultTracesPath,
 			Compression:    NoCompression,
 			Protocol:       ProtocolHTTPProtobuf,
 			MaxRequestSize: DefaultMaxRequestSize,
 			Timeout:        DefaultTimeout,
-		},
+{{ else }}			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
+			URLPath:        DefaultTracesPath,
+			Compression:    NoCompression,
+			Protocol:       ProtocolHTTPProtobuf,
+			MaxRequestSize: DefaultMaxRequestSize,
+			Timeout:        DefaultTimeout,
+{{ end }}		},
 		RetryConfig: retry.DefaultConfig,
 	}
 	cfg = ApplyHTTPEnvConfigs(cfg)
@@ -370,7 +391,16 @@ func WithMaxRequestSize(size int) GenericOption {
 		return cfg
 	})
 }
-
+{{ if .isHTTP }}
+func WithMaxResponseBodySize(size int64) HTTPOption {
+	return NewHTTPOption(func(cfg Config) Config {
+		if size > 0 {
+			cfg.Traces.MaxResponseBodySize = size
+		}
+		return cfg
+	})
+}
+{{ end }}
 func WithProxy(pf HTTPTransportProxyFunc) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Traces.Proxy = pf

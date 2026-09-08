@@ -40,7 +40,8 @@ const (
 // body. It is set to 4 MiB per the OTLP specification recommendation to
 // mitigate excessive memory usage caused by a misconfigured or malicious
 // server. If exceeded, the response is treated as a not-retryable error.
-// This is a variable to allow tests to override it.
+// This is a variable to allow tests to override it. WithMaxResponseBodySize
+// overrides this default for a single exporter.
 var maxResponseBodySize int64 = 4 * 1024 * 1024
 
 var gzPool = sync.Pool{
@@ -217,10 +218,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			// Success, do not retry.
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-				if maxBytesErr, ok := errors.AsType[*http.MaxBytesError](err); ok {
-					return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-				}
+			if err := copyResponseBody(&respData, resp.Body, c.cfg.MaxResponseBodySize); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
@@ -258,10 +256,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-			if maxBytesErr, ok := errors.AsType[*http.MaxBytesError](err); ok {
-				return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-			}
+		if err := copyResponseBody(&respData, resp.Body, c.cfg.MaxResponseBodySize); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
@@ -398,6 +393,19 @@ type request struct {
 func (r *request) reset(ctx context.Context) {
 	r.Body = r.bodyReader()
 	r.Request = r.WithContext(ctx)
+}
+
+func copyResponseBody(dst io.Writer, src io.ReadCloser, maxSize int64) error {
+	if maxSize <= 0 {
+		maxSize = maxResponseBodySize
+	}
+	if _, err := io.Copy(dst, http.MaxBytesReader(nil, src, maxSize)); err != nil {
+		if maxBytesErr, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
+		}
+		return err
+	}
+	return nil
 }
 
 // retryableError represents a request failure that can be retried.

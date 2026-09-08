@@ -652,12 +652,7 @@ func TestClientInstrumentation(t *testing.T) {
 }
 
 func TestResponseBodySizeLimit(t *testing.T) {
-	// Override the limit to 1 byte so any non-empty response body exceeds it.
-	orig := *otlptracehttp.MaxResponseBodySize
-	*otlptracehttp.MaxResponseBodySize = 1
-	t.Cleanup(func() { *otlptracehttp.MaxResponseBodySize = orig })
-
-	// largeBody is larger than the 1-byte limit.
+	// largeBody is larger than the configured 1-byte limit.
 	largeBody := []byte("xx")
 
 	tests := []struct {
@@ -691,6 +686,7 @@ func TestResponseBodySizeLimit(t *testing.T) {
 				otlptracehttp.WithEndpointURL(srv.URL),
 				otlptracehttp.WithInsecure(),
 				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+				otlptracehttp.WithMaxResponseBodySize(1),
 			)
 			exporter, err := otlptrace.New(t.Context(), client)
 			require.NoError(t, err)
@@ -701,6 +697,35 @@ func TestResponseBodySizeLimit(t *testing.T) {
 			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 		})
 	}
+}
+
+func TestDefaultResponseBodySizeLimit(t *testing.T) {
+	orig := *otlptracehttp.MaxResponseBodySize
+	*otlptracehttp.MaxResponseBodySize = 1
+	t.Cleanup(func() { *otlptracehttp.MaxResponseBodySize = orig })
+
+	largeBody := []byte("xx")
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(largeBody)
+	}))
+	t.Cleanup(srv.Close)
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpointURL(srv.URL),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+	)
+	exporter, err := otlptrace.New(t.Context(), client)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = exporter.Shutdown(t.Context()) })
+
+	err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
+	assert.ErrorContains(t, err, "response body too large")
+	assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 }
 
 func TestRequestBodySizeLimit(t *testing.T) {
