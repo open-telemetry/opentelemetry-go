@@ -14,7 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
@@ -23,6 +25,7 @@ type syncClient struct {
 	logEndpoint      string
 	captured         [][]*tracepb.ResourceSpans
 	uploadSyncCalled bool
+	onUpload         func([]*tracepb.ResourceSpans)
 }
 
 var _ otlptrace.SyncClient = &syncClient{}
@@ -36,10 +39,11 @@ func (*syncClient) UploadTraces(_ context.Context, _ []*tracepb.ResourceSpans) e
 
 func (c *syncClient) UploadTracesSync(_ context.Context, rs []*tracepb.ResourceSpans) error {
 	c.uploadSyncCalled = true
-	// Capture shallow copy to test retention contract: caller should not
-	// retain after return, but we capture to verify data correctness before
-	// arena reuse. We copy slice header only; underlying data will be
-	// invalidated after Reset, so test must check values before that.
+	// Verify synchronously before return: arena is Reset after Upload returns,
+	// so arena-owned attributes/events must be checked here, not after.
+	if c.onUpload != nil {
+		c.onUpload(rs)
+	}
 	c.captured = append(c.captured, rs)
 	return c.uploadErr
 }
@@ -106,46 +110,105 @@ func TestSyncExporterArenaReuse(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// First batch
+	// First batch with arena-owned data (attributes + events are arena-backed,
+	// span structs and names are heap-allocated). Values must be checked
+	// synchronously in onUpload: ExportSpans Resets the arena after Upload
+	// returns, so captured references are invalid afterwards.
+	client.onUpload = func(rs []*tracepb.ResourceSpans) {
+		assert.Equal(t, "v1", spanAttrString(rs, "span-1", "k"))
+		assert.Equal(t, int64(7), spanAttrInt(rs, "span-2", "n"))
+		assert.Equal(t, "ev1", spanEventAttrString(rs, "span-1", "e1", "ek"))
+	}
 	spans1 := tracetest.SpanStubs{
-		{Name: "span-1", Attributes: nil},
-		{Name: "span-2"},
+		{
+			Name:       "span-1",
+			Attributes: []attribute.KeyValue{attribute.String("k", "v1")},
+			Events: []tracesdk.Event{
+				{Name: "e1", Attributes: []attribute.KeyValue{attribute.String("ek", "ev1")}},
+			},
+		},
+		{Name: "span-2", Attributes: []attribute.KeyValue{attribute.Int("n", 7)}},
 	}.Snapshots()
 	require.NoError(t, exp.ExportSpans(ctx, spans1))
 	require.Len(t, client.captured, 1)
-	// Verify first batch has correct names before arena reset corrupts it.
-	// Since we captured slice header, underlying arena data is still valid
-	// until next export reuses arena. We check immediately.
-	firstBatch := client.captured[0]
-	// Count spans in first batch
-	count := 0
-	for _, rs := range firstBatch {
-		for _, ss := range rs.ScopeSpans {
-			count += len(ss.Spans)
-		}
-	}
-	assert.Equal(t, 2, count)
 
-	// Second batch with different data to ensure arena reuse does not corrupt
-	// first batch's captured reference after Return (client must not retain).
-	// But since our test client retains slice header, second export will reuse
-	// arena and mutate memory that first batch points to. A correct SyncClient
-	// must NOT retain after return, so capturing is safe only if we deep-copy.
-	// Instead verify second export succeeds and has correct data.
+	// Second batch reuses the arena with different values.
+	client.onUpload = func(rs []*tracepb.ResourceSpans) {
+		assert.Equal(t, "v2", spanAttrString(rs, "span-3", "k"))
+		assert.Equal(t, "ev2", spanEventAttrString(rs, "span-3", "e1", "ek"))
+	}
 	spans2 := tracetest.SpanStubs{
-		{Name: "span-3"},
+		{
+			Name:       "span-3",
+			Attributes: []attribute.KeyValue{attribute.String("k", "v2")},
+			Events: []tracesdk.Event{
+				{Name: "e1", Attributes: []attribute.KeyValue{attribute.String("ek", "ev2")}},
+			},
+		},
 	}.Snapshots()
 	require.NoError(t, exp.ExportSpans(ctx, spans2))
 	require.Len(t, client.captured, 2)
-	count = 0
-	for _, rs := range client.captured[1] {
-		for _, ss := range rs.ScopeSpans {
-			count += len(ss.Spans)
-		}
-	}
-	assert.Equal(t, 1, count)
 
 	assert.NoError(t, exp.Shutdown(ctx))
+}
+
+func findPBSpan(
+	rs []*tracepb.ResourceSpans,
+	name string,
+) *tracepb.Span {
+	for _, r := range rs {
+		for _, ss := range r.ScopeSpans {
+			for _, s := range ss.Spans {
+				if s.Name == name {
+					return s
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func spanAttrString(rs []*tracepb.ResourceSpans, spanName, key string) string {
+	s := findPBSpan(rs, spanName)
+	if s == nil {
+		return ""
+	}
+	for _, a := range s.Attributes {
+		if a.Key == key {
+			return a.Value.GetStringValue()
+		}
+	}
+	return ""
+}
+
+func spanAttrInt(rs []*tracepb.ResourceSpans, spanName, key string) int64 {
+	s := findPBSpan(rs, spanName)
+	if s == nil {
+		return 0
+	}
+	for _, a := range s.Attributes {
+		if a.Key == key {
+			return a.Value.GetIntValue()
+		}
+	}
+	return 0
+}
+
+func spanEventAttrString(rs []*tracepb.ResourceSpans, spanName, eventName, key string) string {
+	s := findPBSpan(rs, spanName)
+	if s == nil {
+		return ""
+	}
+	for _, e := range s.Events {
+		if e.Name == eventName {
+			for _, a := range e.Attributes {
+				if a.Key == key {
+					return a.Value.GetStringValue()
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func TestSyncExporterWithOptions(t *testing.T) {
