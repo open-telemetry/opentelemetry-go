@@ -278,8 +278,11 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 			s.addDroppedAttr(1)
 			continue
 		}
-		a = dedupAttr(a, s.tracer.provider.spanLimits.AttributeValueDepthLimit)
-		a = attrnorm.Truncate(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
+		a = normAttr(
+			a,
+			s.tracer.provider.spanLimits.AttributeValueDepthLimit,
+			s.tracer.provider.spanLimits.AttributeValueLengthLimit,
+		)
 		s.attributes = append(s.attributes, a)
 		s.attributesDirty = true
 	}
@@ -353,8 +356,11 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 		if idx, ok := exists[a.Key]; ok {
 			// Perform all updates before dropping, even when at capacity.
-			a = dedupAttr(a, s.tracer.provider.spanLimits.AttributeValueDepthLimit)
-			a = attrnorm.Truncate(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
+			a = normAttr(
+				a,
+				s.tracer.provider.spanLimits.AttributeValueDepthLimit,
+				s.tracer.provider.spanLimits.AttributeValueLengthLimit,
+			)
 			s.attributes[idx] = a
 			continue
 		}
@@ -364,15 +370,18 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 			// updates are checked and performed.
 			s.addDroppedAttr(1)
 		} else {
-			a = dedupAttr(a, s.tracer.provider.spanLimits.AttributeValueDepthLimit)
-			a = attrnorm.Truncate(s.tracer.provider.spanLimits.AttributeValueLengthLimit, a)
+			a = normAttr(
+				a,
+				s.tracer.provider.spanLimits.AttributeValueDepthLimit,
+				s.tracer.provider.spanLimits.AttributeValueLengthLimit,
+			)
 			s.attributes = append(s.attributes, a)
 			exists[a.Key] = len(s.attributes) - 1
 		}
 	}
 }
 
-func dedupAttr(attr attribute.KeyValue, depthLimit int) attribute.KeyValue {
+func normAttr(attr attribute.KeyValue, depthLimit, lengthLimit int) attribute.KeyValue {
 	switch attr.Value.Type() {
 	case attribute.SLICE, attribute.MAP:
 		if depthLimit < 0 {
@@ -380,10 +389,8 @@ func dedupAttr(attr attribute.KeyValue, depthLimit int) attribute.KeyValue {
 		} else {
 			attr, _, _ = attrnorm.KeyValueWithDepthLimit(attr, depthLimit)
 		}
-		return attr
-	default:
-		return attr
 	}
+	return attrnorm.Truncate(lengthLimit, attr)
 }
 
 // End ends the span. This method does nothing if the span is already ended or

@@ -86,14 +86,15 @@ func KeyValues(kvs []attribute.KeyValue) ([]attribute.KeyValue, bool) {
 // Top-level key uniqueness remains attribute.Set's responsibility; this only
 // normalizes map attribute values.
 func Set(set attribute.Set) (attribute.Set, bool) {
-	if set.Len() == 0 {
+	length := set.Len()
+	if length == 0 {
 		return set, false
 	}
 
 	// Most attribute sets contain no duplicate map keys. Delay allocation until
 	// the first changed value so the no-op path returns the original Set.
 	var normalized []attribute.KeyValue
-	for i := range set.Len() {
+	for i := range length {
 		kv, _ := set.Get(i)
 		kv, changed := KeyValue(kv)
 		if normalized != nil {
@@ -104,7 +105,7 @@ func Set(set attribute.Set) (attribute.Set, bool) {
 			continue
 		}
 
-		normalized = make([]attribute.KeyValue, 0, set.Len())
+		normalized = make([]attribute.KeyValue, 0, length)
 		for j := range i {
 			prior, _ := set.Get(j)
 			normalized = append(normalized, prior)
@@ -180,7 +181,10 @@ func deduplicateMapValue(value attribute.Value) (attribute.Value, bool) {
 		if normalized != nil {
 			normalized = append(normalized, kv)
 		} else if changed {
-			normalized = make([]attribute.KeyValue, 0, length)
+			if i == 0 && j == length {
+				return attribute.MapValue(kv), true
+			}
+			normalized = make([]attribute.KeyValue, 0, length-(j-i-1))
 			for k := range i {
 				normalized = append(normalized, keyValueAt(storage, k))
 			}

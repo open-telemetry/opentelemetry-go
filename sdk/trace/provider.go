@@ -444,6 +444,8 @@ func WithSampler(s Sampler) TracerProviderOption {
 //
 // Setting this to zero means the default limit of 64 is used. Setting this to
 // a negative value means no limit is applied.
+//
+// There is no environment variable for this limit.
 func WithAttributeValueDepthLimit(limit int) TracerProviderOption {
 	if limit == 0 {
 		limit = DefaultAttributeValueDepthLimit

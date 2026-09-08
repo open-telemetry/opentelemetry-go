@@ -52,6 +52,17 @@ func TestValue(t *testing.T) {
 			wantChanged: true,
 		},
 		{
+			name: "single duplicate run",
+			value: attribute.MapValue(
+				attribute.String("one", "1"),
+				attribute.String("one", "2"),
+			),
+			want: attribute.MapValue(
+				attribute.String("one", "2"),
+			),
+			wantChanged: true,
+		},
+		{
 			name: "duplicate map after prior key",
 			value: attribute.MapValue(
 				attribute.String("a", "1"),
@@ -324,6 +335,33 @@ func TestValueWithDepthLimitChangeReasons(t *testing.T) {
 	}
 }
 
+func TestValueWithDepthLimitSingleDuplicateRunAllocations(t *testing.T) {
+	value := attribute.MapValue(
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	var got attribute.Value
+	var depthLimited, deduplicated bool
+
+	allocs := testing.AllocsPerRun(1000, func() {
+		got, depthLimited, deduplicated = ValueWithDepthLimit(value, 64)
+	})
+	if allocs > 1 {
+		t.Fatalf("ValueWithDepthLimit() allocations = %v, want at most 1", allocs)
+	}
+	if depthLimited || !deduplicated {
+		t.Fatalf(
+			"ValueWithDepthLimit() changes = (%v, %v), want (false, true)",
+			depthLimited,
+			deduplicated,
+		)
+	}
+	want := attribute.MapValue(attribute.String("key", "second"))
+	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
+		t.Fatalf("ValueWithDepthLimit() mismatch (-want +got):\n%s", diff)
+	}
+}
+
 func TestValueLimitDepthPreservesDuplicateMapKeys(t *testing.T) {
 	input := attribute.MapValue(
 		attribute.String("dup", "first"),
@@ -382,6 +420,25 @@ func TestValueNoopAllocationFree(t *testing.T) {
 		t.Fatal("Value() changed a no-op input")
 	}
 	if diff := cmp.Diff(value, got, cmpValue); diff != "" {
+		t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestValueSingleDuplicateRunAllocations(t *testing.T) {
+	value := attribute.MapValue(
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	var got attribute.Value
+
+	allocs := testing.AllocsPerRun(1000, func() {
+		got, _ = Value(value)
+	})
+	if allocs > 1 {
+		t.Fatalf("Value() allocations = %v, want at most 1", allocs)
+	}
+	want := attribute.MapValue(attribute.String("key", "second"))
+	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
 		t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -586,14 +643,6 @@ func TestDepthLimitCollectionEntryShapes(t *testing.T) {
 		t.Fatal("KeyValuesWithDepthLimit() modified input")
 	}
 
-	limited, changed := KeyValuesLimitDepth(input, 1)
-	if !changed {
-		t.Fatal("KeyValuesLimitDepth() did not change input")
-	}
-	if diff := cmp.Diff(want, limited, cmpValue); diff != "" {
-		t.Fatalf("KeyValuesLimitDepth() mismatch (-want +got):\n%s", diff)
-	}
-
 	set := attribute.NewSet(input...)
 	gotSet, depthLimited, deduplicated := SetWithDepthLimit(set, 1)
 	if !depthLimited || deduplicated {
@@ -720,7 +769,6 @@ func TestDepthLimitNoopAllocationFree(t *testing.T) {
 					{name: "KeyValueWithDepthLimit", run: func() { _, _, _ = KeyValueWithDepthLimit(kv, limit) }},
 					{name: "KeyValueLimitDepth", run: func() { _, _ = KeyValueLimitDepth(kv, limit) }},
 					{name: "KeyValuesWithDepthLimit", run: func() { _, _, _ = KeyValuesWithDepthLimit(kvs, limit) }},
-					{name: "KeyValuesLimitDepth", run: func() { _, _ = KeyValuesLimitDepth(kvs, limit) }},
 					{name: "SetWithDepthLimit", run: func() { _, _, _ = SetWithDepthLimit(set, limit) }},
 					{name: "SetLimitDepth", run: func() { _, _ = SetLimitDepth(set, limit) }},
 				}

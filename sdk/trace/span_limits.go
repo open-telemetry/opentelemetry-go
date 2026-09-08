@@ -52,6 +52,10 @@ type SpanLimits struct {
 	// descending into an array element or map value. An array or map beyond this
 	// depth is replaced by an empty value.
 	//
+	// This limit applies to span, event, link, and instrumentation scope
+	// attributes processed by a TracerProvider. It does not apply to Resource
+	// attributes.
+	//
 	// Setting this to zero means the default limit is used.
 	//
 	// Setting this to a negative value means no limit is applied.

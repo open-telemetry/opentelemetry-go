@@ -451,14 +451,30 @@ func TestMapDeduplication(t *testing.T) {
 	})
 
 	t.Run("ScopeWithAllowKeyDuplication", func(t *testing.T) {
+		input := attribute.Map(
+			"map",
+			attribute.String("dup", "first"),
+			attribute.String("dup", "second"),
+			attribute.Map("over", attribute.String("leaf", "value")),
+		)
+		want := attribute.Map(
+			"map",
+			attribute.String("dup", "first"),
+			attribute.String("dup", "second"),
+			attribute.KeyValue{Key: "over"},
+		)
 		p := newProcessor("processor")
-		lp := NewLoggerProvider(WithProcessor(p), WithAllowKeyDuplication())
-		l := lp.Logger("scope", log.WithInstrumentationAttributes(dup))
+		lp := NewLoggerProvider(
+			WithProcessor(p),
+			WithAllowKeyDuplication(),
+			WithAttributeValueDepthLimit(1),
+		)
+		l := lp.Logger("scope", log.WithInstrumentationAttributes(input))
 
 		l.Emit(t.Context(), log.Record{})
 
 		require.Len(t, p.records, 1)
-		assert.Equal(t, attribute.NewSet(dup), p.records[0].InstrumentationScope().Attributes)
+		assert.Equal(t, attribute.NewSet(want), p.records[0].InstrumentationScope().Attributes)
 	})
 }
 

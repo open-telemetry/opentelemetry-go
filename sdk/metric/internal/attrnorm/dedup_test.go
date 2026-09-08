@@ -49,6 +49,17 @@ func TestValue(t *testing.T) {
 			wantChanged: true,
 		},
 		{
+			name: "single duplicate run",
+			value: attribute.MapValue(
+				attribute.String("one", "1"),
+				attribute.String("one", "2"),
+			),
+			want: attribute.MapValue(
+				attribute.String("one", "2"),
+			),
+			wantChanged: true,
+		},
+		{
 			name: "duplicate map after prior key",
 			value: attribute.MapValue(
 				attribute.String("a", "1"),
@@ -156,6 +167,25 @@ func TestValueNoopAllocationFree(t *testing.T) {
 		t.Fatal("Value() changed a no-op input")
 	}
 	if diff := cmp.Diff(value, got, cmpValue); diff != "" {
+		t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestValueSingleDuplicateRunAllocations(t *testing.T) {
+	value := attribute.MapValue(
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	)
+	var got attribute.Value
+
+	allocs := testing.AllocsPerRun(1000, func() {
+		got, _ = Value(value)
+	})
+	if allocs > 1 {
+		t.Fatalf("Value() allocations = %v, want at most 1", allocs)
+	}
+	want := attribute.MapValue(attribute.String("key", "second"))
+	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
 		t.Fatalf("Value() mismatch (-want +got):\n%s", diff)
 	}
 }
