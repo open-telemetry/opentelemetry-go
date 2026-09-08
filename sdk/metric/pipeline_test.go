@@ -878,6 +878,40 @@ func TestViewMatchingModeComposableExemplarSelectorLastWins(t *testing.T) {
 	assert.True(t, called2, "second selector should be called (last-wins)")
 }
 
+func TestViewMatchingModeComposableAggregationLastWins(t *testing.T) {
+	views := []View{
+		NewView(Instrument{Name: "foo"}, Stream{Aggregation: AggregationSum{}}),
+		NewView(
+			Instrument{Name: "foo"},
+			Stream{Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{1, 5, 10}}},
+		),
+	}
+
+	r := NewManualReader()
+	p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+	r.register(p)
+	var vc cache[string, instID]
+	ins := newInserter[int64](p, &vc)
+	got, err := ins.Instrument(
+		Instrument{Name: "foo", Kind: InstrumentKindCounter},
+		nil,
+		DefaultAggregationSelector(InstrumentKindCounter),
+	)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+
+	got[0](t.Context(), 3, *attribute.EmptySet())
+
+	var data metricdata.ResourceMetrics
+	err = r.Collect(t.Context(), &data)
+	require.NoError(t, err)
+	require.Len(t, data.ScopeMetrics, 1)
+	require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+	m := data.ScopeMetrics[0].Metrics[0]
+	_, ok := m.Data.(metricdata.Histogram[int64])
+	assert.True(t, ok, "expected Histogram aggregation to win over preceding Sum aggregation (last-wins)")
+}
+
 func TestComposeAttributeFilters(t *testing.T) {
 	testcases := []struct {
 		name       string
