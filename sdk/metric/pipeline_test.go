@@ -958,6 +958,7 @@ func TestViewMatchingModeComposableDefaultAttributes(t *testing.T) {
 	}
 	r := NewManualReader()
 	p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+	r.register(p)
 	var vc cache[string, instID]
 	ins := newInserter[int64](p, &vc)
 	allowed := []attribute.Key{"k1"}
@@ -969,18 +970,31 @@ func TestViewMatchingModeComposableDefaultAttributes(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 
+	got[0](t.Context(), 1, attribute.NewSet(attribute.String("k1", "v1"), attribute.String("k2", "v2")))
+	var data metricdata.ResourceMetrics
+	err = r.Collect(t.Context(), &data)
+	require.NoError(t, err)
+	require.Len(t, data.ScopeMetrics, 1)
+	require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+	sum, ok := data.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 1)
+	assert.Equal(t, attribute.NewSet(attribute.String("k1", "v1")), sum.DataPoints[0].Attributes)
+
 	// Case 2: Matching view WITH attribute filter overrides allowedKeys baseline.
+	r2 := NewManualReader()
 	viewsWithFilter := []View{
 		NewView(Instrument{Name: "foo"}, Stream{AttributeFilter: attribute.NewAllowKeysFilter("k2")}),
 	}
 	pWithFilter := newPipeline(
 		resource.Empty(),
-		r,
+		r2,
 		viewsWithFilter,
 		exemplar.AlwaysOffFilter,
 		0,
 		viewMatchingModeComposable,
 	)
+	r2.register(pWithFilter)
 	var vc2 cache[string, instID]
 	ins2 := newInserter[int64](pWithFilter, &vc2)
 	got2, err2 := ins2.Instrument(
@@ -990,6 +1004,17 @@ func TestViewMatchingModeComposableDefaultAttributes(t *testing.T) {
 	)
 	require.NoError(t, err2)
 	require.Len(t, got2, 1)
+
+	got2[0](t.Context(), 1, attribute.NewSet(attribute.String("k1", "v1"), attribute.String("k2", "v2")))
+	var data2 metricdata.ResourceMetrics
+	err2 = r2.Collect(t.Context(), &data2)
+	require.NoError(t, err2)
+	require.Len(t, data2.ScopeMetrics, 1)
+	require.Len(t, data2.ScopeMetrics[0].Metrics, 1)
+	sum2, ok2 := data2.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok2)
+	require.Len(t, sum2.DataPoints, 1)
+	assert.Equal(t, attribute.NewSet(attribute.String("k2", "v2")), sum2.DataPoints[0].Attributes)
 }
 
 func TestViewMatchingModeComposableInvalidAggregationDirectView(t *testing.T) {
