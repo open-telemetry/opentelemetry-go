@@ -27,7 +27,21 @@ type rawValue struct {
 	stringly string
 	slice    any
 }
+{{ if index . "DepthLimit" }}
+type valueChanges uint8
 
+type depthLimitMode uint8
+
+const (
+	depthLimitChanged valueChanges = 1 << iota
+	deduplicationChanged
+)
+
+const (
+	preserveDuplicateKeys depthLimitMode = iota
+	deduplicateKeys
+)
+{{ end }}
 // Value returns value with all map values deduplicated and whether it changed.
 //
 // Duplicate map keys are resolved using last-value-wins semantics.
@@ -41,7 +55,76 @@ func Value(value attribute.Value) (attribute.Value, bool) {
 		return value, false
 	}
 }
+{{ if index . "DepthLimit" }}
+// ValueWithDepthLimit returns value with all map values deduplicated and all
+// array and map values limited to depthLimit. The boolean results report depth
+// limiting and deduplication changes, respectively.
+//
+// Duplicate map keys are resolved using last-value-wins semantics. Depth
+// starts at one for value and increments when descending into an array element
+// or map value. An array or map beyond a non-negative depthLimit is replaced by
+// an empty value. A negative depthLimit disables depth limiting.
+func ValueWithDepthLimit(
+	value attribute.Value,
+	depthLimit int,
+) (attribute.Value, bool, bool) {
+	if depthLimit < 0 {
+		value, deduplicated := Value(value)
+		return value, false, deduplicated
+	}
 
+	// Keep the common scalar and primitive-array cases in this wrapper. Routing
+	// them through the recursive, multi-result transform adds measurable
+	// overhead to the dominant simple attribute path.
+	switch value.Type() {
+	case attribute.BOOLSLICE,
+		attribute.INT64SLICE,
+		attribute.FLOAT64SLICE,
+		attribute.STRINGSLICE,
+		attribute.BYTESLICE:
+		if exceedsDepthLimit(depthLimit, 1) {
+			return attribute.Value{}, true, false
+		}
+		return value, false, false
+	case attribute.SLICE, attribute.MAP:
+	default:
+		return value, false, false
+	}
+
+	value, changes := valueWithDepthLimit(value, depthLimit, 1, deduplicateKeys)
+	return value, changes&depthLimitChanged != 0, changes&deduplicationChanged != 0
+}
+
+// ValueLimitDepth returns value with all array and map values limited to
+// depthLimit. Map keys are not deduplicated.
+//
+// Depth starts at one for value and increments when descending into an array
+// element or map value. An array or map beyond a non-negative depthLimit is
+// replaced by an empty value. A negative depthLimit disables depth limiting.
+func ValueLimitDepth(value attribute.Value, depthLimit int) (attribute.Value, bool) {
+	if depthLimit < 0 {
+		return value, false
+	}
+
+	switch value.Type() {
+	case attribute.BOOLSLICE,
+		attribute.INT64SLICE,
+		attribute.FLOAT64SLICE,
+		attribute.STRINGSLICE,
+		attribute.BYTESLICE:
+		if exceedsDepthLimit(depthLimit, 1) {
+			return attribute.Value{}, true
+		}
+		return value, false
+	case attribute.SLICE, attribute.MAP:
+	default:
+		return value, false
+	}
+
+	value, changes := valueWithDepthLimit(value, depthLimit, 1, preserveDuplicateKeys)
+	return value, changes != 0
+}
+{{ end }}
 // KeyValue returns kv with all map values deduplicated and whether it changed.
 func KeyValue(kv attribute.KeyValue) (attribute.KeyValue, bool) {
 	value, changed := Value(kv.Value)
@@ -50,7 +133,31 @@ func KeyValue(kv attribute.KeyValue) (attribute.KeyValue, bool) {
 	}
 	return kv, changed
 }
+{{ if index . "DepthLimit" }}
+// KeyValueWithDepthLimit returns kv with all map values deduplicated and all
+// array and map values limited to depthLimit. The boolean results report depth
+// limiting and deduplication changes, respectively.
+func KeyValueWithDepthLimit(
+	kv attribute.KeyValue,
+	depthLimit int,
+) (attribute.KeyValue, bool, bool) {
+	value, depthLimited, deduplicated := ValueWithDepthLimit(kv.Value, depthLimit)
+	if depthLimited || deduplicated {
+		kv.Value = value
+	}
+	return kv, depthLimited, deduplicated
+}
 
+// KeyValueLimitDepth returns kv with all array and map values limited to
+// depthLimit. Map keys are not deduplicated.
+func KeyValueLimitDepth(kv attribute.KeyValue, depthLimit int) (attribute.KeyValue, bool) {
+	value, changed := ValueLimitDepth(kv.Value, depthLimit)
+	if changed {
+		kv.Value = value
+	}
+	return kv, changed
+}
+{{ end }}
 // KeyValues returns kvs with all map values deduplicated and whether they changed.
 //
 // The returned slice is the original kvs slice if no value needs
@@ -79,7 +186,86 @@ func KeyValues(kvs []attribute.KeyValue) ([]attribute.KeyValue, bool) {
 	}
 	return normalized, true
 }
+{{ if index . "DepthLimit" }}
+// KeyValuesWithDepthLimit returns kvs with all map values deduplicated and all
+// array and map values limited to depthLimit. The boolean results report depth
+// limiting and deduplication changes, respectively.
+//
+// The returned slice is the original kvs slice if no value needs
+// normalization. Top-level keys in kvs are not deduplicated.
+func KeyValuesWithDepthLimit(
+	kvs []attribute.KeyValue,
+	depthLimit int,
+) ([]attribute.KeyValue, bool, bool) {
+	if depthLimit < 0 {
+		kvs, deduplicated := KeyValues(kvs)
+		return kvs, false, deduplicated
+	}
 
+	var normalized []attribute.KeyValue
+	var allChanges valueChanges
+	for i, kv := range kvs {
+		value, changes := valueWithDepthLimit(kv.Value, depthLimit, 1, deduplicateKeys)
+		allChanges |= changes
+		if changes != 0 {
+			kv.Value = value
+		}
+		if normalized != nil {
+			normalized[i] = kv
+			continue
+		}
+		if changes == 0 {
+			continue
+		}
+
+		normalized = make([]attribute.KeyValue, len(kvs))
+		copy(normalized, kvs[:i])
+		normalized[i] = kv
+	}
+	if normalized == nil {
+		return kvs, false, false
+	}
+	return normalized,
+		allChanges&depthLimitChanged != 0,
+		allChanges&deduplicationChanged != 0
+}
+
+// KeyValuesLimitDepth returns kvs with all array and map values limited to
+// depthLimit. Map keys are not deduplicated.
+//
+// The returned slice is the original kvs slice if no value changes.
+func KeyValuesLimitDepth(
+	kvs []attribute.KeyValue,
+	depthLimit int,
+) ([]attribute.KeyValue, bool) {
+	if depthLimit < 0 {
+		return kvs, false
+	}
+
+	var normalized []attribute.KeyValue
+	for i, kv := range kvs {
+		value, changes := valueWithDepthLimit(kv.Value, depthLimit, 1, preserveDuplicateKeys)
+		if changes != 0 {
+			kv.Value = value
+		}
+		if normalized != nil {
+			normalized[i] = kv
+			continue
+		}
+		if changes == 0 {
+			continue
+		}
+
+		normalized = make([]attribute.KeyValue, len(kvs))
+		copy(normalized, kvs[:i])
+		normalized[i] = kv
+	}
+	if normalized == nil {
+		return kvs, false
+	}
+	return normalized, true
+}
+{{ end }}
 // Set returns set with all map values deduplicated and whether it changed.
 //
 // The returned Set is the original set if no value needs deduplication.
@@ -117,7 +303,310 @@ func Set(set attribute.Set) (attribute.Set, bool) {
 
 	return attribute.NewSet(normalized...), true
 }
+{{ if index . "DepthLimit" }}
+// SetWithDepthLimit returns set with all map values deduplicated and all array
+// and map values limited to depthLimit. The boolean results report depth
+// limiting and deduplication changes, respectively.
+//
+// The returned Set is the original set if no value needs normalization.
+// Top-level key uniqueness remains attribute.Set's responsibility; this only
+// normalizes attribute values.
+func SetWithDepthLimit(
+	set attribute.Set,
+	depthLimit int,
+) (attribute.Set, bool, bool) {
+	if depthLimit < 0 {
+		set, deduplicated := Set(set)
+		return set, false, deduplicated
+	}
+	if set.Len() == 0 {
+		return set, false, false
+	}
 
+	var normalized []attribute.KeyValue
+	var allChanges valueChanges
+	for i := range set.Len() {
+		kv, _ := set.Get(i)
+		value, changes := valueWithDepthLimit(kv.Value, depthLimit, 1, deduplicateKeys)
+		allChanges |= changes
+		if changes != 0 {
+			kv.Value = value
+		}
+		if normalized != nil {
+			normalized = append(normalized, kv)
+			continue
+		}
+		if changes == 0 {
+			continue
+		}
+
+		normalized = make([]attribute.KeyValue, 0, set.Len())
+		for j := range i {
+			prior, _ := set.Get(j)
+			normalized = append(normalized, prior)
+		}
+		normalized = append(normalized, kv)
+	}
+	if normalized == nil {
+		return set, false, false
+	}
+	return attribute.NewSet(normalized...),
+		allChanges&depthLimitChanged != 0,
+		allChanges&deduplicationChanged != 0
+}
+
+// SetLimitDepth returns set with all array and map values limited to
+// depthLimit. Map keys are not deduplicated.
+//
+// The returned Set is the original set if no value changes.
+func SetLimitDepth(set attribute.Set, depthLimit int) (attribute.Set, bool) {
+	if depthLimit < 0 || set.Len() == 0 {
+		return set, false
+	}
+
+	var normalized []attribute.KeyValue
+	for i := range set.Len() {
+		kv, _ := set.Get(i)
+		value, changes := valueWithDepthLimit(kv.Value, depthLimit, 1, preserveDuplicateKeys)
+		if changes != 0 {
+			kv.Value = value
+		}
+		if normalized != nil {
+			normalized = append(normalized, kv)
+			continue
+		}
+		if changes == 0 {
+			continue
+		}
+
+		normalized = make([]attribute.KeyValue, 0, set.Len())
+		for j := range i {
+			prior, _ := set.Get(j)
+			normalized = append(normalized, prior)
+		}
+		normalized = append(normalized, kv)
+	}
+	if normalized == nil {
+		return set, false
+	}
+	return attribute.NewSet(normalized...), true
+}
+
+// valueWithDepthLimit combines depth limiting with the existing recursive map
+// normalization walk. It checks the limit before reading collection storage,
+// and lazily rebuilds only changed ancestry.
+func valueWithDepthLimit(
+	value attribute.Value,
+	depthLimit, depth int,
+	mode depthLimitMode,
+) (attribute.Value, valueChanges) {
+	switch value.Type() {
+	case attribute.BOOLSLICE,
+		attribute.INT64SLICE,
+		attribute.FLOAT64SLICE,
+		attribute.STRINGSLICE,
+		attribute.BYTESLICE:
+		if exceedsDepthLimit(depthLimit, depth) {
+			return attribute.Value{}, depthLimitChanged
+		}
+	case attribute.SLICE:
+		if exceedsDepthLimit(depthLimit, depth) {
+			return attribute.Value{}, depthLimitChanged
+		}
+		return sliceValueWithDepthLimit(value, depthLimit, depth, mode)
+	case attribute.MAP:
+		if exceedsDepthLimit(depthLimit, depth) {
+			return attribute.Value{}, depthLimitChanged
+		}
+		if mode == deduplicateKeys {
+			return deduplicateMapValueWithDepthLimit(value, depthLimit, depth)
+		}
+		return mapValueLimitDepth(value, depthLimit, depth)
+	}
+	return value, 0
+}
+
+func sliceValueWithDepthLimit(
+	value attribute.Value,
+	depthLimit, depth int,
+	mode depthLimitMode,
+) (attribute.Value, valueChanges) {
+	storage := valueStorage(value)
+	length := valueLen(storage)
+	if length <= 1 {
+		if length == 1 {
+			elem := valueAt(storage, 0)
+			newElem, changes := valueWithDepthLimit(
+				elem,
+				depthLimit,
+				depth+1,
+				mode,
+			)
+			if changes != 0 {
+				return attribute.SliceValue(newElem), changes
+			}
+		}
+		return value, 0
+	}
+
+	var normalized []attribute.Value
+	var allChanges valueChanges
+	for i := range length {
+		elem := valueAt(storage, i)
+		newElem, changes := valueWithDepthLimit(
+			elem,
+			depthLimit,
+			depth+1,
+			mode,
+		)
+		allChanges |= changes
+		if normalized != nil {
+			normalized[i] = newElem
+			continue
+		}
+		if changes == 0 {
+			continue
+		}
+
+		normalized = make([]attribute.Value, length)
+		for j := range i {
+			normalized[j] = valueAt(storage, j)
+		}
+		normalized[i] = newElem
+	}
+	if normalized == nil {
+		return value, 0
+	}
+	return attribute.SliceValue(normalized...), allChanges
+}
+
+func deduplicateMapValueWithDepthLimit(
+	value attribute.Value,
+	depthLimit, depth int,
+) (attribute.Value, valueChanges) {
+	storage := valueStorage(value)
+	length := keyValueLen(storage)
+	if length <= 1 {
+		if length == 1 {
+			kv := keyValueAt(storage, 0)
+			newValue, changes := valueWithDepthLimit(
+				kv.Value,
+				depthLimit,
+				depth+1,
+				deduplicateKeys,
+			)
+			if changes != 0 {
+				kv.Value = newValue
+				return attribute.MapValue(kv), changes
+			}
+		}
+		return value, 0
+	}
+
+	var normalized []attribute.KeyValue
+	var allChanges valueChanges
+	for i := 0; i < length; {
+		// attribute.MapValue stores key-values sorted by key using a stable
+		// sort. Only the last entry in an equal-key run survives, so avoid
+		// traversing values that will be discarded.
+		first := keyValueAt(storage, i)
+		j := i + 1
+		for j < length && keyValueAt(storage, j).Key == first.Key {
+			j++
+		}
+
+		kv := keyValueAt(storage, j-1)
+		newValue, changes := valueWithDepthLimit(
+			kv.Value,
+			depthLimit,
+			depth+1,
+			deduplicateKeys,
+		)
+		if changes != 0 {
+			kv.Value = newValue
+		}
+		if j-i > 1 {
+			changes |= deduplicationChanged
+		}
+		allChanges |= changes
+		if normalized != nil {
+			normalized = append(normalized, kv)
+		} else if changes != 0 {
+			normalized = make([]attribute.KeyValue, 0, length)
+			for k := range i {
+				normalized = append(normalized, keyValueAt(storage, k))
+			}
+			normalized = append(normalized, kv)
+		}
+		i = j
+	}
+	if normalized == nil {
+		return value, 0
+	}
+	return attribute.MapValue(normalized...), allChanges
+}
+
+func mapValueLimitDepth(
+	value attribute.Value,
+	depthLimit, depth int,
+) (attribute.Value, valueChanges) {
+	storage := valueStorage(value)
+	length := keyValueLen(storage)
+	if length <= 1 {
+		if length == 1 {
+			kv := keyValueAt(storage, 0)
+			newValue, changes := valueWithDepthLimit(
+				kv.Value,
+				depthLimit,
+				depth+1,
+				preserveDuplicateKeys,
+			)
+			if changes != 0 {
+				kv.Value = newValue
+				return attribute.MapValue(kv), changes
+			}
+		}
+		return value, 0
+	}
+
+	var normalized []attribute.KeyValue
+	var allChanges valueChanges
+	for i := range length {
+		kv := keyValueAt(storage, i)
+		newValue, changes := valueWithDepthLimit(
+			kv.Value,
+			depthLimit,
+			depth+1,
+			preserveDuplicateKeys,
+		)
+		allChanges |= changes
+		if changes != 0 {
+			kv.Value = newValue
+		}
+		if normalized != nil {
+			normalized[i] = kv
+			continue
+		}
+		if changes == 0 {
+			continue
+		}
+
+		normalized = make([]attribute.KeyValue, length)
+		for j := range i {
+			normalized[j] = keyValueAt(storage, j)
+		}
+		normalized[i] = kv
+	}
+	if normalized == nil {
+		return value, 0
+	}
+	return attribute.MapValue(normalized...), allChanges
+}
+
+func exceedsDepthLimit(limit, depth int) bool {
+	return limit >= 0 && depth > limit
+}
+{{ end }}
 func deduplicateSliceValue(value attribute.Value) (attribute.Value, bool) {
 	storage := valueStorage(value)
 	length := valueLen(storage)

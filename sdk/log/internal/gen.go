@@ -6,8 +6,8 @@ package internal
 
 //go:generate gotmpl --body=../../../internal/shared/x/x.go.tmpl "--data={ \"pkg\": \"go.opentelemetry.io/otel/sdk/log\" }" --out=x/x.go
 //go:generate gotmpl --body=../../../internal/shared/x/x_test.go.tmpl "--data={}" --out=x/x_test.go
-//go:generate gotmpl --body=../../../internal/shared/attrnorm/dedup.go.tmpl "--data={}" --out=attrnorm/dedup.go
-//go:generate gotmpl --body=../../../internal/shared/attrnorm/dedup_test.go.tmpl "--data={}" --out=attrnorm/dedup_test.go
+//go:generate gotmpl --body=../../../internal/shared/attrnorm/dedup.go.tmpl "--data={ \"DepthLimit\": true }" --out=attrnorm/dedup.go
+//go:generate gotmpl --body=../../../internal/shared/attrnorm/dedup_test.go.tmpl "--data={ \"DepthLimit\": true }" --out=attrnorm/dedup_test.go
 //go:generate gotmpl --body=../../../internal/shared/attrnorm/truncate.go.tmpl "--data={}" --out=attrnorm/truncate.go
 //go:generate gotmpl --body=../../../internal/shared/attrnorm/truncate_test.go.tmpl "--data={}" --out=attrnorm/truncate_test.go
 //go:generate gotmpl --body=../../../internal/shared/counter/counter.go.tmpl "--data={ \"pkg\": \"go.opentelemetry.io/otel/sdk/log\" }" --out=counter/counter.go
