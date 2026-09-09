@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Decode `traceparent` using a hex lookup table in `go.opentelemetry.io/otel/propagation`, which rejects the specification-disallowed upper-case characters without a separate scan of the header. (#8739)
+- Decode all characters at constant indices in `TraceIDFromHex` and `SpanIDFromHex` in `go.opentelemetry.io/otel/trace` to eliminate bounds checks. (#8740)
 
 ### Added
 
