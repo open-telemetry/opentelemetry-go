@@ -108,20 +108,22 @@ func TestNewConfig(t *testing.T) {
 				WithCompression(GzipCompression),
 				WithHeaders(headers),
 				WithMaxRequestSize(1),
+				WithMaxResponseSize(2),
 				WithTimeout(time.Second),
 				WithRetry(RetryConfig(rc)),
 				// Do not test WithProxy. Requires func comparison.
 			},
 			want: config{
-				endpoint:       newSetting("test"),
-				path:           newSetting("/path"),
-				insecure:       newSetting(true),
-				tlsCfg:         newSetting(tlsCfg),
-				headers:        newSetting(headers),
-				compression:    newSetting(GzipCompression),
-				maxRequestSize: newSetting(1),
-				timeout:        newSetting(time.Second),
-				retryCfg:       newSetting(rc),
+				endpoint:        newSetting("test"),
+				path:            newSetting("/path"),
+				insecure:        newSetting(true),
+				tlsCfg:          newSetting(tlsCfg),
+				headers:         newSetting(headers),
+				compression:     newSetting(GzipCompression),
+				maxRequestSize:  newSetting(1),
+				maxResponseSize: newSetting(int64(2)),
+				timeout:         newSetting(time.Second),
+				retryCfg:        newSetting(rc),
 			},
 		},
 		{
@@ -514,6 +516,9 @@ func TestNewConfig(t *testing.T) {
 			if !tc.want.maxRequestSize.Set {
 				tc.want.maxRequestSize = newSetting(64 * 1024 * 1024)
 			}
+			if !tc.want.maxResponseSize.Set {
+				tc.want.maxResponseSize = newSetting(defaultMaxResponseSize)
+			}
 
 			// Do not compare pointer values.
 			assertTLSConfig(t, tc.want.tlsCfg, c.tlsCfg)
@@ -530,6 +535,16 @@ func TestNewConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMaxResponseSize(t *testing.T) {
+	for _, size := range []int64{0, -1} {
+		cfg := newConfig([]Option{WithMaxResponseSize(size)})
+		assert.Equal(t, defaultMaxResponseSize, cfg.maxResponseSize.Value)
+	}
+
+	cfg := newConfig([]Option{WithMaxResponseSize(2), WithMaxResponseSize(0)})
+	assert.Equal(t, int64(2), cfg.maxResponseSize.Value)
 }
 
 func assertTLSConfig(t *testing.T, want, got setting[*tls.Config]) {

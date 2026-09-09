@@ -464,12 +464,7 @@ func TestGetBodyCalledOnRedirectWithGzip(t *testing.T) {
 }
 
 func TestResponseBodySizeLimit(t *testing.T) {
-	// Override the limit to 1 byte so any non-empty response body exceeds it.
-	orig := maxResponseBodySize
-	maxResponseBodySize = 1
-	t.Cleanup(func() { maxResponseBodySize = orig })
-
-	// largeBody is larger than the 1-byte limit.
+	// largeBody is larger than the configured 1-byte limit.
 	largeBody := []byte("xx")
 
 	tests := []struct {
@@ -502,6 +497,7 @@ func TestResponseBodySizeLimit(t *testing.T) {
 			opts := []Option{
 				WithEndpoint(srv.Listener.Addr().String()),
 				WithInsecure(),
+				WithMaxResponseSize(1),
 				WithRetry(RetryConfig{Enabled: false}),
 			}
 			cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
@@ -514,6 +510,38 @@ func TestResponseBodySizeLimit(t *testing.T) {
 			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 		})
 	}
+}
+
+func TestResponseBodySizeLimitAfterDecompression(t *testing.T) {
+	const limit = 64
+	body := bytes.Repeat([]byte("x"), 1024)
+
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+		zw := gzip.NewWriter(w)
+		_, _ = zw.Write(body)
+		_ = zw.Close()
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithMaxResponseSize(limit),
+		WithRetry(RetryConfig{Enabled: false}),
+	}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	c, err := newClient(cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Shutdown(t.Context()) })
+
+	err = c.UploadMetrics(t.Context(), &mpb.ResourceMetrics{})
+	assert.ErrorContains(t, err, "response body too large: exceeded 64 bytes")
+	assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 }
 
 func TestRequestBodySizeLimit(t *testing.T) {

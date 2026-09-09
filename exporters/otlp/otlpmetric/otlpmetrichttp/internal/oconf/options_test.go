@@ -81,6 +81,11 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, NoCompression, c.Metrics.Compression)
 				assert.Equal(t, map[string]string(nil), c.Metrics.Headers)
 				assert.Equal(t, 64*1024*1024, c.Metrics.MaxRequestSize)
+				if grpcOption {
+					assert.Zero(t, c.Metrics.MaxResponseSize)
+				} else {
+					assert.Equal(t, DefaultMaxResponseSize, c.Metrics.MaxResponseSize)
+				}
 				assert.Equal(t, 10*time.Second, c.Metrics.Timeout)
 			},
 		},
@@ -631,6 +636,27 @@ func asGRPCOptions(opts []GenericOption) []GRPCOption {
 		converted[i] = NewGRPCOption(o.ApplyGRPCOption)
 	}
 	return converted
+}
+
+func TestMaxResponseSize(t *testing.T) {
+	tests := []struct {
+		name string
+		size int64
+		want int64
+	}{
+		{name: "Positive", size: 2, want: 2},
+		{name: "Zero", size: 0, want: DefaultMaxResponseSize},
+		{name: "Negative", size: -1, want: DefaultMaxResponseSize},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cfg := NewHTTPConfig(WithMaxResponseSize(test.size))
+			assert.Equal(t, test.want, cfg.Metrics.MaxResponseSize)
+		})
+	}
+
+	cfg := NewHTTPConfig(WithMaxResponseSize(2), WithMaxResponseSize(0))
+	assert.Equal(t, int64(2), cfg.Metrics.MaxResponseSize)
 }
 
 func TestCleanPath(t *testing.T) {
