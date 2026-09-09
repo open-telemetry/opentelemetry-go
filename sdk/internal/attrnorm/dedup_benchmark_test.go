@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/internal/attrnorm"
 )
 
-func BenchmarkValue(b *testing.B) {
+func BenchmarkValueDedup(b *testing.B) {
 	values := []struct {
 		name  string
 		value attribute.Value
@@ -47,7 +47,7 @@ func BenchmarkValue(b *testing.B) {
 		b.Run(value.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				_, _ = attrnorm.DeduplicateValue(value.value)
+				_, _ = attrnorm.ValueDedup(value.value)
 			}
 		})
 	}

@@ -17,7 +17,7 @@ import (
 
 var cmpValue = cmp.AllowUnexported(attribute.Value{})
 
-func TestDeduplicateValue(t *testing.T) {
+func TestValueDedup(t *testing.T) {
 	tests := []struct {
 		name        string
 		value       attribute.Value
@@ -140,18 +140,18 @@ func TestDeduplicateValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, changed := DeduplicateValue(test.value)
+			got, changed := ValueDedup(test.value)
 			if changed != test.wantChanged {
-				t.Fatalf("DeduplicateValue() changed = %v, want %v", changed, test.wantChanged)
+				t.Fatalf("ValueDedup() changed = %v, want %v", changed, test.wantChanged)
 			}
 			if diff := cmp.Diff(test.want, got, cmpValue); diff != "" {
-				t.Fatalf("DeduplicateValue() mismatch (-want +got):\n%s", diff)
+				t.Fatalf("ValueDedup() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
 }
 
-func TestValueDepthLimit(t *testing.T) {
+func TestValueLimitDepth(t *testing.T) {
 	type depthFn func(attribute.Value, int) (attribute.Value, bool)
 	functions := []struct {
 		name string
@@ -160,13 +160,13 @@ func TestValueDepthLimit(t *testing.T) {
 		{
 			name: "Deduplicate",
 			fn: func(value attribute.Value, limit int) (attribute.Value, bool) {
-				value, changed, _ := DeduplicateValueWithDepthLimit(value, limit)
+				value, changed, _ := ValueDedupLimitDepth(value, limit)
 				return value, changed
 			},
 		},
 		{
 			name: "AllowDuplicates",
-			fn:   LimitValueDepth,
+			fn:   ValueLimitDepth,
 		},
 	}
 
@@ -258,7 +258,7 @@ func TestValueDepthLimit(t *testing.T) {
 	}
 }
 
-func TestDeduplicateValueWithDepthLimitChangeReasons(t *testing.T) {
+func TestValueDedupLimitDepthChangeReasons(t *testing.T) {
 	tests := []struct {
 		name                         string
 		limit                        int
@@ -319,7 +319,7 @@ func TestDeduplicateValueWithDepthLimitChangeReasons(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, depthLimited, deduplicated := DeduplicateValueWithDepthLimit(test.value, test.limit)
+			got, depthLimited, deduplicated := ValueDedupLimitDepth(test.value, test.limit)
 			if depthLimited != test.wantDepth {
 				t.Fatalf("depthLimited = %v, want %v", depthLimited, test.wantDepth)
 			}
@@ -327,13 +327,13 @@ func TestDeduplicateValueWithDepthLimitChangeReasons(t *testing.T) {
 				t.Fatalf("deduplicated = %v, want %v", deduplicated, test.wantDeduplication)
 			}
 			if diff := cmp.Diff(test.want, got, cmpValue); diff != "" {
-				t.Fatalf("DeduplicateValueWithDepthLimit() mismatch (-want +got):\n%s", diff)
+				t.Fatalf("ValueDedupLimitDepth() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
 }
 
-func TestDeduplicateValueWithDepthLimitSingleDuplicateRunAllocations(t *testing.T) {
+func TestValueDedupLimitDepthSingleDuplicateRunAllocations(t *testing.T) {
 	value := attribute.MapValue(
 		attribute.String("key", "first"),
 		attribute.String("key", "second"),
@@ -342,25 +342,25 @@ func TestDeduplicateValueWithDepthLimitSingleDuplicateRunAllocations(t *testing.
 	var depthLimited, deduplicated bool
 
 	allocs := testing.AllocsPerRun(1000, func() {
-		got, depthLimited, deduplicated = DeduplicateValueWithDepthLimit(value, 64)
+		got, depthLimited, deduplicated = ValueDedupLimitDepth(value, 64)
 	})
 	if allocs > 1 {
-		t.Fatalf("DeduplicateValueWithDepthLimit() allocations = %v, want at most 1", allocs)
+		t.Fatalf("ValueDedupLimitDepth() allocations = %v, want at most 1", allocs)
 	}
 	if depthLimited || !deduplicated {
 		t.Fatalf(
-			"DeduplicateValueWithDepthLimit() changes = (%v, %v), want (false, true)",
+			"ValueDedupLimitDepth() changes = (%v, %v), want (false, true)",
 			depthLimited,
 			deduplicated,
 		)
 	}
 	want := attribute.MapValue(attribute.String("key", "second"))
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
-		t.Fatalf("DeduplicateValueWithDepthLimit() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("ValueDedupLimitDepth() mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestLimitValueDepthPreservesDuplicateMapKeys(t *testing.T) {
+func TestValueLimitDepthPreservesDuplicateMapKeys(t *testing.T) {
 	input := attribute.MapValue(
 		attribute.String("dup", "first"),
 		attribute.String("dup", "second"),
@@ -372,19 +372,19 @@ func TestLimitValueDepthPreservesDuplicateMapKeys(t *testing.T) {
 		attribute.KeyValue{Key: "over"},
 	)
 
-	got, changed := LimitValueDepth(input, 1)
+	got, changed := ValueLimitDepth(input, 1)
 	if !changed {
-		t.Fatal("LimitValueDepth() did not change value")
+		t.Fatal("ValueLimitDepth() did not change value")
 	}
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
-		t.Fatalf("LimitValueDepth() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("ValueLimitDepth() mismatch (-want +got):\n%s", diff)
 	}
 	if diff := cmp.Diff(input.AsMap(), []attribute.KeyValue{
 		attribute.String("dup", "first"),
 		attribute.String("dup", "second"),
 		attribute.Map("over", attribute.String("leaf", "value")),
 	}, cmpValue); diff != "" {
-		t.Fatalf("LimitValueDepth() modified input (-want +got):\n%s", diff)
+		t.Fatalf("ValueLimitDepth() modified input (-want +got):\n%s", diff)
 	}
 }
 
@@ -398,12 +398,12 @@ func TestDepthLimitRecursiveFamilies(t *testing.T) {
 		attribute.Slice("slice", attribute.MapValue(duplicates...)),
 	)
 
-	preserved, changed := LimitValueDepth(input, 3)
+	preserved, changed := ValueLimitDepth(input, 3)
 	if changed {
-		t.Fatal("LimitValueDepth() changed an input within the depth limit")
+		t.Fatal("ValueLimitDepth() changed an input within the depth limit")
 	}
 	if diff := cmp.Diff(input, preserved, cmpValue); diff != "" {
-		t.Fatalf("LimitValueDepth() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("ValueLimitDepth() mismatch (-want +got):\n%s", diff)
 	}
 
 	want := attribute.MapValue(
@@ -413,39 +413,39 @@ func TestDepthLimitRecursiveFamilies(t *testing.T) {
 			attribute.MapValue(attribute.String("dup", "second")),
 		),
 	)
-	got, depthLimited, deduplicated := DeduplicateValueWithDepthLimit(input, 3)
+	got, depthLimited, deduplicated := ValueDedupLimitDepth(input, 3)
 	if depthLimited || !deduplicated {
 		t.Fatalf(
-			"DeduplicateValueWithDepthLimit() changes = (%v, %v), want (false, true)",
+			"ValueDedupLimitDepth() changes = (%v, %v), want (false, true)",
 			depthLimited,
 			deduplicated,
 		)
 	}
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
-		t.Fatalf("DeduplicateValueWithDepthLimit() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("ValueDedupLimitDepth() mismatch (-want +got):\n%s", diff)
 	}
 	if diff := cmp.Diff(input.AsMap(), []attribute.KeyValue{
 		attribute.Map("map", duplicates...),
 		attribute.Slice("slice", attribute.MapValue(duplicates...)),
 	}, cmpValue); diff != "" {
-		t.Fatalf("DeduplicateValueWithDepthLimit() modified input (-want +got):\n%s", diff)
+		t.Fatalf("ValueDedupLimitDepth() modified input (-want +got):\n%s", diff)
 	}
 }
 
-func TestValueDepthLimitStopsBeforeOverLimitChildren(t *testing.T) {
+func TestValueDedupLimitDepthStopsBeforeOverLimitChildren(t *testing.T) {
 	input := nestedMapValue(4096, attribute.StringValue("value"))
 	want := nestedMapValue(1, attribute.Value{})
 
-	got, depthLimited, deduplicated := DeduplicateValueWithDepthLimit(input, 1)
+	got, depthLimited, deduplicated := ValueDedupLimitDepth(input, 1)
 	if !depthLimited || deduplicated {
-		t.Fatalf("DeduplicateValueWithDepthLimit() changes = (%v, %v), want (true, false)", depthLimited, deduplicated)
+		t.Fatalf("ValueDedupLimitDepth() changes = (%v, %v), want (true, false)", depthLimited, deduplicated)
 	}
 	if got != want {
-		t.Fatal("DeduplicateValueWithDepthLimit() did not stop at the first over-limit value")
+		t.Fatal("ValueDedupLimitDepth() did not stop at the first over-limit value")
 	}
 }
 
-func TestDeduplicateValueNoopAllocationFree(t *testing.T) {
+func TestValueDedupNoopAllocationFree(t *testing.T) {
 	value := attribute.MapValue(
 		attribute.String("one", "1"),
 		attribute.String("two", "2"),
@@ -453,20 +453,20 @@ func TestDeduplicateValueNoopAllocationFree(t *testing.T) {
 	var got attribute.Value
 
 	allocs := testing.AllocsPerRun(1000, func() {
-		got, _ = DeduplicateValue(value)
+		got, _ = ValueDedup(value)
 	})
 	if allocs != 0 {
-		t.Fatalf("DeduplicateValue() allocations = %v, want 0", allocs)
+		t.Fatalf("ValueDedup() allocations = %v, want 0", allocs)
 	}
-	if _, changed := DeduplicateValue(value); changed {
-		t.Fatal("DeduplicateValue() changed a no-op input")
+	if _, changed := ValueDedup(value); changed {
+		t.Fatal("ValueDedup() changed a no-op input")
 	}
 	if diff := cmp.Diff(value, got, cmpValue); diff != "" {
-		t.Fatalf("DeduplicateValue() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("ValueDedup() mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDeduplicateValueSingleDuplicateRunAllocations(t *testing.T) {
+func TestValueDedupSingleDuplicateRunAllocations(t *testing.T) {
 	value := attribute.MapValue(
 		attribute.String("key", "first"),
 		attribute.String("key", "second"),
@@ -474,18 +474,18 @@ func TestDeduplicateValueSingleDuplicateRunAllocations(t *testing.T) {
 	var got attribute.Value
 
 	allocs := testing.AllocsPerRun(1000, func() {
-		got, _ = DeduplicateValue(value)
+		got, _ = ValueDedup(value)
 	})
 	if allocs > 1 {
-		t.Fatalf("DeduplicateValue() allocations = %v, want at most 1", allocs)
+		t.Fatalf("ValueDedup() allocations = %v, want at most 1", allocs)
 	}
 	want := attribute.MapValue(attribute.String("key", "second"))
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
-		t.Fatalf("DeduplicateValue() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("ValueDedup() mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDeduplicateValueStorageShapes(t *testing.T) {
+func TestValueDedupStorageShapes(t *testing.T) {
 	for n := 0; n <= 6; n++ {
 		t.Run("map", func(t *testing.T) {
 			kvs := make([]attribute.KeyValue, n)
@@ -494,12 +494,12 @@ func TestDeduplicateValueStorageShapes(t *testing.T) {
 			}
 			value := attribute.MapValue(kvs...)
 
-			got, changed := DeduplicateValue(value)
+			got, changed := ValueDedup(value)
 			if changed {
-				t.Fatal("DeduplicateValue() changed a no-op input")
+				t.Fatal("ValueDedup() changed a no-op input")
 			}
 			if diff := cmp.Diff(value, got, cmpValue); diff != "" {
-				t.Fatalf("DeduplicateValue() mismatch (-want +got):\n%s", diff)
+				t.Fatalf("ValueDedup() mismatch (-want +got):\n%s", diff)
 			}
 		})
 		t.Run("slice", func(t *testing.T) {
@@ -509,18 +509,18 @@ func TestDeduplicateValueStorageShapes(t *testing.T) {
 			}
 			value := attribute.SliceValue(values...)
 
-			got, changed := DeduplicateValue(value)
+			got, changed := ValueDedup(value)
 			if changed {
-				t.Fatal("DeduplicateValue() changed a no-op input")
+				t.Fatal("ValueDedup() changed a no-op input")
 			}
 			if diff := cmp.Diff(value, got, cmpValue); diff != "" {
-				t.Fatalf("DeduplicateValue() mismatch (-want +got):\n%s", diff)
+				t.Fatalf("ValueDedup() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
 }
 
-func TestDeduplicateKeyValue(t *testing.T) {
+func TestKeyValueDedup(t *testing.T) {
 	kv := attribute.Map(
 		"map",
 		attribute.String("nested", "first"),
@@ -531,34 +531,34 @@ func TestDeduplicateKeyValue(t *testing.T) {
 		attribute.String("nested", "second"),
 	)
 
-	got, changed := DeduplicateKeyValue(kv)
+	got, changed := KeyValueDedup(kv)
 	if !changed {
-		t.Fatal("DeduplicateKeyValue() changed = false, want true")
+		t.Fatal("KeyValueDedup() changed = false, want true")
 	}
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
-		t.Fatalf("DeduplicateKeyValue() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("KeyValueDedup() mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDeduplicateKeyValuesNoopReturnsInput(t *testing.T) {
+func TestKeyValuesDedupNoopReturnsInput(t *testing.T) {
 	kvs := []attribute.KeyValue{
 		attribute.String("one", "1"),
 		attribute.Map("two", attribute.String("nested", "value")),
 	}
 
-	got, changed := DeduplicateKeyValues(kvs)
+	got, changed := KeyValuesDedup(kvs)
 	if changed {
-		t.Fatal("DeduplicateKeyValues() changed a no-op input")
+		t.Fatal("KeyValuesDedup() changed a no-op input")
 	}
 	if len(got) != len(kvs) {
-		t.Fatalf("DeduplicateKeyValues() length = %d, want %d", len(got), len(kvs))
+		t.Fatalf("KeyValuesDedup() length = %d, want %d", len(got), len(kvs))
 	}
 	if &got[0] != &kvs[0] {
-		t.Fatal("DeduplicateKeyValues() copied a no-op input")
+		t.Fatal("KeyValuesDedup() copied a no-op input")
 	}
 }
 
-func TestDeduplicateKeyValues(t *testing.T) {
+func TestKeyValuesDedup(t *testing.T) {
 	kvs := []attribute.KeyValue{
 		attribute.String("top", "value"),
 		attribute.Map(
@@ -577,16 +577,16 @@ func TestDeduplicateKeyValues(t *testing.T) {
 		attribute.String("tail", "value"),
 	}
 
-	got, changed := DeduplicateKeyValues(kvs)
+	got, changed := KeyValuesDedup(kvs)
 	if !changed {
-		t.Fatal("DeduplicateKeyValues() changed = false, want true")
+		t.Fatal("KeyValuesDedup() changed = false, want true")
 	}
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
-		t.Fatalf("DeduplicateKeyValues() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("KeyValuesDedup() mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDeduplicateSet(t *testing.T) {
+func TestSetDedup(t *testing.T) {
 	set := attribute.NewSet(
 		attribute.String("a-top", "value"),
 		attribute.Map(
@@ -605,39 +605,39 @@ func TestDeduplicateSet(t *testing.T) {
 		attribute.String("z-tail", "value"),
 	)
 
-	got, changed := DeduplicateSet(set)
+	got, changed := SetDedup(set)
 	if !changed {
-		t.Fatal("DeduplicateSet() changed = false, want true")
+		t.Fatal("SetDedup() changed = false, want true")
 	}
 	if diff := cmp.Diff(want.ToSlice(), got.ToSlice(), cmpValue); diff != "" {
-		t.Fatalf("DeduplicateSet() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("SetDedup() mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDeduplicateSetNoop(t *testing.T) {
+func TestSetDedupNoop(t *testing.T) {
 	set := attribute.NewSet(
 		attribute.String("top", "value"),
 		attribute.Map("map", attribute.String("nested", "value")),
 	)
 
-	got, changed := DeduplicateSet(set)
+	got, changed := SetDedup(set)
 	if changed {
-		t.Fatal("DeduplicateSet() changed a no-op input")
+		t.Fatal("SetDedup() changed a no-op input")
 	}
 	if !got.Equals(&set) {
-		t.Fatal("DeduplicateSet() changed a no-op input")
+		t.Fatal("SetDedup() changed a no-op input")
 	}
 }
 
-func TestDeduplicateSetEmpty(t *testing.T) {
+func TestSetDedupEmpty(t *testing.T) {
 	set := attribute.Set{}
 
-	got, changed := DeduplicateSet(set)
+	got, changed := SetDedup(set)
 	if changed {
-		t.Fatal("DeduplicateSet() changed an empty input")
+		t.Fatal("SetDedup() changed an empty input")
 	}
 	if !got.Equals(&set) {
-		t.Fatal("DeduplicateSet() changed an empty input")
+		t.Fatal("SetDedup() changed an empty input")
 	}
 }
 
@@ -652,76 +652,76 @@ func TestDepthLimitCollectionEntryShapes(t *testing.T) {
 		attribute.Map("b", attribute.KeyValue{Key: "over"}),
 		attribute.String("z", "tail"),
 	}
-	gotKV, depthLimited, deduplicated := DeduplicateKeyValueWithDepthLimit(input[1], 1)
+	gotKV, depthLimited, deduplicated := KeyValueDedupLimitDepth(input[1], 1)
 	if !depthLimited || deduplicated {
 		t.Fatalf(
-			"DeduplicateKeyValueWithDepthLimit() changes = (%v, %v), want (true, false)",
+			"KeyValueDedupLimitDepth() changes = (%v, %v), want (true, false)",
 			depthLimited,
 			deduplicated,
 		)
 	}
 	if diff := cmp.Diff(want[1], gotKV, cmpValue); diff != "" {
-		t.Fatalf("DeduplicateKeyValueWithDepthLimit() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("KeyValueDedupLimitDepth() mismatch (-want +got):\n%s", diff)
 	}
-	gotKV, changed := LimitKeyValueDepth(input[1], 1)
+	gotKV, changed := KeyValueLimitDepth(input[1], 1)
 	if !changed {
-		t.Fatal("LimitKeyValueDepth() did not change input")
+		t.Fatal("KeyValueLimitDepth() did not change input")
 	}
 	if diff := cmp.Diff(want[1], gotKV, cmpValue); diff != "" {
-		t.Fatalf("LimitKeyValueDepth() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("KeyValueLimitDepth() mismatch (-want +got):\n%s", diff)
 	}
 
-	got, depthLimited, deduplicated := DeduplicateKeyValuesWithDepthLimit(input, 1)
+	got, depthLimited, deduplicated := KeyValuesDedupLimitDepth(input, 1)
 	if !depthLimited || deduplicated {
 		t.Fatalf(
-			"DeduplicateKeyValuesWithDepthLimit() changes = (%v, %v), want (true, false)",
+			"KeyValuesDedupLimitDepth() changes = (%v, %v), want (true, false)",
 			depthLimited,
 			deduplicated,
 		)
 	}
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
-		t.Fatalf("DeduplicateKeyValuesWithDepthLimit() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("KeyValuesDedupLimitDepth() mismatch (-want +got):\n%s", diff)
 	}
-	unchanged, depthLimited, deduplicated := DeduplicateKeyValuesWithDepthLimit(input, 64)
+	unchanged, depthLimited, deduplicated := KeyValuesDedupLimitDepth(input, 64)
 	if depthLimited || deduplicated {
 		t.Fatalf(
-			"DeduplicateKeyValuesWithDepthLimit() changes = (%v, %v), want (false, false)",
+			"KeyValuesDedupLimitDepth() changes = (%v, %v), want (false, false)",
 			depthLimited,
 			deduplicated,
 		)
 	}
 	if &unchanged[0] != &input[0] {
-		t.Fatal("DeduplicateKeyValuesWithDepthLimit() copied a no-op input")
+		t.Fatal("KeyValuesDedupLimitDepth() copied a no-op input")
 	}
 	if input[1].Value.AsMap()[0].Value.Type() != attribute.MAP {
-		t.Fatal("DeduplicateKeyValuesWithDepthLimit() modified input")
+		t.Fatal("KeyValuesDedupLimitDepth() modified input")
 	}
 
 	set := attribute.NewSet(input...)
-	gotSet, depthLimited, deduplicated := DeduplicateSetWithDepthLimit(set, 1)
+	gotSet, depthLimited, deduplicated := SetDedupLimitDepth(set, 1)
 	if !depthLimited || deduplicated {
-		t.Fatalf("DeduplicateSetWithDepthLimit() changes = (%v, %v), want (true, false)", depthLimited, deduplicated)
+		t.Fatalf("SetDedupLimitDepth() changes = (%v, %v), want (true, false)", depthLimited, deduplicated)
 	}
 	wantSet := attribute.NewSet(want...)
 	if diff := cmp.Diff(wantSet.ToSlice(), gotSet.ToSlice(), cmpValue); diff != "" {
-		t.Fatalf("DeduplicateSetWithDepthLimit() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("SetDedupLimitDepth() mismatch (-want +got):\n%s", diff)
 	}
-	gotSet, changed = LimitSetDepth(set, 1)
+	gotSet, changed = SetLimitDepth(set, 1)
 	if !changed {
-		t.Fatal("LimitSetDepth() did not change input")
+		t.Fatal("SetLimitDepth() did not change input")
 	}
 	if diff := cmp.Diff(wantSet.ToSlice(), gotSet.ToSlice(), cmpValue); diff != "" {
-		t.Fatalf("LimitSetDepth() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("SetLimitDepth() mismatch (-want +got):\n%s", diff)
 	}
 
 	empty := attribute.NewSet()
-	gotSet, depthLimited, deduplicated = DeduplicateSetWithDepthLimit(empty, 1)
+	gotSet, depthLimited, deduplicated = SetDedupLimitDepth(empty, 1)
 	if depthLimited || deduplicated || !gotSet.Equals(&empty) {
-		t.Fatal("DeduplicateSetWithDepthLimit() changed an empty set")
+		t.Fatal("SetDedupLimitDepth() changed an empty set")
 	}
-	gotSet, changed = LimitSetDepth(empty, 1)
+	gotSet, changed = SetLimitDepth(empty, 1)
 	if changed || !gotSet.Equals(&empty) {
-		t.Fatal("LimitSetDepth() changed an empty set")
+		t.Fatal("SetLimitDepth() changed an empty set")
 	}
 }
 
@@ -737,20 +737,20 @@ func TestDepthLimitMapContinuationPaths(t *testing.T) {
 		attribute.String("z", "tail"),
 	)
 
-	got, depthLimited, deduplicated := DeduplicateValueWithDepthLimit(input, 1)
+	got, depthLimited, deduplicated := ValueDedupLimitDepth(input, 1)
 	if !depthLimited || deduplicated {
-		t.Fatalf("DeduplicateValueWithDepthLimit() changes = (%v, %v), want (true, false)", depthLimited, deduplicated)
+		t.Fatalf("ValueDedupLimitDepth() changes = (%v, %v), want (true, false)", depthLimited, deduplicated)
 	}
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
-		t.Fatalf("DeduplicateValueWithDepthLimit() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("ValueDedupLimitDepth() mismatch (-want +got):\n%s", diff)
 	}
 
-	got, changed := LimitValueDepth(input, 1)
+	got, changed := ValueLimitDepth(input, 1)
 	if !changed {
-		t.Fatal("LimitValueDepth() did not change input")
+		t.Fatal("ValueLimitDepth() did not change input")
 	}
 	if diff := cmp.Diff(want, got, cmpValue); diff != "" {
-		t.Fatalf("LimitValueDepth() mismatch (-want +got):\n%s", diff)
+		t.Fatalf("ValueLimitDepth() mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -762,11 +762,11 @@ func TestDepthLimitCopyOnWriteStorageShapes(t *testing.T) {
 		{
 			name: "Deduplicate",
 			run: func(value attribute.Value, limit int) (attribute.Value, bool) {
-				value, depthLimited, deduplicated := DeduplicateValueWithDepthLimit(value, limit)
+				value, depthLimited, deduplicated := ValueDedupLimitDepth(value, limit)
 				return value, depthLimited || deduplicated
 			},
 		},
-		{name: "Preserve", run: LimitValueDepth},
+		{name: "Preserve", run: ValueLimitDepth},
 	}
 
 	for _, operation := range operations {
@@ -835,24 +835,24 @@ func TestDepthLimitNoopAllocationFree(t *testing.T) {
 					run  func()
 				}{
 					{
-						name: "DeduplicateValueWithDepthLimit",
-						run:  func() { _, _, _ = DeduplicateValueWithDepthLimit(test.value, limit) },
+						name: "ValueDedupLimitDepth",
+						run:  func() { _, _, _ = ValueDedupLimitDepth(test.value, limit) },
 					},
-					{name: "LimitValueDepth", run: func() { _, _ = LimitValueDepth(test.value, limit) }},
+					{name: "ValueLimitDepth", run: func() { _, _ = ValueLimitDepth(test.value, limit) }},
 					{
-						name: "DeduplicateKeyValueWithDepthLimit",
-						run:  func() { _, _, _ = DeduplicateKeyValueWithDepthLimit(kv, limit) },
+						name: "KeyValueDedupLimitDepth",
+						run:  func() { _, _, _ = KeyValueDedupLimitDepth(kv, limit) },
 					},
-					{name: "LimitKeyValueDepth", run: func() { _, _ = LimitKeyValueDepth(kv, limit) }},
+					{name: "KeyValueLimitDepth", run: func() { _, _ = KeyValueLimitDepth(kv, limit) }},
 					{
-						name: "DeduplicateKeyValuesWithDepthLimit",
-						run:  func() { _, _, _ = DeduplicateKeyValuesWithDepthLimit(kvs, limit) },
+						name: "KeyValuesDedupLimitDepth",
+						run:  func() { _, _, _ = KeyValuesDedupLimitDepth(kvs, limit) },
 					},
 					{
-						name: "DeduplicateSetWithDepthLimit",
-						run:  func() { _, _, _ = DeduplicateSetWithDepthLimit(set, limit) },
+						name: "SetDedupLimitDepth",
+						run:  func() { _, _, _ = SetDedupLimitDepth(set, limit) },
 					},
-					{name: "LimitSetDepth", run: func() { _, _ = LimitSetDepth(set, limit) }},
+					{name: "SetLimitDepth", run: func() { _, _ = SetLimitDepth(set, limit) }},
 				}
 				for _, operation := range operations {
 					t.Run(operation.name, func(t *testing.T) {
@@ -874,7 +874,7 @@ func nestedMapValue(depth int, leaf attribute.Value) attribute.Value {
 	return value
 }
 
-func BenchmarkValueDepthLimit(b *testing.B) {
+func BenchmarkValueLimitDepth(b *testing.B) {
 	wideSlice := attribute.SliceValue(
 		attribute.IntValue(0), attribute.IntValue(1), attribute.IntValue(2),
 		attribute.IntValue(3), attribute.IntValue(4), attribute.IntValue(5),
@@ -911,7 +911,7 @@ func BenchmarkValueDepthLimit(b *testing.B) {
 				b.ReportAllocs()
 				var out attribute.Value
 				for b.Loop() {
-					out, _ = DeduplicateValue(test.value)
+					out, _ = ValueDedup(test.value)
 				}
 				_ = out
 			})
@@ -920,7 +920,7 @@ func BenchmarkValueDepthLimit(b *testing.B) {
 					b.ReportAllocs()
 					var out attribute.Value
 					for b.Loop() {
-						out, _, _ = DeduplicateValueWithDepthLimit(test.value, limit)
+						out, _, _ = ValueDedupLimitDepth(test.value, limit)
 					}
 					_ = out
 				})
@@ -928,7 +928,7 @@ func BenchmarkValueDepthLimit(b *testing.B) {
 					b.ReportAllocs()
 					var out attribute.Value
 					for b.Loop() {
-						out, _ = LimitValueDepth(test.value, limit)
+						out, _ = ValueLimitDepth(test.value, limit)
 					}
 					_ = out
 				})

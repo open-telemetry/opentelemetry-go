@@ -201,7 +201,7 @@ func (r *Record) Body() attribute.Value {
 // SetBody sets the body of the log record.
 func (r *Record) SetBody(v attribute.Value) {
 	if !r.allowDupKeys {
-		r.body, _ = attrnorm.DeduplicateValue(v)
+		r.body, _ = attrnorm.ValueDedup(v)
 	} else {
 		r.body = v
 	}
@@ -529,15 +529,15 @@ func (r *Record) applyCompositeAttrDepthLimitAndDedup(attr attribute.KeyValue) a
 	if !r.allowDupKeys {
 		var deduplicated bool
 		if depthLimit < 0 {
-			attr, deduplicated = attrnorm.DeduplicateKeyValue(attr)
+			attr, deduplicated = attrnorm.KeyValueDedup(attr)
 		} else {
-			attr, _, deduplicated = attrnorm.DeduplicateKeyValueWithDepthLimit(attr, depthLimit)
+			attr, _, deduplicated = attrnorm.KeyValueDedupLimitDepth(attr, depthLimit)
 		}
 		if deduplicated {
 			logKeyValuePairDropped()
 		}
 	} else if depthLimit >= 0 {
-		attr, _ = attrnorm.LimitKeyValueDepth(attr, depthLimit)
+		attr, _ = attrnorm.KeyValueLimitDepth(attr, depthLimit)
 	}
 	return attr
 }

@@ -144,9 +144,9 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 		logInvalidAttribute()
 	}
 	if !p.allowDupKeys {
-		attrs, _, _ = attrnorm.DeduplicateSetWithDepthLimit(attrs, p.attrValueDepthLimit())
+		attrs, _, _ = attrnorm.SetDedupLimitDepth(attrs, p.attrValueDepthLimit())
 	} else {
-		attrs, _ = attrnorm.LimitSetDepth(attrs, p.attrValueDepthLimit())
+		attrs, _ = attrnorm.SetLimitDepth(attrs, p.attrValueDepthLimit())
 	}
 	scope := instrumentation.Scope{
 		Name:       name,

@@ -35,22 +35,22 @@ const (
 	deduplicationChanged
 )
 
-// DeduplicateValue returns value with all map values deduplicated and whether
+// ValueDedup returns value with all map values deduplicated and whether
 // it changed.
 //
 // Duplicate map keys are resolved using last-value-wins semantics.
-func DeduplicateValue(value attribute.Value) (attribute.Value, bool) {
+func ValueDedup(value attribute.Value) (attribute.Value, bool) {
 	switch value.Type() {
 	case attribute.SLICE:
-		return deduplicateSliceValue(value)
+		return sliceValueDedup(value)
 	case attribute.MAP:
-		return deduplicateMapValue(value)
+		return mapValueDedup(value)
 	default:
 		return value, false
 	}
 }
 
-// DeduplicateValueWithDepthLimit returns value with all map values
+// ValueDedupLimitDepth returns value with all map values
 // deduplicated and all array and map values limited to depthLimit. The boolean
 // results report depth limiting and deduplication changes, respectively.
 //
@@ -58,12 +58,12 @@ func DeduplicateValue(value attribute.Value) (attribute.Value, bool) {
 // starts at one for value and increments when descending into an array element
 // or map value. An array or map beyond a non-negative depthLimit is replaced by
 // an empty value. A negative depthLimit disables depth limiting.
-func DeduplicateValueWithDepthLimit(
+func ValueDedupLimitDepth(
 	value attribute.Value,
 	depthLimit int,
 ) (attribute.Value, bool, bool) {
 	if depthLimit < 0 {
-		value, deduplicated := DeduplicateValue(value)
+		value, deduplicated := ValueDedup(value)
 		return value, false, deduplicated
 	}
 
@@ -85,17 +85,17 @@ func DeduplicateValueWithDepthLimit(
 		return value, false, false
 	}
 
-	value, changes := deduplicateValueWithDepthLimit(value, depthLimit)
+	value, changes := valueDedupLimitDepth(value, depthLimit)
 	return value, changes&depthLimitChanged != 0, changes&deduplicationChanged != 0
 }
 
-// LimitValueDepth returns value with all array and map values limited to
+// ValueLimitDepth returns value with all array and map values limited to
 // depthLimit. Map keys are not deduplicated.
 //
 // Depth starts at one for value and increments when descending into an array
 // element or map value. An array or map beyond a non-negative depthLimit is
 // replaced by an empty value. A negative depthLimit disables depth limiting.
-func LimitValueDepth(value attribute.Value, depthLimit int) (attribute.Value, bool) {
+func ValueLimitDepth(value attribute.Value, depthLimit int) (attribute.Value, bool) {
 	if depthLimit < 0 {
 		return value, false
 	}
@@ -115,55 +115,55 @@ func LimitValueDepth(value attribute.Value, depthLimit int) (attribute.Value, bo
 		return value, false
 	}
 
-	return limitValueDepth(value, depthLimit)
+	return valueLimitDepth(value, depthLimit)
 }
 
-// DeduplicateKeyValue returns kv with all map values deduplicated and whether
+// KeyValueDedup returns kv with all map values deduplicated and whether
 // it changed.
-func DeduplicateKeyValue(kv attribute.KeyValue) (attribute.KeyValue, bool) {
-	value, changed := DeduplicateValue(kv.Value)
+func KeyValueDedup(kv attribute.KeyValue) (attribute.KeyValue, bool) {
+	value, changed := ValueDedup(kv.Value)
 	if changed {
 		kv.Value = value
 	}
 	return kv, changed
 }
 
-// DeduplicateKeyValueWithDepthLimit returns kv with all map values
+// KeyValueDedupLimitDepth returns kv with all map values
 // deduplicated and all array and map values limited to depthLimit. The boolean
 // results report depth limiting and deduplication changes, respectively.
-func DeduplicateKeyValueWithDepthLimit(
+func KeyValueDedupLimitDepth(
 	kv attribute.KeyValue,
 	depthLimit int,
 ) (attribute.KeyValue, bool, bool) {
-	value, depthLimited, deduplicated := DeduplicateValueWithDepthLimit(kv.Value, depthLimit)
+	value, depthLimited, deduplicated := ValueDedupLimitDepth(kv.Value, depthLimit)
 	if depthLimited || deduplicated {
 		kv.Value = value
 	}
 	return kv, depthLimited, deduplicated
 }
 
-// LimitKeyValueDepth returns kv with all array and map values limited to
+// KeyValueLimitDepth returns kv with all array and map values limited to
 // depthLimit. Map keys are not deduplicated.
-func LimitKeyValueDepth(kv attribute.KeyValue, depthLimit int) (attribute.KeyValue, bool) {
-	value, changed := LimitValueDepth(kv.Value, depthLimit)
+func KeyValueLimitDepth(kv attribute.KeyValue, depthLimit int) (attribute.KeyValue, bool) {
+	value, changed := ValueLimitDepth(kv.Value, depthLimit)
 	if changed {
 		kv.Value = value
 	}
 	return kv, changed
 }
 
-// DeduplicateKeyValues returns kvs with all map values deduplicated and whether
+// KeyValuesDedup returns kvs with all map values deduplicated and whether
 // they changed.
 //
 // The returned slice is the original kvs slice if no value needs
 // deduplication. Top-level keys in kvs are not deduplicated.
-func DeduplicateKeyValues(kvs []attribute.KeyValue) ([]attribute.KeyValue, bool) {
+func KeyValuesDedup(kvs []attribute.KeyValue) ([]attribute.KeyValue, bool) {
 	// Preserve the caller's slice on the common no-op path. Once a changed
 	// value is found, copy the prior values exactly once and fill the rest in
 	// place as the scan continues.
 	var normalized []attribute.KeyValue
 	for i, kv := range kvs {
-		kv, changed := DeduplicateKeyValue(kv)
+		kv, changed := KeyValueDedup(kv)
 		if normalized != nil {
 			normalized[i] = kv
 			continue
@@ -182,25 +182,25 @@ func DeduplicateKeyValues(kvs []attribute.KeyValue) ([]attribute.KeyValue, bool)
 	return normalized, true
 }
 
-// DeduplicateKeyValuesWithDepthLimit returns kvs with all map values
+// KeyValuesDedupLimitDepth returns kvs with all map values
 // deduplicated and all array and map values limited to depthLimit. The boolean
 // results report depth limiting and deduplication changes, respectively.
 //
 // The returned slice is the original kvs slice if no value needs
 // normalization. Top-level keys in kvs are not deduplicated.
-func DeduplicateKeyValuesWithDepthLimit(
+func KeyValuesDedupLimitDepth(
 	kvs []attribute.KeyValue,
 	depthLimit int,
 ) ([]attribute.KeyValue, bool, bool) {
 	if depthLimit < 0 {
-		kvs, deduplicated := DeduplicateKeyValues(kvs)
+		kvs, deduplicated := KeyValuesDedup(kvs)
 		return kvs, false, deduplicated
 	}
 
 	var normalized []attribute.KeyValue
 	var allChanges valueChanges
 	for i, kv := range kvs {
-		value, changes := deduplicateValueWithDepthLimit(kv.Value, depthLimit)
+		value, changes := valueDedupLimitDepth(kv.Value, depthLimit)
 		allChanges |= changes
 		if changes != 0 {
 			kv.Value = value
@@ -225,13 +225,13 @@ func DeduplicateKeyValuesWithDepthLimit(
 		allChanges&deduplicationChanged != 0
 }
 
-// DeduplicateSet returns set with all map values deduplicated and whether it
+// SetDedup returns set with all map values deduplicated and whether it
 // changed.
 //
 // The returned Set is the original set if no value needs deduplication.
 // Top-level key uniqueness remains attribute.Set's responsibility; this only
 // normalizes map attribute values.
-func DeduplicateSet(set attribute.Set) (attribute.Set, bool) {
+func SetDedup(set attribute.Set) (attribute.Set, bool) {
 	length := set.Len()
 	if length == 0 {
 		return set, false
@@ -242,7 +242,7 @@ func DeduplicateSet(set attribute.Set) (attribute.Set, bool) {
 	var normalized []attribute.KeyValue
 	for i := range length {
 		kv, _ := set.Get(i)
-		kv, changed := DeduplicateKeyValue(kv)
+		kv, changed := KeyValueDedup(kv)
 		if normalized != nil {
 			normalized = append(normalized, kv)
 			continue
@@ -265,19 +265,19 @@ func DeduplicateSet(set attribute.Set) (attribute.Set, bool) {
 	return attribute.NewSet(normalized...), true
 }
 
-// DeduplicateSetWithDepthLimit returns set with all map values deduplicated and
+// SetDedupLimitDepth returns set with all map values deduplicated and
 // all array and map values limited to depthLimit. The boolean results report
 // depth limiting and deduplication changes, respectively.
 //
 // The returned Set is the original set if no value needs normalization.
 // Top-level key uniqueness remains attribute.Set's responsibility; this only
 // normalizes attribute values.
-func DeduplicateSetWithDepthLimit(
+func SetDedupLimitDepth(
 	set attribute.Set,
 	depthLimit int,
 ) (attribute.Set, bool, bool) {
 	if depthLimit < 0 {
-		set, deduplicated := DeduplicateSet(set)
+		set, deduplicated := SetDedup(set)
 		return set, false, deduplicated
 	}
 	length := set.Len()
@@ -289,7 +289,7 @@ func DeduplicateSetWithDepthLimit(
 	var allChanges valueChanges
 	for i := range length {
 		kv, _ := set.Get(i)
-		value, changes := deduplicateValueWithDepthLimit(kv.Value, depthLimit)
+		value, changes := valueDedupLimitDepth(kv.Value, depthLimit)
 		allChanges |= changes
 		if changes != 0 {
 			kv.Value = value
@@ -317,11 +317,11 @@ func DeduplicateSetWithDepthLimit(
 		allChanges&deduplicationChanged != 0
 }
 
-// LimitSetDepth returns set with all array and map values limited to
+// SetLimitDepth returns set with all array and map values limited to
 // depthLimit. Map keys are not deduplicated.
 //
 // The returned Set is the original set if no value changes.
-func LimitSetDepth(set attribute.Set, depthLimit int) (attribute.Set, bool) {
+func SetLimitDepth(set attribute.Set, depthLimit int) (attribute.Set, bool) {
 	if depthLimit < 0 {
 		return set, false
 	}
@@ -333,7 +333,7 @@ func LimitSetDepth(set attribute.Set, depthLimit int) (attribute.Set, bool) {
 	var normalized []attribute.KeyValue
 	for i := range length {
 		kv, _ := set.Get(i)
-		value, changed := limitValueDepth(kv.Value, depthLimit)
+		value, changed := valueLimitDepth(kv.Value, depthLimit)
 		if changed {
 			kv.Value = value
 		}
@@ -358,11 +358,11 @@ func LimitSetDepth(set attribute.Set, depthLimit int) (attribute.Set, bool) {
 	return attribute.NewSet(normalized...), true
 }
 
-// deduplicateValueWithDepthLimit combines depth limiting with recursive map
+// valueDedupLimitDepth combines depth limiting with recursive map
 // deduplication. remainingDepth is non-negative. It checks the remaining
 // budget before reading collection storage and lazily rebuilds only changed
 // ancestry.
-func deduplicateValueWithDepthLimit(
+func valueDedupLimitDepth(
 	value attribute.Value,
 	remainingDepth int,
 ) (attribute.Value, valueChanges) {
@@ -379,18 +379,18 @@ func deduplicateValueWithDepthLimit(
 		if remainingDepth == 0 {
 			return attribute.Value{}, depthLimitChanged
 		}
-		return deduplicateSliceValueWithDepthLimit(value, remainingDepth)
+		return sliceValueDedupLimitDepth(value, remainingDepth)
 	case attribute.MAP:
 		if remainingDepth == 0 {
 			return attribute.Value{}, depthLimitChanged
 		}
-		return deduplicateMapValueWithDepthLimit(value, remainingDepth)
+		return mapValueDedupLimitDepth(value, remainingDepth)
 	}
 	return value, 0
 }
 
-// limitValueDepth limits collection depth while preserving duplicate map keys.
-func limitValueDepth(
+// valueLimitDepth limits collection depth while preserving duplicate map keys.
+func valueLimitDepth(
 	value attribute.Value,
 	remainingDepth int,
 ) (attribute.Value, bool) {
@@ -407,17 +407,17 @@ func limitValueDepth(
 		if remainingDepth == 0 {
 			return attribute.Value{}, true
 		}
-		return limitSliceValueDepth(value, remainingDepth)
+		return sliceValueLimitDepth(value, remainingDepth)
 	case attribute.MAP:
 		if remainingDepth == 0 {
 			return attribute.Value{}, true
 		}
-		return limitMapValueDepth(value, remainingDepth)
+		return mapValueLimitDepth(value, remainingDepth)
 	}
 	return value, false
 }
 
-func deduplicateSliceValueWithDepthLimit(
+func sliceValueDedupLimitDepth(
 	value attribute.Value,
 	remainingDepth int,
 ) (attribute.Value, valueChanges) {
@@ -426,7 +426,7 @@ func deduplicateSliceValueWithDepthLimit(
 	if length <= 1 {
 		if length == 1 {
 			elem := valueAt(storage, 0)
-			newElem, changes := deduplicateValueWithDepthLimit(
+			newElem, changes := valueDedupLimitDepth(
 				elem,
 				remainingDepth-1,
 			)
@@ -441,7 +441,7 @@ func deduplicateSliceValueWithDepthLimit(
 	var allChanges valueChanges
 	for i := range length {
 		elem := valueAt(storage, i)
-		newElem, changes := deduplicateValueWithDepthLimit(
+		newElem, changes := valueDedupLimitDepth(
 			elem,
 			remainingDepth-1,
 		)
@@ -466,7 +466,7 @@ func deduplicateSliceValueWithDepthLimit(
 	return attribute.SliceValue(normalized...), allChanges
 }
 
-func limitSliceValueDepth(
+func sliceValueLimitDepth(
 	value attribute.Value,
 	remainingDepth int,
 ) (attribute.Value, bool) {
@@ -475,7 +475,7 @@ func limitSliceValueDepth(
 	if length <= 1 {
 		if length == 1 {
 			elem := valueAt(storage, 0)
-			newElem, changed := limitValueDepth(elem, remainingDepth-1)
+			newElem, changed := valueLimitDepth(elem, remainingDepth-1)
 			if changed {
 				return attribute.SliceValue(newElem), true
 			}
@@ -486,7 +486,7 @@ func limitSliceValueDepth(
 	var normalized []attribute.Value
 	for i := range length {
 		elem := valueAt(storage, i)
-		newElem, changed := limitValueDepth(elem, remainingDepth-1)
+		newElem, changed := valueLimitDepth(elem, remainingDepth-1)
 		if normalized != nil {
 			normalized[i] = newElem
 			continue
@@ -507,7 +507,7 @@ func limitSliceValueDepth(
 	return attribute.SliceValue(normalized...), true
 }
 
-func deduplicateMapValueWithDepthLimit(
+func mapValueDedupLimitDepth(
 	value attribute.Value,
 	remainingDepth int,
 ) (attribute.Value, valueChanges) {
@@ -516,7 +516,7 @@ func deduplicateMapValueWithDepthLimit(
 	if length <= 1 {
 		if length == 1 {
 			kv := keyValueAt(storage, 0)
-			newValue, changes := deduplicateValueWithDepthLimit(
+			newValue, changes := valueDedupLimitDepth(
 				kv.Value,
 				remainingDepth-1,
 			)
@@ -541,7 +541,7 @@ func deduplicateMapValueWithDepthLimit(
 		}
 
 		kv := keyValueAt(storage, j-1)
-		newValue, changes := deduplicateValueWithDepthLimit(
+		newValue, changes := valueDedupLimitDepth(
 			kv.Value,
 			remainingDepth-1,
 		)
@@ -572,7 +572,7 @@ func deduplicateMapValueWithDepthLimit(
 	return attribute.MapValue(normalized...), allChanges
 }
 
-func limitMapValueDepth(
+func mapValueLimitDepth(
 	value attribute.Value,
 	remainingDepth int,
 ) (attribute.Value, bool) {
@@ -581,7 +581,7 @@ func limitMapValueDepth(
 	if length <= 1 {
 		if length == 1 {
 			kv := keyValueAt(storage, 0)
-			newValue, changed := limitValueDepth(kv.Value, remainingDepth-1)
+			newValue, changed := valueLimitDepth(kv.Value, remainingDepth-1)
 			if changed {
 				kv.Value = newValue
 				return attribute.MapValue(kv), true
@@ -593,7 +593,7 @@ func limitMapValueDepth(
 	var normalized []attribute.KeyValue
 	for i := range length {
 		kv := keyValueAt(storage, i)
-		newValue, changed := limitValueDepth(kv.Value, remainingDepth-1)
+		newValue, changed := valueLimitDepth(kv.Value, remainingDepth-1)
 		if changed {
 			kv.Value = newValue
 		}
@@ -617,7 +617,7 @@ func limitMapValueDepth(
 	return attribute.MapValue(normalized...), true
 }
 
-func deduplicateSliceValue(value attribute.Value) (attribute.Value, bool) {
+func sliceValueDedup(value attribute.Value) (attribute.Value, bool) {
 	storage := valueStorage(value)
 	length := valueLen(storage)
 
@@ -626,7 +626,7 @@ func deduplicateSliceValue(value attribute.Value) (attribute.Value, bool) {
 	var normalized []attribute.Value
 	for i := range length {
 		elem := valueAt(storage, i)
-		elem, changed := DeduplicateValue(elem)
+		elem, changed := ValueDedup(elem)
 		if normalized != nil {
 			normalized[i] = elem
 			continue
@@ -647,14 +647,14 @@ func deduplicateSliceValue(value attribute.Value) (attribute.Value, bool) {
 	return attribute.SliceValue(normalized...), true
 }
 
-func deduplicateMapValue(value attribute.Value) (attribute.Value, bool) {
+func mapValueDedup(value attribute.Value) (attribute.Value, bool) {
 	storage := valueStorage(value)
 	length := keyValueLen(storage)
 	if length <= 1 {
 		// A single map entry cannot duplicate its own key, but its value might
 		// contain a map or slice that needs recursive normalization.
 		if length == 1 {
-			kv, changed := DeduplicateKeyValue(keyValueAt(storage, 0))
+			kv, changed := KeyValueDedup(keyValueAt(storage, 0))
 			if changed {
 				return attribute.MapValue(kv), true
 			}
@@ -673,7 +673,7 @@ func deduplicateMapValue(value attribute.Value) (attribute.Value, bool) {
 			j++
 		}
 
-		kv, nestedChanged := DeduplicateKeyValue(keyValueAt(storage, j-1))
+		kv, nestedChanged := KeyValueDedup(keyValueAt(storage, j-1))
 		// j-i > 1 means the current key run contained duplicates.
 		changed := nestedChanged || j-i > 1
 		if normalized != nil {
