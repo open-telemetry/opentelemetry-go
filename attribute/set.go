@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"slices"
 	"sort"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute/internal/xxhash"
 )
@@ -407,6 +408,33 @@ func computeDataReflect(kvs []KeyValue) any {
 		*at.Index(i).Addr().Interface().(*KeyValue) = keyValue
 	}
 	return at.Interface()
+}
+
+// String returns a string representation of the Set as a JSON object.
+//
+// The returned string is meant for debugging;
+// the string representation is not stable.
+func (l *Set) String() string {
+	if l == nil || l.hash == 0 {
+		return "{}"
+	}
+
+	n := l.Len()
+	var b strings.Builder
+	// Estimate 16 bytes per attribute for the key, separators, and a small value.
+	b.Grow(len("{}") + n*16)
+	_ = b.WriteByte('{')
+	for i := range n {
+		if i > 0 {
+			_ = b.WriteByte(',')
+		}
+		kv, _ := l.Get(i)
+		appendJSONString(&b, string(kv.Key))
+		_ = b.WriteByte(':')
+		appendJSONValue(&b, kv.Value)
+	}
+	_ = b.WriteByte('}')
+	return b.String()
 }
 
 // MarshalJSON returns the JSON encoding of the Set.
