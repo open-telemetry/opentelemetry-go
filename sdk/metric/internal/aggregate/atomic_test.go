@@ -296,6 +296,42 @@ func TestLimitedSyncMapLimit(t *testing.T) {
 	assert.Same(t, v7, v8, "Subsequent keys should return same overflow value")
 }
 
+func TestLimitedSyncMapOverflowAttributeBeforeLimit(t *testing.T) {
+	newValue := func(attribute.Set) any { return new(int) }
+
+	t.Run("NoLimit", func(t *testing.T) {
+		var m limitedSyncMap[any]
+		v1 := loadOrStore(&m, overflowSet, newValue)
+		assert.Equal(t, 1, m.Len())
+
+		attr := attribute.NewSet(attribute.String("key", "1"))
+		v2 := loadOrStore(&m, attr, newValue)
+		assert.Equal(t, 2, m.Len())
+		assert.NotSame(t, v1, v2)
+	})
+
+	t.Run("WithLimit", func(t *testing.T) {
+		m := limitedSyncMap[any]{aggLimit: 3}
+		v1 := loadOrStore(&m, overflowSet, newValue)
+		assert.Equal(t, 1, m.Len())
+
+		attr2 := attribute.NewSet(attribute.String("key", "2"))
+		v2 := loadOrStore(&m, attr2, newValue)
+		assert.Equal(t, 2, m.Len())
+		assert.NotSame(t, v1, v2)
+
+		attr3 := attribute.NewSet(attribute.String("key", "3"))
+		v3 := loadOrStore(&m, attr3, newValue)
+		assert.Equal(t, 2, m.Len())
+		assert.Same(t, v1, v3)
+
+		attr4 := attribute.NewSet(attribute.String("key", "4"))
+		v4 := loadOrStore(&m, attr4, newValue)
+		assert.Equal(t, 2, m.Len())
+		assert.Same(t, v3, v4)
+	})
+}
+
 func TestLimitedSyncMapConcurrentSafe(t *testing.T) {
 	m := limitedSyncMap[any]{aggLimit: 5}
 	newValue := func(attribute.Set) any { return 1 }
