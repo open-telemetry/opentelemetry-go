@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -486,8 +487,8 @@ var readFile = os.ReadFile
 
 // loadCertPool loads and returns the *x509.CertPool found at path if it exists
 // and is valid. Otherwise, nil and an error are returned.
-func loadCertPool(path string) (*x509.CertPool, error) {
-	b, err := readFile(path)
+func loadCertPool(filePath string) (*x509.CertPool, error) {
+	b, err := readFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -579,7 +580,7 @@ func convPath(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return u.Path + "/v1/logs", nil
+	return path.Join(u.Path, defaultPath), nil
 }
 
 // convInsecure converts s from a string to a bool without case sensitivity.
