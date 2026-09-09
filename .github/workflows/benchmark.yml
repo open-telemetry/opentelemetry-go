@@ -9,6 +9,9 @@ on:
       - '**/go.sum'
       - 'Makefile'
       - '.github/workflows/benchmark.yml'
+  schedule:
+    - cron: '0 8 * * 0'
+      timezone: America/Los_Angeles
   workflow_dispatch:
     inputs:
       full:
@@ -58,7 +61,7 @@ jobs:
           # For a manual workflow_dispatch run, neither field is set,
           # and the Makefile's default base ref kicks in.
           BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
-          ARGS: ${{ inputs.full && '-all' || '' }}
+          ARGS: ${{ (github.event_name == 'schedule' || inputs.full) && '-all' || '' }}
         run: |
           shards=$(make print-affected-benchmarks)
           echo "shards=${shards}" >> "$GITHUB_OUTPUT"
