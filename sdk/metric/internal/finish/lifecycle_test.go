@@ -177,7 +177,7 @@ func TestLifecycleMeasurementWaitsForCollection(t *testing.T) {
 	measurement.Release()
 }
 
-func TestLifecycleConcurrentReactivation(t *testing.T) {
+func TestLifecycleConcurrentSafeReactivation(t *testing.T) {
 	const measurements = 64
 
 	for range 10 {
@@ -209,7 +209,7 @@ func TestLifecycleConcurrentReactivation(t *testing.T) {
 	}
 }
 
-func TestLifecycleConcurrentDeltaCollection(t *testing.T) {
+func TestLifecycleConcurrentSafeDeltaCollection(t *testing.T) {
 	for range 1_000 {
 		var lifecycle Lifecycle
 		start := make(chan struct{})

@@ -254,7 +254,7 @@ func TestFinishSumRetireAndDelete(t *testing.T) {
 	assert.False(t, retire)
 }
 
-func TestFinishSumConcurrentLifecycle(t *testing.T) {
+func TestFinishSumConcurrentSafeLifecycle(t *testing.T) {
 	agg := Builder[int64]{
 		Temporality:   metricdata.DeltaTemporality,
 		ReservoirFunc: dropExemplars[int64],
@@ -294,7 +294,7 @@ func TestFinishSumConcurrentLifecycle(t *testing.T) {
 	assert.Equal(t, int64(measurements), collected.Load())
 }
 
-func TestFinishSumConcurrentShutdown(t *testing.T) {
+func TestFinishSumConcurrentSafeShutdown(t *testing.T) {
 	agg := Builder[int64]{ReservoirFunc: dropExemplars[int64]}.FinishSum(true)
 	var (
 		stop atomic.Bool
