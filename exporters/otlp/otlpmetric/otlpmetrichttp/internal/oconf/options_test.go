@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/envconfig"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -559,6 +560,30 @@ func TestConfigs(t *testing.T) {
 			opts: []GenericOption{},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.Nil(t, c.Metrics.HTTPClient)
+			},
+		},
+
+		{
+			name: "Test With ServiceConfig, ReconnectionPeriod, And Caller-Supplied DialOption",
+			opts: []GenericOption{
+				newSplitOption(
+					func(cfg Config) Config { return cfg },
+					func(cfg Config) Config {
+						cfg.ServiceConfig = "{}"
+						cfg.ReconnectionPeriod = time.Second
+						cfg.DialOptions = append(cfg.DialOptions, grpc.WithUserAgent("caller-supplied"))
+						return cfg
+					},
+				),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				if !grpcOption {
+					return
+				}
+				baseline := NewGRPCConfig()
+				// ServiceConfig, ReconnectionPeriod, and the caller-supplied DialOption
+				// must each contribute their own entry alongside the internally computed defaults.
+				assert.Len(t, c.DialOptions, len(baseline.DialOptions)+3)
 			},
 		},
 	}
