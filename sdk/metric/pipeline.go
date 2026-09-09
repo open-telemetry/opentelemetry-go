@@ -81,6 +81,7 @@ type pipeline struct {
 	multiCallbacks   list.List
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+	metricFilter     metricFilter
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
@@ -167,14 +168,18 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		for _, inst := range instruments {
 			var keep func(attrs attribute.Set) bool
 			if inst.metricFilter != nil {
-
-				// TODO change  inst.kind of type instrumentKind to aggregator type.
 				action := inst.metricFilter.TestMetric(scope, inst.name, inst.kind, inst.unit)
-				if action == 1 {
+				if action == metricFilterDrop {
 					continue
-				} else if action == 2 {
+				} else if action == metricFilterAcceptPartial {
 					keep = func(attrs attribute.Set) bool {
-						return inst.metricFilter.TestAttributes(scope, inst.name, inst.kind, inst.unit, attrs.ToSlice()) == 0
+						return inst.metricFilter.TestAttributes(
+							scope,
+							inst.name,
+							inst.kind,
+							inst.unit,
+							attrs.ToSlice(),
+						) == metricFilterAttrAccept
 					}
 				}
 			}
@@ -438,7 +443,7 @@ func (i *inserter[N]) cachedAggregator(
 			description:  stream.Description,
 			unit:         stream.Unit,
 			compAgg:      out,
-			metricFilter: stream.metricFilter,
+			metricFilter: i.pipeline.metricFilter,
 			kind:         kind,
 		})
 		id := aggIDCount.Add(1)
@@ -656,6 +661,9 @@ func newPipelines(
 	pipes := make([]*pipeline, 0, len(readers))
 	for _, r := range readers {
 		p := newPipeline(res, r, views, exemplarFilter, cardinalityLimit)
+		if r, ok := r.(interface{ getMetricFilter() metricFilter }); ok {
+			p.metricFilter = r.getMetricFilter()
+		}
 		r.register(p)
 		pipes = append(pipes, p)
 	}

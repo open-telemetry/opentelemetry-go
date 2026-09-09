@@ -1095,3 +1095,36 @@ func BenchmarkPeriodicReaderInstrumentation(b *testing.B) {
 		run(b, true)
 	})
 }
+
+func TestPeriodicReaderMetricFilter(t *testing.T) {
+	ctx := t.Context()
+
+	filter := testMetricFilterOption{
+		testMetric: func(_ instrumentation.Scope, name string, _ InstrumentKind, _ string) int {
+			if name == "dropped" {
+				return metricFilterDrop
+			}
+			return metricFilterAccept
+		},
+		testAttributes: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string, _ []attribute.KeyValue) int {
+			return metricFilterAttrAccept
+		},
+	}
+
+	rdr := NewPeriodicReader(testExporter{}, filter)
+	mp := NewMeterProvider(WithReader(rdr))
+	meter := mp.Meter("test")
+
+	dropped, err := meter.Int64Counter("dropped")
+	require.NoError(t, err)
+	dropped.Add(ctx, 1)
+
+	kept, err := meter.Int64Counter("kept")
+	require.NoError(t, err)
+	kept.Add(ctx, 1)
+
+	rm := &metricdata.ResourceMetrics{}
+	require.NoError(t, rdr.Collect(ctx, rm))
+	assert.Equal(t, 0, sumDataPointCount(rm, "dropped"))
+	assert.Equal(t, 1, sumDataPointCount(rm, "kept"))
+}

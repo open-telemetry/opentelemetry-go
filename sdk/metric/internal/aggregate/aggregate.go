@@ -22,7 +22,7 @@ type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
 // attribute set is included in the collection output. It is evaluated
 // once per data point during collection. A nil filterAttrs includes all
 // data points.
-type filterAttrs func(attrs attribute.Set) bool
+type filterAttrs = func(attrs attribute.Set) bool
 
 // ComputeAggregation stores the aggregate of measurements into dest and
 // returns the number of aggregate data-points output.

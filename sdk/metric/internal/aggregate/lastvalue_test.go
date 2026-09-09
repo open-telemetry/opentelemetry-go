@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -575,4 +576,47 @@ func testCumulativePrecomputedLastValueConcurrentSafe[N int64 | float64]() func(
 func BenchmarkLastValue(b *testing.B) {
 	b.Run("Int64", benchmarkAggregate(Builder[int64]{}.PrecomputedLastValue))
 	b.Run("Float64", benchmarkAggregate(Builder[float64]{}.PrecomputedLastValue))
+}
+
+func TestLastValueFilterAttributes(t *testing.T) {
+	ctx := t.Context()
+
+	tests := map[string]struct {
+		filter filterAttrs
+		wantN  int
+		want   attribute.Set
+	}{
+		"DropOne": {
+			filter: func(attrs attribute.Set) bool { return !attrs.Equals(&bob) },
+			wantN:  1,
+			want:   alice,
+		},
+		"DropAll": {
+			filter: func(attribute.Set) bool { return false },
+			wantN:  0,
+		},
+		"NilFilterIncludesAll": {
+			filter: nil,
+			wantN:  2,
+			want:   alice,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			in, out := Builder[int64]{Temporality: metricdata.DeltaTemporality}.LastValue()
+			in(ctx, 1, alice)
+			in(ctx, 2, bob)
+
+			got := new(metricdata.Aggregation)
+			n := out(got, tt.filter)
+			assert.Equal(t, tt.wantN, n)
+
+			gauge := (*got).(metricdata.Gauge[int64])
+			require.Len(t, gauge.DataPoints, tt.wantN)
+			if tt.wantN == 1 {
+				assert.Equal(t, tt.want, gauge.DataPoints[0].Attributes)
+			}
+		})
+	}
 }

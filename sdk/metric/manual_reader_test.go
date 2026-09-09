@@ -401,3 +401,91 @@ func BenchmarkManualReaderInstrumentation(b *testing.B) {
 		run(b, true)
 	})
 }
+
+func TestManualReaderMetricFilter(t *testing.T) {
+	ctx := t.Context()
+
+	tests := []struct {
+		name       string
+		testMetric func(string) int
+		wantCount  int
+	}{
+		{
+			name: "Accept keeps the metric",
+			testMetric: func(string) int {
+				return metricFilterAccept
+			},
+			wantCount: 1,
+		},
+		{
+			name: "Drop removes the metric",
+			testMetric: func(string) int {
+				return metricFilterDrop
+			},
+			wantCount: 0,
+		},
+		{
+			name: "Accept_Partial with all attributes accepted keeps the metric",
+			testMetric: func(string) int {
+				return metricFilterAcceptPartial
+			},
+			wantCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filter := testMetricFilterOption{
+				testMetric: func(_ instrumentation.Scope, name string, _ InstrumentKind, _ string) int {
+					return tt.testMetric(name)
+				},
+				testAttributes: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string, _ []attribute.KeyValue) int {
+					return metricFilterAttrAccept
+				},
+			}
+
+			rdr := NewManualReader(filter)
+			mp := NewMeterProvider(WithReader(rdr))
+			meter := mp.Meter("test")
+
+			counter, err := meter.Int64Counter("filtered")
+			require.NoError(t, err)
+			counter.Add(ctx, 1)
+
+			rm := &metricdata.ResourceMetrics{}
+			require.NoError(t, rdr.Collect(ctx, rm))
+			assert.Equal(t, tt.wantCount, sumDataPointCount(rm, "filtered"))
+		})
+	}
+}
+
+func TestManualReaderMetricFilterAcceptPartial(t *testing.T) {
+	ctx := t.Context()
+
+	filter := testMetricFilterOption{
+		testMetric: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string) int {
+			return metricFilterAcceptPartial
+		},
+		testAttributes: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string, attrs []attribute.KeyValue) int {
+			for _, attr := range attrs {
+				if attr.Key == "drop" {
+					return metricFilterAttrDrop
+				}
+			}
+			return metricFilterAttrAccept
+		},
+	}
+
+	rdr := NewManualReader(filter)
+	mp := NewMeterProvider(WithReader(rdr))
+	meter := mp.Meter("test")
+
+	counter, err := meter.Int64Counter("partial")
+	require.NoError(t, err)
+	counter.Add(ctx, 1, metric.WithAttributes(attribute.String("keep", "true")))
+	counter.Add(ctx, 1, metric.WithAttributes(attribute.String("drop", "true")))
+
+	rm := &metricdata.ResourceMetrics{}
+	require.NoError(t, rdr.Collect(ctx, rm))
+	assert.Equal(t, 1, sumDataPointCount(rm, "partial"))
+}
