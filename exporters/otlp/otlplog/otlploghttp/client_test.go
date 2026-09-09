@@ -1134,7 +1134,12 @@ func TestResponseBodySizeLimit(t *testing.T) {
 				WithEndpoint(srv.Listener.Addr().String()),
 				WithInsecure(),
 				WithMaxResponseSize(1),
-				WithRetry(RetryConfig{Enabled: false}),
+				WithRetry(RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Millisecond,
+					MaxInterval:     time.Millisecond,
+					MaxElapsedTime:  time.Second,
+				}),
 			}
 			cfg := newConfig(opts)
 			c, err := newHTTPClient(t.Context(), cfg)
@@ -1167,7 +1172,12 @@ func TestResponseBodySizeLimitAfterDecompression(t *testing.T) {
 		WithEndpoint(srv.Listener.Addr().String()),
 		WithInsecure(),
 		WithMaxResponseSize(limit),
-		WithRetry(RetryConfig{Enabled: false}),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
 	}
 	cfg := newConfig(opts)
 	c, err := newHTTPClient(t.Context(), cfg)

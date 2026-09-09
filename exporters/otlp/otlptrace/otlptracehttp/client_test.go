@@ -686,7 +686,12 @@ func TestResponseBodySizeLimit(t *testing.T) {
 				otlptracehttp.WithEndpointURL(srv.URL),
 				otlptracehttp.WithInsecure(),
 				otlptracehttp.WithMaxResponseSize(1),
-				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Millisecond,
+					MaxInterval:     time.Millisecond,
+					MaxElapsedTime:  time.Second,
+				}),
 			)
 			exporter, err := otlptrace.New(t.Context(), client)
 			require.NoError(t, err)
@@ -719,7 +724,12 @@ func TestResponseBodySizeLimitAfterDecompression(t *testing.T) {
 		otlptracehttp.WithEndpointURL(srv.URL),
 		otlptracehttp.WithInsecure(),
 		otlptracehttp.WithMaxResponseSize(limit),
-		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
 	)
 	exporter, err := otlptrace.New(t.Context(), client)
 	require.NoError(t, err)

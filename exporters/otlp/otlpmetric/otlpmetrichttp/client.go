@@ -199,7 +199,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if err := copyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
+			if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
@@ -230,7 +230,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if err := copyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
+		if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
@@ -324,22 +324,6 @@ type request struct {
 func (r *request) reset(ctx context.Context) {
 	r.Body = r.bodyReader()
 	r.Request = r.WithContext(ctx)
-}
-
-func copyResponseBody(dst io.Writer, src io.Reader, maxSize int64) error {
-	if _, err := io.Copy(dst, io.LimitReader(src, maxSize)); err != nil {
-		return err
-	}
-
-	var extra [1]byte
-	_, err := io.ReadFull(src, extra[:])
-	if err == nil {
-		return fmt.Errorf("response body too large: exceeded %d bytes", maxSize)
-	}
-	if errors.Is(err, io.EOF) {
-		return nil
-	}
-	return err
 }
 
 // retryableError represents a request failure that can be retried.

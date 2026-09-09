@@ -6,6 +6,8 @@ package internal
 
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/partialsuccess.go.tmpl "--data={}" --out=partialsuccess.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/partialsuccess_test.go.tmpl "--data={}" --out=partialsuccess_test.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/response.go.tmpl "--data={}" --out=response.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/response_test.go.tmpl "--data={}" --out=response_test.go
 
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/retry/retry.go.tmpl "--data={}" --out=retry/retry.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/retry/retry_test.go.tmpl "--data={}" --out=retry/retry_test.go
