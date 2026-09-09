@@ -453,21 +453,40 @@ func TestMapDeduplication(t *testing.T) {
 	t.Run("ScopeWithAllowKeyDuplication", func(t *testing.T) {
 		input := attribute.Map(
 			"map",
-			attribute.String("dup", "first"),
-			attribute.String("dup", "second"),
-			attribute.Map("over", attribute.String("leaf", "value")),
+			attribute.Slice(
+				"nested",
+				attribute.MapValue(
+					attribute.String("dup", "first"),
+					attribute.String("dup", "second"),
+				),
+			),
+			attribute.Map(
+				"over",
+				attribute.Map(
+					"middle",
+					attribute.Map("deep", attribute.String("leaf", "value")),
+				),
+			),
 		)
 		want := attribute.Map(
 			"map",
-			attribute.String("dup", "first"),
-			attribute.String("dup", "second"),
-			attribute.KeyValue{Key: "over"},
+			attribute.Slice(
+				"nested",
+				attribute.MapValue(
+					attribute.String("dup", "first"),
+					attribute.String("dup", "second"),
+				),
+			),
+			attribute.Map(
+				"over",
+				attribute.Map("middle", attribute.KeyValue{Key: "deep"}),
+			),
 		)
 		p := newProcessor("processor")
 		lp := NewLoggerProvider(
 			WithProcessor(p),
 			WithAllowKeyDuplication(),
-			WithAttributeValueDepthLimit(1),
+			WithAttributeValueDepthLimit(3),
 		)
 		l := lp.Logger("scope", log.WithInstrumentationAttributes(input))
 

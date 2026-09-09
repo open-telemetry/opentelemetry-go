@@ -385,9 +385,9 @@ func normAttr(attr attribute.KeyValue, depthLimit, lengthLimit int) attribute.Ke
 	switch attr.Value.Type() {
 	case attribute.SLICE, attribute.MAP:
 		if depthLimit < 0 {
-			attr, _ = attrnorm.KeyValue(attr)
+			attr, _ = attrnorm.DeduplicateKeyValue(attr)
 		} else {
-			attr, _, _ = attrnorm.KeyValueWithDepthLimit(attr, depthLimit)
+			attr, _, _ = attrnorm.DeduplicateKeyValueWithDepthLimit(attr, depthLimit)
 		}
 	}
 	return attrnorm.Truncate(lengthLimit, attr)
@@ -549,7 +549,7 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
-	attrs, _, _ := attrnorm.KeyValuesWithDepthLimit(
+	attrs, _, _ := attrnorm.DeduplicateKeyValuesWithDepthLimit(
 		c.Attributes(),
 		s.tracer.provider.spanLimits.AttributeValueDepthLimit,
 	)
@@ -732,7 +732,7 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		return
 	}
 
-	attrs, _, _ := attrnorm.KeyValuesWithDepthLimit(
+	attrs, _, _ := attrnorm.DeduplicateKeyValuesWithDepthLimit(
 		link.Attributes,
 		s.tracer.provider.spanLimits.AttributeValueDepthLimit,
 	)

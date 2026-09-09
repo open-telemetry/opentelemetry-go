@@ -487,19 +487,38 @@ func TestRecordAttributeValueDepthLimit(t *testing.T) {
 	t.Run("AllowKeyDuplication", func(t *testing.T) {
 		input := attribute.Map(
 			"attr",
-			attribute.String("dup", "first"),
-			attribute.String("dup", "second"),
-			attribute.Map("over", attribute.String("leaf", "value")),
+			attribute.Slice(
+				"nested",
+				attribute.MapValue(
+					attribute.String("dup", "first"),
+					attribute.String("dup", "second"),
+				),
+			),
+			attribute.Map(
+				"over",
+				attribute.Map(
+					"middle",
+					attribute.Map("deep", attribute.String("leaf", "value")),
+				),
+			),
 		)
 		want := attribute.Map(
 			"attr",
-			attribute.String("dup", "first"),
-			attribute.String("dup", "second"),
-			attribute.KeyValue{Key: "over"},
+			attribute.Slice(
+				"nested",
+				attribute.MapValue(
+					attribute.String("dup", "first"),
+					attribute.String("dup", "second"),
+				),
+			),
+			attribute.Map(
+				"over",
+				attribute.Map("middle", attribute.KeyValue{Key: "deep"}),
+			),
 		)
 		r := Record{
 			attributeValueLengthLimit: -1,
-			attributeValueDepthLimit:  1,
+			attributeValueDepthLimit:  3,
 			attributeCountLimit:       -1,
 			allowDupKeys:              true,
 		}

@@ -28,10 +28,11 @@ type rawValue struct {
 	slice    any
 }
 
-// Value returns value with all map values deduplicated and whether it changed.
+// DeduplicateValue returns value with all map values deduplicated and whether
+// it changed.
 //
 // Duplicate map keys are resolved using last-value-wins semantics.
-func Value(value attribute.Value) (attribute.Value, bool) {
+func DeduplicateValue(value attribute.Value) (attribute.Value, bool) {
 	switch value.Type() {
 	case attribute.SLICE:
 		return deduplicateSliceValue(value)
@@ -42,26 +43,28 @@ func Value(value attribute.Value) (attribute.Value, bool) {
 	}
 }
 
-// KeyValue returns kv with all map values deduplicated and whether it changed.
-func KeyValue(kv attribute.KeyValue) (attribute.KeyValue, bool) {
-	value, changed := Value(kv.Value)
+// DeduplicateKeyValue returns kv with all map values deduplicated and whether
+// it changed.
+func DeduplicateKeyValue(kv attribute.KeyValue) (attribute.KeyValue, bool) {
+	value, changed := DeduplicateValue(kv.Value)
 	if changed {
 		kv.Value = value
 	}
 	return kv, changed
 }
 
-// KeyValues returns kvs with all map values deduplicated and whether they changed.
+// DeduplicateKeyValues returns kvs with all map values deduplicated and whether
+// they changed.
 //
 // The returned slice is the original kvs slice if no value needs
 // deduplication. Top-level keys in kvs are not deduplicated.
-func KeyValues(kvs []attribute.KeyValue) ([]attribute.KeyValue, bool) {
+func DeduplicateKeyValues(kvs []attribute.KeyValue) ([]attribute.KeyValue, bool) {
 	// Preserve the caller's slice on the common no-op path. Once a changed
 	// value is found, copy the prior values exactly once and fill the rest in
 	// place as the scan continues.
 	var normalized []attribute.KeyValue
 	for i, kv := range kvs {
-		kv, changed := KeyValue(kv)
+		kv, changed := DeduplicateKeyValue(kv)
 		if normalized != nil {
 			normalized[i] = kv
 			continue
@@ -80,12 +83,13 @@ func KeyValues(kvs []attribute.KeyValue) ([]attribute.KeyValue, bool) {
 	return normalized, true
 }
 
-// Set returns set with all map values deduplicated and whether it changed.
+// DeduplicateSet returns set with all map values deduplicated and whether it
+// changed.
 //
 // The returned Set is the original set if no value needs deduplication.
 // Top-level key uniqueness remains attribute.Set's responsibility; this only
 // normalizes map attribute values.
-func Set(set attribute.Set) (attribute.Set, bool) {
+func DeduplicateSet(set attribute.Set) (attribute.Set, bool) {
 	length := set.Len()
 	if length == 0 {
 		return set, false
@@ -96,7 +100,7 @@ func Set(set attribute.Set) (attribute.Set, bool) {
 	var normalized []attribute.KeyValue
 	for i := range length {
 		kv, _ := set.Get(i)
-		kv, changed := KeyValue(kv)
+		kv, changed := DeduplicateKeyValue(kv)
 		if normalized != nil {
 			normalized = append(normalized, kv)
 			continue
@@ -128,7 +132,7 @@ func deduplicateSliceValue(value attribute.Value) (attribute.Value, bool) {
 	var normalized []attribute.Value
 	for i := range length {
 		elem := valueAt(storage, i)
-		elem, changed := Value(elem)
+		elem, changed := DeduplicateValue(elem)
 		if normalized != nil {
 			normalized[i] = elem
 			continue
@@ -156,7 +160,7 @@ func deduplicateMapValue(value attribute.Value) (attribute.Value, bool) {
 		// A single map entry cannot duplicate its own key, but its value might
 		// contain a map or slice that needs recursive normalization.
 		if length == 1 {
-			kv, changed := KeyValue(keyValueAt(storage, 0))
+			kv, changed := DeduplicateKeyValue(keyValueAt(storage, 0))
 			if changed {
 				return attribute.MapValue(kv), true
 			}
@@ -175,7 +179,7 @@ func deduplicateMapValue(value attribute.Value) (attribute.Value, bool) {
 			j++
 		}
 
-		kv, nestedChanged := KeyValue(keyValueAt(storage, j-1))
+		kv, nestedChanged := DeduplicateKeyValue(keyValueAt(storage, j-1))
 		// j-i > 1 means the current key run contained duplicates.
 		changed := nestedChanged || j-i > 1
 		if normalized != nil {
