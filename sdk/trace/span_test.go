@@ -4,6 +4,7 @@
 package trace
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -389,6 +390,49 @@ func BenchmarkSpanEnd(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				spans[i].End()
 			}
+		})
+	}
+}
+
+func BenchmarkRecordingSpanRecordError(b *testing.B) {
+	for _, tc := range []struct {
+		name    string
+		workers int
+		ended   bool
+	}{
+		{name: "Active"},
+		{name: "Ended", ended: true},
+		{name: "Contended", workers: 8},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			span := startSpan(NewTracerProvider(), b.Name()).(*recordingSpan)
+			if tc.ended {
+				span.End()
+			}
+			err := errors.New("benchmark error")
+
+			b.ReportAllocs()
+			b.ResetTimer()
+			if tc.workers == 0 {
+				for b.Loop() {
+					span.RecordError(err)
+				}
+				return
+			}
+
+			var wg sync.WaitGroup
+			wg.Add(tc.workers)
+			for i := range tc.workers {
+				start := i * b.N / tc.workers
+				end := (i + 1) * b.N / tc.workers
+				go func(start, end int) {
+					defer wg.Done()
+					for i := start; i < end; i++ {
+						span.RecordError(err)
+					}
+				}(start, end)
+			}
+			wg.Wait()
 		})
 	}
 }
