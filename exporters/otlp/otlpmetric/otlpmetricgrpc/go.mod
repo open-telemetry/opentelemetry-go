@@ -13,7 +13,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.47.0-rc.1
 	go.opentelemetry.io/otel/sdk/metric v1.47.0-rc.1
 	go.opentelemetry.io/proto/otlp v1.11.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260831171406-18b4a7587f8a
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260908043556-f8649ddbbfe6
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
 )
@@ -28,10 +28,10 @@ require (
 	go.opentelemetry.io/otel/log v1.47.0-rc.1 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0-rc.1 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260831171406-18b4a7587f8a // indirect
+	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260908043556-f8649ddbbfe6 // indirect
 )
 
 replace go.opentelemetry.io/otel => ../../../..
