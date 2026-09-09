@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/envconfig"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -194,10 +195,8 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.False(t, c.Metrics.Insecure)
-				if grpcOption {
-					assert.Equal(t, "env.endpoint", c.Metrics.Endpoint)
-				} else {
-					assert.Equal(t, "env.endpoint", c.Metrics.Endpoint)
+				assert.Equal(t, "env.endpoint", c.Metrics.Endpoint)
+				if !grpcOption {
 					assert.Equal(t, "/prefix/v1/metrics", c.Metrics.URLPath)
 				}
 			},
@@ -319,6 +318,9 @@ func TestConfigs(t *testing.T) {
 				assert.True(t, c.Metrics.Insecure)
 				if grpcOption {
 					assert.Equal(t, "unix-abstract:///grpc.sock", c.Metrics.Endpoint)
+				} else {
+					assert.Empty(t, c.Metrics.Endpoint)
+					assert.Equal(t, "/grpc.sock/v1/metrics", c.Metrics.URLPath)
 				}
 			},
 		},
@@ -596,6 +598,30 @@ func TestConfigs(t *testing.T) {
 			opts: []GenericOption{},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.Nil(t, c.Metrics.HTTPClient)
+			},
+		},
+
+		{
+			name: "Test With ServiceConfig, ReconnectionPeriod, And Caller-Supplied DialOption",
+			opts: []GenericOption{
+				newSplitOption(
+					func(cfg Config) Config { return cfg },
+					func(cfg Config) Config {
+						cfg.ServiceConfig = "{}"
+						cfg.ReconnectionPeriod = time.Second
+						cfg.DialOptions = append(cfg.DialOptions, grpc.WithUserAgent("caller-supplied"))
+						return cfg
+					},
+				),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				if !grpcOption {
+					return
+				}
+				baseline := NewGRPCConfig()
+				// ServiceConfig, ReconnectionPeriod, and the caller-supplied DialOption
+				// must each contribute their own entry alongside the internally computed defaults.
+				assert.Len(t, c.DialOptions, len(baseline.DialOptions)+3)
 			},
 		},
 	}
