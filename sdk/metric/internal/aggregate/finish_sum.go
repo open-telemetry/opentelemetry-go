@@ -90,29 +90,31 @@ func (v *finishSumValue[N]) collectCumulative(
 	if !ok {
 		return metricdata.DataPoint[N]{}, false, false
 	}
-	dp, retire := v.collect(collection)
+	dp, retire := v.collect(v.start, collection)
 	return dp, true, retire
 }
 
 func (v *finishSumValue[N]) collectDelta(
+	start time.Time,
 	t time.Time,
 ) (metricdata.DataPoint[N], bool, bool) {
 	collection, ok := v.lifecycle.BeginDeltaCollection(t)
 	if !ok {
 		return metricdata.DataPoint[N]{}, false, false
 	}
-	dp, retire := v.collect(collection)
+	dp, retire := v.collect(start, collection)
 	return dp, true, retire
 }
 
 func (v *finishSumValue[N]) collect(
+	start time.Time,
 	collection finish.Collection,
 ) (metricdata.DataPoint[N], bool) {
 	defer collection.Complete()
 
 	dp := metricdata.DataPoint[N]{
 		Attributes: v.attrs,
-		StartTime:  v.start,
+		StartTime:  start,
 		Time:       collection.Time(),
 		Value:      v.value.load(),
 	}
@@ -138,6 +140,7 @@ type finishSum[N int64 | float64] struct {
 	stopped      atomic.Bool
 
 	values      limitedSyncMap[*finishSumValue[N]]
+	start       time.Time
 	temporality metricdata.Temporality
 	monotonic   bool
 	reservoir   func(attribute.Set) FilteredExemplarReservoir[N]
@@ -149,13 +152,17 @@ func newFinishSum[N int64 | float64](
 	limit int,
 	reservoir func(attribute.Set) FilteredExemplarReservoir[N],
 ) *finishSum[N] {
+	var start time.Time
 	if temporality != metricdata.DeltaTemporality {
 		temporality = metricdata.CumulativeTemporality
+	} else {
+		start = now()
 	}
 	return &finishSum[N]{
 		values: limitedSyncMap[*finishSumValue[N]]{
 			aggLimit: limit,
 		},
+		start:       start,
 		temporality: temporality,
 		monotonic:   monotonic,
 		reservoir:   reservoir,
@@ -241,6 +248,10 @@ func (s *finishSum[N]) collect(
 	}
 
 	t := now()
+	start := s.start
+	if s.temporality == metricdata.DeltaTemporality {
+		s.start = t
+	}
 	sData, _ := (*dest).(metricdata.Sum[N])
 	sData.Temporality = s.temporality
 	sData.IsMonotonic = s.monotonic
@@ -251,7 +262,7 @@ func (s *finishSum[N]) collect(
 		var dp metricdata.DataPoint[N]
 		var emit, retire bool
 		if s.temporality == metricdata.DeltaTemporality {
-			dp, emit, retire = point.collectDelta(t)
+			dp, emit, retire = point.collectDelta(start, t)
 		} else {
 			dp, emit, retire = point.collectCumulative(t)
 		}

@@ -86,6 +86,24 @@ func TestFinishSumLifecycle(t *testing.T) {
 		assert.Equal(t, y2kPlus(20), points[0].Time)
 		assert.Empty(t, finishSumPoints(t, agg.ComputeAggregation))
 	})
+
+	t.Run("DeltaIntervalStart", func(t *testing.T) {
+		c.Reset()
+		agg := Builder[int64]{
+			Temporality:   metricdata.DeltaTemporality,
+			ReservoirFunc: dropExemplars[int64],
+		}.FinishSum(true)
+
+		agg.Measure(t.Context(), 2, alice)
+		first := finishSumPoints(t, agg.ComputeAggregation)
+		require.Len(t, first, 1)
+		assert.Equal(t, y2kPlus(0), first[0].StartTime)
+
+		agg.Measure(t.Context(), 3, alice)
+		second := finishSumPoints(t, agg.ComputeAggregation)
+		require.Len(t, second, 1)
+		assert.Equal(t, first[0].Time, second[0].StartTime)
+	})
 }
 
 func TestFinishSumAttributes(t *testing.T) {
@@ -202,7 +220,7 @@ func TestFinishSumInitialMeasurementAdmission(t *testing.T) {
 	collected := make(chan collectionResult, 1)
 	go func() {
 		close(started)
-		point, emit, _ := point.collectDelta(y2k)
+		point, emit, _ := point.collectDelta(point.start, point.start)
 		collected <- collectionResult{point: point, emit: emit}
 	}()
 	<-started
