@@ -154,9 +154,8 @@ func (l *Lifecycle) AcquireSharedMeasurement() (Measurement, bool) {
 }
 
 func (l *Lifecycle) waitForCollection() {
-	for lifecycleState(l.state.Load()) == lifecycleCollecting {
-		runtime.Gosched()
-	}
+	l.control.Lock()
+	l.control.Unlock() //nolint:gocritic,staticcheck // Lock acquisition parks until collection completes.
 }
 
 func (l *Lifecycle) releaseMeasurement() {
