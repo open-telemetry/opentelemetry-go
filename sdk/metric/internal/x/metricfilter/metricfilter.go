@@ -1,7 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package metricfilter provides interfaces and options to filter exported metric streams.
+// Package metricfilter provides the experimental MetricFilter API for
+// filtering aggregated metric data points during collection.
 package metricfilter // import "go.opentelemetry.io/otel/sdk/metric/internal/x/metricfilter"
 
 import (
