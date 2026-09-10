@@ -31,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -1581,6 +1581,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 		}
 
 		addExponentialHistogramMetric(
+			t.Context(),
 			ch,
 			histogram,
 			m,
@@ -1588,7 +1589,6 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 			keyVals{},
 			otlptranslator.LabelNamer{},
 			nil,
-			t.Context(),
 		)
 		// Expect an invalid metric to be sent that carries the scale error.
 		var pm prometheus.Metric
@@ -1603,6 +1603,68 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 		// The exporter reports via invalid metric, not the global otel error handler.
 		assert.NoError(t, capturedError)
 	})
+}
+
+func TestInvalidExponentialHistogramScaleReportsObservabilityError(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	originalMP := otel.GetMeterProvider()
+	defer otel.SetMeterProvider(originalMP)
+
+	reader := metric.NewManualReader()
+	otel.SetMeterProvider(metric.NewMeterProvider(metric.WithReader(reader)))
+	inst, err := observ.NewInstrumentation(0)
+	require.NoError(t, err)
+
+	now := time.Now()
+	histogram := metricdata.ExponentialHistogram[float64]{
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+			{
+				Attributes: attribute.NewSet(),
+				StartTime:  now,
+				Time:       now,
+				Count:      1,
+				Scale:      -5,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}
+
+	ch := make(chan prometheus.Metric, 1)
+	addExponentialHistogramMetric(
+		t.Context(),
+		ch,
+		histogram,
+		metricdata.Metrics{Name: "test_histogram"},
+		"test_histogram",
+		keyVals{},
+		otlptranslator.LabelNamer{},
+		inst,
+	)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	var values []int64
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name != observ.ScopeName {
+			continue
+		}
+		for _, m := range sm.Metrics {
+			if m.Name != "otel.sdk.exporter.metric_data_point.exported" {
+				continue
+			}
+			sum, ok := m.Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+			for _, dp := range sum.DataPoints {
+				values = append(values, dp.Value)
+			}
+		}
+	}
+
+	require.ElementsMatch(t, []int64{0, 1}, values)
 }
 
 func TestDownscaleExponentialBucket(t *testing.T) {
@@ -1751,6 +1813,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 
 		// This should not produce any errors and should properly downscale buckets
 		addExponentialHistogramMetric(
+			t.Context(),
 			ch,
 			histogram,
 			m,
@@ -1758,7 +1821,6 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			keyVals{},
 			otlptranslator.LabelNamer{},
 			nil,
-			t.Context(),
 		)
 
 		// Verify a metric was produced
@@ -1815,6 +1877,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 
 		// This should not produce any errors and should properly downscale buckets
 		addExponentialHistogramMetric(
+			t.Context(),
 			ch,
 			histogram,
 			m,
@@ -1822,7 +1885,6 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			keyVals{},
 			otlptranslator.LabelNamer{},
 			nil,
-			t.Context(),
 		)
 
 		// Verify a metric was produced
@@ -1879,6 +1941,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 
 		// This should handle negative buckets correctly
 		addExponentialHistogramMetric(
+			t.Context(),
 			ch,
 			histogram,
 			m,
@@ -1886,7 +1949,6 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			keyVals{},
 			otlptranslator.LabelNamer{},
 			nil,
-			t.Context(),
 		)
 
 		// Verify a metric was produced
@@ -1937,6 +1999,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 
 		// This should handle int64 exponential histograms correctly
 		addExponentialHistogramMetric(
+			t.Context(),
 			ch,
 			histogram,
 			m,
@@ -1944,7 +2007,6 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			keyVals{},
 			otlptranslator.LabelNamer{},
 			nil,
-			t.Context(),
 		)
 
 		// Verify a metric was produced

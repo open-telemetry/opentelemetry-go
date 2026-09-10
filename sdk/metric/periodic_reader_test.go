@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package metric
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 const testDur = time.Second * 2
@@ -145,6 +145,22 @@ func TestIntervalEnvAndOption(t *testing.T) {
 	opts := []PeriodicReaderOption{WithInterval(want)}
 	got := newPeriodicReaderConfig(opts).interval
 	assert.Equal(t, want, got, "option should have precedence over env var")
+}
+
+func TestEnvDurationRejectsOverflow(t *testing.T) {
+	const value = "9223372036855"
+	for _, tc := range []struct {
+		key  string
+		want time.Duration
+	}{
+		{key: envInterval, want: defaultInterval},
+		{key: envTimeout, want: defaultTimeout},
+	} {
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, value)
+			assert.Equal(t, tc.want, envDuration(tc.key, tc.want))
+		})
+	}
 }
 
 type fnExporter struct {

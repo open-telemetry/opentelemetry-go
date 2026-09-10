@@ -7,4 +7,4 @@
 // See the blog post "[Deprecating Zipkin Exporter]".
 //
 // [Deprecating Zipkin Exporter]: https://opentelemetry.io/blog/2025/deprecating-zipkin-exporters/
-package zipkin // import "go.opentelemetry.io/otel/exporters/zipkin"
+package zipkin

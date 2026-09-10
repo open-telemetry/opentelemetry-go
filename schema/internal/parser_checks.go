@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package internal provides internal functionality for the schema package.
-package internal // import "go.opentelemetry.io/otel/schema/internal"
+package internal
 
 import (
 	"errors"

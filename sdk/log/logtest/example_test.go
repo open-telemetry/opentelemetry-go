@@ -10,7 +10,7 @@ import (
 	"io"
 	"os"
 
-	logapi "go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/log/logtest"
@@ -22,10 +22,10 @@ func ExampleRecordFactory() {
 		InstrumentationScope: &instrumentation.Scope{Name: "myapp"},
 	}
 
-	rf.Body = logapi.StringValue("foo")
+	rf.Body = attribute.StringValue("foo")
 	r1 := rf.NewRecord()
 
-	rf.Body = logapi.StringValue("bar")
+	rf.Body = attribute.StringValue("bar")
 	r2 := rf.NewRecord()
 
 	_ = exp.Export(context.Background(), []log.Record{r1, r2})
@@ -35,7 +35,7 @@ func ExampleRecordFactory() {
 	// scope=myapp msg=bar
 }
 
-// Compile time check exporter implements log.Exporter.
+// This is a compile-time check that exporter implements log.Exporter.
 var _ log.Exporter = exporter{}
 
 type exporter struct{ io.Writer }
@@ -58,7 +58,7 @@ func (exporter) Shutdown(context.Context) error {
 	return nil
 }
 
-// appropriate error should be returned in these situations.
+// ForceFlush returns nil.
 func (exporter) ForceFlush(context.Context) error {
 	return nil
 }

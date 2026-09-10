@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package zipkin // import "go.opentelemetry.io/otel/exporters/zipkin"
+package zipkin
 
 import (
 	"encoding/binary"
@@ -21,7 +21,7 @@ import (
 	semconv121 "go.opentelemetry.io/otel/semconv/v1.21.0"
 	semconv125 "go.opentelemetry.io/otel/semconv/v1.25.0"
 	semconv138 "go.opentelemetry.io/otel/semconv/v1.38.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -182,10 +182,10 @@ func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 		}
 		encoded, _ := json.Marshal(data)
 		return string(kv.Key), string(encoded)
-	case attribute.SLICE:
+	case attribute.SLICE, attribute.MAP:
 		// Note that this is a best effort support as this exporter is already deprecated.
 		// Yet, we want to preserve other existing behavior as much as possible.
-		// Emit the slice using the non-OTLP AnyValue string representation.
+		// Emit the value using the non-OTLP AnyValue string representation.
 		// Some values will be emitted differently than the specific types above.
 		return string(kv.Key), kv.Value.String()
 	default:

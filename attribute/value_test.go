@@ -200,6 +200,20 @@ func TestEquivalence(t *testing.T) {
 			),
 		},
 		{
+			// Map equivalence sorts entries stably by key;
+			// when duplicate keys exist, the relative order of same-key entries must match.
+			attribute.Map(
+				"Map",
+				attribute.Bool("a", true),
+				attribute.Map("a", attribute.String("nested", "value")),
+			),
+			attribute.Map(
+				"Map",
+				attribute.Bool("a", true),
+				attribute.Map("a", attribute.String("nested", "value")),
+			),
+		},
+		{
 			attribute.KeyValue{Key: "Empty"},
 			attribute.KeyValue{Key: "Empty"},
 		},
@@ -309,6 +323,20 @@ func TestNotEquivalence(t *testing.T) {
 		{
 			attribute.Map("Map", attribute.String("key", "value")),
 			attribute.Map("Map", attribute.String("other", "value")),
+		},
+		{
+			// With duplicate keys, changing the relative order of same-key entries changes map equivalence
+			// (stable key sort preserves duplicates' order).
+			attribute.Map(
+				"Map",
+				attribute.Bool("a", true),
+				attribute.Map("a", attribute.String("nested", "value")),
+			),
+			attribute.Map(
+				"Map",
+				attribute.Map("a", attribute.String("nested", "value")),
+				attribute.Bool("a", true),
+			),
 		},
 		{
 			attribute.KeyValue{Key: "Empty"},

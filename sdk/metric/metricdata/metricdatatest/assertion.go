@@ -3,7 +3,7 @@
 
 // Package metricdatatest provides testing functionality for use with the
 // metricdata package.
-package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+package metricdatatest
 
 import (
 	"fmt"
