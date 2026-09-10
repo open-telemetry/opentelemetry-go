@@ -49,6 +49,7 @@ func (f RecordFactory) NewRecord() sdklog.Record {
 	// do not inherit the zero-value Record's truncation behavior.
 	set(r, "attributeCountLimit", -1)
 	set(r, "attributeValueLengthLimit", -1)
+	set(r, "attributeValueDepthLimit", -1)
 
 	r.SetEventName(f.EventName)
 	r.SetTimestamp(f.Timestamp)
