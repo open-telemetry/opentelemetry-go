@@ -102,6 +102,8 @@ func TestLifecycle(t *testing.T) {
 		assert.False(t, lifecycle.Finish(y2kPlus(1)))
 		_, ok := lifecycle.AcquireMeasurement()
 		assert.False(t, ok)
+		_, ok = lifecycle.AcquireSharedMeasurement()
+		assert.False(t, ok)
 		collection, ok := lifecycle.BeginCumulativeCollection(y2kPlus(2))
 		assert.False(t, ok)
 		assert.Zero(t, collection)
@@ -153,28 +155,40 @@ func TestLifecycleSharedMeasurementPrecedesBlockedFinish(t *testing.T) {
 }
 
 func TestLifecycleMeasurementWaitsForCollection(t *testing.T) {
-	var lifecycle Lifecycle
-	collection, ok := lifecycle.BeginCumulativeCollection(y2k)
-	require.True(t, ok)
-
-	acquired, started := make(chan Measurement, 1), make(chan struct{})
-	go func() {
-		close(started)
-		measurement, ok := lifecycle.AcquireMeasurement()
-		if ok {
-			acquired <- measurement
-		}
-	}()
-	<-started
-	select {
-	case <-acquired:
-		t.Fatal("measurement acquired during collection")
-	case <-time.After(10 * time.Millisecond):
+	tests := []struct {
+		name    string
+		acquire func(*Lifecycle) (Measurement, bool)
+	}{
+		{name: "Ordinary", acquire: (*Lifecycle).AcquireMeasurement},
+		{name: "Shared", acquire: (*Lifecycle).AcquireSharedMeasurement},
 	}
 
-	collection.Complete()
-	measurement := <-acquired
-	measurement.Release()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var lifecycle Lifecycle
+			collection, ok := lifecycle.BeginCumulativeCollection(y2k)
+			require.True(t, ok)
+
+			acquired, started := make(chan Measurement, 1), make(chan struct{})
+			go func() {
+				close(started)
+				measurement, ok := test.acquire(&lifecycle)
+				if ok {
+					acquired <- measurement
+				}
+			}()
+			<-started
+			select {
+			case <-acquired:
+				t.Fatal("measurement acquired during collection")
+			case <-time.After(10 * time.Millisecond):
+			}
+
+			collection.Complete()
+			measurement := <-acquired
+			measurement.Release()
+		})
+	}
 }
 
 func TestLifecycleConcurrentSafeReactivation(t *testing.T) {
@@ -186,10 +200,8 @@ func TestLifecycleConcurrentSafeReactivation(t *testing.T) {
 
 		start := make(chan struct{})
 		var wg sync.WaitGroup
-		wg.Add(measurements)
 		for range measurements {
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				<-start
 				measurement, ok := lifecycle.AcquireMeasurement()
 				if !ok {
@@ -197,7 +209,7 @@ func TestLifecycleConcurrentSafeReactivation(t *testing.T) {
 					return
 				}
 				measurement.Release()
-			}()
+			})
 		}
 		close(start)
 		wg.Wait()
@@ -214,24 +226,21 @@ func TestLifecycleConcurrentSafeDeltaCollection(t *testing.T) {
 		var lifecycle Lifecycle
 		start := make(chan struct{})
 		var wg sync.WaitGroup
-		wg.Add(2)
 
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			<-start
 			measurement, ok := lifecycle.AcquireMeasurement()
 			if ok {
 				measurement.Release()
 			}
-		}()
-		go func() {
-			defer wg.Done()
+		})
+		wg.Go(func() {
 			<-start
 			collection, ok := lifecycle.BeginDeltaCollection(y2k)
 			if ok {
 				collection.Complete()
 			}
-		}()
+		})
 
 		close(start)
 		wg.Wait()

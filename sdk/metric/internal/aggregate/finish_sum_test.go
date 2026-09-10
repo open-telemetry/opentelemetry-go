@@ -4,6 +4,7 @@
 package aggregate
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -284,15 +285,12 @@ func TestFinishSumConcurrentSafeLifecycle(t *testing.T) {
 		stop      atomic.Bool
 		wg        sync.WaitGroup
 	)
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for !stop.Load() {
 			agg.Finish(alice.Equivalent(), time.Now())
 		}
-	}()
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		for !stop.Load() {
 			var data metricdata.Aggregation
 			agg.ComputeAggregation(&data)
@@ -300,7 +298,7 @@ func TestFinishSumConcurrentSafeLifecycle(t *testing.T) {
 				collected.Add(point.Value)
 			}
 		}
-	}()
+	})
 	for range measurements {
 		agg.Measure(t.Context(), 1, alice)
 	}
@@ -313,30 +311,56 @@ func TestFinishSumConcurrentSafeLifecycle(t *testing.T) {
 }
 
 func TestFinishSumConcurrentSafeShutdown(t *testing.T) {
-	agg := Builder[int64]{ReservoirFunc: dropExemplars[int64]}.FinishSum(true)
-	var (
-		stop atomic.Bool
-		wg   sync.WaitGroup
-	)
-	wg.Add(2)
+	reservoir := &blockingFinishSumReservoir{
+		offered: make(chan struct{}),
+		release: make(chan struct{}),
+	}
+	agg := Builder[int64]{
+		ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+			return reservoir
+		},
+	}.FinishSum(true)
+
+	measured := make(chan struct{})
 	go func() {
-		defer wg.Done()
-		for !stop.Load() {
-			agg.Measure(t.Context(), 1, alice)
-		}
+		agg.Measure(t.Context(), 1, alice)
+		close(measured)
 	}()
+	<-reservoir.offered
+
+	shutdown := make(chan struct{})
 	go func() {
-		defer wg.Done()
-		for !stop.Load() {
-			agg.Finish(alice.Equivalent(), time.Now())
-		}
+		agg.Shutdown()
+		close(shutdown)
 	}()
-	agg.Shutdown()
-	stop.Store(true)
-	wg.Wait()
+	select {
+	case <-shutdown:
+		t.Fatal("shutdown completed with a measurement in flight")
+	case <-time.After(10 * time.Millisecond):
+	}
+
+	close(reservoir.release)
+	<-measured
+	<-shutdown
 	var data metricdata.Aggregation
 	assert.Zero(t, agg.ComputeAggregation(&data))
 }
+
+type blockingFinishSumReservoir struct {
+	offered chan struct{}
+	release chan struct{}
+}
+
+func (r *blockingFinishSumReservoir) Offer(
+	context.Context,
+	int64,
+	lazyFilteredAttributes,
+) {
+	close(r.offered)
+	<-r.release
+}
+
+func (*blockingFinishSumReservoir) Collect(*[]exemplar.Exemplar) {}
 
 func BenchmarkFinishSum(b *testing.B) {
 	b.Run("Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
