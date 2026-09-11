@@ -3,7 +3,7 @@
 
 // Package metricfilter provides the experimental MetricFilter API for
 // filtering aggregated metric data points during collection.
-package metricfilter // import "go.opentelemetry.io/otel/sdk/metric/internal/x/metricfilter"
+package metricfilter
 
 import (
 	"go.opentelemetry.io/otel/attribute"
