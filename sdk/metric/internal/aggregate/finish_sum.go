@@ -215,6 +215,7 @@ func (s *finishSum[N]) measure(
 			}
 			return
 		}
+		s.values.CompareAndDelete(lazy.Distinct(), point)
 	}
 }
 

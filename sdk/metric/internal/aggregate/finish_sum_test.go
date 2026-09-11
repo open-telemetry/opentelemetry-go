@@ -273,6 +273,30 @@ func TestFinishSumRetireAndDelete(t *testing.T) {
 	assert.False(t, retire)
 }
 
+func TestFinishSumMeasureDeletesRetiredPoint(t *testing.T) {
+	store := newFinishSum(
+		true,
+		metricdata.CumulativeTemporality,
+		0,
+		dropExemplars[int64],
+	)
+	lazy := newLazyFilteredAttributes(alice, nil)
+	store.measure(t.Context(), 1, lazy)
+	raw, ok := store.values.Load(alice.Equivalent())
+	require.True(t, ok)
+	retired := raw.(*finishSumValue[int64])
+	retired.shutdown()
+
+	store.measure(t.Context(), 2, lazy)
+
+	raw, ok = store.values.Load(alice.Equivalent())
+	require.True(t, ok)
+	replacement := raw.(*finishSumValue[int64])
+	assert.NotSame(t, retired, replacement)
+	assert.Equal(t, int64(2), replacement.value.load())
+	assert.Equal(t, 1, store.values.Len())
+}
+
 func TestFinishSumConcurrentSafeLifecycle(t *testing.T) {
 	agg := Builder[int64]{
 		Temporality:   metricdata.DeltaTemporality,
