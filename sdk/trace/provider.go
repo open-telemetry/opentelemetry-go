@@ -255,13 +255,14 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 			idx = i
 		}
 	}
-	if stopOnce != nil {
-		stopOnce.state.Do(func() {
-			if err := sp.Shutdown(context.Background()); err != nil {
-				otel.Handle(err)
-			}
-		})
+	if stopOnce == nil {
+		return
 	}
+	stopOnce.state.Do(func() {
+		if err := sp.Shutdown(context.Background()); err != nil {
+			otel.Handle(err)
+		}
+	})
 	if len(spss) > 1 {
 		copy(spss[idx:], spss[idx+1:])
 	}
