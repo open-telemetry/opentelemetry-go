@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
-	"go.opentelemetry.io/otel/sdk/metric/internal/reservoir"
 )
 
 // FilteredExemplarReservoir wraps a [exemplar.Reservoir] with a filter.
@@ -35,7 +34,7 @@ type filteredExemplarReservoir[N int64 | float64] struct {
 	reservoir exemplar.Reservoir
 	// The exemplar.Reservoir is not required to be concurrent safe, but
 	// implementations can indicate that they are concurrent-safe by embedding
-	// reservoir.ConcurrentSafe in order to improve performance.
+	// exemplar.ConcurrentSafe in order to improve performance.
 	reservoirMux   sync.Mutex
 	concurrentSafe bool
 }
@@ -46,7 +45,7 @@ func NewFilteredExemplarReservoir[N int64 | float64](
 	f exemplar.Filter,
 	r exemplar.Reservoir,
 ) FilteredExemplarReservoir[N] {
-	_, concurrentSafe := r.(reservoir.ConcurrentSafe)
+	_, concurrentSafe := r.(exemplar.ConcurrentSafe)
 	return &filteredExemplarReservoir[N]{
 		filter:         f,
 		reservoir:      r,
