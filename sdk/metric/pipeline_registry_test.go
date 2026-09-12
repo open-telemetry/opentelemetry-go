@@ -174,11 +174,12 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	}
 
 	testcases := []struct {
-		name     string
-		reader   Reader
-		views    []View
-		inst     Instrument
-		validate func(*testing.T, []aggregate.Measure[N], []aggregate.ComputeAggregation, error)
+		name             string
+		reader           Reader
+		views            []View
+		viewMatchingMode viewMatchingMode
+		inst             Instrument
+		validate         func(*testing.T, []aggregate.Measure[N], []aggregate.ComputeAggregation, error)
 	}{
 		{
 			name: "Default/Drop",
@@ -323,6 +324,14 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 			validate: assertSum[N](2, metricdata.CumulativeTemporality, true, [2]N{1, 4}),
 		},
 		{
+			name:             "Composable/MultipleViewsConsolidated",
+			reader:           NewManualReader(),
+			views:            []View{defaultView, renameView},
+			viewMatchingMode: viewMatchingModeComposable,
+			inst:             instruments[InstrumentKindCounter],
+			validate:         assertSum[N](1, metricdata.CumulativeTemporality, true, [2]N{1, 4}),
+		},
+		{
 			name: "Reader/Default/Cumulative/Sum/Monotonic",
 			reader: NewManualReader(
 				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDefault{} }),
@@ -391,7 +400,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
 			var c cache[string, instID]
-			p := newPipeline(nil, tt.reader, tt.views, exemplar.AlwaysOffFilter, 0)
+			p := newPipeline(nil, tt.reader, tt.views, exemplar.AlwaysOffFilter, 0, tt.viewMatchingMode)
 			i := newInserter[N](p, &c)
 			readerAggregation := i.readerDefaultAggregation(tt.inst.Kind)
 			input, err := i.Instrument(tt.inst, nil, readerAggregation)
@@ -413,7 +422,17 @@ func TestCreateAggregators(t *testing.T) {
 
 func testInvalidInstrumentShouldPanic[N int64 | float64]() {
 	var c cache[string, instID]
-	i := newInserter[N](newPipeline(nil, NewManualReader(), []View{defaultView}, exemplar.AlwaysOffFilter, 0), &c)
+	i := newInserter[N](
+		newPipeline(
+			nil,
+			NewManualReader(),
+			[]View{defaultView},
+			exemplar.AlwaysOffFilter,
+			0,
+			viewMatchingModeIndependent,
+		),
+		&c,
+	)
 	inst := Instrument{
 		Name: "foo",
 		Kind: InstrumentKind(255),
@@ -429,7 +448,14 @@ func TestInvalidInstrumentShouldPanic(t *testing.T) {
 
 func TestPipelinesAggregatorForEachReader(t *testing.T) {
 	r0, r1 := NewManualReader(), NewManualReader()
-	pipes := newPipelines(resource.Empty(), []Reader{r0, r1}, nil, exemplar.AlwaysOffFilter, 0)
+	pipes := newPipelines(
+		resource.Empty(),
+		[]Reader{r0, r1},
+		nil,
+		exemplar.AlwaysOffFilter,
+		0,
+		viewMatchingModeIndependent,
+	)
 	require.Len(t, pipes, 2, "created pipelines")
 
 	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
@@ -503,7 +529,14 @@ func TestPipelineRegistryCreateAggregators(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p := newPipelines(resource.Empty(), tt.readers, tt.views, exemplar.AlwaysOffFilter, 0)
+			p := newPipelines(
+				resource.Empty(),
+				tt.readers,
+				tt.views,
+				exemplar.AlwaysOffFilter,
+				0,
+				viewMatchingModeIndependent,
+			)
 			testPipelineRegistryResolveIntAggregators(t, p, tt.wantCount)
 			testPipelineRegistryResolveFloatAggregators(t, p, tt.wantCount)
 			testPipelineRegistryResolveIntHistogramAggregators(t, p, tt.wantCount)
@@ -557,7 +590,7 @@ func TestPipelineRegistryResource(t *testing.T) {
 	readers := []Reader{NewManualReader()}
 	views := []View{defaultView, v}
 	res := resource.NewSchemaless(attribute.String("key", "val"))
-	pipes := newPipelines(res, readers, views, exemplar.AlwaysOffFilter, 0)
+	pipes := newPipelines(res, readers, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent)
 	for _, p := range pipes {
 		assert.True(t, res.Equal(p.resource), "resource not set")
 	}
@@ -570,7 +603,7 @@ func TestPipelineRegistryCreateAggregatorsIncompatibleInstrument(t *testing.T) {
 
 	readers := []Reader{testRdrHistogram}
 	views := []View{defaultView}
-	p := newPipelines(resource.Empty(), readers, views, exemplar.AlwaysOffFilter, 0)
+	p := newPipelines(resource.Empty(), readers, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent)
 	inst := Instrument{Name: "foo", Kind: InstrumentKindObservableGauge}
 
 	var vc cache[string, instID]
@@ -630,7 +663,7 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 	fooInst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
 	barInst := Instrument{Name: "bar", Kind: InstrumentKindCounter}
 
-	p := newPipelines(resource.Empty(), readers, views, exemplar.AlwaysOffFilter, 0)
+	p := newPipelines(resource.Empty(), readers, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeIndependent)
 
 	var vc cache[string, instID]
 	ri := newResolver[int64](p, &vc)
