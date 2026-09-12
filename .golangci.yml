@@ -265,6 +265,8 @@ formatters:
     - golines
   settings:
     gofumpt:
+      extra:
+        group-params: true
       extra-rules: true
     goimports:
       local-prefixes:
