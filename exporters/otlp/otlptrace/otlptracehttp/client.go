@@ -76,6 +76,7 @@ type client struct {
 }
 
 var _ otlptrace.Client = (*client)(nil)
+var _ otlptrace.SyncClient = (*client)(nil)
 
 // NewClient creates a new HTTP trace client.
 func NewClient(opts ...Option) otlptrace.Client {
@@ -154,6 +155,16 @@ func (c *client) Stop(ctx context.Context) error {
 
 // UploadTraces sends a batch of spans to the collector.
 func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
+	return c.uploadTraces(ctx, protoSpans)
+}
+
+// UploadTracesSync synchronously sends a batch of spans to the collector.
+// It fully consumes protoSpans before returning and does not retain it.
+func (c *client) UploadTracesSync(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
+	return c.uploadTraces(ctx, protoSpans)
+}
+
+func (c *client) uploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
 	pbRequest := &coltracepb.ExportTraceServiceRequest{
 		ResourceSpans: protoSpans,
 	}
