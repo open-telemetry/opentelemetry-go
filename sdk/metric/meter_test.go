@@ -3054,3 +3054,38 @@ func TestMeterDefaultAttributes_FilterAll(t *testing.T) {
 	}
 	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 }
+
+func TestMetricFilterAsyncInstrument(t *testing.T) {
+	ctx := t.Context()
+
+	filter := testMetricFilterOption{
+		testMetric: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string) int {
+			return metricFilterAcceptPartial
+		},
+		testAttributes: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string, attrs []attribute.KeyValue) int {
+			for _, attr := range attrs {
+				if attr.Key == "drop" {
+					return metricFilterAttrDrop
+				}
+			}
+			return metricFilterAttrAccept
+		},
+	}
+
+	rdr := NewManualReader(filter)
+	mp := NewMeterProvider(WithReader(rdr))
+	meter := mp.Meter("test")
+
+	obs, err := meter.Int64ObservableCounter("async")
+	require.NoError(t, err)
+	_, err = meter.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+		o.ObserveInt64(obs, 1, metric.WithAttributes(attribute.String("keep", "true")))
+		o.ObserveInt64(obs, 2, metric.WithAttributes(attribute.String("drop", "true")))
+		return nil
+	}, obs)
+	require.NoError(t, err)
+
+	rm := &metricdata.ResourceMetrics{}
+	require.NoError(t, rdr.Collect(ctx, rm))
+	assert.Equal(t, 1, sumDataPointCount(rm, "async"))
+}

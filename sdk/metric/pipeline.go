@@ -31,10 +31,12 @@ var (
 // instrumentSync is a synchronization point between a pipeline and an
 // instrument's aggregate function.
 type instrumentSync struct {
-	name        string
-	description string
-	unit        string
-	compAgg     aggregate.ComputeAggregation
+	name         string
+	description  string
+	unit         string
+	compAgg      aggregate.ComputeAggregation
+	metricFilter metricFilter
+	kind         InstrumentKind
 }
 
 func newPipeline(
@@ -79,6 +81,7 @@ type pipeline struct {
 	multiCallbacks   list.List
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+	metricFilter     metricFilter
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
@@ -163,8 +166,25 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		rm.ScopeMetrics[i].Metrics = internal.ReuseSlice(rm.ScopeMetrics[i].Metrics, len(instruments))
 		j := 0
 		for _, inst := range instruments {
+			var keep func(attrs attribute.Set) bool
+			if inst.metricFilter != nil {
+				action := inst.metricFilter.TestMetric(scope, inst.name, inst.kind, inst.unit)
+				if action == metricFilterDrop {
+					continue
+				} else if action == metricFilterAcceptPartial {
+					keep = func(attrs attribute.Set) bool {
+						return inst.metricFilter.TestAttributes(
+							scope,
+							inst.name,
+							inst.kind,
+							inst.unit,
+							attrs.ToSlice(),
+						) == metricFilterAttrAccept
+					}
+				}
+			}
 			data := rm.ScopeMetrics[i].Metrics[j].Data
-			if n := inst.compAgg(&data); n > 0 {
+			if n := inst.compAgg(&data, keep); n > 0 {
 				rm.ScopeMetrics[i].Metrics[j].Name = inst.name
 				rm.ScopeMetrics[i].Metrics[j].Description = inst.description
 				rm.ScopeMetrics[i].Metrics[j].Unit = inst.unit
@@ -415,13 +435,16 @@ func (i *inserter[N]) cachedAggregator(
 		if in == nil { // Drop aggregator.
 			return aggVal[N]{0, nil, nil}
 		}
+
 		i.pipeline.addSync(scope, instrumentSync{
 			// Use the first-seen name casing for this and all subsequent
 			// requests of this instrument.
-			name:        stream.Name,
-			description: stream.Description,
-			unit:        stream.Unit,
-			compAgg:     out,
+			name:         stream.Name,
+			description:  stream.Description,
+			unit:         stream.Unit,
+			compAgg:      out,
+			metricFilter: i.pipeline.metricFilter,
+			kind:         kind,
 		})
 		id := aggIDCount.Add(1)
 		return aggVal[N]{id, in, err}
@@ -638,6 +661,9 @@ func newPipelines(
 	pipes := make([]*pipeline, 0, len(readers))
 	for _, r := range readers {
 		p := newPipeline(res, r, views, exemplarFilter, cardinalityLimit)
+		if r, ok := r.(interface{ getMetricFilter() metricFilter }); ok {
+			p.metricFilter = r.getMetricFilter()
+		}
 		r.register(p)
 		pipes = append(pipes, p)
 	}

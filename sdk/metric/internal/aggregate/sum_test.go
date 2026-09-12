@@ -683,3 +683,46 @@ func BenchmarkSum(b *testing.B) {
 		}.PrecomputedSum(false)
 	}))
 }
+
+func TestSumFilterAttributes(t *testing.T) {
+	ctx := t.Context()
+
+	tests := map[string]struct {
+		filter filterAttrs
+		wantN  int
+		want   attribute.Set
+	}{
+		"DropOne": {
+			filter: func(attrs attribute.Set) bool { return !attrs.Equals(&bob) },
+			wantN:  1,
+			want:   alice,
+		},
+		"DropAll": {
+			filter: func(attribute.Set) bool { return false },
+			wantN:  0,
+		},
+		"NilFilterIncludesAll": {
+			filter: nil,
+			wantN:  2,
+			want:   alice,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			in, out := Builder[int64]{Temporality: metricdata.CumulativeTemporality}.Sum(false)
+			in(ctx, 1, alice)
+			in(ctx, 2, bob)
+
+			got := new(metricdata.Aggregation)
+			n := out(got, tt.filter)
+			assert.Equal(t, tt.wantN, n)
+
+			sum := (*got).(metricdata.Sum[int64])
+			require.Len(t, sum.DataPoints, tt.wantN)
+			if tt.wantN == 1 {
+				assert.Equal(t, tt.want, sum.DataPoints[0].Attributes)
+			}
+		})
+	}
+}

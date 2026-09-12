@@ -34,6 +34,7 @@ import (
 
 func testSumAggregateOutput(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	_ func(attribute.Set) bool,
 ) int {
 	*dest = metricdata.Sum[int64]{
 		Temporality: metricdata.CumulativeTemporality,
@@ -52,7 +53,12 @@ func TestNewPipeline(t *testing.T) {
 	assert.Equal(t, resource.Empty(), output.Resource)
 	assert.Empty(t, output.ScopeMetrics)
 
-	iSync := instrumentSync{"name", "desc", "1", testSumAggregateOutput}
+	iSync := instrumentSync{
+		name:        "name",
+		description: "desc",
+		unit:        "1",
+		compAgg:     testSumAggregateOutput,
+	}
 	assert.NotPanics(t, func() {
 		pipe.addSync(instrumentation.Scope{}, iSync)
 	})
@@ -94,7 +100,12 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 		go func(n int) {
 			defer wg.Done()
 			name := fmt.Sprintf("name %d", n)
-			sync := instrumentSync{name, "desc", "1", testSumAggregateOutput}
+			sync := instrumentSync{
+				name:        name,
+				description: "desc",
+				unit:        "1",
+				compAgg:     testSumAggregateOutput,
+			}
 			pipe.addSync(instrumentation.Scope{}, sync)
 		}(i)
 
@@ -625,7 +636,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 		name:        "test-metric",
 		description: "test description",
 		unit:        "test unit",
-		compAgg: func(dest *metricdata.Aggregation) int {
+		compAgg: func(dest *metricdata.Aggregation, _ func(attribute.Set) bool) int {
 			aggCallCount++
 
 			*dest = metricdata.Sum[int64]{

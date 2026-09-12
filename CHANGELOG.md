@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add experimental MetricFilter support to go.opentelemetry.io/otel/sdk/metric. (#8461)  
 - Add `WithMaxResponseSize` to `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, and
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8941)

@@ -133,7 +133,7 @@ func test[N int64 | float64](meas Measure[N], comp ComputeAggregation, steps []t
 			}
 
 			t.Logf("step: %d", i)
-			assert.Equal(t, step.expect.n, comp(got), "incorrect data size")
+			assert.Equal(t, step.expect.n, comp(got, nil), "incorrect data size")
 			metricdatatest.AssertAggregationsEqual(t, step.expect.agg, *got)
 		}
 	}
@@ -204,7 +204,7 @@ func testAggregationConcurrentSafe[N int64 | float64](
 		wg.Go(func() {
 			for range concurrentNumRecords {
 				got := new(metricdata.Aggregation)
-				comp(got)
+				comp(got, nil)
 				results = append(results, *got)
 			}
 		})
@@ -213,7 +213,7 @@ func testAggregationConcurrentSafe[N int64 | float64](
 
 		// Final flush to get final values
 		got := new(metricdata.Aggregation)
-		comp(got)
+		comp(got, nil)
 		results = append(results, *got)
 
 		validate(t, results)
@@ -260,7 +260,7 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 			}
 		}
 
-		comp(got)
+		comp(got, nil)
 	})
 
 	b.Run("ComputeAggregation", func(b *testing.B) {
@@ -278,7 +278,7 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			comps[n](got)
+			comps[n](got, nil)
 		}
 	})
 }
