@@ -347,8 +347,8 @@ func (v *Value) MarshalJSON() ([]byte, error) {
 		}{strconv.FormatInt(int64(v.num), 10)}) // nolint: gosec  // From raw bytes.
 	case ValueKindFloat64:
 		return json.Marshal(struct {
-			Value float64 `json:"doubleValue"`
-		}{v.asFloat64()})
+			Value protoFloat64 `json:"doubleValue"`
+		}{protoFloat64(v.asFloat64())})
 	case ValueKindBool:
 		return json.Marshal(struct {
 			Value bool `json:"boolValue"`
@@ -421,9 +421,9 @@ func (v *Value) UnmarshalJSON(data []byte) error {
 			err = decoder.Decode(&val)
 			*v = Int64Value(val.Int64())
 		case "doubleValue", "double_value":
-			var val float64
+			var val protoFloat64
 			err = decoder.Decode(&val)
-			*v = Float64Value(val)
+			*v = Float64Value(val.Float64())
 		case "bytesValue", "bytes_value":
 			var val64 string
 			if err := decoder.Decode(&val64); err != nil {

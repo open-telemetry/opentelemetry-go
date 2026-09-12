@@ -563,6 +563,33 @@ func TestSpanEnd(t *testing.T) {
 	}
 }
 
+func TestSpanEndWithNonFiniteFloatAttribute(t *testing.T) {
+	orig := ended
+	t.Cleanup(func() { ended = orig })
+
+	var buf []byte
+	ended = func(b []byte) { buf = b }
+
+	s := spanBuilder{
+		Options: []SpanStartOption{
+			WithAttributes(attribute.Float64("infinity", math.Inf(1))),
+		},
+	}.Build()
+	s.End()
+
+	require.NotNil(t, buf, "no span data emitted")
+
+	var traces telemetry.Traces
+	require.NoError(t, json.Unmarshal(buf, &traces))
+	require.Len(t, traces.ResourceSpans, 1)
+	require.Len(t, traces.ResourceSpans[0].ScopeSpans, 1)
+	require.Len(t, traces.ResourceSpans[0].ScopeSpans[0].Spans, 1)
+
+	attrs := traces.ResourceSpans[0].ScopeSpans[0].Spans[0].Attrs
+	require.Len(t, attrs, 1)
+	assert.Equal(t, telemetry.Float64Value(math.Inf(1)), attrs[0].Value)
+}
+
 func TestSpanNilUnsampledGuards(t *testing.T) {
 	run := func(fn func(s *autoSpan)) func(*testing.T) {
 		return func(t *testing.T) {
