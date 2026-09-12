@@ -36,7 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Propagate invalid exponential histogram scale errors to Prometheus exporter self-observability metrics in `go.opentelemetry.io/otel/exporters/prometheus`. (#8839)
 - Ignore HTTP URL paths when building OTLP/gRPC metric exporter targets from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`, while preserving `unix://` and `unix-abstract://` targets; treat `unix-abstract://` endpoints as insecure in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8862)
 - Ignore HTTP(S) paths when deriving gRPC trace exporter endpoints from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#8852)
-- Preserve non-HTTP(S) gRPC targets such as `unix://` and `unix-abstract://` sockets, and scheme-less `host:port` values, when reading `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`; these previously resolved to an empty dial target and all exports failed. (#TBD)
+- Preserve non-HTTP(S) gRPC targets such as `unix://` and `unix-abstract://` sockets, and scheme-less `host:port` values, when reading `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`; these previously resolved to an empty dial target and all exports failed. (#8952)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
