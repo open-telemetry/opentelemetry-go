@@ -1111,3 +1111,38 @@ func BenchmarkPeriodicReaderInstrumentation(b *testing.B) {
 		run(b, true)
 	})
 }
+
+func TestNewPeriodicReaderConcurrentSafe(t *testing.T) {
+	origErrorHandler := otel.GetErrorHandler()
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(error) {}))
+	t.Cleanup(func() { otel.SetErrorHandler(origErrorHandler) })
+
+	orig := newTicker
+	t.Cleanup(func() { newTicker = orig })
+
+	for range 50 {
+		goroutineInRun := make(chan struct{})
+		doTick := make(chan time.Time)
+
+		newTicker = func(d time.Duration) *time.Ticker {
+			ticker := time.NewTicker(d)
+			ticker.C = doTick
+			close(goroutineInRun)
+			return ticker
+		}
+
+		var r *PeriodicReader
+		readerReady := make(chan struct{})
+		go func() {
+			r = NewPeriodicReader(new(fnExporter))
+			close(readerReady)
+		}()
+
+		<-goroutineInRun
+		doTick <- time.Now()
+		<-readerReady
+
+		r.register(testSDKProducer{})
+		_ = r.Shutdown(t.Context())
+	}
+}
