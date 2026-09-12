@@ -4,10 +4,12 @@
 package aggregate
 
 import (
+	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -386,5 +388,179 @@ func BenchmarkSyncMap(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			m.Clear()
 		}
+	})
+}
+
+func TestHotColdMap(t *testing.T) {
+	t.Run("BasicWriteAndCollect", func(t *testing.T) {
+		var m hotColdMap[int]
+		m.init(10)
+		set := attribute.NewSet(attribute.String("k", "v"))
+		lazy := newLazyFilteredAttributes(set, nil)
+
+		hotIdx := m.start()
+		val := m.LoadOrStoreAttr(hotIdx, lazy, func(attribute.Set) int { return 100 })
+		m.done(hotIdx)
+		assert.Equal(t, 100, val)
+
+		readIdx := m.swapHotAndWait()
+		assert.Equal(t, 1, m.Len(readIdx))
+
+		var collected []int
+		m.Range(readIdx, func(_, value any) bool {
+			collected = append(collected, value.(int))
+			return true
+		})
+		m.Clear(readIdx)
+		assert.Equal(t, []int{100}, collected)
+		assert.Equal(t, 0, m.Len(readIdx))
+	})
+
+	t.Run("LimitEnforcement", func(t *testing.T) {
+		var m hotColdMap[int]
+		m.init(2) // Limit of 2: 1 normal + 1 overflow
+		set1 := attribute.NewSet(attribute.String("k", "1"))
+		set2 := attribute.NewSet(attribute.String("k", "2"))
+		set3 := attribute.NewSet(attribute.String("k", "3"))
+
+		lazy1 := newLazyFilteredAttributes(set1, nil)
+		lazy2 := newLazyFilteredAttributes(set2, nil)
+		lazy3 := newLazyFilteredAttributes(set3, nil)
+
+		hotIdx := m.start()
+		val1 := m.LoadOrStoreAttr(hotIdx, lazy1, func(attribute.Set) int { return 1 })
+		val2 := m.LoadOrStoreAttr(hotIdx, lazy2, func(attribute.Set) int { return 2 })
+		val3 := m.LoadOrStoreAttr(hotIdx, lazy3, func(attribute.Set) int { return 3 })
+		m.done(hotIdx)
+
+		assert.Equal(t, 1, val1)
+		assert.Equal(t, 2, val2)
+		assert.Equal(t, 2, val3) // Reuses overflow entry
+
+		readIdx := m.swapHotAndWait()
+		assert.Equal(t, 2, m.Len(readIdx))
+
+		var collected []int
+		m.Range(readIdx, func(_, value any) bool {
+			collected = append(collected, value.(int))
+			return true
+		})
+		m.Clear(readIdx)
+		assert.Len(t, collected, 2)
+	})
+
+	t.Run("LimitBudgetRestorationAfterClear", func(t *testing.T) {
+		var m hotColdMap[int]
+		m.init(3) // Limit of 3: 2 normal + 1 overflow
+
+		set1 := attribute.NewSet(attribute.String("k", "1"))
+		set2 := attribute.NewSet(attribute.String("k", "2"))
+		lazy1 := newLazyFilteredAttributes(set1, nil)
+		lazy2 := newLazyFilteredAttributes(set2, nil)
+
+		// Cycle 1: store 2 sets.
+		hotIdx := m.start()
+		val1 := m.LoadOrStoreAttr(hotIdx, lazy1, func(attribute.Set) int { return 1 })
+		val2 := m.LoadOrStoreAttr(hotIdx, lazy2, func(attribute.Set) int { return 2 })
+		m.done(hotIdx)
+		assert.Equal(t, 1, val1)
+		assert.Equal(t, 2, val2)
+
+		readIdx := m.swapHotAndWait()
+		assert.Equal(t, 2, m.Len(readIdx))
+		m.Clear(readIdx)
+		assert.Equal(t, 0, m.Len(readIdx))
+
+		// Cycle 2: store 2 new distinct sets in the next cycle.
+		// If Clear didn't reset the limit, set4 would overflow.
+		set3 := attribute.NewSet(attribute.String("k", "3"))
+		set4 := attribute.NewSet(attribute.String("k", "4"))
+		lazy3 := newLazyFilteredAttributes(set3, nil)
+		lazy4 := newLazyFilteredAttributes(set4, nil)
+
+		hotIdx = m.start()
+		val3 := m.LoadOrStoreAttr(hotIdx, lazy3, func(attribute.Set) int { return 3 })
+		val4 := m.LoadOrStoreAttr(hotIdx, lazy4, func(attribute.Set) int { return 4 })
+		m.done(hotIdx)
+		assert.Equal(t, 3, val3)
+		assert.Equal(t, 4, val4)
+
+		readIdx = m.swapHotAndWait()
+		assert.Equal(t, 2, m.Len(readIdx))
+		var collected []int
+		m.Range(readIdx, func(_, value any) bool {
+			collected = append(collected, value.(int))
+			return true
+		})
+		m.Clear(readIdx)
+		assert.ElementsMatch(t, []int{3, 4}, collected)
+	})
+
+	t.Run("ConcurrentAccessWithSwap", func(t *testing.T) {
+		var m hotColdMap[int]
+		m.init(100)
+
+		started := make(chan struct{})
+		release := make(chan struct{})
+		var blockedWriterDone atomic.Bool
+
+		var wg sync.WaitGroup
+		// Writer 1 starts, signals, and blocks until collector calls swapHotAndWait.
+		wg.Go(func() {
+			hotIdx := m.start()
+			defer m.done(hotIdx)
+
+			close(started)
+			<-release
+
+			set := attribute.NewSet(attribute.String("k", "blocked"))
+			lazy := newLazyFilteredAttributes(set, nil)
+			_ = m.LoadOrStoreAttr(hotIdx, lazy, func(attribute.Set) int { return 999 })
+			blockedWriterDone.Store(true)
+		})
+
+		<-started
+
+		// Concurrent writers.
+		for i := range 20 {
+			k := fmt.Sprintf("concurrent-%d", i)
+			wg.Go(func() {
+				hotIdx := m.start()
+				defer m.done(hotIdx)
+				set := attribute.NewSet(attribute.String("k", k))
+				lazy := newLazyFilteredAttributes(set, nil)
+				_ = m.LoadOrStoreAttr(hotIdx, lazy, func(attribute.Set) int { return i })
+			})
+		}
+
+		// Swap hot and cold. In a goroutine so we can unblock the writer while swapHotAndWait is waiting.
+		var readIdx coldIdx
+		var swapCompleted atomic.Bool
+		swapDone := make(chan struct{})
+		go func() {
+			readIdx = m.swapHotAndWait()
+			swapCompleted.Store(true)
+			close(swapDone)
+		}()
+
+		// Allow swapHotAndWait to enter its wait loop, then release the blocked writer.
+		time.Sleep(10 * time.Millisecond)
+		assert.False(t, swapCompleted.Load(), "swapHotAndWait returned before in-flight writer finished")
+		close(release)
+
+		<-swapDone
+		assert.True(t, blockedWriterDone.Load())
+		wg.Wait()
+
+		// Verify the blocked writer's value landed in the cold map.
+		var foundBlocked bool
+		m.Range(readIdx, func(_, value any) bool {
+			if value.(int) == 999 {
+				foundBlocked = true
+			}
+			return true
+		})
+		assert.True(t, foundBlocked, "value from writer in-flight during swap must be in cold map")
+		m.Clear(readIdx)
 	})
 }
