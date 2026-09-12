@@ -38,16 +38,17 @@ jobs:
             echo "Running in pull_request context"
             echo "Base SHA: $BASE_SHA"
             echo "Head SHA: $HEAD_SHA"
-            CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep '\.md$' || true)
+            CHANGED=$(git diff --name-only -z "$BASE_SHA" "$HEAD_SHA" | grep -z '\.md$' | tr '\0' '\n' || true)
           elif [[ "$EVENT_NAME" == "push" ]]; then
             echo "Running in push context"
-            CHANGED=$(git diff --name-only HEAD~1 HEAD | grep '\.md$' || true)
+            CHANGED=$(git diff --name-only -z HEAD~1 HEAD | grep -z '\.md$' | tr '\0' '\n' || true)
           else
             echo "Unsupported event type: $EVENT_NAME"
             exit 1
           fi
 
-          MD=$(echo "$CHANGED" | tr '\n' ' ' | xargs)
+          # Preserve filename boundaries (spaces, leading -) by shell-escaping each path
+          MD=$(echo "$CHANGED" | while IFS= read -r f; do [ -n "$f" ] && case "$f" in -*) f="./$f";; esac; printf '%q ' "$f"; done | sed 's/ $//')
           echo "Markdown files changed: $MD"
           echo "md=$MD" >> "$GITHUB_OUTPUT"
 
