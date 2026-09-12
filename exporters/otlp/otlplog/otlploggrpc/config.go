@@ -404,14 +404,24 @@ func convCompression(s string) (Compression, error) {
 	return NoCompression, fmt.Errorf("unknown compression: %s", s)
 }
 
-// convEndpoint converts s from a URL string to an endpoint if s is a valid
+// convEndpoint converts s from a URL string to a gRPC target if s is a valid
 // URL. Otherwise, "" and an error are returned.
+//
+// HTTP(S) URLs contribute only their host, matching the OTLP specification
+// which reserves the URL path for OTLP/HTTP. Non-HTTP targets such as
+// "unix:///tmp/grpc.sock" and "unix-abstract:///name" are preserved verbatim
+// so the gRPC client can resolve them.
 func convEndpoint(s string) (string, error) {
 	u, err := url.Parse(s)
 	if err != nil {
 		return "", err
 	}
-	return u.Host, nil
+	switch strings.ToLower(u.Scheme) {
+	case "http", "https", "":
+		return u.Host, nil
+	default:
+		return u.String(), nil
+	}
 }
 
 // convInsecure converts s from a string to a bool without case sensitivity.
