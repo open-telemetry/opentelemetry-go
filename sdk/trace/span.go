@@ -483,9 +483,7 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 		return
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if !s.isRecording() {
+	if !s.IsRecording() {
 		return
 	}
 
@@ -501,7 +499,7 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 		))
 	}
 
-	s.addEvent(semconv.ExceptionEventName, opts...)
+	s.AddEvent(semconv.ExceptionEventName, opts...)
 }
 
 func typeStr(i any) string {
