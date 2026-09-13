@@ -1285,6 +1285,46 @@ func TestRecordError(t *testing.T) {
 	}
 }
 
+type reentrantRecordError struct {
+	span trace.Span
+}
+
+func (e reentrantRecordError) Error() string {
+	e.span.AddEvent("from Error")
+	return "boom"
+}
+
+func TestRecordErrorAllowsReentrantErrorFormatting(t *testing.T) {
+	tp := NewTracerProvider()
+	_, span := tp.Tracer(t.Name()).Start(t.Context(), "span")
+
+	done := make(chan struct{})
+	go func() {
+		span.RecordError(reentrantRecordError{span: span})
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		span.End()
+	case <-time.After(2 * time.Second):
+		t.Fatal("RecordError deadlocked while formatting a reentrant error")
+	}
+}
+
+func TestRecordErrorAfterEnd(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
+	_, span := tp.Tracer(t.Name()).Start(t.Context(), "span")
+
+	span.End()
+	span.RecordError(errors.New("ignored"))
+
+	got := te.Spans()
+	require.Len(t, got, 1)
+	assert.Empty(t, got[0].events)
+}
+
 func TestRecordErrorWithStackTrace(t *testing.T) {
 	err := newTestError("test error")
 	typ := "go.opentelemetry.io/otel/sdk/trace.testError"
