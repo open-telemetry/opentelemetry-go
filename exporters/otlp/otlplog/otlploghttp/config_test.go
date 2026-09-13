@@ -114,20 +114,22 @@ func TestNewConfig(t *testing.T) {
 				WithCompression(GzipCompression),
 				WithHeaders(headers),
 				WithMaxRequestSize(1),
+				WithMaxResponseSize(2),
 				WithTimeout(time.Second),
 				WithRetry(RetryConfig(rc)),
 				// Do not test WithProxy. Requires func comparison.
 			},
 			want: config{
-				endpoint:       newSetting("test"),
-				path:           newSetting("/path"),
-				insecure:       newSetting(true),
-				tlsCfg:         newSetting(tlsCfg),
-				headers:        newSetting(headers),
-				compression:    newSetting(GzipCompression),
-				maxRequestSize: newSetting(1),
-				timeout:        newSetting(time.Second),
-				retryCfg:       newSetting(rc),
+				endpoint:        newSetting("test"),
+				path:            newSetting("/path"),
+				insecure:        newSetting(true),
+				tlsCfg:          newSetting(tlsCfg),
+				headers:         newSetting(headers),
+				compression:     newSetting(GzipCompression),
+				maxRequestSize:  newSetting(1),
+				maxResponseSize: newSetting(int64(2)),
+				timeout:         newSetting(time.Second),
+				retryCfg:        newSetting(rc),
 			},
 		},
 		{
@@ -536,6 +538,9 @@ func TestNewConfig(t *testing.T) {
 			if !tc.want.encoding.Set {
 				tc.want.encoding = newSetting(ProtoEncoding)
 			}
+			if !tc.want.maxResponseSize.Set {
+				tc.want.maxResponseSize = newSetting(defaultMaxResponseSize)
+			}
 
 			// Do not compare pointer values.
 			assertTLSConfig(t, tc.want.tlsCfg, c.tlsCfg)
@@ -638,6 +643,16 @@ func TestWithEncoding(t *testing.T) {
 		assert.Equal(t, JSONEncoding, c.encoding.Value)
 		assert.ErrorContains(t, got, "invalid OTEL_EXPORTER_OTLP_LOGS_PROTOCOL value not-a-protocol")
 	})
+}
+
+func TestMaxResponseSize(t *testing.T) {
+	for _, size := range []int64{0, -1} {
+		cfg := newConfig([]Option{WithMaxResponseSize(size)})
+		assert.Equal(t, defaultMaxResponseSize, cfg.maxResponseSize.Value)
+	}
+
+	cfg := newConfig([]Option{WithMaxResponseSize(2), WithMaxResponseSize(0)})
+	assert.Equal(t, int64(2), cfg.maxResponseSize.Value)
 }
 
 func assertTLSConfig(t *testing.T, want, got setting[*tls.Config]) {
