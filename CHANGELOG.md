@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `WithMaxExportBatchSize` to `go.opentelemetry.io/otel/sdk/metric` to configure the maximum export batch size for `PeriodicReader`.
 - Add `WithMaxResponseSize` to `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, and
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#8941)
@@ -21,6 +22,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Reduce allocations when applying attribute value length limits in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log` by rebuilding composite values only when truncation is needed. (#8912)
 - Decode `traceparent` using a hex lookup table in `go.opentelemetry.io/otel/propagation`, which rejects the specification-disallowed upper-case characters without a separate scan of the header. (#8739)
+
+### Removed
+
+- Remove the experimental `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE` environment variable in `go.opentelemetry.io/otel/sdk/metric`.
 
 ### Fixed
 
