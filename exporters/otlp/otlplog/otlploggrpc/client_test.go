@@ -642,6 +642,25 @@ func TestClient(t *testing.T) {
 	})
 }
 
+// A raw grpc.DialOption passed via WithDialOption must not be overridden by
+// the internally computed default credentials.
+func TestWithDialOptionCredentialsTakePrecedence(t *testing.T) {
+	coll, err := newGRPCCollector(t.Context(), "", nil)
+	require.NoError(t, err)
+	t.Cleanup(coll.srv.Stop)
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	cfg := newConfig([]Option{
+		WithEndpoint(coll.listener.Addr().String()),
+		WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
+	})
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, client.Shutdown(ctx)) })
+
+	require.NoError(t, client.UploadLogs(ctx, resourceLogs))
+}
+
 func TestConfig(t *testing.T) {
 	factoryFunc := func(rCh <-chan exportResult, o ...Option) (log.Exporter, *grpcCollector) {
 		coll, err := newGRPCCollector(t.Context(), "", rCh)
