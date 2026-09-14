@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Remove the experimental `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE` environment variable in `go.opentelemetry.io/otel/sdk/metric`.
+  Use the `WithMaxExportBatchSize` option instead.
 
 ### Fixed
 
