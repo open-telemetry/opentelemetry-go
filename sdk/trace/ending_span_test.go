@@ -4,7 +4,6 @@
 package trace
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -24,7 +23,7 @@ func endedRecordingSpan(t *testing.T) *recordingSpan {
 	t.Helper()
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))
-	_, span := tp.Tracer("test").Start(context.Background(), "test")
+	_, span := tp.Tracer("test").Start(t.Context(), "test")
 	span.End()
 	rs, ok := span.(*recordingSpan)
 	require.True(t, ok)

@@ -11,7 +11,6 @@ import (
 	"go.opentelemetry.io/otel/trace/embedded"
 )
 
-
 // endingSpan wraps a recordingSpan that has stopped recording (endTime set)
 // and is handed to span processor OnEnding callbacks. It is the only way to
 // mutate a span once the span has stopped recording; its mutating methods skip
@@ -25,10 +24,10 @@ type endingSpan struct {
 var _ ReadWriteSpan = endingSpan{}
 
 // IsRecording returns true because the span is still mutable during OnEnding.
-func (s endingSpan) IsRecording() bool { return true }
+func (endingSpan) IsRecording() bool { return true }
 
 // End is a no-op: the span is already in the process of ending.
-func (s endingSpan) End(...trace.SpanEndOption) {}
+func (endingSpan) End(...trace.SpanEndOption) {}
 
 // SetStatus sets the status of the span.
 func (s endingSpan) SetStatus(code codes.Code, description string) {

@@ -20,15 +20,15 @@ type enrichingProcessor struct {
 	ended []sdktrace.ReadOnlySpan
 }
 
-func (p *enrichingProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {}
-func (p *enrichingProcessor) OnEnd(s sdktrace.ReadOnlySpan)                    { p.ended = append(p.ended, s) }
-func (p *enrichingProcessor) Shutdown(context.Context) error                   { return nil }
-func (p *enrichingProcessor) ForceFlush(context.Context) error                 { return nil }
+func (*enrichingProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {}
+func (p *enrichingProcessor) OnEnd(s sdktrace.ReadOnlySpan)                 { p.ended = append(p.ended, s) }
+func (*enrichingProcessor) Shutdown(context.Context) error                  { return nil }
+func (*enrichingProcessor) ForceFlush(context.Context) error                { return nil }
 
 // OnEnding implements OnEndingSpanProcessor. Registering a processor that
 // satisfies this interface with sdktrace.TracerProvider causes it to be called
 // during Span.End before the span becomes read-only.
-func (p *enrichingProcessor) OnEnding(s sdktrace.ReadWriteSpan) {
+func (*enrichingProcessor) OnEnding(s sdktrace.ReadWriteSpan) {
 	s.SetAttributes(attribute.Bool("enriched", true))
 }
 
@@ -44,7 +44,7 @@ func TestOnEndingSpanProcessorEndToEnd(t *testing.T) {
 	)
 	tp.RegisterSpanProcessor(p)
 
-	_, span := tp.Tracer("test").Start(context.Background(), "op")
+	_, span := tp.Tracer("test").Start(t.Context(), "op")
 	span.End()
 
 	spans := exp.GetSpans()
