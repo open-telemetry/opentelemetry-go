@@ -6,8 +6,8 @@ package otlploghttp_test
 import (
 	"context"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
@@ -26,7 +26,7 @@ func Example() {
 		}
 	}()
 
-	global.SetLoggerProvider(provider)
+	otel.SetLoggerProvider(provider)
 
 	// From here, the provider can be used by instrumentation to collect
 	// telemetry.

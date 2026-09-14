@@ -15,7 +15,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
+	"strings"
 
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -76,7 +78,7 @@ type AnyValue struct {
 	StringValue *string      `json:"stringValue,omitempty"`
 	BoolValue   *bool        `json:"boolValue,omitempty"`
 	IntValue    *Int64       `json:"intValue,omitempty"`
-	DoubleValue *float64     `json:"doubleValue,omitempty"`
+	DoubleValue *Float64     `json:"doubleValue,omitempty"`
 	ArrayValue  *ArrayValue  `json:"arrayValue,omitempty"`
 	KvlistValue *KvlistValue `json:"kvlistValue,omitempty"`
 	BytesValue  []byte       `json:"bytesValue,omitempty"`
@@ -301,7 +303,8 @@ func encodeAnyValue(av *commonpb.AnyValue) *AnyValue {
 		iv := Int64(v.IntValue)
 		out.IntValue = &iv
 	case *commonpb.AnyValue_DoubleValue:
-		out.DoubleValue = &v.DoubleValue
+		dv := Float64(v.DoubleValue)
+		out.DoubleValue = &dv
 	case *commonpb.AnyValue_ArrayValue:
 		if v.ArrayValue != nil {
 			arr := &ArrayValue{}
@@ -461,7 +464,7 @@ func decodeAnyValue(jav *AnyValue) *commonpb.AnyValue {
 	case jav.IntValue != nil:
 		av.Value = &commonpb.AnyValue_IntValue{IntValue: int64(*jav.IntValue)}
 	case jav.DoubleValue != nil:
-		av.Value = &commonpb.AnyValue_DoubleValue{DoubleValue: *jav.DoubleValue}
+		av.Value = &commonpb.AnyValue_DoubleValue{DoubleValue: float64(*jav.DoubleValue)}
 	case jav.ArrayValue != nil:
 		arr := &commonpb.ArrayValue{}
 		for _, v := range jav.ArrayValue.Values {
@@ -480,13 +483,61 @@ func decodeAnyValue(jav *AnyValue) *commonpb.AnyValue {
 	return av
 }
 
+// Float64 encodes non-finite values as strings per ProtoJSON specs.
+type Float64 float64
+
+// MarshalJSON implements the [json.Marshaler] interface.
+func (f Float64) MarshalJSON() ([]byte, error) {
+	switch value := float64(f); {
+	case math.IsNaN(value):
+		return []byte(`"NaN"`), nil
+	case math.IsInf(value, 1):
+		return []byte(`"Infinity"`), nil
+	case math.IsInf(value, -1):
+		return []byte(`"-Infinity"`), nil
+	default:
+		return strconv.AppendFloat(nil, value, 'g', -1, 64), nil
+	}
+}
+
+// UnmarshalJSON implements the [json.Unmarshaler] interface.
+func (f *Float64) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		switch str {
+		case "NaN":
+			*f = Float64(math.NaN())
+		case "Infinity":
+			*f = Float64(math.Inf(1))
+		case "-Infinity":
+			*f = Float64(math.Inf(-1))
+		default:
+			var value *float64
+			if str != strings.TrimSpace(str) || json.Unmarshal([]byte(str), &value) != nil || value == nil {
+				return fmt.Errorf("invalid float value %q", str)
+			}
+			*f = Float64(*value)
+		}
+		return nil
+	}
+
+	var value float64
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*f = Float64(value)
+	return nil
+}
+
 // Int64 encodes int64 as a quoted decimal string per ProtoJSON specs.
 type Int64 int64
 
+// MarshalJSON implements the [json.Marshaler] interface.
 func (i Int64) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + strconv.FormatInt(int64(i), 10) + `"`), nil
 }
 
+// UnmarshalJSON implements the [json.Unmarshaler] interface.
 func (i *Int64) UnmarshalJSON(data []byte) error {
 	// expects either a string representation or a number
 	var s string
@@ -509,10 +560,12 @@ func (i *Int64) UnmarshalJSON(data []byte) error {
 // Uint64 encodes uint64 as a quoted decimal string per ProtoJSON specs.
 type Uint64 uint64
 
+// MarshalJSON implements the [json.Marshaler] interface.
 func (i Uint64) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + strconv.FormatUint(uint64(i), 10) + `"`), nil
 }
 
+// UnmarshalJSON implements the [json.Unmarshaler] interface.
 func (i *Uint64) UnmarshalJSON(data []byte) error {
 	// expects either a string representation or a number
 	var s string
@@ -537,6 +590,7 @@ const base16Alphabets = "0123456789ABCDEF"
 // TraceID encodes a 16-byte trace ID as a case-insensitive hex-encoded string.
 type TraceID [16]byte
 
+// MarshalJSON implements the [json.Marshaler] interface.
 func (t TraceID) MarshalJSON() ([]byte, error) {
 	var b [34]byte
 	b[0] = '"'
@@ -548,6 +602,7 @@ func (t TraceID) MarshalJSON() ([]byte, error) {
 	return b[:], nil
 }
 
+// UnmarshalJSON implements the [json.Unmarshaler] interface.
 func (t *TraceID) UnmarshalJSON(data []byte) error {
 	var str string
 	if err := json.Unmarshal(data, &str); err != nil {
@@ -567,6 +622,7 @@ func (t *TraceID) UnmarshalJSON(data []byte) error {
 // SpanID encodes an 8-byte span ID as a case-insensitive hex-encoded string.
 type SpanID [8]byte
 
+// MarshalJSON implements the [json.Marshaler] interface.
 func (s SpanID) MarshalJSON() ([]byte, error) {
 	var b [18]byte
 	b[0] = '"'
@@ -578,6 +634,7 @@ func (s SpanID) MarshalJSON() ([]byte, error) {
 	return b[:], nil
 }
 
+// UnmarshalJSON implements the [json.Unmarshaler] interface.
 func (s *SpanID) UnmarshalJSON(data []byte) error {
 	var str string
 	if err := json.Unmarshal(data, &str); err != nil {

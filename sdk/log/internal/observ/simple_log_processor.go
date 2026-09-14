@@ -22,10 +22,11 @@ const (
 	ScopeName = "go.opentelemetry.io/otel/sdk/log/internal/observ"
 )
 
-// simpleProcessorN is a global 0-based count of the number of simple processor created.
+// simpleProcessorN is a global zero-based count of the number of simple
+// processors created.
 var simpleProcessorN atomic.Int64
 
-// NextSimpleProcessorID returns the next unique ID for a simpleProcessor.
+// NextSimpleProcessorID returns the next unique ID for a simple processor.
 func NextSimpleProcessorID() int64 {
 	const inc = 1
 	return simpleProcessorN.Add(inc) - inc

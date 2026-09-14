@@ -1605,6 +1605,68 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 	})
 }
 
+func TestInvalidExponentialHistogramScaleReportsObservabilityError(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	originalMP := otel.GetMeterProvider()
+	defer otel.SetMeterProvider(originalMP)
+
+	reader := metric.NewManualReader()
+	otel.SetMeterProvider(metric.NewMeterProvider(metric.WithReader(reader)))
+	inst, err := observ.NewInstrumentation(0)
+	require.NoError(t, err)
+
+	now := time.Now()
+	histogram := metricdata.ExponentialHistogram[float64]{
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+			{
+				Attributes: attribute.NewSet(),
+				StartTime:  now,
+				Time:       now,
+				Count:      1,
+				Scale:      -5,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}
+
+	ch := make(chan prometheus.Metric, 1)
+	addExponentialHistogramMetric(
+		t.Context(),
+		ch,
+		histogram,
+		metricdata.Metrics{Name: "test_histogram"},
+		"test_histogram",
+		keyVals{},
+		otlptranslator.LabelNamer{},
+		inst,
+	)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	var values []int64
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name != observ.ScopeName {
+			continue
+		}
+		for _, m := range sm.Metrics {
+			if m.Name != "otel.sdk.exporter.metric_data_point.exported" {
+				continue
+			}
+			sum, ok := m.Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+			for _, dp := range sum.DataPoints {
+				values = append(values, dp.Value)
+			}
+		}
+	}
+
+	require.ElementsMatch(t, []int64{0, 1}, values)
+}
+
 func TestDownscaleExponentialBucket(t *testing.T) {
 	tests := []struct {
 		name       string

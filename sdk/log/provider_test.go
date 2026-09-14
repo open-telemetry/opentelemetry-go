@@ -398,6 +398,59 @@ func TestMapDeduplication(t *testing.T) {
 	})
 }
 
+func TestLoggerProviderInvalidInstrumentationAttributes(t *testing.T) {
+	invalid := attribute.String("", "invalid")
+	upper := attribute.String("Key", "upper")
+	lower := attribute.String("key", "lower")
+	attrs := []attribute.KeyValue{invalid, upper, lower}
+	want := attribute.NewSet(upper, lower)
+
+	options := []struct {
+		name string
+		new  func(...attribute.KeyValue) log.LoggerOption
+	}{
+		{
+			name: "Attributes",
+			new:  log.WithInstrumentationAttributes,
+		},
+		{
+			name: "AttributeSet",
+			new: func(attrs ...attribute.KeyValue) log.LoggerOption {
+				return log.WithInstrumentationAttributeSet(attribute.NewSet(attrs...))
+			},
+		},
+	}
+
+	for _, option := range options {
+		for _, allowDup := range []bool{false, true} {
+			name := option.name + "/AllowDuplicates=" + strconv.FormatBool(allowDup)
+			t.Run(name, func(t *testing.T) {
+				orig := logInvalidAttribute
+				t.Cleanup(func() { logInvalidAttribute = orig })
+				var diagnosticCalls int
+				logInvalidAttribute = sync.OnceFunc(func() { diagnosticCalls++ })
+
+				validProvider := NewLoggerProvider()
+				_ = validProvider.Logger("valid", option.new(upper, lower))
+				assert.Zero(t, diagnosticCalls)
+
+				processor := newProcessor("processor")
+				providerOpts := []LoggerProviderOption{WithProcessor(processor)}
+				if allowDup {
+					providerOpts = append(providerOpts, WithAllowKeyDuplication())
+				}
+				provider := NewLoggerProvider(providerOpts...)
+				logger := provider.Logger("scope", option.new(attrs...))
+				logger.Emit(t.Context(), log.Record{})
+
+				require.Len(t, processor.records, 1)
+				assert.Equal(t, want, processor.records[0].InstrumentationScope().Attributes)
+				assert.Equal(t, 1, diagnosticCalls)
+			})
+		}
+	}
+}
+
 func TestLoggerProviderConcurrentSafe(t *testing.T) {
 	const goRoutineN = 10
 
