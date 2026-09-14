@@ -15,6 +15,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
 )
 
+type meterFactory func(instrumentation.Scope, pipelines) metric.Meter
+
+func defaultMeterFactory(s instrumentation.Scope, p pipelines) metric.Meter {
+	return newMeter(s, p)
+}
+
 // MeterProvider handles the creation and coordination of Meters. All Meters
 // created by a MeterProvider will be associated with the same Resource, have
 // the same Views applied to them, and have their produced metric telemetry
@@ -22,8 +28,9 @@ import (
 type MeterProvider struct {
 	embedded.MeterProvider
 
-	pipes  pipelines
-	meters cache[instrumentation.Scope, *meter]
+	pipes        pipelines
+	meters       cache[instrumentation.Scope, metric.Meter]
+	meterFactory meterFactory
 
 	forceFlush, shutdown func(context.Context) error
 	stopped              atomic.Bool
@@ -41,11 +48,21 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 func NewMeterProvider(options ...Option) *MeterProvider {
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()
+	factory, experimentalShutdown := newExperimentalMeterFactory(conf.experimental)
+	if experimentalShutdown != nil {
+		readerShutdown := sdown
+		sdown = func(ctx context.Context) error {
+			err := readerShutdown(ctx)
+			experimentalShutdown()
+			return err
+		}
+	}
 
 	mp := &MeterProvider{
-		pipes:      newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
-		forceFlush: flush,
-		shutdown:   sdown,
+		pipes:        newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
+		meterFactory: factory,
+		forceFlush:   flush,
+		shutdown:     sdown,
 	}
 	// Log after creation so all readers show correctly they are registered.
 	global.Info(
@@ -93,8 +110,12 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 		"Attributes", s.Attributes,
 	)
 
-	return mp.meters.Lookup(s, func() *meter {
-		return newMeter(s, mp.pipes)
+	factory := mp.meterFactory
+	if factory == nil {
+		factory = defaultMeterFactory
+	}
+	return mp.meters.Lookup(s, func() metric.Meter {
+		return factory(s, mp.pipes)
 	})
 }
 
