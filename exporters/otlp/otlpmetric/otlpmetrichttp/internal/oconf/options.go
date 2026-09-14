@@ -38,6 +38,9 @@ const (
 	// DefaultMaxRequestSize is the default maximum size of a serialized export
 	// request, before compression.
 	DefaultMaxRequestSize int = 64 * 1024 * 1024
+	// DefaultMaxResponseSize is the default maximum size of an OTLP/HTTP
+	// response body, after decompression.
+	DefaultMaxResponseSize int64 = 4 * 1024 * 1024
 	// DefaultBackoff is a default base backoff time used in the
 	// exponential backoff strategy.
 	DefaultBackoff time.Duration = 300 * time.Millisecond
@@ -53,14 +56,15 @@ type (
 
 	// SignalConfig holds the configuration for exporting a single signal.
 	SignalConfig struct {
-		Endpoint       string
-		Insecure       bool
-		TLSCfg         *tls.Config
-		Headers        map[string]string
-		Compression    Compression
-		MaxRequestSize int
-		Timeout        time.Duration
-		URLPath        string
+		Endpoint        string
+		Insecure        bool
+		TLSCfg          *tls.Config
+		Headers         map[string]string
+		Compression     Compression
+		MaxRequestSize  int
+		MaxResponseSize int64
+		Timeout         time.Duration
+		URLPath         string
 
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
@@ -93,11 +97,12 @@ type (
 func NewHTTPConfig(opts ...HTTPOption) Config {
 	cfg := Config{
 		Metrics: SignalConfig{
-			Endpoint:       fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
-			URLPath:        DefaultMetricsPath,
-			Compression:    NoCompression,
-			MaxRequestSize: DefaultMaxRequestSize,
-			Timeout:        DefaultTimeout,
+			Endpoint:        fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorHTTPPort),
+			URLPath:         DefaultMetricsPath,
+			Compression:     NoCompression,
+			MaxRequestSize:  DefaultMaxRequestSize,
+			MaxResponseSize: DefaultMaxResponseSize,
+			Timeout:         DefaultTimeout,
 
 			TemporalitySelector: metric.DefaultTemporalitySelector,
 			AggregationSelector: metric.DefaultAggregationSelector,
@@ -397,6 +402,17 @@ func WithTimeout(duration time.Duration) GenericOption {
 func WithMaxRequestSize(size int) GenericOption {
 	return newGenericOption(func(cfg Config) Config {
 		cfg.Metrics.MaxRequestSize = size
+		return cfg
+	})
+}
+
+// WithMaxResponseSize configures the maximum size, in bytes, of an OTLP/HTTP
+// response body, after decompression.
+func WithMaxResponseSize(size int64) HTTPOption {
+	return NewHTTPOption(func(cfg Config) Config {
+		if size > 0 {
+			cfg.Metrics.MaxResponseSize = size
+		}
 		return cfg
 	})
 }
