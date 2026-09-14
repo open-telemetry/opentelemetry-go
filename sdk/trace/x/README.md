@@ -10,7 +10,50 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 ## Features
 
+- [OnEndingSpanProcessor](#onendingspanprocessor)
 - [ProbabilitySampler](#probabilitysampler)
+
+### OnEndingSpanProcessor
+
+`OnEndingSpanProcessor` is an optional extension interface for
+[`sdktrace.SpanProcessor`](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/trace#SpanProcessor)
+implementations. When a registered processor also implements this interface,
+its `OnEnding` method is called during [`Span.End`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#Span),
+after the end timestamp is set but while the span is still mutable. This
+allows processors to inspect and modify a span before it is exported — for
+example, to implement tail-based sampling or span enrichment.
+
+All `OnEnding` callbacks run in registration order, before any `OnEnd`
+callback is invoked. The `OnEnding` method must not block or retain the span
+past the call.
+
+#### Usage
+
+```go
+import (
+    sdktrace "go.opentelemetry.io/otel/sdk/trace"
+    "go.opentelemetry.io/otel/sdk/trace/x"
+)
+
+type myProcessor struct{}
+
+func (p *myProcessor) OnStart(ctx context.Context, s sdktrace.ReadWriteSpan) {}
+func (p *myProcessor) OnEnd(s sdktrace.ReadOnlySpan)                          {}
+func (p *myProcessor) Shutdown(ctx context.Context) error                     { return nil }
+func (p *myProcessor) ForceFlush(ctx context.Context) error                   { return nil }
+
+// OnEnding implements x.OnEndingSpanProcessor.
+func (p *myProcessor) OnEnding(s sdktrace.ReadWriteSpan) {
+    // Modify the span before it becomes read-only.
+    s.SetAttributes(attribute.Bool("sampled-by-tail", true))
+}
+
+// Compile-time assertion that myProcessor satisfies x.OnEndingSpanProcessor.
+var _ x.OnEndingSpanProcessor = (*myProcessor)(nil)
+
+tp := sdktrace.NewTracerProvider()
+tp.RegisterSpanProcessor(&myProcessor{})
+```
 
 ### ProbabilitySampler
 
