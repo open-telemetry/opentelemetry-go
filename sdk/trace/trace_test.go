@@ -1383,10 +1383,19 @@ func TestRecordErrorWithStackTrace(t *testing.T) {
 		t,
 		strings.HasPrefix(
 			gotStackTraceFunctionName[3],
+			"go.opentelemetry.io/otel/sdk/trace.errorEventOptions",
+		),
+		"%q not prefixed with go.opentelemetry.io/otel/sdk/trace.errorEventOptions",
+		gotStackTraceFunctionName[3],
+	)
+	assert.Truef(
+		t,
+		strings.HasPrefix(
+			gotStackTraceFunctionName[5],
 			"go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).RecordError",
 		),
 		"%q not prefixed with go.opentelemetry.io/otel/sdk/trace.(*recordingSpan).RecordError",
-		gotStackTraceFunctionName[3],
+		gotStackTraceFunctionName[5],
 	)
 }
 
