@@ -5,6 +5,7 @@ package trace
 
 import (
 	"context"
+	"os"
 	"errors"
 	"fmt"
 	"sync"
@@ -104,6 +105,9 @@ type experimentalOption interface {
 // The passed opts are used to override these default values and configure the
 // returned TracerProvider appropriately.
 func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
+	if v := os.Getenv("OTEL_TRACES_EXPORTER"); v !="" {
+		global.Warn("OTEL_TRACES_EXPORTER is set but Go SDK does not support auto-configuring expoter in code","OTEL_TRACES_EXPORTER",v)
+	}
 	o := tracerProviderConfig{
 		spanLimits: NewSpanLimits(),
 	}

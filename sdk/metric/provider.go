@@ -4,6 +4,7 @@
 package metric
 
 import (
+	"os"   
 	"context"
 	"sync/atomic"
 
@@ -39,6 +40,9 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // created. This means the returned MeterProvider, one created with no
 // Readers, will perform no operations.
 func NewMeterProvider(options ...Option) *MeterProvider {
+	if v := os.Getenv("OTEL_METRICS_EXPORTER"); v !=""{
+		global.Warn("OTEL_METRICS_EXPORTER is set but Go SDK does not support auto-configuring exporters via env var. Configure exporter in code","OTEL_METRICS_EXPORTER", v)
+	}
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()
 

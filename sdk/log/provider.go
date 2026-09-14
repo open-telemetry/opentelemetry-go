@@ -6,6 +6,7 @@ package log
 import (
 	"context"
 	"errors"
+	"os"
 	"sync"
 	"sync/atomic"
 
@@ -103,6 +104,9 @@ var _ log.LoggerProvider = (*LoggerProvider)(nil)
 // is created. This means the returned LoggerProvider, one created with no
 // Processors, will perform no operations.
 func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
+	if v := os.Getenv("OTEL_LOGS_EXPORTER"); v != "" {
+		global.Warn("OTEL_LOGS_EXPORTER is set but Go SDK does not support auto-configuring expoters via env var. Configure exporter in code", "OTEL_LOGS_EXPORTER",v)
+	}
 	cfg := newProviderConfig(opts)
 	return &LoggerProvider{
 		resource:                  cfg.resource,
