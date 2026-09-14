@@ -7,6 +7,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -253,4 +256,100 @@ func NewNamedTestSpanProcessors(names []string) []*testSpanProcessor {
 		tsp = append(tsp, NewTestSpanProcessor(n))
 	}
 	return tsp
+}
+
+// onEndingProcessor is a SpanProcessor that also implements OnEnding.
+type onEndingProcessor struct {
+	testSpanProcessor
+	onEndingCalled bool
+	endTimeSet     bool
+	setAttr        attribute.KeyValue
+	order          *[]string
+}
+
+func (p *onEndingProcessor) OnEnding(s ReadWriteSpan) {
+	p.onEndingCalled = true
+	p.endTimeSet = !s.EndTime().IsZero()
+	if p.order != nil {
+		*p.order = append(*p.order, p.name)
+	}
+	s.SetAttributes(p.setAttr)
+}
+
+func TestOnEndingCalledBeforeOnEnd(t *testing.T) {
+	tp := basicTracerProvider(t)
+	p := &onEndingProcessor{
+		testSpanProcessor: testSpanProcessor{name: "p1"},
+		setAttr:           attribute.Bool("from-onending", true),
+	}
+	tp.RegisterSpanProcessor(p)
+
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	span.End()
+
+	assert.True(t, p.onEndingCalled, "OnEnding should be called")
+	assert.True(t, p.endTimeSet, "EndTime should be set when OnEnding is called")
+
+	require.Len(t, p.spansEnded, 1)
+	var found bool
+	for _, kv := range p.spansEnded[0].Attributes() {
+		if kv.Key == "from-onending" && kv.Value.AsBool() {
+			found = true
+		}
+	}
+	assert.True(t, found, "attribute set in OnEnding should appear in OnEnd snapshot")
+}
+
+func TestOnEndingOrder(t *testing.T) {
+	tp := basicTracerProvider(t)
+	order := []string{}
+	p1 := &onEndingProcessor{testSpanProcessor: testSpanProcessor{name: "p1"}, order: &order}
+	p2 := &onEndingProcessor{testSpanProcessor: testSpanProcessor{name: "p2"}, order: &order}
+	tp.RegisterSpanProcessor(p1)
+	tp.RegisterSpanProcessor(p2)
+
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	span.End()
+
+	assert.Equal(t, []string{"p1", "p2"}, order, "OnEnding should run in registration order")
+}
+
+func TestOnEndingSkippedForProcessorsWithoutIt(t *testing.T) {
+	tp := basicTracerProvider(t)
+	regular := NewTestSpanProcessor("regular")
+	withHook := &onEndingProcessor{
+		testSpanProcessor: testSpanProcessor{name: "hook"},
+		setAttr:           attribute.String("marker", "set"),
+	}
+	tp.RegisterSpanProcessor(regular)
+	tp.RegisterSpanProcessor(withHook)
+
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	span.End()
+
+	assert.True(t, withHook.onEndingCalled)
+	require.Len(t, regular.spansEnded, 1)
+	var found bool
+	for _, kv := range regular.spansEnded[0].Attributes() {
+		if kv.Key == "marker" {
+			found = true
+		}
+	}
+	assert.True(t, found, "regular OnEnd should see attribute set in OnEnding of another processor")
+}
+
+func TestOnEndingMutationFromOtherGoroutineDropped(t *testing.T) {
+	tp := basicTracerProvider(t)
+	p := NewTestSpanProcessor("p")
+	tp.RegisterSpanProcessor(p)
+
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	span.End()
+
+	// After End returns the span is no longer recording; mutations are no-ops.
+	span.SetAttributes(attribute.String("late", "should-not-appear"))
+	require.Len(t, p.spansEnded, 1)
+	for _, kv := range p.spansEnded[0].Attributes() {
+		assert.NotEqual(t, attribute.Key("late"), kv.Key)
+	}
 }

@@ -373,6 +373,36 @@ func BenchmarkSpanID_DotString(b *testing.B) {
 	}
 }
 
+// onEndingNoopProcessor is a SpanProcessor that also implements OnEnding
+// without doing any work, used to measure the overhead of the OnEnding hook.
+type onEndingNoopProcessor struct{}
+
+func (onEndingNoopProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {}
+func (onEndingNoopProcessor) OnEnd(sdktrace.ReadOnlySpan)                     {}
+func (onEndingNoopProcessor) OnEnding(sdktrace.ReadWriteSpan)                 {}
+func (onEndingNoopProcessor) Shutdown(context.Context) error                  { return nil }
+func (onEndingNoopProcessor) ForceFlush(context.Context) error                { return nil }
+
+func BenchmarkSpanProcessorOnEnding(b *testing.B) {
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSyncer(tracetest.NewNoopExporter()),
+	)
+	tp.RegisterSpanProcessor(onEndingNoopProcessor{})
+	b.Cleanup(func() {
+		//nolint:usetesting
+		_ = tp.Shutdown(context.Background())
+	})
+	tracer := tp.Tracer("bench")
+	ctx := b.Context()
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, span := tracer.Start(ctx, "bench")
+		span.End()
+	}
+}
+
 func traceBenchmark(b *testing.B, name string, fn func(*testing.B, trace.Tracer)) {
 	b.Run("AlwaysSample", func(b *testing.B) {
 		b.ReportAllocs()

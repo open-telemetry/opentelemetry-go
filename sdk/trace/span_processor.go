@@ -49,13 +49,25 @@ type SpanProcessor interface {
 	// must never be done outside of a new major release.
 }
 
+// onEndingSpanProcessor is the unexported interface that mirrors
+// [go.opentelemetry.io/otel/sdk/trace/x.OnEndingSpanProcessor]. It is
+// detected by structural type assertion at registration time.
+type onEndingSpanProcessor interface {
+	OnEnding(ReadWriteSpan)
+}
+
 type spanProcessorState struct {
-	sp    SpanProcessor
-	state sync.Once
+	sp       SpanProcessor
+	onEnding onEndingSpanProcessor
+	state    sync.Once
 }
 
 func newSpanProcessorState(sp SpanProcessor) *spanProcessorState {
-	return &spanProcessorState{sp: sp}
+	s := &spanProcessorState{sp: sp}
+	if oesp, ok := sp.(onEndingSpanProcessor); ok {
+		s.onEnding = oesp
+	}
+	return s
 }
 
 type spanProcessorStates []*spanProcessorState
