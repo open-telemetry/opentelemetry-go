@@ -267,7 +267,7 @@ type onEndingProcessor struct {
 	order          *[]string
 }
 
-func (p *onEndingProcessor) OnEnding(s ReadWriteSpan) {
+func (p *onEndingProcessor) OnEnding(s ReadWriteSpan, _ trace.Span) {
 	p.onEndingCalled = true
 	p.endTimeSet = !s.EndTime().IsZero()
 	if p.order != nil {

@@ -3,7 +3,10 @@
 
 package x
 
-import sdktrace "go.opentelemetry.io/otel/sdk/trace"
+import (
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
+)
 
 // OnEndingSpanProcessor is implemented by [sdktrace.SpanProcessor]
 // implementations that want to mutate a span during its [sdktrace.Span.End]
@@ -30,5 +33,14 @@ type OnEndingSpanProcessor interface {
 	// OnEnding is called during Span.End, after the end timestamp is set and
 	// while the span is still mutable. Modifications to the span made here
 	// will be visible in subsequent OnEnd callbacks.
-	OnEnding(s sdktrace.ReadWriteSpan)
+	//
+	// ending is the mutable span. It must not be retained or mutated after
+	// the method returns.
+	//
+	// original is the exact [trace.Span] instance returned by
+	// [go.opentelemetry.io/otel/trace.Tracer.Start] and passed to
+	// [sdktrace.SpanProcessor.OnStart]. It has already ended, so mutations
+	// through it are no-ops; its primary use is correlating state recorded
+	// in OnStart with the ending span.
+	OnEnding(ending sdktrace.ReadWriteSpan, original trace.Span)
 }

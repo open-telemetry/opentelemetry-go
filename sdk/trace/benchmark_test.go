@@ -379,7 +379,7 @@ type onEndingNoopProcessor struct{}
 
 func (onEndingNoopProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {}
 func (onEndingNoopProcessor) OnEnd(sdktrace.ReadOnlySpan)                     {}
-func (onEndingNoopProcessor) OnEnding(sdktrace.ReadWriteSpan)                 {}
+func (onEndingNoopProcessor) OnEnding(sdktrace.ReadWriteSpan, trace.Span)      {}
 func (onEndingNoopProcessor) Shutdown(context.Context) error                  { return nil }
 func (onEndingNoopProcessor) ForceFlush(context.Context) error                { return nil }
 

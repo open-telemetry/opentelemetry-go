@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // enrichingProcessor adds an attribute in OnEnding and records spans in OnEnd.
@@ -28,7 +29,7 @@ func (*enrichingProcessor) ForceFlush(context.Context) error                { re
 // OnEnding implements OnEndingSpanProcessor. Registering a processor that
 // satisfies this interface with sdktrace.TracerProvider causes it to be called
 // during Span.End before the span becomes read-only.
-func (*enrichingProcessor) OnEnding(s sdktrace.ReadWriteSpan) {
+func (*enrichingProcessor) OnEnding(s sdktrace.ReadWriteSpan, _ trace.Span) {
 	s.SetAttributes(attribute.Bool("enriched", true))
 }
 

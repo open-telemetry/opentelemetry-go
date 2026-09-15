@@ -6,6 +6,8 @@ package trace
 import (
 	"context"
 	"sync"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 // SpanProcessor is a processing pipeline for spans in the trace signal.
@@ -53,7 +55,7 @@ type SpanProcessor interface {
 // [go.opentelemetry.io/otel/sdk/trace/x.OnEndingSpanProcessor]. It is
 // detected by structural type assertion at registration time.
 type onEndingSpanProcessor interface {
-	OnEnding(ReadWriteSpan)
+	OnEnding(ReadWriteSpan, trace.Span)
 }
 
 type spanProcessorState struct {

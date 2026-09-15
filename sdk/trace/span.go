@@ -484,7 +484,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	for _, sp := range sps {
 		if sp.onEnding != nil {
-			sp.onEnding.OnEnding(endingSpan{recordingSpan: s})
+			sp.onEnding.OnEnding(endingSpan{recordingSpan: s}, s)
 		}
 	}
 	snap := s.snapshot()
