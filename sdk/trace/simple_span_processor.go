@@ -85,6 +85,9 @@ func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 
 // Shutdown shuts down the exporter this SimpleSpanProcessor exports to.
 func (ssp *simpleSpanProcessor) Shutdown(ctx context.Context) error {
+	if ssp.exporter == nil {
+		return nil
+	}
 	var err error
 	ssp.stopOnce.Do(func() {
 		stopFunc := func(exp SpanExporter) (<-chan error, func()) {
