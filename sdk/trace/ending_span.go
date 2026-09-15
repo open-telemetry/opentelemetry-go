@@ -8,7 +8,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
-	"go.opentelemetry.io/otel/trace/embedded"
 )
 
 // endingSpan wraps a recordingSpan that has stopped recording (endTime set)
@@ -17,7 +16,6 @@ import (
 // the isRecording check so that processors can still modify the span before it
 // becomes truly immutable after all OnEnding callbacks have returned.
 type endingSpan struct {
-	embedded.Span
 	*recordingSpan
 }
 
