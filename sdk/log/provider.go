@@ -105,7 +105,7 @@ var _ log.LoggerProvider = (*LoggerProvider)(nil)
 // Processors, will perform no operations.
 func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 	if v := os.Getenv("OTEL_LOGS_EXPORTER"); v != "" {
-		global.Warn("OTEL_LOGS_EXPORTER is set but Go SDK does not support auto-configuring expoters via env var. Configure exporter in code", "OTEL_LOGS_EXPORTER",v)
+		global.Warn("OTEL_LOGS_EXPORTER is set but it will have no effect .The Go SDK does not auto-configure exporters from environment variables by default.To use it, import \"go.opentelemetry.io/contrib/exporters/autoexport\"","OTEL_LOGS_EXPORTER",v)
 	}
 	cfg := newProviderConfig(opts)
 	return &LoggerProvider{
