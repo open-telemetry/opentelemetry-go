@@ -12,40 +12,84 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// atomicCounter is an efficient way of adding to a number which is either an
-// int64 or float64. It is designed to be efficient when adding whole
-// numbers, regardless of whether N is an int64 or float64.
+// atomicCounter is an efficient way of adding to an int64 or float64. It keeps
+// integer and fractional values separate to make whole-number additions fast.
 //
 // Inspired by the Prometheus counter implementation:
 // https://github.com/prometheus/client_golang/blob/14ccb93091c00f86b85af7753100aa372d63602b/prometheus/counter.go#L108
 type atomicCounter[N int64 | float64] struct {
-	// nFloatBits contains only the non-integer portion of the counter.
+	// nFloatBits contains the non-integer portion of the value.
 	nFloatBits atomic.Uint64
-	// nInt contains only the integer portion of the counter.
+	// fractionalWriteGeneration changes for every completed fractional write.
+	fractionalWriteGeneration atomic.Uint64
+	// nInt contains the integer portion of the value.
 	nInt atomic.Int64
+	// fractionalWriteState counts active fractional writes in multiples of two.
+	// Its low bit freezes new writes while a float64 load takes a snapshot.
+	fractionalWriteState atomic.Uint32
+	// snapshotMu serializes float64 loads that need to freeze fractional writes.
+	snapshotMu sync.Mutex
 }
 
-// load returns the current value. The caller must ensure all calls to add have
-// returned prior to calling load.
+const (
+	atomicCounterSnapshotFrozen = 1
+	atomicCounterWriteStarted   = 2
+	atomicCounterWriteDone      = ^uint32(1)
+	atomicCounterSnapshotDone   = ^uint32(0)
+)
+
 func (n *atomicCounter[N]) load() N {
-	fval := math.Float64frombits(n.nFloatBits.Load())
+	var value N
+	if _, ok := any(value).(int64); ok {
+		return N(n.nInt.Load())
+	}
+	for range 3 {
+		if n.fractionalWriteState.Load() != 0 {
+			break
+		}
+		generation := n.fractionalWriteGeneration.Load()
+		fbits := n.nFloatBits.Load()
+		ival := n.nInt.Load()
+		if fbits == n.nFloatBits.Load() &&
+			generation == n.fractionalWriteGeneration.Load() &&
+			n.fractionalWriteState.Load() == 0 {
+			return N(math.Float64frombits(fbits) + float64(ival))
+		}
+	}
+	n.snapshotMu.Lock()
+	n.fractionalWriteState.Add(atomicCounterSnapshotFrozen)
+	for n.fractionalWriteState.Load() != atomicCounterSnapshotFrozen {
+		runtime.Gosched()
+	}
+	fbits := n.nFloatBits.Load()
 	ival := n.nInt.Load()
-	return N(fval + float64(ival))
+	n.fractionalWriteState.Add(atomicCounterSnapshotDone)
+	n.snapshotMu.Unlock()
+	return N(math.Float64frombits(fbits) + float64(ival))
 }
 
 func (n *atomicCounter[N]) add(value N) {
-	ival := int64(value)
 	// This case is where the value is an int, or if it is a whole-numbered float.
-	if float64(ival) == float64(value) {
-		n.nInt.Add(ival)
-		return
+	if value == N(int64(value)) {
+		n.nInt.Add(int64(value))
+	} else {
+		addFractional(n, value)
+	}
+}
+
+//go:noinline
+func addFractional[N int64 | float64](n *atomicCounter[N], value N) {
+	for n.fractionalWriteState.Add(atomicCounterWriteStarted)&atomicCounterSnapshotFrozen != 0 {
+		n.fractionalWriteState.Add(atomicCounterWriteDone)
+		runtime.Gosched()
 	}
 
-	// Value must be a float below.
 	for {
 		oldBits := n.nFloatBits.Load()
 		newBits := math.Float64bits(math.Float64frombits(oldBits) + float64(value))
 		if n.nFloatBits.CompareAndSwap(oldBits, newBits) {
+			n.fractionalWriteGeneration.Add(1)
+			n.fractionalWriteState.Add(atomicCounterWriteDone)
 			return
 		}
 	}
@@ -54,7 +98,9 @@ func (n *atomicCounter[N]) add(value N) {
 // reset resets the internal state, and is not safe to call concurrently.
 func (n *atomicCounter[N]) reset() {
 	n.nFloatBits.Store(0)
+	n.fractionalWriteGeneration.Store(0)
 	n.nInt.Store(0)
+	n.fractionalWriteState.Store(0)
 }
 
 // atomicN is a generic atomic number value.
