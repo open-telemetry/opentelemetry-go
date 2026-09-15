@@ -81,6 +81,11 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, NoCompression, c.Metrics.Compression)
 				assert.Equal(t, map[string]string(nil), c.Metrics.Headers)
 				assert.Equal(t, 64*1024*1024, c.Metrics.MaxRequestSize)
+				if grpcOption {
+					assert.Zero(t, c.Metrics.MaxResponseSize)
+				} else {
+					assert.Equal(t, DefaultMaxResponseSize, c.Metrics.MaxResponseSize)
+				}
 				assert.Equal(t, 10*time.Second, c.Metrics.Timeout)
 			},
 		},
@@ -195,11 +200,22 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.False(t, c.Metrics.Insecure)
-				if grpcOption {
-					assert.Equal(t, "env.endpoint/prefix", c.Metrics.Endpoint)
-				} else {
-					assert.Equal(t, "env.endpoint", c.Metrics.Endpoint)
+				assert.Equal(t, "env.endpoint", c.Metrics.Endpoint)
+				if !grpcOption {
 					assert.Equal(t, "/prefix/v1/metrics", c.Metrics.URLPath)
+				}
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Endpoint with path",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "http://env.metrics.endpoint/prefix",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Metrics.Insecure)
+				assert.Equal(t, "env.metrics.endpoint", c.Metrics.Endpoint)
+				if !grpcOption {
+					assert.Equal(t, "/prefix", c.Metrics.URLPath)
 				}
 			},
 		},
@@ -284,6 +300,33 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.Equal(t, "env_metrics_endpoint", c.Metrics.Endpoint)
 				assert.True(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Endpoint with unix scheme",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "unix:///tmp/grpc.sock",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Metrics.Insecure)
+				if grpcOption {
+					assert.Equal(t, "unix:///tmp/grpc.sock", c.Metrics.Endpoint)
+				}
+			},
+		},
+		{
+			name: "Test Environment Endpoint with unix-abstract scheme",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "unix-abstract:///grpc.sock",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Metrics.Insecure)
+				if grpcOption {
+					assert.Equal(t, "unix-abstract:///grpc.sock", c.Metrics.Endpoint)
+				} else {
+					assert.Empty(t, c.Metrics.Endpoint)
+					assert.Equal(t, "/grpc.sock/v1/metrics", c.Metrics.URLPath)
+				}
 			},
 		},
 
@@ -631,6 +674,27 @@ func asGRPCOptions(opts []GenericOption) []GRPCOption {
 		converted[i] = NewGRPCOption(o.ApplyGRPCOption)
 	}
 	return converted
+}
+
+func TestMaxResponseSize(t *testing.T) {
+	tests := []struct {
+		name string
+		size int64
+		want int64
+	}{
+		{name: "Positive", size: 2, want: 2},
+		{name: "Zero", size: 0, want: DefaultMaxResponseSize},
+		{name: "Negative", size: -1, want: DefaultMaxResponseSize},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cfg := NewHTTPConfig(WithMaxResponseSize(test.size))
+			assert.Equal(t, test.want, cfg.Metrics.MaxResponseSize)
+		})
+	}
+
+	cfg := NewHTTPConfig(WithMaxResponseSize(2), WithMaxResponseSize(0))
+	assert.Equal(t, int64(2), cfg.Metrics.MaxResponseSize)
 }
 
 func TestCleanPath(t *testing.T) {
