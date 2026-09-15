@@ -42,6 +42,8 @@ type Collector interface {
 	Collect() *Storage
 }
 
+// ExportResult is the response, or error, a Collector returns to a Client
+// upload request.
 type ExportResult struct {
 	Response *collpb.ExportMetricsServiceResponse
 	Err      error
@@ -174,6 +176,8 @@ var emptyExportMetricsServiceResponse = func() []byte {
 	return r
 }()
 
+// HTTPResponseError is returned by the HTTPCollector when it responds to a
+// request with a non-2xx status code.
 type HTTPResponseError struct {
 	Err    error
 	Status int
