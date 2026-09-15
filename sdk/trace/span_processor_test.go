@@ -6,6 +6,7 @@ package trace
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -351,5 +352,34 @@ func TestOnEndingMutationFromOtherGoroutineDropped(t *testing.T) {
 	require.Len(t, p.spansEnded, 1)
 	for _, kv := range p.spansEnded[0].Attributes() {
 		assert.NotEqual(t, attribute.Key("late"), kv.Key)
+	}
+}
+
+// reentrantRecordErrorOnEndingProcessor calls RecordError from OnEnding using
+// an error whose Error() method calls back into the same span. This exercises
+// the same reentrancy class fixed for recordingSpan.RecordError by #8815.
+type reentrantRecordErrorOnEndingProcessor struct {
+	testSpanProcessor
+}
+
+func (p *reentrantRecordErrorOnEndingProcessor) OnEnding(s ReadWriteSpan, _ trace.Span) {
+	s.RecordError(reentrantRecordError{span: s})
+}
+
+func TestOnEndingRecordErrorAllowsReentrantErrorFormatting(t *testing.T) {
+	tp := basicTracerProvider(t)
+	tp.RegisterSpanProcessor(&reentrantRecordErrorOnEndingProcessor{})
+
+	_, span := tp.Tracer(t.Name()).Start(t.Context(), "span")
+	done := make(chan struct{})
+	go func() {
+		span.End()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Span.End deadlocked while OnEnding formatted a reentrant error")
 	}
 }
