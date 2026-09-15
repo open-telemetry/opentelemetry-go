@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental `ProbabilitySampler` in `go.opentelemetry.io/otel/sdk/trace/x` that conforms to the [OpenTelemetry specification's threshold-based sampling algorithm](https://opentelemetry.io/docs/specs/otel/trace/sdk/#probabilitysampler). (#8123)
 - Add experimental `*Binder` extension interfaces in `go.opentelemetry.io/otel/metric/x` for instruments that support binding attributes ahead of time. (#8760)
 - Add the experimental `Finisher` synchronous metric instrument extension interface to `go.opentelemetry.io/otel/metric/x`. (#8906)
+- Add experimental support for running observable-instrument callbacks in parallel via a reused worker pool, enabled with the `OTEL_GO_X_PARALLEL_CALLBACKS=true` environment variable, in `go.opentelemetry.io/otel/sdk/metric`. (#8581)
 
 ### Changed
 
@@ -78,7 +79,6 @@ The next release will require at least [Go 1.26].
 - Support testing of [Go 1.27]. (#8811)
 - Support `http/json` protocol in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#8273, #8775, #8831)
 - Add `Hasher` struct and methods in `go.opentelemetry.io/otel/attribute` to compute authoritative `Distinct` hashes incrementally for attribute filtering and deduplication. (#8598)
-- Add experimental support for running observable-instrument callbacks in parallel via a reused worker pool, enabled with the `OTEL_GO_X_PARALLEL_CALLBACKS=true` environment variable, in `go.opentelemetry.io/otel/sdk/metric`. (#8581)
 
 ### Changed
 
