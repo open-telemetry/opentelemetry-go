@@ -433,7 +433,7 @@ type reentrantRecordErrorOnEndingProcessor struct {
 	testSpanProcessor
 }
 
-func (p *reentrantRecordErrorOnEndingProcessor) OnEnding(s ReadWriteSpan, _ trace.Span) {
+func (*reentrantRecordErrorOnEndingProcessor) OnEnding(s ReadWriteSpan, _ trace.Span) {
 	s.RecordError(reentrantRecordError{span: s})
 }
 

@@ -379,7 +379,7 @@ type onEndingNoopProcessor struct{}
 
 func (onEndingNoopProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {}
 func (onEndingNoopProcessor) OnEnd(sdktrace.ReadOnlySpan)                     {}
-func (onEndingNoopProcessor) OnEnding(sdktrace.ReadWriteSpan, trace.Span)      {}
+func (onEndingNoopProcessor) OnEnding(sdktrace.ReadWriteSpan, trace.Span)     {}
 func (onEndingNoopProcessor) Shutdown(context.Context) error                  { return nil }
 func (onEndingNoopProcessor) ForceFlush(context.Context) error                { return nil }
 
@@ -402,7 +402,7 @@ func BenchmarkSpanProcessorOnEnding(b *testing.B) {
 			tp := sdktrace.NewTracerProvider(
 				sdktrace.WithSyncer(tracetest.NewNoopExporter()),
 			)
-			for i := 0; i < n; i++ {
+			for range n {
 				tp.RegisterSpanProcessor(noopProcessor{})
 			}
 			b.Cleanup(func() {
