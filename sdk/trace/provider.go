@@ -278,8 +278,12 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 	spss = spss[:len(spss)-1]
 
 	p.spanProcessors.Store(&spss)
-	// Set hasOnEnding after storing the trimmed list so the flag falls before
-	// a concurrent Span.End can observe the removed processor.
+	// Set hasOnEnding after storing the trimmed list. A concurrent Span.End
+	// that already loaded the old list will still call OnEnding because it
+	// iterates sps directly; a Span.End that loads the new list will also
+	// see the updated flag. The narrow window where a Span.End holds the old
+	// list but reads the new flag=false is an acceptable boundary condition
+	// during concurrent unregistration.
 	p.hasOnEnding.Store(spss.hasOnEnding())
 }
 
