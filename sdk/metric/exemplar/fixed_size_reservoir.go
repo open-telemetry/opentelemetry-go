@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/internal/reservoir"
 )
 
 // FixedSizeReservoirProvider returns a provider of [FixedSizeReservoir].
@@ -45,7 +44,7 @@ var _ Reservoir = &FixedSizeReservoir{}
 // If there are more than k, the Reservoir will then randomly sample all
 // additional measurement with a decreasing probability.
 type FixedSizeReservoir struct {
-	reservoir.ConcurrentSafe
+	ConcurrentSafe
 	mu      sync.Mutex
 	storage []measurement
 	nt      nextTracker
