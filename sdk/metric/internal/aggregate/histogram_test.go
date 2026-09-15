@@ -451,7 +451,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 	h.measure(t.Context(), 5, newLazyFilteredAttributes(alice, nil))
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
-	h.collect(&data)
+	h.collect(&data, nil)
 	hdp := data.(metricdata.Histogram[int64]).DataPoints[0]
 	hdp.Bounds[1] = 10
 	assert.Equal(t, cpB, h.bounds, "modifying the Aggregation bounds should not change the bounds")
@@ -462,7 +462,7 @@ func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	h.measure(t.Context(), 5, newLazyFilteredAttributes(alice, nil))
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
-	h.collect(&data)
+	h.collect(&data, nil)
 	hdp := data.(metricdata.Histogram[int64]).DataPoints[0]
 
 	hPt, ok := h.values.Load(alice.Equivalent())
@@ -499,25 +499,25 @@ func TestDeltaHistogramReset(t *testing.T) {
 	h := newDeltaHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
-	require.Equal(t, 0, h.collect(&data))
+	require.Equal(t, 0, h.collect(&data, nil))
 	require.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
 	h.measure(t.Context(), 1, newLazyFilteredAttributes(alice, nil))
 
 	expect := metricdata.Histogram[int64]{Temporality: metricdata.DeltaTemporality}
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](alice, 1, 1, now(), now())}
-	h.collect(&data)
+	h.collect(&data, nil)
 	metricdatatest.AssertAggregationsEqual(t, expect, data)
 
 	// The attr set should be forgotten once Aggregations is called.
 	expect.DataPoints = nil
-	assert.Equal(t, 0, h.collect(&data))
+	assert.Equal(t, 0, h.collect(&data, nil))
 	assert.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
 	// Aggregating another set should not affect the original (alice).
 	h.measure(t.Context(), 1, newLazyFilteredAttributes(bob, nil))
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](bob, 1, 1, now(), now())}
-	h.collect(&data)
+	h.collect(&data, nil)
 	metricdatatest.AssertAggregationsEqual(t, expect, data)
 }
 
@@ -537,7 +537,7 @@ func TestHistogramDatapointReuseLeakedStaleValues(t *testing.T) {
 	in1(ctx, 5, alice)
 
 	dest := new(metricdata.Aggregation)
-	n := out1(dest)
+	n := out1(dest, nil)
 	require.Equal(t, 1, n)
 
 	h, ok := (*dest).(metricdata.Histogram[int64])
@@ -555,7 +555,7 @@ func TestHistogramDatapointReuseLeakedStaleValues(t *testing.T) {
 
 	in2(ctx, 7, alice)
 
-	n = out2(dest)
+	n = out2(dest, nil)
 	require.Equal(t, 1, n)
 
 	h, ok = (*dest).(metricdata.Histogram[int64])
@@ -597,7 +597,7 @@ func TestHistogramMinMaxUnset(t *testing.T) {
 	)
 
 	var dest metricdata.Aggregation
-	h.collect(&dest)
+	h.collect(&dest, nil)
 
 	eh := dest.(metricdata.Histogram[int64])
 	require.Len(t, eh.DataPoints, 1)
@@ -618,4 +618,53 @@ func BenchmarkHistogram(b *testing.B) {
 			Temporality: metricdata.DeltaTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
 	}))
+}
+
+func TestHistogramFilterAttributes(t *testing.T) {
+	ctx := t.Context()
+
+	tests := map[string]struct {
+		filter filterAttrs
+		wantN  int
+		want   attribute.Set
+	}{
+		"DropOne": {
+			filter: func(attrs attribute.Set) bool { return !attrs.Equals(&bob) },
+			wantN:  1,
+			want:   alice,
+		},
+		"DropAll": {
+			filter: func(attribute.Set) bool { return false },
+			wantN:  0,
+		},
+		"NilFilterIncludesAll": {
+			filter: nil,
+			wantN:  2,
+			want:   alice,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			in, out := Builder[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+			}.ExplicitBucketHistogram(
+				bounds,
+				noMinMax,
+				false,
+			)
+			in(ctx, 1, alice)
+			in(ctx, 2, bob)
+
+			got := new(metricdata.Aggregation)
+			n := out(got, tt.filter)
+			assert.Equal(t, tt.wantN, n)
+
+			hist := (*got).(metricdata.Histogram[int64])
+			require.Len(t, hist.DataPoints, tt.wantN)
+			if tt.wantN == 1 {
+				assert.Equal(t, tt.want, hist.DataPoints[0].Attributes)
+			}
+		})
+	}
 }

@@ -392,3 +392,10 @@ func TestReadersNotRequiredToBeComparable(t *testing.T) {
 	r := noCompareReader{Reader: NewManualReader()}
 	assert.NotPanics(t, func() { _ = NewMeterProvider(WithReader(r)) })
 }
+
+func TestExperimentalReaderOptionDoesNotPanic(t *testing.T) {
+	opt := experimentalReaderOption{}
+
+	assert.NotPanics(t, func() { _ = NewManualReader(opt) })
+	assert.NotPanics(t, func() { _ = NewPeriodicReader(testExporter{}, opt) })
+}

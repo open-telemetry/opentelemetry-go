@@ -1192,7 +1192,7 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 			wg.Wait()
 
 			dest := new(metricdata.Aggregation)
-			comp(dest)
+			comp(dest, nil)
 			h := (*dest).(metricdata.ExponentialHistogram[N])
 			require.Len(t, h.DataPoints, 1)
 			assert.Equal(t, uint64(numGoroutines*numRecords), h.DataPoints[0].ZeroCount)
@@ -1246,12 +1246,12 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 			wg.Wait()
 
 			dest := new(metricdata.Aggregation)
-			comp(dest)
+			comp(dest, nil)
 			h := (*dest).(metricdata.ExponentialHistogram[N])
 			require.Len(t, h.DataPoints, 1)
 
 			refDest := new(metricdata.Aggregation)
-			refComp(refDest)
+			refComp(refDest, nil)
 			refH := (*refDest).(metricdata.ExponentialHistogram[N])
 			require.Len(t, refH.DataPoints, 1)
 
@@ -1306,7 +1306,7 @@ func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
 	h.measure(ctx, math.Inf(-1), newLazyFilteredAttributes(attribute.NewSet(), nil))
 
 	var dest metricdata.Aggregation
-	h.delta(&dest)
+	h.delta(&dest, nil)
 	eh := dest.(metricdata.ExponentialHistogram[float64])
 	assert.Empty(t, eh.DataPoints)
 }
@@ -1326,7 +1326,7 @@ func TestExponentialHistogramDatapointReuseLeakedStaleValues(t *testing.T) {
 	in1(ctx, 5, alice)
 
 	dest := new(metricdata.Aggregation)
-	n := out1(dest)
+	n := out1(dest, nil)
 	require.Equal(t, 1, n)
 
 	h, ok := (*dest).(metricdata.ExponentialHistogram[int64])
@@ -1344,7 +1344,7 @@ func TestExponentialHistogramDatapointReuseLeakedStaleValues(t *testing.T) {
 
 	in2(ctx, 7, alice)
 
-	n = out2(dest)
+	n = out2(dest, nil)
 	require.Equal(t, 1, n)
 
 	h, ok = (*dest).(metricdata.ExponentialHistogram[int64])
@@ -1374,7 +1374,7 @@ func TestExponentialHistogramDatapointReuseLeakedStaleValues_Cumulative(t *testi
 	in1(ctx, 5, alice)
 
 	dest := new(metricdata.Aggregation)
-	n := out1(dest)
+	n := out1(dest, nil)
 	require.Equal(t, 1, n)
 
 	h, ok := (*dest).(metricdata.ExponentialHistogram[int64])
@@ -1392,7 +1392,7 @@ func TestExponentialHistogramDatapointReuseLeakedStaleValues_Cumulative(t *testi
 
 	in2(ctx, 7, alice)
 
-	n = out2(dest)
+	n = out2(dest, nil)
 	require.Equal(t, 1, n)
 
 	h, ok = (*dest).(metricdata.ExponentialHistogram[int64])
@@ -1420,7 +1420,7 @@ func TestExponentialHistogramMinMaxUnset(t *testing.T) {
 	hDelta.valuesMu.Unlock()
 
 	var dest metricdata.Aggregation
-	hDelta.delta(&dest)
+	hDelta.delta(&dest, nil)
 	ehDelta := dest.(metricdata.ExponentialHistogram[int64])
 	require.Len(t, ehDelta.DataPoints, 1)
 	_, defined := ehDelta.DataPoints[0].Min.Value()
@@ -1437,11 +1437,61 @@ func TestExponentialHistogramMinMaxUnset(t *testing.T) {
 	hCumul.values[alice.Equivalent()] = dpCumul
 	hCumul.valuesMu.Unlock()
 
-	hCumul.cumulative(&dest)
+	hCumul.cumulative(&dest, nil)
 	ehCumul := dest.(metricdata.ExponentialHistogram[int64])
 	require.Len(t, ehCumul.DataPoints, 1)
 	_, defined = ehCumul.DataPoints[0].Min.Value()
 	assert.False(t, defined, "Min should be invalid when not set")
 	_, defined = ehCumul.DataPoints[0].Max.Value()
 	assert.False(t, defined, "Max should be invalid when not set")
+}
+
+func TestExponentialHistogramFilterAttributes(t *testing.T) {
+	ctx := t.Context()
+
+	tests := map[string]struct {
+		filter filterAttrs
+		wantN  int
+		want   attribute.Set
+	}{
+		"DropOne": {
+			filter: func(attrs attribute.Set) bool { return !attrs.Equals(&bob) },
+			wantN:  1,
+			want:   alice,
+		},
+		"DropAll": {
+			filter: func(attribute.Set) bool { return false },
+			wantN:  0,
+		},
+		"NilFilterIncludesAll": {
+			filter: nil,
+			wantN:  2,
+			want:   alice,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			in, out := Builder[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+			}.ExponentialBucketHistogram(
+				4,
+				20,
+				false,
+				false,
+			)
+			in(ctx, 1, alice)
+			in(ctx, 2, bob)
+
+			got := new(metricdata.Aggregation)
+			n := out(got, tt.filter)
+			assert.Equal(t, tt.wantN, n)
+
+			exp := (*got).(metricdata.ExponentialHistogram[int64])
+			require.Len(t, exp.DataPoints, tt.wantN)
+			if tt.wantN == 1 {
+				assert.Equal(t, tt.want, exp.DataPoints[0].Attributes)
+			}
+		})
+	}
 }
