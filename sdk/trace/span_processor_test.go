@@ -448,9 +448,11 @@ func TestOnEndingRecordErrorAllowsReentrantErrorFormatting(t *testing.T) {
 		close(done)
 	}()
 
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
 	select {
 	case <-done:
-	case <-time.After(2 * time.Second):
+	case <-ctx.Done():
 		t.Fatal("Span.End deadlocked while OnEnding formatted a reentrant error")
 	}
 }
