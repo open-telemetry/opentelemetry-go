@@ -73,3 +73,14 @@ func newSpanProcessorState(sp SpanProcessor) *spanProcessorState {
 }
 
 type spanProcessorStates []*spanProcessorState
+
+// hasOnEnding reports whether any processor in the slice implements the
+// OnEnding callback.
+func (s spanProcessorStates) hasOnEnding() bool {
+	for _, sps := range s {
+		if sps.onEnding != nil {
+			return true
+		}
+	}
+	return false
+}
