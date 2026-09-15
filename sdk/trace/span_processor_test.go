@@ -339,20 +339,91 @@ func TestOnEndingSkippedForProcessorsWithoutIt(t *testing.T) {
 	assert.True(t, found, "regular OnEnd should see attribute set in OnEnding of another processor")
 }
 
-func TestOnEndingMutationFromOtherGoroutineDropped(t *testing.T) {
+// blockingOnEndingProcessor lets the test synchronize with OnEnding so that a
+// concurrent mutation attempt through the original span reference can be
+// verified to have no effect.
+type blockingOnEndingProcessor struct {
+	testSpanProcessor
+	started chan struct{}
+	release chan struct{}
+}
+
+func (p *blockingOnEndingProcessor) OnEnding(ending ReadWriteSpan, _ trace.Span) {
+	close(p.started)
+	<-p.release
+	ending.SetAttributes(attribute.String("from-onending", "yes"))
+}
+
+// TestOnEndingConcurrencyGuarantee verifies the spec requirement that no other
+// goroutine may modify the span while OnEnding is executing. A concurrent
+// SetAttributes call on the original span reference must be dropped, while an
+// attribute set via the ending parameter must appear in the OnEnd snapshot.
+func TestOnEndingConcurrencyGuarantee(t *testing.T) {
 	tp := basicTracerProvider(t)
-	p := NewTestSpanProcessor("p")
+	p := &blockingOnEndingProcessor{
+		testSpanProcessor: testSpanProcessor{name: "p"},
+		started:           make(chan struct{}),
+		release:           make(chan struct{}),
+	}
 	tp.RegisterSpanProcessor(p)
 
 	_, span := tp.Tracer("t").Start(t.Context(), "s")
-	span.End()
 
-	// After End returns the span is no longer recording; mutations are no-ops.
-	span.SetAttributes(attribute.String("late", "should-not-appear"))
+	endDone := make(chan struct{})
+	go func() {
+		span.End()
+		close(endDone)
+	}()
+
+	// Wait until OnEnding has started, then try to mutate through the original
+	// span reference. The SDK must ignore this because the span is in the
+	// ending-only window.
+	<-p.started
+	span.SetAttributes(attribute.String("race", "should-not-appear"))
+	close(p.release)
+	<-endDone
+
 	require.Len(t, p.spansEnded, 1)
-	for _, kv := range p.spansEnded[0].Attributes() {
-		assert.NotEqual(t, attribute.Key("late"), kv.Key)
+	snap := p.spansEnded[0].Attributes()
+	for _, kv := range snap {
+		assert.NotEqual(t, attribute.Key("race"), kv.Key, "concurrent mutation must be dropped")
 	}
+	var found bool
+	for _, kv := range snap {
+		if kv.Key == "from-onending" && kv.Value.AsString() == "yes" {
+			found = true
+		}
+	}
+	assert.True(t, found, "attribute set via ending parameter must appear in OnEnd snapshot")
+}
+
+// correlatingProcessor records the span from OnStart and checks that the
+// original parameter in OnEnding is the same Go value.
+type correlatingProcessor struct {
+	testSpanProcessor
+	started trace.Span
+}
+
+func (p *correlatingProcessor) OnStart(_ context.Context, s ReadWriteSpan) {
+	p.started = s
+}
+
+func (p *correlatingProcessor) OnEnding(_ ReadWriteSpan, original trace.Span) {
+	if original != p.started {
+		panic("original span in OnEnding is not the same value as the one from OnStart")
+	}
+}
+
+func TestOnEndingOriginalMatchesOnStart(t *testing.T) {
+	tp := basicTracerProvider(t)
+	p := &correlatingProcessor{}
+	tp.RegisterSpanProcessor(p)
+
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	// Confirm OnStart saw the same span the caller holds.
+	assert.Equal(t, span, p.started)
+	// End calls OnEnding; the correlatingProcessor panics if original != started.
+	assert.NotPanics(t, func() { span.End() })
 }
 
 // reentrantRecordErrorOnEndingProcessor calls RecordError from OnEnding using
