@@ -9,6 +9,9 @@ on:
       - '**/go.sum'
       - 'Makefile'
       - '.github/workflows/benchmark.yml'
+  schedule:
+    - cron: '0 8 * * 0'
+      timezone: America/Los_Angeles
   workflow_dispatch:
     inputs:
       full:
@@ -58,7 +61,7 @@ jobs:
           # For a manual workflow_dispatch run, neither field is set,
           # and the Makefile's default base ref kicks in.
           BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
-          ARGS: ${{ inputs.full && '-all' || '' }}
+          ARGS: ${{ (github.event_name == 'schedule' || inputs.full) && '-all' || '' }}
         run: |
           shards=$(make print-affected-benchmarks)
           echo "shards=${shards}" >> "$GITHUB_OUTPUT"
@@ -72,7 +75,7 @@ jobs:
     name: Benchmarks
     runs-on: oracle-bare-metal-64cpu-1024gb-x86-64-ubuntu-24
     container:
-      image: ubuntu:26.04@sha256:889d056d5c6c0bfb55789ff3710681d68e50713cb562d2196dc07110599c7a6f
+      image: ubuntu:26.04@sha256:e5a4d6262ab5dbc25a85e60550dd7c87fd41a74fe43881534ed8288b2a7a3f8d
       # CodSpeed's profiling feature needs elevated permissions.
       options: --cap-add=PERFMON
     strategy:
