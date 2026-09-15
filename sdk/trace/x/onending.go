@@ -27,6 +27,9 @@ import (
 // other [sdktrace.SpanProcessor] methods on the same processor, so
 // implementations must be safe for concurrent use.
 //
+// OnEnding may be called concurrently with or after [sdktrace.SpanProcessor.Shutdown]
+// during processor unregistration. Implementations must handle this gracefully.
+//
 // Note: OnEnding alone does not suppress other processors, change
 // TraceFlags.Sampled, or drop a span. Tail-based filtering that needs those
 // effects requires a custom buffering/export pipeline on top of this hook.
