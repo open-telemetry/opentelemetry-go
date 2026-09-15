@@ -106,7 +106,7 @@ type experimentalOption interface {
 // returned TracerProvider appropriately.
 func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	if v := os.Getenv("OTEL_TRACES_EXPORTER"); v !="" {
-		global.Warn("OTEL_TRACES_EXPORTER is set but Go SDK does not support auto-configuring expoter in code","OTEL_TRACES_EXPORTER",v)
+		global.Warn("OTEL_TRACES_EXPORTER is set but it will have no effect.The Go SDK does not auto-configuring exporters from environment variables by default.To enable environment variable suppport, import \"go opentelemetry.io/contrib/exporters/autoexport\"","OTEL_TRACES_EXPORTER",v)
 	}
 	o := tracerProviderConfig{
 		spanLimits: NewSpanLimits(),
