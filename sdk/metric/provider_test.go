@@ -490,3 +490,9 @@ func TestMeterProviderPerInstrumentCardinalityLimits(t *testing.T) {
 		})
 	}
 }
+
+            func TestMeterProviderWarnsOnOTELMetricsExporter(t *testing.T) {
+	        t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
+	        mp := NewMeterProvider()
+	        _ = mp.Shutdown(context.Background())
+}
