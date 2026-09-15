@@ -41,7 +41,7 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // Readers, will perform no operations.
 func NewMeterProvider(options ...Option) *MeterProvider {
 	if v := os.Getenv("OTEL_METRICS_EXPORTER"); v !=""{
-		global.Warn("OTEL_METRICS_EXPORTER is set but Go SDK does not support auto-configuring exporters via env var. Configure exporter in code","OTEL_METRICS_EXPORTER", v)
+		global.Warn("OTEL_METRICS_EXPORTER is set but it will have no effect.The Go SDK does not auto-configuring exporters from environment variables by default. To use it, import \"go.opentelemetry.io/contrib/exporters/autoexport"","OTEL_METRICS_EXPORTER", v)
 	}
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()
