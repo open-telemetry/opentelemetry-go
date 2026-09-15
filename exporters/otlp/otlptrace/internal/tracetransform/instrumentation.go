@@ -21,3 +21,15 @@ func InstrumentationScope(il instrumentation.Scope) *commonpb.InstrumentationSco
 		Attributes: Iterator(il.Attributes.Iter()),
 	}
 }
+
+// InstrumentationScopeWithArena transforms an instrumentation Scope using arena.
+func InstrumentationScopeWithArena(il instrumentation.Scope, arena *Arena) *commonpb.InstrumentationScope {
+	if il == (instrumentation.Scope{}) {
+		return nil
+	}
+	return &commonpb.InstrumentationScope{
+		Name:       il.Name,
+		Version:    il.Version,
+		Attributes: IteratorWithArena(il.Attributes.Iter(), arena),
+	}
+}

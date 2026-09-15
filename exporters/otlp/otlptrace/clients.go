@@ -41,3 +41,21 @@ type Client interface {
 	// DO NOT CHANGE: any modification will not be backwards compatible and
 	// must never be done outside of a new major release.
 }
+
+// SyncClient is a Client that provides a synchronous upload operation.
+//
+// UploadTracesSync must fully consume the supplied traces before returning
+// and must not retain, reference, mutate, or asynchronously process the
+// trace data after the method returns. When UploadTracesSync returns, the
+// caller is free to reuse or reclaim the memory backing the trace data.
+//
+// It may be called concurrently.
+type SyncClient interface {
+	Client
+
+	// UploadTracesSync synchronously transforms and sends the passed traces
+	// to the collector. The client MUST fully consume protoSpans before
+	// returning and MUST NOT retain or reference protoSpans or any of its
+	// nested data after the method returns.
+	UploadTracesSync(ctx context.Context, protoSpans []*tracepb.ResourceSpans) error
+}
