@@ -9,11 +9,13 @@ import (
 	"math"
 	mrand "math/rand"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -540,4 +542,46 @@ func BenchmarkProbabilitySamplerShouldSample(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestProbabilitySamplerReportsTracestateErrorOnce(t *testing.T) {
+	const traceIDWillSample = "00000000000000000080000000000000"
+	sampler := ProbabilitySampler(1)
+
+	traceID, err := trace.TraceIDFromHex(traceIDWillSample)
+	require.NoError(t, err)
+	spanID, err := trace.SpanIDFromHex("00f067aa0ba902b7")
+	require.NoError(t, err)
+
+	// A 252-byte ot value cannot be combined with the sampler's th value
+	// without exceeding the W3C 256-byte limit of a tracestate entry.
+	initialState, err := trace.ParseTraceState("ot=" + strings.Repeat("a", 252))
+	require.NoError(t, err)
+
+	parentCtx := trace.ContextWithSpanContext(
+		t.Context(),
+		trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsRandom,
+			TraceState: initialState,
+		}),
+	)
+	params := sdktrace.SamplingParameters{
+		ParentContext: parentCtx,
+		TraceID:       traceID,
+	}
+
+	var handled atomic.Int64
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(error) {
+		handled.Add(1)
+	}))
+
+	for range 3 {
+		result := sampler.ShouldSample(params)
+		assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
+		assert.Equal(t, initialState, result.Tracestate)
+	}
+
+	assert.EqualValues(t, 1, handled.Load(), "tracestate combination error should be handled exactly once")
 }
