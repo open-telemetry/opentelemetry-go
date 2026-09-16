@@ -89,7 +89,14 @@ func TestRecordFactory(t *testing.T) {
 
 func TestRecordFactoryKeepsAddedAttributesUnlimited(t *testing.T) {
 	got := RecordFactory{}.NewRecord()
-	attrs := []attribute.KeyValue{attribute.String("str", "0123456789")}
+	deep := attribute.StringValue("value")
+	for range 65 {
+		deep = attribute.MapValue(attribute.KeyValue{Key: "nested", Value: deep})
+	}
+	attrs := []attribute.KeyValue{
+		attribute.String("str", "0123456789"),
+		{Key: "deep", Value: deep},
+	}
 
 	got.AddAttributes(attrs...)
 
