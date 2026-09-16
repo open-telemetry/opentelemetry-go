@@ -23,6 +23,7 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+	experimental     []experimentalOption
 }
 
 const defaultCardinalityLimit = 2000
@@ -85,10 +86,12 @@ func newConfig(options []Option) config {
 		conf = o.apply(conf)
 	}
 	for _, o := range options {
-		if _, ok := o.(experimentalOption); ok {
-			continue
+		switch experimental := o.(type) {
+		case experimentalOption:
+			conf.experimental = append(conf.experimental, experimental)
+		default:
+			conf = o.apply(conf)
 		}
-		conf = o.apply(conf)
 	}
 	return conf
 }
