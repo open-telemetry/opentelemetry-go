@@ -21,6 +21,8 @@ import (
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	logspb "go.opentelemetry.io/proto/otlp/logs/v1"
 	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
+
+	"math"
 )
 
 // ExportLogsServiceRequest corresponds to collogpb.ExportLogsServiceRequest.
