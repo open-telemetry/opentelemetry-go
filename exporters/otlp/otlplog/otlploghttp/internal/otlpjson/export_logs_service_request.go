@@ -15,14 +15,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
+	"strings"
 
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	logspb "go.opentelemetry.io/proto/otlp/logs/v1"
 	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
-
-	"math"
 )
 
 // ExportLogsServiceRequest corresponds to collogpb.ExportLogsServiceRequest.
