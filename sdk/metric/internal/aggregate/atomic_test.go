@@ -6,10 +6,10 @@ package aggregate
 import (
 	"fmt"
 	"math"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -495,72 +495,77 @@ func TestHotColdMap(t *testing.T) {
 		m.Clear(readIdx)
 		assert.ElementsMatch(t, []int{3, 4}, collected)
 	})
+}
 
-	t.Run("ConcurrentAccessWithSwap", func(t *testing.T) {
-		var m hotColdMap[int]
-		m.init(100)
+func TestHotColdMapConcurrentSafe(t *testing.T) {
+	var m hotColdMap[int]
+	m.init(100)
 
-		started := make(chan struct{})
-		release := make(chan struct{})
-		var blockedWriterDone atomic.Bool
+	initialHotIdx := hotIdx(m.startedCountAndHotIdx.Load() >> 63)
 
-		var wg sync.WaitGroup
-		// Writer 1 starts, signals, and blocks until collector calls swapHotAndWait.
+	started := make(chan struct{})
+	release := make(chan struct{})
+	var blockedWriterDone atomic.Bool
+
+	var wg sync.WaitGroup
+	// Writer 1 starts, signals, and blocks until collector calls swapHotAndWait.
+	wg.Go(func() {
+		hotIdx := m.start()
+		defer m.done(hotIdx)
+
+		close(started)
+		<-release
+
+		set := attribute.NewSet(attribute.String("k", "blocked"))
+		lazy := newLazyFilteredAttributes(set, nil)
+		_ = m.hot(hotIdx).LoadOrStoreAttr(lazy, func(attribute.Set) int { return 999 })
+		blockedWriterDone.Store(true)
+	})
+
+	<-started
+
+	// Swap hot and cold. In a goroutine so we can unblock the writer while swapHotAndWait is waiting.
+	var readIdx coldIdx
+	var swapCompleted atomic.Bool
+	swapDone := make(chan struct{})
+	go func() {
+		readIdx = m.swapHotAndWait()
+		swapCompleted.Store(true)
+		close(swapDone)
+	}()
+
+	// Wait for swapHotAndWait to flip the hot bit and enter its wait loop.
+	for hotIdx(m.startedCountAndHotIdx.Load()>>63) == initialHotIdx {
+		runtime.Gosched()
+	}
+
+	// Concurrent writers while swapHotAndWait is waiting.
+	for i := range 20 {
+		k := fmt.Sprintf("concurrent-%d", i)
 		wg.Go(func() {
 			hotIdx := m.start()
 			defer m.done(hotIdx)
-
-			close(started)
-			<-release
-
-			set := attribute.NewSet(attribute.String("k", "blocked"))
+			set := attribute.NewSet(attribute.String("k", k))
 			lazy := newLazyFilteredAttributes(set, nil)
-			_ = m.hot(hotIdx).LoadOrStoreAttr(lazy, func(attribute.Set) int { return 999 })
-			blockedWriterDone.Store(true)
+			_ = m.hot(hotIdx).LoadOrStoreAttr(lazy, func(attribute.Set) int { return i })
 		})
+	}
 
-		<-started
+	assert.False(t, swapCompleted.Load(), "swapHotAndWait returned before in-flight writer finished")
+	close(release)
 
-		// Concurrent writers.
-		for i := range 20 {
-			k := fmt.Sprintf("concurrent-%d", i)
-			wg.Go(func() {
-				hotIdx := m.start()
-				defer m.done(hotIdx)
-				set := attribute.NewSet(attribute.String("k", k))
-				lazy := newLazyFilteredAttributes(set, nil)
-				_ = m.hot(hotIdx).LoadOrStoreAttr(lazy, func(attribute.Set) int { return i })
-			})
+	<-swapDone
+	assert.True(t, blockedWriterDone.Load())
+	wg.Wait()
+
+	// Verify the blocked writer's value landed in the cold map.
+	var foundBlocked bool
+	m.Range(readIdx, func(_, value any) bool {
+		if value.(int) == 999 {
+			foundBlocked = true
 		}
-
-		// Swap hot and cold. In a goroutine so we can unblock the writer while swapHotAndWait is waiting.
-		var readIdx coldIdx
-		var swapCompleted atomic.Bool
-		swapDone := make(chan struct{})
-		go func() {
-			readIdx = m.swapHotAndWait()
-			swapCompleted.Store(true)
-			close(swapDone)
-		}()
-
-		// Allow swapHotAndWait to enter its wait loop, then release the blocked writer.
-		time.Sleep(10 * time.Millisecond)
-		assert.False(t, swapCompleted.Load(), "swapHotAndWait returned before in-flight writer finished")
-		close(release)
-
-		<-swapDone
-		assert.True(t, blockedWriterDone.Load())
-		wg.Wait()
-
-		// Verify the blocked writer's value landed in the cold map.
-		var foundBlocked bool
-		m.Range(readIdx, func(_, value any) bool {
-			if value.(int) == 999 {
-				foundBlocked = true
-			}
-			return true
-		})
-		assert.True(t, foundBlocked, "value from writer in-flight during swap must be in cold map")
-		m.Clear(readIdx)
+		return true
 	})
+	assert.True(t, foundBlocked, "value from writer in-flight during swap must be in cold map")
+	m.Clear(readIdx)
 }
