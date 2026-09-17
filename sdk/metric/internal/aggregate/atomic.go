@@ -27,26 +27,37 @@ type atomicCounter[N int64 | float64] struct {
 
 // load returns the current value. The caller must ensure all calls to add have
 // returned prior to calling load.
-func (n *atomicCounter[N]) load() N {
-	fval := math.Float64frombits(n.nFloatBits.Load())
-	ival := n.nInt.Load()
-	return N(fval + float64(ival))
+func (n *atomicCounter[N]) load() (value N) {
+	switch any(value).(type) {
+	case int64:
+		value = N(n.nInt.Load())
+	case float64:
+		fval := math.Float64frombits(n.nFloatBits.Load())
+		ival := n.nInt.Load()
+		value = N(fval + float64(ival))
+	}
+	return value
 }
 
 func (n *atomicCounter[N]) add(value N) {
-	ival := int64(value)
-	// This case is where the value is an int, or if it is a whole-numbered float.
-	if float64(ival) == float64(value) {
-		n.nInt.Add(ival)
-		return
-	}
-
-	// Value must be a float below.
-	for {
-		oldBits := n.nFloatBits.Load()
-		newBits := math.Float64bits(math.Float64frombits(oldBits) + float64(value))
-		if n.nFloatBits.CompareAndSwap(oldBits, newBits) {
+	switch v := any(value).(type) {
+	case int64:
+		n.nInt.Add(v)
+	case float64:
+		ival := int64(v)
+		// This case is where the value is a whole-numbered float.
+		if float64(ival) == v {
+			n.nInt.Add(ival)
 			return
+		}
+
+		// Value must be a float below.
+		for {
+			oldBits := n.nFloatBits.Load()
+			newBits := math.Float64bits(math.Float64frombits(oldBits) + v)
+			if n.nFloatBits.CompareAndSwap(oldBits, newBits) {
+				return
+			}
 		}
 	}
 }
