@@ -49,7 +49,23 @@ func (s *deltaLastValue[N]) measure(
 	hotIdx := s.vals.start()
 	defer s.vals.done(hotIdx)
 
-	measureLastValue(ctx, s.vals.hot(hotIdx), s.newRes, value, lazy)
+	lv := s.vals.hot(hotIdx).LoadOrStoreAttr(lazy, func(attr attribute.Set) *lastValuePoint[N] {
+		r := s.newRes(attr)
+		_, isDrop := r.(*dropRes[N])
+		p := &lastValuePoint[N]{
+			res:           r,
+			attrs:         attr,
+			startTime:     now(),
+			dropExemplars: isDrop,
+		}
+		p.value.Store(value)
+		return p
+	})
+
+	lv.value.Store(value)
+	if !lv.dropExemplars {
+		lv.res.Offer(ctx, value, lazy)
+	}
 }
 
 func (s *deltaLastValue[N]) collect(
@@ -120,18 +136,8 @@ func (s *cumulativeLastValue[N]) measure(
 	value N,
 	lazy lazyFilteredAttributes,
 ) {
-	measureLastValue(ctx, &s.values, s.newRes, value, lazy)
-}
-
-func measureLastValue[N int64 | float64](
-	ctx context.Context,
-	dest *limitedSyncMap[*lastValuePoint[N]],
-	newRes func(attribute.Set) FilteredExemplarReservoir[N],
-	value N,
-	lazy lazyFilteredAttributes,
-) {
-	lv := dest.LoadOrStoreAttr(lazy, func(attr attribute.Set) *lastValuePoint[N] {
-		r := newRes(attr)
+	lv := s.values.LoadOrStoreAttr(lazy, func(attr attribute.Set) *lastValuePoint[N] {
+		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
 		p := &lastValuePoint[N]{
 			res:           r,
