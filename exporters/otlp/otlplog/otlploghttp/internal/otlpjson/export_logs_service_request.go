@@ -72,11 +72,56 @@ type KeyValue struct {
 }
 
 // AnyValue corresponds to commonpb.AnyValue.
+type Float64 float64
+
+// MarshalJSON implements the [json.Marshaler] interface.
+func (f Float64) MarshalJSON() ([]byte, error) {
+	switch value := float64(f); {
+	case math.IsNaN(value):
+		return []byte(`"NaN"`), nil
+	case math.IsInf(value, 1):
+		return []byte(`"Infinity"`), nil
+	case math.IsInf(value, -1):
+		return []byte(`"-Infinity"`), nil
+	default:
+		return strconv.AppendFloat(nil, value, 'g', -1, 64), nil
+	}
+}
+
+// UnmarshalJSON implements the [json.Unmarshaler] interface.
+func (f *Float64) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		switch str {
+		case "NaN":
+			*f = Float64(math.NaN())
+		case "Infinity":
+			*f = Float64(math.Inf(1))
+		case "-Infinity":
+			*f = Float64(math.Inf(-1))
+		default:
+			var value *float64
+			if str != strings.TrimSpace(str) || json.Unmarshal([]byte(str), &value) != nil || value == nil {
+				return fmt.Errorf("invalid float value %q", str)
+			}
+			*f = Float64(*value)
+		}
+		return nil
+	}
+
+	var value float64
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	*f = Float64(value)
+	return nil
+}
+
 type AnyValue struct {
 	StringValue *string      `json:"stringValue,omitempty"`
 	BoolValue   *bool        `json:"boolValue,omitempty"`
 	IntValue    *Int64       `json:"intValue,omitempty"`
-	DoubleValue float64      `json:"doubleValue,omitempty"`
+	DoubleValue *Float64     `json:"doubleValue,omitempty"`
 	ArrayValue  *ArrayValue  `json:"arrayValue,omitempty"`
 	KvlistValue *KvlistValue `json:"kvlistValue,omitempty"`
 	BytesValue  []byte       `json:"bytesValue,omitempty"`
@@ -254,7 +299,8 @@ func encodeAnyValue(av *commonpb.AnyValue) *AnyValue {
 		iv := Int64(v.IntValue)
 		out.IntValue = &iv
 	case *commonpb.AnyValue_DoubleValue:
-		out.DoubleValue = &v.DoubleValue
+		dv := Float64(v.DoubleValue)
+		out.DoubleValue = &dv
 	case *commonpb.AnyValue_ArrayValue:
 		if v.ArrayValue != nil {
 			arr := &ArrayValue{}
@@ -386,7 +432,7 @@ func decodeAnyValue(jav *AnyValue) *commonpb.AnyValue {
 	case jav.IntValue != nil:
 		av.Value = &commonpb.AnyValue_IntValue{IntValue: int64(*jav.IntValue)}
 	case jav.DoubleValue != nil:
-		av.Value = &commonpb.AnyValue_DoubleValue{DoubleValue: *jav.DoubleValue}
+		av.Value = &commonpb.AnyValue_DoubleValue{DoubleValue: float64(*jav.DoubleValue)}
 	case jav.ArrayValue != nil:
 		arr := &commonpb.ArrayValue{}
 		for _, v := range jav.ArrayValue.Values {
