@@ -336,8 +336,8 @@ func (i *inserter[N]) independentInstrument(
 }
 
 // composeAttributeFilters combines attribute filters from matching views using logical AND.
-// If no matching views specify an attribute filter, the baseline filter is returned.
-func composeAttributeFilters(baseline attribute.Filter, streams []Stream) attribute.Filter {
+// If no matching views specify an attribute filter, nil is returned.
+func composeAttributeFilters(streams []Stream) attribute.Filter {
 	var filters []attribute.Filter
 	for _, s := range streams {
 		if s.AttributeFilter != nil {
@@ -346,7 +346,7 @@ func composeAttributeFilters(baseline attribute.Filter, streams []Stream) attrib
 	}
 
 	if len(filters) == 0 {
-		return baseline
+		return nil
 	}
 	if len(filters) == 1 {
 		return filters[0]
@@ -394,11 +394,6 @@ func (i *inserter[N]) composableInstrument(
 		err      error
 		seen     = make(map[uint64]struct{})
 	)
-
-	var baseline attribute.Filter
-	if allowedKeys != nil {
-		baseline = attribute.NewAllowKeysFilter(allowedKeys...)
-	}
 
 	for _, name := range targetNames {
 		var groupStreams []Stream
@@ -454,7 +449,7 @@ func (i *inserter[N]) composableInstrument(
 		}
 		resolved.Aggregation = chosenAgg
 
-		resolved.AttributeFilter = composeAttributeFilters(baseline, groupStreams)
+		resolved.AttributeFilter = composeAttributeFilters(groupStreams)
 
 		in, id, e := i.cachedAggregator(inst.Scope, inst.Kind, resolved, allowedKeys, readerAggregation)
 		if e != nil {

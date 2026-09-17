@@ -913,26 +913,22 @@ func TestViewMatchingModeComposableAggregationLastWins(t *testing.T) {
 }
 
 func TestComposeAttributeFilters(t *testing.T) {
+	t.Run("NilFiltersReturnNil", func(t *testing.T) {
+		composed := composeAttributeFilters([]Stream{
+			{Name: "s1"},
+			{Name: "s2"},
+		})
+		assert.Nil(t, composed)
+	})
+
 	testcases := []struct {
 		name       string
-		baseline   attribute.Filter
 		streams    []Stream
 		checkTrue  []attribute.KeyValue
 		checkFalse []attribute.KeyValue
 	}{
 		{
-			name:     "NilFiltersUseBaseline",
-			baseline: attribute.NewAllowKeysFilter("base", "a"),
-			streams: []Stream{
-				{Name: "s1"},
-				{Name: "s2"},
-			},
-			checkTrue:  []attribute.KeyValue{attribute.Int("base", 1), attribute.Int("a", 1)},
-			checkFalse: []attribute.KeyValue{attribute.Int("b", 1)},
-		},
-		{
-			name:     "SingleFilterOverridesBaseline",
-			baseline: attribute.NewAllowKeysFilter("base"),
+			name: "SingleFilter",
 			streams: []Stream{
 				{AttributeFilter: attribute.NewAllowKeysFilter("a", "b")},
 			},
@@ -940,8 +936,7 @@ func TestComposeAttributeFilters(t *testing.T) {
 			checkFalse: []attribute.KeyValue{attribute.Int("base", 1), attribute.Int("c", 1)},
 		},
 		{
-			name:     "AllowFiltersOverrideBaseline",
-			baseline: attribute.NewAllowKeysFilter("base"),
+			name: "AllowFiltersIntersection",
 			streams: []Stream{
 				{AttributeFilter: attribute.NewAllowKeysFilter("a", "b", "c")},
 				{AttributeFilter: attribute.NewAllowKeysFilter("b", "c", "d")},
@@ -950,8 +945,7 @@ func TestComposeAttributeFilters(t *testing.T) {
 			checkFalse: []attribute.KeyValue{attribute.Int("base", 1), attribute.Int("a", 1), attribute.Int("d", 1)},
 		},
 		{
-			name:     "DenyFiltersUnion",
-			baseline: nil,
+			name: "DenyFiltersUnion",
 			streams: []Stream{
 				{AttributeFilter: attribute.NewDenyKeysFilter("x")},
 				{AttributeFilter: attribute.NewDenyKeysFilter("y")},
@@ -960,8 +954,7 @@ func TestComposeAttributeFilters(t *testing.T) {
 			checkFalse: []attribute.KeyValue{attribute.Int("x", 1), attribute.Int("y", 1)},
 		},
 		{
-			name:     "AllowAndDenyCombined",
-			baseline: attribute.NewAllowKeysFilter("base"),
+			name: "AllowAndDenyCombined",
 			streams: []Stream{
 				{AttributeFilter: attribute.NewAllowKeysFilter("a", "b", "c")},
 				{AttributeFilter: attribute.NewDenyKeysFilter("b")},
@@ -973,7 +966,7 @@ func TestComposeAttributeFilters(t *testing.T) {
 
 	for _, tt := range testcases {
 		t.Run(tt.name, func(t *testing.T) {
-			composed := composeAttributeFilters(tt.baseline, tt.streams)
+			composed := composeAttributeFilters(tt.streams)
 			require.NotNil(t, composed)
 			for _, kv := range tt.checkTrue {
 				assert.Truef(t, composed(kv), "expected true for %v", kv)
