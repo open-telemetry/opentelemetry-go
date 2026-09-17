@@ -81,7 +81,9 @@ func (ps *probabilitySampler) ShouldSample(p sdktrace.SamplingParameters) sdktra
 
 	combined, err := state.Insert("ot", newOtts)
 	if err != nil {
-		// This should never happen, but we handle it here for code hygiene.
+		// This can happen when the incoming "ot" entry is invalid, for
+		// example when combining it with the threshold would exceed the
+		// maximum length of a tracestate value.
 		ps.combineErrOnce.Do(func() {
 			otel.Handle(fmt.Errorf("could not combine tracestate: %w", err))
 		})
