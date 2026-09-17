@@ -50,6 +50,50 @@ func TestAtomicSumAddIntConcurrentSafe(t *testing.T) {
 	assert.Equal(t, int64(15), aSum.load())
 }
 
+func TestAtomicCounterInt64Precision(t *testing.T) {
+	tests := []struct {
+		name   string
+		values []int64
+		want   int64
+	}{
+		{
+			name:   "above 2^53",
+			values: []int64{(1 << 53) + 1},
+			want:   (1 << 53) + 1,
+		},
+		{
+			name:   "above 2^53 plus one",
+			values: []int64{(1 << 53) + 1, 1},
+			want:   (1 << 53) + 2,
+		},
+		{
+			name:   "below -2^53",
+			values: []int64{-(1 << 53) - 1},
+			want:   -(1 << 53) - 1,
+		},
+		{
+			name:   "MaxInt64",
+			values: []int64{math.MaxInt64},
+			want:   math.MaxInt64,
+		},
+		{
+			name:   "MinInt64",
+			values: []int64{math.MinInt64},
+			want:   math.MinInt64,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var c atomicCounter[int64]
+			for _, v := range tt.values {
+				c.add(v)
+			}
+			assert.Equal(t, tt.want, c.load())
+		})
+	}
+}
+
 func BenchmarkAtomicCounter(b *testing.B) {
 	b.Run("Int64", benchmarkAtomicCounter[int64])
 	b.Run("Float64", benchmarkAtomicCounter[float64])
