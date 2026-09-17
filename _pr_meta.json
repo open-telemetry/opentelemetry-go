@@ -1,0 +1,10 @@
+{
+  "repo": "open-telemetry/opentelemetry-go",
+  "number": 8199,
+  "base": "main",
+  "head": "feat/otlploghttp-json-encoding",
+  "fork": "VedantMadane/opentelemetry-go",
+  "title": "feat(otlploghttp): support http/json encoding",
+  "url": "https://github.com/open-telemetry/opentelemetry-go/pull/8199",
+  "rebased": true
+}

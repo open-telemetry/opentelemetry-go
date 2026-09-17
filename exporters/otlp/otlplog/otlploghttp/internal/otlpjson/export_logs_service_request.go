@@ -76,7 +76,7 @@ type AnyValue struct {
 	StringValue *string      `json:"stringValue,omitempty"`
 	BoolValue   *bool        `json:"boolValue,omitempty"`
 	IntValue    *Int64       `json:"intValue,omitempty"`
-	DoubleValue *float64     `json:"doubleValue,omitempty"`
+	DoubleValue float64      `json:"doubleValue,omitempty"`
 	ArrayValue  *ArrayValue  `json:"arrayValue,omitempty"`
 	KvlistValue *KvlistValue `json:"kvlistValue,omitempty"`
 	BytesValue  []byte       `json:"bytesValue,omitempty"`
