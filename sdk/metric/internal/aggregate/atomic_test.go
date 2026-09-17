@@ -399,7 +399,7 @@ func TestHotColdMap(t *testing.T) {
 		lazy := newLazyFilteredAttributes(set, nil)
 
 		hotIdx := m.start()
-		val := m.LoadOrStoreAttr(hotIdx, lazy, func(attribute.Set) int { return 100 })
+		val := m.hot(hotIdx).LoadOrStoreAttr(lazy, func(attribute.Set) int { return 100 })
 		m.done(hotIdx)
 		assert.Equal(t, 100, val)
 
@@ -428,9 +428,9 @@ func TestHotColdMap(t *testing.T) {
 		lazy3 := newLazyFilteredAttributes(set3, nil)
 
 		hotIdx := m.start()
-		val1 := m.LoadOrStoreAttr(hotIdx, lazy1, func(attribute.Set) int { return 1 })
-		val2 := m.LoadOrStoreAttr(hotIdx, lazy2, func(attribute.Set) int { return 2 })
-		val3 := m.LoadOrStoreAttr(hotIdx, lazy3, func(attribute.Set) int { return 3 })
+		val1 := m.hot(hotIdx).LoadOrStoreAttr(lazy1, func(attribute.Set) int { return 1 })
+		val2 := m.hot(hotIdx).LoadOrStoreAttr(lazy2, func(attribute.Set) int { return 2 })
+		val3 := m.hot(hotIdx).LoadOrStoreAttr(lazy3, func(attribute.Set) int { return 3 })
 		m.done(hotIdx)
 
 		assert.Equal(t, 1, val1)
@@ -460,8 +460,8 @@ func TestHotColdMap(t *testing.T) {
 
 		// Cycle 1: store 2 sets.
 		hotIdx := m.start()
-		val1 := m.LoadOrStoreAttr(hotIdx, lazy1, func(attribute.Set) int { return 1 })
-		val2 := m.LoadOrStoreAttr(hotIdx, lazy2, func(attribute.Set) int { return 2 })
+		val1 := m.hot(hotIdx).LoadOrStoreAttr(lazy1, func(attribute.Set) int { return 1 })
+		val2 := m.hot(hotIdx).LoadOrStoreAttr(lazy2, func(attribute.Set) int { return 2 })
 		m.done(hotIdx)
 		assert.Equal(t, 1, val1)
 		assert.Equal(t, 2, val2)
@@ -479,8 +479,8 @@ func TestHotColdMap(t *testing.T) {
 		lazy4 := newLazyFilteredAttributes(set4, nil)
 
 		hotIdx = m.start()
-		val3 := m.LoadOrStoreAttr(hotIdx, lazy3, func(attribute.Set) int { return 3 })
-		val4 := m.LoadOrStoreAttr(hotIdx, lazy4, func(attribute.Set) int { return 4 })
+		val3 := m.hot(hotIdx).LoadOrStoreAttr(lazy3, func(attribute.Set) int { return 3 })
+		val4 := m.hot(hotIdx).LoadOrStoreAttr(lazy4, func(attribute.Set) int { return 4 })
 		m.done(hotIdx)
 		assert.Equal(t, 3, val3)
 		assert.Equal(t, 4, val4)
@@ -515,7 +515,7 @@ func TestHotColdMap(t *testing.T) {
 
 			set := attribute.NewSet(attribute.String("k", "blocked"))
 			lazy := newLazyFilteredAttributes(set, nil)
-			_ = m.LoadOrStoreAttr(hotIdx, lazy, func(attribute.Set) int { return 999 })
+			_ = m.hot(hotIdx).LoadOrStoreAttr(lazy, func(attribute.Set) int { return 999 })
 			blockedWriterDone.Store(true)
 		})
 
@@ -529,7 +529,7 @@ func TestHotColdMap(t *testing.T) {
 				defer m.done(hotIdx)
 				set := attribute.NewSet(attribute.String("k", k))
 				lazy := newLazyFilteredAttributes(set, nil)
-				_ = m.LoadOrStoreAttr(hotIdx, lazy, func(attribute.Set) int { return i })
+				_ = m.hot(hotIdx).LoadOrStoreAttr(lazy, func(attribute.Set) int { return i })
 			})
 		}
 

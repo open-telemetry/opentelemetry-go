@@ -591,8 +591,7 @@ func TestHistogramMinMaxUnset(t *testing.T) {
 	// hPt.minMax.set is false by default
 
 	hotIdx := h.vals.start()
-	h.vals.LoadOrStoreAttr(
-		hotIdx,
+	h.vals.hot(hotIdx).LoadOrStoreAttr(
 		newLazyFilteredAttributes(alice, nil),
 		func(attribute.Set) *histogramPoint[int64] {
 			return hPt

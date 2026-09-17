@@ -351,17 +351,17 @@ func (m *limitedSyncMap[V]) Len() int {
 	return m.len
 }
 
-// hotColdMap manages two [limitedSyncMap] instances for lockless concurrent
-// writes and hot/cold swapping during collection.
+// hotColdMap manages two [limitedSyncMap] instances so that measurement and
+// collection operate on separate maps and do not lock each other out.
 //
-// Writes are performed without locking via [hotColdMap.LoadOrStoreAttr] to the
-// currently hot map index returned by [hotColdWaitGroup.start]. Collection is
-// performed by calling [hotColdWaitGroup.swapHotAndWait] to atomically swap
-// the hot and cold maps and wait for in-flight writes to the cold map to
-// complete. The caller can then read the cold map via [hotColdMap.Range] and
-// must call [hotColdMap.Clear] on the cold index so that unused attribute sets
-// do not report in subsequent collection cycles and the cardinality limit
-// budget is reset.
+// Measurements write to the currently hot map returned by [hotColdMap.hot]
+// using the index from [hotColdWaitGroup.start]. Collection is performed by
+// calling [hotColdWaitGroup.swapHotAndWait] to atomically swap the hot and cold
+// maps and wait for in-flight writes to the cold map to complete. The caller
+// can then read the cold map via [hotColdMap.Range] and must call
+// [hotColdMap.Clear] on the cold index so that unused attribute sets do not
+// report in subsequent collection cycles and the cardinality limit budget is
+// reset.
 //
 // swapHotAndWait must not be called concurrently.
 type hotColdMap[V any] struct {
@@ -376,12 +376,6 @@ func (m *hotColdMap[V]) init(limit int) {
 
 func (m *hotColdMap[V]) hot(i hotIdx) *limitedSyncMap[V] {
 	return &m.hotColdValMap[i]
-}
-
-// LoadOrStoreAttr returns the existing value for lazy in the hot map at hotIdx,
-// or constructs and stores a new value using newValue if it does not exist.
-func (m *hotColdMap[V]) LoadOrStoreAttr(hotIdx hotIdx, lazy lazyFilteredAttributes, newValue func(attribute.Set) V) V {
-	return m.hotColdValMap[hotIdx].LoadOrStoreAttr(lazy, newValue)
 }
 
 // Len returns the length of the specified map.
