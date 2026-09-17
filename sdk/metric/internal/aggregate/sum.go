@@ -61,9 +61,6 @@ func (s *deltaSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAtt
 		}
 	})
 	sv.n.add(value)
-	// It is possible for collection to race with measurement and observe the
-	// exemplar in the batch of metrics after the add().
-	// This is an accepted tradeoff to avoid locking during measurement.
 	if !sv.dropExemplars {
 		sv.res.Offer(ctx, value, lazy)
 	}
@@ -148,7 +145,7 @@ func (s *cumulativeSum[N]) measure(ctx context.Context, value N, lazy lazyFilter
 	})
 	sv.n.add(value)
 	// It is possible for collection to race with measurement and observe the
-	// exemplar in the batch of metrics after the add().
+	// exemplar in the batch of metrics after the add() for cumulative sums.
 	// This is an accepted tradeoff to avoid locking during measurement.
 	if !sv.dropExemplars {
 		sv.res.Offer(ctx, value, lazy)
