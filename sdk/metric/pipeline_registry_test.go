@@ -14,6 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -62,7 +63,7 @@ func assertSum[N int64 | float64](
 			in(t.Context(), 1, *attribute.EmptySet())
 
 			var got metricdata.Aggregation
-			assert.Equal(t, 1, out(&got), "1 data-point expected")
+			assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
 			metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
 				Temporality: temp,
 				IsMonotonic: mono,
@@ -71,7 +72,7 @@ func assertSum[N int64 | float64](
 
 			in(t.Context(), 3, *attribute.EmptySet())
 
-			assert.Equal(t, 1, out(&got), "1 data-point expected")
+			assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
 			metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
 				Temporality: temp,
 				IsMonotonic: mono,
@@ -92,7 +93,7 @@ func assertHist[N int64 | float64](
 		in(t.Context(), 1, *attribute.EmptySet())
 
 		var got metricdata.Aggregation
-		assert.Equal(t, 1, out(&got), "1 data-point expected")
+		assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
 		buckets := []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		n := 1
 		metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
@@ -113,7 +114,7 @@ func assertHist[N int64 | float64](
 			buckets[1] = 2
 			n = 2
 		}
-		assert.Equal(t, 1, out(&got), "1 data-point expected")
+		assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
 		metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
 			Temporality: temp,
 			DataPoints: []metricdata.HistogramDataPoint[N]{{
@@ -142,7 +143,7 @@ func assertLastValue[N int64 | float64](
 	in(t.Context(), 1, *attribute.EmptySet())
 
 	var got metricdata.Aggregation
-	assert.Equal(t, 1, out(&got), "1 data-point expected")
+	assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
 	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[N]{
 		DataPoints: []metricdata.DataPoint[N]{{Value: 1}},
 	}, got, metricdatatest.IgnoreTimestamp())
@@ -290,7 +291,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 				in(t.Context(), 1, *attribute.EmptySet())
 
 				var got metricdata.Aggregation
-				assert.Equal(t, 1, out(&got), "1 data-point expected")
+				assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
 				metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{{
@@ -303,7 +304,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 
 				in(t.Context(), 1, *attribute.EmptySet())
 
-				assert.Equal(t, 1, out(&got), "1 data-point expected")
+				assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
 				metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{{
@@ -892,4 +893,40 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			assert.ErrorIs(t, err, tt.want)
 		})
 	}
+}
+
+func TestMetricFilterMultipleReaders(t *testing.T) {
+	ctx := t.Context()
+
+	dropFilter := testMetricFilterOption{
+		testMetric: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string) int {
+			return metricFilterDrop
+		},
+	}
+	acceptFilter := testMetricFilterOption{
+		testMetric: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string) int {
+			return metricFilterAccept
+		},
+		testAttributes: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string, _ []attribute.KeyValue) int {
+			return metricFilterAttrAccept
+		},
+	}
+
+	dropReader := NewManualReader(dropFilter)
+	acceptReader := NewManualReader(acceptFilter)
+
+	mp := NewMeterProvider(WithReader(dropReader), WithReader(acceptReader))
+	meter := mp.Meter("test")
+
+	counter, err := meter.Int64Counter("shared")
+	require.NoError(t, err)
+	counter.Add(ctx, 1)
+
+	dropRM := &metricdata.ResourceMetrics{}
+	require.NoError(t, dropReader.Collect(ctx, dropRM))
+	assert.Equal(t, 0, sumDataPointCount(dropRM, "shared"))
+
+	acceptRM := &metricdata.ResourceMetrics{}
+	require.NoError(t, acceptReader.Collect(ctx, acceptRM))
+	assert.Equal(t, 1, sumDataPointCount(acceptRM, "shared"))
 }
