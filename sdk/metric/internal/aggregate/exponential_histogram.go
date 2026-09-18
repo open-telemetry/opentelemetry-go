@@ -344,14 +344,17 @@ func (e *expoHistogram[N]) measure(
 	distinct := lazy.Distinct()
 	v, ok := e.values[distinct]
 	if !ok {
-		v, ok = e.values[overflowSet.Equivalent()]
-		if !ok {
-			var fltrAttr attribute.Set
-			if e.limit.aggLimit > 0 && len(e.values) >= e.limit.aggLimit-1 {
-				fltrAttr = overflowSet
+		var fltrAttr attribute.Set
+		if e.limit.aggLimit > 0 && len(e.values) >= e.limit.aggLimit-1 {
+			if ov, exists := e.values[overflowSet.Equivalent()]; exists {
+				v = ov
 			} else {
-				fltrAttr = lazy.Set()
+				fltrAttr = overflowSet
 			}
+		} else {
+			fltrAttr = lazy.Set()
+		}
+		if v == nil {
 			v = newExpoHistogramDataPoint[N](fltrAttr, e.maxSize, e.maxScale, e.noMinMax, e.noSum)
 			r := e.newRes(fltrAttr)
 			_, isDrop := r.(*dropRes[N])
