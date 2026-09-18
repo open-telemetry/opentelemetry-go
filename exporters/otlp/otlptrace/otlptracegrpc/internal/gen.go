@@ -18,6 +18,7 @@ package internal
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlpconfig/options_test.go.tmpl "--data={\"isHTTP\": false, \"envconfigImportPath\": \"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/envconfig\"}" --out=otlpconfig/options_test.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlpconfig/optiontypes.go.tmpl "--data={}" --out=otlpconfig/optiontypes.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlpconfig/tls.go.tmpl "--data={}" --out=otlpconfig/tls.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlpconfig/zstd.go.tmpl "--data={}" --out=otlpconfig/zstd.go
 
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlptracetest/client.go.tmpl "--data={}" --out=otlptracetest/client.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlptracetest/collector.go.tmpl "--data={}" --out=otlptracetest/collector.go

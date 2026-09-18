@@ -4,6 +4,7 @@
 package otlpmetricgrpc
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -16,6 +17,32 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
+
+// TestExporterWithZstdCompressorAppliesOnTheWire checks the collector
+// actually observes zstd on the wire, not just that the export succeeds: an
+// invalid WithCompressor value also succeeds, silently uncompressed.
+func TestExporterWithZstdCompressorAppliesOnTheWire(t *testing.T) {
+	coll, err := otest.NewGRPCCollector("", nil)
+	require.NoError(t, err)
+	t.Cleanup(coll.Shutdown)
+
+	ctx := t.Context()
+	opts := []Option{WithEndpoint(coll.Addr().String()), WithInsecure(), WithCompressor("zstd")}
+	cfg := oconf.NewGRPCConfig(asGRPCOptions(opts)...)
+	client, err := newClient(ctx, cfg)
+	require.NoError(t, err)
+
+	exp, err := newExporter(client, oconf.Config{})
+	require.NoError(t, err)
+	// t.Context() is already canceled by the time Cleanup funcs run, so
+	// Shutdown needs its own context here.
+	t.Cleanup(func() { assert.NoError(t, exp.Shutdown(context.Background())) })
+
+	require.NoError(t, exp.Export(ctx, new(metricdata.ResourceMetrics)))
+	assert.Eventually(t, func() bool {
+		return coll.Compression() == "zstd"
+	}, 10*time.Second, 10*time.Millisecond)
+}
 
 func TestExporterClientConcurrentSafe(t *testing.T) {
 	const goroutines = 5

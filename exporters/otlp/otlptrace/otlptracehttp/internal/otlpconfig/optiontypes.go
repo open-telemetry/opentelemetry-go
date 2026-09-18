@@ -27,6 +27,9 @@ const (
 	// GzipCompression tells the driver to send payloads after
 	// compressing them with gzip.
 	GzipCompression
+	// ZstdCompression tells the driver to send payloads after
+	// compressing them with zstd.
+	ZstdCompression
 )
 
 // Marshaler describes the kind of message format sent to the collector.

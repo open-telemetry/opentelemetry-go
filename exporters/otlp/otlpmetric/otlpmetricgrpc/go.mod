@@ -7,6 +7,7 @@ retract v0.32.2 // Contains unresolvable dependencies.
 require (
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/google/go-cmp v0.7.0
+	github.com/klauspost/compress v1.20.0
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.47.0-rc.1
 	go.opentelemetry.io/otel/metric v1.47.0-rc.1
