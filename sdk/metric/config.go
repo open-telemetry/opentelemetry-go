@@ -6,6 +6,7 @@ package metric
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -16,6 +17,13 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+type viewMatchingMode int
+
+const (
+	viewMatchingModeIndependent viewMatchingMode = iota
+	viewMatchingModeComposable
+)
+
 // config contains configuration options for a MeterProvider.
 type config struct {
 	res              *resource.Resource
@@ -23,6 +31,7 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+	viewMatchingMode viewMatchingMode
 }
 
 const defaultCardinalityLimit = 2000
@@ -74,6 +83,13 @@ type experimentalOption interface {
 	Experimental()
 }
 
+// viewMatchingModeOption is structurally matched with options from the
+// experimental sdk/metric/x module across module boundaries.
+type viewMatchingModeOption interface {
+	ViewMatchingMode() int
+	Experimental()
+}
+
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
 	conf := config{
@@ -85,6 +101,16 @@ func newConfig(options []Option) config {
 		conf = o.apply(conf)
 	}
 	for _, o := range options {
+		if modeOpt, ok := o.(viewMatchingModeOption); ok {
+			mode := modeOpt.ViewMatchingMode()
+			if mode < int(viewMatchingModeIndependent) || mode > int(viewMatchingModeComposable) {
+				otel.Handle(fmt.Errorf("unsupported view matching mode %d, falling back to independent", mode))
+				conf.viewMatchingMode = viewMatchingModeIndependent
+			} else {
+				conf.viewMatchingMode = viewMatchingMode(mode)
+			}
+			continue
+		}
 		if _, ok := o.(experimentalOption); ok {
 			continue
 		}
