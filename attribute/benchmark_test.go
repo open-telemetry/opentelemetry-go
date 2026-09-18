@@ -587,53 +587,37 @@ func benchmarkEquivalentMapAccess(b *testing.B, set *attribute.Set) {
 }
 
 func BenchmarkSetString(b *testing.B) {
-	b.Run("Empty", func(b *testing.B) {
-		set := attribute.NewSet()
-		b.ReportAllocs()
-		b.ResetTimer()
-		for range b.N {
-			outStr = set.String()
-		}
-	})
-	b.Run("OneElement", func(b *testing.B) {
-		set := attribute.NewSet(attribute.String("key", "value"))
-		b.ReportAllocs()
-		b.ResetTimer()
-		for range b.N {
-			outStr = set.String()
-		}
-	})
-	b.Run("FiveElements", func(b *testing.B) {
-		set := attribute.NewSet(
-			attribute.Bool("a", true),
-			attribute.Int64("b", 42),
-			attribute.Float64("c", 3.14),
-			attribute.String("d", "hello"),
-			attribute.StringSlice("e", []string{"x", "y"}),
-		)
-		b.ReportAllocs()
-		b.ResetTimer()
-		for range b.N {
-			outStr = set.String()
-		}
-	})
-	b.Run("TenElements", func(b *testing.B) {
-		set := attribute.NewSet(
-			attribute.String("a", "one"),
-			attribute.String("b", "two"),
-			attribute.String("c", "three"),
-			attribute.String("d", "four"),
-			attribute.String("e", "five"),
-			attribute.String("f", "six"),
-			attribute.String("g", "seven"),
-			attribute.String("h", "eight"),
-			attribute.String("i", "nine"),
-			attribute.String("j", "ten"),
-		)
-		b.ReportAllocs()
-		b.ResetTimer()
-		for range b.N {
-			outStr = set.String()
-		}
-	})
+	for _, bench := range []struct {
+		name  string
+		attrs []attribute.KeyValue
+	}{
+		{
+			name: "Len2",
+			attrs: []attribute.KeyValue{
+				attribute.String("a", "one"),
+				attribute.String("b", "two"),
+			},
+		},
+		{
+			name: "Len8",
+			attrs: []attribute.KeyValue{
+				attribute.String("a", "one"),
+				attribute.String("b", "two"),
+				attribute.String("c", "three"),
+				attribute.String("d", "four"),
+				attribute.String("e", "five"),
+				attribute.String("f", "six"),
+				attribute.String("g", "seven"),
+				attribute.String("h", "eight"),
+			},
+		},
+	} {
+		b.Run(bench.name, func(b *testing.B) {
+			set := attribute.NewSet(bench.attrs...)
+			b.ReportAllocs()
+			for b.Loop() {
+				set.String()
+			}
+		})
+	}
 }
