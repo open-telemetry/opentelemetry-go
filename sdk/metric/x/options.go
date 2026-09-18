@@ -24,11 +24,11 @@ import (
 // receive Set updates, and the attempt is logged as an error. A Handle whose
 // MeterProvider has been shut down is released and may be claimed again.
 type MeterConfiguratorHandle struct {
-	mu           sync.Mutex // serializes Set calls; see Set's doc comment
+	mu           sync.Mutex // guards onUpdate, version, and registered; serializes Set, RegisterOnUpdate, and Unregister; see Set's doc comment
 	configurator atomic.Pointer[versionedConfigurator]
-	onUpdate     atomic.Pointer[func()] // To avoid race between handle.Set() and RegisterOnUpdate
-	version      atomic.Uint64          // bumped once per Set call; see Set
-	registered   atomic.Bool            // claimed by a MeterProvider; see RegisterOnUpdate/Unregister
+	onUpdate     func() // set/read under mu; see RegisterOnUpdate/Unregister
+	version      uint64 // bumped once per Set call, guarded by mu; see Set
+	registered   bool   // claimed by a MeterProvider; guarded by mu; see RegisterOnUpdate/Unregister
 }
 
 // errHandleAlreadyRegistered is logged when a MeterConfiguratorHandle already
@@ -64,9 +64,11 @@ func NewMeterConfiguratorHandle() *MeterConfiguratorHandle {
 // Concurrent calls to Set are serialized: a Set call blocks until any
 // already-in-progress Set, including its cache walk, has completed. This
 // keeps one Set's cache walk from partially overwriting another's result
-// across different meters. The callback registered via RegisterOnUpdate must
-// not call Set on the same handle; doing so deadlocks, since this lock is
-// not reentrant.
+// across different meters. Set shares its lock with RegisterOnUpdate and
+// Unregister, so the callback registered via RegisterOnUpdate, and the fn
+// passed to Set, must not call Set, RegisterOnUpdate, or Unregister (directly,
+// or indirectly, e.g. via Shutdown) on the same handle; doing so deadlocks,
+// since this lock is not reentrant.
 //
 // Passing a nil fn clears the configurator, reverting to the same default
 // behavior as a handle that has never had Set called on it (the Meter
@@ -74,10 +76,10 @@ func NewMeterConfiguratorHandle() *MeterConfiguratorHandle {
 func (h *MeterConfiguratorHandle) Set(fn MeterConfigurator) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	v := h.version.Add(1)
-	h.configurator.Store(&versionedConfigurator{fn: fn, version: v})
-	if cb := h.onUpdate.Load(); cb != nil {
-		(*cb)()
+	h.version++
+	h.configurator.Store(&versionedConfigurator{fn: fn, version: h.version})
+	if h.onUpdate != nil {
+		h.onUpdate()
 	}
 }
 
@@ -142,11 +144,15 @@ func (o meterConfiguratorProviderOption) RegisterOnUpdate(fn func()) bool {
 	if o.handle == nil {
 		return false
 	}
-	if !o.handle.registered.CompareAndSwap(false, true) {
+	o.handle.mu.Lock()
+	defer o.handle.mu.Unlock()
+
+	if o.handle.registered {
 		global.Error(errHandleAlreadyRegistered, "did not register MeterConfiguratorHandle")
 		return false
 	}
-	o.handle.onUpdate.Store(&fn)
+	o.handle.registered = true
+	o.handle.onUpdate = fn
 	return true
 }
 
@@ -160,6 +166,10 @@ func (o meterConfiguratorProviderOption) Unregister() {
 	if o.handle == nil {
 		return
 	}
-	o.handle.onUpdate.Store(nil)
-	o.handle.registered.Store(false)
+
+	o.handle.mu.Lock()
+	defer o.handle.mu.Unlock()
+
+	o.handle.onUpdate = nil
+	o.handle.registered = false
 }
