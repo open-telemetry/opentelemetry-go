@@ -4,17 +4,20 @@
 package trace
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"math/rand/v2"
 	"testing"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -55,6 +58,56 @@ func (*shutdownSpanProcessor) OnStart(context.Context, ReadWriteSpan) {}
 func (*shutdownSpanProcessor) OnEnd(ReadOnlySpan)                     {}
 func (*shutdownSpanProcessor) ForceFlush(context.Context) error {
 	return nil
+}
+
+const sensitiveExporterEndpoint = "user:pass@collector.internal:4318"
+
+type marshalingSpanExporter struct{}
+
+func (*marshalingSpanExporter) ExportSpans(context.Context, []ReadOnlySpan) error {
+	return nil
+}
+
+func (*marshalingSpanExporter) Shutdown(context.Context) error {
+	return nil
+}
+
+func (*marshalingSpanExporter) MarshalLog() any {
+	return struct{ Endpoint string }{Endpoint: sensitiveExporterEndpoint}
+}
+
+func TestTracerProviderCreatedLogDoesNotIncludeExporterConfig(t *testing.T) {
+	tests := []struct {
+		name string
+		opt  func(SpanExporter) TracerProviderOption
+	}{
+		{
+			name: "batch",
+			opt:  func(e SpanExporter) TracerProviderOption { return WithBatcher(e) },
+		},
+		{
+			name: "simple",
+			opt:  WithSyncer,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			orig := global.GetLogger()
+			global.SetLogger(funcr.New(func(_, args string) {
+				_, _ = buf.WriteString(args)
+			}, funcr.Options{Verbosity: 4}))
+			t.Cleanup(func() { global.SetLogger(orig) })
+
+			tp := NewTracerProvider(tt.opt(&marshalingSpanExporter{}))
+			require.NoError(t, tp.Shutdown(t.Context()))
+
+			logged := buf.String()
+			assert.Contains(t, logged, "TracerProvider created")
+			assert.NotContains(t, logged, sensitiveExporterEndpoint)
+		})
+	}
 }
 
 func TestShutdownCallsTracerMethod(t *testing.T) {
@@ -121,6 +174,21 @@ func TestUnregisterLast(t *testing.T) {
 	stp.RegisterSpanProcessor(sp3)
 
 	stp.UnregisterSpanProcessor(sp3)
+
+	sps := stp.getSpanProcessors()
+	require.Len(t, sps, 2)
+	assert.Same(t, sp1, sps[0].sp)
+	assert.Same(t, sp2, sps[1].sp)
+}
+
+func TestUnregisterUnknownSpanProcessor(t *testing.T) {
+	stp := NewTracerProvider()
+	sp1 := &basicSpanProcessor{}
+	sp2 := &basicSpanProcessor{}
+	stp.RegisterSpanProcessor(sp1)
+	stp.RegisterSpanProcessor(sp2)
+
+	stp.UnregisterSpanProcessor(&basicSpanProcessor{})
 
 	sps := stp.getSpanProcessors()
 	require.Len(t, sps, 2)
@@ -407,6 +475,57 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 					}
 				})
 			}
+		})
+	}
+}
+
+func TestTracerProviderSamplerConfigFromEnvEmptyValues(t *testing.T) {
+	tests := []struct {
+		name          string
+		sampler       string
+		samplerArg    string
+		setSamplerArg bool
+		description   string
+	}{
+		{
+			name:        "empty sampler",
+			sampler:     "",
+			description: ParentBased(AlwaysSample()).Description(),
+		},
+		{
+			name:          "empty traceidratio sampler arg",
+			sampler:       "traceidratio",
+			samplerArg:    "",
+			setSamplerArg: true,
+			description:   TraceIDRatioBased(1.0).Description(),
+		},
+		{
+			name:          "empty parentbased traceidratio sampler arg",
+			sampler:       "parentbased_traceidratio",
+			samplerArg:    "",
+			setSamplerArg: true,
+			description:   ParentBased(TraceIDRatioBased(1.0)).Description(),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			handler.Reset()
+			t.Cleanup(handler.Reset)
+
+			t.Setenv(envTracesSampler, test.sampler)
+			if test.setSamplerArg {
+				t.Setenv(envTracesSamplerArg, test.samplerArg)
+			}
+
+			stp := NewTracerProvider(WithSyncer(NewTestExporter()))
+			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				require.NoError(t, stp.Shutdown(context.Background()))
+			})
+
+			assert.Equal(t, test.description, stp.sampler.Description())
+			assert.Empty(t, handler.errs)
 		})
 	}
 }

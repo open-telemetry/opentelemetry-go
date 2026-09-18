@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package attribute // import "go.opentelemetry.io/otel/attribute"
+package attribute
 
 import (
 	"cmp"
@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"slices"
 	"sort"
-	"strings"
 
 	"go.opentelemetry.io/otel/attribute/internal/xxhash"
 )
@@ -314,6 +313,9 @@ func filteredToFront(slice []KeyValue, keep Filter) int {
 // Filter returns a filtered copy of this Set. See the documentation for
 // NewSetWithSortableFiltered for more details.
 func (l *Set) Filter(re Filter) (Set, []KeyValue) {
+	if l == nil {
+		return emptySet, nil
+	}
 	if re == nil {
 		return *l, nil
 	}
@@ -407,31 +409,19 @@ func computeDataReflect(kvs []KeyValue) any {
 	return at.Interface()
 }
 
-// String returns a string representation of the Set as a JSON object.
+// String returns a string representation of the Set using the
+// [OpenTelemetry Attribute Collection representation for non-OTLP protocols]
+// rules.
 //
-// The returned string is meant for debugging;
-// the string representation is not stable.
+// The Set is encoded as a JSON object. A nil or empty Set is encoded as an
+// empty JSON object.
+//
+// [OpenTelemetry Attribute Collection representation for non-OTLP protocols]: https://opentelemetry.io/docs/specs/otel/common/#attribute-collection-representation-for-non-otlp
 func (l *Set) String() string {
 	if l == nil || l.hash == 0 {
 		return "{}"
 	}
-
-	n := l.Len()
-	var b strings.Builder
-	// Estimate 16 bytes per attribute for the key, separators, and a small value.
-	b.Grow(len("{}") + n*16)
-	_ = b.WriteByte('{')
-	for i := range n {
-		if i > 0 {
-			_ = b.WriteByte(',')
-		}
-		kv, _ := l.Get(i)
-		appendJSONString(&b, string(kv.Key))
-		_ = b.WriteByte(':')
-		appendJSONValue(&b, kv.Value)
-	}
-	_ = b.WriteByte('}')
-	return b.String()
+	return formatMapValue(l.data)
 }
 
 // MarshalJSON returns the JSON encoding of the Set.

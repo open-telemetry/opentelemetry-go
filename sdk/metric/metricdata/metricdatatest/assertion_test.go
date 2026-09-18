@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+package metricdatatest
 
 import (
 	"encoding/json"
@@ -849,6 +849,34 @@ func TestEqualKeyValue(t *testing.T) {
 			name: "byte slice different value",
 			a:    attribute.ByteSlice("bytes", []byte{1, 2, 3}),
 			b:    attribute.ByteSlice("bytes", []byte{1, 2, 4}),
+			want: false,
+		},
+		{
+			name: "map equal",
+			a: attribute.Map(
+				"map",
+				attribute.String("b", "two"),
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+			),
+			b: attribute.Map(
+				"map",
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+				attribute.String("b", "two"),
+			),
+			want: true,
+		},
+		{
+			name: "map different value",
+			a: attribute.Map(
+				"map",
+				attribute.String("b", "two"),
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+			),
+			b: attribute.Map(
+				"map",
+				attribute.Key("a").Map(attribute.Int("nested", 2)),
+				attribute.String("b", "two"),
+			),
 			want: false,
 		},
 		{

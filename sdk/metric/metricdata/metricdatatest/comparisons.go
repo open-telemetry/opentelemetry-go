@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+package metricdatatest
 
 import (
 	"bytes"
@@ -587,6 +587,10 @@ func equalKeyValue(a, b attribute.KeyValue) bool {
 		}
 	case attribute.SLICE:
 		if ok := slices.Equal(a.Value.AsSlice(), b.Value.AsSlice()); !ok {
+			return false
+		}
+	case attribute.MAP:
+		if ok := slices.EqualFunc(a.Value.AsMap(), b.Value.AsMap(), equalKeyValue); !ok {
 			return false
 		}
 	case attribute.EMPTY:

@@ -9,16 +9,11 @@ package cicdconv
 
 import (
 	"context"
-	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
-)
-
-var (
-	addOptPool = &sync.Pool{New: func() any { return &[]metric.AddOption{} }}
-	recOptPool = &sync.Pool{New: func() any { return &[]metric.RecordOption{} }}
+	"go.opentelemetry.io/otel/semconv/internal/metricpool"
 )
 
 // PipelineResultAttr is an attribute conforming to the cicd.pipeline.result
@@ -173,11 +168,8 @@ func (m PipelineRunActive) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -203,14 +195,85 @@ func (m PipelineRunActive) AddSet(ctx context.Context, incr int64, set attribute
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// PipelineRunActiveObservable is an instrument used to record metric values
+// conforming to the "cicd.pipeline.run.active" semantic conventions. It
+// represents the number of pipeline runs currently active in the system by
+// state.
+type PipelineRunActiveObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newPipelineRunActiveObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of pipeline runs currently active in the system by state."),
+	metric.WithUnit("{run}"),
+}
+
+// NewPipelineRunActiveObservable returns a new PipelineRunActiveObservable
+// instrument.
+func NewPipelineRunActiveObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (PipelineRunActiveObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PipelineRunActiveObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPipelineRunActiveObservableOpts
+	} else {
+		opt = append(opt, newPipelineRunActiveObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"cicd.pipeline.run.active",
+		opt...,
+	)
+	if err != nil {
+		return PipelineRunActiveObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return PipelineRunActiveObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PipelineRunActiveObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PipelineRunActiveObservable) Name() string {
+	return "cicd.pipeline.run.active"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PipelineRunActiveObservable) Unit() string {
+	return "{run}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PipelineRunActiveObservable) Description() string {
+	return "The number of pipeline runs currently active in the system by state."
+}
+
+// AttrPipelineName returns a required attribute for the "cicd.pipeline.name"
+// semantic convention. It represents the human readable name of the pipeline
+// within a CI/CD system.
+func (PipelineRunActiveObservable) AttrPipelineName(val string) attribute.KeyValue {
+	return attribute.String("cicd.pipeline.name", val)
+}
+
+// AttrPipelineRunState returns a required attribute for the
+// "cicd.pipeline.run.state" semantic convention. It represents the pipeline run
+// goes through these states during its lifecycle.
+func (PipelineRunActiveObservable) AttrPipelineRunState(val PipelineRunStateAttr) attribute.KeyValue {
+	return attribute.String("cicd.pipeline.run.state", string(val))
 }
 
 // PipelineRunDuration is an instrument used to record metric values conforming
@@ -298,11 +361,8 @@ func (m PipelineRunDuration) Record(
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(
 		*o,
@@ -328,11 +388,8 @@ func (m PipelineRunDuration) RecordSet(ctx context.Context, val float64, set att
 		return
 	}
 
-	o := recOptPool.Get().(*[]metric.RecordOption)
-	defer func() {
-		*o = (*o)[:0]
-		recOptPool.Put(o)
-	}()
+	o := metricpool.RecordOptions()
+	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Float64Histogram.Record(ctx, val, *o...)
@@ -439,11 +496,8 @@ func (m PipelineRunErrors) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -474,14 +528,85 @@ func (m PipelineRunErrors) AddSet(ctx context.Context, incr int64, set attribute
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// PipelineRunErrorsObservable is an instrument used to record metric values
+// conforming to the "cicd.pipeline.run.errors" semantic conventions. It
+// represents the number of errors encountered in pipeline runs (eg. compile,
+// test failures).
+type PipelineRunErrorsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newPipelineRunErrorsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("The number of errors encountered in pipeline runs (eg. compile, test failures)."),
+	metric.WithUnit("{error}"),
+}
+
+// NewPipelineRunErrorsObservable returns a new PipelineRunErrorsObservable
+// instrument.
+func NewPipelineRunErrorsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (PipelineRunErrorsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return PipelineRunErrorsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newPipelineRunErrorsObservableOpts
+	} else {
+		opt = append(opt, newPipelineRunErrorsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"cicd.pipeline.run.errors",
+		opt...,
+	)
+	if err != nil {
+		return PipelineRunErrorsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return PipelineRunErrorsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m PipelineRunErrorsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (PipelineRunErrorsObservable) Name() string {
+	return "cicd.pipeline.run.errors"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (PipelineRunErrorsObservable) Unit() string {
+	return "{error}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (PipelineRunErrorsObservable) Description() string {
+	return "The number of errors encountered in pipeline runs (eg. compile, test failures)."
+}
+
+// AttrPipelineName returns a required attribute for the "cicd.pipeline.name"
+// semantic convention. It represents the human readable name of the pipeline
+// within a CI/CD system.
+func (PipelineRunErrorsObservable) AttrPipelineName(val string) attribute.KeyValue {
+	return attribute.String("cicd.pipeline.name", val)
+}
+
+// AttrErrorType returns a required attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (PipelineRunErrorsObservable) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
 // SystemErrors is an instrument used to record metric values conforming to the
@@ -568,11 +693,8 @@ func (m SystemErrors) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -601,14 +723,84 @@ func (m SystemErrors) AddSet(ctx context.Context, incr int64, set attribute.Set)
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64Counter.Add(ctx, incr, *o...)
+}
+
+// SystemErrorsObservable is an instrument used to record metric values
+// conforming to the "cicd.system.errors" semantic conventions. It represents the
+// number of errors in a component of the CICD system (eg. controller, scheduler,
+// agent).
+type SystemErrorsObservable struct {
+	metric.Int64ObservableCounter
+}
+
+var newSystemErrorsObservableOpts = []metric.Int64ObservableCounterOption{
+	metric.WithDescription("The number of errors in a component of the CICD system (eg. controller, scheduler, agent)."),
+	metric.WithUnit("{error}"),
+}
+
+// NewSystemErrorsObservable returns a new SystemErrorsObservable instrument.
+func NewSystemErrorsObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableCounterOption,
+) (SystemErrorsObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return SystemErrorsObservable{noop.Int64ObservableCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newSystemErrorsObservableOpts
+	} else {
+		opt = append(opt, newSystemErrorsObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableCounter(
+		"cicd.system.errors",
+		opt...,
+	)
+	if err != nil {
+		return SystemErrorsObservable{noop.Int64ObservableCounter{}}, err
+	}
+	return SystemErrorsObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m SystemErrorsObservable) Inst() metric.Int64ObservableCounter {
+	return m.Int64ObservableCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (SystemErrorsObservable) Name() string {
+	return "cicd.system.errors"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (SystemErrorsObservable) Unit() string {
+	return "{error}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (SystemErrorsObservable) Description() string {
+	return "The number of errors in a component of the CICD system (eg. controller, scheduler, agent)."
+}
+
+// AttrSystemComponent returns a required attribute for the
+// "cicd.system.component" semantic convention. It represents the name of a
+// component of the CICD system.
+func (SystemErrorsObservable) AttrSystemComponent(val string) attribute.KeyValue {
+	return attribute.String("cicd.system.component", val)
+}
+
+// AttrErrorType returns a required attribute for the "error.type" semantic
+// convention. It represents the describes a class of error the operation ended
+// with.
+func (SystemErrorsObservable) AttrErrorType(val ErrorTypeAttr) attribute.KeyValue {
+	return attribute.String("error.type", string(val))
 }
 
 // WorkerCount is an instrument used to record metric values conforming to the
@@ -688,11 +880,8 @@ func (m WorkerCount) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -717,12 +906,73 @@ func (m WorkerCount) AddSet(ctx context.Context, incr int64, set attribute.Set) 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// WorkerCountObservable is an instrument used to record metric values conforming
+// to the "cicd.worker.count" semantic conventions. It represents the number of
+// workers on the CICD system by state.
+type WorkerCountObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newWorkerCountObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The number of workers on the CICD system by state."),
+	metric.WithUnit("{count}"),
+}
+
+// NewWorkerCountObservable returns a new WorkerCountObservable instrument.
+func NewWorkerCountObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (WorkerCountObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return WorkerCountObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newWorkerCountObservableOpts
+	} else {
+		opt = append(opt, newWorkerCountObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"cicd.worker.count",
+		opt...,
+	)
+	if err != nil {
+		return WorkerCountObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return WorkerCountObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m WorkerCountObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (WorkerCountObservable) Name() string {
+	return "cicd.worker.count"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (WorkerCountObservable) Unit() string {
+	return "{count}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (WorkerCountObservable) Description() string {
+	return "The number of workers on the CICD system by state."
+}
+
+// AttrWorkerState returns a required attribute for the "cicd.worker.state"
+// semantic convention. It represents the state of a CICD worker / agent.
+func (WorkerCountObservable) AttrWorkerState(val WorkerStateAttr) attribute.KeyValue {
+	return attribute.String("cicd.worker.state", string(val))
 }

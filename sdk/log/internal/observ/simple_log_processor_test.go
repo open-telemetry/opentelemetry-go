@@ -4,7 +4,6 @@
 package observ
 
 import (
-	"errors"
 	"sync"
 	"testing"
 
@@ -20,8 +19,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 func TestNextExporterID(t *testing.T) {
@@ -138,16 +137,12 @@ func setup(t *testing.T) (*SLP, func() metricdata.ScopeMetrics) {
 	}
 }
 
-func processedMetric(err error) metricdata.Metrics {
+func processedMetric() metricdata.Metrics {
 	processed := &otelconv.SDKProcessorLogProcessed{}
 
 	attrs := []attribute.KeyValue{
 		GetSLPComponentName(slpComponentID),
 		processed.AttrComponentType(otelconv.ComponentTypeSimpleLogProcessor),
-	}
-
-	if err != nil {
-		attrs = append(attrs, semconv.ErrorType(err))
 	}
 
 	dp := []metricdata.DataPoint[int64]{
@@ -175,31 +170,22 @@ var Scope = instrumentation.Scope{
 	SchemaURL: semconv.SchemaURL,
 }
 
-func assertMetric(t *testing.T, got metricdata.ScopeMetrics, err error) {
+func assertMetric(t *testing.T, got metricdata.ScopeMetrics) {
 	t.Helper()
 	assert.Equal(t, Scope, got.Scope, "unexpected scope")
 	m := got.Metrics
 	require.Len(t, m, 1, "expected 1 metrics")
 
 	o := metricdatatest.IgnoreTimestamp()
-	want := processedMetric(err)
+	want := processedMetric()
 
 	metricdatatest.AssertEqual(t, want, m[0], o)
 }
 
 func TestSLP(t *testing.T) {
-	t.Run("NoError", func(t *testing.T) {
-		slp, collect := setup(t)
-		slp.LogProcessed(t.Context(), nil)
-		assertMetric(t, collect(), nil)
-	})
-
-	t.Run("Error", func(t *testing.T) {
-		processErr := errors.New("error processing log")
-		slp, collect := setup(t)
-		slp.LogProcessed(t.Context(), processErr)
-		assertMetric(t, collect(), processErr)
-	})
+	slp, collect := setup(t)
+	slp.LogProcessed(t.Context())
+	assertMetric(t, collect())
 }
 
 func BenchmarkSLP(b *testing.B) {
@@ -228,27 +214,7 @@ func BenchmarkSLP(b *testing.B) {
 		b.ReportAllocs()
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
-				ssp.LogProcessed(ctx, nil)
-			}
-		})
-	})
-
-	b.Run("LogProcessedWithError", func(b *testing.B) {
-		orig := otel.GetMeterProvider()
-		b.Cleanup(func() {
-			otel.SetMeterProvider(orig)
-		})
-		otel.SetMeterProvider(noop.NewMeterProvider())
-		slp := newSLP(b)
-		ctx := b.Context()
-
-		processErr := errors.New("error processing log")
-
-		b.ResetTimer()
-		b.ReportAllocs()
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				slp.LogProcessed(ctx, processErr)
+				ssp.LogProcessed(ctx)
 			}
 		})
 	})

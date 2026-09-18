@@ -497,7 +497,7 @@ func TestNewConfig(t *testing.T) {
 			}(otel.GetErrorHandler()))
 			c := newConfig(tc.options)
 			if !tc.want.maxRequestSize.Set {
-				tc.want.maxRequestSize = newSetting(defaultMaxRequestSize)
+				tc.want.maxRequestSize = newSetting(64 * 1024 * 1024)
 			}
 
 			// Do not compare pointer values.

@@ -1,11 +1,12 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+package aggregate
 
 import (
 	"context"
 	"sort"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -447,7 +448,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 	b[0] = 10
 	assert.Equal(t, cpB, h.bounds, "modifying the bounds argument should not change the bounds")
 
-	h.measure(t.Context(), 5, alice, nil)
+	h.measure(t.Context(), 5, newLazyFilteredAttributes(alice, nil))
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	h.collect(&data)
@@ -458,7 +459,7 @@ func TestHistogramImmutableBounds(t *testing.T) {
 
 func TestCumulativeHistogramImmutableCounts(t *testing.T) {
 	h := newCumulativeHistogram[int64](bounds, noMinMax, false, 0, dropExemplars[int64])
-	h.measure(t.Context(), 5, alice, nil)
+	h.measure(t.Context(), 5, newLazyFilteredAttributes(alice, nil))
 
 	var data metricdata.Aggregation = metricdata.Histogram[int64]{}
 	h.collect(&data)
@@ -501,7 +502,7 @@ func TestDeltaHistogramReset(t *testing.T) {
 	require.Equal(t, 0, h.collect(&data))
 	require.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
-	h.measure(t.Context(), 1, alice, nil)
+	h.measure(t.Context(), 1, newLazyFilteredAttributes(alice, nil))
 
 	expect := metricdata.Histogram[int64]{Temporality: metricdata.DeltaTemporality}
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](alice, 1, 1, now(), now())}
@@ -514,10 +515,96 @@ func TestDeltaHistogramReset(t *testing.T) {
 	assert.Empty(t, data.(metricdata.Histogram[int64]).DataPoints)
 
 	// Aggregating another set should not affect the original (alice).
-	h.measure(t.Context(), 1, bob, nil)
+	h.measure(t.Context(), 1, newLazyFilteredAttributes(bob, nil))
 	expect.DataPoints = []metricdata.HistogramDataPoint[int64]{hPointSummed[int64](bob, 1, 1, now(), now())}
 	h.collect(&data)
 	metricdatatest.AssertAggregationsEqual(t, expect, data)
+}
+
+func TestHistogramDatapointReuseLeakedStaleValues(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	bounds := []float64{1, 5}
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	// 1. Collect with sum and min/max enabled.
+	in1, out1 := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality,
+	}.ExplicitBucketHistogram(bounds, false, false)
+
+	ctx := t.Context()
+	in1(ctx, 5, alice)
+
+	dest := new(metricdata.Aggregation)
+	n := out1(dest)
+	require.Equal(t, 1, n)
+
+	h, ok := (*dest).(metricdata.Histogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+	require.Equal(t, int64(5), h.DataPoints[0].Sum)
+	val, defined := h.DataPoints[0].Min.Value()
+	require.True(t, defined)
+	require.Equal(t, int64(5), val)
+
+	// 2. Collect with sum and min/max disabled.
+	in2, out2 := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality,
+	}.ExplicitBucketHistogram(bounds, true, true)
+
+	in2(ctx, 7, alice)
+
+	n = out2(dest)
+	require.Equal(t, 1, n)
+
+	h, ok = (*dest).(metricdata.Histogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+
+	// Validate that stale values are not reported.
+	assert.Equal(t, int64(0), h.DataPoints[0].Sum, "stale Sum leaked")
+	_, defined = h.DataPoints[0].Min.Value()
+	assert.False(t, defined, "stale Min leaked")
+	_, defined = h.DataPoints[0].Max.Value()
+	assert.False(t, defined, "stale Max leaked")
+}
+
+func TestHistogramMinMaxUnset(t *testing.T) {
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	h := &deltaHistogram[int64]{
+		noMinMax: false,
+		noSum:    false,
+		bounds:   []float64{1, 5},
+		start:    time.Now(),
+	}
+
+	hPt := &histogramPoint[int64]{
+		attrs: alice,
+		histogramPointCounters: histogramPointCounters[int64]{
+			counts: make([]atomic.Uint64, 3),
+		},
+		res: dropExemplars[int64](alice),
+	}
+	// hPt.minMax.set is false by default
+
+	h.hotColdValMap[0].LoadOrStoreAttr(
+		newLazyFilteredAttributes(alice, nil),
+		func(attribute.Set) *histogramPoint[int64] {
+			return hPt
+		},
+	)
+
+	var dest metricdata.Aggregation
+	h.collect(&dest)
+
+	eh := dest.(metricdata.Histogram[int64])
+	require.Len(t, eh.DataPoints, 1)
+	_, defined := eh.DataPoints[0].Min.Value()
+	assert.False(t, defined, "Min should be invalid when not set")
+	_, defined = eh.DataPoints[0].Max.Value()
+	assert.False(t, defined, "Max should be invalid when not set")
 }
 
 func BenchmarkHistogram(b *testing.B) {
@@ -528,16 +615,6 @@ func BenchmarkHistogram(b *testing.B) {
 	}))
 	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
-			Temporality: metricdata.DeltaTemporality,
-		}.ExplicitBucketHistogram(bounds, noMinMax, false)
-	}))
-	b.Run("Float64/Cumulative", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
-			Temporality: metricdata.CumulativeTemporality,
-		}.ExplicitBucketHistogram(bounds, noMinMax, false)
-	}))
-	b.Run("Float64/Delta", benchmarkAggregate(func() (Measure[float64], ComputeAggregation) {
-		return Builder[float64]{
 			Temporality: metricdata.DeltaTemporality,
 		}.ExplicitBucketHistogram(bounds, noMinMax, false)
 	}))

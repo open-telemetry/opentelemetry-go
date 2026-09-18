@@ -9,16 +9,11 @@ package openshiftconv
 
 import (
 	"context"
-	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
-)
-
-var (
-	addOptPool = &sync.Pool{New: func() any { return &[]metric.AddOption{} }}
-	recOptPool = &sync.Pool{New: func() any { return &[]metric.RecordOption{} }}
+	"go.opentelemetry.io/otel/semconv/internal/metricpool"
 )
 
 // ClusterquotaCPULimitHard is an instrument used to record metric values
@@ -98,11 +93,8 @@ func (m ClusterquotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ...
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -126,14 +118,71 @@ func (m ClusterquotaCPULimitHard) AddSet(ctx context.Context, incr int64, set at
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaCPULimitHardObservable is an instrument used to record metric
+// values conforming to the "openshift.clusterquota.cpu.limit.hard" semantic
+// conventions. It represents the enforced hard limit of the resource across all
+// projects.
+type ClusterquotaCPULimitHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaCPULimitHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The enforced hard limit of the resource across all projects."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewClusterquotaCPULimitHardObservable returns a new
+// ClusterquotaCPULimitHardObservable instrument.
+func NewClusterquotaCPULimitHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaCPULimitHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaCPULimitHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaCPULimitHardObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaCPULimitHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.cpu.limit.hard",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaCPULimitHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaCPULimitHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaCPULimitHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaCPULimitHardObservable) Name() string {
+	return "openshift.clusterquota.cpu.limit.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaCPULimitHardObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaCPULimitHardObservable) Description() string {
+	return "The enforced hard limit of the resource across all projects."
 }
 
 // ClusterquotaCPULimitUsed is an instrument used to record metric values
@@ -213,11 +262,8 @@ func (m ClusterquotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ...
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -241,14 +287,71 @@ func (m ClusterquotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set at
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaCPULimitUsedObservable is an instrument used to record metric
+// values conforming to the "openshift.clusterquota.cpu.limit.used" semantic
+// conventions. It represents the current observed total usage of the resource
+// across all projects.
+type ClusterquotaCPULimitUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaCPULimitUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The current observed total usage of the resource across all projects."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewClusterquotaCPULimitUsedObservable returns a new
+// ClusterquotaCPULimitUsedObservable instrument.
+func NewClusterquotaCPULimitUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaCPULimitUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaCPULimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaCPULimitUsedObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaCPULimitUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.cpu.limit.used",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaCPULimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaCPULimitUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaCPULimitUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaCPULimitUsedObservable) Name() string {
+	return "openshift.clusterquota.cpu.limit.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaCPULimitUsedObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaCPULimitUsedObservable) Description() string {
+	return "The current observed total usage of the resource across all projects."
 }
 
 // ClusterquotaCPURequestHard is an instrument used to record metric values
@@ -329,11 +432,8 @@ func (m ClusterquotaCPURequestHard) Add(ctx context.Context, incr int64, attrs .
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -357,14 +457,71 @@ func (m ClusterquotaCPURequestHard) AddSet(ctx context.Context, incr int64, set 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaCPURequestHardObservable is an instrument used to record metric
+// values conforming to the "openshift.clusterquota.cpu.request.hard" semantic
+// conventions. It represents the enforced hard limit of the resource across all
+// projects.
+type ClusterquotaCPURequestHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaCPURequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The enforced hard limit of the resource across all projects."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewClusterquotaCPURequestHardObservable returns a new
+// ClusterquotaCPURequestHardObservable instrument.
+func NewClusterquotaCPURequestHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaCPURequestHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaCPURequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaCPURequestHardObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaCPURequestHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.cpu.request.hard",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaCPURequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaCPURequestHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaCPURequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaCPURequestHardObservable) Name() string {
+	return "openshift.clusterquota.cpu.request.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaCPURequestHardObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaCPURequestHardObservable) Description() string {
+	return "The enforced hard limit of the resource across all projects."
 }
 
 // ClusterquotaCPURequestUsed is an instrument used to record metric values
@@ -445,11 +602,8 @@ func (m ClusterquotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs .
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -473,14 +627,71 @@ func (m ClusterquotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaCPURequestUsedObservable is an instrument used to record metric
+// values conforming to the "openshift.clusterquota.cpu.request.used" semantic
+// conventions. It represents the current observed total usage of the resource
+// across all projects.
+type ClusterquotaCPURequestUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaCPURequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The current observed total usage of the resource across all projects."),
+	metric.WithUnit("{cpu}"),
+}
+
+// NewClusterquotaCPURequestUsedObservable returns a new
+// ClusterquotaCPURequestUsedObservable instrument.
+func NewClusterquotaCPURequestUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaCPURequestUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaCPURequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaCPURequestUsedObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaCPURequestUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.cpu.request.used",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaCPURequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaCPURequestUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaCPURequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaCPURequestUsedObservable) Name() string {
+	return "openshift.clusterquota.cpu.request.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaCPURequestUsedObservable) Unit() string {
+	return "{cpu}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaCPURequestUsedObservable) Description() string {
+	return "The current observed total usage of the resource across all projects."
 }
 
 // ClusterquotaEphemeralStorageLimitHard is an instrument used to record metric
@@ -561,11 +772,8 @@ func (m ClusterquotaEphemeralStorageLimitHard) Add(ctx context.Context, incr int
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -589,14 +797,71 @@ func (m ClusterquotaEphemeralStorageLimitHard) AddSet(ctx context.Context, incr 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaEphemeralStorageLimitHardObservable is an instrument used to
+// record metric values conforming to the
+// "openshift.clusterquota.ephemeral_storage.limit.hard" semantic conventions. It
+// represents the enforced hard limit of the resource across all projects.
+type ClusterquotaEphemeralStorageLimitHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaEphemeralStorageLimitHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The enforced hard limit of the resource across all projects."),
+	metric.WithUnit("By"),
+}
+
+// NewClusterquotaEphemeralStorageLimitHardObservable returns a new
+// ClusterquotaEphemeralStorageLimitHardObservable instrument.
+func NewClusterquotaEphemeralStorageLimitHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaEphemeralStorageLimitHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaEphemeralStorageLimitHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaEphemeralStorageLimitHardObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaEphemeralStorageLimitHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.ephemeral_storage.limit.hard",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaEphemeralStorageLimitHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaEphemeralStorageLimitHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaEphemeralStorageLimitHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaEphemeralStorageLimitHardObservable) Name() string {
+	return "openshift.clusterquota.ephemeral_storage.limit.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaEphemeralStorageLimitHardObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaEphemeralStorageLimitHardObservable) Description() string {
+	return "The enforced hard limit of the resource across all projects."
 }
 
 // ClusterquotaEphemeralStorageLimitUsed is an instrument used to record metric
@@ -677,11 +942,8 @@ func (m ClusterquotaEphemeralStorageLimitUsed) Add(ctx context.Context, incr int
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -705,14 +967,72 @@ func (m ClusterquotaEphemeralStorageLimitUsed) AddSet(ctx context.Context, incr 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaEphemeralStorageLimitUsedObservable is an instrument used to
+// record metric values conforming to the
+// "openshift.clusterquota.ephemeral_storage.limit.used" semantic conventions. It
+// represents the current observed total usage of the resource across all
+// projects.
+type ClusterquotaEphemeralStorageLimitUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaEphemeralStorageLimitUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The current observed total usage of the resource across all projects."),
+	metric.WithUnit("By"),
+}
+
+// NewClusterquotaEphemeralStorageLimitUsedObservable returns a new
+// ClusterquotaEphemeralStorageLimitUsedObservable instrument.
+func NewClusterquotaEphemeralStorageLimitUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaEphemeralStorageLimitUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaEphemeralStorageLimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaEphemeralStorageLimitUsedObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaEphemeralStorageLimitUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.ephemeral_storage.limit.used",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaEphemeralStorageLimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaEphemeralStorageLimitUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaEphemeralStorageLimitUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaEphemeralStorageLimitUsedObservable) Name() string {
+	return "openshift.clusterquota.ephemeral_storage.limit.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaEphemeralStorageLimitUsedObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaEphemeralStorageLimitUsedObservable) Description() string {
+	return "The current observed total usage of the resource across all projects."
 }
 
 // ClusterquotaEphemeralStorageRequestHard is an instrument used to record metric
@@ -793,11 +1113,8 @@ func (m ClusterquotaEphemeralStorageRequestHard) Add(ctx context.Context, incr i
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -821,14 +1138,71 @@ func (m ClusterquotaEphemeralStorageRequestHard) AddSet(ctx context.Context, inc
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaEphemeralStorageRequestHardObservable is an instrument used to
+// record metric values conforming to the
+// "openshift.clusterquota.ephemeral_storage.request.hard" semantic conventions.
+// It represents the enforced hard limit of the resource across all projects.
+type ClusterquotaEphemeralStorageRequestHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaEphemeralStorageRequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The enforced hard limit of the resource across all projects."),
+	metric.WithUnit("By"),
+}
+
+// NewClusterquotaEphemeralStorageRequestHardObservable returns a new
+// ClusterquotaEphemeralStorageRequestHardObservable instrument.
+func NewClusterquotaEphemeralStorageRequestHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaEphemeralStorageRequestHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaEphemeralStorageRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaEphemeralStorageRequestHardObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaEphemeralStorageRequestHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.ephemeral_storage.request.hard",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaEphemeralStorageRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaEphemeralStorageRequestHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaEphemeralStorageRequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaEphemeralStorageRequestHardObservable) Name() string {
+	return "openshift.clusterquota.ephemeral_storage.request.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaEphemeralStorageRequestHardObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaEphemeralStorageRequestHardObservable) Description() string {
+	return "The enforced hard limit of the resource across all projects."
 }
 
 // ClusterquotaEphemeralStorageRequestUsed is an instrument used to record metric
@@ -910,11 +1284,8 @@ func (m ClusterquotaEphemeralStorageRequestUsed) Add(ctx context.Context, incr i
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -938,14 +1309,72 @@ func (m ClusterquotaEphemeralStorageRequestUsed) AddSet(ctx context.Context, inc
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaEphemeralStorageRequestUsedObservable is an instrument used to
+// record metric values conforming to the
+// "openshift.clusterquota.ephemeral_storage.request.used" semantic conventions.
+// It represents the current observed total usage of the resource across all
+// projects.
+type ClusterquotaEphemeralStorageRequestUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaEphemeralStorageRequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The current observed total usage of the resource across all projects."),
+	metric.WithUnit("By"),
+}
+
+// NewClusterquotaEphemeralStorageRequestUsedObservable returns a new
+// ClusterquotaEphemeralStorageRequestUsedObservable instrument.
+func NewClusterquotaEphemeralStorageRequestUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaEphemeralStorageRequestUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaEphemeralStorageRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaEphemeralStorageRequestUsedObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaEphemeralStorageRequestUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.ephemeral_storage.request.used",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaEphemeralStorageRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaEphemeralStorageRequestUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaEphemeralStorageRequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaEphemeralStorageRequestUsedObservable) Name() string {
+	return "openshift.clusterquota.ephemeral_storage.request.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaEphemeralStorageRequestUsedObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaEphemeralStorageRequestUsedObservable) Description() string {
+	return "The current observed total usage of the resource across all projects."
 }
 
 // ClusterquotaHugepageCountRequestHard is an instrument used to record metric
@@ -1035,11 +1464,8 @@ func (m ClusterquotaHugepageCountRequestHard) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -1072,14 +1498,77 @@ func (m ClusterquotaHugepageCountRequestHard) AddSet(ctx context.Context, incr i
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaHugepageCountRequestHardObservable is an instrument used to record
+// metric values conforming to the
+// "openshift.clusterquota.hugepage_count.request.hard" semantic conventions. It
+// represents the enforced hard limit of the resource across all projects.
+type ClusterquotaHugepageCountRequestHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaHugepageCountRequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The enforced hard limit of the resource across all projects."),
+	metric.WithUnit("{hugepage}"),
+}
+
+// NewClusterquotaHugepageCountRequestHardObservable returns a new
+// ClusterquotaHugepageCountRequestHardObservable instrument.
+func NewClusterquotaHugepageCountRequestHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaHugepageCountRequestHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaHugepageCountRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaHugepageCountRequestHardObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaHugepageCountRequestHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.hugepage_count.request.hard",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaHugepageCountRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaHugepageCountRequestHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaHugepageCountRequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaHugepageCountRequestHardObservable) Name() string {
+	return "openshift.clusterquota.hugepage_count.request.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaHugepageCountRequestHardObservable) Unit() string {
+	return "{hugepage}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaHugepageCountRequestHardObservable) Description() string {
+	return "The enforced hard limit of the resource across all projects."
+}
+
+// AttrK8SHugepageSize returns a required attribute for the "k8s.hugepage.size"
+// semantic convention. It represents the size (identifier) of the K8s huge page.
+func (ClusterquotaHugepageCountRequestHardObservable) AttrK8SHugepageSize(val string) attribute.KeyValue {
+	return attribute.String("k8s.hugepage.size", val)
 }
 
 // ClusterquotaHugepageCountRequestUsed is an instrument used to record metric
@@ -1169,11 +1658,8 @@ func (m ClusterquotaHugepageCountRequestUsed) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -1206,14 +1692,78 @@ func (m ClusterquotaHugepageCountRequestUsed) AddSet(ctx context.Context, incr i
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaHugepageCountRequestUsedObservable is an instrument used to record
+// metric values conforming to the
+// "openshift.clusterquota.hugepage_count.request.used" semantic conventions. It
+// represents the current observed total usage of the resource across all
+// projects.
+type ClusterquotaHugepageCountRequestUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaHugepageCountRequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The current observed total usage of the resource across all projects."),
+	metric.WithUnit("{hugepage}"),
+}
+
+// NewClusterquotaHugepageCountRequestUsedObservable returns a new
+// ClusterquotaHugepageCountRequestUsedObservable instrument.
+func NewClusterquotaHugepageCountRequestUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaHugepageCountRequestUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaHugepageCountRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaHugepageCountRequestUsedObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaHugepageCountRequestUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.hugepage_count.request.used",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaHugepageCountRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaHugepageCountRequestUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaHugepageCountRequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaHugepageCountRequestUsedObservable) Name() string {
+	return "openshift.clusterquota.hugepage_count.request.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaHugepageCountRequestUsedObservable) Unit() string {
+	return "{hugepage}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaHugepageCountRequestUsedObservable) Description() string {
+	return "The current observed total usage of the resource across all projects."
+}
+
+// AttrK8SHugepageSize returns a required attribute for the "k8s.hugepage.size"
+// semantic convention. It represents the size (identifier) of the K8s huge page.
+func (ClusterquotaHugepageCountRequestUsedObservable) AttrK8SHugepageSize(val string) attribute.KeyValue {
+	return attribute.String("k8s.hugepage.size", val)
 }
 
 // ClusterquotaMemoryLimitHard is an instrument used to record metric values
@@ -1294,11 +1844,8 @@ func (m ClusterquotaMemoryLimitHard) Add(ctx context.Context, incr int64, attrs 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -1322,14 +1869,71 @@ func (m ClusterquotaMemoryLimitHard) AddSet(ctx context.Context, incr int64, set
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaMemoryLimitHardObservable is an instrument used to record metric
+// values conforming to the "openshift.clusterquota.memory.limit.hard" semantic
+// conventions. It represents the enforced hard limit of the resource across all
+// projects.
+type ClusterquotaMemoryLimitHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaMemoryLimitHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The enforced hard limit of the resource across all projects."),
+	metric.WithUnit("By"),
+}
+
+// NewClusterquotaMemoryLimitHardObservable returns a new
+// ClusterquotaMemoryLimitHardObservable instrument.
+func NewClusterquotaMemoryLimitHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaMemoryLimitHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaMemoryLimitHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaMemoryLimitHardObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaMemoryLimitHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.memory.limit.hard",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaMemoryLimitHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaMemoryLimitHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaMemoryLimitHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaMemoryLimitHardObservable) Name() string {
+	return "openshift.clusterquota.memory.limit.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaMemoryLimitHardObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaMemoryLimitHardObservable) Description() string {
+	return "The enforced hard limit of the resource across all projects."
 }
 
 // ClusterquotaMemoryLimitUsed is an instrument used to record metric values
@@ -1410,11 +2014,8 @@ func (m ClusterquotaMemoryLimitUsed) Add(ctx context.Context, incr int64, attrs 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -1438,14 +2039,71 @@ func (m ClusterquotaMemoryLimitUsed) AddSet(ctx context.Context, incr int64, set
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaMemoryLimitUsedObservable is an instrument used to record metric
+// values conforming to the "openshift.clusterquota.memory.limit.used" semantic
+// conventions. It represents the current observed total usage of the resource
+// across all projects.
+type ClusterquotaMemoryLimitUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaMemoryLimitUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The current observed total usage of the resource across all projects."),
+	metric.WithUnit("By"),
+}
+
+// NewClusterquotaMemoryLimitUsedObservable returns a new
+// ClusterquotaMemoryLimitUsedObservable instrument.
+func NewClusterquotaMemoryLimitUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaMemoryLimitUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaMemoryLimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaMemoryLimitUsedObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaMemoryLimitUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.memory.limit.used",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaMemoryLimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaMemoryLimitUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaMemoryLimitUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaMemoryLimitUsedObservable) Name() string {
+	return "openshift.clusterquota.memory.limit.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaMemoryLimitUsedObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaMemoryLimitUsedObservable) Description() string {
+	return "The current observed total usage of the resource across all projects."
 }
 
 // ClusterquotaMemoryRequestHard is an instrument used to record metric values
@@ -1526,11 +2184,8 @@ func (m ClusterquotaMemoryRequestHard) Add(ctx context.Context, incr int64, attr
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -1554,14 +2209,71 @@ func (m ClusterquotaMemoryRequestHard) AddSet(ctx context.Context, incr int64, s
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaMemoryRequestHardObservable is an instrument used to record metric
+// values conforming to the "openshift.clusterquota.memory.request.hard" semantic
+// conventions. It represents the enforced hard limit of the resource across all
+// projects.
+type ClusterquotaMemoryRequestHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaMemoryRequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The enforced hard limit of the resource across all projects."),
+	metric.WithUnit("By"),
+}
+
+// NewClusterquotaMemoryRequestHardObservable returns a new
+// ClusterquotaMemoryRequestHardObservable instrument.
+func NewClusterquotaMemoryRequestHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaMemoryRequestHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaMemoryRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaMemoryRequestHardObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaMemoryRequestHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.memory.request.hard",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaMemoryRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaMemoryRequestHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaMemoryRequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaMemoryRequestHardObservable) Name() string {
+	return "openshift.clusterquota.memory.request.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaMemoryRequestHardObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaMemoryRequestHardObservable) Description() string {
+	return "The enforced hard limit of the resource across all projects."
 }
 
 // ClusterquotaMemoryRequestUsed is an instrument used to record metric values
@@ -1642,11 +2354,8 @@ func (m ClusterquotaMemoryRequestUsed) Add(ctx context.Context, incr int64, attr
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -1670,14 +2379,71 @@ func (m ClusterquotaMemoryRequestUsed) AddSet(ctx context.Context, incr int64, s
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaMemoryRequestUsedObservable is an instrument used to record metric
+// values conforming to the "openshift.clusterquota.memory.request.used" semantic
+// conventions. It represents the current observed total usage of the resource
+// across all projects.
+type ClusterquotaMemoryRequestUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaMemoryRequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The current observed total usage of the resource across all projects."),
+	metric.WithUnit("By"),
+}
+
+// NewClusterquotaMemoryRequestUsedObservable returns a new
+// ClusterquotaMemoryRequestUsedObservable instrument.
+func NewClusterquotaMemoryRequestUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaMemoryRequestUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaMemoryRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaMemoryRequestUsedObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaMemoryRequestUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.memory.request.used",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaMemoryRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaMemoryRequestUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaMemoryRequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaMemoryRequestUsedObservable) Name() string {
+	return "openshift.clusterquota.memory.request.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaMemoryRequestUsedObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaMemoryRequestUsedObservable) Description() string {
+	return "The current observed total usage of the resource across all projects."
 }
 
 // ClusterquotaObjectCountHard is an instrument used to record metric values
@@ -1768,11 +2534,8 @@ func (m ClusterquotaObjectCountHard) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -1805,14 +2568,78 @@ func (m ClusterquotaObjectCountHard) AddSet(ctx context.Context, incr int64, set
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaObjectCountHardObservable is an instrument used to record metric
+// values conforming to the "openshift.clusterquota.object_count.hard" semantic
+// conventions. It represents the enforced hard limit of the resource across all
+// projects.
+type ClusterquotaObjectCountHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaObjectCountHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The enforced hard limit of the resource across all projects."),
+	metric.WithUnit("{object}"),
+}
+
+// NewClusterquotaObjectCountHardObservable returns a new
+// ClusterquotaObjectCountHardObservable instrument.
+func NewClusterquotaObjectCountHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaObjectCountHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaObjectCountHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaObjectCountHardObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaObjectCountHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.object_count.hard",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaObjectCountHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaObjectCountHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaObjectCountHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaObjectCountHardObservable) Name() string {
+	return "openshift.clusterquota.object_count.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaObjectCountHardObservable) Unit() string {
+	return "{object}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaObjectCountHardObservable) Description() string {
+	return "The enforced hard limit of the resource across all projects."
+}
+
+// AttrK8SResourceQuotaResourceName returns a required attribute for the
+// "k8s.resourcequota.resource_name" semantic convention. It represents the name
+// of the K8s resource a resource quota defines.
+func (ClusterquotaObjectCountHardObservable) AttrK8SResourceQuotaResourceName(val string) attribute.KeyValue {
+	return attribute.String("k8s.resourcequota.resource_name", val)
 }
 
 // ClusterquotaObjectCountUsed is an instrument used to record metric values
@@ -1903,11 +2730,8 @@ func (m ClusterquotaObjectCountUsed) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -1940,14 +2764,78 @@ func (m ClusterquotaObjectCountUsed) AddSet(ctx context.Context, incr int64, set
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+}
+
+// ClusterquotaObjectCountUsedObservable is an instrument used to record metric
+// values conforming to the "openshift.clusterquota.object_count.used" semantic
+// conventions. It represents the current observed total usage of the resource
+// across all projects.
+type ClusterquotaObjectCountUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaObjectCountUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The current observed total usage of the resource across all projects."),
+	metric.WithUnit("{object}"),
+}
+
+// NewClusterquotaObjectCountUsedObservable returns a new
+// ClusterquotaObjectCountUsedObservable instrument.
+func NewClusterquotaObjectCountUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaObjectCountUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaObjectCountUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaObjectCountUsedObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaObjectCountUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.object_count.used",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaObjectCountUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaObjectCountUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaObjectCountUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaObjectCountUsedObservable) Name() string {
+	return "openshift.clusterquota.object_count.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaObjectCountUsedObservable) Unit() string {
+	return "{object}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaObjectCountUsedObservable) Description() string {
+	return "The current observed total usage of the resource across all projects."
+}
+
+// AttrK8SResourceQuotaResourceName returns a required attribute for the
+// "k8s.resourcequota.resource_name" semantic convention. It represents the name
+// of the K8s resource a resource quota defines.
+func (ClusterquotaObjectCountUsedObservable) AttrK8SResourceQuotaResourceName(val string) attribute.KeyValue {
+	return attribute.String("k8s.resourcequota.resource_name", val)
 }
 
 // ClusterquotaPersistentvolumeclaimCountHard is an instrument used to record
@@ -2039,11 +2927,8 @@ func (m ClusterquotaPersistentvolumeclaimCountHard) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -2077,11 +2962,8 @@ func (m ClusterquotaPersistentvolumeclaimCountHard) AddSet(ctx context.Context, 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -2093,6 +2975,76 @@ func (m ClusterquotaPersistentvolumeclaimCountHard) AddSet(ctx context.Context, 
 //
 // [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
 func (ClusterquotaPersistentvolumeclaimCountHard) AttrK8SStorageclassName(val string) attribute.KeyValue {
+	return attribute.String("k8s.storageclass.name", val)
+}
+
+// ClusterquotaPersistentvolumeclaimCountHardObservable is an instrument used to
+// record metric values conforming to the
+// "openshift.clusterquota.persistentvolumeclaim_count.hard" semantic
+// conventions. It represents the enforced hard limit of the resource across all
+// projects.
+type ClusterquotaPersistentvolumeclaimCountHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaPersistentvolumeclaimCountHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The enforced hard limit of the resource across all projects."),
+	metric.WithUnit("{persistentvolumeclaim}"),
+}
+
+// NewClusterquotaPersistentvolumeclaimCountHardObservable returns a new
+// ClusterquotaPersistentvolumeclaimCountHardObservable instrument.
+func NewClusterquotaPersistentvolumeclaimCountHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaPersistentvolumeclaimCountHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaPersistentvolumeclaimCountHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaPersistentvolumeclaimCountHardObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaPersistentvolumeclaimCountHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.persistentvolumeclaim_count.hard",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaPersistentvolumeclaimCountHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaPersistentvolumeclaimCountHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaPersistentvolumeclaimCountHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaPersistentvolumeclaimCountHardObservable) Name() string {
+	return "openshift.clusterquota.persistentvolumeclaim_count.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaPersistentvolumeclaimCountHardObservable) Unit() string {
+	return "{persistentvolumeclaim}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaPersistentvolumeclaimCountHardObservable) Description() string {
+	return "The enforced hard limit of the resource across all projects."
+}
+
+// AttrK8SStorageclassName returns an optional attribute for the
+// "k8s.storageclass.name" semantic convention. It represents the name of K8s
+// [StorageClass] object.
+//
+// [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
+func (ClusterquotaPersistentvolumeclaimCountHardObservable) AttrK8SStorageclassName(val string) attribute.KeyValue {
 	return attribute.String("k8s.storageclass.name", val)
 }
 
@@ -2185,11 +3137,8 @@ func (m ClusterquotaPersistentvolumeclaimCountUsed) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -2223,11 +3172,8 @@ func (m ClusterquotaPersistentvolumeclaimCountUsed) AddSet(ctx context.Context, 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -2239,6 +3185,76 @@ func (m ClusterquotaPersistentvolumeclaimCountUsed) AddSet(ctx context.Context, 
 //
 // [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
 func (ClusterquotaPersistentvolumeclaimCountUsed) AttrK8SStorageclassName(val string) attribute.KeyValue {
+	return attribute.String("k8s.storageclass.name", val)
+}
+
+// ClusterquotaPersistentvolumeclaimCountUsedObservable is an instrument used to
+// record metric values conforming to the
+// "openshift.clusterquota.persistentvolumeclaim_count.used" semantic
+// conventions. It represents the current observed total usage of the resource
+// across all projects.
+type ClusterquotaPersistentvolumeclaimCountUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaPersistentvolumeclaimCountUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The current observed total usage of the resource across all projects."),
+	metric.WithUnit("{persistentvolumeclaim}"),
+}
+
+// NewClusterquotaPersistentvolumeclaimCountUsedObservable returns a new
+// ClusterquotaPersistentvolumeclaimCountUsedObservable instrument.
+func NewClusterquotaPersistentvolumeclaimCountUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaPersistentvolumeclaimCountUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaPersistentvolumeclaimCountUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaPersistentvolumeclaimCountUsedObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaPersistentvolumeclaimCountUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.persistentvolumeclaim_count.used",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaPersistentvolumeclaimCountUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaPersistentvolumeclaimCountUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaPersistentvolumeclaimCountUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaPersistentvolumeclaimCountUsedObservable) Name() string {
+	return "openshift.clusterquota.persistentvolumeclaim_count.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaPersistentvolumeclaimCountUsedObservable) Unit() string {
+	return "{persistentvolumeclaim}"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaPersistentvolumeclaimCountUsedObservable) Description() string {
+	return "The current observed total usage of the resource across all projects."
+}
+
+// AttrK8SStorageclassName returns an optional attribute for the
+// "k8s.storageclass.name" semantic convention. It represents the name of K8s
+// [StorageClass] object.
+//
+// [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
+func (ClusterquotaPersistentvolumeclaimCountUsedObservable) AttrK8SStorageclassName(val string) attribute.KeyValue {
 	return attribute.String("k8s.storageclass.name", val)
 }
 
@@ -2330,11 +3346,8 @@ func (m ClusterquotaStorageRequestHard) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -2368,11 +3381,8 @@ func (m ClusterquotaStorageRequestHard) AddSet(ctx context.Context, incr int64, 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -2384,6 +3394,75 @@ func (m ClusterquotaStorageRequestHard) AddSet(ctx context.Context, incr int64, 
 //
 // [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
 func (ClusterquotaStorageRequestHard) AttrK8SStorageclassName(val string) attribute.KeyValue {
+	return attribute.String("k8s.storageclass.name", val)
+}
+
+// ClusterquotaStorageRequestHardObservable is an instrument used to record
+// metric values conforming to the "openshift.clusterquota.storage.request.hard"
+// semantic conventions. It represents the enforced hard limit of the resource
+// across all projects.
+type ClusterquotaStorageRequestHardObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaStorageRequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The enforced hard limit of the resource across all projects."),
+	metric.WithUnit("By"),
+}
+
+// NewClusterquotaStorageRequestHardObservable returns a new
+// ClusterquotaStorageRequestHardObservable instrument.
+func NewClusterquotaStorageRequestHardObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaStorageRequestHardObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaStorageRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaStorageRequestHardObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaStorageRequestHardObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.storage.request.hard",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaStorageRequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaStorageRequestHardObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaStorageRequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaStorageRequestHardObservable) Name() string {
+	return "openshift.clusterquota.storage.request.hard"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaStorageRequestHardObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaStorageRequestHardObservable) Description() string {
+	return "The enforced hard limit of the resource across all projects."
+}
+
+// AttrK8SStorageclassName returns an optional attribute for the
+// "k8s.storageclass.name" semantic convention. It represents the name of K8s
+// [StorageClass] object.
+//
+// [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
+func (ClusterquotaStorageRequestHardObservable) AttrK8SStorageclassName(val string) attribute.KeyValue {
 	return attribute.String("k8s.storageclass.name", val)
 }
 
@@ -2475,11 +3554,8 @@ func (m ClusterquotaStorageRequestUsed) Add(
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(
 		*o,
@@ -2513,11 +3589,8 @@ func (m ClusterquotaStorageRequestUsed) AddSet(ctx context.Context, incr int64, 
 		return
 	}
 
-	o := addOptPool.Get().(*[]metric.AddOption)
-	defer func() {
-		*o = (*o)[:0]
-		addOptPool.Put(o)
-	}()
+	o := metricpool.AddOptions()
+	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
 	m.Int64UpDownCounter.Add(ctx, incr, *o...)
@@ -2529,5 +3602,74 @@ func (m ClusterquotaStorageRequestUsed) AddSet(ctx context.Context, incr int64, 
 //
 // [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
 func (ClusterquotaStorageRequestUsed) AttrK8SStorageclassName(val string) attribute.KeyValue {
+	return attribute.String("k8s.storageclass.name", val)
+}
+
+// ClusterquotaStorageRequestUsedObservable is an instrument used to record
+// metric values conforming to the "openshift.clusterquota.storage.request.used"
+// semantic conventions. It represents the current observed total usage of the
+// resource across all projects.
+type ClusterquotaStorageRequestUsedObservable struct {
+	metric.Int64ObservableUpDownCounter
+}
+
+var newClusterquotaStorageRequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+	metric.WithDescription("The current observed total usage of the resource across all projects."),
+	metric.WithUnit("By"),
+}
+
+// NewClusterquotaStorageRequestUsedObservable returns a new
+// ClusterquotaStorageRequestUsedObservable instrument.
+func NewClusterquotaStorageRequestUsedObservable(
+	m metric.Meter,
+	opt ...metric.Int64ObservableUpDownCounterOption,
+) (ClusterquotaStorageRequestUsedObservable, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return ClusterquotaStorageRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = newClusterquotaStorageRequestUsedObservableOpts
+	} else {
+		opt = append(opt, newClusterquotaStorageRequestUsedObservableOpts...)
+	}
+
+	i, err := m.Int64ObservableUpDownCounter(
+		"openshift.clusterquota.storage.request.used",
+		opt...,
+	)
+	if err != nil {
+		return ClusterquotaStorageRequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+	}
+	return ClusterquotaStorageRequestUsedObservable{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m ClusterquotaStorageRequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
+	return m.Int64ObservableUpDownCounter
+}
+
+// Name returns the semantic convention name of the instrument.
+func (ClusterquotaStorageRequestUsedObservable) Name() string {
+	return "openshift.clusterquota.storage.request.used"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func (ClusterquotaStorageRequestUsedObservable) Unit() string {
+	return "By"
+}
+
+// Description returns the semantic convention description of the instrument
+func (ClusterquotaStorageRequestUsedObservable) Description() string {
+	return "The current observed total usage of the resource across all projects."
+}
+
+// AttrK8SStorageclassName returns an optional attribute for the
+// "k8s.storageclass.name" semantic convention. It represents the name of K8s
+// [StorageClass] object.
+//
+// [StorageClass]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#storageclass-v1-storage-k8s-io
+func (ClusterquotaStorageRequestUsedObservable) AttrK8SStorageclassName(val string) attribute.KeyValue {
 	return attribute.String("k8s.storageclass.name", val)
 }

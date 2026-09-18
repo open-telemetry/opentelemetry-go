@@ -44,6 +44,13 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 			attribute.StringSliceValue([]string{"value", "value-1"}),
 			attribute.ByteSliceValue([]byte{1, 2, 3}),
 		),
+		attribute.Map(
+			"map",
+			attribute.String("string", "value"),
+			attribute.StringSlice("stringSlice", []string{"value", "value-1"}),
+			attribute.ByteSlice("byteSlice", []byte("value")),
+			attribute.Slice("slice", attribute.StringValue("value")),
+		),
 	}
 
 	links := make([]trace.Link, count)
