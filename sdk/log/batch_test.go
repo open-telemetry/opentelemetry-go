@@ -1149,6 +1149,74 @@ func TestBatchProcessorMetrics(t *testing.T) {
 	require.NoError(t, bp.Shutdown(ctx))
 }
 
+func TestBatchProcessorShutdownRecordsQueueFullMetrics(t *testing.T) {
+	origID := counter.SetExporterID(blpComponentID)
+	t.Cleanup(func() { counter.SetExporterID(origID) })
+
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	e := &testExporter{}
+	e.ExportTrigger = make(chan struct{})
+	var release sync.Once
+	releaseExporter := func() {
+		release.Do(func() { close(e.ExportTrigger) })
+	}
+	bp := NewBatchProcessor(
+		e,
+		WithMaxQueueSize(1),
+		WithExportMaxBatchSize(1),
+		WithExportInterval(time.Hour),
+		WithExportTimeout(time.Hour),
+	)
+	ctx := t.Context()
+	defer func() {
+		releaseExporter()
+		assert.NoError(t, bp.Shutdown(t.Context()))
+	}()
+
+	r := new(Record)
+	r.SetBody(attribute.BoolValue(true))
+	require.NoError(t, bp.OnEmit(ctx, r))
+	require.Eventually(t, func() bool {
+		return e.ExportN() == 1
+	}, 2*time.Second, time.Microsecond, "export not started")
+
+	require.NoError(t, bp.OnEmit(ctx, r))
+	require.NoError(t, bp.OnEmit(ctx, r))
+	require.NoError(t, bp.OnEmit(ctx, r))
+
+	assertBLPMetrics(
+		t, reader,
+		blpQCap(1),
+		blpQSize(1),
+		blpProcessed(blpDPt(blpSet(), 1)),
+	)
+
+	shutdownErr := make(chan error, 1)
+	go func() { shutdownErr <- bp.Shutdown(ctx) }()
+	require.Eventually(t, func() bool {
+		return len(bp.shutdown) == 1
+	}, 2*time.Second, time.Microsecond, "shutdown not queued")
+
+	releaseExporter()
+	require.NoError(t, <-shutdownErr)
+
+	assertBLPMetrics(
+		t, reader,
+		blpProcessed(
+			blpDPt(blpSet(), 2),
+			blpDPt(blpSet(observ.ErrQueueFull), 2),
+		),
+	)
+}
+
 func blpSet(attrs ...attribute.KeyValue) attribute.Set {
 	return attribute.NewSet(append([]attribute.KeyValue{
 		semconv.OTelComponentTypeBatchingLogProcessor,
@@ -1160,7 +1228,7 @@ func blpDPt(set attribute.Set, value int64) metricdata.DataPoint[int64] {
 	return metricdata.DataPoint[int64]{Attributes: set, Value: value}
 }
 
-func blpQCap(v int64) metricdata.Metrics {
+func blpQCap(v int64) metricdata.Metrics { //nolint:unparam // This is a reusable test utility function.
 	return metricdata.Metrics{
 		Name:        otelconv.SDKProcessorLogQueueCapacity{}.Name(),
 		Description: otelconv.SDKProcessorLogQueueCapacity{}.Description(),

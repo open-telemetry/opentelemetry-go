@@ -5,6 +5,9 @@ package main
 
 import (
 	"bytes"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -91,6 +94,85 @@ func TestNoInvalidObservableHistogramTypes(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("WalkDir(%q) error = %v", semconvDir, err)
+	}
+}
+
+// TestGeneratedMetricHelpersReturnAfterEmptyAttrs checks every retained helper
+// affected by the missing return in semconv v1.32.0 through v1.34.0.
+func TestGeneratedMetricHelpersReturnAfterEmptyAttrs(t *testing.T) {
+	t.Parallel()
+
+	packages := map[string][]string{
+		"containerconv": {"Uptime"},
+		"goconv":        {"ScheduleDuration"},
+		"k8sconv":       {"NodeCPUUsage", "NodeMemoryUsage", "NodeUptime", "PodCPUUsage", "PodMemoryUsage", "PodUptime"},
+		"processconv":   {"Uptime"},
+		"rpcconv":       {"ClientDuration", "ClientRequestSize", "ClientRequestsPerRPC", "ClientResponseSize", "ClientResponsesPerRPC", "ServerDuration", "ServerRequestSize", "ServerRequestsPerRPC", "ServerResponseSize", "ServerResponsesPerRPC"},
+		"systemconv":    {"Uptime"},
+	}
+	versions := []string{"v1.32.0", "v1.33.0", "v1.34.0"}
+	fset := token.NewFileSet()
+
+	for _, version := range versions {
+		for pkg, functions := range packages {
+			path := filepath.Join("..", "..", "..", "semconv", version, pkg, "metric.go")
+			file, err := parser.ParseFile(fset, path, nil, 0)
+			if err != nil {
+				t.Fatalf("ParseFile(%q) error = %v", path, err)
+			}
+
+			for _, function := range functions {
+				matches := 0
+				ast.Inspect(file, func(node ast.Node) bool {
+					fn, ok := node.(*ast.FuncDecl)
+					if !ok || fn.Recv == nil || fn.Name.Name != "Record" {
+						return true
+					}
+					if len(fn.Recv.List) != 1 || len(fn.Recv.List[0].Names) != 1 || fn.Recv.List[0].Names[0].Name != "m" {
+						return true
+					}
+					receiver, ok := fn.Recv.List[0].Type.(*ast.Ident)
+					if !ok || receiver.Name != function {
+						return true
+					}
+
+					fastPaths := 0
+					ast.Inspect(fn.Body, func(node ast.Node) bool {
+						ifStmt, ok := node.(*ast.IfStmt)
+						if !ok {
+							return true
+						}
+						condition, ok := ifStmt.Cond.(*ast.BinaryExpr)
+						if !ok || condition.Op != token.EQL {
+							return true
+						}
+						call, ok := condition.X.(*ast.CallExpr)
+						zero, zeroOK := condition.Y.(*ast.BasicLit)
+						if !ok || !zeroOK || zero.Kind != token.INT || zero.Value != "0" || len(call.Args) != 1 {
+							return true
+						}
+						fn, fnOK := call.Fun.(*ast.Ident)
+						arg, argOK := call.Args[0].(*ast.Ident)
+						if !fnOK || !argOK || fn.Name != "len" || arg.Name != "attrs" {
+							return true
+						}
+						if len(ifStmt.Body.List) > 0 {
+							if _, ok := ifStmt.Body.List[len(ifStmt.Body.List)-1].(*ast.ReturnStmt); ok {
+								fastPaths++
+							}
+						}
+						return true
+					})
+					if fastPaths == 1 {
+						matches++
+					}
+					return false
+				})
+				if matches != 1 {
+					t.Errorf("%s: %s.Record empty-attrs fast paths = %d, want 1", path, function, matches)
+				}
+			}
+		}
 	}
 }
 

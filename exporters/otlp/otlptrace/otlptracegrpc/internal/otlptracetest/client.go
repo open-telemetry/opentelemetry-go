@@ -16,6 +16,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 )
 
+// RunExporterShutdownTest runs a suite of subtests verifying that clients
+// built by factory correctly honor Stop's timeout and cancellation.
 func RunExporterShutdownTest(t *testing.T, factory func() otlptrace.Client) {
 	t.Run("testClientStopHonorsTimeout", func(t *testing.T) {
 		testClientStopHonorsTimeout(t, factory())
