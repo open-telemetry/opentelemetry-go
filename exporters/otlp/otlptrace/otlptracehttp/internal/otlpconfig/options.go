@@ -160,6 +160,10 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 	}
 	if cfg.Traces.Compression == GzipCompression {
 		dialOptsPrefix = append(dialOptsPrefix, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
+	} else if cfg.Traces.Compression == ZstdCompression {
+		// A literal: zstd.go, which registers the codec under this name,
+		// isn't generated for the HTTP-generated sibling sharing this func.
+		dialOptsPrefix = append(dialOptsPrefix, grpc.WithDefaultCallOptions(grpc.UseCompressor("zstd")))
 	}
 	if cfg.ReconnectionPeriod != 0 {
 		p := grpc.ConnectParams{

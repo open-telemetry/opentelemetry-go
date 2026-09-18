@@ -110,8 +110,11 @@ func WithReconnectionPeriod(rp time.Duration) Option {
 }
 
 func compressorToCompression(compressor string) otlpconfig.Compression {
-	if compressor == "gzip" {
+	switch compressor {
+	case "gzip":
 		return otlpconfig.GzipCompression
+	case "zstd":
+		return otlpconfig.ZstdCompression
 	}
 
 	otel.Handle(fmt.Errorf("invalid compression type: '%s', using no compression as default", compressor))
@@ -119,7 +122,7 @@ func compressorToCompression(compressor string) otlpconfig.Compression {
 }
 
 // WithCompressor sets the compressor for the gRPC client to use when sending
-// requests. Supported compressor values: "gzip".
+// requests. Supported compressor values: "gzip", "zstd".
 func WithCompressor(compressor string) Option {
 	return wrappedOption{otlpconfig.WithCompression(compressorToCompression(compressor))}
 }

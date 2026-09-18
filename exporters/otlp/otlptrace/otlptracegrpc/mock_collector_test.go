@@ -15,6 +15,7 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/stats"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlptracetest"
 )
@@ -23,9 +24,10 @@ func makeMockCollector(t testing.TB, mockConfig *mockConfig) *mockCollector {
 	return &mockCollector{
 		t: t,
 		traceSvc: &mockTraceService{
-			storage: otlptracetest.NewSpansStorage(),
-			errors:  mockConfig.errors,
-			partial: mockConfig.partial,
+			storage:     otlptracetest.NewSpansStorage(),
+			errors:      mockConfig.errors,
+			partial:     mockConfig.partial,
+			compression: &compressionStatsHandler{},
 		},
 		stopped: make(chan struct{}),
 	}
@@ -41,12 +43,17 @@ type mockTraceService struct {
 	storage     otlptracetest.SpansStorage
 	headers     metadata.MD
 	exportBlock chan struct{}
+	compression *compressionStatsHandler
 }
 
 func (mts *mockTraceService) getHeaders() metadata.MD {
 	mts.mu.RLock()
 	defer mts.mu.RUnlock()
 	return mts.headers
+}
+
+func (mts *mockTraceService) getCompression() string {
+	return mts.compression.getCompression()
 }
 
 func (mts *mockTraceService) getSpans() []*tracepb.Span {
@@ -149,6 +156,43 @@ func (mc *mockCollector) getHeaders() metadata.MD {
 	return mc.traceSvc.getHeaders()
 }
 
+func (mc *mockCollector) getCompression() string {
+	return mc.traceSvc.getCompression()
+}
+
+// compressionStatsHandler records the gRPC compression algorithm negotiated
+// for each received request. This is the only way to observe it: the
+// "grpc-encoding" header isn't exposed through metadata.FromIncomingContext,
+// which strips reserved gRPC headers.
+type compressionStatsHandler struct {
+	mu          sync.RWMutex
+	compression string
+}
+
+func (h *compressionStatsHandler) TagRPC(ctx context.Context, _ *stats.RPCTagInfo) context.Context {
+	return ctx
+}
+
+func (h *compressionStatsHandler) HandleRPC(_ context.Context, s stats.RPCStats) {
+	if in, ok := s.(*stats.InHeader); ok && !in.Client {
+		h.mu.Lock()
+		h.compression = in.Compression
+		h.mu.Unlock()
+	}
+}
+
+func (h *compressionStatsHandler) TagConn(ctx context.Context, _ *stats.ConnTagInfo) context.Context {
+	return ctx
+}
+
+func (h *compressionStatsHandler) HandleConn(context.Context, stats.ConnStats) {}
+
+func (h *compressionStatsHandler) getCompression() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.compression
+}
+
 // runMockCollector is a helper function to create a mock Collector.
 func runMockCollector(tb testing.TB) *mockCollector {
 	tb.Helper()
@@ -165,8 +209,8 @@ func runMockCollectorWithConfig(tb testing.TB, mockConfig *mockConfig) *mockColl
 	ln, err := (&net.ListenConfig{}).Listen(tb.Context(), "tcp", mockConfig.endpoint)
 	require.NoError(tb, err, "net.Listen")
 
-	srv := grpc.NewServer()
 	mc := makeMockCollector(tb, mockConfig)
+	srv := grpc.NewServer(grpc.StatsHandler(mc.traceSvc.compression))
 	collectortracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
 	go func() {
 		_ = srv.Serve(ln)

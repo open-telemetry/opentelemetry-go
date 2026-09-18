@@ -29,6 +29,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/stats"
 	"google.golang.org/protobuf/proto"
 
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
@@ -85,9 +86,43 @@ type GRPCCollector struct {
 	headers   metadata.MD
 	storage   *Storage
 
-	resultCh <-chan ExportResult
-	listener net.Listener
-	srv      *grpc.Server
+	resultCh    <-chan ExportResult
+	listener    net.Listener
+	srv         *grpc.Server
+	compression *compressionStatsHandler
+}
+
+// compressionStatsHandler records the gRPC compression algorithm negotiated
+// for each received request. This is the only way to observe it: the
+// "grpc-encoding" header isn't exposed through metadata.FromIncomingContext,
+// which strips reserved gRPC headers.
+type compressionStatsHandler struct {
+	mu          sync.Mutex
+	compression string
+}
+
+func (h *compressionStatsHandler) TagRPC(ctx context.Context, _ *stats.RPCTagInfo) context.Context {
+	return ctx
+}
+
+func (h *compressionStatsHandler) HandleRPC(_ context.Context, s stats.RPCStats) {
+	if in, ok := s.(*stats.InHeader); ok && !in.Client {
+		h.mu.Lock()
+		h.compression = in.Compression
+		h.mu.Unlock()
+	}
+}
+
+func (h *compressionStatsHandler) TagConn(ctx context.Context, _ *stats.ConnTagInfo) context.Context {
+	return ctx
+}
+
+func (h *compressionStatsHandler) HandleConn(context.Context, stats.ConnStats) {}
+
+func (h *compressionStatsHandler) get() string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.compression
 }
 
 // NewGRPCCollector returns a *GRPCCollector that is listening at the provided
@@ -105,8 +140,9 @@ func NewGRPCCollector(endpoint string, resultCh <-chan ExportResult) (*GRPCColle
 	}
 
 	c := &GRPCCollector{
-		storage:  NewStorage(),
-		resultCh: resultCh,
+		storage:     NewStorage(),
+		resultCh:    resultCh,
+		compression: &compressionStatsHandler{},
 	}
 
 	var err error
@@ -115,7 +151,7 @@ func NewGRPCCollector(endpoint string, resultCh <-chan ExportResult) (*GRPCColle
 		return nil, err
 	}
 
-	c.srv = grpc.NewServer()
+	c.srv = grpc.NewServer(grpc.StatsHandler(c.compression))
 	collpb.RegisterMetricsServiceServer(c.srv, c)
 	go func() { _ = c.srv.Serve(c.listener) }()
 
@@ -142,6 +178,12 @@ func (c *GRPCCollector) Headers() map[string][]string {
 	c.headersMu.Lock()
 	defer c.headersMu.Unlock()
 	return metadata.Join(c.headers)
+}
+
+// Compression returns the gRPC compression algorithm negotiated for the most
+// recently received request.
+func (c *GRPCCollector) Compression() string {
+	return c.compression.get()
 }
 
 // Export handles the export req.

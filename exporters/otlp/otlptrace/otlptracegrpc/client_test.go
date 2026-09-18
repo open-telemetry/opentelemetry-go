@@ -127,6 +127,27 @@ func TestNewEndToEnd(t *testing.T) {
 	}
 }
 
+// TestWithZstdCompressorAppliesOnTheWire checks the collector actually
+// observes zstd on the wire, not just that the export succeeds: an invalid
+// WithCompressor value also succeeds, silently uncompressed.
+func TestWithZstdCompressorAppliesOnTheWire(t *testing.T) {
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	exp := newGRPCExporter(ctx, t, mc.endpoint, otlptracegrpc.WithCompressor("zstd"))
+	t.Cleanup(func() {
+		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
+		defer cancel()
+		require.NoError(t, exp.Shutdown(ctx))
+	})
+
+	require.NoError(t, exp.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
+	assert.Eventually(t, func() bool {
+		return mc.getCompression() == "zstd"
+	}, 10*time.Second, 10*time.Millisecond)
+}
+
 func TestWithEndpointURL(t *testing.T) {
 	mc := runMockCollector(t)
 
