@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+package metricdatatest
 
 import (
 	"encoding/json"

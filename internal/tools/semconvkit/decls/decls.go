@@ -3,7 +3,7 @@
 
 // Package decls provides a set of functions to parse and analyze Go source
 // code and get the declarations within it.
-package decls // import "go.opentelemetry.io/otel/internal/tools/semconvkit/decls"
+package decls
 
 import (
 	"go/ast"

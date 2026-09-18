@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+package aggregate
 
 import (
 	"math"
@@ -228,8 +228,13 @@ type limitedSyncMap[V any] struct {
 	lenMux   sync.Mutex
 }
 
-func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue func(attribute.Set) V) V {
-	actual, loaded := m.Load(fltrAttr.Equivalent())
+// LoadOrStoreAttr performs lookup using lazy.Distinct() on the hot path without
+// constructing a Set. If the entry is not found and the aggregation limit has not
+// been exceeded, lazy.Set() is called to construct the attribute.Set for storage.
+// If the aggregation limit is exceeded, overflowSet is used instead without calling lazy.Set().
+func (m *limitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes, newValue func(attribute.Set) V) V {
+	distinct := lazy.Distinct()
+	actual, loaded := m.Load(distinct)
 	if loaded {
 		return actual.(V)
 	}
@@ -246,19 +251,66 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(fltrAttr attribute.Set, newValue fun
 	// re-fetch now that we hold the lock to ensure we don't use the overflow
 	// set unless we are sure the attribute set isn't being written
 	// concurrently.
-	actual, loaded = m.Load(fltrAttr.Equivalent())
+	actual, loaded = m.Load(distinct)
 	if loaded {
 		return actual.(V)
 	}
 
+	var fltrAttr attribute.Set
 	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
 		fltrAttr = overflowSet
+		distinct = overflowSet.Equivalent()
+	} else {
+		fltrAttr = lazy.Set()
 	}
-	actual, loaded = m.LoadOrStore(fltrAttr.Equivalent(), newValue(fltrAttr))
+	actual, loaded = m.LoadOrStore(distinct, newValue(fltrAttr))
 	if !loaded {
 		m.len++
 	}
 	return actual.(V)
+}
+
+// LoadOrStoreAttrReclaiming is equivalent to LoadOrStoreAttr, except that a
+// slot released after overflow was created can be reused for a new attribute
+// set. The shared overflow entry remains available for measurements made while
+// all normal slots are occupied. It reports whether the value was loaded and
+// whether this lookup was routed to the shared overflow entry.
+func (m *limitedSyncMap[V]) LoadOrStoreAttrReclaiming(
+	lazy lazyFilteredAttributes,
+	newValue func(attribute.Set, bool) V,
+) (value V, loaded, overflowed bool) {
+	distinct := lazy.Distinct()
+	actual, loaded := m.Load(distinct)
+	if loaded {
+		return actual.(V), true, false
+	}
+
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+
+	actual, loaded = m.Load(distinct)
+	if loaded {
+		return actual.(V), true, false
+	}
+
+	overflow, hasOverflow := m.Load(overflowSet.Equivalent())
+	if m.aggLimit > 0 && hasOverflow && m.len >= m.aggLimit {
+		return overflow.(V), true, true
+	}
+
+	var attrs attribute.Set
+	overflowed = m.aggLimit > 0 && !hasOverflow && m.len >= m.aggLimit-1
+	if overflowed {
+		attrs = overflowSet
+		distinct = overflowSet.Equivalent()
+	} else {
+		attrs = lazy.Set()
+	}
+	actual, loaded = m.LoadOrStore(distinct, newValue(attrs, overflowed))
+	if !loaded {
+		m.len++
+	}
+	return actual.(V), loaded, overflowed
 }
 
 func (m *limitedSyncMap[V]) Clear() {
@@ -266,6 +318,18 @@ func (m *limitedSyncMap[V]) Clear() {
 	defer m.lenMux.Unlock()
 	m.len = 0
 	m.Map.Clear()
+}
+
+// CompareAndDelete deletes the entry for key if its value is equal to old.
+// It reports whether the entry was deleted.
+func (m *limitedSyncMap[V]) CompareAndDelete(key attribute.Distinct, old V) bool {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+	if !m.Map.CompareAndDelete(key, old) {
+		return false
+	}
+	m.len--
+	return true
 }
 
 func (m *limitedSyncMap[V]) Len() int {

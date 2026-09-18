@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package metric
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 func TestManualReader(t *testing.T) {

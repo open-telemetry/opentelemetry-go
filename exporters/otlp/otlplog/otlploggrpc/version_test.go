@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// regex taken from https://github.com/Masterminds/semver/tree/v3.1.1
+// versionRegex is based on https://github.com/Masterminds/semver/tree/v3.1.1.
 var versionRegex = regexp.MustCompile(`^v?([0-9]+)(\.[0-9]+)?(\.[0-9]+)?` +
 	`(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?` +
 	`(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$`)

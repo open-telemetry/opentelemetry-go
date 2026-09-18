@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/logtest"
 )
@@ -22,9 +23,9 @@ func Example() {
 	r := log.Record{}
 	r.SetTimestamp(time.Now())
 	r.SetSeverity(log.SeverityInfo)
-	r.SetBody(log.StringValue("Hello there"))
-	r.AddAttributes(log.String("foo", "bar"))
-	r.AddAttributes(log.Int("n", 1))
+	r.SetBody(attribute.StringValue("Hello there"))
+	r.AddAttributes(attribute.String("foo", "bar"))
+	r.AddAttributes(attribute.Int("n", 1))
 	l.Emit(t.Context(), r)
 
 	// Verify that the expected and actual log records match.
@@ -32,10 +33,10 @@ func Example() {
 		logtest.Scope{Name: "Example"}: []logtest.Record{
 			{
 				Severity: log.SeverityInfo,
-				Body:     log.StringValue("Hello there"),
-				Attributes: []log.KeyValue{
-					log.Int("n", 1),
-					log.String("foo", "bar"),
+				Body:     attribute.StringValue("Hello there"),
+				Attributes: []attribute.KeyValue{
+					attribute.Int("n", 1),
+					attribute.String("foo", "bar"),
 				},
 			},
 		},

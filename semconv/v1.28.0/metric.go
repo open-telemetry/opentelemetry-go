@@ -3,7 +3,7 @@
 
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-package semconv // import "go.opentelemetry.io/otel/semconv/v1.28.0"
+package semconv
 
 const (
 	// ContainerCPUTime is the metric conforming to the "container.cpu.time"

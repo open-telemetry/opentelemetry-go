@@ -3,7 +3,7 @@
 
 // Package metricpool provides shared pools for semantic convention metric
 // measurement options.
-package metricpool // import "go.opentelemetry.io/otel/semconv/internal/metricpool"
+package metricpool
 
 import (
 	"sync"

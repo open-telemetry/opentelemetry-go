@@ -543,6 +543,7 @@ func (Uptime) Description() string {
 func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

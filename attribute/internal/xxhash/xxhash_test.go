@@ -11,6 +11,9 @@ import (
 )
 
 func TestIntegrity(t *testing.T) {
+	// Verify hashing a string prefix and a uint64 suffix produces the same
+	// digest as hashing the equivalent byte sequence directly. This ensures
+	// Uint64 uses the expected little-endian byte encoding.
 	data := []byte{'1', '2', 3, 4, 5, 6, 7, 8, 9, 10}
 	h0 := New()
 	want := h0.String(string(data))

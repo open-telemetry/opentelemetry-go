@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package attribute // import "go.opentelemetry.io/otel/attribute"
+package attribute
 
 import (
 	"cmp"
@@ -25,8 +25,14 @@ type keyVal struct {
 var keyVals = []keyVal{
 	{name: "BoolTrue", kv: func(k string) KeyValue { return Bool(k, true) }},
 	{name: "BoolFalse", kv: func(k string) KeyValue { return Bool(k, false) }},
+	{name: "BoolSliceLen0", kv: func(k string) KeyValue { return BoolSlice(k, []bool{}) }},
+	{name: "BoolSliceLen1", kv: func(k string) KeyValue { return BoolSlice(k, []bool{true}) }},
 	{name: "BoolSliceLen2", kv: func(k string) KeyValue { return BoolSlice(k, []bool{false, true}) }},
 	{name: "BoolSliceLen3", kv: func(k string) KeyValue { return BoolSlice(k, []bool{true, true, false}) }},
+	{
+		name: "BoolSliceLen5",
+		kv:   func(k string) KeyValue { return BoolSlice(k, []bool{true, false, true, true, false}) },
+	},
 	{name: "IntNegative", kv: func(k string) KeyValue { return Int(k, -1278) }},
 	{name: "IntZero", kv: func(k string) KeyValue { return Int(k, 0) }}, // Should be different than false above.
 	{name: "IntSliceLen5", kv: func(k string) KeyValue { return IntSlice(k, []int{3, 23, 21, -8, 0}) }},
@@ -38,6 +44,9 @@ var keyVals = []keyVal{
 	{name: "Int64", kv: func(k string) KeyValue { return Int64(k, 29369) }},
 	{name: "Int64SliceLen4", kv: func(k string) KeyValue { return Int64Slice(k, []int64{3826, -38, -29, -1}) }},
 	{name: "Int64SliceWithZero", kv: func(k string) KeyValue { return Int64Slice(k, []int64{8, -328, 29, 0}) }},
+	{name: "Int64SliceLen0", kv: func(k string) KeyValue { return Int64Slice(k, []int64{}) }},
+	{name: "Int64SliceLen2", kv: func(k string) KeyValue { return Int64Slice(k, []int64{7, -7}) }},
+	{name: "Int64SliceLen3", kv: func(k string) KeyValue { return Int64Slice(k, []int64{11, -22, 33}) }},
 	{name: "Float64", kv: func(k string) KeyValue { return Float64(k, -0.3812381) }},
 	{name: "Float64Large", kv: func(k string) KeyValue { return Float64(k, 1e32) }},
 	{
@@ -48,10 +57,20 @@ var keyVals = []keyVal{
 		name: "Float64SliceLarge",
 		kv:   func(k string) KeyValue { return Float64Slice(k, []float64{-13e8, -32.8, 4., 1e28}) },
 	},
+	{name: "Float64SliceLen0", kv: func(k string) KeyValue { return Float64Slice(k, []float64{}) }},
+	{name: "Float64SliceLen1", kv: func(k string) KeyValue { return Float64Slice(k, []float64{3.14}) }},
+	{name: "Float64SliceLen2", kv: func(k string) KeyValue { return Float64Slice(k, []float64{0.15, -2.5}) }},
+	{name: "Float64SliceLen3", kv: func(k string) KeyValue { return Float64Slice(k, []float64{1.5, -2.5, 3.5}) }},
 	{name: "StringFoo", kv: func(k string) KeyValue { return String(k, "foo") }},
 	{name: "StringBar", kv: func(k string) KeyValue { return String(k, "bar") }},
+	{name: "StringSliceLen0", kv: func(k string) KeyValue { return StringSlice(k, []string{}) }},
+	{name: "StringSliceLen2", kv: func(k string) KeyValue { return StringSlice(k, []string{"alpha", "beta"}) }},
 	{name: "StringSliceLen3", kv: func(k string) KeyValue { return StringSlice(k, []string{"foo", "bar", "baz"}) }},
 	{name: "StringSliceLooksLikeIntSlice", kv: func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) }},
+	{
+		name: "StringSliceLen5",
+		kv:   func(k string) KeyValue { return StringSlice(k, []string{"a", "bb", "ccc", "dddd", "eeeee"}) },
+	},
 	{name: "ByteSliceFoo", kv: func(k string) KeyValue { return ByteSlice(k, []byte("foo")) }},
 	{name: "ByteSliceLooksLikeIntSlice", kv: func(k string) KeyValue { return ByteSlice(k, []byte("[]i1")) }},
 	{name: "SliceLen0", kv: func(k string) KeyValue { return Slice(k) }},
@@ -211,12 +230,78 @@ func TestHashValueMapOrdering(t *testing.T) {
 			reversed := slices.Clone(tt.kvs)
 			slices.Reverse(reversed)
 
-			got := hashValue(xxhash.New(), MapValue(tt.kvs...)).Sum64()
-			want := hashValue(xxhash.New(), MapValue(reversed...)).Sum64()
+			h1 := xxhash.New()
+			h1 = hashValue(h1, MapValue(tt.kvs...))
+			got := h1.Sum64()
+			h2 := xxhash.New()
+			h2 = hashValue(h2, MapValue(reversed...))
+			want := h2.Sum64()
 			if got != want {
 				t.Fatalf("hashValue(MapValue(%v)) = %d, want %d", tt.kvs, got, want)
 			}
 		})
+	}
+}
+
+// TestHasherMatchesSetEquivalent pins the invariant that a Hasher written in
+// ascending key order produces the same Distinct as the equivalent Set. Hasher
+// and Set hashing share their initialization, per-attribute mixing, and final
+// framing, so this holds structurally today. The test guards against a future
+// change that splits those paths apart.
+func TestHasherMatchesSetEquivalent(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
+		h := NewHasher()
+		set := NewSet()
+		if got, want := h.Distinct(), set.Equivalent(); got != want {
+			t.Errorf("Hasher.Distinct() = %v, NewSet().Equivalent() = %v", got, want)
+		}
+	})
+
+	for _, gen := range keyVals {
+		t.Run(gen.name, func(t *testing.T) {
+			kv := gen.kv("k")
+			h := NewHasher()
+			h.Write(kv)
+			set := NewSet(kv)
+			if got, want := h.Distinct(), set.Equivalent(); got != want {
+				t.Errorf("Hasher.Distinct() = %v, NewSet(%v).Equivalent() = %v", got, kv, want)
+			}
+		})
+	}
+
+	t.Run("All", func(t *testing.T) {
+		// Distinct keys in ascending order, which is the precondition Write
+		// documents and the order NewSet sorts into.
+		attrs := make([]KeyValue, len(keyVals))
+		for i, gen := range keyVals {
+			attrs[i] = gen.kv(fmt.Sprintf("k%03d", i))
+		}
+		h := NewHasher()
+		for _, kv := range attrs {
+			h.Write(kv)
+		}
+		set := NewSet(attrs...)
+		if got, want := h.Distinct(), set.Equivalent(); got != want {
+			t.Errorf("Hasher.Distinct() = %v, NewSet(...).Equivalent() = %v", got, want)
+		}
+	})
+}
+
+func TestHasherReset(t *testing.T) {
+	h := NewHasher()
+	h.Write(String("a", "1"))
+	h.Write(String("b", "2"))
+	distinctBefore := h.Distinct()
+
+	h.Reset()
+	if got, want := h.Distinct(), emptySet.Equivalent(); got != want {
+		t.Errorf("h.Distinct() after Reset = %v, want %v", got, want)
+	}
+
+	h.Write(String("a", "1"))
+	h.Write(String("b", "2"))
+	if got, want := h.Distinct(), distinctBefore; got != want {
+		t.Errorf("h.Distinct() after re-write = %v, want %v", got, want)
 	}
 }
 
@@ -316,7 +401,9 @@ func BenchmarkHashValueSlice(b *testing.B) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				hashValue(xxhash.New(), bench.v).Sum64()
+				h := xxhash.New()
+				h = hashValue(h, bench.v)
+				_ = h.Sum64()
 			}
 		})
 	}
@@ -363,7 +450,9 @@ func BenchmarkHashValueMap(b *testing.B) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				hashValue(xxhash.New(), bench.v).Sum64()
+				h := xxhash.New()
+				h = hashValue(h, bench.v)
+				_ = h.Sum64()
 			}
 		})
 	}
@@ -602,4 +691,21 @@ func FuzzHashKVs(f *testing.F) {
 			}
 		}
 	})
+}
+
+func BenchmarkHasher(b *testing.B) {
+	kvs := []KeyValue{
+		String("A", "alpha"),
+		Int64("B", 42),
+		Bool("C", true),
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		h := NewHasher()
+		for _, kv := range kvs {
+			h.Write(kv)
+		}
+		_ = h.Distinct()
+	}
 }

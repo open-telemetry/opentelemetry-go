@@ -1,8 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package x contains experimental metric options.
-package x // import "go.opentelemetry.io/otel/metric/x"
+// Package x contains experimental metric options and extension interfaces.
+package x
 
 import (
 	"go.opentelemetry.io/otel/attribute"

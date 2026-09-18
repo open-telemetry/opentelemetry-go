@@ -3,7 +3,7 @@
 
 //go:generate stringer -type=InstrumentKind -trimprefix=InstrumentKind
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package metric
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
 )
 
 var zeroScope instrumentation.Scope
@@ -141,6 +142,9 @@ type Stream struct {
 	// the attribute will not be recorded, otherwise, if it returns true, it
 	// will record the attribute.
 	//
+	// If nil, the instrument's advisory attribute keys are used. If the
+	// instrument has no advisory attribute keys, all attributes are recorded.
+	//
 	// Note that attributes filtered out by a View may still appear on Exemplars,
 	// because Exemplars are recorded with the dropped measurement attributes
 	// when View attribute filtering is applied.
@@ -206,9 +210,11 @@ func extractRawKVs[T any](opts []T) []attribute.KeyValue {
 }
 
 func resolveAttributes(configAttrs attribute.Set, rawKVs []attribute.KeyValue) attribute.Set {
+	configAttrs, _ = attrnorm.SetDedup(configAttrs)
 	if len(rawKVs) == 0 {
 		return configAttrs
 	}
+	rawKVs, _ = attrnorm.KeyValuesDedup(rawKVs)
 	merged := make([]attribute.KeyValue, 0, configAttrs.Len()+len(rawKVs))
 	merged = append(merged, configAttrs.ToSlice()...)
 	// rawKVs are appended after configAttrs, meaning they will override any duplicate keys in configAttrs.
