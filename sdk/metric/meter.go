@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
@@ -27,8 +28,9 @@ var ErrInstrumentName = errors.New("invalid instrument name")
 type meter struct {
 	embedded.Meter
 
-	scope instrumentation.Scope
-	pipes pipelines
+	scope   instrumentation.Scope
+	pipes   pipelines
+	enabled versionedEnabled
 
 	int64Insts             *cacheWithErr[instID, *int64Inst]
 	float64Insts           *cacheWithErr[instID, *float64Inst]
@@ -58,6 +60,59 @@ func newMeter(s instrumentation.Scope, p pipelines) *meter {
 		float64ObservableInsts: &float64ObservableInsts,
 		int64Resolver:          newResolver[int64](p, &viewCache),
 		float64Resolver:        newResolver[float64](p, &viewCache),
+	}
+}
+
+func (m *meter) setEnabled(enabled bool) {
+	// 0 is a placeholder version until a real one is threaded through from
+	// the configurator; see StoreIfNewer's doc comment for why ties (0
+	// against 0) are allowed to overwrite.
+	m.enabled.StoreIfNewer(0, enabled)
+}
+
+// setEnabledIfNewer applies enabled if version is at least as new as the
+// version already stored; see versionedEnabled.StoreIfNewer.
+func (m *meter) setEnabledIfNewer(version uint64, enabled bool) { // nolint:revive  // enabled is not a control flag.
+	m.enabled.StoreIfNewer(version, enabled)
+}
+
+// versionedEnabled holds an enabled bool and the version it was last set
+// under.
+type versionedEnabled struct {
+	// state contains a 63-bit version + 1-bit enabled.
+	// These are contained together so a write can atomically compare
+	// the stored version against its own and decide whether to overwrite.
+	// Add/Record/Observe call still does a single atomic load, with no
+	// extra allocation or synchronization added to the hot path.
+	state atomic.Uint64
+}
+
+// Load reports the currently stored enabled bool.
+func (ve *versionedEnabled) Load() bool {
+	return ve.state.Load()&1 != 0
+}
+
+// StoreIfNewer sets enabled if version is at least as new as the version
+// currently stored, and reports whether it did. Ties are allowed to
+// overwrite: a given version identifies a single configuration decision, so
+// two writes sharing a version can only ever be redoing the same decision,
+// never disagreeing ones.
+func (ve *versionedEnabled) StoreIfNewer( // nolint:revive  // enabled is not a control flag.
+	version uint64,
+	enabled bool,
+) bool {
+	nextVersionedState := version << 1
+	if enabled {
+		nextVersionedState |= 1
+	}
+	for {
+		oldState := ve.state.Load()
+		if version < (oldState >> 1) {
+			return false
+		}
+		if ve.state.CompareAndSwap(oldState, nextVersionedState) {
+			return true
+		}
 	}
 }
 
@@ -165,7 +220,12 @@ func (m *meter) int64ObservableInstrument(
 			for _, cback := range callbacks {
 				inst := int64Observer{measures: in}
 				fn := cback
-				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
+				insert.addCallback(func(ctx context.Context) error {
+					if !m.enabled.Load() {
+						return nil
+					}
+					return fn(ctx, inst)
+				})
 			}
 		}
 		return inst, validateInstrumentName(id.Name)
@@ -348,7 +408,12 @@ func (m *meter) float64ObservableInstrument(
 			for _, cback := range callbacks {
 				inst := float64Observer{measures: in}
 				fn := cback
-				insert.addCallback(func(ctx context.Context) error { return fn(ctx, inst) })
+				insert.addCallback(func(ctx context.Context) error {
+					if !m.enabled.Load() {
+						return nil
+					}
+					return fn(ctx, inst)
+				})
 			}
 		}
 		return inst, validateInstrumentName(id.Name)
@@ -534,7 +599,12 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 		}
 
 		// Some or all instruments were valid.
-		cBack := func(ctx context.Context) error { return f(ctx, reg) }
+		cBack := func(ctx context.Context) error {
+			if !m.enabled.Load() {
+				return nil
+			}
+			return f(ctx, reg)
+		}
 		unregs[ix] = pipe.addMultiCallback(cBack)
 	}
 
@@ -695,7 +765,7 @@ func (p int64InstProvider) lookup(
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
 		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
-		return &int64Inst{measures: aggs}, err
+		return &int64Inst{measures: aggs, meter: p.meter}, err
 	})
 }
 
@@ -712,7 +782,7 @@ func (p int64InstProvider) lookupHistogram(
 		Kind:        InstrumentKindHistogram,
 	}, func() (*int64Inst, error) {
 		aggs, err := p.histogramAggs(name, cfg, allowedKeys)
-		return &int64Inst{measures: aggs}, err
+		return &int64Inst{measures: aggs, meter: p.meter}, err
 	})
 }
 
@@ -769,7 +839,7 @@ func (p float64InstProvider) lookup(
 		Kind:        kind,
 	}, func() (*float64Inst, error) {
 		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
-		return &float64Inst{measures: aggs}, err
+		return &float64Inst{measures: aggs, meter: p.meter}, err
 	})
 }
 
@@ -786,7 +856,7 @@ func (p float64InstProvider) lookupHistogram(
 		Kind:        InstrumentKindHistogram,
 	}, func() (*float64Inst, error) {
 		aggs, err := p.histogramAggs(name, cfg, allowedKeys)
-		return &float64Inst{measures: aggs}, err
+		return &float64Inst{measures: aggs, meter: p.meter}, err
 	})
 }
 

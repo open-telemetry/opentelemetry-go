@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental `ProbabilitySampler` in `go.opentelemetry.io/otel/sdk/trace/x` that conforms to the [OpenTelemetry specification's threshold-based sampling algorithm](https://opentelemetry.io/docs/specs/otel/trace/sdk/#probabilitysampler). (#8123)
 - Add experimental `*Binder` extension interfaces in `go.opentelemetry.io/otel/metric/x` for instruments that support binding attributes ahead of time. (#8760)
 - Add the experimental `Finisher` synchronous metric instrument extension interface to `go.opentelemetry.io/otel/metric/x`. (#8906)
+- Add experimental support for enabling/disabling `Meter`s per instrumentation scope via `MeterConfigurator`, `MeterConfig`, and `MeterConfiguratorHandle` in `go.opentelemetry.io/otel/sdk/metric/x`. Configuration is set at `MeterProvider` construction via `WithMeterConfigurator` and can be updated live through `MeterConfiguratorHandle.Set`. This gates recording (`Add`/`Record`/`Observe`) only. (#8743)
 
 ### Changed
 
