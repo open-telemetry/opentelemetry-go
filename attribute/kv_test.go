@@ -173,6 +173,11 @@ func TestKeyValueString(t *testing.T) {
 		want string
 	}{
 		{
+			name: "zero value",
+			kv:   attribute.KeyValue{},
+			want: `{"":null}`,
+		},
+		{
 			name: "bool true",
 			kv:   attribute.Bool("bool", true),
 			want: `{"bool":true}`,
@@ -234,8 +239,11 @@ func TestKeyValueString(t *testing.T) {
 		},
 		{
 			name: "float64 slice",
-			kv:   attribute.Float64Slice("floats", []float64{1.5, -2.25}),
-			want: `{"floats":[1.5,-2.25]}`,
+			kv: attribute.Float64Slice(
+				"floats",
+				[]float64{1.5, math.NaN(), math.Inf(1), math.Inf(-1)},
+			),
+			want: `{"floats":[1.5,"NaN","Infinity","-Infinity"]}`,
 		},
 		{
 			name: "empty float64 slice",
@@ -264,8 +272,9 @@ func TestKeyValueString(t *testing.T) {
 				attribute.StringValue("one"),
 				attribute.IntValue(2),
 				attribute.BoolValue(false),
+				attribute.Value{},
 			),
-			want: `{"slice":["one",2,false]}`,
+			want: `{"slice":["one",2,false,null]}`,
 		},
 		{
 			name: "empty value slice",
@@ -273,9 +282,23 @@ func TestKeyValueString(t *testing.T) {
 			want: `{"slice":[]}`,
 		},
 		{
-			name: "quoted key",
-			kv:   attribute.String(`http.request.method:raw`, "GET"),
-			want: `{"http.request.method:raw":"GET"}`,
+			name: "map",
+			kv: attribute.Map(
+				"context",
+				attribute.String("name", "x"),
+				attribute.Map("nested", attribute.Bool("value", true)),
+			),
+			want: `{"context":{"name":"x","nested":{"value":true}}}`,
+		},
+		{
+			name: "key needs escaping",
+			kv:   attribute.String("line\n\"quoted\"\\key", "value"),
+			want: `{"line\n\"quoted\"\\key":"value"}`,
+		},
+		{
+			name: "key has invalid UTF-8",
+			kv:   attribute.String(string([]byte{'a', 0xff, 'b'}), "value"),
+			want: `{"a\ufffdb":"value"}`,
 		},
 		{
 			name: "empty value",

@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `String` method for `KeyValue` type in `go.opentelemetry.io/otel/attribute`. (#8205)
 - Add `WithMaxExportBatchSize` to `go.opentelemetry.io/otel/sdk/metric` to configure the maximum export batch size for `PeriodicReader`.
 - Add `WithAttributeValueDepthLimit`, `DefaultAttributeValueDepthLimit`, and `SpanLimits.AttributeValueDepthLimit` in `go.opentelemetry.io/otel/sdk/trace` to configure the maximum depth of span, event, link, and instrumentation scope attribute values. (#8938)
 - Add `WithAttributeValueDepthLimit` in `go.opentelemetry.io/otel/sdk/log` to configure the maximum depth of log record and instrumentation scope attribute values. (#8938)
@@ -188,7 +189,6 @@ The next release will require at least [Go 1.26].
 - Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#8153)
 - Support `BYTESLICE` attributes in `go.opentelemetry.io/otel/exporters/zipkin`. (#8153)
 - Add `String` method for `Value` type in `go.opentelemetry.io/otel/attribute`. (#8142)
-- Add `String` method for `KeyValue` type in `go.opentelemetry.io/otel/attribute`. (#8205)
 - Add `Slice` and `SliceValue` functions for new `SLICE` attribute type in `go.opentelemetry.io/otel/attribute`. (#8166)
 - Support `SLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlptrace`. (#8216)
 - Support `SLICE` attributes in `go.opentelemetry.io/otel/exporters/otlp/otlplog`. (#8216)

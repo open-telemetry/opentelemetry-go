@@ -40,8 +40,8 @@ func benchmarkEmit(kv attribute.KeyValue) func(*testing.B) {
 func benchmarkValueString(v attribute.Value) func(*testing.B) {
 	return func(b *testing.B) {
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outStr = v.String()
+		for b.Loop() {
+			v.String()
 		}
 	}
 }
@@ -49,8 +49,8 @@ func benchmarkValueString(v attribute.Value) func(*testing.B) {
 func benchmarkKeyValueString(kv attribute.KeyValue) func(*testing.B) {
 	return func(b *testing.B) {
 		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			outStr = kv.String()
+		for b.Loop() {
+			kv.String()
 		}
 	}
 }
@@ -446,8 +446,7 @@ func BenchmarkMap(b *testing.B) {
 					outMap = kv.Value.AsMap()
 				}
 			})
-			b.Run("String", benchmarkString(kv))
-			b.Run("Emit", benchmarkEmit(kv))
+			runStringBenchmarks(b, kv)
 		})
 	}
 }
