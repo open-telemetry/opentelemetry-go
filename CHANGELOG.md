@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `"zstd"` as a supported `WithCompressor` value, `ZstdCompression`, and `OTEL_EXPORTER_OTLP_(TRACES|METRICS)_COMPRESSION=zstd` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, backed by `github.com/klauspost/compress/zstd` and registered automatically so no separate codec import is required.
+- Add `"zstd"` as a supported `WithCompressor` value, `ZstdCompression`, and `OTEL_EXPORTER_OTLP_(TRACES|METRICS)_COMPRESSION=zstd` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, backed by `github.com/klauspost/compress/zstd` and registered automatically so no separate codec import is required. (#8985)
 - Add `WithMaxExportBatchSize` to `go.opentelemetry.io/otel/sdk/metric` to configure the maximum export batch size for `PeriodicReader`.
 - Add `WithAttributeValueDepthLimit`, `DefaultAttributeValueDepthLimit`, and `SpanLimits.AttributeValueDepthLimit` in `go.opentelemetry.io/otel/sdk/trace` to configure the maximum depth of span, event, link, and instrumentation scope attribute values. (#8938)
 - Add `WithAttributeValueDepthLimit` in `go.opentelemetry.io/otel/sdk/log` to configure the maximum depth of log record and instrumentation scope attribute values. (#8938)
