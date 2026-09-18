@@ -94,6 +94,18 @@ func TestAtomicCounterInt64Precision(t *testing.T) {
 			assert.Equal(t, tt.want, c.load())
 		})
 	}
+
+	t.Run("merge across counters", func(t *testing.T) {
+		var cold, hot atomicCounter[int64]
+		cold.add((1 << 53) + 1)
+		assert.Equal(t, int64((1<<53)+1), cold.load())
+
+		// Simulates hot/cold double-buffering merge (e.g. cumulative histograms).
+		hot.add(cold.load())
+		cold.reset()
+		hot.add(1)
+		assert.Equal(t, int64((1<<53)+2), hot.load())
+	})
 }
 
 func BenchmarkAtomicCounter(b *testing.B) {
