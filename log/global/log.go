@@ -5,15 +5,13 @@
 Package global provides access to a global implementation of the OpenTelemetry
 Logs API.
 
-This package is experimental. It will be deprecated and removed when the [log]
-package becomes stable. Its functionality will be migrated to
-go.opentelemetry.io/otel.
+Deprecated: Use the equivalent APIs in [go.opentelemetry.io/otel].
 */
 package global
 
 import (
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/internal/global"
 )
 
 // Logger returns a [log.Logger] configured with the provided name and options
@@ -22,28 +20,34 @@ import (
 // If this is called before a global LoggerProvider is configured, the returned
 // Logger will be a No-Op implementation of a Logger. When a global
 // LoggerProvider is registered for the first time, the returned Logger is
-// updated in-place to report to this new LoggerProvider. There is no need to
+// updated in place to report to this new LoggerProvider. There is no need to
 // call this function again for an updated instance.
 //
 // This is a convenience function. It is equivalent to:
 //
 //	GetLoggerProvider().Logger(name, options...)
+//
+// Deprecated: Use [otel.Logger] instead.
 func Logger(name string, options ...log.LoggerOption) log.Logger {
-	return GetLoggerProvider().Logger(name, options...)
+	return otel.Logger(name, options...)
 }
 
 // GetLoggerProvider returns the globally configured [log.LoggerProvider].
 //
 // If a global LoggerProvider has not been configured with [SetLoggerProvider],
-// the returned Logger will be a No-Op implementation of a LoggerProvider. When
+// the returned LoggerProvider will be a No-Op implementation. When
 // a global LoggerProvider is registered for the first time, the returned
-// LoggerProvider and all of its created Loggers are updated in-place. There is
+// LoggerProvider and all Loggers it has created are updated in place. There is
 // no need to call this function again for an updated instance.
+//
+// Deprecated: Use [otel.GetLoggerProvider] instead.
 func GetLoggerProvider() log.LoggerProvider {
-	return global.GetLoggerProvider()
+	return otel.GetLoggerProvider()
 }
 
 // SetLoggerProvider configures provider as the global [log.LoggerProvider].
+//
+// Deprecated: Use [otel.SetLoggerProvider] instead.
 func SetLoggerProvider(provider log.LoggerProvider) {
-	global.SetLoggerProvider(provider)
+	otel.SetLoggerProvider(provider)
 }

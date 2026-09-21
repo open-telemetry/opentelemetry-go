@@ -485,6 +485,65 @@ func TestCustomUserAgent(t *testing.T) {
 	require.Contains(t, headers.Get("user-agent")[0], customUserAgent)
 }
 
+// A raw grpc.DialOption passed via WithDialOption must not be overridden by the
+// internally computed default credentials, which kick-in in absence of
+// otlptracegrpc.WithInsecure and otlptracegrpc.WithTLSCredentials.
+func TestWithDialOptionCredentialsTakePrecedence(t *testing.T) {
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	client := otlptracegrpc.NewClient(
+		otlptracegrpc.WithEndpoint(mc.endpoint),
+		otlptracegrpc.WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
+	)
+	exp, err := otlptrace.New(ctx, client)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+	require.NoError(t, exp.ExportSpans(ctx, roSpans))
+}
+
+// Guards against accidental replacement by an unrelated WithDialOption call:
+// it must not silently drop the exporter's default grpc.WithUserAgent dial option.
+func TestWithDialOptionPreservesDefaultUserAgent(t *testing.T) {
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	exp := newGRPCExporter(ctx, t, mc.endpoint,
+		otlptracegrpc.WithDialOption(grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff:           backoff.DefaultConfig,
+			MinConnectTimeout: time.Second,
+		})),
+	)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+	require.NoError(t, exp.ExportSpans(ctx, roSpans))
+
+	headers := mc.getHeaders()
+	wantUserAgent := "OTel OTLP Exporter Go/" + otlptrace.Version()
+	require.Contains(t, headers.Get("user-agent")[0], wantUserAgent)
+}
+
+// Confirms WithDialOption's contract: repeated calls replace, not accumulate.
+func TestWithDialOptionLastCallWins(t *testing.T) {
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	const firstUserAgent, secondUserAgent = "first-user-agent", "second-user-agent"
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	exp := newGRPCExporter(ctx, t, mc.endpoint,
+		otlptracegrpc.WithDialOption(grpc.WithUserAgent(firstUserAgent)),
+		otlptracegrpc.WithDialOption(grpc.WithUserAgent(secondUserAgent)),
+	)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+	require.NoError(t, exp.ExportSpans(ctx, roSpans))
+
+	headers := mc.getHeaders()
+	require.Contains(t, headers.Get("user-agent")[0], secondUserAgent)
+	require.NotContains(t, headers.Get("user-agent")[0], firstUserAgent)
+}
+
 func TestClientInstrumentation(t *testing.T) {
 	// Enable instrumentation for this test.
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")

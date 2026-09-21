@@ -147,6 +147,42 @@ func TestIntervalEnvAndOption(t *testing.T) {
 	assert.Equal(t, want, got, "option should have precedence over env var")
 }
 
+func TestWithMaxExportBatchSize(t *testing.T) {
+	test := func(size int) int {
+		opts := []PeriodicReaderOption{WithMaxExportBatchSize(size)}
+		return newPeriodicReaderConfig(opts).maxExportBatchSize
+	}
+
+	assert.Equal(t, 10, test(10))
+	assert.Equal(t, 0, newPeriodicReaderConfig(nil).maxExportBatchSize)
+	assert.Equal(t, 0, test(0), "invalid max export batch size should use default")
+	assert.Equal(t, 0, test(-1), "invalid max export batch size should use default")
+
+	opts := []PeriodicReaderOption{WithMaxExportBatchSize(10), WithMaxExportBatchSize(-1)}
+	assert.Equal(
+		t,
+		10,
+		newPeriodicReaderConfig(opts).maxExportBatchSize,
+		"non-positive value should preserve previous value",
+	)
+}
+
+func TestEnvDurationRejectsOverflow(t *testing.T) {
+	const value = "9223372036855"
+	for _, tc := range []struct {
+		key  string
+		want time.Duration
+	}{
+		{key: envInterval, want: defaultInterval},
+		{key: envTimeout, want: defaultTimeout},
+	} {
+		t.Run(tc.key, func(t *testing.T) {
+			t.Setenv(tc.key, value)
+			assert.Equal(t, tc.want, envDuration(tc.key, tc.want))
+		})
+	}
+}
+
 type fnExporter struct {
 	temporalityFunc TemporalitySelector
 	aggregationFunc AggregationSelector
@@ -298,8 +334,6 @@ func TestPeriodicReaderRun(t *testing.T) {
 }
 
 func TestPeriodicReaderBatching(t *testing.T) {
-	t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "2")
-
 	var exported []metricdata.ResourceMetrics
 	exp := &fnExporter{
 		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
@@ -342,6 +376,7 @@ func TestPeriodicReaderBatching(t *testing.T) {
 
 	r := NewPeriodicReader(
 		exp,
+		WithMaxExportBatchSize(2),
 		WithProducer(testExternalProducer{
 			produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
 				return testMetrics, nil
@@ -376,9 +411,79 @@ func TestPeriodicReaderBatching(t *testing.T) {
 	_ = r.Shutdown(t.Context())
 }
 
-func TestPeriodicReaderBatching_WithoutCancel(t *testing.T) {
-	t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "1") // Force small batches
+func TestPeriodicReaderBatching_Disabled(t *testing.T) {
+	for _, opt := range [][]PeriodicReaderOption{
+		nil,
+		{WithMaxExportBatchSize(0)},
+		{WithMaxExportBatchSize(-1)},
+	} {
+		var exported []metricdata.ResourceMetrics
+		exp := &fnExporter{
+			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+				exported = append(exported, *m)
+				return nil
+			},
+		}
 
+		ts1, ts2, ts3 := time.Now(), time.Now(), time.Now()
+		testMetrics := []metricdata.ScopeMetrics{{
+			Scope: instrumentation.Scope{Name: "sdk/metric/test/reader/internal"},
+			Metrics: []metricdata.Metrics{{
+				Name: "metric1",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{{
+						Attributes: attribute.NewSet(attribute.String("user", "david")),
+						StartTime:  ts1, Time: ts1.Add(time.Second), Value: 1,
+					}},
+				},
+			}, {
+				Name: "metric2",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("user", "tyler")),
+							StartTime:  ts2,
+							Time:       ts2.Add(time.Second),
+							Value:      10,
+						},
+						{
+							Attributes: attribute.NewSet(attribute.String("user", "robert")),
+							StartTime:  ts3,
+							Time:       ts3.Add(time.Second),
+							Value:      100,
+						},
+					},
+				},
+			}},
+		}}
+
+		opts := append([]PeriodicReaderOption{
+			WithProducer(testExternalProducer{
+				produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+					return testMetrics, nil
+				},
+			}),
+		}, opt...)
+
+		r := NewPeriodicReader(exp, opts...)
+		r.register(testSDKProducer{})
+
+		assert.NoError(t, r.ForceFlush(t.Context()))
+		assert.Len(t, exported, 1)
+
+		dpCount := 0
+		for _, sm := range exported[0].ScopeMetrics {
+			for _, m := range sm.Metrics {
+				dpCount += metricDPC(m)
+			}
+		}
+		assert.Equal(t, 4, dpCount)
+
+		_ = r.Shutdown(t.Context())
+	}
+}
+
+func TestPeriodicReaderBatching_WithoutCancel(t *testing.T) {
 	trigger := triggerTicker(t)
 
 	timeout := 200 * time.Millisecond
@@ -401,7 +506,7 @@ func TestPeriodicReaderBatching_WithoutCancel(t *testing.T) {
 		},
 	}
 
-	r := NewPeriodicReader(exp, WithTimeout(timeout))
+	r := NewPeriodicReader(exp, WithTimeout(timeout), WithMaxExportBatchSize(1))
 
 	r.register(testSDKProducer{
 		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
@@ -504,8 +609,6 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 	})
 
 	t.Run("ForceFlush timeout on export with batching", func(t *testing.T) {
-		t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "1") // Force small batches
-
 		timeout := 200 * time.Millisecond
 
 		var exportCount int
@@ -522,7 +625,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		}
 
 		ts1 := time.Now()
-		r := NewPeriodicReader(exp, WithTimeout(timeout), WithProducer(testExternalProducer{
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithMaxExportBatchSize(1), WithProducer(testExternalProducer{
 			produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
 				return []metricdata.ScopeMetrics{{
 					Scope: instrumentation.Scope{Name: "test"},
@@ -601,8 +704,6 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 	})
 
 	t.Run("Shutdown timeout on export with batching", func(t *testing.T) {
-		t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "1") // Force small batches
-
 		timeout := 200 * time.Millisecond
 
 		var exportCount int
@@ -619,7 +720,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		}
 
 		ts1 := time.Now()
-		r := NewPeriodicReader(exp, WithTimeout(timeout), WithProducer(testExternalProducer{
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithMaxExportBatchSize(1), WithProducer(testExternalProducer{
 			produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
 				return []metricdata.ScopeMetrics{{
 					Scope: instrumentation.Scope{Name: "test"},

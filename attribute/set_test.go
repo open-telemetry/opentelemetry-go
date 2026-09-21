@@ -254,6 +254,26 @@ func TestFiltering(t *testing.T) {
 	}
 }
 
+func TestSetFilterNilReceiver(t *testing.T) {
+	var set *attribute.Set
+
+	t.Run("KeepAll", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			got, dropped := set.Filter(func(attribute.KeyValue) bool { return true })
+			assert.Empty(t, got.ToSlice())
+			assert.Nil(t, dropped)
+		})
+	})
+
+	t.Run("NilFilter", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			got, dropped := set.Filter(nil)
+			assert.Empty(t, got.ToSlice())
+			assert.Nil(t, dropped)
+		})
+	})
+}
+
 func TestUniqueness(t *testing.T) {
 	short := []attribute.KeyValue{
 		attribute.String("A", "0"),
@@ -318,8 +338,7 @@ func TestLookup(t *testing.T) {
 func TestZeroSetExportedMethodsNoPanic(t *testing.T) {
 	rType := reflect.TypeFor[*attribute.Set]()
 	rVal := reflect.ValueOf(&attribute.Set{})
-	for n := 0; n < rType.NumMethod(); n++ {
-		mType := rType.Method(n)
+	for mType := range rType.Methods() {
 		if !mType.IsExported() {
 			t.Logf("ignoring unexported %s", mType.Name)
 			continue

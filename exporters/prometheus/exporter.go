@@ -16,7 +16,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/otlptranslator"
-	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -409,12 +408,13 @@ func addExponentialHistogramMetric[N int64 | float64](
 		scale := dp.Scale
 		if scale < -4 {
 			// Reject scales below -4 as they cannot be represented in Prometheus
+			scaleErr := fmt.Errorf("%w: %d (min -4)", errEHScaleBelowMin, scale)
 			reportError(
 				ch,
 				desc,
-				fmt.Errorf("%w: %d (min -4)", errEHScaleBelowMin, scale),
+				scaleErr,
 			)
-			err = errors.Join(err, e)
+			err = errors.Join(err, scaleErr)
 			continue
 		}
 
@@ -638,7 +638,6 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 			kv := itr.Attribute()
 			key, err := labelNamer.Build(string(kv.Key))
 			if err != nil {
-				// TODO(#7066) Handle this error better.
 				return nil, nil, err
 			}
 			if _, ok := keysMap[key]; !ok {
@@ -680,7 +679,6 @@ func getScopeAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([
 		kv := itr.Attribute()
 		key, err := labelNamer.Build(string(kv.Key))
 		if err != nil {
-			// TODO(#7066) Handle this error better.
 			return nil, nil, err
 		}
 		if isReservedScopeLabel(key) {
@@ -798,8 +796,8 @@ func (c *collector) validateMetrics(name, description string, metricType *dto.Me
 
 	if !exist {
 		c.metricFamilies[name] = &dto.MetricFamily{
-			Name: proto.String(name),
-			Help: proto.String(description),
+			Name: new(name),
+			Help: new(description),
 			Type: metricType,
 		}
 		return false, ""

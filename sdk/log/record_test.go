@@ -432,6 +432,154 @@ func TestRecordBody(t *testing.T) {
 	}
 }
 
+func logDepthLimitInputAttr(key string) attribute.KeyValue {
+	return attribute.Map(
+		key,
+		attribute.Map(
+			"level1",
+			attribute.Map("over", attribute.String("leaf", "value")),
+		),
+	)
+}
+
+func logDepthLimitWantAttr(key string) attribute.KeyValue {
+	return attribute.Map(
+		key,
+		attribute.Map(
+			"level1",
+			attribute.KeyValue{Key: "over"},
+		),
+	)
+}
+
+func TestRecordAttributeValueDepthLimit(t *testing.T) {
+	t.Run("AddAttributes", func(t *testing.T) {
+		r := Record{
+			attributeValueLengthLimit: -1,
+			attributeValueDepthLimit:  2,
+			attributeCountLimit:       -1,
+		}
+		r.AddAttributes(logDepthLimitInputAttr("attr"))
+		assertKV(t, r, logDepthLimitWantAttr("attr"))
+		assert.Zero(t, r.DroppedAttributes())
+	})
+
+	t.Run("SetAttributes", func(t *testing.T) {
+		r := Record{
+			attributeValueLengthLimit: -1,
+			attributeValueDepthLimit:  2,
+			attributeCountLimit:       -1,
+		}
+		r.SetAttributes(logDepthLimitInputAttr("attr"))
+		assertKV(t, r, logDepthLimitWantAttr("attr"))
+	})
+
+	t.Run("NegativeUnlimited", func(t *testing.T) {
+		r := Record{
+			attributeValueLengthLimit: -1,
+			attributeValueDepthLimit:  -1,
+			attributeCountLimit:       -1,
+		}
+		r.AddAttributes(logDepthLimitInputAttr("attr"))
+		assertKV(t, r, logDepthLimitInputAttr("attr"))
+	})
+
+	t.Run("AllowKeyDuplication", func(t *testing.T) {
+		input := attribute.Map(
+			"attr",
+			attribute.Slice(
+				"nested",
+				attribute.MapValue(
+					attribute.String("dup", "first"),
+					attribute.String("dup", "second"),
+				),
+			),
+			attribute.Map(
+				"over",
+				attribute.Map(
+					"middle",
+					attribute.Map("deep", attribute.String("leaf", "value")),
+				),
+			),
+		)
+		want := attribute.Map(
+			"attr",
+			attribute.Slice(
+				"nested",
+				attribute.MapValue(
+					attribute.String("dup", "first"),
+					attribute.String("dup", "second"),
+				),
+			),
+			attribute.Map(
+				"over",
+				attribute.Map("middle", attribute.KeyValue{Key: "deep"}),
+			),
+		)
+		r := Record{
+			attributeValueLengthLimit: -1,
+			attributeValueDepthLimit:  3,
+			attributeCountLimit:       -1,
+			allowDupKeys:              true,
+		}
+		r.AddAttributes(input)
+		assertKV(t, r, want)
+	})
+
+	t.Run("LengthAndDepth", func(t *testing.T) {
+		input := attribute.Map(
+			"attr",
+			attribute.String("truncate", "value"),
+			attribute.Map("over", attribute.String("leaf", "value")),
+		)
+		want := attribute.Map(
+			"attr",
+			attribute.String("truncate", "val"),
+			attribute.KeyValue{Key: "over"},
+		)
+		r := Record{
+			attributeValueLengthLimit: 3,
+			attributeValueDepthLimit:  1,
+			attributeCountLimit:       -1,
+		}
+		r.AddAttributes(input)
+		assertKV(t, r, want)
+	})
+}
+
+func TestRecordAttributeValueDepthLimitOverwrite(t *testing.T) {
+	r := Record{
+		attributeValueLengthLimit: -1,
+		attributeValueDepthLimit:  1,
+		attributeCountLimit:       -1,
+	}
+	for i := range attributesInlineCount + 1 {
+		r.AddAttributes(attribute.Int(fmt.Sprintf("key-%d", i), i))
+	}
+
+	front := logDepthLimitInputAttr("key-0")
+	back := logDepthLimitInputAttr(fmt.Sprintf("key-%d", attributesInlineCount))
+	r.AddAttributes(front, back)
+
+	wantFront := attribute.Map("key-0", attribute.KeyValue{Key: "level1"})
+	wantBack := attribute.Map(fmt.Sprintf("key-%d", attributesInlineCount), attribute.KeyValue{Key: "level1"})
+	attrs := collectRecordAttributes(r)
+	assert.Contains(t, attrs, wantFront)
+	assert.Contains(t, attrs, wantBack)
+	assert.NotContains(t, attrs, front)
+	assert.NotContains(t, attrs, back)
+}
+
+func TestRecordBodyAttributeValueDepthLimitNotApplied(t *testing.T) {
+	r := Record{
+		attributeValueDepthLimit: 1,
+		attributeCountLimit:      -1,
+	}
+	body := logDepthLimitInputAttr("body").Value
+	r.SetBody(body)
+	assert.True(t, valueEqual(body, r.Body()))
+}
+
 func TestRecordAttributes(t *testing.T) {
 	attrs := []attribute.KeyValue{
 		attribute.Bool("0", true),
@@ -590,6 +738,9 @@ func TestRecordDroppedAttributes(t *testing.T) {
 
 		attrs := make([]attribute.KeyValue, i)
 		attrs[0] = attribute.Bool("only key different then the rest", true)
+		for j := 1; j < len(attrs); j++ {
+			attrs[j] = attribute.Bool("duplicate", true)
+		}
 
 		r.AddAttributes(attrs...)
 		// Deduplication doesn't count as dropped.
@@ -620,6 +771,57 @@ func TestRecordDroppedAttributes(t *testing.T) {
 	}
 }
 
+func TestRecordInvalidAttributes(t *testing.T) {
+	orig := logInvalidAttribute
+	t.Cleanup(func() { logInvalidAttribute = orig })
+	var diagnosticCalls int
+	logInvalidAttribute = sync.OnceFunc(func() { diagnosticCalls++ })
+
+	invalid := attribute.String("", "invalid")
+	upper := attribute.String("Key", "upper")
+	lower := attribute.String("key", "lower")
+	extra := attribute.String("extra", "over limit")
+
+	valid := Record{attributeCountLimit: -1, attributeValueLengthLimit: -1}
+	valid.AddAttributes(upper)
+	valid.SetAttributes(lower)
+	assert.Zero(t, diagnosticCalls)
+
+	for _, allowDup := range []bool{false, true} {
+		t.Run("AllowDuplicates="+strconv.FormatBool(allowDup), func(t *testing.T) {
+			r := Record{
+				attributeCountLimit:       2,
+				attributeValueLengthLimit: -1,
+				allowDupKeys:              allowDup,
+			}
+			attributes := func() []attribute.KeyValue {
+				var got []attribute.KeyValue
+				r.WalkAttributes(func(kv attribute.KeyValue) bool {
+					got = append(got, kv)
+					return true
+				})
+				return got
+			}
+
+			r.AddAttributes(upper)
+			r.AddAttributes(invalid)
+			assert.Equal(t, []attribute.KeyValue{upper}, attributes())
+			r.AddAttributes(lower)
+			assert.Equal(t, []attribute.KeyValue{upper, lower}, attributes())
+			assert.Zero(t, r.DroppedAttributes())
+
+			r.SetAttributes(invalid, upper, lower, extra)
+			assert.Equal(t, []attribute.KeyValue{upper, lower}, attributes())
+			assert.Equal(t, 1, r.DroppedAttributes())
+
+			r.SetAttributes(invalid)
+			assert.Empty(t, attributes())
+			assert.Zero(t, r.DroppedAttributes())
+		})
+	}
+	assert.Equal(t, 1, diagnosticCalls)
+}
+
 func TestRecordZeroAttributeCountLimit(t *testing.T) {
 	attrs := []attribute.KeyValue{
 		attribute.String("one", "1"),
@@ -646,7 +848,7 @@ func TestRecordAttrAllowDuplicateAttributes(t *testing.T) {
 		{
 			name:  "EmptyKey",
 			attrs: make([]attribute.KeyValue, 10),
-			want:  make([]attribute.KeyValue, 10),
+			want:  nil,
 		},
 		{
 			name: "MapKey",
@@ -801,7 +1003,7 @@ func TestRecordAttrDeduplication(t *testing.T) {
 		{
 			name:  "EmptyKey",
 			attrs: make([]attribute.KeyValue, 10),
-			want:  make([]attribute.KeyValue, 1),
+			want:  nil,
 		},
 		{
 			name: "NonEmptyKey",
@@ -1162,14 +1364,15 @@ func TestDeduplicationBehavior(t *testing.T) {
 	})
 
 	testCases := []struct {
-		name                string
-		attributeCountLimit int
-		allowDupKeys        bool
-		attrs               []attribute.KeyValue
-		wantKeyValueDropped bool
-		wantAttrDropped     bool
-		wantDroppedCount    int
-		wantAttributeCount  int
+		name                     string
+		attributeCountLimit      int
+		attributeValueDepthLimit int
+		allowDupKeys             bool
+		attrs                    []attribute.KeyValue
+		wantKeyValueDropped      bool
+		wantAttrDropped          bool
+		wantDroppedCount         int
+		wantAttributeCount       int
 	}{
 		{
 			name:                "Duplicate keys only",
@@ -1224,6 +1427,31 @@ func TestDeduplicationBehavior(t *testing.T) {
 			wantDroppedCount:    0,
 			wantAttributeCount:  1,
 		},
+		{
+			name:                     "Depth limit only",
+			attributeCountLimit:      -1,
+			attributeValueDepthLimit: 1,
+			attrs: []attribute.KeyValue{
+				attribute.Map("outer", attribute.Map("over", attribute.String("leaf", "value"))),
+			},
+			wantAttributeCount: 1,
+		},
+		{
+			name:                     "Over-depth map skips nested duplicates",
+			attributeCountLimit:      -1,
+			attributeValueDepthLimit: 1,
+			attrs: []attribute.KeyValue{
+				attribute.Map(
+					"outer",
+					attribute.Map(
+						"over",
+						attribute.String("duplicate", "first"),
+						attribute.String("duplicate", "second"),
+					),
+				),
+			},
+			wantAttributeCount: 1,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1236,6 +1464,7 @@ func TestDeduplicationBehavior(t *testing.T) {
 
 			r := &Record{
 				attributeValueLengthLimit: -1,
+				attributeValueDepthLimit:  tc.attributeValueDepthLimit,
 				attributeCountLimit:       tc.attributeCountLimit,
 				allowDupKeys:              tc.allowDupKeys,
 			}
@@ -1689,6 +1918,10 @@ func BenchmarkAddAttributes(b *testing.B) {
 			),
 		),
 	}
+	depthLimitedKV := attribute.Map(
+		"depth",
+		attribute.Map("nested", attribute.String("leaf", "value")),
+	)
 
 	// Adding a single attribute with no limits applied.
 	b.Run("Single/NoLimits", func(b *testing.B) {
@@ -1861,6 +2094,44 @@ func BenchmarkAddAttributes(b *testing.B) {
 			records[i].AddAttributes(longValueAttrs...)
 		}
 	})
+
+	for _, value := range []struct {
+		name string
+		attr attribute.KeyValue
+	}{
+		{name: "Scalar", attr: singleKV},
+		{name: "Composite", attr: depthLimitedKV},
+	} {
+		for _, limit := range []struct {
+			name  string
+			value int
+		}{
+			{name: "Disabled", value: -1},
+			{name: "Default", value: 0},
+			{name: "LimitOne", value: 1},
+		} {
+			for _, allowDupKeys := range []bool{false, true} {
+				mode := "Deduplicate"
+				if allowDupKeys {
+					mode = "AllowDuplicates"
+				}
+				b.Run(fmt.Sprintf("DepthLimit/%s/%s/%s", value.name, limit.name, mode), func(b *testing.B) {
+					records := make([]Record, b.N)
+					for i := range records {
+						records[i].allowDupKeys = allowDupKeys
+						records[i].attributeValueLengthLimit = -1
+						records[i].attributeValueDepthLimit = limit.value
+						records[i].attributeCountLimit = -1
+					}
+					b.ResetTimer()
+					b.ReportAllocs()
+					for i := range b.N {
+						records[i].AddAttributes(value.attr)
+					}
+				})
+			}
+		}
+	}
 }
 
 func BenchmarkSetAttributes(b *testing.B) {
@@ -1926,6 +2197,10 @@ func BenchmarkSetAttributes(b *testing.B) {
 			),
 		),
 	}
+	depthLimitedKV := attribute.Map(
+		"depth",
+		attribute.Map("nested", attribute.String("leaf", "value")),
+	)
 
 	// Setting a single attribute with no limits applied.
 	b.Run("Single/NoLimits", func(b *testing.B) {
@@ -2117,6 +2392,44 @@ func BenchmarkSetAttributes(b *testing.B) {
 			records[i].SetAttributes(uniqueAttrs...)
 		}
 	})
+
+	for _, value := range []struct {
+		name string
+		attr attribute.KeyValue
+	}{
+		{name: "Scalar", attr: singleKV},
+		{name: "Composite", attr: depthLimitedKV},
+	} {
+		for _, limit := range []struct {
+			name  string
+			value int
+		}{
+			{name: "Disabled", value: -1},
+			{name: "Default", value: 0},
+			{name: "LimitOne", value: 1},
+		} {
+			for _, allowDupKeys := range []bool{false, true} {
+				mode := "Deduplicate"
+				if allowDupKeys {
+					mode = "AllowDuplicates"
+				}
+				b.Run(fmt.Sprintf("DepthLimit/%s/%s/%s", value.name, limit.name, mode), func(b *testing.B) {
+					records := make([]Record, b.N)
+					for i := range records {
+						records[i].allowDupKeys = allowDupKeys
+						records[i].attributeValueLengthLimit = -1
+						records[i].attributeValueDepthLimit = limit.value
+						records[i].attributeCountLimit = -1
+					}
+					b.ResetTimer()
+					b.ReportAllocs()
+					for i := range b.N {
+						records[i].SetAttributes(value.attr)
+					}
+				})
+			}
+		}
+	}
 }
 
 func BenchmarkSetBody(b *testing.B) {

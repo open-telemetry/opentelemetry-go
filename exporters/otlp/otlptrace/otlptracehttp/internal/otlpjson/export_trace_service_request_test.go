@@ -6,6 +6,7 @@ package otlpjson
 import (
 	"bytes"
 	"encoding/json"
+	"math"
 	"regexp"
 	"testing"
 
@@ -187,6 +188,41 @@ func TestMarshalInt64AsDecimalString(t *testing.T) {
 	assert.Equal(t, "-42", intVal)
 }
 
+func TestMarshalNonFiniteDoubleValuesAsStrings(t *testing.T) {
+	tests := []struct {
+		name  string
+		value float64
+		want  string
+	}{
+		{name: "NaN", value: math.NaN(), want: "NaN"},
+		{name: "positive infinity", value: math.Inf(1), want: "Infinity"},
+		{name: "negative infinity", value: math.Inf(-1), want: "-Infinity"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := &coltracepb.ExportTraceServiceRequest{
+				ResourceSpans: []*tracepb.ResourceSpans{{
+					Resource: &resourcepb.Resource{
+						Attributes: []*commonpb.KeyValue{{
+							Key: "non-finite",
+							Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{
+								DoubleValue: test.value,
+							}},
+						}},
+					},
+				}},
+			}
+
+			data, err := MarshalExportTraceServiceRequest(req)
+			require.NoError(t, err)
+
+			want := `{"resourceSpans":[{"resource":{"attributes":[{"key":"non-finite","value":{"doubleValue":"` + test.want + `"}}]}}]}`
+			assert.JSONEq(t, want, string(data))
+		})
+	}
+}
+
 func TestMarshalFieldNamesAreCamelCase(t *testing.T) {
 	data, err := MarshalExportTraceServiceRequest(spanForTest())
 	require.NoError(t, err)
@@ -355,6 +391,50 @@ func TestUnmarshalAcceptsIntAndUint64AsStringOrNumber(t *testing.T) {
 	}
 }
 
+func TestUnmarshalAcceptsFiniteDoubleAsStringOrNumber(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		value string
+		want  float64
+	}{
+		{"as_string", `"1.2"`, 1.2},
+		{"as_string_E_notation", `"5.678e4"`, 56780},
+		{"as_number", `1.2`, 1.2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := `{"resourceSpans":[{"resource":{"attributes":[{
+				"key":"finite-double",
+				"value":{"doubleValue":` + tc.value + `}
+			}]}}]}`
+
+			var req coltracepb.ExportTraceServiceRequest
+			require.NoError(t, UnmarshalExportTraceServiceRequest([]byte(input), &req))
+
+			got := req.ResourceSpans[0].Resource.Attributes[0].Value.GetDoubleValue()
+			assert.InDelta(t, tc.want, got, 0)
+		})
+	}
+}
+
+func TestUnmarshalRejectsInvalidDoubleStrings(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		value string
+	}{
+		{"not_a_number", `"not a number"`},
+		{"leading_space", `" 1.2"`},
+		{"hexadecimal", `"0x1p2"`},
+		{"noncanonical_infinity", `"Inf"`},
+		{"nested_string", `"\"1.2\""`},
+		{"out_of_range", `"1.79e309"`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var f Float64
+			require.Error(t, json.Unmarshal([]byte(tc.value), &f))
+		})
+	}
+}
+
 func TestAnyValueRoundTrip(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -396,6 +476,27 @@ func TestAnyValueRoundTrip(t *testing.T) {
 			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: 3.14}},
 			check: func(t *testing.T, got *commonpb.AnyValue) {
 				assert.InEpsilon(t, 3.14, got.GetDoubleValue(), 1e-9)
+			},
+		},
+		{
+			name:  "NaN",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: math.NaN()}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				assert.True(t, math.IsNaN(got.GetDoubleValue()))
+			},
+		},
+		{
+			name:  "positive_infinity",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: math.Inf(1)}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				assert.True(t, math.IsInf(got.GetDoubleValue(), 1))
+			},
+		},
+		{
+			name:  "negative_infinity",
+			proto: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{DoubleValue: math.Inf(-1)}},
+			check: func(t *testing.T, got *commonpb.AnyValue) {
+				assert.True(t, math.IsInf(got.GetDoubleValue(), -1))
 			},
 		},
 		{

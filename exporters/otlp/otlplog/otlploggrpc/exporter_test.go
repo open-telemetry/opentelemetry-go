@@ -101,12 +101,37 @@ func TestExporterShutdown(t *testing.T) {
 	require.NoError(t, err, "New")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown Exporter")
 
-	// After Shutdown is called, calls to Export, Shutdown, or ForceFlush
-	// should perform no operation and return nil error.
 	r := make([]sdklog.Record, 1)
-	assert.NoError(t, e.Export(ctx, r), "Export on Shutdown Exporter")
+	assert.ErrorIs(t, e.Export(ctx, r), sdklog.ErrExporterShutdown, "Export on Shutdown Exporter")
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush on Shutdown Exporter")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown on Shutdown Exporter")
+}
+
+func TestExporterExportConcurrentShutdown(t *testing.T) {
+	orig := transformResourceLogs
+	started := make(chan struct{})
+	resume := make(chan struct{})
+	transformResourceLogs = func([]sdklog.Record) []*logpb.ResourceLogs {
+		close(started)
+		<-resume
+		return make([]*logpb.ResourceLogs, 1)
+	}
+	t.Cleanup(func() { transformResourceLogs = orig })
+
+	c := &mockClient{}
+	e := newExporter(c)
+	ctx := t.Context()
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- e.Export(ctx, make([]sdklog.Record, 1))
+	}()
+
+	<-started
+	assert.NoError(t, e.Shutdown(ctx), "Shutdown Exporter")
+	close(resume)
+
+	assert.ErrorIs(t, <-errCh, sdklog.ErrExporterShutdown)
+	assert.Zero(t, c.uploads, "client UploadLogs calls")
 }
 
 func TestExporterForceFlush(t *testing.T) {
@@ -150,7 +175,7 @@ func TestExporterConcurrentSafe(t *testing.T) {
 	wg.Wait()
 }
 
-// TestExporter runs integration test against the real OTLP collector.
+// TestExporter runs an integration test against the real OTLP collector.
 func TestExporter(t *testing.T) {
 	t.Run("ExporterHonorsContextErrors", func(t *testing.T) {
 		t.Run("Export", testCtxErrs(func() func(context.Context) error {

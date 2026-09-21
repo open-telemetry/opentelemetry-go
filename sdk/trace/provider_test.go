@@ -181,6 +181,21 @@ func TestUnregisterLast(t *testing.T) {
 	assert.Same(t, sp2, sps[1].sp)
 }
 
+func TestUnregisterUnknownSpanProcessor(t *testing.T) {
+	stp := NewTracerProvider()
+	sp1 := &basicSpanProcessor{}
+	sp2 := &basicSpanProcessor{}
+	stp.RegisterSpanProcessor(sp1)
+	stp.RegisterSpanProcessor(sp2)
+
+	stp.UnregisterSpanProcessor(&basicSpanProcessor{})
+
+	sps := stp.getSpanProcessors()
+	require.Len(t, sps, 2)
+	assert.Same(t, sp1, sps[0].sp)
+	assert.Same(t, sp2, sps[1].sp)
+}
+
 func TestShutdownTraceProvider(t *testing.T) {
 	stp := NewTracerProvider()
 	sp := &basicSpanProcessor{}
@@ -460,6 +475,57 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 					}
 				})
 			}
+		})
+	}
+}
+
+func TestTracerProviderSamplerConfigFromEnvEmptyValues(t *testing.T) {
+	tests := []struct {
+		name          string
+		sampler       string
+		samplerArg    string
+		setSamplerArg bool
+		description   string
+	}{
+		{
+			name:        "empty sampler",
+			sampler:     "",
+			description: ParentBased(AlwaysSample()).Description(),
+		},
+		{
+			name:          "empty traceidratio sampler arg",
+			sampler:       "traceidratio",
+			samplerArg:    "",
+			setSamplerArg: true,
+			description:   TraceIDRatioBased(1.0).Description(),
+		},
+		{
+			name:          "empty parentbased traceidratio sampler arg",
+			sampler:       "parentbased_traceidratio",
+			samplerArg:    "",
+			setSamplerArg: true,
+			description:   ParentBased(TraceIDRatioBased(1.0)).Description(),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			handler.Reset()
+			t.Cleanup(handler.Reset)
+
+			t.Setenv(envTracesSampler, test.sampler)
+			if test.setSamplerArg {
+				t.Setenv(envTracesSamplerArg, test.samplerArg)
+			}
+
+			stp := NewTracerProvider(WithSyncer(NewTestExporter()))
+			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				require.NoError(t, stp.Shutdown(context.Background()))
+			})
+
+			assert.Equal(t, test.description, stp.sampler.Description())
+			assert.Empty(t, handler.errs)
 		})
 	}
 }

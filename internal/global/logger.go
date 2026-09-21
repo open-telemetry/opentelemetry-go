@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package global is the internal implementation of the OpenTelemetry global
-// Logs API.
 package global
 
 import (
@@ -10,30 +8,19 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 )
-
-// instLib defines the instrumentation library a logger is created for.
-//
-// Do not use sdk/instrumentation (API cannot depend on the SDK).
-type instLib struct {
-	name      string
-	version   string
-	schemaURL string
-	attrs     attribute.Set
-}
 
 type loggerProvider struct {
 	embedded.LoggerProvider
 
 	mu       sync.Mutex
-	loggers  map[instLib]*logger
+	loggers  map[il]*logger
 	delegate log.LoggerProvider
 }
 
-// Compile-time guarantee loggerProvider implements LoggerProvider.
+// This is a compile-time guarantee that loggerProvider implements LoggerProvider.
 var _ log.LoggerProvider = (*loggerProvider)(nil)
 
 func (p *loggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
@@ -45,16 +32,16 @@ func (p *loggerProvider) Logger(name string, options ...log.LoggerOption) log.Lo
 	}
 
 	cfg := log.NewLoggerConfig(options...)
-	key := instLib{
-		name:      name,
-		version:   cfg.InstrumentationVersion(),
-		schemaURL: cfg.SchemaURL(),
-		attrs:     cfg.InstrumentationAttributes(),
+	key := il{
+		name:    name,
+		version: cfg.InstrumentationVersion(),
+		schema:  cfg.SchemaURL(),
+		attrs:   cfg.InstrumentationAttributes(),
 	}
 
 	if p.loggers == nil {
 		l := &logger{name: name, options: options}
-		p.loggers = map[instLib]*logger{key: l}
+		p.loggers = map[il]*logger{key: l}
 		return l
 	}
 
@@ -87,7 +74,7 @@ type logger struct {
 	delegate atomic.Value // log.Logger
 }
 
-// Compile-time guarantee logger implements Logger.
+// This is a compile-time guarantee that logger implements Logger.
 var _ log.Logger = (*logger)(nil)
 
 func (l *logger) Emit(ctx context.Context, r log.Record) {

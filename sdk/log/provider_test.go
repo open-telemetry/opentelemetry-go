@@ -196,6 +196,7 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 	p0, p1 := newProcessor("0"), newProcessor("1")
 	attrCntLim := 12
 	attrValLenLim := 21
+	attrValDepthLim := 5
 
 	testcases := []struct {
 		name    string
@@ -209,6 +210,7 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 				resource:                  resource.Default(),
 				attributeCountLimit:       defaultAttrCntLim,
 				attributeValueLengthLimit: defaultAttrValLenLim,
+				attributeValueDepthLimit:  defaultAttrValDepthLim,
 			},
 		},
 		{
@@ -219,6 +221,7 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 				WithProcessor(p1),
 				WithAttributeCountLimit(attrCntLim),
 				WithAttributeValueLengthLimit(attrValLenLim),
+				WithAttributeValueDepthLimit(attrValDepthLim),
 				WithAllowKeyDuplication(),
 			},
 			want: &LoggerProvider{
@@ -226,7 +229,20 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 				processors:                []Processor{p0, p1},
 				attributeCountLimit:       attrCntLim,
 				attributeValueLengthLimit: attrValLenLim,
+				attributeValueDepthLimit:  attrValDepthLim,
 				allowDupKeys:              true,
+			},
+		},
+		{
+			name: "ZeroAttributeValueDepthLimitOption",
+			options: []LoggerProviderOption{
+				WithAttributeValueDepthLimit(0),
+			},
+			want: &LoggerProvider{
+				resource:                  resource.Default(),
+				attributeCountLimit:       defaultAttrCntLim,
+				attributeValueLengthLimit: defaultAttrValLenLim,
+				attributeValueDepthLimit:  defaultAttrValDepthLim,
 			},
 		},
 		{
@@ -234,11 +250,13 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 			envars: map[string]string{
 				envarAttrCntLim:    strconv.Itoa(attrCntLim),
 				envarAttrValLenLim: strconv.Itoa(attrValLenLim),
+				"OTEL_LOGRECORD_ATTRIBUTE_VALUE_DEPTH_LIMIT": "1",
 			},
 			want: &LoggerProvider{
 				resource:                  resource.Default(),
 				attributeCountLimit:       attrCntLim,
 				attributeValueLengthLimit: attrValLenLim,
+				attributeValueDepthLimit:  defaultAttrValDepthLim,
 			},
 		},
 		{
@@ -251,6 +269,7 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 				resource:                  resource.Default(),
 				attributeCountLimit:       defaultAttrCntLim,
 				attributeValueLengthLimit: defaultAttrValLenLim,
+				attributeValueDepthLimit:  defaultAttrValDepthLim,
 			},
 		},
 		{
@@ -268,6 +287,7 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 				resource:                  resource.Default(),
 				attributeCountLimit:       attrCntLim,
 				attributeValueLengthLimit: attrValLenLim,
+				attributeValueDepthLimit:  defaultAttrValDepthLim,
 			},
 		},
 	}
@@ -280,6 +300,50 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 			assert.Equal(t, tc.want, NewLoggerProvider(tc.options...))
 		})
 	}
+}
+
+func TestLoggerProviderAttributeValueDepthLimitFallback(t *testing.T) {
+	assert.Equal(t, defaultAttrValDepthLim, new(LoggerProvider).attrValueDepthLimit())
+	assert.Equal(t, 5, (&LoggerProvider{attributeValueDepthLimit: 5}).attrValueDepthLimit())
+}
+
+func collectRecordAttributes(r Record) []attribute.KeyValue {
+	var attrs []attribute.KeyValue
+	r.WalkAttributes(func(kv attribute.KeyValue) bool {
+		attrs = append(attrs, kv)
+		return true
+	})
+	return attrs
+}
+
+func TestLoggerProviderAttributeValueDepthLimit(t *testing.T) {
+	p := newProcessor("processor")
+	lp := NewLoggerProvider(
+		WithProcessor(p),
+		WithAttributeValueDepthLimit(2),
+		WithResource(resource.NewSchemaless(logDepthLimitInputAttr("resource"))),
+	)
+	l := lp.Logger("scope", log.WithInstrumentationAttributes(logDepthLimitInputAttr("scope")))
+
+	var in log.Record
+	in.SetBody(logDepthLimitInputAttr("body").Value)
+	in.AddAttributes(logDepthLimitInputAttr("attr"))
+	l.Emit(t.Context(), in)
+
+	require.Len(t, p.records, 1)
+	got := p.records[0]
+	assert.Equal(t, []attribute.KeyValue{logDepthLimitInputAttr("resource")}, got.Resource().Attributes())
+	assert.Equal(t, attribute.NewSet(logDepthLimitWantAttr("scope")), got.InstrumentationScope().Attributes)
+	assert.Equal(t, []attribute.KeyValue{logDepthLimitWantAttr("attr")}, collectRecordAttributes(got))
+	assert.True(t, valueEqual(logDepthLimitInputAttr("body").Value, got.Body()))
+	assert.Zero(t, got.DroppedAttributes())
+}
+
+func TestLoggerProviderAttributeValueDepthLimitOptionPrecedence(t *testing.T) {
+	assert.Equal(t, 3, newProviderConfig([]LoggerProviderOption{
+		WithAttributeValueDepthLimit(7),
+		WithAttributeValueDepthLimit(3),
+	}).attrValDepthLim.Value)
 }
 
 func mergeResource(t *testing.T, r1, r2 *resource.Resource) *resource.Resource {
@@ -387,15 +451,103 @@ func TestMapDeduplication(t *testing.T) {
 	})
 
 	t.Run("ScopeWithAllowKeyDuplication", func(t *testing.T) {
+		input := attribute.Map(
+			"map",
+			attribute.Slice(
+				"nested",
+				attribute.MapValue(
+					attribute.String("dup", "first"),
+					attribute.String("dup", "second"),
+				),
+			),
+			attribute.Map(
+				"over",
+				attribute.Map(
+					"middle",
+					attribute.Map("deep", attribute.String("leaf", "value")),
+				),
+			),
+		)
+		want := attribute.Map(
+			"map",
+			attribute.Slice(
+				"nested",
+				attribute.MapValue(
+					attribute.String("dup", "first"),
+					attribute.String("dup", "second"),
+				),
+			),
+			attribute.Map(
+				"over",
+				attribute.Map("middle", attribute.KeyValue{Key: "deep"}),
+			),
+		)
 		p := newProcessor("processor")
-		lp := NewLoggerProvider(WithProcessor(p), WithAllowKeyDuplication())
-		l := lp.Logger("scope", log.WithInstrumentationAttributes(dup))
+		lp := NewLoggerProvider(
+			WithProcessor(p),
+			WithAllowKeyDuplication(),
+			WithAttributeValueDepthLimit(3),
+		)
+		l := lp.Logger("scope", log.WithInstrumentationAttributes(input))
 
 		l.Emit(t.Context(), log.Record{})
 
 		require.Len(t, p.records, 1)
-		assert.Equal(t, attribute.NewSet(dup), p.records[0].InstrumentationScope().Attributes)
+		assert.Equal(t, attribute.NewSet(want), p.records[0].InstrumentationScope().Attributes)
 	})
+}
+
+func TestLoggerProviderInvalidInstrumentationAttributes(t *testing.T) {
+	invalid := attribute.String("", "invalid")
+	upper := attribute.String("Key", "upper")
+	lower := attribute.String("key", "lower")
+	attrs := []attribute.KeyValue{invalid, upper, lower}
+	want := attribute.NewSet(upper, lower)
+
+	options := []struct {
+		name string
+		new  func(...attribute.KeyValue) log.LoggerOption
+	}{
+		{
+			name: "Attributes",
+			new:  log.WithInstrumentationAttributes,
+		},
+		{
+			name: "AttributeSet",
+			new: func(attrs ...attribute.KeyValue) log.LoggerOption {
+				return log.WithInstrumentationAttributeSet(attribute.NewSet(attrs...))
+			},
+		},
+	}
+
+	for _, option := range options {
+		for _, allowDup := range []bool{false, true} {
+			name := option.name + "/AllowDuplicates=" + strconv.FormatBool(allowDup)
+			t.Run(name, func(t *testing.T) {
+				orig := logInvalidAttribute
+				t.Cleanup(func() { logInvalidAttribute = orig })
+				var diagnosticCalls int
+				logInvalidAttribute = sync.OnceFunc(func() { diagnosticCalls++ })
+
+				validProvider := NewLoggerProvider()
+				_ = validProvider.Logger("valid", option.new(upper, lower))
+				assert.Zero(t, diagnosticCalls)
+
+				processor := newProcessor("processor")
+				providerOpts := []LoggerProviderOption{WithProcessor(processor)}
+				if allowDup {
+					providerOpts = append(providerOpts, WithAllowKeyDuplication())
+				}
+				provider := NewLoggerProvider(providerOpts...)
+				logger := provider.Logger("scope", option.new(attrs...))
+				logger.Emit(t.Context(), log.Record{})
+
+				require.Len(t, processor.records, 1)
+				assert.Equal(t, want, processor.records[0].InstrumentationScope().Attributes)
+				assert.Equal(t, 1, diagnosticCalls)
+			})
+		}
+	}
 }
 
 func TestLoggerProviderConcurrentSafe(t *testing.T) {
