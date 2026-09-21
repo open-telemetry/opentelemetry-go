@@ -366,6 +366,43 @@ func TestFinishSumConcurrentSafeShutdown(t *testing.T) {
 	assert.Zero(t, agg.ComputeAggregation(&data))
 }
 
+func TestFinishSumShutdownWaitsForSeriesCreation(t *testing.T) {
+	creating := make(chan struct{})
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	releaseCreation := func() { releaseOnce.Do(func() { close(release) }) }
+	defer releaseCreation()
+	agg := Builder[int64]{
+		ReservoirFunc: func(attrs attribute.Set) FilteredExemplarReservoir[int64] {
+			close(creating)
+			<-release
+			return dropExemplars[int64](attrs)
+		},
+	}.FinishSum(true)
+
+	measured := make(chan struct{})
+	go func() {
+		agg.Measure(t.Context(), 1, alice)
+		close(measured)
+	}()
+	<-creating
+	agg.Stop()
+	waited := make(chan error, 1)
+	go func() { waited <- agg.Wait(t.Context()) }()
+	select {
+	case err := <-waited:
+		require.NoError(t, err)
+		t.Fatal("shutdown completed while a series was being created")
+	case <-time.After(10 * time.Millisecond):
+	}
+
+	releaseCreation()
+	assert.NoError(t, <-waited)
+	<-measured
+	var data metricdata.Aggregation
+	assert.Zero(t, agg.ComputeAggregation(&data))
+}
+
 type blockingFinishSumReservoir struct {
 	offered chan struct{}
 	release chan struct{}
