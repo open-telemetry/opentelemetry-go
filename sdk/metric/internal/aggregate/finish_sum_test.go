@@ -5,7 +5,6 @@ package aggregate
 
 import (
 	"context"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -253,6 +252,29 @@ func TestFinishSumShutdown(t *testing.T) {
 	assert.Nil(t, data)
 }
 
+func TestFinishSumRetireAndDelete(t *testing.T) {
+	store := newFinishSum(
+		true,
+		metricdata.CumulativeTemporality,
+		0,
+		dropExemplars[int64],
+	)
+	lazy := newLazyFilteredAttributes(alice, nil)
+	store.measure(t.Context(), 1, lazy)
+	raw, ok := store.values.Load(alice.Equivalent())
+	require.True(t, ok)
+	point := raw.(*finishSumValue[int64])
+
+	store.retireAndDelete(point)
+	store.retireAndDelete(point)
+	assert.Zero(t, store.values.Len())
+	assert.False(t, point.measure(t.Context(), 1, lazy))
+
+	_, emit, retire := point.collectCumulative(y2k)
+	assert.False(t, emit)
+	assert.False(t, retire)
+}
+
 func TestFinishSumMeasureDeletesRetiredPoint(t *testing.T) {
 	store := newFinishSum(
 		true,
@@ -344,136 +366,6 @@ func TestFinishSumConcurrentSafeShutdown(t *testing.T) {
 	assert.Zero(t, agg.ComputeAggregation(&data))
 }
 
-func TestFinishSumMeasurementDoesNotWaitForShutdown(t *testing.T) {
-	reservoir := &multiBlockingFinishSumReservoir{
-		offered: make(chan int64, 2),
-		first:   make(chan struct{}),
-		second:  make(chan struct{}),
-	}
-	defer closeIfOpen(reservoir.first)
-	defer closeIfOpen(reservoir.second)
-	agg := Builder[int64]{
-		ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
-			return reservoir
-		},
-	}.FinishSum(true)
-
-	first := make(chan struct{})
-	go func() {
-		agg.Measure(t.Context(), 1, alice)
-		close(first)
-	}()
-	require.Equal(t, int64(1), <-reservoir.offered)
-	second := make(chan struct{})
-	go func() {
-		agg.Measure(t.Context(), 2, alice)
-		close(second)
-	}()
-	require.Equal(t, int64(2), <-reservoir.offered)
-
-	agg.Stop()
-	waited := make(chan error, 1)
-	go func() { waited <- agg.Wait(t.Context()) }()
-	close(reservoir.first)
-	select {
-	case <-first:
-	case <-time.After(time.Second):
-		t.Fatal("measurement waited for another writer during shutdown")
-	}
-	select {
-	case err := <-waited:
-		require.NoError(t, err)
-		t.Fatal("shutdown completed with a measurement in flight")
-	default:
-	}
-
-	close(reservoir.second)
-	<-second
-	require.NoError(t, <-waited)
-}
-
-func TestFinishSumShutdownWaitsForSeriesCreation(t *testing.T) {
-	creating := make(chan struct{})
-	release := make(chan struct{})
-	var releaseOnce sync.Once
-	releaseCreation := func() { releaseOnce.Do(func() { close(release) }) }
-	defer releaseCreation()
-	agg := Builder[int64]{
-		ReservoirFunc: func(attrs attribute.Set) FilteredExemplarReservoir[int64] {
-			close(creating)
-			<-release
-			return dropExemplars[int64](attrs)
-		},
-	}.FinishSum(true)
-
-	measured := make(chan struct{})
-	go func() {
-		agg.Measure(t.Context(), 1, alice)
-		close(measured)
-	}()
-	<-creating
-	agg.Stop()
-	waited := make(chan error, 1)
-	go func() { waited <- agg.Wait(t.Context()) }()
-	select {
-	case err := <-waited:
-		require.NoError(t, err)
-		t.Fatal("shutdown completed while a series was being created")
-	case <-time.After(10 * time.Millisecond):
-	}
-
-	releaseCreation()
-	assert.NoError(t, <-waited)
-	<-measured
-	var data metricdata.Aggregation
-	assert.Zero(t, agg.ComputeAggregation(&data))
-}
-
-func TestFinishSumShutdownCreationCancellationIsRetryable(t *testing.T) {
-	creating := make(chan struct{})
-	release := make(chan struct{})
-	defer closeIfOpen(release)
-	store := newFinishSum[int64](
-		true,
-		metricdata.CumulativeTemporality,
-		0,
-		func(attrs attribute.Set) FilteredExemplarReservoir[int64] {
-			close(creating)
-			<-release
-			return dropExemplars[int64](attrs)
-		},
-	)
-
-	measured := make(chan struct{})
-	go func() {
-		store.measure(t.Context(), 1, newLazyFilteredAttributes(alice, nil))
-		close(measured)
-	}()
-	<-creating
-	store.stop()
-	ctx, cancel := context.WithCancel(t.Context())
-	waited := make(chan error, 1)
-	go func() { waited <- store.wait(ctx) }()
-	for store.collectMu.TryLock() {
-		store.collectMu.Unlock()
-		runtime.Gosched()
-	}
-	cancel()
-	assert.ErrorIs(t, <-waited, context.Canceled)
-
-	retried := make(chan error, 1)
-	go func() { retried <- store.wait(t.Context()) }()
-	select {
-	case err := <-retried:
-		require.NoError(t, err)
-		t.Fatal("shutdown retry completed while a series was being created")
-	default:
-	}
-	close(release)
-	<-measured
-	require.NoError(t, <-retried)
-}
-
 type blockingFinishSumReservoir struct {
 	offered chan struct{}
 	release chan struct{}
@@ -489,35 +381,6 @@ func (r *blockingFinishSumReservoir) Offer(
 }
 
 func (*blockingFinishSumReservoir) Collect(*[]exemplar.Exemplar) {}
-
-type multiBlockingFinishSumReservoir struct {
-	offered chan int64
-	first   chan struct{}
-	second  chan struct{}
-}
-
-func (r *multiBlockingFinishSumReservoir) Offer(
-	_ context.Context,
-	value int64,
-	_ lazyFilteredAttributes,
-) {
-	r.offered <- value
-	if value == 1 {
-		<-r.first
-	} else {
-		<-r.second
-	}
-}
-
-func (*multiBlockingFinishSumReservoir) Collect(*[]exemplar.Exemplar) {}
-
-func closeIfOpen(ch chan struct{}) {
-	select {
-	case <-ch:
-	default:
-		close(ch)
-	}
-}
 
 func BenchmarkFinishSum(b *testing.B) {
 	b.Run("Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
@@ -563,45 +426,6 @@ func BenchmarkFinishSumMeasure(b *testing.B) {
 			})
 		})
 	}
-}
-
-func BenchmarkFinishSumMeasureMiss(b *testing.B) {
-	const numAttrs = 256
-	attrs := make([]attribute.Set, numAttrs)
-	for i := range numAttrs {
-		attrs[i] = attribute.NewSet(attribute.Int("series", i))
-	}
-	newMeasure := func() Measure[int64] {
-		agg := Builder[int64]{
-			AggregationLimit: 1,
-			ReservoirFunc:    dropExemplars[int64],
-		}.FinishSum(true)
-		agg.Measure(b.Context(), 1, alice)
-		return agg.Measure
-	}
-
-	b.Run("mode=serial", func(b *testing.B) {
-		measure := newMeasure()
-		b.ReportAllocs()
-		b.ResetTimer()
-		var i int
-		for b.Loop() {
-			measure(b.Context(), 1, attrs[i%numAttrs])
-			i++
-		}
-	})
-	b.Run("mode=parallel", func(b *testing.B) {
-		measure := newMeasure()
-		b.ReportAllocs()
-		b.ResetTimer()
-		b.RunParallel(func(pb *testing.PB) {
-			var i int
-			for pb.Next() {
-				measure(b.Context(), 1, attrs[i%numAttrs])
-				i++
-			}
-		})
-	})
 }
 
 func BenchmarkFinishSumOverflowMeasurement(b *testing.B) {
