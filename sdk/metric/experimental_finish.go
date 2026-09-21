@@ -4,6 +4,7 @@
 package metric
 
 import (
+	"context"
 	"errors"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -13,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/finish"
 )
 
-func newFinishMeterFactory() (meterFactoryFn meterFactory, shutdown func()) {
+func newFinishMeterFactory() (meterFactoryFn meterFactory, shutdown func(context.Context) error) {
 	registry := &finish.Registry{}
 	return func(s instrumentation.Scope, p pipelines) metric.Meter {
 		m := newMeter(s, p)
@@ -68,7 +69,7 @@ func finishInt64CounterAggregators(
 	r resolver[int64],
 	id Instrument,
 	allowedKeys []attribute.Key,
-	registerShutdown func(func()),
+	registerShutdown func(func(), func(context.Context) error),
 ) ([]aggregate.Measure[int64], []finish.Func, error) {
 	var (
 		measures  []aggregate.Measure[int64]
@@ -84,7 +85,7 @@ func finishInt64CounterAggregators(
 			if kind == InstrumentKindCounter {
 				if _, ok := agg.(AggregationSum); ok {
 					sum := b.FinishSum(true)
-					registerShutdown(sum.Shutdown)
+					registerShutdown(sum.Stop, sum.Wait)
 					return streamAggregation[int64]{
 						measure: sum.Measure,
 						compute: sum.ComputeAggregation,

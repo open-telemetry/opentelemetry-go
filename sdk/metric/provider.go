@@ -5,6 +5,7 @@ package metric
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/global"
@@ -52,9 +53,7 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 	if experimentalShutdown != nil {
 		readerShutdown := sdown
 		sdown = func(ctx context.Context) error {
-			err := readerShutdown(ctx)
-			experimentalShutdown()
-			return err
+			return errors.Join(readerShutdown(ctx), experimentalShutdown(ctx))
 		}
 	}
 

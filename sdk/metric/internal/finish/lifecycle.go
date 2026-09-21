@@ -4,6 +4,7 @@
 package finish
 
 import (
+	"context"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -239,15 +240,36 @@ func (l *Lifecycle) beginCollection(at time.Time) (Collection, bool) {
 // measurements to complete and has no effect if the lifetime is already
 // retired.
 func (l *Lifecycle) Retire() {
-	l.control.Lock()
+	_ = l.RetireContext(context.Background())
+}
+
+// RetireContext permanently closes the series lifetime. It waits for admitted
+// measurements to complete and has no effect if the lifetime is already
+// retired. It returns without retiring the lifetime if ctx is canceled first.
+func (l *Lifecycle) RetireContext(ctx context.Context) error {
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if l.control.TryLock() {
+			break
+		}
+		runtime.Gosched()
+	}
 	defer l.control.Unlock()
 	if lifecycleState(l.state.Load()) == lifecycleRetired {
-		return
+		return nil
 	}
+	state := lifecycleState(l.state.Load())
 	l.state.Store(uint32(lifecycleCollecting))
 	for l.writers.Load() != 0 {
+		if err := ctx.Err(); err != nil {
+			l.state.Store(uint32(state))
+			return err
+		}
 		runtime.Gosched()
 	}
 	l.finished = time.Time{}
 	l.state.Store(uint32(lifecycleRetired))
+	return nil
 }

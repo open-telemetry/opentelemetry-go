@@ -4,6 +4,7 @@
 package finish
 
 import (
+	"context"
 	"runtime"
 	"sync"
 	"testing"
@@ -315,6 +316,25 @@ func TestLifecycleRetireWaitsForMeasurement(t *testing.T) {
 
 	measurement.Release()
 	<-retired
+	_, ok = lifecycle.AcquireMeasurement()
+	assert.False(t, ok)
+}
+
+func TestLifecycleRetireContext(t *testing.T) {
+	var lifecycle Lifecycle
+	measurement, ok := lifecycle.AcquireMeasurement()
+	require.True(t, ok)
+	ctx, cancel := context.WithCancel(t.Context())
+	retired := make(chan error, 1)
+	go func() { retired <- lifecycle.RetireContext(ctx) }()
+	for lifecycleState(lifecycle.state.Load()) != lifecycleCollecting {
+		runtime.Gosched()
+	}
+	cancel()
+
+	assert.ErrorIs(t, <-retired, context.Canceled)
+	measurement.Release()
+	require.NoError(t, lifecycle.RetireContext(t.Context()))
 	_, ok = lifecycle.AcquireMeasurement()
 	assert.False(t, ok)
 }

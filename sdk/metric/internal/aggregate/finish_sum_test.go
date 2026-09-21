@@ -241,8 +241,10 @@ func TestFinishSumInitialMeasurementAdmission(t *testing.T) {
 func TestFinishSumShutdown(t *testing.T) {
 	agg := Builder[int64]{ReservoirFunc: dropExemplars[int64]}.FinishSum(true)
 	agg.Measure(t.Context(), 1, alice)
-	agg.Shutdown()
-	agg.Shutdown()
+	agg.Stop()
+	require.NoError(t, agg.Wait(t.Context()))
+	agg.Stop()
+	require.NoError(t, agg.Wait(t.Context()))
 	agg.Measure(t.Context(), 2, alice)
 	agg.Finish(alice.Equivalent(), time.Now())
 	var data metricdata.Aggregation
@@ -352,20 +354,14 @@ func TestFinishSumConcurrentSafeShutdown(t *testing.T) {
 	}()
 	<-reservoir.offered
 
-	shutdown := make(chan struct{})
-	go func() {
-		agg.Shutdown()
-		close(shutdown)
-	}()
-	select {
-	case <-shutdown:
-		t.Fatal("shutdown completed with a measurement in flight")
-	case <-time.After(10 * time.Millisecond):
-	}
+	agg.Stop()
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	assert.ErrorIs(t, agg.Wait(ctx), context.Canceled)
 
 	close(reservoir.release)
 	<-measured
-	<-shutdown
+	require.NoError(t, agg.Wait(t.Context()))
 	var data metricdata.Aggregation
 	assert.Zero(t, agg.ComputeAggregation(&data))
 }
