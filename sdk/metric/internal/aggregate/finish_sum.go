@@ -138,7 +138,7 @@ type FinishSum[N int64 | float64] struct {
 
 type finishSum[N int64 | float64] struct {
 	collectMu sync.Mutex
-	createMu  sync.RWMutex
+	createMu  sync.Mutex
 	stopped   atomic.Bool
 
 	values      limitedSyncMap[*finishSumValue[N]]
@@ -221,8 +221,8 @@ func (s *finishSum[N]) measure(
 func (s *finishSum[N]) loadOrStore(
 	lazy lazyFilteredAttributes,
 ) (*finishSumValue[N], finish.Measurement, bool, bool) {
-	s.createMu.RLock()
-	defer s.createMu.RUnlock()
+	s.createMu.Lock()
+	defer s.createMu.Unlock()
 	if s.stopped.Load() {
 		return nil, finish.Measurement{}, false, false
 	}

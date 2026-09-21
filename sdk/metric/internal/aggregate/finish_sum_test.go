@@ -465,6 +465,45 @@ func BenchmarkFinishSumMeasure(b *testing.B) {
 	}
 }
 
+func BenchmarkFinishSumMeasureMiss(b *testing.B) {
+	const numAttrs = 256
+	attrs := make([]attribute.Set, numAttrs)
+	for i := range numAttrs {
+		attrs[i] = attribute.NewSet(attribute.Int("series", i))
+	}
+	newMeasure := func() Measure[int64] {
+		agg := Builder[int64]{
+			AggregationLimit: 1,
+			ReservoirFunc:    dropExemplars[int64],
+		}.FinishSum(true)
+		agg.Measure(b.Context(), 1, alice)
+		return agg.Measure
+	}
+
+	b.Run("mode=serial", func(b *testing.B) {
+		measure := newMeasure()
+		b.ReportAllocs()
+		b.ResetTimer()
+		var i int
+		for b.Loop() {
+			measure(b.Context(), 1, attrs[i%numAttrs])
+			i++
+		}
+	})
+	b.Run("mode=parallel", func(b *testing.B) {
+		measure := newMeasure()
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			var i int
+			for pb.Next() {
+				measure(b.Context(), 1, attrs[i%numAttrs])
+				i++
+			}
+		})
+	})
+}
+
 func BenchmarkFinishSumOverflowMeasurement(b *testing.B) {
 	lazy := newLazyFilteredAttributes(overflowSet, nil)
 	b.Run("state=promotion", func(b *testing.B) {
