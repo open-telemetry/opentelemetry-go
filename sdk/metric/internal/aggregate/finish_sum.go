@@ -138,7 +138,7 @@ type FinishSum[N int64 | float64] struct {
 
 type finishSum[N int64 | float64] struct {
 	collectMu sync.Mutex
-	createMu  sync.Mutex
+	creating  atomic.Int64
 	stopped   atomic.Bool
 
 	values      limitedSyncMap[*finishSumValue[N]]
@@ -187,67 +187,55 @@ func (s *finishSum[N]) measure(
 		if loaded {
 			point = raw.(*finishSumValue[N])
 		} else {
-			point, initial, loaded, overflowed = s.loadOrStore(lazy)
-			if point == nil {
+			if !s.acquireCreation() {
 				return
 			}
+			point, loaded, overflowed = s.values.LoadOrStoreAttrReclaiming(lazy, func(
+				attrs attribute.Set,
+				overflow bool,
+			) *finishSumValue[N] {
+				point := newFinishSumValue(attrs, s.reservoir)
+				// The point has not been published, so its new lifecycle cannot be
+				// retired and this initial measurement admission cannot fail.
+				if overflow {
+					initial, _ = point.lifecycle.AcquireSharedMeasurement()
+				} else {
+					initial, _ = point.lifecycle.AcquireMeasurement()
+				}
+				return point
+			})
+			s.releaseCreation()
 		}
 		if !loaded {
 			point.measureAcquired(ctx, value, lazy, initial)
-			if s.stopped.Load() {
-				s.retireAndDelete(point)
-			}
 			return
 		}
 		if overflowed {
 			if point.measureOverflow(ctx, value, lazy) {
-				if s.stopped.Load() {
-					s.retireAndDelete(point)
-				}
 				return
 			}
 			continue
 		}
 		if point.measure(ctx, value, lazy) {
-			if s.stopped.Load() {
-				s.retireAndDelete(point)
-			}
 			return
 		}
 		s.values.CompareAndDelete(lazy.Distinct(), point)
 	}
 }
 
-func (s *finishSum[N]) loadOrStore(
-	lazy lazyFilteredAttributes,
-) (*finishSumValue[N], finish.Measurement, bool, bool) {
-	s.createMu.Lock()
-	defer s.createMu.Unlock()
+func (s *finishSum[N]) acquireCreation() bool {
+	// Increment before checking stopped so shutdown either observes this
+	// publisher or closes admission before it can modify values.
+	s.creating.Add(1)
 	if s.stopped.Load() {
-		return nil, finish.Measurement{}, false, false
+		s.releaseCreation()
+		return false
 	}
-
-	var initial finish.Measurement
-	point, loaded, overflowed := s.values.LoadOrStoreAttrReclaiming(lazy, func(
-		attrs attribute.Set,
-		overflow bool,
-	) *finishSumValue[N] {
-		point := newFinishSumValue(attrs, s.reservoir)
-		// The point has not been published, so its new lifecycle cannot be
-		// retired and this initial measurement admission cannot fail.
-		if overflow {
-			initial, _ = point.lifecycle.AcquireSharedMeasurement()
-		} else {
-			initial, _ = point.lifecycle.AcquireMeasurement()
-		}
-		return point
-	})
-	return point, initial, loaded, overflowed
+	return true
 }
 
-func (s *finishSum[N]) retireAndDelete(point *finishSumValue[N]) {
-	_ = point.shutdown(context.Background())
-	s.values.CompareAndDelete(point.attrs.Equivalent(), point)
+func (s *finishSum[N]) releaseCreation() {
+	s.creating.Add(-1)
 }
 
 func (s *finishSum[N]) finish(
@@ -319,10 +307,9 @@ func (s *finishSum[N]) wait(ctx context.Context) error {
 		return err
 	}
 	defer s.collectMu.Unlock()
-	if err := s.lockCreation(ctx); err != nil {
+	if err := s.waitForCreation(ctx); err != nil {
 		return err
 	}
-	defer s.createMu.Unlock()
 
 	var err error
 	s.values.Range(func(_, raw any) bool {
@@ -347,12 +334,12 @@ func (s *finishSum[N]) lockCollection(ctx context.Context) error {
 	}
 }
 
-func (s *finishSum[N]) lockCreation(ctx context.Context) error {
+func (s *finishSum[N]) waitForCreation(ctx context.Context) error {
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if s.createMu.TryLock() {
+		if s.creating.Load() == 0 {
 			return nil
 		}
 		runtime.Gosched()
