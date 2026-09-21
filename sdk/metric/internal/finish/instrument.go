@@ -11,8 +11,11 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-// Func finishes a series identified by raw, pre-View attributes.
-type Func func([]attribute.KeyValue, time.Time)
+// Func marks a metric series as finished at t.
+//
+// attrs is the complete, unfiltered attribute collection supplied by the
+// instrument caller. Implementations must not retain or modify attrs.
+type Func func(attrs []attribute.KeyValue, t time.Time)
 
 type int64Counter struct {
 	metric.Int64Counter
