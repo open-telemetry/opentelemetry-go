@@ -294,16 +294,19 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes, newValu
 // LoadOrStoreAttrReclaiming is equivalent to LoadOrStoreAttr, except that a
 // slot released after overflow was created can be reused for a new attribute
 // set. The shared overflow entry remains available for measurements made while
-// all normal slots are occupied. It reports whether the value was loaded and
-// whether this lookup was routed to the shared overflow entry.
+// all normal slots are occupied. New values are added only if allow returns
+// true while insertion is locked. The returned values report whether the value
+// was loaded, whether this lookup was routed to the shared overflow entry, and
+// whether the lookup was accepted.
 func (m *limitedSyncMap[V]) LoadOrStoreAttrReclaiming(
 	lazy lazyFilteredAttributes,
+	allow func() bool,
 	newValue func(attribute.Set, bool) V,
-) (value V, loaded, overflowed bool) {
+) (value V, loaded, overflowed, accepted bool) {
 	distinct := lazy.Distinct()
 	actual, loaded := m.Load(distinct)
 	if loaded {
-		return actual.(V), true, false
+		return actual.(V), true, false, true
 	}
 
 	m.lenMux.Lock()
@@ -311,12 +314,15 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttrReclaiming(
 
 	actual, loaded = m.Load(distinct)
 	if loaded {
-		return actual.(V), true, false
+		return actual.(V), true, false, true
+	}
+	if !allow() {
+		return value, false, false, false
 	}
 
 	overflow, hasOverflow := m.Load(overflowSet.Equivalent())
 	if m.aggLimit > 0 && hasOverflow && m.len >= m.aggLimit {
-		return overflow.(V), true, true
+		return overflow.(V), true, true, true
 	}
 
 	var attrs attribute.Set
@@ -331,7 +337,25 @@ func (m *limitedSyncMap[V]) LoadOrStoreAttrReclaiming(
 	if !loaded {
 		m.len++
 	}
-	return actual.(V), loaded, overflowed
+	return actual.(V), loaded, overflowed, true
+}
+
+// Drain calls f for every stored value while preventing new values from being
+// added. If all calls return true, Drain removes all values and returns true.
+func (m *limitedSyncMap[V]) Drain(f func(V) bool) bool {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+
+	complete := true
+	m.Range(func(_, raw any) bool {
+		complete = f(raw.(V))
+		return complete
+	})
+	if complete {
+		m.len = 0
+		m.Map.Clear()
+	}
+	return complete
 }
 
 func (m *limitedSyncMap[V]) Clear() {

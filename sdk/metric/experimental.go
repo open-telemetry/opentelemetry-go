@@ -3,11 +3,15 @@
 
 package metric
 
+import "context"
+
 type finishOption interface {
 	FinishEnabled() bool
 }
 
-func newExperimentalMeterFactory(options []experimentalOption) (meterFactoryFn meterFactory, shutdown func()) {
+func newExperimentalMeterFactory(
+	options []experimentalOption,
+) (meterFactoryFn meterFactory, shutdown func(context.Context) error) {
 	for _, option := range options {
 		if finish, ok := option.(finishOption); ok && finish.FinishEnabled() {
 			return newFinishMeterFactory()

@@ -4,6 +4,7 @@
 package metric
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -101,4 +102,16 @@ func TestExperimentalInt64CounterFinishAggregationError(t *testing.T) {
 
 	_, err := provider.Meter("test").Int64Counter("requests")
 	assert.ErrorIs(t, err, errUnknownAggregation)
+}
+
+func TestExperimentalFinishShutdownContext(t *testing.T) {
+	reader := NewManualReader()
+	provider := NewMeterProvider(WithReader(reader), testFinishOption(true))
+	counter, err := provider.Meter("test").Int64Counter("requests")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	assert.ErrorIs(t, provider.Shutdown(ctx), context.Canceled)
 }

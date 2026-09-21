@@ -5,6 +5,7 @@ package aggregate
 
 import (
 	"context"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -126,18 +127,22 @@ func (v *finishSumValue[N]) shutdown() {
 	v.lifecycle.Retire()
 }
 
+func (v *finishSumValue[N]) shutdownContext(ctx context.Context) error {
+	return v.lifecycle.RetireContext(ctx)
+}
+
 // FinishSum contains the operations of a finish-aware Sum aggregation.
 type FinishSum[N int64 | float64] struct {
 	Measure            Measure[N]
 	ComputeAggregation ComputeAggregation
 	Finish             func(attribute.Distinct, time.Time)
-	Shutdown           func()
+	Stop               func()
+	Wait               func(context.Context) error
 }
 
 type finishSum[N int64 | float64] struct {
-	collectMu    sync.Mutex
-	shutdownOnce sync.Once
-	stopped      atomic.Bool
+	collectMu sync.Mutex
+	stopped   atomic.Bool
 
 	values      limitedSyncMap[*finishSumValue[N]]
 	start       time.Time
@@ -179,20 +184,32 @@ func (s *finishSum[N]) measure(
 			return
 		}
 		var initial finish.Measurement
-		point, loaded, overflowed := s.values.LoadOrStoreAttrReclaiming(lazy, func(
-			attrs attribute.Set,
-			overflow bool,
-		) *finishSumValue[N] {
-			point := newFinishSumValue(attrs, s.reservoir)
-			// The point has not been published, so its new lifecycle cannot be
-			// retired and this initial measurement admission cannot fail.
-			if overflow {
-				initial, _ = point.lifecycle.AcquireSharedMeasurement()
-			} else {
-				initial, _ = point.lifecycle.AcquireMeasurement()
+		var point *finishSumValue[N]
+		raw, loaded := s.values.Load(lazy.Distinct())
+		overflowed := false
+		if loaded {
+			point = raw.(*finishSumValue[N])
+		} else {
+			var accepted bool
+			point, loaded, overflowed, accepted = s.values.LoadOrStoreAttrReclaiming(
+				lazy,
+				func() bool { return !s.stopped.Load() },
+				func(attrs attribute.Set, overflow bool) *finishSumValue[N] {
+					point := newFinishSumValue(attrs, s.reservoir)
+					// The point has not been published, so its new lifecycle cannot be
+					// retired and this initial measurement admission cannot fail.
+					if overflow {
+						initial, _ = point.lifecycle.AcquireSharedMeasurement()
+					} else {
+						initial, _ = point.lifecycle.AcquireMeasurement()
+					}
+					return point
+				},
+			)
+			if !accepted {
+				return
 			}
-			return point
-		})
+		}
 		if !loaded {
 			point.measureAcquired(ctx, value, lazy, initial)
 			if s.stopped.Load() {
@@ -283,17 +300,35 @@ func (s *finishSum[N]) collect(
 	return len(points)
 }
 
-func (s *finishSum[N]) shutdown() {
-	s.shutdownOnce.Do(func() {
-		s.stopped.Store(true)
-		s.collectMu.Lock()
-		defer s.collectMu.Unlock()
-		s.values.Range(func(_, raw any) bool {
-			raw.(*finishSumValue[N]).shutdown()
-			return true
-		})
-		s.values.Clear()
+func (s *finishSum[N]) stop() {
+	s.stopped.Store(true)
+}
+
+func (s *finishSum[N]) wait(ctx context.Context) error {
+	s.stop()
+	if err := lockFinishSum(ctx, &s.collectMu); err != nil {
+		return err
+	}
+	defer s.collectMu.Unlock()
+
+	var err error
+	s.values.Drain(func(raw *finishSumValue[N]) bool {
+		err = raw.shutdownContext(ctx)
+		return err == nil
 	})
+	return err
+}
+
+func lockFinishSum(ctx context.Context, mu *sync.Mutex) error {
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if mu.TryLock() {
+			return nil
+		}
+		runtime.Gosched()
+	}
 }
 
 // FinishSum returns a Sum aggregation with exact-attribute lifecycle support.
@@ -308,6 +343,7 @@ func (b Builder[N]) FinishSum(monotonic bool) FinishSum[N] {
 		Measure:            b.filter(store.measure),
 		ComputeAggregation: store.collect,
 		Finish:             store.finish,
-		Shutdown:           store.shutdown,
+		Stop:               store.stop,
+		Wait:               store.wait,
 	}
 }
