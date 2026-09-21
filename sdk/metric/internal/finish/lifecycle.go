@@ -253,8 +253,7 @@ func (l *Lifecycle) Retire(ctx context.Context) error {
 	if lifecycleState(l.state.Load()) == lifecycleRetired {
 		return nil
 	}
-	state := lifecycleState(l.state.Load())
-	l.state.Store(uint32(lifecycleCollecting))
+	state := lifecycleState(l.state.Swap(uint32(lifecycleCollecting)))
 	for l.writers.Load() != 0 {
 		if err := ctx.Err(); err != nil {
 			l.state.Store(uint32(state))
