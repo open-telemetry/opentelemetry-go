@@ -123,12 +123,8 @@ func (v *finishSumValue[N]) collect(
 	return dp, collection.ShouldRetire()
 }
 
-func (v *finishSumValue[N]) shutdown() {
-	v.lifecycle.Retire()
-}
-
-func (v *finishSumValue[N]) shutdownContext(ctx context.Context) error {
-	return v.lifecycle.RetireContext(ctx)
+func (v *finishSumValue[N]) shutdown(ctx context.Context) error {
+	return v.lifecycle.Retire(ctx)
 }
 
 // FinishSum contains the operations of a finish-aware Sum aggregation.
@@ -250,7 +246,7 @@ func (s *finishSum[N]) loadOrStore(
 }
 
 func (s *finishSum[N]) retireAndDelete(point *finishSumValue[N]) {
-	point.shutdown()
+	_ = point.shutdown(context.Background())
 	s.values.CompareAndDelete(point.attrs.Equivalent(), point)
 }
 
@@ -330,7 +326,7 @@ func (s *finishSum[N]) wait(ctx context.Context) error {
 
 	var err error
 	s.values.Range(func(_, raw any) bool {
-		err = raw.(*finishSumValue[N]).shutdownContext(ctx)
+		err = raw.(*finishSumValue[N]).shutdown(ctx)
 		return err == nil
 	})
 	if err == nil {

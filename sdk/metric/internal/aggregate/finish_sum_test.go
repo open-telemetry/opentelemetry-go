@@ -287,7 +287,7 @@ func TestFinishSumMeasureDeletesRetiredPoint(t *testing.T) {
 	raw, ok := store.values.Load(alice.Equivalent())
 	require.True(t, ok)
 	retired := raw.(*finishSumValue[int64])
-	retired.shutdown()
+	require.NoError(t, retired.shutdown(t.Context()))
 
 	store.measure(t.Context(), 2, lazy)
 

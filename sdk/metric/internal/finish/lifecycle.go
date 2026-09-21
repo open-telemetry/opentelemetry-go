@@ -238,15 +238,8 @@ func (l *Lifecycle) beginCollection(at time.Time) (Collection, bool) {
 
 // Retire permanently closes the series lifetime. It waits for admitted
 // measurements to complete and has no effect if the lifetime is already
-// retired.
-func (l *Lifecycle) Retire() {
-	_ = l.RetireContext(context.Background())
-}
-
-// RetireContext permanently closes the series lifetime. It waits for admitted
-// measurements to complete and has no effect if the lifetime is already
 // retired. It returns without retiring the lifetime if ctx is canceled first.
-func (l *Lifecycle) RetireContext(ctx context.Context) error {
+func (l *Lifecycle) Retire(ctx context.Context) error {
 	for {
 		if err := ctx.Err(); err != nil {
 			return err

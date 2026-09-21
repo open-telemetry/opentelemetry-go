@@ -97,8 +97,8 @@ func TestLifecycle(t *testing.T) {
 
 	t.Run("RetiredIsTerminal", func(t *testing.T) {
 		var lifecycle Lifecycle
-		lifecycle.Retire()
-		lifecycle.Retire()
+		require.NoError(t, lifecycle.Retire(t.Context()))
+		require.NoError(t, lifecycle.Retire(t.Context()))
 
 		assert.False(t, lifecycle.Finish(y2kPlus(1)))
 		_, ok := lifecycle.AcquireMeasurement()
@@ -300,10 +300,9 @@ func TestLifecycleRetireWaitsForMeasurement(t *testing.T) {
 	measurement, ok := lifecycle.AcquireMeasurement()
 	require.True(t, ok)
 
-	retired := make(chan struct{})
+	retired := make(chan error, 1)
 	go func() {
-		lifecycle.Retire()
-		close(retired)
+		retired <- lifecycle.Retire(t.Context())
 	}()
 	for lifecycleState(lifecycle.state.Load()) != lifecycleCollecting {
 		runtime.Gosched()
@@ -315,18 +314,18 @@ func TestLifecycleRetireWaitsForMeasurement(t *testing.T) {
 	}
 
 	measurement.Release()
-	<-retired
+	require.NoError(t, <-retired)
 	_, ok = lifecycle.AcquireMeasurement()
 	assert.False(t, ok)
 }
 
-func TestLifecycleRetireContext(t *testing.T) {
+func TestLifecycleRetireCancellation(t *testing.T) {
 	var lifecycle Lifecycle
 	measurement, ok := lifecycle.AcquireMeasurement()
 	require.True(t, ok)
 	ctx, cancel := context.WithCancel(t.Context())
 	retired := make(chan error, 1)
-	go func() { retired <- lifecycle.RetireContext(ctx) }()
+	go func() { retired <- lifecycle.Retire(ctx) }()
 	for lifecycleState(lifecycle.state.Load()) != lifecycleCollecting {
 		runtime.Gosched()
 	}
@@ -334,7 +333,7 @@ func TestLifecycleRetireContext(t *testing.T) {
 
 	assert.ErrorIs(t, <-retired, context.Canceled)
 	measurement.Release()
-	require.NoError(t, lifecycle.RetireContext(t.Context()))
+	require.NoError(t, lifecycle.Retire(t.Context()))
 	_, ok = lifecycle.AcquireMeasurement()
 	assert.False(t, ok)
 }
