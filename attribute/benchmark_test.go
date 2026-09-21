@@ -587,3 +587,39 @@ func benchmarkEquivalentMapAccess(b *testing.B, set *attribute.Set) {
 		values[set.Equivalent()]++
 	}
 }
+
+func BenchmarkSetString(b *testing.B) {
+	for _, bench := range []struct {
+		name  string
+		attrs []attribute.KeyValue
+	}{
+		{
+			name: "Len2",
+			attrs: []attribute.KeyValue{
+				attribute.String("a", "one"),
+				attribute.String("b", "two"),
+			},
+		},
+		{
+			name: "Len8",
+			attrs: []attribute.KeyValue{
+				attribute.String("a", "one"),
+				attribute.String("b", "two"),
+				attribute.String("c", "three"),
+				attribute.String("d", "four"),
+				attribute.String("e", "five"),
+				attribute.String("f", "six"),
+				attribute.String("g", "seven"),
+				attribute.String("h", "eight"),
+			},
+		},
+	} {
+		b.Run(bench.name, func(b *testing.B) {
+			set := attribute.NewSet(bench.attrs...)
+			b.ReportAllocs()
+			for b.Loop() {
+				set.String()
+			}
+		})
+	}
+}

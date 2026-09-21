@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `String` method for `KeyValue` type in `go.opentelemetry.io/otel/attribute`. (#8205)
+- Add `String` method for `Set` type in `go.opentelemetry.io/otel/attribute`. (#8347)
 - Add `WithMaxExportBatchSize` to `go.opentelemetry.io/otel/sdk/metric` to configure the maximum export batch size for `PeriodicReader`.
 - Add `WithAttributeValueDepthLimit`, `DefaultAttributeValueDepthLimit`, and `SpanLimits.AttributeValueDepthLimit` in `go.opentelemetry.io/otel/sdk/trace` to configure the maximum depth of span, event, link, and instrumentation scope attribute values. (#8938)
 - Add `WithAttributeValueDepthLimit` in `go.opentelemetry.io/otel/sdk/log` to configure the maximum depth of log record and instrumentation scope attribute values. (#8938)
@@ -26,6 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Apply a maximum depth of 64 by default to span, event, link, log record, and instrumentation scope attribute values in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log`. (#8938)
 - Reduce allocations when applying attribute value length limits in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log` by rebuilding composite values only when truncation is needed. (#8912)
 - Decode `traceparent` using a hex lookup table in `go.opentelemetry.io/otel/propagation`, which rejects the specification-disallowed upper-case characters without a separate scan of the header. (#8739)
+- Decode all characters at constant indices in `TraceIDFromHex` and `SpanIDFromHex` in `go.opentelemetry.io/otel/trace` to eliminate bounds checks. (#8740)
 
 ### Removed
 
