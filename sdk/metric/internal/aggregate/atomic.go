@@ -35,6 +35,8 @@ func (n *atomicCounter[N]) load() (value N) {
 		fval := math.Float64frombits(n.nFloatBits.Load())
 		ival := n.nInt.Load()
 		value = N(fval + float64(ival))
+	default:
+		panic("unsupported type")
 	}
 	return value
 }
