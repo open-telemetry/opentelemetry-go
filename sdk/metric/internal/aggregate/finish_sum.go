@@ -142,6 +142,7 @@ type FinishSum[N int64 | float64] struct {
 
 type finishSum[N int64 | float64] struct {
 	collectMu sync.Mutex
+	createMu  sync.RWMutex
 	stopped   atomic.Bool
 
 	values      limitedSyncMap[*finishSumValue[N]]
@@ -190,23 +191,8 @@ func (s *finishSum[N]) measure(
 		if loaded {
 			point = raw.(*finishSumValue[N])
 		} else {
-			var accepted bool
-			point, loaded, overflowed, accepted = s.values.LoadOrStoreAttrReclaiming(
-				lazy,
-				func() bool { return !s.stopped.Load() },
-				func(attrs attribute.Set, overflow bool) *finishSumValue[N] {
-					point := newFinishSumValue(attrs, s.reservoir)
-					// The point has not been published, so its new lifecycle cannot be
-					// retired and this initial measurement admission cannot fail.
-					if overflow {
-						initial, _ = point.lifecycle.AcquireSharedMeasurement()
-					} else {
-						initial, _ = point.lifecycle.AcquireMeasurement()
-					}
-					return point
-				},
-			)
-			if !accepted {
+			point, initial, loaded, overflowed = s.loadOrStore(lazy)
+			if point == nil {
 				return
 			}
 		}
@@ -234,6 +220,33 @@ func (s *finishSum[N]) measure(
 		}
 		s.values.CompareAndDelete(lazy.Distinct(), point)
 	}
+}
+
+func (s *finishSum[N]) loadOrStore(
+	lazy lazyFilteredAttributes,
+) (*finishSumValue[N], finish.Measurement, bool, bool) {
+	s.createMu.RLock()
+	defer s.createMu.RUnlock()
+	if s.stopped.Load() {
+		return nil, finish.Measurement{}, false, false
+	}
+
+	var initial finish.Measurement
+	point, loaded, overflowed := s.values.LoadOrStoreAttrReclaiming(lazy, func(
+		attrs attribute.Set,
+		overflow bool,
+	) *finishSumValue[N] {
+		point := newFinishSumValue(attrs, s.reservoir)
+		// The point has not been published, so its new lifecycle cannot be
+		// retired and this initial measurement admission cannot fail.
+		if overflow {
+			initial, _ = point.lifecycle.AcquireSharedMeasurement()
+		} else {
+			initial, _ = point.lifecycle.AcquireMeasurement()
+		}
+		return point
+	})
+	return point, initial, loaded, overflowed
 }
 
 func (s *finishSum[N]) retireAndDelete(point *finishSumValue[N]) {
@@ -306,25 +319,44 @@ func (s *finishSum[N]) stop() {
 
 func (s *finishSum[N]) wait(ctx context.Context) error {
 	s.stop()
-	if err := lockFinishSum(ctx, &s.collectMu); err != nil {
+	if err := s.lockCollection(ctx); err != nil {
 		return err
 	}
 	defer s.collectMu.Unlock()
+	if err := s.lockCreation(ctx); err != nil {
+		return err
+	}
+	defer s.createMu.Unlock()
 
 	var err error
-	s.values.Drain(func(raw *finishSumValue[N]) bool {
-		err = raw.shutdownContext(ctx)
+	s.values.Range(func(_, raw any) bool {
+		err = raw.(*finishSumValue[N]).shutdownContext(ctx)
 		return err == nil
 	})
+	if err == nil {
+		s.values.Clear()
+	}
 	return err
 }
 
-func lockFinishSum(ctx context.Context, mu *sync.Mutex) error {
+func (s *finishSum[N]) lockCollection(ctx context.Context) error {
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if mu.TryLock() {
+		if s.collectMu.TryLock() {
+			return nil
+		}
+		runtime.Gosched()
+	}
+}
+
+func (s *finishSum[N]) lockCreation(ctx context.Context) error {
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if s.createMu.TryLock() {
 			return nil
 		}
 		runtime.Gosched()
