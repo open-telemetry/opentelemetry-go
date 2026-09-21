@@ -19,7 +19,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.47.0-rc.1
 	go.opentelemetry.io/proto/otlp v1.11.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260921155816-b14227669459
-	google.golang.org/grpc v1.83.2
+	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
 )
 
