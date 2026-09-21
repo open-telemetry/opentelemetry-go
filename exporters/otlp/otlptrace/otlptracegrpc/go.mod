@@ -14,7 +14,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.47.0-rc.1
 	go.opentelemetry.io/proto/otlp v1.11.0
 	go.uber.org/goleak v1.3.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260911204522-f61a6ca850bd
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260918162117-cecb64721679
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
 )
@@ -30,7 +30,7 @@ require (
 	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260911204522-f61a6ca850bd // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260918162117-cecb64721679 // indirect
 )
 
 replace go.opentelemetry.io/otel => ../../../..
