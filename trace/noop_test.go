@@ -77,3 +77,32 @@ func TestNonRecordingSpanTracerStart(t *testing.T) {
 		t.Errorf("SpanContext not carried by nonRecordingSpan. got %#v, want %#v", got, want)
 	}
 }
+
+func TestNoopTracerStartPreservesRecordingParent(t *testing.T) {
+	tid, err := TraceIDFromHex("01000000000000000000000000000000")
+	if err != nil {
+		t.Fatalf("failure creating TraceID: %s", err.Error())
+	}
+	sid, err := SpanIDFromHex("0200000000000000")
+	if err != nil {
+		t.Fatalf("failure creating SpanID: %s", err.Error())
+	}
+	sc := NewSpanContext(SpanContextConfig{TraceID: tid, SpanID: sid})
+
+	parent := recordingSpan{Span: nonRecordingSpan{sc: sc}}
+	ctx := ContextWithSpan(t.Context(), parent)
+	ctx, span := NewNoopTracerProvider().Tracer("test instrumentation").Start(ctx, "span1")
+
+	if got, want := span.SpanContext(), sc; !assertSpanContextEqual(got, want) {
+		t.Errorf("SpanContext not carried by recording parent. got %#v, want %#v", got, want)
+	}
+	if got, want := SpanContextFromContext(ctx), sc; !assertSpanContextEqual(got, want) {
+		t.Errorf("SpanContext not carried in returned context. got %#v, want %#v", got, want)
+	}
+}
+
+type recordingSpan struct {
+	Span
+}
+
+func (recordingSpan) IsRecording() bool { return true }
