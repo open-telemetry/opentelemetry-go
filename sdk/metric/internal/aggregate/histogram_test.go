@@ -414,6 +414,95 @@ func TestDeltaHistogramReset(t *testing.T) {
 	metricdatatest.AssertAggregationsEqual(t, expect, data)
 }
 
+func TestHistogramDatapointReuseLeakedStaleValues(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	bounds := []float64{1, 5}
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	// 1. Collect with sum and min/max enabled.
+	in1, out1 := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality,
+	}.ExplicitBucketHistogram(bounds, false, false)
+
+	ctx := t.Context()
+	in1(ctx, 5, alice)
+
+	dest := new(metricdata.Aggregation)
+	n := out1(dest)
+	require.Equal(t, 1, n)
+
+	h, ok := (*dest).(metricdata.Histogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+	require.Equal(t, int64(5), h.DataPoints[0].Sum)
+	val, defined := h.DataPoints[0].Min.Value()
+	require.True(t, defined)
+	require.Equal(t, int64(5), val)
+
+	// 2. Collect with sum and min/max disabled.
+	in2, out2 := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality,
+	}.ExplicitBucketHistogram(bounds, true, true)
+
+	in2(ctx, 7, alice)
+
+	n = out2(dest)
+	require.Equal(t, 1, n)
+
+	h, ok = (*dest).(metricdata.Histogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+
+	// Validate that stale values are not reported.
+	assert.Equal(t, int64(0), h.DataPoints[0].Sum, "stale Sum leaked")
+	_, defined = h.DataPoints[0].Min.Value()
+	assert.False(t, defined, "stale Min leaked")
+	_, defined = h.DataPoints[0].Max.Value()
+	assert.False(t, defined, "stale Max leaked")
+}
+
+func TestHistogramMinMaxUnset(t *testing.T) {
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	h := &deltaHistogram[int64]{
+		noMinMax: false,
+		noSum:    false,
+		bounds:   []float64{1, 5},
+		start:    time.Now(),
+	}
+	h.vals.init(0)
+
+	hPt := &histogramPoint[int64]{
+		attrs: alice,
+		histogramPointCounters: histogramPointCounters[int64]{
+			counts: make([]atomic.Uint64, 3),
+		},
+		res: dropExemplars[int64](alice),
+	}
+	// hPt.minMax.set is false by default
+
+	hotIdx := h.vals.start()
+	h.vals.hot(hotIdx).LoadOrStoreAttr(
+		newLazyFilteredAttributes(alice, nil),
+		func(attribute.Set) *histogramPoint[int64] {
+			return hPt
+		},
+	)
+	h.vals.done(hotIdx)
+
+	var dest metricdata.Aggregation
+	h.collect(&dest)
+
+	eh := dest.(metricdata.Histogram[int64])
+	require.Len(t, eh.DataPoints, 1)
+	_, defined := eh.DataPoints[0].Min.Value()
+	assert.False(t, defined, "Min should be invalid when not set")
+	_, defined = eh.DataPoints[0].Max.Value()
+	assert.False(t, defined, "Max should be invalid when not set")
+}
+
 func BenchmarkHistogram(b *testing.B) {
 	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{

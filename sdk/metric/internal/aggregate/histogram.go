@@ -83,18 +83,8 @@ func (b *histogramPointCounters[N]) mergeIntoAndReset( // nolint:revive // Inten
 
 // deltaHistogram is a histogram whose internal storage is reset when it is
 // collected.
-//
-// deltaHistogram's measure is implemented without locking, even when called
-// concurrently with collect. This is done by maintaining two separate maps:
-// one "hot" which is concurrently updated by measure(), and one "cold", which
-// is read and reset by collect(). The [hotcoldWaitGroup] allows collect() to
-// swap the hot and cold maps, and wait for updates to the cold map to complete
-// prior to reading. deltaHistogram swaps ald clears complete maps so that
-// unused attribute sets do not report in subsequent collect() calls.
 type deltaHistogram[N int64 | float64] struct {
-	hcwg          hotColdWaitGroup
-	hotColdValMap [2]limitedSyncMap
-
+	vals     hotColdMap[*histogramPoint[N]]
 	start    time.Time
 	noMinMax bool
 	noSum    bool
@@ -108,12 +98,16 @@ func (s *deltaHistogram[N]) measure(
 	fltrAttr attribute.Set,
 	droppedAttr []attribute.KeyValue,
 ) {
-	hotIdx := s.hcwg.start()
-	defer s.hcwg.done(hotIdx)
-	h := s.hotColdValMap[hotIdx].LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
-		hPt := &histogramPoint[N]{
-			res:   s.newRes(attr),
-			attrs: attr,
+	hotIdx := s.vals.start()
+	defer s.vals.done(hotIdx)
+
+	h := s.vals.hot(hotIdx).LoadOrStoreAttr(lazy, func(attr attribute.Set) *histogramPoint[N] {
+		r := s.newRes(attr)
+		_, isDrop := r.(*dropRes[N])
+		return &histogramPoint[N]{
+			res:           r,
+			attrs:         attr,
+			dropExemplars: isDrop,
 			// N+1 buckets. For example:
 			//
 			//   bounds = [0, 5, 10]
@@ -123,8 +117,7 @@ func (s *deltaHistogram[N]) measure(
 			//   counts = (-∞, 0], (0, 5.0], (5.0, 10.0], (10.0, +∞)
 			histogramPointCounters: histogramPointCounters[N]{counts: make([]atomic.Uint64, len(s.bounds)+1)},
 		}
-		return hPt
-	}).(*histogramPoint[N])
+	})
 
 	// This search will return an index in the range [0, len(s.bounds)], where
 	// it will return len(s.bounds) if value is greater than the last element
@@ -156,17 +149,15 @@ func newDeltaHistogram[N int64 | float64](
 	// complete control over the fix.
 	b := slices.Clone(boundaries)
 	slices.Sort(b)
-	return &deltaHistogram[N]{
+	h := &deltaHistogram[N]{
 		start:    now(),
 		noMinMax: noMinMax,
 		noSum:    noSum,
 		bounds:   b,
 		newRes:   r,
-		hotColdValMap: [2]limitedSyncMap{
-			{aggLimit: limit},
-			{aggLimit: limit},
-		},
 	}
+	h.vals.init(limit)
+	return h
 }
 
 func (s *deltaHistogram[N]) collect(
@@ -180,20 +171,19 @@ func (s *deltaHistogram[N]) collect(
 	h.Temporality = metricdata.DeltaTemporality
 
 	// delta always clears values on collection
-	readIdx := s.hcwg.swapHotAndWait()
+	readIdx := s.vals.swapHotAndWait()
 
 	// Do not allow modification of our copy of bounds.
 	bounds := slices.Clone(s.bounds)
 
 	// The len will not change while we iterate over values, since we waited
 	// for all writes to finish to the cold values and len.
-	n := s.hotColdValMap[readIdx].Len()
+	n := s.vals.Len(readIdx)
 	hDPts := reset(h.DataPoints, n, n)
 
 	var i int
-	s.hotColdValMap[readIdx].Range(func(_, value any) bool {
+	s.vals.Range(readIdx, func(_, value any) bool {
 		val := value.(*histogramPoint[N])
-
 		count := val.loadCountsInto(&hDPts[i].BucketCounts)
 		hDPts[i].Attributes = val.attrs
 		hDPts[i].StartTime = s.start
@@ -213,12 +203,12 @@ func (s *deltaHistogram[N]) collect(
 		}
 
 		collectExemplars(&hDPts[i].Exemplars, val.res.Collect)
-
 		i++
 		return true
 	})
 	// Unused attribute sets do not report.
-	s.hotColdValMap[readIdx].Clear()
+	s.vals.Clear(readIdx)
+
 	// The delta collection cycle resets.
 	s.start = t
 
@@ -368,7 +358,7 @@ func (s *cumulativeHistogram[N]) collect(
 		}
 		// Once we've read the point, merge it back into the hot histogram
 		// point since it is cumulative.
-		hotIdx := (readIdx + 1) % 2
+		hotIdx := hotIdx((readIdx + 1) % 2)
 		val.hotColdPoint[readIdx].mergeIntoAndReset(&val.hotColdPoint[hotIdx], s.noMinMax, s.noSum)
 
 		collectExemplars(&newPt.Exemplars, val.res.Collect)
