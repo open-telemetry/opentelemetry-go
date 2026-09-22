@@ -18,15 +18,9 @@ var now = time.Now
 // Measure receives measurements to be aggregated.
 type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
 
-// filterAttrs reports whether an aggregated data point with the given
-// attribute set is included in the collection output. It is evaluated
-// once per data point during collection. A nil filterAttrs includes all
-// data points.
-type filterAttrs = func(attrs attribute.Set) bool
-
 // ComputeAggregation stores the aggregate of measurements into dest and
 // returns the number of aggregate data-points output.
-type ComputeAggregation func(dest *metricdata.Aggregation, filter filterAttrs) int
+type ComputeAggregation func(dest *metricdata.Aggregation) int
 
 // Builder builds an aggregate function.
 type Builder[N int64 | float64] struct {
@@ -42,8 +36,8 @@ type Builder[N int64 | float64] struct {
 	// ReservoirFunc is the factory function used by aggregate functions to
 	// create new exemplar reservoirs for a new seen attribute set.
 	//
-	// If this is not provided a default factory function that returns a
-	// DropReservoir reservoir will be used.
+	// If this is not provided a default factory function that returns an
+	// dropReservoir reservoir will be used.
 	ReservoirFunc func(attribute.Set) FilteredExemplarReservoir[N]
 	// AggregationLimit is the cardinality limit of measurement attributes. Any
 	// measurement for new attributes once the limit has been reached will be
@@ -60,20 +54,21 @@ func (b Builder[N]) resFunc() func(attribute.Set) FilteredExemplarReservoir[N] {
 		return b.ReservoirFunc
 	}
 
-	return DropReservoir
+	return dropReservoir
 }
 
-type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, lazy lazyFilteredAttributes)
+type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue)
 
 func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 	if b.Filter != nil {
 		fltr := b.Filter // Copy to make it immutable after assignment.
 		return func(ctx context.Context, n N, a attribute.Set) {
-			f(ctx, n, newLazyFilteredAttributes(a, fltr))
+			fAttr, dropped := a.Filter(fltr)
+			f(ctx, n, fAttr, dropped)
 		}
 	}
 	return func(ctx context.Context, n N, a attribute.Set) {
-		f(ctx, n, newLazyFilteredAttributes(a, nil))
+		f(ctx, n, a, nil)
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // stableMetricFilter mirrors the internal interface the SDK checks for so we
@@ -19,13 +19,13 @@ import (
 // package importing the SDK's internal types.
 type stableMetricFilter interface {
 	Experimental()
-	TestMetric(instrumentationScope instrumentation.Scope, name string, kind metric.InstrumentKind, unit string) int
+	TestMetric(instrumentationScope instrumentation.Scope, name string, kind metricdata.Aggregation, unit string) int
 	TestAttributes(
 		instrumentationScope instrumentation.Scope,
 		name string,
-		kind metric.InstrumentKind,
+		kind metricdata.Aggregation,
 		unit string,
-		attributes []attribute.KeyValue,
+		attributes attribute.Set,
 	) int
 }
 
@@ -34,16 +34,16 @@ type testFilter struct {
 	attributesResult AttributesFilterResult
 }
 
-func (f testFilter) TestMetric(instrumentation.Scope, string, metric.InstrumentKind, string) Result {
+func (f testFilter) TestMetric(instrumentation.Scope, string, metricdata.Aggregation, string) Result {
 	return f.metricResult
 }
 
 func (f testFilter) TestAttributes(
 	instrumentation.Scope,
 	string,
-	metric.InstrumentKind,
+	metricdata.Aggregation,
 	string,
-	[]attribute.KeyValue,
+	attribute.Set,
 ) AttributesFilterResult {
 	return f.attributesResult
 }
@@ -60,6 +60,19 @@ func TestWithMetricFilterOptionSatisfiesStableInterface(t *testing.T) {
 	require.True(t, ok, "option must satisfy the stable metricFilter interface")
 
 	assert.NotPanics(t, mf.Experimental)
+}
+
+func TestWithMetricFilterNil(t *testing.T) {
+	mf, ok := WithMetricFilter(nil).(stableMetricFilter)
+	require.True(t, ok)
+
+	scope := instrumentation.Scope{Name: "test"}
+	data := metricdata.Sum[int64]{}
+	attrs := attribute.NewSet(attribute.String("k", "v"))
+	assert.NotPanics(t, func() {
+		assert.Equal(t, int(Accept), mf.TestMetric(scope, "name", data, "1"))
+		assert.Equal(t, int(AttrAccept), mf.TestAttributes(scope, "name", data, "1", attrs))
+	})
 }
 
 func TestWithMetricFilterEnumMapping(t *testing.T) {
@@ -95,10 +108,11 @@ func TestWithMetricFilterEnumMapping(t *testing.T) {
 			mf := opt.(stableMetricFilter)
 
 			scope := instrumentation.Scope{Name: "test"}
-			attrs := []attribute.KeyValue{attribute.String("k", "v")}
+			data := metricdata.Sum[int64]{}
+			attrs := attribute.NewSet(attribute.String("k", "v"))
 
-			assert.Equal(t, tt.wantM, mf.TestMetric(scope, "name", metric.InstrumentKindCounter, "1"))
-			assert.Equal(t, tt.wantAttr, mf.TestAttributes(scope, "name", metric.InstrumentKindCounter, "1", attrs))
+			assert.Equal(t, tt.wantM, mf.TestMetric(scope, "name", data, "1"))
+			assert.Equal(t, tt.wantAttr, mf.TestAttributes(scope, "name", data, "1", attrs))
 		})
 	}
 }

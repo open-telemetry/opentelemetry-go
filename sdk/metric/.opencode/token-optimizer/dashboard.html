@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-lpGXmVTp0rSleHfXj6dgKg=='; connect-src 'self' https://api.github.com;">
+<title>Token Optimizer - OpenCode Dashboard</title>
+<style>
+:root {
+  --bg: #0d1117; --bg-card: #161b22; --bg-hover: #1c2128;
+  --border: #30363d; --text: #e6edf3; --text-dim: #8b949e;
+  --accent: #58a6ff; --success: #3fb950; --warning: #d29922;
+  --danger: #f85149; --purple: #a855f7;
+  --radius: 8px; --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-6: 24px;
+}
+/* Light theme — activation order (no FOUC): localStorage 'to-theme' > prefers-color-scheme:light > dark default.
+   All color tokens re-derived for light backgrounds; secondary text (#242b35) pushed near-black so small
+   description text stays legible (canonical complaint: washed-out grey at 10-13px in light mode). */
+[data-theme="light"] {
+  --bg: #eef1f6; --bg-card: #ffffff; --bg-hover: #e4e9f1;
+  --border: rgba(14,22,34,0.14); --text: #0e1622; --text-dim: #242b35;
+  /* Teal accent verified WCAG AA (4.5:1) on white. */
+  --accent: #07697f;
+  /* Status colors re-derived for AA legibility on light background. */
+  --success: #1a7f37; --warning: #9a6700; --danger: #cf222e; --purple: #7c3aed;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; }
+/* Focus ring — visible for keyboard users; removed from mouse/touch paths by :focus-visible semantics. */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Respect user motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+.container { max-width: 1200px; margin: 0 auto; padding: var(--s-6); }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s-6); padding-bottom: var(--s-4); border-bottom: 1px solid var(--border); }
+.header h1 { font-size: 20px; font-weight: 600; }
+.header .sub { color: var(--text-dim); font-size: 13px; }
+.nav { display: flex; gap: var(--s-2); margin-bottom: var(--s-6); flex-wrap: wrap; align-items: center; }
+.nav a { padding: var(--s-2) var(--s-3); border-radius: var(--radius); color: var(--text-dim); text-decoration: none; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+.nav a:hover { background: var(--bg-hover); color: var(--text); }
+.nav a.active { background: var(--accent); color: #fff; }
+/* Theme toggle — placed in nav row; shows moon icon in dark mode (click to go light) and sun icon in light mode. */
+.theme-toggle {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-dim); background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 5px 10px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.theme-toggle:hover { color: var(--text); border-color: var(--accent); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.theme-toggle-icon { width: 14px; height: 14px; display: block; }
+.icon-sun { display: none; }
+.icon-moon { display: block; }
+[data-theme="light"] .icon-sun { display: block; }
+[data-theme="light"] .icon-moon { display: none; }
+.view { display: none; }
+.view.active { display: block; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--s-4); margin-bottom: var(--s-6); }
+.stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--s-4); }
+.stat-value { font-size: 28px; font-weight: 700; margin-bottom: var(--s-1); font-variant-numeric: tabular-nums; }
+.stat-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-sub { font-size: 11px; color: var(--text-dim); margin-top: var(--s-1); }
+table { width: 100%; border-collapse: collapse; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+th { text-align: left; padding: var(--s-3) var(--s-4); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); background: var(--bg-hover); border-bottom: 1px solid var(--border); }
+td { padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--border); font-size: 13px; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg-hover); }
+.grade { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-weight: 700; font-size: 13px; color: #fff; }
+.section-title { font-size: 16px; font-weight: 600; margin-bottom: var(--s-4); }
+.chart-bar { height: 6px; border-radius: 3px; background: var(--border); margin: var(--s-1) 0; overflow: hidden; }
+.chart-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.empty { text-align: center; padding: var(--s-6); color: var(--text-dim); }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+.oc-footer { margin-top: var(--s-6); padding-top: var(--s-4); border-top: 1px solid var(--border);
+             display: flex; align-items: center; gap: 16px; color: var(--text-dim); font-size: 13px; }
+.oc-footer .byline { opacity: 0.85; }
+.oc-footer a { color: var(--accent); text-decoration: none; }
+.gh-star { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; font-size: 12px;
+           color: var(--accent); border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card);
+           transition: border-color 0.15s, background 0.15s; }
+.gh-star:hover { border-color: var(--accent); background: var(--bg-hover); }
+.gh-star-count { font-variant-numeric: tabular-nums; padding-left: 7px; border-left: 1px solid var(--border); color: var(--text); }
+.oc-social { display: inline-flex; gap: 13px; align-items: center; margin-left: auto; }
+.oc-social a { color: var(--text-dim); display: inline-flex; transition: color 0.15s; }
+.oc-social a:hover { color: var(--text); }
+</style>
+<!-- No-FOUC theme boot: reads localStorage 'to-theme', falls back to prefers-color-scheme:light, defaults to dark.
+     Must run before first paint so CSS vars resolve correctly on frame 1. -->
+<script nonce="lpGXmVTp0rSleHfXj6dgKg==">
+(function () {
+  try {
+    var stored = null;
+    try { stored = window.localStorage.getItem('to-theme'); } catch (e) {}
+    var theme;
+    if (stored === 'light' || stored === 'dark') {
+      theme = stored;
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      theme = 'light';
+    } else {
+      theme = 'dark';
+    }
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  } catch (e) { /* dark default already applies */ }
+})();
+</script>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>Token Optimizer</h1>
+      <div class="sub">OpenCode Dashboard &middot; Core v5.13.10 &middot; Adapter v1.1.7 &middot; Last 30 days &middot; 1 sessions</div>
+    </div>
+    <div class="sub">Generated 2026-09-17 10:51 &middot; Run <code style="font-family:monospace;background:var(--bg-hover);padding:1px 5px;border-radius:3px">token_dashboard</code> to refresh</div>
+  </div>
+
+  <div class="nav">
+    <a class="active" data-view="overview">Overview</a>
+    <a data-view="savings">Savings</a>
+    <a data-view="quality">Quality Trends</a>
+    <a data-view="sessions">Sessions</a>
+    <a data-view="daily">Daily Stats</a>
+    <button type="button" id="theme-toggle" class="theme-toggle"
+            aria-pressed="false" aria-label="Toggle light and dark theme"
+            title="Toggle light / dark theme">
+      <svg class="theme-toggle-icon icon-moon" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round"
+           stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+      <svg class="theme-toggle-icon icon-sun" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round"
+           stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="5"/>
+        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+      </svg>
+      <span class="theme-toggle-label">Dark</span>
+    </button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="view active" id="view-overview">
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value">1</div>
+        <div class="stat-label">Total Sessions</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" style="color:#a855f7">S</div>
+        <div class="stat-label">Avg Resource Health</div>
+        <div class="stat-sub">100/100 (Good)</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" style="color:#3b82f6">B</div>
+        <div class="stat-label">Avg Session Efficiency</div>
+        <div class="stat-sub">76/100</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">0</div>
+        <div class="stat-label">Total Tool Calls</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">0</div>
+        <div class="stat-label">Compactions</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">2m</div>
+        <div class="stat-label">Total Session Time</div>
+      </div>
+    </div>
+
+    
+
+    
+
+    
+    <div class="section-title">Daily Activity (Last 30 Days)</div>
+    <table>
+      <thead><tr><th>Date</th><th>Sessions</th><th>Avg Quality</th><th>Grade</th></tr></thead>
+      <tbody>
+        <tr>
+            <td>2026-09-17</td>
+            <td>1</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span>100/100</span>
+                <div class="chart-bar" style="flex:1"><div class="chart-bar-fill" style="width:100%;background:#a855f7"></div></div>
+              </div>
+            </td>
+            <td><span class="grade" style="background:#a855f7">S</span></td>
+          </tr>
+      </tbody>
+    </table>
+    
+  </div>
+
+  <!-- SAVINGS -->
+  <div class="view" id="view-savings">
+    <div class="section-title">Token Optimizer &middot; Savings</div>
+
+    
+    <div style="background:var(--bg-card);border:1px solid var(--accent);border-radius:var(--radius);padding:var(--s-6);margin-bottom:var(--s-4);box-shadow:0 0 0 1px rgba(88,166,255,0.12);">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--accent);margin-bottom:var(--s-2);">Your savings baseline is still building</div>
+      <div style="font-size:14px;color:var(--text-dim);line-height:1.6;margin-bottom:var(--s-3);">
+        Token Optimizer measures savings against <strong>your own</strong> pre-optimization baseline, frozen from your first 30 days of real sessions. It never uses anyone else's numbers.
+      </div>
+      <div style="font-size:14px;color:var(--text);margin-bottom:var(--s-3);">
+        <strong>0 of ~30 sessions</strong> collected in your baseline window, about <strong>31 days</strong> until it locks in.
+        Until then, the Sessions view shows your current usage.
+      </div>
+      <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:0%;background:var(--accent);border-radius:4px;transition:width 0.3s;"></div>
+      </div>
+      <div style="margin-top:var(--s-2);font-size:11px;color:var(--text-dim);">0% complete &middot; first tracked session: 2026-09-17</div>
+    </div>
+  </div>
+
+  <!-- QUALITY TRENDS -->
+  <div class="view" id="view-quality">
+    <div class="section-title">Quality Score Trends</div>
+    
+    <table>
+      <thead><tr><th>Date</th><th>Session</th><th>Resource Health</th><th>Session Efficiency</th><th>Mode</th><th>Tool Calls</th><th>Compactions</th></tr></thead>
+      <tbody>
+        <tr>
+            <td>2026-09-17</td>
+            <td style="font-family:monospace;font-size:11px">ses_f56d</td>
+            <td><span class="grade" style="background:#a855f7">S</span> 100</td>
+            <td><span class="grade" style="background:#3b82f6">B</span> 76</td>
+            <td><span class="tag" style="background:var(--bg-hover)">general</span></td>
+            <td>0</td>
+            <td>0</td>
+          </tr>
+      </tbody>
+    </table>
+    
+  </div>
+
+  <!-- SESSIONS -->
+  <div class="view" id="view-sessions">
+    <div class="section-title">Session History</div>
+    
+    <table>
+      <thead><tr><th>Date</th><th>Session ID</th><th>Model</th><th>Duration</th><th>Health</th><th>Efficiency</th><th>Tools</th><th>Mode</th></tr></thead>
+      <tbody>
+        <tr>
+            <td>2026-09-17</td>
+            <td style="font-family:monospace;font-size:11px">ses_f56d738c</td>
+            <td>kimi-k3</td>
+            <td>2m</td>
+            <td><span class="grade" style="background:#a855f7">S</span> 100</td>
+            <td><span class="grade" style="background:#3b82f6">B</span> 76</td>
+            <td>0</td>
+            <td><span class="tag" style="background:var(--bg-hover)">general</span></td>
+          </tr>
+      </tbody>
+    </table>
+    
+  </div>
+
+  <!-- DAILY STATS -->
+  <div class="view" id="view-daily">
+    <div class="section-title">Daily Aggregates</div>
+    
+    <table>
+      <thead><tr><th>Date</th><th>Sessions</th><th>Avg Resource Health</th><th>Avg Efficiency</th></tr></thead>
+      <tbody>
+        <tr>
+            <td>2026-09-17</td>
+            <td>1</td>
+            <td>100/100 (Good)</td>
+            <td>76/100</td>
+          </tr>
+      </tbody>
+    </table>
+    
+  </div>
+
+  <footer class="oc-footer">
+    <span class="byline">Built by <a href="https://linkedin.com/in/alexgreensh" target="_blank" rel="noopener">Alex Greenshpun</a></span>
+    <span class="byline" style="opacity:0.7">Core v5.13.10 &middot; Adapter v1.1.7</span>
+    <a class="gh-star" href="https://github.com/alexgreensh/token-optimizer" target="_blank" rel="noopener" title="Star Token Optimizer on GitHub">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6.06 6.6.59-5 4.38 1.5 6.47L12 16.98 5.99 20.5l1.5-6.47-5-4.38 6.6-.59L12 2.5z"/></svg>
+      <span>Star on GitHub</span>
+      <span class="gh-star-count" data-gh-stars hidden></span>
+    </a>
+    <span class="oc-social">
+      <a href="https://github.com/alexgreensh/token-optimizer" target="_blank" rel="noopener" title="GitHub"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.08-.73.08-.73 1.2.08 1.84 1.23 1.84 1.23 1.07 1.83 2.81 1.3 3.5 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 016.02 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 011.23 3.22c0 4.61-2.81 5.63-5.48 5.92.42.36.81 1.1.81 2.22v3.29c0 .32.22.7.82.58A12.01 12.01 0 0024 12c0-6.63-5.37-12-12-12z"/></svg></a>
+      <a href="https://x.com/alexgreensh" target="_blank" rel="noopener" title="X (Twitter)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817-5.97 6.817H1.673l7.73-8.835L1.254 2.25h6.83l4.713 6.231 5.447-6.231zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644z"/></svg></a>
+      <a href="https://linkedin.com/in/alexgreensh" target="_blank" rel="noopener" title="LinkedIn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 110-4.13 2.06 2.06 0 010 4.13zm1.78 13.02H3.56V9h3.56v11.45zM22.23 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.23 0z"/></svg></a>
+    </span>
+  </footer>
+</div>
+
+<script nonce="lpGXmVTp0rSleHfXj6dgKg==">
+document.querySelectorAll('.nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    document.querySelectorAll('.nav a').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    a.classList.add('active');
+    document.getElementById('view-' + a.dataset.view).classList.add('active');
+  });
+});
+// Theme toggle wiring. The boot script in <head> already applied the correct
+// theme before first paint (no FOUC); here we sync aria-pressed + label and wire the click.
+(function setupThemeToggle() {
+  var btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  function currentTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  }
+  function syncButton() {
+    var light = currentTheme() === 'light';
+    btn.setAttribute('aria-pressed', light ? 'true' : 'false');
+    var label = btn.querySelector('.theme-toggle-label');
+    if (label) label.textContent = light ? 'Light' : 'Dark';
+  }
+  function applyTheme(theme) {
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    try { window.localStorage.setItem('to-theme', theme); } catch (e) {}
+    syncButton();
+  }
+  btn.addEventListener('click', function() {
+    applyTheme(currentTheme() === 'light' ? 'dark' : 'light');
+  });
+  // Follow OS preference live only while the user hasn't made an explicit choice.
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: light)');
+    var onChange = function(e) {
+      var stored = null;
+      try { stored = window.localStorage.getItem('to-theme'); } catch (err) {}
+      if (stored === 'light' || stored === 'dark') return;
+      if (e.matches) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      syncButton();
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  }
+  syncButton();
+})();
+// Live GitHub star count (public CORS endpoint; degrades silently to no count).
+(function () {
+  function fmt(n) { return (typeof n !== 'number' || !isFinite(n) || n < 0) ? null : (n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n)); }
+  function paint(label) { document.querySelectorAll('[data-gh-stars]').forEach(function (el) { el.textContent = label; el.hidden = false; }); }
+  try { var c = sessionStorage.getItem('to-gh-stars'); if (c) { paint(c); return; } } catch (e) {}
+  fetch('https://api.github.com/repos/alexgreensh/token-optimizer', { headers: { Accept: 'application/vnd.github+json' } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) { var l = d && fmt(d.stargazers_count); if (!l) return; paint(l); try { sessionStorage.setItem('to-gh-stars', l); } catch (e) {} })
+    .catch(function () {});
+})();
+</script>
+</body>
+</html>

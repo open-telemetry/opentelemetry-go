@@ -63,7 +63,7 @@ func assertSum[N int64 | float64](
 			in(t.Context(), 1, *attribute.EmptySet())
 
 			var got metricdata.Aggregation
-			assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
+			assert.Equal(t, 1, out(&got), "1 data-point expected")
 			metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
 				Temporality: temp,
 				IsMonotonic: mono,
@@ -72,7 +72,7 @@ func assertSum[N int64 | float64](
 
 			in(t.Context(), 3, *attribute.EmptySet())
 
-			assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
+			assert.Equal(t, 1, out(&got), "1 data-point expected")
 			metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
 				Temporality: temp,
 				IsMonotonic: mono,
@@ -93,7 +93,7 @@ func assertHist[N int64 | float64](
 		in(t.Context(), 1, *attribute.EmptySet())
 
 		var got metricdata.Aggregation
-		assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
+		assert.Equal(t, 1, out(&got), "1 data-point expected")
 		buckets := []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		n := 1
 		metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
@@ -114,7 +114,7 @@ func assertHist[N int64 | float64](
 			buckets[1] = 2
 			n = 2
 		}
-		assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
+		assert.Equal(t, 1, out(&got), "1 data-point expected")
 		metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
 			Temporality: temp,
 			DataPoints: []metricdata.HistogramDataPoint[N]{{
@@ -143,7 +143,7 @@ func assertLastValue[N int64 | float64](
 	in(t.Context(), 1, *attribute.EmptySet())
 
 	var got metricdata.Aggregation
-	assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
+	assert.Equal(t, 1, out(&got), "1 data-point expected")
 	metricdatatest.AssertAggregationsEqual(t, metricdata.Gauge[N]{
 		DataPoints: []metricdata.DataPoint[N]{{Value: 1}},
 	}, got, metricdatatest.IgnoreTimestamp())
@@ -291,7 +291,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 				in(t.Context(), 1, *attribute.EmptySet())
 
 				var got metricdata.Aggregation
-				assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
+				assert.Equal(t, 1, out(&got), "1 data-point expected")
 				metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{{
@@ -304,7 +304,7 @@ func testCreateAggregators[N int64 | float64](t *testing.T) {
 
 				in(t.Context(), 1, *attribute.EmptySet())
 
-				assert.Equal(t, 1, out(&got, nil), "1 data-point expected")
+				assert.Equal(t, 1, out(&got), "1 data-point expected")
 				metricdatatest.AssertAggregationsEqual(t, metricdata.Histogram[N]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[N]{{
@@ -899,15 +899,15 @@ func TestMetricFilterMultipleReaders(t *testing.T) {
 	ctx := t.Context()
 
 	dropFilter := testMetricFilterOption{
-		testMetric: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string) int {
+		testMetric: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string) int {
 			return metricFilterDrop
 		},
 	}
 	acceptFilter := testMetricFilterOption{
-		testMetric: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string) int {
+		testMetric: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string) int {
 			return metricFilterAccept
 		},
-		testAttributes: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string, _ []attribute.KeyValue) int {
+		testAttributes: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, _ attribute.Set) int {
 			return metricFilterAttrAccept
 		},
 	}

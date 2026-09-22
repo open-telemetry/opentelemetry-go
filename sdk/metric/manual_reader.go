@@ -53,7 +53,14 @@ func NewManualReader(opts ...ManualReaderOption) *ManualReader {
 		cardinalityLimitSelector: cfg.cardinalityLimitSelector,
 		metricFilter:             cfg.metricFilter,
 	}
-	r.externalProducers.Store(cfg.producers)
+	producers := cfg.producers
+	if cfg.metricFilter != nil {
+		producers = make([]Producer, len(producers))
+		for i, p := range cfg.producers {
+			producers[i] = &filteringProducer{inner: p, filter: cfg.metricFilter}
+		}
+	}
+	r.externalProducers.Store(producers)
 
 	var err error
 	r.inst, err = observ.NewInstrumentation(manualReaderType, nextManualReaderID())
@@ -75,8 +82,12 @@ func nextManualReaderID() int64 {
 // register stores the sdkProducer which enables the caller
 // to read metrics from the SDK on demand.
 func (mr *ManualReader) register(p sdkProducer) {
+	produce := p.produce
+	if mr.metricFilter != nil {
+		produce = wrapProduce(produce, mr.metricFilter)
+	}
 	// Only register once. If producer is already set, do nothing.
-	if !mr.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
+	if !mr.sdkProducer.CompareAndSwap(nil, produceHolder{produce: produce}) {
 		msg := "did not register manual reader"
 		global.Error(errDuplicateRegister, msg)
 	}

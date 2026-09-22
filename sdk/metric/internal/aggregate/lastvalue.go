@@ -8,47 +8,37 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // lastValuePoint is timestamped measurement data.
 type lastValuePoint[N int64 | float64] struct {
-	attrs         attribute.Set
-	value         atomicN[N]
-	res           FilteredExemplarReservoir[N]
-	startTime     time.Time
-	dropExemplars bool
+	attrs attribute.Set
+	value atomicN[N]
+	res   FilteredExemplarReservoir[N]
 }
 
 // lastValueMap summarizes a set of measurements as the last one made.
 type lastValueMap[N int64 | float64] struct {
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
-	values limitedSyncMap[*lastValuePoint[N]]
+	values limitedSyncMap
 }
 
 func (s *lastValueMap[N]) measure(
 	ctx context.Context,
 	value N,
-	lazy lazyFilteredAttributes,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
 ) {
-	lv := s.values.LoadOrStoreAttr(lazy, func(attr attribute.Set) *lastValuePoint[N] {
-		r := s.newRes(attr)
-		_, isDrop := r.(*dropRes[N])
-		p := &lastValuePoint[N]{
-			res:           r,
-			attrs:         attr,
-			startTime:     now(),
-			dropExemplars: isDrop,
+	lv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
+		return &lastValuePoint[N]{
+			res:   s.newRes(attr),
+			attrs: attr,
 		}
-		p.value.Store(value)
-		return p
-	})
+	}).(*lastValuePoint[N])
 
 	lv.value.Store(value)
-	if !lv.dropExemplars {
-		lv.res.Offer(ctx, value, lazy)
-	}
+	lv.res.Offer(ctx, value, droppedAttr)
 }
 
 func newDeltaLastValue[N int64 | float64](
@@ -60,12 +50,12 @@ func newDeltaLastValue[N int64 | float64](
 		start:  now(),
 		hotColdValMap: [2]lastValueMap[N]{
 			{
+				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
-				values: limitedSyncMap[*lastValuePoint[N]]{aggLimit: limit},
 			},
 			{
+				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
-				values: limitedSyncMap[*lastValuePoint[N]]{aggLimit: limit},
 			},
 		},
 	}
@@ -83,19 +73,19 @@ type deltaLastValue[N int64 | float64] struct {
 func (s *deltaLastValue[N]) measure(
 	ctx context.Context,
 	value N,
-	lazy lazyFilteredAttributes,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
 ) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, lazy)
+	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
 }
 
 func (s *deltaLastValue[N]) collect(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
-	filter filterAttrs,
 ) int {
 	t := now()
-	n := s.copyAndClearDpts(dest, t, filter)
+	n := s.copyAndClearDpts(dest, t)
 	// Update start time for delta temporality.
 	s.start = t
 	return n
@@ -106,7 +96,6 @@ func (s *deltaLastValue[N]) collect(
 func (s *deltaLastValue[N]) copyAndClearDpts(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 	t time.Time,
-	filter filterAttrs,
 ) int {
 	// Ignore if dest is not a metricdata.Gauge. The chance for memory reuse of
 	// the DataPoints is missed (better luck next time).
@@ -121,9 +110,6 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		v := value.(*lastValuePoint[N])
-		if filter != nil && !filter(v.attrs) {
-			return true
-		}
 		dPts[i].Attributes = v.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
@@ -132,7 +118,7 @@ func (s *deltaLastValue[N]) copyAndClearDpts(
 		i++
 		return true
 	})
-	gData.DataPoints = dPts[:i]
+	gData.DataPoints = dPts
 	// Do not report stale values.
 	s.hotColdValMap[readIdx].values.Clear()
 	*dest = gData
@@ -151,16 +137,15 @@ func newCumulativeLastValue[N int64 | float64](
 ) *cumulativeLastValue[N] {
 	return &cumulativeLastValue[N]{
 		lastValueMap: lastValueMap[N]{
+			values: limitedSyncMap{aggLimit: limit},
 			newRes: r,
-			values: limitedSyncMap[*lastValuePoint[N]]{aggLimit: limit},
 		},
 		start: now(),
 	}
 }
 
 func (s *cumulativeLastValue[N]) collect(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
-	filter filterAttrs,
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
 	// Ignore if dest is not a metricdata.Gauge. The chance for memory reuse of
@@ -171,22 +156,12 @@ func (s *cumulativeLastValue[N]) collect(
 	// current length for capacity.
 	dPts := reset(gData.DataPoints, 0, s.values.Len())
 
-	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
-
 	var i int
 	s.values.Range(func(_, value any) bool {
 		v := value.(*lastValuePoint[N])
-		if filter != nil && !filter(v.attrs) {
-			return true
-		}
-
-		startTime := s.start
-		if perSeriesStartTimeEnabled {
-			startTime = v.startTime
-		}
 		newPt := metricdata.DataPoint[N]{
 			Attributes: v.attrs,
-			StartTime:  startTime,
+			StartTime:  s.start,
 			Time:       t,
 			Value:      v.value.Load(),
 		}
@@ -220,16 +195,14 @@ type precomputedLastValue[N int64 | float64] struct {
 }
 
 func (s *precomputedLastValue[N]) delta(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
-	filter filterAttrs,
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
-	return s.collect(dest, filter)
+	return s.collect(dest)
 }
 
 func (s *precomputedLastValue[N]) cumulative(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
-	filter filterAttrs,
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	// Do not reset the start time.
-	return s.copyAndClearDpts(dest, now(), filter)
+	return s.copyAndClearDpts(dest, now())
 }

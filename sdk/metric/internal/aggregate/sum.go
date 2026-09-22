@@ -8,45 +8,37 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 type sumValue[N int64 | float64] struct {
-	n             atomicCounter[N]
-	res           FilteredExemplarReservoir[N]
-	attrs         attribute.Set
-	startTime     time.Time
-	dropExemplars bool
+	n     atomicCounter[N]
+	res   FilteredExemplarReservoir[N]
+	attrs attribute.Set
 }
 
 type sumValueMap[N int64 | float64] struct {
+	values limitedSyncMap
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
-	values limitedSyncMap[*sumValue[N]]
 }
 
 func (s *sumValueMap[N]) measure(
 	ctx context.Context,
 	value N,
-	lazy lazyFilteredAttributes,
+	fltrAttr attribute.Set,
+	droppedAttr []attribute.KeyValue,
 ) {
-	sv := s.values.LoadOrStoreAttr(lazy, func(attr attribute.Set) *sumValue[N] {
-		r := s.newRes(attr)
-		_, isDrop := r.(*dropRes[N])
+	sv := s.values.LoadOrStoreAttr(fltrAttr, func(attr attribute.Set) any {
 		return &sumValue[N]{
-			res:           r,
-			attrs:         attr,
-			startTime:     now(),
-			dropExemplars: isDrop,
+			res:   s.newRes(attr),
+			attrs: attr,
 		}
-	})
+	}).(*sumValue[N])
 	sv.n.add(value)
 	// It is possible for collection to race with measurement and observe the
 	// exemplar in the batch of metrics after the add() for cumulative sums.
 	// This is an accepted tradeoff to avoid locking during measurement.
-	if !sv.dropExemplars {
-		sv.res.Offer(ctx, value, lazy)
-	}
+	sv.res.Offer(ctx, value, droppedAttr)
 }
 
 // newDeltaSum returns an aggregator that summarizes a set of measurements as
@@ -62,12 +54,12 @@ func newDeltaSum[N int64 | float64](
 		start:     now(),
 		hotColdValMap: [2]sumValueMap[N]{
 			{
+				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
-				values: limitedSyncMap[*sumValue[N]]{aggLimit: limit},
 			},
 			{
+				values: limitedSyncMap{aggLimit: limit},
 				newRes: r,
-				values: limitedSyncMap[*sumValue[N]]{aggLimit: limit},
 			},
 		},
 	}
@@ -82,15 +74,14 @@ type deltaSum[N int64 | float64] struct {
 	hotColdValMap [2]sumValueMap[N]
 }
 
-func (s *deltaSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAttributes) {
+func (s *deltaSum[N]) measure(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue) {
 	hotIdx := s.hcwg.start()
 	defer s.hcwg.done(hotIdx)
-	s.hotColdValMap[hotIdx].measure(ctx, value, lazy)
+	s.hotColdValMap[hotIdx].measure(ctx, value, fltrAttr, droppedAttr)
 }
 
 func (s *deltaSum[N]) collect(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
-	filter filterAttrs,
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
 
@@ -110,9 +101,6 @@ func (s *deltaSum[N]) collect(
 	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
-		if filter != nil && !filter(val.attrs) {
-			return true
-		}
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
@@ -125,7 +113,7 @@ func (s *deltaSum[N]) collect(
 	// The delta collection cycle resets.
 	s.start = t
 
-	sData.DataPoints = dPts[:i]
+	sData.DataPoints = dPts
 	*dest = sData
 
 	return i
@@ -143,8 +131,8 @@ func newCumulativeSum[N int64 | float64](
 		monotonic: monotonic,
 		start:     now(),
 		sumValueMap: sumValueMap[N]{
+			values: limitedSyncMap{aggLimit: limit},
 			newRes: r,
-			values: limitedSyncMap[*sumValue[N]]{aggLimit: limit},
 		},
 	}
 }
@@ -158,8 +146,7 @@ type cumulativeSum[N int64 | float64] struct {
 }
 
 func (s *cumulativeSum[N]) collect(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
-	filter filterAttrs,
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
 
@@ -173,22 +160,12 @@ func (s *cumulativeSum[N]) collect(
 	// current length for capacity.
 	dPts := reset(sData.DataPoints, 0, s.values.Len())
 
-	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
-
 	var i int
 	s.values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
-		if filter != nil && !filter(val.attrs) {
-			return true
-		}
-
-		startTime := s.start
-		if perSeriesStartTimeEnabled {
-			startTime = val.startTime
-		}
 		newPt := metricdata.DataPoint[N]{
 			Attributes: val.attrs,
-			StartTime:  startTime,
+			StartTime:  s.start,
 			Time:       t,
 			Value:      val.n.load(),
 		}
@@ -229,8 +206,7 @@ type precomputedSum[N int64 | float64] struct {
 }
 
 func (s *precomputedSum[N]) delta(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
-	filter filterAttrs,
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
 	newReported := make(map[any]N)
@@ -254,15 +230,12 @@ func (s *precomputedSum[N]) delta(
 		n := val.n.load()
 
 		delta := n - s.reported[key]
-		newReported[key] = n
-		if filter != nil && !filter(val.attrs) {
-			return true
-		}
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
 		dPts[i].Value = delta
+		newReported[key] = n
 		i++
 		return true
 	})
@@ -271,15 +244,14 @@ func (s *precomputedSum[N]) delta(
 	// The delta collection cycle resets.
 	s.start = t
 
-	sData.DataPoints = dPts[:i]
+	sData.DataPoints = dPts
 	*dest = sData
 
 	return i
 }
 
 func (s *precomputedSum[N]) cumulative(
-	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface,
-	filter filterAttrs,
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
 
@@ -299,9 +271,6 @@ func (s *precomputedSum[N]) cumulative(
 	var i int
 	s.hotColdValMap[readIdx].values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
-		if filter != nil && !filter(val.attrs) {
-			return true
-		}
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
@@ -312,7 +281,7 @@ func (s *precomputedSum[N]) cumulative(
 	})
 	s.hotColdValMap[readIdx].values.Clear()
 
-	sData.DataPoints = dPts[:i]
+	sData.DataPoints = dPts
 	*dest = sData
 
 	return i

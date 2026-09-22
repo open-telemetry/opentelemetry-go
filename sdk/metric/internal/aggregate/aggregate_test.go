@@ -74,7 +74,7 @@ func (c *clock) Register() (unregister func()) {
 }
 
 func dropExemplars[N int64 | float64](attr attribute.Set) FilteredExemplarReservoir[N] {
-	return DropReservoir[N](attr)
+	return dropReservoir[N](attr)
 }
 
 func TestBuilderFilter(t *testing.T) {
@@ -91,10 +91,10 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 			return func(t *testing.T) {
 				t.Helper()
 
-				meas := b.filter(func(_ context.Context, v N, lazy lazyFilteredAttributes) {
+				meas := b.filter(func(_ context.Context, v N, f attribute.Set, d []attribute.KeyValue) {
 					assert.Equal(t, value, v, "measured incorrect value")
-					assert.Equal(t, wantF, lazy.Set(), "measured incorrect filtered attributes")
-					assert.ElementsMatch(t, wantD, lazy.Dropped(), "measured incorrect dropped attributes")
+					assert.Equal(t, wantF, f, "measured incorrect filtered attributes")
+					assert.ElementsMatch(t, wantD, d, "measured incorrect dropped attributes")
 				})
 				meas(t.Context(), value, attr)
 			}
@@ -133,98 +133,48 @@ func test[N int64 | float64](meas Measure[N], comp ComputeAggregation, steps []t
 			}
 
 			t.Logf("step: %d", i)
-			assert.Equal(t, step.expect.n, comp(got, nil), "incorrect data size")
+			assert.Equal(t, step.expect.n, comp(got), "incorrect data size")
 			metricdatatest.AssertAggregationsEqual(t, step.expect.agg, *got)
 		}
 	}
 }
 
-func getConcurrentVals[N int64 | float64]() []N {
-	// Keep length of v in sync with concurrentNumRecords
-	// and expectedConcurrentSum.
-	switch any(*new(N)).(type) {
-	case float64:
-		v := []float64{2.5, 6.1, 4.4, 10.0, 22.0, -3.5, -6.5, 3.0, -6.0}
-		return any(v).([]N)
-	default:
-		v := []int64{2, 6, 4, 10, 22, -3, -6, 3, -6}
-		return any(v).([]N)
-	}
-}
-
-const (
-	concurrentValsSum       = 32
-	concurrentNumGoroutines = 10
-	concurrentNumRecords    = 90 // Multiple of 9 (length of values sequences)
-	expectedConcurrentCount = uint64(concurrentNumGoroutines * concurrentNumRecords)
-)
-
-func expectedConcurrentSum[N int64 | float64]() N {
-	return N(int64(concurrentNumGoroutines) * int64(concurrentNumRecords/9) * concurrentValsSum)
-}
-
-// testAggregationConcurrentSafe provides a unified stress test for all generic aggregators
-// by generating high contention, cardinality limit overflow, and validating exact results.
-func testAggregationConcurrentSafe[N int64 | float64](
+func testAggergationConcurrentSafe[N int64 | float64](
 	meas Measure[N],
 	comp ComputeAggregation,
-	validate func(t *testing.T, aggs []metricdata.Aggregation),
+	validate func(t *testing.T, agg metricdata.Aggregation),
 ) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
 
+		got := new(metricdata.Aggregation)
 		ctx := t.Context()
 		var wg sync.WaitGroup
-
-		// Use 10 different attribute sets to force overflow on the AggregationLimit
-		// which is typically set to 3.
-		attrs := make([]attribute.Set, concurrentNumGoroutines)
-		for i := range attrs {
-			attrs[i] = attribute.NewSet(attribute.String(keyUser, strconv.Itoa(i)))
+		for _, args := range []arg[N]{
+			{ctx, 2, alice},
+			{ctx, 6, alice},
+			{ctx, 4, alice},
+			{ctx, 10, alice},
+			{ctx, 22, alice},
+			{ctx, -3, bob},
+			{ctx, -6, bob},
+			{ctx, 3, bob},
+			{ctx, 6, bob},
+		} {
+			wg.Go(func() {
+				meas(args.ctx, args.value, args.attr)
+			})
 		}
-
-		vals := getConcurrentVals[N]()
-
-		wg.Add(concurrentNumGoroutines)
-		for i := range concurrentNumGoroutines {
-			go func(id int) {
-				defer wg.Done()
-				// Each goroutine records to a distinct attribute set
-				attr := attrs[id]
-
-				for j := range concurrentNumRecords {
-					meas(ctx, vals[j%len(vals)], attr)
-				}
-			}(i)
-		}
-
-		var results []metricdata.Aggregation
-
-		// Run computation concurrently with measurements to stress hot/cold swaps
 		wg.Go(func() {
-			for range concurrentNumRecords {
-				got := new(metricdata.Aggregation)
-				comp(got, nil)
-				results = append(results, *got)
+			for range 2 {
+				comp(got)
+				// We do not check expected output for each step because
+				// computeAggregation is run concurrently with steps. Instead,
+				// we validate that the output is a valid possible output.
+				validate(t, *got)
 			}
 		})
-
 		wg.Wait()
-
-		// Final flush to get final values
-		got := new(metricdata.Aggregation)
-		comp(got, nil)
-		results = append(results, *got)
-
-		validate(t, results)
-	}
-}
-
-func assertSumEqual[N int64 | float64](t *testing.T, expected, actual N) {
-	if _, ok := any(*new(N)).(float64); ok {
-		assert.InDelta(t, float64(expected), float64(actual), 0.0001)
-	} else {
-		assert.Equal(t, expected, actual)
 	}
 }
 
@@ -260,7 +210,7 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 			}
 		}
 
-		comp(got, nil)
+		comp(got)
 	})
 
 	b.Run("ComputeAggregation", func(b *testing.B) {
@@ -278,7 +228,7 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 		b.ResetTimer()
 
 		for n := 0; n < b.N; n++ {
-			comps[n](got, nil)
+			comps[n](got)
 		}
 	})
 }

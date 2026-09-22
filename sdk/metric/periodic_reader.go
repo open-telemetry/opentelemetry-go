@@ -139,7 +139,14 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 	if val, ok := x.MetricExportBatchSize.Lookup(); ok {
 		r.batcher = batcher{size: val}
 	}
-	r.externalProducers.Store(conf.producers)
+	producers := conf.producers
+	if conf.metricFilter != nil {
+		producers = make([]Producer, len(conf.producers))
+		for i, p := range conf.producers {
+			producers[i] = &filteringProducer{inner: p, filter: conf.metricFilter}
+		}
+	}
+	r.externalProducers.Store(producers)
 
 	go func() {
 		defer func() { close(r.done) }()
@@ -224,8 +231,13 @@ func (r *PeriodicReader) run(ctx context.Context, interval time.Duration) {
 
 // register registers p as the producer of this reader.
 func (r *PeriodicReader) register(p sdkProducer) {
+	produce := p.produce
+	if r.metricFilter != nil {
+		produce = wrapProduce(produce, r.metricFilter)
+	}
+
 	// Only register once. If producer is already set, do nothing.
-	if !r.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
+	if !r.sdkProducer.CompareAndSwap(nil, produceHolder{produce: produce}) {
 		msg := "did not register periodic reader"
 		global.Error(errDuplicateRegister, msg)
 	}

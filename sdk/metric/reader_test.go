@@ -60,6 +60,26 @@ func (ts *readerTestSuite) TestExternalProducer() {
 	ts.Equal(testResourceMetricsAB, m)
 }
 
+func (ts *readerTestSuite) TestMetricFilterExternalProducer() {
+	ts.Reader = ts.Factory(
+		WithProducer(testExternalProducer{}),
+		testAggregationMetricFilter{
+			testMetric: func(_ instrumentation.Scope, name string, _ metricdata.Aggregation, _ string) int {
+				if name == "fake scope data" {
+					return metricFilterDrop
+				}
+				return metricFilterAccept
+			},
+		},
+	)
+	ts.Reader.register(testSDKProducer{})
+
+	m := metricdata.ResourceMetrics{}
+	err := ts.Reader.Collect(context.Background(), &m)
+	ts.NoError(err)
+	ts.Equal(testResourceMetricsA, m)
+}
+
 func (ts *readerTestSuite) TestCollectAfterShutdown() {
 	ts.Reader = ts.Factory(WithProducer(testExternalProducer{}))
 	ctx := context.Background()

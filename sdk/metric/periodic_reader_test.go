@@ -1116,13 +1116,13 @@ func TestPeriodicReaderMetricFilter(t *testing.T) {
 	ctx := t.Context()
 
 	filter := testMetricFilterOption{
-		testMetric: func(_ instrumentation.Scope, name string, _ InstrumentKind, _ string) int {
+		testMetric: func(_ instrumentation.Scope, name string, _ metricdata.Aggregation, _ string) int {
 			if name == "dropped" {
 				return metricFilterDrop
 			}
 			return metricFilterAccept
 		},
-		testAttributes: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string, _ []attribute.KeyValue) int {
+		testAttributes: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, _ attribute.Set) int {
 			return metricFilterAttrAccept
 		},
 	}

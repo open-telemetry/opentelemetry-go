@@ -34,7 +34,6 @@ import (
 
 func testSumAggregateOutput(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
-	_ func(attribute.Set) bool,
 ) int {
 	*dest = metricdata.Sum[int64]{
 		Temporality: metricdata.CumulativeTemporality,
@@ -636,7 +635,7 @@ func TestPipelineProduceErrors(t *testing.T) {
 		name:        "test-metric",
 		description: "test description",
 		unit:        "test unit",
-		compAgg: func(dest *metricdata.Aggregation, _ func(attribute.Set) bool) int {
+		compAgg: func(dest *metricdata.Aggregation) int {
 			aggCallCount++
 
 			*dest = metricdata.Sum[int64]{

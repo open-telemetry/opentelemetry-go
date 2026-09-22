@@ -3059,11 +3059,11 @@ func TestMetricFilterAsyncInstrument(t *testing.T) {
 	ctx := t.Context()
 
 	filter := testMetricFilterOption{
-		testMetric: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string) int {
+		testMetric: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string) int {
 			return metricFilterAcceptPartial
 		},
-		testAttributes: func(_ instrumentation.Scope, _ string, _ InstrumentKind, _ string, attrs []attribute.KeyValue) int {
-			for _, attr := range attrs {
+		testAttributes: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, attrs attribute.Set) int {
+			for _, attr := range attrs.ToSlice() {
 				if attr.Key == "drop" {
 					return metricFilterAttrDrop
 				}

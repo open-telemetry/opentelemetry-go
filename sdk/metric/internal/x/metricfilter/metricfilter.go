@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // MetricFilter defines the interface which enables the MetricReader's
@@ -21,7 +22,7 @@ type MetricFilter interface {
 	TestMetric(
 		instrumentationScope instrumentation.Scope,
 		name string,
-		kind metric.InstrumentKind,
+		kind metricdata.Aggregation,
 		unit string,
 	) Result
 	// TestAttributes determines for a given metric stream and attribute set
@@ -31,9 +32,9 @@ type MetricFilter interface {
 	TestAttributes(
 		instrumentationScope instrumentation.Scope,
 		name string,
-		kind metric.InstrumentKind,
+		kind metricdata.Aggregation,
 		unit string,
-		attributes []attribute.KeyValue,
+		attributes attribute.Set,
 	) AttributesFilterResult
 }
 
@@ -76,9 +77,12 @@ func (metricFilterOption) Experimental() {}
 func (o metricFilterOption) TestMetric(
 	scope instrumentation.Scope,
 	name string,
-	kind metric.InstrumentKind,
+	kind metricdata.Aggregation,
 	unit string,
 ) int {
+	if o.filter == nil {
+		return int(Accept)
+	}
 	return int(o.filter.TestMetric(scope, name, kind, unit))
 }
 
@@ -87,10 +91,13 @@ func (o metricFilterOption) TestMetric(
 func (o metricFilterOption) TestAttributes(
 	scope instrumentation.Scope,
 	name string,
-	kind metric.InstrumentKind,
+	kind metricdata.Aggregation,
 	unit string,
-	attrs []attribute.KeyValue,
+	attrs attribute.Set,
 ) int {
+	if o.filter == nil {
+		return int(Accept)
+	}
 	return int(o.filter.TestAttributes(scope, name, kind, unit, attrs))
 }
 
@@ -98,5 +105,8 @@ func (o metricFilterOption) TestAttributes(
 // This allows you to selectively accept, drop, or partially filter metric streams and
 // their specific attribute sets at the reader level.
 func WithMetricFilter(f MetricFilter) metric.ReaderOption {
+	if f == nil {
+		return metricFilterOption{}
+	}
 	return metricFilterOption{filter: f}
 }
