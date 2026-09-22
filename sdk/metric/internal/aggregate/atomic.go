@@ -27,10 +27,18 @@ type atomicCounter[N int64 | float64] struct {
 
 // load returns the current value. The caller must ensure all calls to add have
 // returned prior to calling load.
-func (n *atomicCounter[N]) load() N {
-	fval := math.Float64frombits(n.nFloatBits.Load())
-	ival := n.nInt.Load()
-	return N(fval + float64(ival))
+func (n *atomicCounter[N]) load() (value N) {
+	switch any(value).(type) {
+	case int64:
+		value = N(n.nInt.Load())
+	case float64:
+		fval := math.Float64frombits(n.nFloatBits.Load())
+		ival := n.nInt.Load()
+		value = N(fval + float64(ival))
+	default:
+		panic("unsupported type")
+	}
+	return value
 }
 
 func (n *atomicCounter[N]) add(value N) {
