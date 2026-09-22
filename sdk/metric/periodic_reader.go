@@ -152,7 +152,14 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 			},
 		},
 	}
-	r.externalProducers.Store(conf.producers)
+	producers := conf.producers
+	if conf.metricFilter != nil {
+		producers = make([]Producer, len(conf.producers))
+		for i, p := range conf.producers {
+			producers[i] = &filteringProducer{inner: p, filter: conf.metricFilter}
+		}
+	}
+	r.externalProducers.Store(producers)
 
 	go func() {
 		defer func() { close(r.done) }()

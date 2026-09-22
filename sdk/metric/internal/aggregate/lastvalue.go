@@ -8,14 +8,17 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // lastValuePoint is timestamped measurement data.
 type lastValuePoint[N int64 | float64] struct {
-	attrs attribute.Set
-	value atomicN[N]
-	res   FilteredExemplarReservoir[N]
+	attrs         attribute.Set
+	value         atomicN[N]
+	res           FilteredExemplarReservoir[N]
+	startTime     time.Time
+	dropExemplars bool
 }
 
 func newDeltaLastValue[N int64 | float64](
@@ -41,8 +44,7 @@ type deltaLastValue[N int64 | float64] struct {
 func (s *deltaLastValue[N]) measure(
 	ctx context.Context,
 	value N,
-	fltrAttr attribute.Set,
-	droppedAttr []attribute.KeyValue,
+	lazy lazyFilteredAttributes,
 ) {
 	hotIdx := s.vals.start()
 	defer s.vals.done(hotIdx)
@@ -56,10 +58,14 @@ func (s *deltaLastValue[N]) measure(
 			startTime:     now(),
 			dropExemplars: isDrop,
 		}
-	}).(*lastValuePoint[N])
+		p.value.Store(value)
+		return p
+	})
 
 	lv.value.Store(value)
-	lv.res.Offer(ctx, value, droppedAttr)
+	if !lv.dropExemplars {
+		lv.res.Offer(ctx, value, lazy)
+	}
 }
 
 func (s *deltaLastValue[N]) collect(
@@ -161,12 +167,19 @@ func (s *cumulativeLastValue[N]) collect(
 	// current length for capacity.
 	dPts := reset(gData.DataPoints, 0, s.values.Len())
 
+	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
+
 	var i int
 	s.values.Range(func(_, value any) bool {
 		v := value.(*lastValuePoint[N])
+
+		startTime := s.start
+		if perSeriesStartTimeEnabled {
+			startTime = v.startTime
+		}
 		newPt := metricdata.DataPoint[N]{
 			Attributes: v.attrs,
-			StartTime:  s.start,
+			StartTime:  startTime,
 			Time:       t,
 			Value:      v.value.Load(),
 		}

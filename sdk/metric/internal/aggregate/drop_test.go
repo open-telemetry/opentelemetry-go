@@ -18,7 +18,7 @@ func TestDrop(t *testing.T) {
 }
 
 func testDropFiltered[N int64 | float64](t *testing.T) {
-	r := dropReservoir[N](*attribute.EmptySet())
+	r := DropReservoir[N](*attribute.EmptySet())
 
 	var dest []exemplar.Exemplar
 	r.Collect(&dest)

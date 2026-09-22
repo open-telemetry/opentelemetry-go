@@ -8,13 +8,16 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 type sumValue[N int64 | float64] struct {
-	n     atomicCounter[N]
-	res   FilteredExemplarReservoir[N]
-	attrs attribute.Set
+	n             atomicCounter[N]
+	res           FilteredExemplarReservoir[N]
+	attrs         attribute.Set
+	startTime     time.Time
+	dropExemplars bool
 }
 
 // newDeltaSum returns an aggregator that summarizes a set of measurements as
@@ -164,12 +167,19 @@ func (s *cumulativeSum[N]) collect(
 	// current length for capacity.
 	dPts := reset(sData.DataPoints, 0, s.values.Len())
 
+	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
+
 	var i int
 	s.values.Range(func(_, value any) bool {
 		val := value.(*sumValue[N])
+
+		startTime := s.start
+		if perSeriesStartTimeEnabled {
+			startTime = val.startTime
+		}
 		newPt := metricdata.DataPoint[N]{
 			Attributes: val.attrs,
-			StartTime:  s.start,
+			StartTime:  startTime,
 			Time:       t,
 			Value:      val.n.load(),
 		}
