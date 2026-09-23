@@ -86,4 +86,32 @@
 //
 // See [go.opentelemetry.io/otel/sdk/metric/internal/x] for information about
 // the experimental features.
+//
+// # Environment Variables
+//
+// The following environment variables can be used for configuration.
+//
+// OTEL_METRIC_EXPORT_INTERVAL (default: "60000") - the time interval (in
+// milliseconds) between the start of two consecutive export attempts of a
+// [PeriodicReader]. Non-positive or invalid values are ignored, and the
+// default is used instead.
+// The configuration can be overridden by the [WithInterval] option.
+//
+// OTEL_METRIC_EXPORT_TIMEOUT (default: "30000") - the maximum time (in
+// milliseconds) a [PeriodicReader] waits for an export to complete before
+// canceling it. Non-positive or invalid values are ignored, and the default
+// is used instead.
+// The configuration can be overridden by the [WithTimeout] option.
+//
+// OTEL_METRICS_EXEMPLAR_FILTER (default: "trace_based") - the default
+// [go.opentelemetry.io/otel/sdk/metric/exemplar.Filter] used to filter
+// measurements as they are made. Recognized values are "always_on",
+// "always_off", and "trace_based". Any other value is ignored, and the
+// default is used instead.
+// The configuration can be overridden by the [WithExemplarFilter] option.
+//
+// OTEL_GO_X_CARDINALITY_LIMIT (default: "2000") - the default cardinality
+// limit, see [WithCardinalityLimit] for more information. Invalid values are
+// ignored, and the default is used instead.
+// The configuration can be overridden by the [WithCardinalityLimit] option.
 package metric
