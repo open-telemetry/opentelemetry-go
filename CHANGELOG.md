@@ -21,8 +21,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental `ProbabilitySampler` in `go.opentelemetry.io/otel/sdk/trace/x` that conforms to the [OpenTelemetry specification's threshold-based sampling algorithm](https://opentelemetry.io/docs/specs/otel/trace/sdk/#probabilitysampler). (#8123)
 - Add experimental `*Binder` extension interfaces in `go.opentelemetry.io/otel/metric/x` for instruments that support binding attributes ahead of time. (#8760)
 - Add the experimental `Finisher` synchronous metric instrument extension interface to `go.opentelemetry.io/otel/metric/x`. (#8906)
+- Add `SetHookFunc`, `GetHookFunc`, `ContextWithSetHook`, and `ContextWithGetHook` to `go.opentelemetry.io/otel/baggage`, allowing bridges to synchronize with `Baggage` stored in a `context.Context` without depending on an internal package.
 
 ### Changed
+
+- `go.opentelemetry.io/otel/bridge/opentracing` now uses the new `go.opentelemetry.io/otel/baggage` hook functions instead of an internal package to synchronize `Baggage` with `OpenTracing` span baggage.
 
 - Use the [OpenTelemetry Attribute Collection representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#attribute-collection-representation-for-non-otlp) for metric data diffs in `go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest`. (#8993)
 - Apply a maximum depth of 64 by default to span, event, link, log record, and instrumentation scope attribute values in `go.opentelemetry.io/otel/sdk/trace` and `go.opentelemetry.io/otel/sdk/log`. (#8938)

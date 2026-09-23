@@ -6,7 +6,6 @@ package opentracing
 import (
 	"context"
 	"fmt"
-	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -21,7 +20,6 @@ import (
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
-	iBaggage "go.opentelemetry.io/otel/internal/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
@@ -384,12 +382,12 @@ func (t *BridgeTracer) SetTextMapPropagator(propagator propagation.TextMapPropag
 // NewHookedContext returns a Context that has ctx as its parent and is
 // wrapped to handle baggage set and get operations.
 func (t *BridgeTracer) NewHookedContext(ctx context.Context) context.Context {
-	ctx = iBaggage.ContextWithSetHook(ctx, t.baggageSetHook)
-	ctx = iBaggage.ContextWithGetHook(ctx, t.baggageGetHook)
+	ctx = baggage.ContextWithSetHook(ctx, t.baggageSetHook)
+	ctx = baggage.ContextWithGetHook(ctx, t.baggageGetHook)
 	return ctx
 }
 
-func (t *BridgeTracer) baggageSetHook(ctx context.Context, list iBaggage.List) context.Context {
+func (t *BridgeTracer) baggageSetHook(ctx context.Context, bag baggage.Baggage) context.Context {
 	span := ot.SpanFromContext(ctx)
 	if span == nil {
 		t.warningHandler("No active OpenTracing span, can not propagate the baggage items from OpenTelemetry context\n")
@@ -402,48 +400,46 @@ func (t *BridgeTracer) baggageSetHook(ctx context.Context, list iBaggage.List) c
 		)
 		return ctx
 	}
-	for k, v := range list {
-		bSpan.setBaggageItemOnly(k, v.Value)
+	for _, m := range bag.Members() {
+		bSpan.setBaggageItemOnly(m.Key(), m.Value())
 	}
 	return ctx
 }
 
-func (t *BridgeTracer) baggageGetHook(ctx context.Context, list iBaggage.List) iBaggage.List {
+func (t *BridgeTracer) baggageGetHook(ctx context.Context, bag baggage.Baggage) baggage.Baggage {
 	span := ot.SpanFromContext(ctx)
 	if span == nil {
 		t.warningHandler(
 			"No active OpenTracing span, can not propagate the baggage items from OpenTracing span context\n",
 		)
-		return list
+		return bag
 	}
 	bSpan, ok := span.(*bridgeSpan)
 	if !ok {
 		t.warningHandler(
 			"Encountered a foreign OpenTracing span, will not propagate the baggage items from OpenTracing span context\n",
 		)
-		return list
+		return bag
 	}
 	bSpan.extraBaggageItemsMu.Lock()
 	defer bSpan.extraBaggageItemsMu.Unlock()
 
 	items := bSpan.extraBaggageItems
 	if len(items) == 0 {
-		return list
+		return bag
 	}
-
-	// Privilege of using the internal representation of Baggage here comes
-	// with the responsibility to make sure we maintain its immutability. We
-	// need to return a copy to ensure this.
-
-	merged := make(iBaggage.List, len(list))
-	maps.Copy(merged, list)
 
 	for k, v := range items {
 		// Overwrite according to OpenTelemetry specification.
-		merged[k] = iBaggage.Item{Value: v}
+		m, err := baggage.NewMemberRaw(k, v)
+		if err != nil {
+			continue
+		}
+		// SetMember returns a new Baggage, preserving immutability of bag.
+		bag, _ = bag.SetMember(m)
 	}
 
-	return merged
+	return bag
 }
 
 // StartSpan is a part of the implementation of the OpenTracing Tracer
