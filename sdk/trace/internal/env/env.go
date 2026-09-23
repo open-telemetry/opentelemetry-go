@@ -95,6 +95,28 @@ func IntEnvOr(key string, defaultValue int) int {
 	return intValue
 }
 
+// positiveIntEnvOr returns the int value of the environment variable with
+// name key if it exists, it is not empty, and the value is a positive
+// integer. Otherwise, defaultValue is returned.
+func positiveIntEnvOr(key string, defaultValue int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		global.Info("Got invalid value, number value expected.", key, value)
+		return defaultValue
+	}
+	if intValue <= 0 {
+		global.Info("Got invalid value, positive number expected.", key, value)
+		return defaultValue
+	}
+
+	return intValue
+}
+
 // BatchSpanProcessorScheduleDelay returns the environment variable value for
 // the OTEL_BSP_SCHEDULE_DELAY key if it exists, otherwise defaultValue is
 // returned.
@@ -110,17 +132,17 @@ func BatchSpanProcessorExportTimeout(defaultValue int) int {
 }
 
 // BatchSpanProcessorMaxQueueSize returns the environment variable value for
-// the OTEL_BSP_MAX_QUEUE_SIZE key if it exists, otherwise defaultValue is
-// returned.
+// the OTEL_BSP_MAX_QUEUE_SIZE key if it exists and is a positive integer,
+// otherwise defaultValue is returned.
 func BatchSpanProcessorMaxQueueSize(defaultValue int) int {
-	return IntEnvOr(BatchSpanProcessorMaxQueueSizeKey, defaultValue)
+	return positiveIntEnvOr(BatchSpanProcessorMaxQueueSizeKey, defaultValue)
 }
 
-// BatchSpanProcessorMaxExportBatchSize returns the environment variable value for
-// the OTEL_BSP_MAX_EXPORT_BATCH_SIZE key if it exists, otherwise defaultValue
-// is returned.
+// BatchSpanProcessorMaxExportBatchSize returns the environment variable value
+// for the OTEL_BSP_MAX_EXPORT_BATCH_SIZE key if it exists and is a positive
+// integer, otherwise defaultValue is returned.
 func BatchSpanProcessorMaxExportBatchSize(defaultValue int) int {
-	return IntEnvOr(BatchSpanProcessorMaxExportBatchSizeKey, defaultValue)
+	return positiveIntEnvOr(BatchSpanProcessorMaxExportBatchSizeKey, defaultValue)
 }
 
 // SpanAttributeValueLength returns the environment variable value for the
