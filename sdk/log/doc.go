@@ -34,5 +34,41 @@ the experimental features.
 
 See [go.opentelemetry.io/otel/log] for more information about
 the OpenTelemetry Logs API.
+
+# Environment Variables
+
+The following environment variables can be used for configuration.
+
+OTEL_BLRP_SCHEDULE_DELAY (default: "1000") - the delay interval (in
+milliseconds) between two consecutive exports of a [BatchProcessor].
+Non-positive or invalid values are ignored, and the default is used instead.
+The configuration can be overridden by the [WithExportInterval] option.
+
+OTEL_BLRP_EXPORT_TIMEOUT (default: "30000") - the maximum time (in
+milliseconds) a [BatchProcessor] waits for an export to complete before
+canceling it. Non-positive or invalid values are ignored, and the default is
+used instead.
+The configuration can be overridden by the [WithExportTimeout] option.
+
+OTEL_BLRP_MAX_QUEUE_SIZE (default: "2048") - the maximum number of log
+records held in the queue of a [BatchProcessor] before log records are
+dropped. Non-positive or invalid values are ignored, and the default is used
+instead.
+The configuration can be overridden by the [WithMaxQueueSize] option.
+
+OTEL_BLRP_MAX_EXPORT_BATCH_SIZE (default: "512") - the maximum number of log
+records a [BatchProcessor] exports in a single batch. Non-positive or invalid
+values are ignored, and the default is used instead.
+The configuration can be overridden by the [WithExportMaxBatchSize] option.
+
+OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT (default: "128") - the maximum allowed
+log record attribute count. Invalid values are ignored, and the default is
+used instead.
+The configuration can be overridden by the [WithAttributeCountLimit] option.
+
+OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT (default: no limit) - the maximum
+allowed attribute value length. Invalid values are ignored, and the default
+is used instead.
+The configuration can be overridden by the [WithAttributeValueLengthLimit] option.
 */
 package log
