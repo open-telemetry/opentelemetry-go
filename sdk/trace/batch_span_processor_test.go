@@ -108,6 +108,27 @@ func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
 	}
 }
 
+func TestNewBatchSpanProcessorWithNegativeEnvOptions(t *testing.T) {
+	tests := []struct {
+		name string
+		key  string
+	}{
+		{name: "negative max queue size", key: env.BatchSpanProcessorMaxQueueSizeKey},
+		{name: "negative max export batch size", key: env.BatchSpanProcessorMaxExportBatchSizeKey},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(tt.key, "-1")
+
+			var bsp SpanProcessor
+			assert.NotPanics(t, func() {
+				bsp = NewBatchSpanProcessor(&testBatchExporter{})
+			})
+			require.NoError(t, bsp.Shutdown(t.Context()))
+		})
+	}
+}
+
 type testOption struct {
 	name           string
 	o              []BatchSpanProcessorOption

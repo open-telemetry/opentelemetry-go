@@ -103,3 +103,34 @@ func TestEnvParse(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvParsePositiveOnly(t *testing.T) {
+	testCases := []struct {
+		name string
+		key  string
+		f    func(int) int
+	}{
+		{
+			name: "BatchSpanProcessorMaxQueueSize",
+			key:  BatchSpanProcessorMaxQueueSizeKey,
+			f:    BatchSpanProcessorMaxQueueSize,
+		},
+		{
+			name: "BatchSpanProcessorMaxExportBatchSize",
+			key:  BatchSpanProcessorMaxExportBatchSizeKey,
+			f:    BatchSpanProcessorMaxExportBatchSize,
+		},
+	}
+
+	const defVal = 500
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(tc.key, "-1")
+			assert.Equal(t, defVal, tc.f(defVal), "negative value")
+
+			t.Setenv(tc.key, "0")
+			assert.Equal(t, defVal, tc.f(defVal), "zero value")
+		})
+	}
+}
