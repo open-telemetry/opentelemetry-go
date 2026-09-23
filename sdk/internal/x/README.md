@@ -9,6 +9,8 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 ## Features
 
 - [Resource](#resource)
+- [Observability](#observability)
+- [Per-Series Start Timestamps](#per-series-start-timestamps)
 
 ### Resource
 
@@ -34,6 +36,61 @@ Disable experimental resource semantic conventions.
 
 ```console
 unset OTEL_GO_X_RESOURCE
+```
+
+### Observability
+
+The SDK provides an observability feature that allows you to monitor the SDK itself.
+
+To opt-in, set the `OTEL_GO_X_OBSERVABILITY` environment variable to `true`.
+The `OTEL_GO_X_SELF_OBSERVABILITY` environment variable is also recognized as an alias.
+
+When enabled, the SDK components (e.g. the trace and metric SDKs) create metrics
+about their own operation using the global `MeterProvider`.
+Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentation
+for more details on these metrics.
+
+[Semantic conventions for OpenTelemetry SDK metrics]: https://github.com/open-telemetry/semantic-conventions/blob/v1.37.0/docs/otel/sdk-metrics.md
+
+#### Examples
+
+Enable SDK self-observability metrics.
+
+```console
+export OTEL_GO_X_OBSERVABILITY=true
+```
+
+Disable SDK self-observability metrics.
+
+```console
+unset OTEL_GO_X_OBSERVABILITY
+```
+
+### Per-Series Start Timestamps
+
+[OpenTelemetry metrics data model] defines a per-series `StartTimeUnixNano`
+that reflects when each individual attribute set was first observed, rather
+than a single start time shared by every data point of an instrument.
+
+To have the metric SDK report per-series start timestamps, set the
+`OTEL_GO_X_PER_SERIES_START_TIMESTAMPS` environment variable.
+The value set must be the case-insensitive string value of `"true"` to enable
+the feature. All other values are ignored.
+
+[OpenTelemetry metrics data model]: https://opentelemetry.io/docs/specs/otel/metrics/data-model/
+
+#### Examples
+
+Enable per-series start timestamps.
+
+```console
+export OTEL_GO_X_PER_SERIES_START_TIMESTAMPS=true
+```
+
+Disable per-series start timestamps.
+
+```console
+unset OTEL_GO_X_PER_SERIES_START_TIMESTAMPS
 ```
 
 ## Compatibility and Stability
