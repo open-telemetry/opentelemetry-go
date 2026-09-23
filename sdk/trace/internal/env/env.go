@@ -99,18 +99,9 @@ func IntEnvOr(key string, defaultValue int) int {
 // name key if it exists, it is not empty, and the value is a positive
 // integer. Otherwise, defaultValue is returned.
 func positiveIntEnvOr(key string, defaultValue int) int {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-
-	intValue, err := strconv.Atoi(value)
-	if err != nil {
-		global.Info("Got invalid value, number value expected.", key, value)
-		return defaultValue
-	}
+	intValue := IntEnvOr(key, defaultValue)
 	if intValue <= 0 {
-		global.Info("Got invalid value, positive number expected.", key, value)
+		global.Info("Got invalid value, positive number expected.", key, intValue)
 		return defaultValue
 	}
 

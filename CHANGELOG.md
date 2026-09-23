@@ -46,7 +46,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Treat empty `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` values as unset in `go.opentelemetry.io/otel/sdk/trace`. (#8873)
 - Normalize global `OTEL_EXPORTER_OTLP_ENDPOINT` path joining in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` so trailing-slash base URLs do not produce double-slash log export paths. (#8864)
 - Prevent a deadlock when formatting an error passed to `RecordError` calls back into the span in `go.opentelemetry.io/otel/sdk/trace`. (#8815)
-- Prevent a panic in `NewBatchSpanProcessor` when `OTEL_BSP_MAX_QUEUE_SIZE` or `OTEL_BSP_MAX_EXPORT_BATCH_SIZE` is set to a non-positive value in `go.opentelemetry.io/otel/sdk/trace`; non-positive values are now ignored and the default is used, consistent with `go.opentelemetry.io/otel/sdk/log`'s handling of `OTEL_BLRP_*` variables.
+- Prevent setting `OTEL_BSP_MAX_QUEUE_SIZE` or `OTEL_BSP_MAX_EXPORT_BATCH_SIZE` to a non-positive value in `go.opentelemetry.io/otel/sdk/trace`. (#9002)
 - Prevent `SimpleSpanProcessor.Shutdown` from panicking when constructed with a nil exporter in `go.opentelemetry.io/otel/sdk/trace`. (#8844)
 - Propagate invalid exponential histogram scale errors to Prometheus exporter self-observability metrics in `go.opentelemetry.io/otel/exporters/prometheus`. (#8839)
 - Retain instrument advisory attributes (`metric/x.WithDefaultAttributes`) when a matching View does not specify an attribute filter in `go.opentelemetry.io/otel/sdk/metric`. (#8859)
