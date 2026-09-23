@@ -1208,6 +1208,8 @@ For more information about the approver role, see the [community repository](htt
 
 ### Triagers
 
+- [Marc Schäfer](https://github.com/marcschaeferger), T&A SYSTEME GmbH
+
 For more information about the triager role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#triager).
 
 ### Emeritus
