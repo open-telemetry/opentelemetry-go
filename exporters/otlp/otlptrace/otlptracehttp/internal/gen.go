@@ -31,3 +31,6 @@ package internal
 //go:generate gotmpl --body=../../../../../internal/shared/counter/counter.go.tmpl "--data={}" --out=counter/counter.go
 //go:generate gotmpl --body=../../../../../internal/shared/counter/counter_test.go.tmpl "--data={}" --out=counter/counter_test.go
 //go:generate gotmpl --body=../../../../../internal/shared/x/x_test.go.tmpl "--data={}" --out=x/x_test.go
+
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpjson/common.go.tmpl "--data={}" --out=otlpjson/common.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpjson/common_test.go.tmpl "--data={}" --out=otlpjson/common_test.go

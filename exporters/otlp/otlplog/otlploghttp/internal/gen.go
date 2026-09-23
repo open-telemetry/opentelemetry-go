@@ -18,3 +18,6 @@ package internal
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlplog/transform/log.go.tmpl "--data={}" --out=transform/log.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlplog/transform/log_attr_test.go.tmpl "--data={}" --out=transform/log_attr_test.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlplog/transform/log_test.go.tmpl "--data={}" --out=transform/log_test.go
+
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpjson/common.go.tmpl "--data={}" --out=otlpjson/common.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpjson/common_test.go.tmpl "--data={}" --out=otlpjson/common_test.go
