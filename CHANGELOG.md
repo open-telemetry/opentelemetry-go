@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
-## [1.47.0/0.69.0/0.23.0/0.1.0] - 2026-09-24
+## [1.47.0/0.69.0/0.23.0/0.1.0] - 2026-09-25
 
 This release contains the first stable release of the OpenTelemetry Go Logs API and SDK.
 Our project stability guarantees now apply to the following modules:
