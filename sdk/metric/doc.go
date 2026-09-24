@@ -110,8 +110,6 @@
 // default is used instead.
 // The configuration can be overridden by the [WithExemplarFilter] option.
 //
-// OTEL_GO_X_CARDINALITY_LIMIT (default: "2000") - the default cardinality
-// limit, see [WithCardinalityLimit] for more information. Invalid values are
-// ignored, and the default is used instead.
-// The configuration can be overridden by the [WithCardinalityLimit] option.
+// See [go.opentelemetry.io/otel/sdk/metric/internal/x] for the experimental
+// OTEL_GO_X_CARDINALITY_LIMIT environment variable.
 package metric
