@@ -8,11 +8,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.47.0/0.69.0/0.23.0/0.1.0] - 2026-09-24
+
+This release contains the first stable release of the OpenTelemetry Go Logs API and SDK.
+Our project stability guarantees now apply to the following modules:
+
+- `go.opentelemetry.io/otel/log`
+- `go.opentelemetry.io/otel/sdk/log`
+
+See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
+
 ### Added
 
 - Add `String` method for `KeyValue` type in `go.opentelemetry.io/otel/attribute`. (#8205)
 - Add `String` method for `Set` type in `go.opentelemetry.io/otel/attribute`. (#8347)
-- Add `WithMaxExportBatchSize` to `go.opentelemetry.io/otel/sdk/metric` to configure the maximum export batch size for `PeriodicReader`.
+- Add `WithMaxExportBatchSize` to `go.opentelemetry.io/otel/sdk/metric` to configure the maximum export batch size for `PeriodicReader`. (#8960)
 - Add `WithAttributeValueDepthLimit`, `DefaultAttributeValueDepthLimit`, and `SpanLimits.AttributeValueDepthLimit` in `go.opentelemetry.io/otel/sdk/trace` to configure the maximum depth of span, event, link, and instrumentation scope attribute values. (#8938)
 - Add `WithAttributeValueDepthLimit` in `go.opentelemetry.io/otel/sdk/log` to configure the maximum depth of log record and instrumentation scope attribute values. (#8938)
 - Add `WithMaxResponseSize` to `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,
@@ -33,12 +46,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Remove the experimental `OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE` environment variable in `go.opentelemetry.io/otel/sdk/metric`.
-  Use the `WithMaxExportBatchSize` option instead.
+  Use the `WithMaxExportBatchSize` option instead. (#8960)
 
 ### Fixed
 
 - Prevent precision loss for large `int64` values in `Sum`, `Histogram`, and `ExponentialHistogram` aggregations in `go.opentelemetry.io/otel/sdk/metric`. (#8981)
-- Ensure `grpc.DialOption` values passed via `WithDialOption` take precedence over conflicting internally-computed defaults in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#8836)
+- Ensure `grpc.DialOption` values passed via `WithDialOption` take precedence over conflicting internally-computed defaults in
+  `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`,
+  `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and
+  `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#8805, #8834, #8836)
 - Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)
 - Prevent a panic in `NewFixedSizeReservoir` and `FixedSizeReservoirProvider` when given a negative size in `go.opentelemetry.io/otel/sdk/metric/exemplar`; negative sizes are now clamped to zero, consistent with a size of zero. (#8832)
 - Preserve exponential histogram `ZeroThreshold` during OTLP metric export in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#8801)
@@ -48,12 +64,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Prevent a deadlock when formatting an error passed to `RecordError` calls back into the span in `go.opentelemetry.io/otel/sdk/trace`. (#8815)
 - Prevent `SimpleSpanProcessor.Shutdown` from panicking when constructed with a nil exporter in `go.opentelemetry.io/otel/sdk/trace`. (#8844)
 - Propagate invalid exponential histogram scale errors to Prometheus exporter self-observability metrics in `go.opentelemetry.io/otel/exporters/prometheus`. (#8839)
-- Retain instrument advisory attributes (`metric/x.WithDefaultAttributes`) when a matching View does not specify an attribute filter in `go.opentelemetry.io/otel/sdk/metric`. (#8859)
+- Retain instrument advisory attributes configured with `go.opentelemetry.io/otel/metric/x.WithDefaultAttributes` when a matching View in `go.opentelemetry.io/otel/sdk/metric` does not specify an attribute filter. (#8859)
 - Ignore HTTP URL paths when building OTLP/gRPC metric exporter targets from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`, while preserving `unix://` and `unix-abstract://` targets; treat `unix-abstract://` endpoints as insecure in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8862)
 - Ignore HTTP(S) paths when deriving gRPC trace exporter endpoints from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#8852)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.47.0-rc.1] - 2026-08-28
 
@@ -76,8 +89,6 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 ### Fixed
 
 - Ignore attempts to unregister unknown span processors in `go.opentelemetry.io/otel/sdk/trace`. (#8840)
-- Ensure `grpc.DialOption` values passed via `WithDialOption` take precedence over conflicting internally-computed defaults in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#8834)
-- Ensure `grpc.DialOption` values passed via `WithDialOption` take precedence over conflicting internally-computed defaults in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#8805)
 
 ### Removed
 
@@ -3882,7 +3893,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.47.0-rc.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.47.0...HEAD
+[1.47.0/0.69.0/0.23.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.47.0
 [1.47.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.47.0-rc.1
 [1.46.0/0.68.0/0.22.0/0.0.19]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.46.0
 [1.45.0/0.67.0/0.21.0/0.0.18]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.45.0
