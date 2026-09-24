@@ -650,9 +650,7 @@ func TestSubNormal(t *testing.T) {
 		maxSize: 4,
 	}
 	want.minMax.Update(math.SmallestNonzeroFloat64)
-	want.sum.add(math.SmallestNonzeroFloat64)
-	want.sum.add(math.SmallestNonzeroFloat64)
-	want.sum.add(math.SmallestNonzeroFloat64)
+	want.sum.add(3 * math.SmallestNonzeroFloat64)
 	want.scale.Store(20)
 	want.posBuckets = *newBucket(-1126170625, []uint64{3})
 
@@ -1109,6 +1107,10 @@ func FuzzGetBin(f *testing.F) {
 		0x1p300,
 		0x1.0000000000001p300,
 		0x1.fffffffffffffp299,
+		0x1p-1069,
+		math.Inf(1),
+		math.Inf(-1),
+		math.NaN(),
 	}
 	scales := []int32{0, 15, -5}
 
@@ -1123,9 +1125,9 @@ func FuzzGetBin(f *testing.F) {
 		if math.Signbit(v) {
 			v *= -1
 		}
-		// GetBin Doesn't work on zero.
-		if v == 0.0 {
-			t.Skip("skipping test for zero")
+		// GetBin only works on finite normal non-zero values.
+		if v < smallestNonZeroNormalFloat64 || math.IsInf(v, 0) || math.IsNaN(v) {
+			t.Skip("skipping test for subnormal, zero, infinity, or NaN")
 		}
 
 		p := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false)
