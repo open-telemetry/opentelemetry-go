@@ -652,9 +652,7 @@ func FuzzHashKVs(f *testing.F) {
 					modifiedKvs[0] = Bool(string(modifiedKvs[0].Key), !modifiedKvs[0].Value.AsBool())
 				case FLOAT64:
 					val := modifiedKvs[0].Value.AsFloat64()
-					if !math.IsNaN(val) && !math.IsInf(val, 0) {
-						modifiedKvs[0] = Float64(string(modifiedKvs[0].Key), val+1.0)
-					}
+					modifiedKvs[0] = Float64(string(modifiedKvs[0].Key), math.Float64frombits(math.Float64bits(val)^1))
 				case SLICE:
 					origSlice := modifiedKvs[0].Value.AsSlice()
 					if len(origSlice) > 0 {
@@ -670,6 +668,8 @@ func FuzzHashKVs(f *testing.F) {
 							newSlice[0] = StringValue("modified")
 						}
 						modifiedKvs[0] = Slice(string(modifiedKvs[0].Key), newSlice...)
+					} else {
+						modifiedKvs[0] = Slice(string(modifiedKvs[0].Key), StringValue("modified"))
 					}
 				case MAP:
 					origMap := modifiedKvs[0].Value.AsMap()
@@ -677,16 +677,20 @@ func FuzzHashKVs(f *testing.F) {
 						newMap := slices.Clone(origMap)
 						newMap[0] = String(string(newMap[0].Key), "modified")
 						modifiedKvs[0] = Map(string(modifiedKvs[0].Key), newMap...)
+					} else {
+						modifiedKvs[0] = Map(string(modifiedKvs[0].Key), String("modified", "modified"))
 					}
 				case EMPTY:
 					modifiedKvs[0] = String(string(modifiedKvs[0].Key), "not_empty")
+				default:
+					modifiedKvs[0] = String(string(modifiedKvs[0].Key), "modified")
 				}
 
 				h3 := hashKVs(modifiedKvs)
 				// Note: We don't assert h1 != h3 because hash collisions are theoretically possible
 				// but we can log suspicious cases for manual review.
 				if h1 == h3 && !reflect.DeepEqual(kvs, modifiedKvs) {
-					t.Logf("Potential hash collision detected: original=%v, modified=%v, hash=%d", kvs, modifiedKvs, h1)
+					t.Logf("Potential hash collision detected: hash=%d", h1)
 				}
 			}
 		}
