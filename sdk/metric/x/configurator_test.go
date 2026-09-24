@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
 type meterConfiguratorOptionExtractor interface {
@@ -102,23 +103,34 @@ func TestMeterConfiguratorHandleRegisterOnUpdateRejectsSecondClaim(t *testing.T)
 	assert.False(t, secondWalked, "the second (rejected) provider must not receive updates")
 }
 
-func TestMeterConfiguratorHandleUnregisterReleasesClaim(t *testing.T) {
+func TestMeterConfiguratorHandleRetiredAfterProviderShutdown(t *testing.T) {
+	ctx := t.Context()
 	h := NewMeterConfiguratorHandle()
 
-	first := WithMeterConfigurator(h).(interface {
-		meterConfiguratorOnUpdateRegistrar
-		meterConfiguratorUnregistrar
+	mpA := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(sdkmetric.NewManualReader()),
+		WithMeterConfigurator(h),
+	)
+	require.NoError(t, mpA.Shutdown(ctx))
+
+	mpB := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(sdkmetric.NewManualReader()),
+		WithMeterConfigurator(h),
+	)
+	counter, err := mpB.Meter("scope").Int64Counter("counter")
+	require.NoError(t, err)
+
+	h.Set(func(instrumentation.Scope) MeterConfig {
+		return NewMeterConfig(WithMeterEnabled(false))
 	})
-	require.True(t, first.RegisterOnUpdate(func() {}), "first registration must succeed")
-	first.Unregister()
+	assert.True(t, counter.Enabled(ctx), "a handle retired by mpA must not configure mpB's meters")
 
-	var rewalked bool
-	second := WithMeterConfigurator(h).(meterConfiguratorOnUpdateRegistrar)
-	claimed := second.RegisterOnUpdate(func() { rewalked = true })
-	require.True(t, claimed, "registration after Unregister must succeed")
+	newCounter, err := mpB.Meter("new-scope").Int64Counter("counter")
+	require.NoError(t, err)
+	assert.True(t, newCounter.Enabled(ctx), "a handle retired by mpA must not configure mpB's new meters")
 
-	h.Set(func(_ instrumentation.Scope) MeterConfig { return MeterConfig{} })
-	assert.True(t, rewalked, "the newly-claiming provider must receive updates")
+	// A repeated Shutdown of mpA must be a no-op for the retired handle.
+	assert.NotPanics(t, func() { _ = mpA.Shutdown(ctx) })
 }
 
 func TestMeterConfiguratorHandleUnregisterClearsOnUpdate(t *testing.T) {
@@ -136,7 +148,7 @@ func TestMeterConfiguratorHandleUnregisterClearsOnUpdate(t *testing.T) {
 
 	opt.Unregister()
 	h.Set(func(_ instrumentation.Scope) MeterConfig { return MeterConfig{} })
-	assert.Equal(t, 1, walks, "Set after Unregister must not walk the released provider")
+	assert.Equal(t, 1, walks, "Set after Unregister must not walk the retired provider")
 }
 
 func TestMeterConfiguratorHandleSetSerializesConcurrentCalls(t *testing.T) {

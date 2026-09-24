@@ -157,7 +157,7 @@ func TestConfiguratorShutdownReleasesHandle(t *testing.T) {
 	assert.False(t, unregistered, "Unregister must not run before Shutdown")
 
 	require.NoError(t, mp.Shutdown(t.Context()))
-	assert.True(t, unregistered, "Shutdown must release the configurator's claim on its handle")
+	assert.True(t, unregistered, "Shutdown must retire the configurator's handle")
 }
 
 // This test guards against a provider whose registration was rejected (handle already claimed

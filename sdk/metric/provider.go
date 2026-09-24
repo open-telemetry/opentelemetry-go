@@ -39,12 +39,12 @@ type MeterProvider struct {
 
 	pipes  pipelines
 	meters cache[instrumentation.Scope, *meter]
-	// configurator is written once, in NewMeterProvider before mp is returned to
-	// any caller, and never reassigned after. No synchronization is needed for
-	// that single write or the reads that follow it.
+	// configurator is only written in NewMeterProvider before mp is returned to
+	// any caller (reset to nil if its handle claim was rejected), and never
+	// reassigned after.
 	configurator meterConfiguratorSnapshotFunc
-	// configuratorUnregister releases configurator's claim on its
-	// MeterConfiguratorHandle during Shutdown. It's nil if:
+	// configuratorUnregister retires configurator's MeterConfiguratorHandle
+	// during Shutdown. It's nil if:
 	//  - no configurator was wired, or
 	//  - its RegisterOnUpdate call did not claim the handle. Same single-write-before-return
 	//    rule as configurator above.
@@ -91,6 +91,12 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 		})
 		if claimed {
 			mp.configuratorUnregister = mco.Unregister
+		} else {
+			// A provider whose claim was rejected ignores the handle entirely,
+			// so its new meters don't read a configurator its cache walk never
+			// applies. Its callback was never stored, so nothing else reads
+			// this field concurrently.
+			mp.configurator = nil
 		}
 	}
 

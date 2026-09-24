@@ -22,7 +22,8 @@ import (
 // already-claimed Handle to another [WithMeterConfigurator] call is not
 // supported: the first MeterProvider keeps the claim, the later one does not
 // receive Set updates, and the attempt is logged as an error. A Handle whose
-// MeterProvider has been shut down is released and may be claimed again.
+// MeterProvider has been shut down cannot be claimed again; create a new
+// Handle for a new MeterProvider.
 type MeterConfiguratorHandle struct {
 	mu           sync.Mutex // guards onUpdate, version, and registered; serializes Set, RegisterOnUpdate, and Unregister; see Set's doc comment
 	configurator atomic.Pointer[versionedConfigurator]
@@ -156,9 +157,10 @@ func (o meterConfiguratorProviderOption) RegisterOnUpdate(fn func()) bool {
 	return true
 }
 
-// Unregister releases this option's claim on the handle, clearing onUpdate so
-// a Set call afterward no longer walks this (now presumably shut down) MeterProvider,
-// and allowing a future MeterProvider to claim the handle via RegisterOnUpdate.
+// Unregister retires the handle, clearing onUpdate so a Set call afterward no
+// longer walks this (now presumably shut down) MeterProvider. The claim is
+// kept, so no other MeterProvider can claim the handle, and repeated calls
+// cannot affect anyone else.
 //
 // Called by sdk/metric during [sdkmetric.MeterProvider.Shutdown],
 // only for a provider whose RegisterOnUpdate call actually claimed it.
@@ -171,5 +173,4 @@ func (o meterConfiguratorProviderOption) Unregister() {
 	defer o.handle.mu.Unlock()
 
 	o.handle.onUpdate = nil
-	o.handle.registered = false
 }
