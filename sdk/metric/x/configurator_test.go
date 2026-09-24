@@ -198,6 +198,44 @@ func TestMeterConfiguratorHandleSetSerializesConcurrentCalls(t *testing.T) {
 	assert.False(t, overlap, "concurrent Set calls' onUpdate callbacks overlapped")
 }
 
+func TestMeterConfiguratorBlockedCallDoesNotBlockOtherScopes(t *testing.T) {
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	h := NewMeterConfiguratorHandle()
+	h.Set(func(s instrumentation.Scope) MeterConfig {
+		if s.Name == "slow" {
+			close(entered)
+			<-release
+		}
+		return MeterConfig{}
+	})
+	mp := sdkmetric.NewMeterProvider(WithMeterConfigurator(h))
+
+	slowDone := make(chan struct{})
+	go func() {
+		defer close(slowDone)
+		_ = mp.Meter("slow")
+	}()
+	<-entered // the configurator is now blocked for "slow"
+
+	fastDone := make(chan struct{})
+	go func() {
+		defer close(fastDone)
+		_ = mp.Meter("fast")
+	}()
+
+	var fastReturned bool
+	select {
+	case <-fastDone:
+		fastReturned = true
+	case <-time.After(5 * time.Second):
+	}
+	close(release)
+	<-slowDone
+
+	assert.True(t, fastReturned, "a configurator blocked on one scope must not block Meter creation for another")
+}
+
 func TestMeterConfiguratorHandleSetNoConfigurator(t *testing.T) {
 	h := NewMeterConfiguratorHandle()
 	opt := WithMeterConfigurator(h)

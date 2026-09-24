@@ -50,9 +50,13 @@ func (o meterEnabledOption) applyMeterConfig(c *MeterConfig) {
 // called. It receives the instrumentation scope and returns the runtime
 // configuration for that Meter.
 //
-// Implementations must return quickly and must not block: a slow or blocked
-// call can stall Meter creation and configuration updates for the whole
-// MeterProvider, not just the caller that triggered it. Implementations must
+// Implementations must be safe for concurrent use: a MeterProvider may call
+// the configurator from multiple goroutines at once, e.g. for Meters created
+// concurrently, or while [MeterConfiguratorHandle.Set] walks existing Meters.
+//
+// Implementations must return quickly and must not block. A slow call delays
+// the Meter call that triggered it, and a Set walk delays any concurrent Set
+// and the MeterProvider's Shutdown until it completes. Implementations must
 // also not panic; a panic is not recovered and propagates to the caller of
 // Meter or [MeterConfiguratorHandle.Set].
 //
