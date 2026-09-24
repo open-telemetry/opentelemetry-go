@@ -657,6 +657,52 @@ func testCumulativePrecomputedSumConcurrentSafe[N int64 | float64]() func(t *tes
 	return testAggregationConcurrentSafe[N](in, out, validateSum[N](true))
 }
 
+func TestCumulativeSumConcurrentFloatSnapshot(t *testing.T) {
+	measure, collect := Builder[float64]{
+		Temporality: metricdata.CumulativeTemporality,
+	}.Sum(false)
+
+	ctx := t.Context()
+	attrs := attribute.NewSet()
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range 10_000_000 {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			measure(ctx, 0.5, attrs)
+			measure(ctx, 1, attrs)
+		}
+	}()
+	t.Cleanup(func() {
+		close(stop)
+		<-done
+	})
+
+	var result metricdata.Aggregation
+	for {
+		select {
+		case <-done:
+			collect(&result)
+			return
+		default:
+		}
+		collect(&result)
+		sum := result.(metricdata.Sum[float64])
+		if len(sum.DataPoints) == 0 {
+			continue
+		}
+		units := int64(sum.DataPoints[0].Value * 2)
+		if units%3 == 2 {
+			t.Fatalf("observed an inconsistent cumulative sum snapshot: %v", sum.DataPoints[0].Value)
+		}
+	}
+}
+
 func BenchmarkSum(b *testing.B) {
 	// The monotonic argument is only used to annotate the Sum returned from
 	// the Aggregation method. It should not have an effect on operational
@@ -682,4 +728,54 @@ func BenchmarkSum(b *testing.B) {
 			Temporality: metricdata.DeltaTemporality,
 		}.PrecomputedSum(false)
 	}))
+}
+
+func BenchmarkCumulativeSumFloat64ConcurrentCollection(b *testing.B) {
+	measure, collect := Builder[float64]{
+		Temporality: metricdata.CumulativeTemporality,
+	}.Sum(false)
+	ctx := b.Context()
+	attrs := attribute.NewSet()
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		var result metricdata.Aggregation
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				collect(&result)
+			}
+		}
+	}()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			measure(ctx, 0.5, attrs)
+			measure(ctx, 1, attrs)
+		}
+	})
+	b.StopTimer()
+	close(stop)
+	<-done
+}
+
+func BenchmarkCumulativeSumFloat64Measure(b *testing.B) {
+	measure, _ := Builder[float64]{
+		Temporality: metricdata.CumulativeTemporality,
+	}.Sum(false)
+	ctx := b.Context()
+	attrs := attribute.NewSet()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			measure(ctx, 0.5, attrs)
+		}
+	})
 }
