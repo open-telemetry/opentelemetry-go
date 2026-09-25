@@ -1120,6 +1120,21 @@ func TestBridgeSpan_BaggageItem(t *testing.T) {
 	})
 }
 
+func TestBridgeTracer_NewHookedContextSetHook(t *testing.T) {
+	tracer := NewBridgeTracer()
+	span := tracer.StartSpan("span")
+	ctx := tracer.NewHookedContext(ot.ContextWithSpan(t.Context(), span))
+
+	member, err := baggage.NewMember("key", "value")
+	require.NoError(t, err)
+	bag, err := baggage.New(member)
+	require.NoError(t, err)
+
+	baggage.ContextWithBaggage(ctx, bag)
+
+	assert.Equal(t, "value", span.BaggageItem("key"))
+}
+
 func TestBridgeSpan_BaggageHookConcurrentSafe(t *testing.T) {
 	tracer := NewBridgeTracer()
 	span := tracer.StartSpan("span")
