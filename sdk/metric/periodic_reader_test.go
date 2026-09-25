@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1195,4 +1196,27 @@ func BenchmarkPeriodicReaderInstrumentation(b *testing.B) {
 		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 		run(b, true)
 	})
+}
+
+func TestNewPeriodicReaderInstRace(t *testing.T) {
+	origErrorHandler := otel.GetErrorHandler()
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(error) {}))
+	t.Cleanup(func() { otel.SetErrorHandler(origErrorHandler) })
+
+	const workers = 10
+	const itersPerWorker = 100
+
+	var wg sync.WaitGroup
+	wg.Add(workers)
+	for range workers {
+		go func() {
+			defer wg.Done()
+			for range itersPerWorker {
+				r := NewPeriodicReader(new(fnExporter), WithInterval(time.Nanosecond))
+				r.register(testSDKProducer{})
+				_ = r.Shutdown(t.Context())
+			}
+		}()
+	}
+	wg.Wait()
 }
