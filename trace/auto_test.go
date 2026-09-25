@@ -375,6 +375,7 @@ func TestSpanCreation(t *testing.T) {
 		}
 	}
 
+	var startCtx context.Context
 	testcases := []struct {
 		TestName string
 		SpanName string
@@ -439,6 +440,19 @@ func TestSpanCreation(t *testing.T) {
 			},
 			Eval: func(t *testing.T, _ context.Context, s *autoSpan) {
 				assert.False(t, s.sampled.Load(), "sampled")
+			},
+		},
+		{
+			TestName: "StartReceivesSpanCtx",
+			Setup: func(t *testing.T) {
+				orig := start
+				t.Cleanup(func() { start = orig })
+				start = func(ctx context.Context, _ *autoSpan, _ *SpanContext, _ *bool, _ *SpanContext) {
+					startCtx = ctx
+				}
+			},
+			Eval: func(t *testing.T, _ context.Context, s *autoSpan) {
+				assert.Same(t, s, SpanFromContext(startCtx))
 			},
 		},
 		{
