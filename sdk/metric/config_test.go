@@ -386,5 +386,7 @@ func (testExperimentalOption) Experimental() {}
 func TestExperimentalOptionSafe(t *testing.T) {
 	var opt testExperimentalOption
 
-	assert.NotPanics(t, func() { _ = newConfig([]Option{opt}) })
+	var conf config
+	assert.NotPanics(t, func() { conf = newConfig([]Option{opt}) })
+	assert.Equal(t, []experimentalOption{opt}, conf.experimental)
 }

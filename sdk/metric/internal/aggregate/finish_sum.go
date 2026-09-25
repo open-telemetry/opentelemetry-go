@@ -5,6 +5,7 @@ package aggregate
 
 import (
 	"context"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -122,8 +123,8 @@ func (v *finishSumValue[N]) collect(
 	return dp, collection.ShouldRetire()
 }
 
-func (v *finishSumValue[N]) shutdown() {
-	v.lifecycle.Retire()
+func (v *finishSumValue[N]) shutdown(ctx context.Context) error {
+	return v.lifecycle.Retire(ctx)
 }
 
 // FinishSum contains the operations of a finish-aware Sum aggregation.
@@ -131,13 +132,13 @@ type FinishSum[N int64 | float64] struct {
 	Measure            Measure[N]
 	ComputeAggregation ComputeAggregation
 	Finish             func(attribute.Distinct, time.Time)
-	Shutdown           func()
+	Stop               func()
+	Wait               func(context.Context) error
 }
 
 type finishSum[N int64 | float64] struct {
-	collectMu    sync.Mutex
-	shutdownOnce sync.Once
-	stopped      atomic.Bool
+	collectMu sync.Mutex
+	stopped   atomic.Bool
 
 	values      limitedSyncMap[*finishSumValue[N]]
 	start       time.Time
@@ -220,7 +221,7 @@ func (s *finishSum[N]) measure(
 }
 
 func (s *finishSum[N]) retireAndDelete(point *finishSumValue[N]) {
-	point.shutdown()
+	_ = point.shutdown(context.Background())
 	s.values.CompareAndDelete(point.attrs.Equivalent(), point)
 }
 
@@ -283,17 +284,38 @@ func (s *finishSum[N]) collect(
 	return len(points)
 }
 
-func (s *finishSum[N]) shutdown() {
-	s.shutdownOnce.Do(func() {
-		s.stopped.Store(true)
-		s.collectMu.Lock()
-		defer s.collectMu.Unlock()
-		s.values.Range(func(_, raw any) bool {
-			raw.(*finishSumValue[N]).shutdown()
-			return true
-		})
-		s.values.Clear()
+func (s *finishSum[N]) stop() {
+	s.stopped.Store(true)
+}
+
+func (s *finishSum[N]) wait(ctx context.Context) error {
+	s.stop()
+	if err := s.lockCollection(ctx); err != nil {
+		return err
+	}
+	defer s.collectMu.Unlock()
+
+	var err error
+	s.values.Range(func(_, raw any) bool {
+		err = raw.(*finishSumValue[N]).shutdown(ctx)
+		return err == nil
 	})
+	if err == nil {
+		s.values.Clear()
+	}
+	return err
+}
+
+func (s *finishSum[N]) lockCollection(ctx context.Context) error {
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if s.collectMu.TryLock() {
+			return nil
+		}
+		runtime.Gosched()
+	}
 }
 
 // FinishSum returns a Sum aggregation with exact-attribute lifecycle support.
@@ -308,6 +330,7 @@ func (b Builder[N]) FinishSum(monotonic bool) FinishSum[N] {
 		Measure:            b.filter(store.measure),
 		ComputeAggregation: store.collect,
 		Finish:             store.finish,
-		Shutdown:           store.shutdown,
+		Stop:               store.stop,
+		Wait:               store.wait,
 	}
 }
