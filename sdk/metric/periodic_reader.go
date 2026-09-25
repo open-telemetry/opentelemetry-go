@@ -31,6 +31,7 @@ type periodicReaderConfig struct {
 	maxExportBatchSize       int
 	producers                []Producer
 	cardinalityLimitSelector CardinalityLimitSelector
+	metricFilter             metricFilter
 }
 
 // newPeriodicReaderConfig returns a periodicReaderConfig configured with
@@ -41,8 +42,15 @@ func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfi
 		timeout:                  envDuration(envTimeout, defaultTimeout),
 		cardinalityLimitSelector: defaultCardinalityLimitSelector,
 	}
-	for _, o := range options {
-		c = o.applyPeriodic(c)
+	for _, opt := range options {
+		if o, ok := opt.(metricFilter); ok {
+			c.metricFilter = o
+			continue
+		}
+		if _, ok := opt.(experimentalOption); ok {
+			continue
+		}
+		c = opt.applyPeriodic(c)
 	}
 	return c
 }
@@ -136,6 +144,7 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 		flushCh:                  make(chan chan error),
 		cancel:                   cancel,
 		done:                     make(chan struct{}),
+		metricFilter:             conf.metricFilter,
 		cardinalityLimitSelector: conf.cardinalityLimitSelector,
 		rmPool: sync.Pool{
 			New: func() any {
@@ -143,7 +152,14 @@ func NewPeriodicReader(exporter Exporter, options ...PeriodicReaderOption) *Peri
 			},
 		},
 	}
-	r.externalProducers.Store(conf.producers)
+	producers := conf.producers
+	if conf.metricFilter != nil {
+		producers = make([]Producer, len(conf.producers))
+		for i, p := range conf.producers {
+			producers[i] = &filteringProducer{inner: p, filter: conf.metricFilter}
+		}
+	}
+	r.externalProducers.Store(producers)
 
 	go func() {
 		defer func() { close(r.done) }()
@@ -194,6 +210,8 @@ type PeriodicReader struct {
 	cardinalityLimitSelector CardinalityLimitSelector
 
 	inst *observ.Instrumentation
+
+	metricFilter metricFilter
 }
 
 // Compile time check the periodicReader implements Reader and is comparable.
@@ -226,8 +244,13 @@ func (r *PeriodicReader) run(ctx context.Context, interval time.Duration) {
 
 // register registers p as the producer of this reader.
 func (r *PeriodicReader) register(p sdkProducer) {
+	produce := p.produce
+	if r.metricFilter != nil {
+		produce = wrapProduce(produce, r.metricFilter)
+	}
+
 	// Only register once. If producer is already set, do nothing.
-	if !r.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
+	if !r.sdkProducer.CompareAndSwap(nil, produceHolder{produce: produce}) {
 		msg := "did not register periodic reader"
 		global.Error(errDuplicateRegister, msg)
 	}
@@ -248,6 +271,11 @@ func (r *PeriodicReader) aggregation(
 // cardinalityLimit returns the cardinality limit for kind.
 func (r *PeriodicReader) cardinalityLimit(kind InstrumentKind) (int, bool) {
 	return r.cardinalityLimitSelector(kind)
+}
+
+// metricFilter returns the MetricFilter configured for this reader.
+func (r *PeriodicReader) getMetricFilter() metricFilter {
+	return r.metricFilter
 }
 
 // collectAndExport gather all metric data related to the periodicReader r from
