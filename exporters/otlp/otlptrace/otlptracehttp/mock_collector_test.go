@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -173,10 +174,22 @@ func (c *mockCollector) getInjectResponseHeader() map[string]string {
 }
 
 func readRequest(r *http.Request) ([]byte, error) {
-	if r.Header.Get("Content-Encoding") == "gzip" {
+	switch r.Header.Get("Content-Encoding") {
+	case "gzip":
 		return readGzipBody(r.Body)
+	case "zstd":
+		return readZstdBody(r.Body)
 	}
 	return io.ReadAll(r.Body)
+}
+
+func readZstdBody(body io.Reader) ([]byte, error) {
+	zr, err := zstd.NewReader(body)
+	if err != nil {
+		return nil, err
+	}
+	defer zr.Close()
+	return io.ReadAll(zr)
 }
 
 func readGzipBody(body io.Reader) ([]byte, error) {

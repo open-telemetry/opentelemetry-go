@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/go-logr/logr v1.4.4
+	github.com/klauspost/compress v1.20.0
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.47.0-rc.1
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.47.0-rc.1

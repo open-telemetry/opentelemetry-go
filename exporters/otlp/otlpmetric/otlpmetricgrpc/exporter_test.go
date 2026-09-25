@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/otest"
@@ -42,6 +44,35 @@ func TestExporterWithZstdCompressorAppliesOnTheWire(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		return coll.Compression() == "zstd"
 	}, 10*time.Second, 10*time.Millisecond)
+}
+
+// TestExporterWithZstdCompressorFallsBackToGzipOnRejection checks that a
+// receiver rejecting zstd with UNIMPLEMENTED does not drop the batch: per
+// the zstd OTEP, UNIMPLEMENTED is non-retryable, so without an explicit
+// fallback the export would fail outright instead of retrying with gzip.
+func TestExporterWithZstdCompressorFallsBackToGzipOnRejection(t *testing.T) {
+	resultCh := make(chan otest.ExportResult, 2)
+	resultCh <- otest.ExportResult{Err: status.Error(codes.Unimplemented, "zstd not supported")}
+	resultCh <- otest.ExportResult{}
+
+	coll, err := otest.NewGRPCCollector("", resultCh)
+	require.NoError(t, err)
+	t.Cleanup(coll.Shutdown)
+
+	ctx := t.Context()
+	opts := []Option{WithEndpoint(coll.Addr().String()), WithInsecure(), WithCompressor("zstd")}
+	cfg := oconf.NewGRPCConfig(asGRPCOptions(opts)...)
+	client, err := newClient(ctx, cfg)
+	require.NoError(t, err)
+
+	exp, err := newExporter(client, oconf.Config{})
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, exp.Shutdown(context.Background())) })
+
+	require.NoError(t, exp.Export(ctx, new(metricdata.ResourceMetrics)))
+	assert.Eventually(t, func() bool {
+		return coll.Compression() == "gzip"
+	}, 10*time.Second, 10*time.Millisecond, "export must retry with gzip, not drop the batch")
 }
 
 func TestExporterClientConcurrentSafe(t *testing.T) {

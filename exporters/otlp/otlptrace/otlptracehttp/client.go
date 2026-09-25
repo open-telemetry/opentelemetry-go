@@ -22,6 +22,7 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/counter"
@@ -120,6 +121,14 @@ func (c *client) Start(ctx context.Context) error {
 		return errInsecureEndpointWithTLS
 	}
 
+	if Compression(c.cfg.Compression) == ZstdCompression && !zstdSupported {
+		// Fail fast at start-up rather than at first export: this build was
+		// compiled with the nozstd tag, so the zstd codec is unavailable.
+		return errors.New(
+			"otlptracehttp: zstd compression configured but not available (built with the nozstd tag?)",
+		)
+	}
+
 	// Initialize the instrumentation if not already done.
 	//
 	// Initialize here instead of NewClient to allow any errors to be passed
@@ -185,90 +194,117 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		default:
 		}
 
-		statusCode = 0
-		request.reset(ctx)
-		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
-		resp, err := c.client.Do(request.Request)
-		var urlErr *url.Error
-		if errors.As(err, &urlErr) && urlErr.Temporary() {
-			return newResponseError(http.Header{}, err)
-		}
-		if err != nil {
-			return err
-		}
-
-		if resp != nil && resp.Body != nil {
-			defer func() {
-				if err := resp.Body.Close(); err != nil {
-					uploadErr = errors.Join(uploadErr, err)
-				}
-			}()
-		}
-
-		statusCode = resp.StatusCode
-		if statusCode >= 200 && statusCode <= 299 {
-			// Success, do not retry.
-			// Read the partial success message, if any.
-			var respData bytes.Buffer
-			if err := internal.CopyResponseBody(&respData, resp.Body, c.cfg.MaxResponseSize); err != nil {
-				return err
+		var partialErr error
+		var err error
+		statusCode, err, partialErr = c.doHTTPAttempt(ctx, &request)
+		uploadErr = errors.Join(uploadErr, partialErr)
+		if (statusCode == http.StatusUnsupportedMediaType || statusCode == http.StatusBadRequest) &&
+			Compression(c.cfg.Compression) == ZstdCompression {
+			// A 415/400 for a zstd-compressed export is non-retryable (see
+			// the zstd OTEP), so without this the batch would be dropped
+			// outright on any receiver that doesn't support zstd. Retry
+			// this same batch once with gzip, which every conformant OTLP
+			// receiver is required to support.
+			otel.Handle(fmt.Errorf(
+				"otlptracehttp: receiver does not support zstd compression (status %d), retrying with gzip: %w",
+				statusCode, err,
+			))
+			if gzErr := request.recompressWithGzip(); gzErr != nil {
+				return errors.Join(err, gzErr)
 			}
-			if respData.Len() == 0 {
-				return nil
-			}
-
-			var respProto coltracepb.ExportTraceServiceResponse
-			switch resp.Header.Get("Content-Type") {
-			case contentTypeProto:
-				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
-					return err
-				}
-			case contentTypeJSON:
-				if err := otlpjson.UnmarshalExportTraceServiceResponse(respData.Bytes(), &respProto); err != nil {
-					return err
-				}
-			default:
-				return nil
-			}
-
-			if respProto.PartialSuccess != nil {
-				msg := respProto.PartialSuccess.GetErrorMessage()
-				n := respProto.PartialSuccess.GetRejectedSpans()
-				if n != 0 || msg != "" {
-					err := internal.TracePartialSuccessError(n, msg)
-					uploadErr = errors.Join(uploadErr, err)
-				}
-			}
-			return nil
+			statusCode, err, partialErr = c.doHTTPAttempt(ctx, &request)
+			uploadErr = errors.Join(uploadErr, partialErr)
 		}
-		// Error cases.
+		return err
+	}))
+}
 
-		// server may return a message with the response
-		// body, so we read it to include in the error
-		// message to be returned. It will help in
-		// debugging the actual issue.
+// doHTTPAttempt sends request once and interprets the response. It returns
+// the response status code, an error if the attempt failed (nil on
+// success), and any partial-success error, which is returned separately
+// since it can be non-nil even when the attempt itself succeeded.
+func (c *client) doHTTPAttempt(ctx context.Context, request *request) (statusCode int, err, partialErr error) {
+	request.reset(ctx)
+	// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
+	resp, doErr := c.client.Do(request.Request)
+	var urlErr *url.Error
+	if errors.As(doErr, &urlErr) && urlErr.Temporary() {
+		return 0, newResponseError(http.Header{}, doErr), nil
+	}
+	if doErr != nil {
+		return 0, doErr, nil
+	}
+
+	if resp.Body != nil {
+		defer func() {
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				err = errors.Join(err, closeErr)
+			}
+		}()
+	}
+
+	statusCode = resp.StatusCode
+	if statusCode >= 200 && statusCode <= 299 {
+		// Success, do not retry.
+		// Read the partial success message, if any.
 		var respData bytes.Buffer
 		if err := internal.CopyResponseBody(&respData, resp.Body, c.cfg.MaxResponseSize); err != nil {
-			return err
+			return statusCode, err, nil
 		}
-		respStr := strings.TrimSpace(respData.String())
-		if respStr == "" {
-			respStr = "(empty)"
+		if respData.Len() == 0 {
+			return statusCode, nil, nil
 		}
-		bodyErr := fmt.Errorf("body: %s", respStr)
 
-		switch statusCode {
-		case http.StatusTooManyRequests,
-			http.StatusBadGateway,
-			http.StatusServiceUnavailable,
-			http.StatusGatewayTimeout:
-			// Retryable failure.
-			return newResponseError(resp.Header, bodyErr)
+		var respProto coltracepb.ExportTraceServiceResponse
+		switch resp.Header.Get("Content-Type") {
+		case contentTypeProto:
+			if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
+				return statusCode, err, nil
+			}
+		case contentTypeJSON:
+			if err := otlpjson.UnmarshalExportTraceServiceResponse(respData.Bytes(), &respProto); err != nil {
+				return statusCode, err, nil
+			}
 		default:
-			// Non-retryable failure.
-			return fmt.Errorf("failed to send to %s: %s (%w)", request.URL, resp.Status, bodyErr)
+			return statusCode, nil, nil
 		}
-	}))
+
+		if respProto.PartialSuccess != nil {
+			msg := respProto.PartialSuccess.GetErrorMessage()
+			n := respProto.PartialSuccess.GetRejectedSpans()
+			if n != 0 || msg != "" {
+				partialErr = internal.TracePartialSuccessError(n, msg)
+			}
+		}
+		return statusCode, nil, partialErr
+	}
+	// Error cases.
+
+	// server may return a message with the response
+	// body, so we read it to include in the error
+	// message to be returned. It will help in
+	// debugging the actual issue.
+	var respData bytes.Buffer
+	if err := internal.CopyResponseBody(&respData, resp.Body, c.cfg.MaxResponseSize); err != nil {
+		return statusCode, err, nil
+	}
+	respStr := strings.TrimSpace(respData.String())
+	if respStr == "" {
+		respStr = "(empty)"
+	}
+	bodyErr := fmt.Errorf("body: %s", respStr)
+
+	switch statusCode {
+	case http.StatusTooManyRequests,
+		http.StatusBadGateway,
+		http.StatusServiceUnavailable,
+		http.StatusGatewayTimeout:
+		// Retryable failure.
+		return statusCode, newResponseError(resp.Header, bodyErr), nil
+	default:
+		// Non-retryable failure.
+		return statusCode, fmt.Errorf("failed to send to %s: %s (%w)", request.URL, resp.Status, bodyErr), nil
+	}
 }
 
 func (c *client) marshalRequest(pbRequest *coltracepb.ExportTraceServiceRequest) ([]byte, error) {
@@ -315,7 +351,7 @@ func (c *client) newRequest(pbRequest *coltracepb.ExportTraceServiceRequest) (re
 		return request{Request: r}, fmt.Errorf("request body too large: exceeded %d bytes", maxSize)
 	}
 
-	req := request{Request: r}
+	req := request{Request: r, rawBody: body}
 	switch Compression(c.cfg.Compression) {
 	case NoCompression:
 		r.ContentLength = int64(len(body))
@@ -345,6 +381,25 @@ func (c *client) newRequest(pbRequest *coltracepb.ExportTraceServiceRequest) (re
 
 		req.bodyReader = bodyReader(b.Bytes())
 		req.GetBody = bodyReaderErr(b.Bytes())
+	case ZstdCompression:
+		if !zstdSupported {
+			return req, errors.New(
+				"otlptracehttp: zstd compression configured but not available (built with the nozstd tag?)",
+			)
+		}
+		// Ensure the content length is not used.
+		r.ContentLength = -1
+		r.Header.Set("Content-Encoding", "zstd")
+
+		compressed, err := compressZstd(body)
+		if err != nil {
+			return req, err
+		}
+
+		req.bodyReader = bodyReader(compressed)
+		req.GetBody = bodyReaderErr(compressed)
+	default:
+		return req, fmt.Errorf("otlptracehttp: unsupported compression: %v", c.cfg.Compression)
 	}
 
 	return req, nil
@@ -379,12 +434,43 @@ type request struct {
 
 	// bodyReader allows the same body to be used for multiple requests.
 	bodyReader func() io.ReadCloser
+
+	// rawBody is the uncompressed request body, retained so a rejected
+	// zstd export can be recompressed with gzip and retried.
+	rawBody []byte
 }
 
 // reset reinitializes the request Body and uses ctx for the request.
 func (r *request) reset(ctx context.Context) {
 	r.Body = r.bodyReader()
 	r.Request = r.WithContext(ctx)
+}
+
+// recompressWithGzip replaces the request's body with a gzip-compressed
+// copy of rawBody. It's used to fall back from zstd on a receiver that
+// rejects it, since every conformant OTLP receiver is required to support
+// gzip.
+func (r *request) recompressWithGzip() error {
+	gz := gzPool.Get().(*gzip.Writer)
+	defer func() {
+		gz.Reset(io.Discard)
+		gzPool.Put(gz)
+	}()
+
+	var b bytes.Buffer
+	gz.Reset(&b)
+	if _, err := gz.Write(r.rawBody); err != nil {
+		return err
+	}
+	if err := gz.Close(); err != nil {
+		return err
+	}
+
+	r.Header.Set("Content-Encoding", "gzip")
+	r.ContentLength = -1
+	r.bodyReader = bodyReader(b.Bytes())
+	r.GetBody = bodyReaderErr(b.Bytes())
+	return nil
 }
 
 // retryableError represents a request failure that can be retried.

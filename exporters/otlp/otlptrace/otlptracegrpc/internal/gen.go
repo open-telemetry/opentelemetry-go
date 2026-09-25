@@ -19,6 +19,7 @@ package internal
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlpconfig/optiontypes.go.tmpl "--data={}" --out=otlpconfig/optiontypes.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlpconfig/tls.go.tmpl "--data={}" --out=otlpconfig/tls.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlpconfig/zstd.go.tmpl "--data={}" --out=otlpconfig/zstd.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlpconfig/zstd_test.go.tmpl "--data={}" --out=otlpconfig/zstd_test.go
 
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlptracetest/client.go.tmpl "--data={}" --out=otlptracetest/client.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlptracetest/collector.go.tmpl "--data={}" --out=otlptracetest/collector.go

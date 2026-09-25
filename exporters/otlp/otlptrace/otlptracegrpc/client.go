@@ -15,10 +15,13 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/encoding"
+	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/counter"
@@ -34,6 +37,7 @@ type client struct {
 	exportTimeout  time.Duration
 	maxRequestSize int
 	requestFunc    retry.RequestFunc
+	compression    otlpconfig.Compression
 
 	// stopCtx is used as a parent context for all exports. Therefore, when it
 	// is canceled with the stopFunc all exports are canceled.
@@ -72,6 +76,7 @@ func newClient(opts ...Option) *client {
 		exportTimeout:  cfg.Traces.Timeout,
 		maxRequestSize: cfg.Traces.MaxRequestSize,
 		requestFunc:    cfg.RetryConfig.RequestFunc(retryable),
+		compression:    cfg.Traces.Compression,
 		dialOpts:       cfg.DialOptions,
 		stopCtx:        ctx,
 		stopFunc:       cancel,
@@ -88,6 +93,13 @@ func newClient(opts ...Option) *client {
 
 // Start establishes a gRPC connection to the collector.
 func (c *client) Start(context.Context) error {
+	if c.compression == otlpconfig.ZstdCompression && encoding.GetCompressor("zstd") == nil {
+		// Fail fast at start-up rather than at first export: this build was
+		// compiled with the nozstd tag, so no "zstd" codec was ever
+		// registered with grpc/encoding.
+		return errors.New("otlptracegrpc: zstd compression configured but not available (built with the nozstd tag?)")
+	}
+
 	if c.conn == nil {
 		// If the caller did not provide a ClientConn when the client was
 		// created, create one using the configuration they did provide.
@@ -231,6 +243,20 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 
 	return c.requestFunc(ctx, func(iCtx context.Context) error {
 		resp, err := c.tsc.Export(iCtx, pbRequest)
+		code = status.Code(err)
+		if code == codes.Unimplemented && c.compression == otlpconfig.ZstdCompression {
+			// UNIMPLEMENTED for a zstd-compressed export is non-retryable
+			// (see the zstd OTEP), so without this the batch would be
+			// dropped outright on any receiver that doesn't support zstd.
+			// Retry this same batch once with gzip, which every conformant
+			// OTLP receiver is required to support.
+			otel.Handle(fmt.Errorf(
+				"otlptracegrpc: receiver does not support zstd compression, retrying with gzip: %w",
+				err,
+			))
+			resp, err = c.tsc.Export(iCtx, pbRequest, grpc.UseCompressor(gzip.Name))
+			code = status.Code(err)
+		}
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedSpans()
@@ -240,7 +266,6 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			}
 		}
 		// nil is converted to OK.
-		code = status.Code(err)
 		if code == codes.OK {
 			// Success.
 			return uploadErr

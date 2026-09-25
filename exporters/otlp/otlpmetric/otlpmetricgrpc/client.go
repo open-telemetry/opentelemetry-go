@@ -14,10 +14,13 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/encoding"
+	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/retry"
@@ -28,6 +31,7 @@ type client struct {
 	exportTimeout  time.Duration
 	maxRequestSize int
 	requestFunc    retry.RequestFunc
+	compression    oconf.Compression
 
 	// ourConn keeps track of where conn was created: true if created here in
 	// NewClient, or false if passed with an option. This is important on
@@ -44,7 +48,17 @@ func newClient(_ context.Context, cfg oconf.Config) (*client, error) {
 		exportTimeout:  cfg.Metrics.Timeout,
 		maxRequestSize: cfg.Metrics.MaxRequestSize,
 		requestFunc:    cfg.RetryConfig.RequestFunc(retryable),
+		compression:    cfg.Metrics.Compression,
 		conn:           cfg.GRPCConn,
+	}
+
+	if c.compression == oconf.ZstdCompression && encoding.GetCompressor("zstd") == nil {
+		// Fail fast at start-up rather than at first export: this build was
+		// compiled with the nozstd tag, so no "zstd" codec was ever
+		// registered with grpc/encoding.
+		return nil, errors.New(
+			"otlpmetricgrpc: zstd compression configured but not available (built with the nozstd tag?)",
+		)
 	}
 
 	if len(cfg.Metrics.Headers) > 0 {
@@ -128,6 +142,20 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
 		resp, err := c.msc.Export(iCtx, pbRequest)
+		code := status.Code(err)
+		if code == codes.Unimplemented && c.compression == oconf.ZstdCompression {
+			// UNIMPLEMENTED for a zstd-compressed export is non-retryable
+			// (see the zstd OTEP), so without this the batch would be
+			// dropped outright on any receiver that doesn't support zstd.
+			// Retry this same batch once with gzip, which every conformant
+			// OTLP receiver is required to support.
+			otel.Handle(fmt.Errorf(
+				"otlpmetricgrpc: receiver does not support zstd compression, retrying with gzip: %w",
+				err,
+			))
+			resp, err = c.msc.Export(iCtx, pbRequest, grpc.UseCompressor(gzip.Name))
+			code = status.Code(err)
+		}
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedDataPoints()
@@ -137,7 +165,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			}
 		}
 		// nil is converted to OK.
-		if status.Code(err) == codes.OK {
+		if code == codes.OK {
 			// Success.
 			return nil
 		}

@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/klauspost/compress/zstd"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/stats"
@@ -395,6 +396,16 @@ func (*HTTPCollector) readBody(r *http.Request) (body []byte, err error) {
 				Status: http.StatusInternalServerError,
 			}
 		}
+	case "zstd":
+		var zr *zstd.Decoder
+		zr, err = zstd.NewReader(r.Body)
+		if err != nil {
+			return nil, &HTTPResponseError{
+				Err:    err,
+				Status: http.StatusInternalServerError,
+			}
+		}
+		reader = zr.IOReadCloser()
 	default:
 		reader = r.Body
 	}

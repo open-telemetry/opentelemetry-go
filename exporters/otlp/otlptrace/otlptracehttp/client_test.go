@@ -279,6 +279,59 @@ func TestExporterShutdown(t *testing.T) {
 	})
 }
 
+// TestWithZstdCompressionAppliesOnTheWire checks the collector actually
+// observes zstd on the wire and can decode it, not just that the export
+// succeeds.
+func TestWithZstdCompressionAppliesOnTheWire(t *testing.T) {
+	mc := runMockCollector(t, mockCollectorConfig{})
+	defer mc.MustStop(t)
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint(mc.Endpoint()),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithCompression(otlptracehttp.ZstdCompression),
+	)
+	ctx := t.Context()
+	exporter, err := otlptrace.New(ctx, client)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, exporter.Shutdown(ctx))
+	}()
+
+	require.NoError(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
+	assert.Eventually(t, func() bool {
+		return len(mc.GetSpans()) == 1
+	}, 10*time.Second, 10*time.Millisecond, "collector must decode the zstd-compressed body")
+}
+
+// TestWithZstdCompressionFallsBackToGzipOnRejection checks that a receiver
+// rejecting zstd with a 415 does not drop the batch: per the zstd OTEP,
+// that status is non-retryable, so without an explicit fallback the export
+// would fail outright instead of retrying with gzip.
+func TestWithZstdCompressionFallsBackToGzipOnRejection(t *testing.T) {
+	mc := runMockCollector(t, mockCollectorConfig{
+		InjectHTTPStatus: []int{http.StatusUnsupportedMediaType},
+	})
+	defer mc.MustStop(t)
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint(mc.Endpoint()),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithCompression(otlptracehttp.ZstdCompression),
+	)
+	ctx := t.Context()
+	exporter, err := otlptrace.New(ctx, client)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, exporter.Shutdown(ctx))
+	}()
+
+	require.NoError(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
+	assert.Eventually(t, func() bool {
+		return len(mc.GetSpans()) == 1
+	}, 10*time.Second, 10*time.Millisecond, "export must retry with gzip, not drop the batch")
+}
+
 func TestTimeout(t *testing.T) {
 	delay := make(chan struct{})
 	mcCfg := mockCollectorConfig{Delay: delay}

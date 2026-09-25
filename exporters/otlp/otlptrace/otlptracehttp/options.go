@@ -32,6 +32,9 @@ const (
 	// GzipCompression tells the driver to send payloads after
 	// compressing them with gzip.
 	GzipCompression = Compression(otlpconfig.GzipCompression)
+	// ZstdCompression tells the driver to send payloads after
+	// compressing them with zstd.
+	ZstdCompression = Compression(otlpconfig.ZstdCompression)
 )
 
 const (

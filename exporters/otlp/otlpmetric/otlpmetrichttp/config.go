@@ -30,6 +30,9 @@ const (
 	// GzipCompression tells the driver to send payloads after
 	// compressing them with gzip.
 	GzipCompression = Compression(oconf.GzipCompression)
+	// ZstdCompression tells the driver to send payloads after
+	// compressing them with zstd.
+	ZstdCompression = Compression(oconf.ZstdCompression)
 )
 
 // Option applies an option to the Exporter.

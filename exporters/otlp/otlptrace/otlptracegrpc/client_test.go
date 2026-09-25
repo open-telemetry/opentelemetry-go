@@ -148,6 +148,30 @@ func TestWithZstdCompressorAppliesOnTheWire(t *testing.T) {
 	}, 10*time.Second, 10*time.Millisecond)
 }
 
+// TestWithZstdCompressorFallsBackToGzipOnRejection checks that a receiver
+// rejecting zstd with UNIMPLEMENTED does not drop the batch: per the zstd
+// OTEP, UNIMPLEMENTED is non-retryable, so without an explicit fallback the
+// export would fail outright instead of retrying with gzip.
+func TestWithZstdCompressorFallsBackToGzipOnRejection(t *testing.T) {
+	mc := runMockCollectorWithConfig(t, &mockConfig{
+		errors: []error{status.Error(codes.Unimplemented, "zstd not supported")},
+	})
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	exp := newGRPCExporter(ctx, t, mc.endpoint, otlptracegrpc.WithCompressor("zstd"))
+	t.Cleanup(func() {
+		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
+		defer cancel()
+		require.NoError(t, exp.Shutdown(ctx))
+	})
+
+	require.NoError(t, exp.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
+	assert.Eventually(t, func() bool {
+		return mc.getCompression() == "gzip"
+	}, 10*time.Second, 10*time.Millisecond, "export must retry with gzip, not drop the batch")
+}
+
 func TestWithEndpointURL(t *testing.T) {
 	mc := runMockCollector(t)
 

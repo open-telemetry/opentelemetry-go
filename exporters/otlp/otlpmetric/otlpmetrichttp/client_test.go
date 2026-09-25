@@ -342,6 +342,54 @@ func TestConfig(t *testing.T) {
 	})
 }
 
+// TestWithZstdCompressionAppliesOnTheWire checks the collector actually
+// decodes zstd on the wire, not just that the export succeeds.
+func TestWithZstdCompressionAppliesOnTheWire(t *testing.T) {
+	coll, err := otest.NewHTTPCollector("", nil)
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	exp, err := New(ctx, WithEndpoint(coll.Addr().String()), WithInsecure(), WithCompression(ZstdCompression))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, coll.Shutdown(context.Background())) })
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.Background())) })
+
+	require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+	assert.Len(t, coll.Collect().Dump(), 1, "collector must decode the zstd-compressed body")
+}
+
+// TestWithZstdCompressionFallsBackToGzipOnRejection checks that a receiver
+// rejecting zstd with a 415 does not drop the batch: per the zstd OTEP,
+// that status is non-retryable, so without an explicit fallback the export
+// would fail outright instead of retrying with gzip.
+func TestWithZstdCompressionFallsBackToGzipOnRejection(t *testing.T) {
+	rCh := make(chan otest.ExportResult, 2)
+	rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+		Status: http.StatusUnsupportedMediaType,
+		Err:    errors.New("zstd not supported"),
+	}}
+	rCh <- otest.ExportResult{}
+
+	coll, err := otest.NewHTTPCollector("", rCh)
+	require.NoError(t, err)
+
+	ctx := t.Context()
+	exp, err := New(ctx, WithEndpoint(coll.Addr().String()), WithInsecure(), WithCompression(ZstdCompression))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, coll.Shutdown(context.Background())) })
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.Background())) })
+
+	require.NoError(
+		t, exp.Export(ctx, &metricdata.ResourceMetrics{}),
+		"export must retry with gzip, not drop the batch",
+	)
+	// The mock collector decodes and stores the body before consulting the
+	// injected result, so both the rejected zstd attempt and the
+	// successful gzip retry land here; the export not erroring is what
+	// proves the batch wasn't dropped.
+	assert.Len(t, coll.Collect().Dump(), 2)
+}
+
 func TestGetBodyCalledOnRedirect(t *testing.T) {
 	// Test that req.GetBody is set correctly, allowing the HTTP transport
 	// to re-send the body on 307 redirects.
