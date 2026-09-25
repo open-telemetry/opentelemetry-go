@@ -5,5 +5,5 @@ package otel
 
 // Version is the current release version of OpenTelemetry in use.
 func Version() string {
-	return "1.47.0-rc.1"
+	return "1.47.0"
 }

@@ -19,7 +19,7 @@ It provides a set of APIs to directly measure performance and behavior of your s
 |---------|--------------------|
 | Traces  | Stable             |
 | Metrics | Stable             |
-| Logs    | Release Candidate[^1] |
+| Logs    | Stable             |
 
 Progress and status specific to this repository is tracked in our
 [project boards](https://github.com/open-telemetry/opentelemetry-go/projects)
@@ -28,8 +28,6 @@ and
 
 Project versioning information and stability guarantees can be found in the
 [versioning documentation](VERSIONING.md).
-
-[^1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.47.0-rc.1
 
 ### Compatibility
 
