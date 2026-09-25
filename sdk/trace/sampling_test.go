@@ -5,6 +5,7 @@ package trace
 
 import (
 	"fmt"
+	"math"
 	"math/rand/v2"
 	"testing"
 
@@ -196,6 +197,15 @@ func TestTraceIdRatioSamplesInclusively(t *testing.T) {
 					"%s sampled but %s did not", samplerLo.Description(), samplerHi.Description())
 			}
 		}
+	}
+}
+
+func TestTraceIDRatioBasedNaN(t *testing.T) {
+	got := TraceIDRatioBased(math.NaN())
+	want := TraceIDRatioBased(0)
+
+	if got != want {
+		t.Errorf("TraceIDRatioBased should treat NaN like 0")
 	}
 }
 
