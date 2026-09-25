@@ -10,7 +10,60 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 
 ## Features
 
+- [OnEndingSpanProcessor](#onendingspanprocessor)
 - [ProbabilitySampler](#probabilitysampler)
+
+### OnEndingSpanProcessor
+
+`OnEndingSpanProcessor` is an optional extension interface for
+[`sdktrace.SpanProcessor`](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/trace#SpanProcessor)
+implementations. When a registered processor also implements this interface,
+its `OnEnding` method is called during
+[`Span.End`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#Span.End),
+after the end timestamp is set but while the span is still mutable. This
+allows processors to inspect and modify a span before it is exported.
+
+All `OnEnding` callbacks run in registration order, before any `OnEnd`
+callback is invoked. The `OnEnding` method must not block or retain the
+ending span past the call. Because `OnEnding` may be called concurrently for
+different spans and may overlap other `SpanProcessor` methods, implementations
+must be safe for concurrent use.
+
+> **Note:** `OnEnding` alone does not suppress other processors, change
+> `TraceFlags.Sampled`, or drop a span. Tail-based filtering that needs those
+> effects requires a custom buffering/export pipeline.
+
+#### Usage
+
+```go
+import (
+    "context"
+
+    "go.opentelemetry.io/otel/attribute"
+    sdktrace "go.opentelemetry.io/otel/sdk/trace"
+    "go.opentelemetry.io/otel/sdk/trace/x"
+    "go.opentelemetry.io/otel/trace"
+)
+
+type myProcessor struct{}
+
+func (p *myProcessor) OnStart(ctx context.Context, s sdktrace.ReadWriteSpan) {}
+func (p *myProcessor) OnEnd(s sdktrace.ReadOnlySpan)                          {}
+func (p *myProcessor) Shutdown(ctx context.Context) error                     { return nil }
+func (p *myProcessor) ForceFlush(ctx context.Context) error                   { return nil }
+
+// OnEnding implements x.OnEndingSpanProcessor.
+func (p *myProcessor) OnEnding(ending sdktrace.ReadWriteSpan, original trace.Span) {
+    // Modify the span before it becomes read-only.
+    ending.SetAttributes(attribute.Bool("enriched", true))
+}
+
+// Compile-time assertion that myProcessor satisfies x.OnEndingSpanProcessor.
+var _ x.OnEndingSpanProcessor = (*myProcessor)(nil)
+
+tp := sdktrace.NewTracerProvider()
+tp.RegisterSpanProcessor(&myProcessor{})
+```
 
 ### ProbabilitySampler
 
