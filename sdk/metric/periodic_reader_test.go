@@ -1214,7 +1214,7 @@ func TestNewPeriodicReaderInstRace(t *testing.T) {
 			for range itersPerWorker {
 				r := NewPeriodicReader(new(fnExporter), WithInterval(time.Nanosecond))
 				r.register(testSDKProducer{})
-				_ = r.Shutdown(context.Background())
+				_ = r.Shutdown(t.Context())
 			}
 		}()
 	}
