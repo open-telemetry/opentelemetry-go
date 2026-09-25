@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"math"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -96,6 +97,12 @@ func (ts traceIDRatioSampler) Description() string {
 func TraceIDRatioBased(fraction float64) Sampler {
 	// Cannot use AlwaysSample() and NeverSample(), must return spec-compliant descriptions.
 	// See https://opentelemetry.io/docs/specs/otel/trace/sdk/#traceidratiobased.
+	if math.IsNaN(fraction) {
+		return predeterminedSampler{
+			description: "TraceIDRatioBased{0}",
+			decision:    Drop,
+		}
+	}
 	if fraction >= 1 {
 		return predeterminedSampler{
 			description: "TraceIDRatioBased{1}",
