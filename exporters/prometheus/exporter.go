@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -841,9 +842,23 @@ func addExemplars[N int64 | float64](
 			otel.Handle(err)
 			return m
 		}
+		traceID := hex.EncodeToString(exemplar.TraceID)
+		spanID := hex.EncodeToString(exemplar.SpanID)
+		if exemplarLabelRunes(labels, traceID, spanID) > prometheus.ExemplarMaxRunes {
+			// The filtered attributes alone, or combined with the trace and
+			// span IDs, exceed the limit prometheus client-go enforces on
+			// exemplar labels. Drop the filtered attributes so the trace and
+			// span IDs, which are the most valuable part of an exemplar, are
+			// not lost along with them.
+			global.Warn(
+				"dropping exemplar filtered attributes: combined exemplar labels exceed the limit",
+				"limit", prometheus.ExemplarMaxRunes,
+			)
+			labels = make(prometheus.Labels, 2)
+		}
 		// Overwrite any existing trace ID or span ID attributes
-		labels[otlptranslator.ExemplarTraceIDKey] = hex.EncodeToString(exemplar.TraceID)
-		labels[otlptranslator.ExemplarSpanIDKey] = hex.EncodeToString(exemplar.SpanID)
+		labels[otlptranslator.ExemplarTraceIDKey] = traceID
+		labels[otlptranslator.ExemplarSpanIDKey] = spanID
 		promExemplars[i] = prometheus.Exemplar{
 			Value:     float64(exemplar.Value),
 			Timestamp: exemplar.Time,
@@ -858,6 +873,18 @@ func addExemplars[N int64 | float64](
 		return m
 	}
 	return metricWithExemplar
+}
+
+// exemplarLabelRunes returns the total number of runes in labels plus the
+// trace and span ID labels that would be added to it, mirroring the count
+// prometheus client-go uses to enforce [prometheus.ExemplarMaxRunes].
+func exemplarLabelRunes(labels prometheus.Labels, traceID, spanID string) int {
+	runes := utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey) + utf8.RuneCountInString(traceID)
+	runes += utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey) + utf8.RuneCountInString(spanID)
+	for k, v := range labels {
+		runes += utf8.RuneCountInString(k) + utf8.RuneCountInString(v)
+	}
+	return runes
 }
 
 func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.LabelNamer) (prometheus.Labels, error) {
