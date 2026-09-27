@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -287,50 +288,32 @@ func (eh chErrorHandler) Handle(err error) {
 	eh.Err <- err
 }
 
-func triggerTicker(t *testing.T) chan time.Time {
-	t.Helper()
-
-	// Override the ticker C chan so tests are not flaky and rely on timing.
-	orig := newTicker
-	t.Cleanup(func() { newTicker = orig })
-
-	// Keep this at size zero so when triggered with a send it will hang until
-	// the select case is selected and the collection loop is started.
-	trigger := make(chan time.Time)
-	newTicker = func(d time.Duration) *time.Ticker {
-		ticker := time.NewTicker(d)
-		ticker.C = trigger
-		return ticker
-	}
-	return trigger
-}
-
 func TestPeriodicReaderRun(t *testing.T) {
-	trigger := triggerTicker(t)
+	synctest.Test(t, func(t *testing.T) {
+		// Register an error handler to validate export errors are passed to
+		// otel.Handle.
+		defer func(orig otel.ErrorHandler) {
+			otel.SetErrorHandler(orig)
+		}(otel.GetErrorHandler())
+		eh := newChErrorHandler()
+		otel.SetErrorHandler(eh)
 
-	// Register an error handler to validate export errors are passed to
-	// otel.Handle.
-	defer func(orig otel.ErrorHandler) {
-		otel.SetErrorHandler(orig)
-	}(otel.GetErrorHandler())
-	eh := newChErrorHandler()
-	otel.SetErrorHandler(eh)
+		exp := &fnExporter{
+			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+				// The testSDKProducer produces testResourceMetricsAB.
+				assert.Equal(t, testResourceMetricsAB, *m)
+				return assert.AnError
+			},
+		}
 
-	exp := &fnExporter{
-		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
-			// The testSDKProducer produces testResourceMetricsAB.
-			assert.Equal(t, testResourceMetricsAB, *m)
-			return assert.AnError
-		},
-	}
+		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
+		r.register(testSDKProducer{})
+		// Blocking here lets synctest advance the virtual clock, firing the ticker.
+		assert.Equal(t, assert.AnError, <-eh.Err)
 
-	r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
-	r.register(testSDKProducer{})
-	trigger <- time.Now()
-	assert.Equal(t, assert.AnError, <-eh.Err)
-
-	// Ensure Reader is allowed clean up attempt.
-	_ = r.Shutdown(t.Context())
+		// Stop the run goroutine so the synctest bubble can exit cleanly.
+		_ = r.Shutdown(t.Context())
+	})
 }
 
 func TestPeriodicReaderBatching(t *testing.T) {
@@ -484,62 +467,55 @@ func TestPeriodicReaderBatching_Disabled(t *testing.T) {
 }
 
 func TestPeriodicReaderBatching_WithoutCancel(t *testing.T) {
-	trigger := triggerTicker(t)
+	synctest.Test(t, func(t *testing.T) {
+		timeout := 200 * time.Millisecond
 
-	timeout := 200 * time.Millisecond
-
-	var exportCount int
-	done := make(chan struct{})
-	exp := &fnExporter{
-		exportFunc: func(ctx context.Context, _ *metricdata.ResourceMetrics) error {
-			exportCount++
-			// Simulate export taking some time
-			select {
-			case <-time.After(100 * time.Millisecond):
-				if exportCount == 2 {
-					close(done)
+		var exportCount int
+		done := make(chan struct{})
+		exp := &fnExporter{
+			exportFunc: func(ctx context.Context, _ *metricdata.ResourceMetrics) error {
+				exportCount++
+				// Simulate export taking some time
+				select {
+				case <-time.After(100 * time.Millisecond):
+					if exportCount == 2 {
+						close(done)
+					}
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
 				}
+			},
+		}
+
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithMaxExportBatchSize(1))
+
+		r.register(testSDKProducer{
+			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+				// Simulate Collect taking time (150ms)
+				// So when we enter the loop, only 50ms are left of the top-level 200ms timeout!
+				select {
+				case <-time.After(150 * time.Millisecond):
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+
+				*rm = testResourceMetricsAB // Has 2 data points
 				return nil
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		},
-	}
+			},
+		})
 
-	r := NewPeriodicReader(exp, WithTimeout(timeout), WithMaxExportBatchSize(1))
+		// Blocking here lets synctest advance the virtual clock, firing the ticker.
+		<-done
 
-	r.register(testSDKProducer{
-		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
-			// Simulate Collect taking time (150ms)
-			// So when we enter the loop, only 50ms are left of the top-level 200ms timeout!
-			select {
-			case <-time.After(150 * time.Millisecond):
-			case <-ctx.Done():
-				return ctx.Err()
-			}
+		assert.Equal(t, 2, exportCount)
 
-			*rm = testResourceMetricsAB // Has 2 data points
-			return nil
-		},
+		// Stop the run goroutine so the synctest bubble can exit cleanly.
+		_ = r.Shutdown(t.Context())
 	})
-
-	trigger <- time.Now()
-
-	select {
-	case <-done:
-		// Success
-	case <-time.After(time.Second):
-		t.Fatal("timeout waiting for exports")
-	}
-
-	assert.Equal(t, 2, exportCount)
 }
 
 func TestPeriodicReaderFlushesPending(t *testing.T) {
-	// Override the ticker so tests are not flaky and rely on timing.
-	trigger := triggerTicker(t)
-	t.Cleanup(func() { close(trigger) })
-
 	expFunc := func(t *testing.T) (exp Exporter, called *bool) {
 		called = new(bool)
 		return &fnExporter{
