@@ -38,7 +38,7 @@ type MeterProvider struct {
 	embedded.MeterProvider
 
 	pipes  pipelines
-	meters cache[instrumentation.Scope, *meter]
+	meters cache[instrumentation.Scope, metric.Meter]
 	// configurator is only written in NewMeterProvider before mp is returned to
 	// any caller (reset to nil if its handle claim was rejected), and never
 	// reassigned after.
@@ -83,9 +83,13 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 		mp.configurator = mco.MeterConfiguratorSnapshot()
 		claimed := mco.RegisterOnUpdate(func() {
 			fn, version := mp.configurator()
-			mp.meters.Range(func(s instrumentation.Scope, m *meter) {
+			mp.meters.Range(func(s instrumentation.Scope, m metric.Meter) {
+				gm, ok := m.(*configuratorMeter)
+				if !ok {
+					return
+				}
 				if cr, ok := fn(s).(meterConfigReader); ok {
-					m.setEnabledIfNewer(version, cr.Enabled())
+					gm.setEnabledIfNewer(version, cr.Enabled())
 				}
 			})
 		})
@@ -146,21 +150,24 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 		"Attributes", s.Attributes,
 	)
 
-	var meterCreated bool
-	m := mp.meters.Lookup(s, func() *meter {
-		meterCreated = true
+	var cfgMeter *configuratorMeter
+	m := mp.meters.Lookup(s, func() metric.Meter {
 		m := newMeter(s, mp.pipes)
 		m.setEnabled(true)
-		return m
+		if mp.configurator == nil {
+			return m
+		}
+		cfgMeter = newConfiguratorMeter(m)
+		return cfgMeter
 	})
 	// Apply the configurator outside the cache lock: it runs arbitrary user
 	// code, and a configurator that calls Meter for the same MeterProvider
 	// would deadlock on the cache's non-reentrant lock otherwise.
 	// An already-cached meter either already has it applied, or will get it from a concurrent Set walk.
-	if meterCreated && mp.configurator != nil {
+	if cfgMeter != nil {
 		fn, version := mp.configurator()
 		if cr, ok := fn(s).(meterConfigReader); ok {
-			m.setEnabledIfNewer(version, cr.Enabled())
+			cfgMeter.setEnabledIfNewer(version, cr.Enabled())
 		}
 	}
 	return m

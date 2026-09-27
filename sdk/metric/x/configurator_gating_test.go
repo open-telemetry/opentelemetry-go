@@ -24,7 +24,6 @@ func gatingMeterProvider(t *testing.T) (*sdkmetric.MeterProvider, *sdkmetric.Man
 	h := NewMeterConfiguratorHandle()
 	rdr := sdkmetric.NewManualReader()
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(rdr), WithMeterConfigurator(h))
-	t.Cleanup(func() { _ = mp.Shutdown(context.Background()) })
 	return mp, rdr, h
 }
 
@@ -94,7 +93,12 @@ var gatingOrders = []struct {
 // gatingCreate creates the meter for scope "scope" and passes it to create,
 // disabling every scope at the point order names. Every scope is disabled
 // when it returns.
-func gatingCreate(mp *sdkmetric.MeterProvider, h *MeterConfiguratorHandle, order gatingOrder, create func(metric.Meter)) {
+func gatingCreate(
+	mp *sdkmetric.MeterProvider,
+	h *MeterConfiguratorHandle,
+	order gatingOrder,
+	create func(metric.Meter),
+) {
 	if order == gatingDisableBeforeMeter {
 		gatingSetAll(h, false)
 	}
@@ -108,47 +112,86 @@ func gatingCreate(mp *sdkmetric.MeterProvider, h *MeterConfiguratorHandle, order
 	}
 }
 
+// gatingSyncInst records one measurement and reports Enabled for a sync
+// instrument, whichever API method it records with.
+type gatingSyncInst struct {
+	record  func(context.Context)
+	enabled func(context.Context) bool
+}
+
+// gatingAdder adapts a counter or up-down counter.
+func gatingAdder[N int64 | float64](i interface {
+	Add(context.Context, N, ...metric.AddOption)
+	Enabled(context.Context) bool
+},
+) gatingSyncInst {
+	return gatingSyncInst{func(ctx context.Context) { i.Add(ctx, 1) }, i.Enabled}
+}
+
+// gatingRecorder adapts a histogram or gauge.
+func gatingRecorder[N int64 | float64](i interface {
+	Record(context.Context, N, ...metric.RecordOption)
+	Enabled(context.Context) bool
+},
+) gatingSyncInst {
+	return gatingSyncInst{func(ctx context.Context) { i.Record(ctx, 1) }, i.Enabled}
+}
+
+// gatingInt64Callback observes 1 and reports each invocation through called.
+func gatingInt64Callback(called func()) metric.Int64Callback {
+	return func(_ context.Context, o metric.Int64Observer) error {
+		called()
+		o.Observe(1)
+		return nil
+	}
+}
+
+// gatingFloat64Callback observes 1 and reports each invocation through called.
+func gatingFloat64Callback(called func()) metric.Float64Callback {
+	return func(_ context.Context, o metric.Float64Observer) error {
+		called()
+		o.Observe(1)
+		return nil
+	}
+}
+
 func TestGatingSyncInstruments(t *testing.T) {
 	const name = "inst"
-	type syncInst struct {
-		record  func(context.Context)
-		enabled func(context.Context) bool
-	}
 	tests := []struct {
 		name  string
-		build func(metric.Meter) (syncInst, error)
+		build func(metric.Meter) (gatingSyncInst, error)
 	}{
-		{"Int64Counter", func(m metric.Meter) (syncInst, error) {
+		{"Int64Counter", func(m metric.Meter) (gatingSyncInst, error) {
 			i, err := m.Int64Counter(name)
-			return syncInst{func(ctx context.Context) { i.Add(ctx, 1) }, i.Enabled}, err
+			return gatingAdder(i), err
 		}},
-		{"Int64UpDownCounter", func(m metric.Meter) (syncInst, error) {
+		{"Int64UpDownCounter", func(m metric.Meter) (gatingSyncInst, error) {
 			i, err := m.Int64UpDownCounter(name)
-			return syncInst{func(ctx context.Context) { i.Add(ctx, 1) }, i.Enabled}, err
+			return gatingAdder(i), err
 		}},
-		{"Int64Histogram", func(m metric.Meter) (syncInst, error) {
+		{"Int64Histogram", func(m metric.Meter) (gatingSyncInst, error) {
 			i, err := m.Int64Histogram(name)
-			return syncInst{func(ctx context.Context) { i.Record(ctx, 1) }, i.Enabled}, err
+			return gatingRecorder(i), err
 		}},
-		{"Int64Gauge", func(m metric.Meter) (syncInst, error) {
+		{"Int64Gauge", func(m metric.Meter) (gatingSyncInst, error) {
 			i, err := m.Int64Gauge(name)
-			return syncInst{func(ctx context.Context) { i.Record(ctx, 1) }, i.Enabled}, err
+			return gatingRecorder(i), err
 		}},
-		{"Float64Counter", func(m metric.Meter) (syncInst, error) {
+		{"Float64Counter", func(m metric.Meter) (gatingSyncInst, error) {
 			i, err := m.Float64Counter(name)
-			return syncInst{func(ctx context.Context) { i.Add(ctx, 1) }, i.Enabled}, err
+			return gatingAdder(i), err
 		}},
-		{"Float64UpDownCounter", func(m metric.Meter) (syncInst, error) {
+		{"Float64UpDownCounter", func(m metric.Meter) (gatingSyncInst, error) {
 			i, err := m.Float64UpDownCounter(name)
-			return syncInst{func(ctx context.Context) { i.Add(ctx, 1) }, i.Enabled}, err
+			return gatingAdder(i), err
 		}},
-		{"Float64Histogram", func(m metric.Meter) (syncInst, error) {
+		{"Float64Histogram", func(m metric.Meter) (gatingSyncInst, error) {
 			i, err := m.Float64Histogram(name)
-			return syncInst{func(ctx context.Context) { i.Record(ctx, 1) }, i.Enabled}, err
+			return gatingRecorder(i), err
 		}},
-		{"Float64Gauge", func(m metric.Meter) (syncInst, error) {
+		{"Float64Gauge", func(m metric.Meter) (gatingSyncInst, error) {
 			i, err := m.Float64Gauge(name)
-			return syncInst{func(ctx context.Context) { i.Record(ctx, 1) }, i.Enabled}, err
+			return gatingRecorder(i), err
 		}},
 	}
 	for _, tt := range tests {
@@ -156,7 +199,7 @@ func TestGatingSyncInstruments(t *testing.T) {
 			t.Run(tt.name+"/"+o.name, func(t *testing.T) {
 				ctx := t.Context()
 				mp, rdr, h := gatingMeterProvider(t)
-				var inst syncInst
+				var inst gatingSyncInst
 				gatingCreate(mp, h, o.order, func(m metric.Meter) {
 					var err error
 					inst, err = tt.build(m)
@@ -186,33 +229,27 @@ func TestGatingObservableCallbacks(t *testing.T) {
 		build func(m metric.Meter, called func()) error
 	}{
 		{"Int64ObservableCounter", func(m metric.Meter, called func()) error {
-			_, err := m.Int64ObservableCounter(name, metric.WithInt64Callback(
-				func(_ context.Context, o metric.Int64Observer) error { called(); o.Observe(1); return nil }))
+			_, err := m.Int64ObservableCounter(name, metric.WithInt64Callback(gatingInt64Callback(called)))
 			return err
 		}},
 		{"Int64ObservableUpDownCounter", func(m metric.Meter, called func()) error {
-			_, err := m.Int64ObservableUpDownCounter(name, metric.WithInt64Callback(
-				func(_ context.Context, o metric.Int64Observer) error { called(); o.Observe(1); return nil }))
+			_, err := m.Int64ObservableUpDownCounter(name, metric.WithInt64Callback(gatingInt64Callback(called)))
 			return err
 		}},
 		{"Int64ObservableGauge", func(m metric.Meter, called func()) error {
-			_, err := m.Int64ObservableGauge(name, metric.WithInt64Callback(
-				func(_ context.Context, o metric.Int64Observer) error { called(); o.Observe(1); return nil }))
+			_, err := m.Int64ObservableGauge(name, metric.WithInt64Callback(gatingInt64Callback(called)))
 			return err
 		}},
 		{"Float64ObservableCounter", func(m metric.Meter, called func()) error {
-			_, err := m.Float64ObservableCounter(name, metric.WithFloat64Callback(
-				func(_ context.Context, o metric.Float64Observer) error { called(); o.Observe(1); return nil }))
+			_, err := m.Float64ObservableCounter(name, metric.WithFloat64Callback(gatingFloat64Callback(called)))
 			return err
 		}},
 		{"Float64ObservableUpDownCounter", func(m metric.Meter, called func()) error {
-			_, err := m.Float64ObservableUpDownCounter(name, metric.WithFloat64Callback(
-				func(_ context.Context, o metric.Float64Observer) error { called(); o.Observe(1); return nil }))
+			_, err := m.Float64ObservableUpDownCounter(name, metric.WithFloat64Callback(gatingFloat64Callback(called)))
 			return err
 		}},
 		{"Float64ObservableGauge", func(m metric.Meter, called func()) error {
-			_, err := m.Float64ObservableGauge(name, metric.WithFloat64Callback(
-				func(_ context.Context, o metric.Float64Observer) error { called(); o.Observe(1); return nil }))
+			_, err := m.Float64ObservableGauge(name, metric.WithFloat64Callback(gatingFloat64Callback(called)))
 			return err
 		}},
 	}
@@ -306,23 +343,26 @@ func TestGatingInstrumentIdentity(t *testing.T) {
 	mp, _, _ := gatingMeterProvider(t)
 
 	m1, m2 := mp.Meter("scope"), mp.Meter("scope")
-	assert.True(t, m1 == m2, "Meter must return the same meter for the same scope")
+	assert.Same(t, m1, m2, "Meter must return the same meter for the same scope")
 
 	c1, err := m1.Int64Counter("counter")
 	require.NoError(t, err)
 	c2, err := m1.Int64Counter("counter")
 	require.NoError(t, err)
-	assert.True(t, c1 == c2, "repeated sync instrument creation must return an equal instrument")
+	assert.Same(t, c1, c2, "repeated sync instrument creation must return an equal instrument")
 
 	h1, err := m1.Float64Histogram("histogram")
 	require.NoError(t, err)
 	h2, err := m1.Float64Histogram("histogram")
 	require.NoError(t, err)
-	assert.True(t, h1 == h2, "repeated sync instrument creation must return an equal instrument")
+	assert.Same(t, h1, h2, "repeated sync instrument creation must return an equal instrument")
 
 	o1, err := m1.Int64ObservableCounter("observable")
 	require.NoError(t, err)
 	o2, err := m1.Int64ObservableCounter("observable")
 	require.NoError(t, err)
+	// Observable instruments are values, not pointers, so Same doesn't apply;
+	// == is the equality users observe, and Equal would compare deeply.
+	//nolint:testifylint // see above
 	assert.True(t, o1 == o2, "repeated async instrument creation must return an equal instrument")
 }

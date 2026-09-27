@@ -522,9 +522,12 @@ func TestInstrumentHasMeterBackref(t *testing.T) {
 	scope := instrumentation.Scope{Name: "test"}
 	m := mp.Meter(scope.Name)
 
-	wantMeter := mp.meters.Lookup(scope, func() *meter {
-		return newMeter(scope, mp.pipes)
+	cached := mp.meters.Lookup(scope, func() metric.Meter {
+		t.Fatal("meter must already be cached")
+		return nil
 	})
+	wantMeter, ok := cached.(*meter)
+	require.True(t, ok)
 
 	ctr, err := m.Int64Counter("int64-counter")
 	require.NoError(t, err)

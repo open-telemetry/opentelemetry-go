@@ -68,6 +68,29 @@ func disablingConfiguratorFn(s instrumentation.Scope) any {
 	return testMeterConfig{enabled: s.Name != "disabled"}
 }
 
+// cachedConfiguratorMeter returns the gated meter mp caches for scope name.
+func cachedConfiguratorMeter(t *testing.T, mp *MeterProvider, name string) *configuratorMeter {
+	t.Helper()
+	gm, ok := mp.Meter(name).(*configuratorMeter)
+	require.True(t, ok, "a provider with a configurator must return a *configuratorMeter")
+	return gm
+}
+
+func TestConfiguratorMeterType(t *testing.T) {
+	t.Run("WithConfigurator", func(t *testing.T) {
+		mp := NewMeterProvider(testConfiguratorOpt{fn: disablingConfiguratorFn})
+		m := mp.Meter("scope")
+		assert.IsType(t, &configuratorMeter{}, m, "a provider with a configurator must return a *configuratorMeter")
+		assert.Same(t, m, mp.Meter("scope"), "the same scope must return the same *configuratorMeter")
+	})
+	t.Run("WithoutConfigurator", func(t *testing.T) {
+		mp := NewMeterProvider()
+		m := mp.Meter("scope")
+		assert.IsType(t, &meter{}, m, "a provider without a configurator must return the plain *meter")
+		assert.Same(t, m, mp.Meter("scope"), "the same scope must return the same *meter")
+	})
+}
+
 // errCallbackShouldNotRun is returned by callbacks in the NotInvokedWhileDisabled
 // tests below; seeing it propagate means the callback ran when it shouldn't have.
 var errCallbackShouldNotRun = errors.New("callback should not run while meter is disabled")
@@ -113,12 +136,16 @@ func TestConfiguratorNewMeter(t *testing.T) {
 			mp := NewMeterProvider(configuratorOpts...)
 			defer mp.Shutdown(t.Context()) //nolint:errcheck
 
-			_ = mp.Meter(tc.scopeName)
-			m := mp.meters.Lookup(instrumentation.Scope{Name: tc.scopeName}, func() *meter {
-				return newMeter(instrumentation.Scope{Name: tc.scopeName}, mp.pipes)
-			})
-			require.NotNil(t, m)
-			assert.Equal(t, tc.wantEnabled, m.enabled.Load())
+			var enabled bool
+			switch m := mp.Meter(tc.scopeName).(type) {
+			case *configuratorMeter:
+				enabled = m.gate.Load()
+			case *meter:
+				enabled = m.enabled.Load()
+			default:
+				t.Fatalf("unexpected meter type %T", m)
+			}
+			assert.Equal(t, tc.wantEnabled, enabled)
 		})
 	}
 }
@@ -175,37 +202,6 @@ func TestConfiguratorShutdownSkipsUnregisterWhenNotClaimed(t *testing.T) {
 	assert.False(t, unregistered, "Shutdown must not unregister a claim this provider never held")
 }
 
-func TestConfiguratorCacheWalkUpdatesCachedMeter(t *testing.T) {
-	var storedCallback func()
-	configuratorOpt := testConfiguratorOpt{
-		fn:       disablingConfiguratorFn,
-		onUpdate: func(cb func()) { storedCallback = cb },
-	}
-
-	mp := NewMeterProvider(configuratorOpt)
-	defer mp.Shutdown(t.Context()) //nolint:errcheck
-
-	// Create and cache a meter before updating the configurator.
-	_ = mp.Meter("test")
-	cachedMeter := mp.meters.Lookup(instrumentation.Scope{Name: "test"}, func() *meter {
-		return newMeter(instrumentation.Scope{Name: "test"}, mp.pipes)
-	})
-	assert.True(t, cachedMeter.enabled.Load(), "meter should be enabled before configurator update")
-
-	// Swap configurator to disable all scopes and simulate handle.Set().
-	mp.configurator = func() (func(instrumentation.Scope) any, uint64) {
-		return func(_ instrumentation.Scope) any {
-			return testMeterConfig{enabled: false}
-		}, 0
-	}
-	if storedCallback != nil {
-		storedCallback()
-	}
-
-	// Cached meter is updated by the cache walk triggered via onUpdate.
-	assert.False(t, cachedMeter.enabled.Load(), "cached meter should be updated by cache walk")
-}
-
 // TestConfiguratorNewMeterConvergesWithSetWalk proves both orderings of the
 // cache-lock/walk consistency guarantee: whichever of a new meter's insertion
 // or a concurrent Set() walk acquires the cache lock first, the meter never
@@ -227,12 +223,6 @@ func TestConfiguratorNewMeterConvergesWithSetWalk(t *testing.T) {
 		return mp, enabled, func() { storedCallback() }
 	}
 
-	cachedMeter := func(mp *MeterProvider, name string) *meter {
-		return mp.meters.Lookup(instrumentation.Scope{Name: name}, func() *meter {
-			return newMeter(instrumentation.Scope{Name: name}, mp.pipes)
-		})
-	}
-
 	t.Run("insert_then_cfg_set", func(t *testing.T) {
 		mp, enabled, walk := newProvider()
 		defer mp.Shutdown(t.Context()) //nolint:errcheck
@@ -247,7 +237,7 @@ func TestConfiguratorNewMeterConvergesWithSetWalk(t *testing.T) {
 		enabled.Store(false)
 		walk()
 
-		assert.False(t, cachedMeter(mp, "race").enabled.Load(),
+		assert.False(t, cachedConfiguratorMeter(t, mp, "race").gate.Load(),
 			"walk started after new meter must observe it")
 	})
 
@@ -264,7 +254,7 @@ func TestConfiguratorNewMeterConvergesWithSetWalk(t *testing.T) {
 		<-walked
 
 		_ = mp.Meter("race")
-		assert.False(t, cachedMeter(mp, "race").enabled.Load(),
+		assert.False(t, cachedConfiguratorMeter(t, mp, "race").gate.Load(),
 			"meter created after the walk must read the updated configurator directly")
 	})
 }
@@ -322,10 +312,7 @@ func TestConfiguratorStaleApplyLosesRaceToNewerSet(t *testing.T) {
 	close(release) // let the stale apply step resume and try to write version 1
 	<-done
 
-	cachedMeter := mp.meters.Lookup(instrumentation.Scope{Name: "race"}, func() *meter {
-		return newMeter(instrumentation.Scope{Name: "race"}, mp.pipes)
-	})
-	assert.False(t, cachedMeter.enabled.Load(),
+	assert.False(t, cachedConfiguratorMeter(t, mp, "race").gate.Load(),
 		"final state must match the newer Set() walk, not the stale value the delayed apply step read")
 }
 
