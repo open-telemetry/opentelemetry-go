@@ -65,6 +65,49 @@ func gatingPoints(t *testing.T, rdr *sdkmetric.ManualReader) map[string]int {
 	return points
 }
 
+// gatingOrder is when every scope is disabled, relative to creating the meter
+// and its instrument.
+type gatingOrder int
+
+const (
+	// gatingDisableExisting disables after the meter and instrument exist, so
+	// the Set walk applies it.
+	gatingDisableExisting gatingOrder = iota
+	// gatingDisableBeforeMeter disables before the meter is created, so it is
+	// applied when the meter is created.
+	gatingDisableBeforeMeter
+	// gatingDisableBeforeInstrument disables after the meter is created but
+	// before the instrument is, so the instrument must pick up the meter's
+	// current state.
+	gatingDisableBeforeInstrument
+)
+
+var gatingOrders = []struct {
+	name  string
+	order gatingOrder
+}{
+	{"DisableExisting", gatingDisableExisting},
+	{"DisableBeforeMeter", gatingDisableBeforeMeter},
+	{"DisableBeforeInstrument", gatingDisableBeforeInstrument},
+}
+
+// gatingCreate creates the meter for scope "scope" and passes it to create,
+// disabling every scope at the point order names. Every scope is disabled
+// when it returns.
+func gatingCreate(mp *sdkmetric.MeterProvider, h *MeterConfiguratorHandle, order gatingOrder, create func(metric.Meter)) {
+	if order == gatingDisableBeforeMeter {
+		gatingSetAll(h, false)
+	}
+	m := mp.Meter("scope")
+	if order == gatingDisableBeforeInstrument {
+		gatingSetAll(h, false)
+	}
+	create(m)
+	if order == gatingDisableExisting {
+		gatingSetAll(h, false)
+	}
+}
+
 func TestGatingSyncInstruments(t *testing.T) {
 	const name = "inst"
 	type syncInst struct {
@@ -109,23 +152,30 @@ func TestGatingSyncInstruments(t *testing.T) {
 		}},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			mp, rdr, h := gatingMeterProvider(t)
-			inst, err := tt.build(mp.Meter("scope"))
-			require.NoError(t, err)
-			require.True(t, inst.enabled(ctx), "instrument must start enabled")
+		for _, o := range gatingOrders {
+			t.Run(tt.name+"/"+o.name, func(t *testing.T) {
+				ctx := t.Context()
+				mp, rdr, h := gatingMeterProvider(t)
+				var inst syncInst
+				gatingCreate(mp, h, o.order, func(m metric.Meter) {
+					var err error
+					inst, err = tt.build(m)
+					require.NoError(t, err)
+					if o.order == gatingDisableExisting {
+						require.True(t, inst.enabled(ctx), "instrument must start enabled")
+					}
+				})
 
-			gatingSetAll(h, false)
-			assert.False(t, inst.enabled(ctx), "Enabled must follow a disabling Set")
-			inst.record(ctx)
-			assert.Zero(t, gatingPoints(t, rdr)[name], "a measurement while disabled must be dropped")
+				assert.False(t, inst.enabled(ctx), "Enabled must report false while disabled")
+				inst.record(ctx)
+				assert.Zero(t, gatingPoints(t, rdr)[name], "a measurement while disabled must be dropped")
 
-			gatingSetAll(h, true)
-			assert.True(t, inst.enabled(ctx), "Enabled must follow a re-enabling Set")
-			inst.record(ctx)
-			assert.Equal(t, 1, gatingPoints(t, rdr)[name], "a measurement after re-enabling must be recorded")
-		})
+				gatingSetAll(h, true)
+				assert.True(t, inst.enabled(ctx), "Enabled must follow a re-enabling Set")
+				inst.record(ctx)
+				assert.Equal(t, 1, gatingPoints(t, rdr)[name], "a measurement after re-enabling must be recorded")
+			})
+		}
 	}
 }
 
@@ -167,19 +217,22 @@ func TestGatingObservableCallbacks(t *testing.T) {
 		}},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mp, rdr, h := gatingMeterProvider(t)
-			calls := 0
-			require.NoError(t, tt.build(mp.Meter("scope"), func() { calls++ }))
+		for _, o := range gatingOrders {
+			t.Run(tt.name+"/"+o.name, func(t *testing.T) {
+				mp, rdr, h := gatingMeterProvider(t)
+				calls := 0
+				gatingCreate(mp, h, o.order, func(m metric.Meter) {
+					require.NoError(t, tt.build(m, func() { calls++ }))
+				})
 
-			gatingSetAll(h, false)
-			assert.Zero(t, gatingPoints(t, rdr)[name], "a disabled meter must produce no observations")
-			assert.Zero(t, calls, "a disabled meter's callback must not be invoked")
+				assert.Zero(t, gatingPoints(t, rdr)[name], "a disabled meter must produce no observations")
+				assert.Zero(t, calls, "a disabled meter's callback must not be invoked")
 
-			gatingSetAll(h, true)
-			assert.Equal(t, 1, gatingPoints(t, rdr)[name], "a re-enabled meter must produce observations")
-			assert.Equal(t, 1, calls, "a re-enabled meter's callback must be invoked once per collection")
-		})
+				gatingSetAll(h, true)
+				assert.Equal(t, 1, gatingPoints(t, rdr)[name], "a re-enabled meter must produce observations")
+				assert.Equal(t, 1, calls, "a re-enabled meter's callback must be invoked once per collection")
+			})
+		}
 	}
 }
 
@@ -207,24 +260,46 @@ func TestGatingRegisterCallback(t *testing.T) {
 }
 
 func TestGatingScopeIsolation(t *testing.T) {
-	ctx := t.Context()
-	mp, rdr, h := gatingMeterProvider(t)
-	on, err := mp.Meter("on").Int64Counter("on.counter")
-	require.NoError(t, err)
-	off, err := mp.Meter("off").Int64Counter("off.counter")
-	require.NoError(t, err)
+	disableOffScope := func(h *MeterConfiguratorHandle) {
+		h.Set(func(s instrumentation.Scope) MeterConfig {
+			return NewMeterConfig(WithMeterEnabled(s.Name != "off"))
+		})
+	}
+	tests := []struct {
+		name string
+		// setBeforeMeters sets the configurator before either meter is
+		// created, so each meter gets its scope's config at creation rather
+		// than from the Set walk.
+		setBeforeMeters bool
+	}{
+		{"SetAfterMeterCreation", false},
+		{"SetBeforeMeterCreation", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			mp, rdr, h := gatingMeterProvider(t)
+			if tt.setBeforeMeters {
+				disableOffScope(h)
+			}
+			on, err := mp.Meter("on").Int64Counter("on.counter")
+			require.NoError(t, err)
+			off, err := mp.Meter("off").Int64Counter("off.counter")
+			require.NoError(t, err)
+			if !tt.setBeforeMeters {
+				disableOffScope(h)
+			}
 
-	h.Set(func(s instrumentation.Scope) MeterConfig {
-		return NewMeterConfig(WithMeterEnabled(s.Name != "off"))
-	})
-	on.Add(ctx, 1)
-	off.Add(ctx, 1)
+			on.Add(ctx, 1)
+			off.Add(ctx, 1)
 
-	points := gatingPoints(t, rdr)
-	assert.Equal(t, 1, points["on.counter"], "an enabled scope must record")
-	assert.Zero(t, points["off.counter"], "a disabled scope must not record")
-	assert.True(t, on.Enabled(ctx), "disabling another scope must not affect this one")
-	assert.False(t, off.Enabled(ctx))
+			points := gatingPoints(t, rdr)
+			assert.Equal(t, 1, points["on.counter"], "an enabled scope must record")
+			assert.Zero(t, points["off.counter"], "a disabled scope must not record")
+			assert.True(t, on.Enabled(ctx), "disabling another scope must not affect this one")
+			assert.False(t, off.Enabled(ctx))
+		})
+	}
 }
 
 func TestGatingInstrumentIdentity(t *testing.T) {
