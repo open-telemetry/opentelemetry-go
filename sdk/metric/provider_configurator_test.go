@@ -174,7 +174,7 @@ func TestConfiguratorNewMeter(t *testing.T) {
 			var enabled bool
 			switch m := mp.Meter(tc.scopeName).(type) {
 			case *configuratorMeter:
-				enabled = m.gate.Load()
+				enabled = m.config.Load()
 			case *meter:
 				// A meter from a provider without a configurator is never
 				// gated, so it always records.
@@ -274,7 +274,7 @@ func TestConfiguratorNewMeterConvergesWithSetWalk(t *testing.T) {
 		enabled.Store(false)
 		walk()
 
-		assert.False(t, cachedConfiguratorMeter(t, mp, "race").gate.Load(),
+		assert.False(t, cachedConfiguratorMeter(t, mp, "race").config.Load(),
 			"walk started after new meter must observe it")
 	})
 
@@ -291,7 +291,7 @@ func TestConfiguratorNewMeterConvergesWithSetWalk(t *testing.T) {
 		<-walked
 
 		_ = mp.Meter("race")
-		assert.False(t, cachedConfiguratorMeter(t, mp, "race").gate.Load(),
+		assert.False(t, cachedConfiguratorMeter(t, mp, "race").config.Load(),
 			"meter created after the walk must read the updated configurator directly")
 	})
 }
@@ -349,7 +349,7 @@ func TestConfiguratorStaleApplyLosesRaceToNewerSet(t *testing.T) {
 	close(release) // let the stale apply step resume and try to write version 1
 	<-done
 
-	assert.False(t, cachedConfiguratorMeter(t, mp, "race").gate.Load(),
+	assert.False(t, cachedConfiguratorMeter(t, mp, "race").config.Load(),
 		"final state must match the newer Set() walk, not the stale value the delayed apply step read")
 }
 

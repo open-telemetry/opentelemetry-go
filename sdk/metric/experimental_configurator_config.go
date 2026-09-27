@@ -5,9 +5,9 @@ package metric
 
 import "sync/atomic"
 
-// versionedEnabled holds a configuratorMeter's enabled bool and the version it
-// was last set under.
-type versionedEnabled struct {
+// versionedMeterConfig holds a configuratorMeter's config, currently only its
+// enabled bool, and the version it was last set under.
+type versionedMeterConfig struct {
 	// state contains a 63-bit version + 1-bit enabled.
 	// These are contained together so a write can atomically compare
 	// the stored version against its own and decide whether to overwrite.
@@ -17,7 +17,7 @@ type versionedEnabled struct {
 }
 
 // Load reports the currently stored enabled bool.
-func (ve *versionedEnabled) Load() bool {
+func (ve *versionedMeterConfig) Load() bool {
 	return ve.state.Load()&1 != 0
 }
 
@@ -26,7 +26,7 @@ func (ve *versionedEnabled) Load() bool {
 // overwrite: a given version identifies a single configuration decision, so
 // two writes sharing a version can only ever be redoing the same decision,
 // never disagreeing ones.
-func (ve *versionedEnabled) StoreIfNewer( // nolint:revive  // enabled is not a control flag.
+func (ve *versionedMeterConfig) StoreIfNewer( // nolint:revive  // enabled is not a control flag.
 	version uint64,
 	enabled bool,
 ) bool {

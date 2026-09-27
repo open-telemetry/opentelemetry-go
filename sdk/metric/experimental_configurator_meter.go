@@ -15,9 +15,9 @@ import (
 type configuratorMeter struct {
 	*meter
 
-	// gate holds the configurator's enabled decision for the meter's scope.
-	// The meter's instrument wrappers point at it, so they share its state.
-	gate versionedEnabled
+	// config holds the configurator's decision for the meter's scope. The
+	// meter's instrument wrappers point at it, so they share its state.
+	config versionedMeterConfig
 
 	// int64Wrappers and float64Wrappers return the same wrapper for the same
 	// base instrument, so repeated instrument creation returns an identical
@@ -33,17 +33,17 @@ func newConfiguratorMeter(m *meter) *configuratorMeter {
 	cm := &configuratorMeter{meter: m}
 	// A meter is enabled until the configurator says otherwise. Version 0 is
 	// older than any Set, so a newer configuration always replaces it.
-	cm.gate.StoreIfNewer(0, true)
+	cm.config.StoreIfNewer(0, true)
 	return cm
 }
 
-// setEnabledIfNewer applies enabled to the gate if version is at least as new
-// as the version already stored; see versionedEnabled.StoreIfNewer.
+// setEnabledIfNewer applies enabled to the config if version is at least as new
+// as the version already stored; see versionedMeterConfig.StoreIfNewer.
 func (m *configuratorMeter) setEnabledIfNewer( // nolint:revive  // enabled is not a control flag.
 	version uint64,
 	enabled bool,
 ) {
-	m.gate.StoreIfNewer(version, enabled)
+	m.config.StoreIfNewer(version, enabled)
 }
 
 // wrapInt64 returns the gated wrapper for inst. It reports false, and callers
@@ -54,7 +54,7 @@ func (m *configuratorMeter) wrapInt64(inst any) (*configuratorInt64Inst, bool) {
 		return nil, false
 	}
 	return m.int64Wrappers.Lookup(base, func() *configuratorInt64Inst {
-		return &configuratorInt64Inst{int64Inst: base, gate: &m.gate}
+		return &configuratorInt64Inst{int64Inst: base, config: &m.config}
 	}), true
 }
 
@@ -66,7 +66,7 @@ func (m *configuratorMeter) wrapFloat64(inst any) (*configuratorFloat64Inst, boo
 		return nil, false
 	}
 	return m.float64Wrappers.Lookup(base, func() *configuratorFloat64Inst {
-		return &configuratorFloat64Inst{float64Inst: base, gate: &m.gate}
+		return &configuratorFloat64Inst{float64Inst: base, config: &m.config}
 	}), true
 }
 
@@ -162,7 +162,7 @@ func (m *configuratorMeter) gateInt64Callbacks(cbs []metric.Int64Callback) []met
 	gated := make([]metric.Int64Callback, len(cbs))
 	for i, cb := range cbs {
 		gated[i] = func(ctx context.Context, o metric.Int64Observer) error {
-			if !m.gate.Load() {
+			if !m.config.Load() {
 				return nil
 			}
 			return cb(ctx, o)
@@ -178,7 +178,7 @@ func (m *configuratorMeter) gateFloat64Callbacks(cbs []metric.Float64Callback) [
 	gated := make([]metric.Float64Callback, len(cbs))
 	for i, cb := range cbs {
 		gated[i] = func(ctx context.Context, o metric.Float64Observer) error {
-			if !m.gate.Load() {
+			if !m.config.Load() {
 				return nil
 			}
 			return cb(ctx, o)
@@ -288,7 +288,7 @@ func (m *configuratorMeter) RegisterCallback(
 	insts ...metric.Observable,
 ) (metric.Registration, error) {
 	return m.meter.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
-		if !m.gate.Load() {
+		if !m.config.Load() {
 			return nil
 		}
 		return f(ctx, o)
