@@ -3,7 +3,11 @@
 
 package metric
 
-import "go.opentelemetry.io/otel/metric"
+import (
+	"context"
+
+	"go.opentelemetry.io/otel/metric"
+)
 
 // configuratorMeter is the Meter returned by a MeterProvider built with a
 // MeterConfigurator. Only such providers create it, so a provider without a
@@ -146,4 +150,144 @@ func (m *configuratorMeter) Float64Gauge(
 		return w, err
 	}
 	return i, err
+}
+
+// gateInt64Callbacks returns cbs with each callback skipped while the meter
+// is disabled. The count is preserved, so the base meter's handling of
+// repeated creation with callbacks is unchanged.
+func (m *configuratorMeter) gateInt64Callbacks(cbs []metric.Int64Callback) []metric.Int64Callback {
+	gated := make([]metric.Int64Callback, len(cbs))
+	for i, cb := range cbs {
+		gated[i] = func(ctx context.Context, o metric.Int64Observer) error {
+			if !m.gate.Load() {
+				return nil
+			}
+			return cb(ctx, o)
+		}
+	}
+	return gated
+}
+
+// gateFloat64Callbacks returns cbs with each callback skipped while the meter
+// is disabled. The count is preserved, so the base meter's handling of
+// repeated creation with callbacks is unchanged.
+func (m *configuratorMeter) gateFloat64Callbacks(cbs []metric.Float64Callback) []metric.Float64Callback {
+	gated := make([]metric.Float64Callback, len(cbs))
+	for i, cb := range cbs {
+		gated[i] = func(ctx context.Context, o metric.Float64Observer) error {
+			if !m.gate.Load() {
+				return nil
+			}
+			return cb(ctx, o)
+		}
+	}
+	return gated
+}
+
+// The observable constructors mirror meter's, but pass gated callbacks to the
+// base meter. The instruments themselves come from the base meter's cache
+// unwrapped, since only their callbacks need gating.
+
+func (m *configuratorMeter) Int64ObservableCounter(
+	name string,
+	options ...metric.Int64ObservableCounterOption,
+) (metric.Int64ObservableCounter, error) {
+	cfg := metric.NewInt64ObservableCounterConfig(options...)
+	id := Instrument{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindObservableCounter,
+		Scope:       m.scope,
+	}
+	return m.int64ObservableInstrument(id, defaultAttributes(options), m.gateInt64Callbacks(cfg.Callbacks()))
+}
+
+func (m *configuratorMeter) Int64ObservableUpDownCounter(
+	name string,
+	options ...metric.Int64ObservableUpDownCounterOption,
+) (metric.Int64ObservableUpDownCounter, error) {
+	cfg := metric.NewInt64ObservableUpDownCounterConfig(options...)
+	id := Instrument{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindObservableUpDownCounter,
+		Scope:       m.scope,
+	}
+	return m.int64ObservableInstrument(id, defaultAttributes(options), m.gateInt64Callbacks(cfg.Callbacks()))
+}
+
+func (m *configuratorMeter) Int64ObservableGauge(
+	name string,
+	options ...metric.Int64ObservableGaugeOption,
+) (metric.Int64ObservableGauge, error) {
+	cfg := metric.NewInt64ObservableGaugeConfig(options...)
+	id := Instrument{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindObservableGauge,
+		Scope:       m.scope,
+	}
+	return m.int64ObservableInstrument(id, defaultAttributes(options), m.gateInt64Callbacks(cfg.Callbacks()))
+}
+
+func (m *configuratorMeter) Float64ObservableCounter(
+	name string,
+	options ...metric.Float64ObservableCounterOption,
+) (metric.Float64ObservableCounter, error) {
+	cfg := metric.NewFloat64ObservableCounterConfig(options...)
+	id := Instrument{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindObservableCounter,
+		Scope:       m.scope,
+	}
+	return m.float64ObservableInstrument(id, defaultAttributes(options), m.gateFloat64Callbacks(cfg.Callbacks()))
+}
+
+func (m *configuratorMeter) Float64ObservableUpDownCounter(
+	name string,
+	options ...metric.Float64ObservableUpDownCounterOption,
+) (metric.Float64ObservableUpDownCounter, error) {
+	cfg := metric.NewFloat64ObservableUpDownCounterConfig(options...)
+	id := Instrument{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindObservableUpDownCounter,
+		Scope:       m.scope,
+	}
+	return m.float64ObservableInstrument(id, defaultAttributes(options), m.gateFloat64Callbacks(cfg.Callbacks()))
+}
+
+func (m *configuratorMeter) Float64ObservableGauge(
+	name string,
+	options ...metric.Float64ObservableGaugeOption,
+) (metric.Float64ObservableGauge, error) {
+	cfg := metric.NewFloat64ObservableGaugeConfig(options...)
+	id := Instrument{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindObservableGauge,
+		Scope:       m.scope,
+	}
+	return m.float64ObservableInstrument(id, defaultAttributes(options), m.gateFloat64Callbacks(cfg.Callbacks()))
+}
+
+// RegisterCallback registers f with the base meter, skipped while the meter is
+// disabled.
+func (m *configuratorMeter) RegisterCallback(
+	f metric.Callback,
+	insts ...metric.Observable,
+) (metric.Registration, error) {
+	return m.meter.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
+		if !m.gate.Load() {
+			return nil
+		}
+		return f(ctx, o)
+	}, insts...)
 }

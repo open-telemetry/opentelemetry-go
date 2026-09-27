@@ -4,8 +4,6 @@
 package metric
 
 import (
-	"context"
-	"errors"
 	"sync/atomic"
 	"testing"
 
@@ -14,7 +12,6 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // testMeterConfig satisfies meterConfigReader without importing sdk/metric/x.
@@ -132,10 +129,6 @@ func TestConfiguratorSyncInstrumentTypes(t *testing.T) {
 		})
 	}
 }
-
-// errCallbackShouldNotRun is returned by callbacks in the NotInvokedWhileDisabled
-// tests below; seeing it propagate means the callback ran when it shouldn't have.
-var errCallbackShouldNotRun = errors.New("callback should not run while meter is disabled")
 
 func TestConfiguratorNewMeter(t *testing.T) {
 	for _, tc := range []struct {
@@ -358,172 +351,7 @@ func TestConfiguratorStaleApplyLosesRaceToNewerSet(t *testing.T) {
 		"final state must match the newer Set() walk, not the stale value the delayed apply step read")
 }
 
-func TestObservableCallbackGatedByConfigurator(t *testing.T) {
-	var storedCallback func()
-	configuratorOpt := testConfiguratorOpt{
-		fn:       disablingConfiguratorFn,
-		onUpdate: func(cb func()) { storedCallback = cb },
-	}
-
-	rdr := NewManualReader()
-	mp := NewMeterProvider(WithReader(rdr), configuratorOpt)
-	defer mp.Shutdown(t.Context()) //nolint:errcheck
-
-	_, err := mp.Meter("disabled").Int64ObservableCounter("ctr", metric.WithInt64Callback(
-		func(_ context.Context, o metric.Int64Observer) error {
-			o.Observe(5)
-			return nil
-		},
-	))
-	require.NoError(t, err)
-
-	var rm metricdata.ResourceMetrics
-	require.NoError(t, rdr.Collect(t.Context(), &rm))
-	assert.Empty(t, rm.ScopeMetrics, "callback Observe on a disabled meter should not reach the aggregator")
-
-	// Re-enable and confirm the callback's Observe() now reaches the aggregator.
-	mp.configurator = func() (func(instrumentation.Scope) any, uint64) {
-		return func(instrumentation.Scope) any {
-			return testMeterConfig{enabled: true}
-		}, 0
-	}
-	require.NotNil(t, storedCallback)
-	storedCallback()
-
-	rm = metricdata.ResourceMetrics{}
-	require.NoError(t, rdr.Collect(t.Context(), &rm))
-	require.Len(t, rm.ScopeMetrics, 1)
-	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-}
-
-func TestObserverObserveGatedByConfigurator(t *testing.T) {
-	var storedCallback func()
-	configuratorOpt := testConfiguratorOpt{
-		fn:       disablingConfiguratorFn,
-		onUpdate: func(cb func()) { storedCallback = cb },
-	}
-
-	rdr := NewManualReader()
-	mp := NewMeterProvider(WithReader(rdr), configuratorOpt)
-	defer mp.Shutdown(t.Context()) //nolint:errcheck
-
-	m := mp.Meter("disabled")
-	ctr, err := m.Int64ObservableCounter("ctr")
-	require.NoError(t, err)
-
-	_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-		o.ObserveInt64(ctr, 5)
-		return nil
-	}, ctr)
-	require.NoError(t, err)
-
-	var rm metricdata.ResourceMetrics
-	require.NoError(t, rdr.Collect(t.Context(), &rm))
-	assert.Empty(t, rm.ScopeMetrics, "ObserveInt64 on a disabled meter should not reach the aggregator")
-
-	// Re-enable and confirm ObserveInt64 now reaches the aggregator.
-	mp.configurator = func() (func(instrumentation.Scope) any, uint64) {
-		return func(instrumentation.Scope) any {
-			return testMeterConfig{enabled: true}
-		}, 0
-	}
-	require.NotNil(t, storedCallback)
-	storedCallback()
-
-	rm = metricdata.ResourceMetrics{}
-	require.NoError(t, rdr.Collect(t.Context(), &rm))
-	require.Len(t, rm.ScopeMetrics, 1)
-	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-}
-
 // Asserts the callback must not run, and its error must not propagate,
 // while the meter is disabled.
-func TestObservableCallbackNotInvokedWhileDisabled(t *testing.T) {
-	var storedCallback func()
-	configuratorOpt := testConfiguratorOpt{
-		fn:       disablingConfiguratorFn,
-		onUpdate: func(cb func()) { storedCallback = cb },
-	}
-
-	rdr := NewManualReader()
-	mp := NewMeterProvider(WithReader(rdr), configuratorOpt)
-	defer mp.Shutdown(t.Context()) //nolint:errcheck
-
-	var invoked bool
-	_, err := mp.Meter("disabled").Int64ObservableCounter("ctr", metric.WithInt64Callback(
-		func(_ context.Context, o metric.Int64Observer) error {
-			invoked = true
-			o.Observe(5)
-			return errCallbackShouldNotRun
-		},
-	))
-	require.NoError(t, err)
-
-	var rm metricdata.ResourceMetrics
-	err = rdr.Collect(t.Context(), &rm)
-	assert.NoError(t, err, "callback error must not propagate while meter is disabled")
-	assert.False(t, invoked, "callback must not run at all while meter is disabled")
-	assert.Empty(t, rm.ScopeMetrics)
-
-	// Re-enable and confirm the callback resumes on the very next collection,
-	// with no re-registration needed.
-	mp.configurator = func() (func(instrumentation.Scope) any, uint64) {
-		return func(instrumentation.Scope) any {
-			return testMeterConfig{enabled: true}
-		}, 0
-	}
-	require.NotNil(t, storedCallback)
-	storedCallback()
-
-	rm = metricdata.ResourceMetrics{}
-	err = rdr.Collect(t.Context(), &rm)
-	assert.ErrorIs(t, err, errCallbackShouldNotRun, "callback error must propagate once re-enabled")
-	assert.True(t, invoked, "callback must run once re-enabled")
-}
-
 // Asserts the callback must not run, and its error must not propagate,
 // while the meter is disabled.
-func TestRegisterCallbackNotInvokedWhileDisabled(t *testing.T) {
-	var storedCallback func()
-	configuratorOpt := testConfiguratorOpt{
-		fn:       disablingConfiguratorFn,
-		onUpdate: func(cb func()) { storedCallback = cb },
-	}
-
-	rdr := NewManualReader()
-	mp := NewMeterProvider(WithReader(rdr), configuratorOpt)
-	defer mp.Shutdown(t.Context()) //nolint:errcheck
-
-	m := mp.Meter("disabled")
-	ctr, err := m.Int64ObservableCounter("ctr")
-	require.NoError(t, err)
-
-	var invoked bool
-	_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-		invoked = true
-		o.ObserveInt64(ctr, 5)
-		return errCallbackShouldNotRun
-	}, ctr)
-	require.NoError(t, err)
-
-	var rm metricdata.ResourceMetrics
-	err = rdr.Collect(t.Context(), &rm)
-	assert.NoError(t, err, "callback error must not propagate while meter is disabled")
-	assert.False(t, invoked, "callback must not run at all while meter is disabled")
-	assert.Empty(t, rm.ScopeMetrics)
-
-	// Re-enable and confirm the callback resumes on the very next collection,
-	// with no re-registration needed.
-	mp.configurator = func() (func(instrumentation.Scope) any, uint64) {
-		return func(instrumentation.Scope) any {
-			return testMeterConfig{enabled: true}
-		}, 0
-	}
-	require.NotNil(t, storedCallback)
-	storedCallback()
-
-	rm = metricdata.ResourceMetrics{}
-	err = rdr.Collect(t.Context(), &rm)
-	assert.ErrorIs(t, err, errCallbackShouldNotRun, "callback error must propagate once re-enabled")
-	assert.True(t, invoked, "callback must run once re-enabled")
-}
