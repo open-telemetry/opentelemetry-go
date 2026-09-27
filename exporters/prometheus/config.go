@@ -107,16 +107,9 @@ func WithoutTargetInfo() Option {
 // [otlptranslator.UnderscoreEscapingWithSuffixes] for full Prometheus-style
 // compatibility or [otlptranslator.NoTranslation] for OpenTelemetry-style names.
 //
-// By default, if the NameValidationScheme variable in
-// [github.com/prometheus/common/model] is "legacy", the default strategy is
-// [otlptranslator.UnderscoreEscapingWithSuffixes]. If the validation scheme is
-// "utf8", then currently the default Strategy is
-// [otlptranslator.NoUTF8EscapingWithSuffixes].
-//
-// Notice: It is planned that a future release of this SDK will change the
-// default to always be [otlptranslator.UnderscoreEscapingWithSuffixes] in all
-// circumstances. Users wanting a different translation strategy should specify
-// it explicitly.
+// If this option is not used, the exporter defaults to
+// [otlptranslator.UnderscoreEscapingWithSuffixes]. Users wanting a different
+// translation strategy should specify it explicitly.
 func WithTranslationStrategy(strategy otlptranslator.TranslationStrategyOption) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.translationStrategy = strategy
