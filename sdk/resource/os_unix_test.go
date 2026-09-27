@@ -52,6 +52,32 @@ func TestUnameError(t *testing.T) {
 	resource.SetDefaultUnameProvider()
 }
 
+func TestPlatformOSDescription(t *testing.T) {
+	t.Run("default provider", func(t *testing.T) {
+		description, err := resource.PlatformOSDescription()
+		require.NoError(t, err)
+		require.NotEmpty(t, description)
+	})
+
+	t.Run("uname error propagates", func(t *testing.T) {
+		resource.SetUnameProvider(fakeUnameProviderWithError)
+		defer resource.SetDefaultUnameProvider()
+
+		description, err := resource.PlatformOSDescription()
+		require.Error(t, err)
+		require.Empty(t, description)
+	})
+
+	t.Run("fake uname with os release", func(t *testing.T) {
+		resource.SetUnameProvider(fakeUnameProvider)
+		defer resource.SetDefaultUnameProvider()
+
+		description, err := resource.PlatformOSDescription()
+		require.NoError(t, err)
+		require.Contains(t, description, "Mock OS DESKTOP-PC 5.0.0 #1 SMP Thu May 6 12:34:56 UTC 2021 x86_64")
+	})
+}
+
 func TestGetFirstAvailableFile(t *testing.T) {
 	tempDir := t.TempDir()
 
