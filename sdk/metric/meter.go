@@ -759,7 +759,7 @@ func (p int64InstProvider) lookup(
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
 		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
-		return &int64Inst{measures: aggs, meter: p.meter}, err
+		return &int64Inst{measures: aggs}, err
 	})
 }
 
@@ -776,7 +776,7 @@ func (p int64InstProvider) lookupHistogram(
 		Kind:        InstrumentKindHistogram,
 	}, func() (*int64Inst, error) {
 		aggs, err := p.histogramAggs(name, cfg, allowedKeys)
-		return &int64Inst{measures: aggs, meter: p.meter}, err
+		return &int64Inst{measures: aggs}, err
 	})
 }
 
@@ -833,7 +833,7 @@ func (p float64InstProvider) lookup(
 		Kind:        kind,
 	}, func() (*float64Inst, error) {
 		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
-		return &float64Inst{measures: aggs, meter: p.meter}, err
+		return &float64Inst{measures: aggs}, err
 	})
 }
 
@@ -850,7 +850,7 @@ func (p float64InstProvider) lookupHistogram(
 		Kind:        InstrumentKindHistogram,
 	}, func() (*float64Inst, error) {
 		aggs, err := p.histogramAggs(name, cfg, allowedKeys)
-		return &float64Inst{measures: aggs, meter: p.meter}, err
+		return &float64Inst{measures: aggs}, err
 	})
 }
 

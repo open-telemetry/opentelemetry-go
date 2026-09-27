@@ -7,13 +7,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/x"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -515,29 +513,4 @@ func TestMeterWithUnsafeAttributes(t *testing.T) {
 			metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 	}
-}
-
-func TestInstrumentHasMeterBackref(t *testing.T) {
-	mp := NewMeterProvider()
-	scope := instrumentation.Scope{Name: "test"}
-	m := mp.Meter(scope.Name)
-
-	cached := mp.meters.Lookup(scope, func() metric.Meter {
-		t.Fatal("meter must already be cached")
-		return nil
-	})
-	wantMeter, ok := cached.(*meter)
-	require.True(t, ok)
-
-	ctr, err := m.Int64Counter("int64-counter")
-	require.NoError(t, err)
-	i64, ok := ctr.(*int64Inst)
-	require.True(t, ok)
-	assert.Same(t, wantMeter, i64.meter)
-
-	hist, err := m.Float64Histogram("float64-histogram")
-	require.NoError(t, err)
-	f64, ok := hist.(*float64Inst)
-	require.True(t, ok)
-	assert.Same(t, wantMeter, f64.meter)
 }
