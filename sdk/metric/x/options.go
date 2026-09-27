@@ -105,6 +105,12 @@ func (meterConfiguratorProviderOption) Experimental() {}
 // [MeterConfiguratorHandle]'s doc comment.
 //
 // A nil h is a no-op, equivalent to omitting this option entirely.
+//
+// Only MeterProviders built with this option check the configurator when
+// recording; others are unaffected.
+//
+// Combining this option with other experimental MeterProvider options is not
+// yet supported.
 func WithMeterConfigurator(h *MeterConfiguratorHandle) sdkmetric.Option {
 	return meterConfiguratorProviderOption{handle: h}
 }
