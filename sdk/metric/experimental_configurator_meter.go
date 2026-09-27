@@ -16,7 +16,8 @@ type configuratorMeter struct {
 	*meter
 
 	// gate holds the configurator's enabled decision for the meter's scope.
-	gate *versionedEnabled
+	// The meter's instrument wrappers point at it, so they share its state.
+	gate versionedEnabled
 
 	// int64Wrappers and float64Wrappers return the same wrapper for the same
 	// base instrument, so repeated instrument creation returns an identical
@@ -29,9 +30,11 @@ type configuratorMeter struct {
 var _ metric.Meter = (*configuratorMeter)(nil)
 
 func newConfiguratorMeter(m *meter) *configuratorMeter {
-	// The gate is still the base meter's own enabled state, which the stable
-	// instruments read; later steps move it onto configuratorMeter.
-	return &configuratorMeter{meter: m, gate: &m.enabled}
+	cm := &configuratorMeter{meter: m}
+	// A meter is enabled until the configurator says otherwise. Version 0 is
+	// older than any Set, so a newer configuration always replaces it.
+	cm.gate.StoreIfNewer(0, true)
+	return cm
 }
 
 // setEnabledIfNewer applies enabled to the gate if version is at least as new
@@ -51,7 +54,7 @@ func (m *configuratorMeter) wrapInt64(inst any) (*configuratorInt64Inst, bool) {
 		return nil, false
 	}
 	return m.int64Wrappers.Lookup(base, func() *configuratorInt64Inst {
-		return &configuratorInt64Inst{int64Inst: base, gate: m.gate}
+		return &configuratorInt64Inst{int64Inst: base, gate: &m.gate}
 	}), true
 }
 
@@ -63,7 +66,7 @@ func (m *configuratorMeter) wrapFloat64(inst any) (*configuratorFloat64Inst, boo
 		return nil, false
 	}
 	return m.float64Wrappers.Lookup(base, func() *configuratorFloat64Inst {
-		return &configuratorFloat64Inst{float64Inst: base, gate: m.gate}
+		return &configuratorFloat64Inst{float64Inst: base, gate: &m.gate}
 	}), true
 }
 

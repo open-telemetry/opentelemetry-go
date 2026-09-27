@@ -176,7 +176,9 @@ func TestConfiguratorNewMeter(t *testing.T) {
 			case *configuratorMeter:
 				enabled = m.gate.Load()
 			case *meter:
-				enabled = m.enabled.Load()
+				// A meter from a provider without a configurator is never
+				// gated, so it always records.
+				enabled = true
 			default:
 				t.Fatalf("unexpected meter type %T", m)
 			}

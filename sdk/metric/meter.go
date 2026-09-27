@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync/atomic"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/internal/global"
@@ -28,9 +27,8 @@ var ErrInstrumentName = errors.New("invalid instrument name")
 type meter struct {
 	embedded.Meter
 
-	scope   instrumentation.Scope
-	pipes   pipelines
-	enabled versionedEnabled
+	scope instrumentation.Scope
+	pipes pipelines
 
 	int64Insts             *cacheWithErr[instID, *int64Inst]
 	float64Insts           *cacheWithErr[instID, *float64Inst]
@@ -60,53 +58,6 @@ func newMeter(s instrumentation.Scope, p pipelines) *meter {
 		float64ObservableInsts: &float64ObservableInsts,
 		int64Resolver:          newResolver[int64](p, &viewCache),
 		float64Resolver:        newResolver[float64](p, &viewCache),
-	}
-}
-
-func (m *meter) setEnabled(enabled bool) {
-	// 0 is a placeholder version until a real one is threaded through from
-	// the configurator; see StoreIfNewer's doc comment for why ties (0
-	// against 0) are allowed to overwrite.
-	m.enabled.StoreIfNewer(0, enabled)
-}
-
-// versionedEnabled holds an enabled bool and the version it was last set
-// under.
-type versionedEnabled struct {
-	// state contains a 63-bit version + 1-bit enabled.
-	// These are contained together so a write can atomically compare
-	// the stored version against its own and decide whether to overwrite.
-	// Add/Record/Observe call still does a single atomic load, with no
-	// extra allocation or synchronization added to the hot path.
-	state atomic.Uint64
-}
-
-// Load reports the currently stored enabled bool.
-func (ve *versionedEnabled) Load() bool {
-	return ve.state.Load()&1 != 0
-}
-
-// StoreIfNewer sets enabled if version is at least as new as the version
-// currently stored, and reports whether it did. Ties are allowed to
-// overwrite: a given version identifies a single configuration decision, so
-// two writes sharing a version can only ever be redoing the same decision,
-// never disagreeing ones.
-func (ve *versionedEnabled) StoreIfNewer( // nolint:revive  // enabled is not a control flag.
-	version uint64,
-	enabled bool,
-) bool {
-	nextVersionedState := version << 1
-	if enabled {
-		nextVersionedState |= 1
-	}
-	for {
-		oldState := ve.state.Load()
-		if version < (oldState >> 1) {
-			return false
-		}
-		if ve.state.CompareAndSwap(oldState, nextVersionedState) {
-			return true
-		}
 	}
 }
 

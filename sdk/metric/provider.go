@@ -153,7 +153,6 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	var cfgMeter *configuratorMeter
 	m := mp.meters.Lookup(s, func() metric.Meter {
 		m := newMeter(s, mp.pipes)
-		m.setEnabled(true)
 		if mp.configurator == nil {
 			return m
 		}
