@@ -468,7 +468,10 @@ func (s *autoSpan) end(opts []SpanEndOption) []byte {
 		s.span.EndTime = time.Now()
 	}
 
-	b, _ := json.Marshal(s.traces) // TODO: do not ignore this error.
+	b, err := json.Marshal(s.traces)
+	if err != nil {
+		return nil
+	}
 	return b
 }
 
