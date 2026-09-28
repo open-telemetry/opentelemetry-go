@@ -1243,7 +1243,7 @@ func TestNewPeriodicReaderInstRace(t *testing.T) {
 	t.Cleanup(func() { otel.SetMeterProvider(origMP) })
 
 	r := NewPeriodicReader(new(fnExporter), WithInterval(time.Millisecond))
-	require.NoError(t, r.Shutdown(context.Background()))
+	require.NoError(t, r.Shutdown(t.Context()))
 	assert.True(t, initHandled.Load(), "instrumentation setup error was not handled")
 }
 
