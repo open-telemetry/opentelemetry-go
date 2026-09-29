@@ -1120,6 +1120,29 @@ func TestBridgeSpan_BaggageItem(t *testing.T) {
 	})
 }
 
+func TestBridgeSpan_BaggageConcurrentSafe(t *testing.T) {
+	tracer := NewBridgeTracer()
+	span := tracer.StartSpan("span")
+	t.Cleanup(span.Finish)
+
+	const iterations = 1000
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for i := range iterations {
+			span.SetBaggageItem("key", strconv.Itoa(i))
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for range iterations {
+			span.Context().ForeachBaggageItem(func(_, _ string) bool { return true })
+		}
+	}()
+	wg.Wait()
+}
+
 func TestBridgeSpan_BaggageHookConcurrentSafe(t *testing.T) {
 	tracer := NewBridgeTracer()
 	span := tracer.StartSpan("span")
