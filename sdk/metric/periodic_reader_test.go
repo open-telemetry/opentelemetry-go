@@ -1237,7 +1237,7 @@ func TestNewPeriodicReaderInstRace(t *testing.T) {
 		// Doing this pauses initialization for a while so we can let some collect iterations run
 		select {
 		case <-firstCollect:
-		case <-time.After(250 * time.Millisecond):
+		case <-time.After(20 * time.Millisecond):
 		}
 	}})
 	t.Cleanup(func() { otel.SetMeterProvider(origMP) })
