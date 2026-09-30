@@ -4,7 +4,6 @@
 package x_test
 
 import (
-	"context"
 	"strconv"
 	"testing"
 
@@ -30,32 +29,60 @@ func BenchmarkConfiguratorSyncMeasure(b *testing.B) {
 	})
 
 	boundaries := sdkmetric.DefaultAggregationSelector(sdkmetric.InstrumentKindHistogram).(sdkmetric.AggregationExplicitBucketHistogram).Boundaries
-	histogramObservations := make([]int64, len(boundaries))
+	histogramObservations := make([]float64, len(boundaries))
 	for i, bound := range boundaries {
-		histogramObservations[i] = int64(bound + 1)
+		histogramObservations[i] = bound + 1
 	}
 
-	// record returns a function that makes the i-th measurement with set.
-	type record func(set attribute.Set) func(ctx context.Context, i int)
-	instruments := []struct {
-		name  string
-		build func(metric.Meter) (record, error)
+	// As in benchSyncViews, each provider and its instruments are created once
+	// and shared by every sub-benchmark that uses them.
+	type instruments struct {
+		counter   metric.Int64Counter
+		histogram metric.Int64Histogram
+	}
+	newInstruments := func(opts ...sdkmetric.Option) instruments {
+		opts = append(opts, sdkmetric.WithReader(sdkmetric.NewManualReader()))
+		m := sdkmetric.NewMeterProvider(opts...).Meter("benchSyncViews")
+		c, err := m.Int64Counter("int64-counter")
+		if err != nil {
+			b.Fatal(err)
+		}
+		h, err := m.Int64Histogram("int64-histogram")
+		if err != nil {
+			b.Fatal(err)
+		}
+		return instruments{counter: c, histogram: h}
+	}
+
+	handle := x.NewMeterConfiguratorHandle()
+	handle.Set(func(instrumentation.Scope) x.MeterConfig {
+		return x.NewMeterConfig(x.WithMeterEnabled(true))
+	})
+	providers := []struct {
+		name string
+		inst instruments
 	}{
-		{"Int64Counter", func(m metric.Meter) (record, error) {
-			c, err := m.Int64Counter("int64-counter")
-			return func(set attribute.Set) func(context.Context, int) {
-				o := []metric.AddOption{metric.WithAttributeSet(set)}
-				return func(ctx context.Context, _ int) { c.Add(ctx, 1, o...) }
-			}, err
+		{"stable", newInstruments()},
+		{"configurator", newInstruments(x.WithMeterConfigurator(handle))},
+	}
+
+	ctx := trace.ContextWithSpanContext(b.Context(), notSampled)
+
+	// measure returns a function that makes the i-th measurement with set.
+	type measure func(inst instruments, set attribute.Set) func(i int)
+	kinds := []struct {
+		name    string
+		measure measure
+	}{
+		{"Int64Counter", func(inst instruments, set attribute.Set) func(int) {
+			o := []metric.AddOption{metric.WithAttributeSet(set)}
+			return func(int) { inst.counter.Add(ctx, 1, o...) }
 		}},
-		{"Int64Histogram", func(m metric.Meter) (record, error) {
-			h, err := m.Int64Histogram("int64-histogram")
-			return func(set attribute.Set) func(context.Context, int) {
-				o := []metric.RecordOption{metric.WithAttributeSet(set)}
-				return func(ctx context.Context, i int) {
-					h.Record(ctx, histogramObservations[i%len(histogramObservations)], o...)
-				}
-			}, err
+		{"Int64Histogram", func(inst instruments, set attribute.Set) func(int) {
+			o := []metric.RecordOption{metric.WithAttributeSet(set)}
+			return func(i int) {
+				inst.histogram.Record(ctx, int64(histogramObservations[i%len(histogramObservations)]), o...)
+			}
 		}},
 	}
 
@@ -71,37 +98,15 @@ func BenchmarkConfiguratorSyncMeasure(b *testing.B) {
 		{"10", attribute.NewSet(attrs...)},
 	}
 
-	providers := []struct {
-		name string
-		opts func() []sdkmetric.Option
-	}{
-		{"stable", func() []sdkmetric.Option { return nil }},
-		{"configurator", func() []sdkmetric.Option {
-			h := x.NewMeterConfiguratorHandle()
-			h.Set(func(instrumentation.Scope) x.MeterConfig {
-				return x.NewMeterConfig(x.WithMeterEnabled(true))
-			})
-			return []sdkmetric.Option{x.WithMeterConfigurator(h)}
-		}},
-	}
-
-	for _, inst := range instruments {
+	for _, k := range kinds {
 		for _, as := range attrSets {
 			for _, p := range providers {
-				b.Run(inst.name+"/Attributes/"+as.name+"/provider="+p.name, func(b *testing.B) {
-					opts := append(p.opts(), sdkmetric.WithReader(sdkmetric.NewManualReader()))
-					rec, err := inst.build(sdkmetric.NewMeterProvider(opts...).Meter("bench"))
-					if err != nil {
-						b.Fatal(err)
-					}
-					f := rec(as.set)
-					ctx := trace.ContextWithSpanContext(b.Context(), notSampled)
-					b.ReportAllocs()
-					b.ResetTimer()
+				b.Run(k.name+"/Attributes/"+as.name+"/provider="+p.name, func(b *testing.B) {
+					f := k.measure(p.inst, as.set)
 					b.RunParallel(func(pb *testing.PB) {
 						i := 0
 						for pb.Next() {
-							f(ctx, i)
+							f(i)
 							i++
 						}
 					})
