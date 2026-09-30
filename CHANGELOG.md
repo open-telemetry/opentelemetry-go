@@ -38,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix a data race in `NewPeriodicReader` where `r.inst` was assigned after the background goroutine was launched in `go.opentelemetry.io/otel/sdk/metric`. (#9028)
+- Do not report an error through the global error handler when `WithCompressor("none")` is passed to `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` or `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`.
 - Prevent precision loss for large `int64` values in `Sum`, `Histogram`, and `ExponentialHistogram` aggregations in `go.opentelemetry.io/otel/sdk/metric`. (#8981)
 - Ensure `grpc.DialOption` values passed via `WithDialOption` take precedence over conflicting internally-computed defaults in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#8836)
 - Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)
