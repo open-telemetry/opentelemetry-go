@@ -13,7 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Automatically shut down configured Samplers and IDGenerators in
   `go.opentelemetry.io/otel/sdk/trace` and external Producers in
   `go.opentelemetry.io/otel/sdk/metric` when they implement
-  `Shutdown(context.Context) error`.
+  `Shutdown(context.Context) error`. (#9057)
 - Add `String` method for `KeyValue` type in `go.opentelemetry.io/otel/attribute`. (#8205)
 - Add `String` method for `Set` type in `go.opentelemetry.io/otel/attribute`. (#8347)
 - Add `WithMaxExportBatchSize` to `go.opentelemetry.io/otel/sdk/metric` to configure the maximum export batch size for `PeriodicReader`.
