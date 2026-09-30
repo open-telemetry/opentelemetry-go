@@ -60,6 +60,43 @@ func (*shutdownSpanProcessor) ForceFlush(context.Context) error {
 	return nil
 }
 
+type shutdownSampler struct {
+	shutdown     func(context.Context) error
+	shouldSample func(SamplingParameters) SamplingResult
+}
+
+func (s *shutdownSampler) ShouldSample(p SamplingParameters) SamplingResult {
+	if s.shouldSample != nil {
+		return s.shouldSample(p)
+	}
+	return SamplingResult{Decision: Drop}
+}
+
+func (*shutdownSampler) Description() string { return "shutdown sampler" }
+
+func (s *shutdownSampler) Shutdown(ctx context.Context) error { return s.shutdown(ctx) }
+
+type shutdownIDGenerator struct {
+	randomIDGenerator
+	shutdown func(context.Context) error
+	newIDs   func(context.Context) (trace.TraceID, trace.SpanID)
+}
+
+func (g *shutdownIDGenerator) Shutdown(ctx context.Context) error { return g.shutdown(ctx) }
+
+func (g *shutdownIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
+	if g.newIDs != nil {
+		return g.newIDs(ctx)
+	}
+	return g.randomIDGenerator.NewIDs(ctx)
+}
+
+type forwardingSampler struct{ Sampler }
+
+func (s forwardingSampler) Shutdown(ctx context.Context) error {
+	return s.Sampler.(shutdowner).Shutdown(ctx)
+}
+
 const sensitiveExporterEndpoint = "user:pass@collector.internal:4318"
 
 type marshalingSpanExporter struct{}
@@ -206,6 +243,200 @@ func TestShutdownTraceProvider(t *testing.T) {
 	assert.NoError(t, stp.Shutdown(t.Context()))
 	assert.True(t, stp.isShutdown.Load())
 	assert.True(t, sp.closed, "error Shutdown basicSpanProcessor")
+}
+
+func TestShutdownComponentsAfterProcessorsOnce(t *testing.T) {
+	var order []string
+	sampler := &shutdownSampler{shutdown: func(context.Context) error {
+		order = append(order, "sampler")
+		return nil
+	}}
+	idGenerator := &shutdownIDGenerator{shutdown: func(context.Context) error {
+		order = append(order, "ID generator")
+		return nil
+	}}
+	processor := &shutdownSpanProcessor{shutdown: func(context.Context) error {
+		order = append(order, "processor")
+		return nil
+	}}
+	tp := NewTracerProvider(WithSampler(sampler), WithIDGenerator(idGenerator), WithSpanProcessor(processor))
+
+	require.NoError(t, tp.Shutdown(t.Context()))
+	assert.Equal(t, []string{"processor", "sampler", "ID generator"}, order)
+	require.NoError(t, tp.Shutdown(t.Context()))
+	assert.Equal(t, []string{"processor", "sampler", "ID generator"}, order)
+}
+
+func TestCachedTracerAfterShutdownDoesNotUseClosedComponents(t *testing.T) {
+	var samplerUsed, idGeneratorUsed bool
+	sampler := &shutdownSampler{
+		shutdown: func(context.Context) error { return nil },
+		shouldSample: func(SamplingParameters) SamplingResult {
+			samplerUsed = true
+			return SamplingResult{Decision: Drop}
+		},
+	}
+	idGenerator := &shutdownIDGenerator{
+		shutdown: func(context.Context) error { return nil },
+		newIDs: func(context.Context) (trace.TraceID, trace.SpanID) {
+			idGeneratorUsed = true
+			return trace.TraceID{}, trace.SpanID{}
+		},
+	}
+	tp := NewTracerProvider(WithSampler(sampler), WithIDGenerator(idGenerator))
+	tracer := tp.Tracer("cached")
+	require.NoError(t, tp.Shutdown(t.Context()))
+
+	_, span := tracer.Start(t.Context(), "after shutdown")
+	assert.False(t, span.IsRecording())
+	assert.False(t, samplerUsed)
+	assert.False(t, idGeneratorUsed)
+}
+
+func TestCompositeSamplerRepeatedDelegateShutdownPerSlot(t *testing.T) {
+	var shutdownCount int
+	delegate := &shutdownSampler{shutdown: func(context.Context) error {
+		shutdownCount++
+		return nil
+	}}
+	tp := NewTracerProvider(WithSampler(AlwaysRecord(ParentBased(
+		delegate,
+		WithRemoteParentSampled(delegate),
+		WithLocalParentNotSampled(delegate),
+	))))
+
+	require.NoError(t, tp.Shutdown(t.Context()))
+	assert.Equal(t, 3, shutdownCount)
+}
+
+func TestCompositeSamplerShutdownPropagatesThroughCustomWrapper(t *testing.T) {
+	var shutdownCount int
+	delegate := &shutdownSampler{shutdown: func(context.Context) error {
+		shutdownCount++
+		return nil
+	}}
+	composite := ParentBased(delegate)
+	_, ok := composite.(shutdowner)
+	require.True(t, ok)
+	tp := NewTracerProvider(WithSampler(forwardingSampler{Sampler: composite}))
+
+	require.NoError(t, tp.Shutdown(t.Context()))
+	assert.Equal(t, 1, shutdownCount)
+}
+
+func TestCompositeSamplerShutdownErrorAndCancellation(t *testing.T) {
+	t.Run("error does not stop other delegates", func(t *testing.T) {
+		shutdownErr := errors.New("sampler shutdown failed")
+		root := &shutdownSampler{shutdown: func(context.Context) error { return shutdownErr }}
+		var nextCalled bool
+		next := &shutdownSampler{shutdown: func(context.Context) error {
+			nextCalled = true
+			return nil
+		}}
+		tp := NewTracerProvider(WithSampler(ParentBased(root, WithRemoteParentSampled(next))))
+
+		assert.ErrorIs(t, tp.Shutdown(t.Context()), shutdownErr)
+		assert.True(t, nextCalled)
+	})
+
+	t.Run("cancellation skips later delegates", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		root := &shutdownSampler{shutdown: func(context.Context) error {
+			cancel()
+			return nil
+		}}
+		var nextCalled bool
+		next := &shutdownSampler{shutdown: func(context.Context) error {
+			nextCalled = true
+			return nil
+		}}
+		tp := NewTracerProvider(WithSampler(ParentBased(root, WithRemoteParentSampled(next))))
+
+		assert.ErrorIs(t, tp.Shutdown(ctx), context.Canceled)
+		assert.False(t, nextCalled)
+	})
+}
+
+func TestDefaultSamplerDecoratorsDoNotRequireShutdown(t *testing.T) {
+	_, parentBasedShutdown := ParentBased(AlwaysSample()).(shutdowner)
+	_, alwaysRecordShutdown := AlwaysRecord(AlwaysSample()).(shutdowner)
+	assert.False(t, parentBasedShutdown)
+	assert.False(t, alwaysRecordShutdown)
+}
+
+func TestShutdownComponentsJoinErrors(t *testing.T) {
+	processorErr := errors.New("processor shutdown failed")
+	samplerErr := errors.New("sampler shutdown failed")
+	idGeneratorErr := errors.New("ID generator shutdown failed")
+	sampler := &shutdownSampler{shutdown: func(context.Context) error { return samplerErr }}
+	idGenerator := &shutdownIDGenerator{shutdown: func(context.Context) error { return idGeneratorErr }}
+	processor := &shutdownSpanProcessor{shutdown: func(context.Context) error { return processorErr }}
+	tp := NewTracerProvider(WithSampler(sampler), WithIDGenerator(idGenerator), WithSpanProcessor(processor))
+
+	err := tp.Shutdown(t.Context())
+	assert.ErrorIs(t, err, processorErr)
+	assert.ErrorIs(t, err, samplerErr)
+	assert.ErrorIs(t, err, idGeneratorErr)
+}
+
+func TestShutdownComponentsRespectCancellation(t *testing.T) {
+	t.Run("default components", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		tp := NewTracerProvider()
+
+		assert.NoError(t, tp.Shutdown(ctx))
+	})
+
+	t.Run("before shutdown", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		var samplerCalled, idGeneratorCalled bool
+		sampler := &shutdownSampler{shutdown: func(context.Context) error {
+			samplerCalled = true
+			return nil
+		}}
+		idGenerator := &shutdownIDGenerator{shutdown: func(context.Context) error {
+			idGeneratorCalled = true
+			return nil
+		}}
+		tp := NewTracerProvider(WithSampler(sampler), WithIDGenerator(idGenerator))
+
+		assert.ErrorIs(t, tp.Shutdown(ctx), context.Canceled)
+		assert.False(t, samplerCalled)
+		assert.False(t, idGeneratorCalled)
+	})
+
+	t.Run("during sampler shutdown", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		var idGeneratorCalled bool
+		sampler := &shutdownSampler{shutdown: func(context.Context) error {
+			cancel()
+			return nil
+		}}
+		idGenerator := &shutdownIDGenerator{shutdown: func(context.Context) error {
+			idGeneratorCalled = true
+			return nil
+		}}
+		tp := NewTracerProvider(WithSampler(sampler), WithIDGenerator(idGenerator))
+
+		assert.ErrorIs(t, tp.Shutdown(ctx), context.Canceled)
+		assert.False(t, idGeneratorCalled)
+	})
+
+	t.Run("during ID generator shutdown", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		idGenerator := &shutdownIDGenerator{shutdown: func(context.Context) error {
+			cancel()
+			return nil
+		}}
+		tp := NewTracerProvider(WithIDGenerator(idGenerator))
+
+		assert.ErrorIs(t, tp.Shutdown(ctx), context.Canceled)
+	})
 }
 
 func TestFailedProcessorShutdown(t *testing.T) {

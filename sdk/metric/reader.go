@@ -238,8 +238,39 @@ type ReaderOption interface {
 
 // WithProducer registers producers as an external Producer of metric data
 // for this Reader.
+//
+// Implementing Shutdown(context.Context) error opts p into automatic cleanup
+// by the Reader, after its own shutdown work (including the final collection
+// for a PeriodicReader). A Producer shared between Readers must coordinate its
+// lifetime across them. A Collect begun before Reader.Shutdown may call
+// p.Produce even after Shutdown returns. The Producer must tolerate that call
+// or coordinate its completion before releasing resources.
 func WithProducer(p Producer) ReaderOption {
 	return producerOption{p: p}
+}
+
+type producerShutdowner interface {
+	Shutdown(context.Context) error
+}
+
+func shutdownProducers(ctx context.Context, producers []Producer) error {
+	var err error
+	var attempted bool
+	for _, producer := range producers {
+		shutdowner, ok := producer.(producerShutdowner)
+		if !ok {
+			continue
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return errors.Join(err, ctxErr)
+		}
+		attempted = true
+		err = errors.Join(err, shutdowner.Shutdown(ctx))
+	}
+	if attempted && ctx.Err() != nil {
+		return errors.Join(err, ctx.Err())
+	}
+	return err
 }
 
 type producerOption struct {

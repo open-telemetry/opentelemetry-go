@@ -6,6 +6,7 @@ package trace
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -182,16 +183,57 @@ func (s predeterminedSampler) Description() string {
 //   - remoteParentNotSampled(Sampler) (default: AlwaysOff)
 //   - localParentSampled(Sampler) (default: AlwaysOn)
 //   - localParentNotSampled(Sampler) (default: AlwaysOff)
+//
+// If a delegate implements Shutdown(context.Context) error, the returned
+// sampler also implements it and calls each such delegate for its configured
+// slot. A delegate used in multiple slots must tolerate multiple calls.
 func ParentBased(root Sampler, samplers ...ParentBasedSamplerOption) Sampler {
-	return parentBased{
+	pb := parentBased{
 		root:   root,
 		config: configureSamplersForParentBased(samplers),
 	}
+	for _, delegate := range [...]Sampler{
+		pb.root,
+		pb.config.remoteParentSampled,
+		pb.config.remoteParentNotSampled,
+		pb.config.localParentSampled,
+		pb.config.localParentNotSampled,
+	} {
+		if _, ok := delegate.(shutdowner); ok {
+			return shutdownParentBased{pb}
+		}
+	}
+	return pb
 }
 
 type parentBased struct {
 	root   Sampler
 	config samplerConfig
+}
+
+type shutdownParentBased struct{ parentBased }
+
+func (pb shutdownParentBased) Shutdown(ctx context.Context) error {
+	return shutdownSamplerDelegates(ctx,
+		pb.root,
+		pb.config.remoteParentSampled,
+		pb.config.remoteParentNotSampled,
+		pb.config.localParentSampled,
+		pb.config.localParentNotSampled,
+	)
+}
+
+func shutdownSamplerDelegates(ctx context.Context, delegates ...Sampler) error {
+	var retErr error
+	for _, delegate := range delegates {
+		if s, ok := delegate.(shutdowner); ok {
+			if err := ctx.Err(); err != nil {
+				return errors.Join(retErr, err)
+			}
+			retErr = errors.Join(retErr, s.Shutdown(ctx))
+		}
+	}
+	return errors.Join(retErr, ctx.Err())
 }
 
 func configureSamplersForParentBased(samplers []ParentBasedSamplerOption) samplerConfig {
@@ -313,12 +355,24 @@ func (pb parentBased) Description() string {
 // It converts `Drop` decisions from the root sampler into `RecordOnly` decisions,
 // allowing processors to see all spans without sending them to exporters. This is
 // typically used to enable accurate span-to-metrics processing.
+// If root implements Shutdown(context.Context) error, the returned sampler
+// implements it and forwards Shutdown to root.
 func AlwaysRecord(root Sampler) Sampler {
-	return alwaysRecord{root}
+	ar := alwaysRecord{root}
+	if _, ok := root.(shutdowner); ok {
+		return shutdownAlwaysRecord{ar}
+	}
+	return ar
 }
 
 type alwaysRecord struct {
 	root Sampler
+}
+
+type shutdownAlwaysRecord struct{ alwaysRecord }
+
+func (ar shutdownAlwaysRecord) Shutdown(ctx context.Context) error {
+	return shutdownSamplerDelegates(ctx, ar.root)
 }
 
 func (ar alwaysRecord) ShouldSample(p SamplingParameters) SamplingResult {

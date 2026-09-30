@@ -5,6 +5,7 @@ package metric
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -78,6 +79,77 @@ func (ts *readerTestSuite) TestShutdownTwice() {
 	ts.Reader.register(testSDKProducer{})
 	ts.Require().NoError(ts.Reader.Shutdown(ctx))
 	ts.ErrorIs(ts.Reader.Shutdown(ctx), ErrReaderShutdown)
+}
+
+func (ts *readerTestSuite) TestExternalProducerShutdown() {
+	var calls int
+	p := &shutdownExternalProducer{shutdownFunc: func(context.Context) error {
+		calls++
+		return nil
+	}}
+	ts.Reader = ts.Factory(WithProducer(p))
+	ts.Reader.register(testSDKProducer{})
+
+	ts.NoError(ts.Reader.Shutdown(context.Background()))
+	ts.Equal(1, calls)
+	ts.ErrorIs(ts.Reader.Shutdown(context.Background()), ErrReaderShutdown)
+	ts.Equal(1, calls)
+}
+
+func (ts *readerTestSuite) TestExternalProducerShutdownBeforeRegister() {
+	var calls int
+	ts.Reader = ts.Factory(WithProducer(&shutdownExternalProducer{
+		shutdownFunc: func(context.Context) error {
+			calls++
+			return nil
+		},
+	}))
+
+	ts.NoError(ts.Reader.Shutdown(context.Background()))
+	ts.Equal(1, calls)
+}
+
+func (ts *readerTestSuite) TestExternalProducerShutdownErrors() {
+	firstErr := errors.New("first producer shutdown")
+	secondErr := errors.New("second producer shutdown")
+	var calls int
+	ts.Reader = ts.Factory(
+		WithProducer(&shutdownExternalProducer{shutdownFunc: func(context.Context) error {
+			calls++
+			return firstErr
+		}}),
+		WithProducer(&shutdownExternalProducer{shutdownFunc: func(context.Context) error {
+			calls++
+			return secondErr
+		}}),
+	)
+	ts.Reader.register(testSDKProducer{})
+
+	err := ts.Reader.Shutdown(context.Background())
+	ts.ErrorIs(err, firstErr)
+	ts.ErrorIs(err, secondErr)
+	ts.Equal(2, calls)
+}
+
+func (ts *readerTestSuite) TestExternalProducerShutdownCancellation() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var calls int
+	ts.Reader = ts.Factory(
+		WithProducer(&shutdownExternalProducer{shutdownFunc: func(context.Context) error {
+			calls++
+			cancel()
+			return nil
+		}}),
+		WithProducer(&shutdownExternalProducer{shutdownFunc: func(context.Context) error {
+			calls++
+			return nil
+		}}),
+	)
+	ts.Reader.register(testSDKProducer{})
+
+	ts.ErrorIs(ts.Reader.Shutdown(ctx), context.Canceled)
+	ts.Equal(1, calls)
 }
 
 func (ts *readerTestSuite) TestMultipleRegister() {
@@ -251,6 +323,15 @@ func (p testSDKProducer) produce(ctx context.Context, rm *metricdata.ResourceMet
 
 type testExternalProducer struct {
 	produceFunc func(context.Context) ([]metricdata.ScopeMetrics, error)
+}
+
+type shutdownExternalProducer struct {
+	testExternalProducer
+	shutdownFunc func(context.Context) error
+}
+
+func (p *shutdownExternalProducer) Shutdown(ctx context.Context) error {
+	return p.shutdownFunc(ctx)
 }
 
 func (p testExternalProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {

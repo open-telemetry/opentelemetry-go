@@ -93,6 +93,10 @@ type experimentalOption interface {
 	Experimental()
 }
 
+type shutdowner interface {
+	Shutdown(context.Context) error
+}
+
 // NewTracerProvider returns a new and configured TracerProvider.
 //
 // By default the returned TracerProvider is configured with:
@@ -297,7 +301,9 @@ func (p *TracerProvider) ForceFlush(ctx context.Context) error {
 }
 
 // Shutdown shuts down TracerProvider. All registered span processors are shut down
-// in the order they were registered and any held computational resources are released.
+// in the order they were registered, followed by the configured sampler, its
+// delegates in SDK decorators, and ID generator when they implement
+// Shutdown(context.Context) error. Any held computational resources are released.
 // After Shutdown is called, all methods are no-ops.
 func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	// This check prevents deadlocks in case of recursive shutdown.
@@ -326,6 +332,24 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 		retErr = errors.Join(retErr, err)
 	}
 	p.spanProcessors.Store(&spanProcessorStates{})
+	var componentShutdown bool
+	if s, ok := p.sampler.(shutdowner); ok {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(retErr, err)
+		}
+		retErr = errors.Join(retErr, s.Shutdown(ctx))
+		componentShutdown = true
+	}
+	if s, ok := p.idGenerator.(shutdowner); ok {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(retErr, err)
+		}
+		retErr = errors.Join(retErr, s.Shutdown(ctx))
+		componentShutdown = true
+	}
+	if componentShutdown {
+		retErr = errors.Join(retErr, ctx.Err())
+	}
 	return retErr
 }
 
@@ -405,6 +429,14 @@ func WithResource(r *resource.Resource) TracerProviderOption {
 //
 // If this option is not used, the TracerProvider will use a random number
 // IDGenerator by default.
+//
+// Implementing Shutdown(context.Context) error opts g into automatic cleanup
+// by the provider, after its span processors and sampler. A Start begun before
+// provider shutdown may call NewIDs or NewSpanID even after Shutdown returns;
+// g must tolerate that call or coordinate its completion before releasing
+// resources.
+// A component shared across provider roles or providers can receive multiple
+// Shutdown calls and must make cleanup safe for that use.
 func WithIDGenerator(g IDGenerator) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
 		if g != nil {
@@ -418,6 +450,15 @@ func WithIDGenerator(g IDGenerator) TracerProviderOption {
 // s as a TracerProvider's Sampler. The configured Sampler is used by the
 // Tracers the TracerProvider creates to make their sampling decisions for the
 // Spans they create.
+//
+// Implementing Shutdown(context.Context) error opts s into automatic cleanup
+// by the provider after its span processors. ParentBased and AlwaysRecord
+// forward Shutdown from their delegates; a custom sampler decorator must do so
+// itself. A Start begun before provider shutdown may call ShouldSample even
+// after Shutdown returns; the sampler must tolerate that call or coordinate its
+// completion before releasing resources. A component shared across provider
+// roles, providers, or delegate slots can receive multiple Shutdown calls and
+// must make cleanup safe for that use.
 //
 // This option overrides the Sampler configured through the OTEL_TRACES_SAMPLER
 // and OTEL_TRACES_SAMPLER_ARG environment variables. If this option is not used
