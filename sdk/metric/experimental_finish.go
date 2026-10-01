@@ -9,18 +9,9 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/finish"
 )
-
-func newFinishMeterFactory() (meterFactoryFn meterFactory, shutdown func(context.Context) error) {
-	registry := &finish.Registry{}
-	return func(s instrumentation.Scope, p pipelines) metric.Meter {
-		m := newMeter(s, p)
-		return finish.NewMeter(m, &factory{meter: m, registry: registry})
-	}, registry.Shutdown
-}
 
 // factory adapts the SDK pipeline resolver to Finish instrument construction.
 type factory struct {

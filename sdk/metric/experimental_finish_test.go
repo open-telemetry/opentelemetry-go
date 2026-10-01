@@ -5,6 +5,7 @@ package metric
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,6 +26,39 @@ func (testFinishOption) apply(config) config {
 func (testFinishOption) Experimental() {}
 
 func (o testFinishOption) FinishEnabled() bool { return bool(o) }
+
+type testObservedFinishOption struct {
+	testFinishOption
+	checked *int
+}
+
+func (o testObservedFinishOption) FinishEnabled() bool {
+	*o.checked++
+	return o.testFinishOption.FinishEnabled()
+}
+
+func TestExperimentalMeterFactoryChecksAllOptions(t *testing.T) {
+	for _, enabled := range [][]bool{{true, false}, {false, true}, {true, true}} {
+		t.Run(fmt.Sprint(enabled), func(t *testing.T) {
+			checked := 0
+			options := []Option{testExperimentalOption{}}
+			for _, value := range enabled {
+				options = append(options, testObservedFinishOption{
+					testFinishOption: testFinishOption(value),
+					checked:          &checked,
+				})
+			}
+			provider := NewMeterProvider(options...)
+			t.Cleanup(func() { assert.NoError(t, provider.Shutdown(t.Context())) })
+
+			assert.Equal(t, len(enabled), checked)
+			counter, err := provider.Meter("test").Int64Counter("requests")
+			require.NoError(t, err)
+			_, ok := counter.(metricx.Finisher)
+			assert.True(t, ok)
+		})
+	}
+}
 
 type testUnknownAggregation struct{}
 
