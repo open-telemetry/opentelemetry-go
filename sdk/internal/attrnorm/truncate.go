@@ -359,6 +359,10 @@ func truncate(limit int, s string) string {
 			continue
 		}
 
+		// A zero limit also truncates a leading invalid byte or U+FFFD.
+		if limit == 0 {
+			return ""
+		}
 		_, size := utf8.DecodeRuneInString(s[i:])
 		if size == 1 {
 			// Invalid encoding.
