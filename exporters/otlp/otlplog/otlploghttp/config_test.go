@@ -146,6 +146,34 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "WithEndpointURLInvalidKeepsDefaults",
+			options: []Option{
+				WithEndpointURL(":\x7f"),
+			},
+			want: config{
+				endpoint: newSetting(defaultEndpoint),
+				path:     newSetting(defaultPath),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+		},
+		{
+			name: "WithEndpointURLInvalidPreservesPriorOptions",
+			options: []Option{
+				WithEndpoint("custom.endpoint:9090"),
+				WithURLPath("/custom/path"),
+				WithInsecure(),
+				WithEndpointURL("://invalid-url"),
+			},
+			want: config{
+				endpoint: newSetting("custom.endpoint:9090"),
+				path:     newSetting("/custom/path"),
+				insecure: newSetting(true),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+		},
+		{
 			name: "EndpointPrecedence",
 			options: []Option{
 				WithEndpointURL(httpsEndpointURL),
@@ -367,6 +395,7 @@ func TestNewConfig(t *testing.T) {
 			name: "InvalidEnvironmentVariables",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT":           "%invalid",
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE":           "not-a-bool",
 				"OTEL_EXPORTER_OTLP_LOGS_HEADERS":            "invalid key=value",
 				"OTEL_EXPORTER_OTLP_LOGS_COMPRESSION":        "xz",
 				"OTEL_EXPORTER_OTLP_LOGS_TIMEOUT":            "100 seconds",
@@ -382,6 +411,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			errs: []string{
 				`invalid OTEL_EXPORTER_OTLP_LOGS_ENDPOINT value %invalid: parse "%invalid": invalid URL escape "%in"`,
+				`invalid OTEL_EXPORTER_OTLP_LOGS_INSECURE value not-a-bool: can't convert "not-a-bool" to bool`,
 				`failed to load TLS:`,
 				`certificate not added`,
 				`tls: failed to find any PEM data in certificate input`,
