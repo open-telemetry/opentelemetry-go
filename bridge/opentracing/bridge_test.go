@@ -1127,19 +1127,16 @@ func TestBridgeSpan_BaggageConcurrentSafe(t *testing.T) {
 
 	const iterations = 1000
 	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for i := range iterations {
 			span.SetBaggageItem("key", strconv.Itoa(i))
 		}
-	}()
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		for range iterations {
 			span.Context().ForeachBaggageItem(func(_, _ string) bool { return true })
 		}
-	}()
+	})
 	wg.Wait()
 }
 
