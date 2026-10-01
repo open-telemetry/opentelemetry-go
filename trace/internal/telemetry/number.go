@@ -5,6 +5,7 @@ package telemetry
 
 import (
 	"encoding/json"
+	"math"
 	"strconv"
 )
 
@@ -62,6 +63,46 @@ func (i *protoUint64) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		*i = protoUint64(parsedUint)
+	}
+	return nil
+}
+
+// protoFloat64 encodes non-finite values as strings per ProtoJSON.
+type protoFloat64 float64
+
+func (f *protoFloat64) Float64() float64 { return float64(*f) }
+
+func (f protoFloat64) MarshalJSON() ([]byte, error) {
+	v := float64(f)
+	switch {
+	case math.IsNaN(v):
+		return []byte(`"NaN"`), nil
+	case math.IsInf(v, 1):
+		return []byte(`"Infinity"`), nil
+	case math.IsInf(v, -1):
+		return []byte(`"-Infinity"`), nil
+	default:
+		return strconv.AppendFloat(nil, v, 'g', -1, 64), nil
+	}
+}
+
+func (f *protoFloat64) UnmarshalJSON(data []byte) error {
+	if data[0] == '"' {
+		var str string
+		if err := json.Unmarshal(data, &str); err != nil {
+			return err
+		}
+		parsedFloat, err := strconv.ParseFloat(str, 64)
+		if err != nil {
+			return err
+		}
+		*f = protoFloat64(parsedFloat)
+	} else {
+		var parsedFloat float64
+		if err := json.Unmarshal(data, &parsedFloat); err != nil {
+			return err
+		}
+		*f = protoFloat64(parsedFloat)
 	}
 	return nil
 }
