@@ -40,7 +40,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/MirrexOne/unqueryvet v1.5.4 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.1 // indirect
-	github.com/ProtonMail/go-crypto v1.5.1 // indirect
+	github.com/ProtonMail/go-crypto v1.5.2 // indirect
 	github.com/alecthomas/chroma/v2 v2.27.0 // indirect
 	github.com/alecthomas/go-check-sumtype v0.5.1-0.20260828200218-ae6904d28606 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.6 // indirect
@@ -64,7 +64,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charithe/durationcheck v0.0.11 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
-	github.com/charmbracelet/ultraviolet v0.0.0-20260922123528-4e49372c11f9 // indirect
+	github.com/charmbracelet/ultraviolet v0.0.0-20260929091141-666ce5eec9fc // indirect
 	github.com/charmbracelet/x/ansi v0.11.8 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
@@ -105,11 +105,11 @@ require (
 	github.com/gofrs/flock v0.13.1 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golangci/asciicheck v0.5.0 // indirect
-	github.com/golangci/canonicalheader v0.0.0-20260827115959-a25c71c521f6 // indirect
+	github.com/golangci/canonicalheader v0.0.0-20260928145534-e18e5c5a078f // indirect
 	github.com/golangci/dupl v0.0.0-20260401084720-c99c5cf5c202 // indirect
 	github.com/golangci/go-printf-func-name v0.1.1 // indirect
 	github.com/golangci/gofmt v0.0.0-20260820135601-e84e05053792 // indirect
-	github.com/golangci/golines v0.15.0 // indirect
+	github.com/golangci/golines v0.16.0 // indirect
 	github.com/golangci/misspell v0.8.0 // indirect
 	github.com/golangci/plugin-module-register v0.1.2 // indirect
 	github.com/golangci/revgrep v0.8.0 // indirect
@@ -170,7 +170,7 @@ require (
 	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
-	github.com/prometheus/common v0.71.0 // indirect
+	github.com/prometheus/common v0.72.0 // indirect
 	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/quasilyte/go-ruleguard v0.4.5 // indirect
 	github.com/quasilyte/go-ruleguard/dsl v0.3.23 // indirect
@@ -213,7 +213,7 @@ require (
 	github.com/ultraware/funlen v0.2.0 // indirect
 	github.com/ultraware/whitespace v0.2.0 // indirect
 	github.com/uudashr/gocognit v1.2.1 // indirect
-	github.com/uudashr/iface v1.5.1 // indirect
+	github.com/uudashr/iface v1.5.2 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xen0n/gosmopolitan v1.3.0 // indirect
 	github.com/xo/terminfo v1.2.0 // indirect
