@@ -101,7 +101,7 @@ func IntEnvOr(key string, defaultValue int) int {
 func positiveIntEnvOr(key string, defaultValue int) int {
 	intValue := IntEnvOr(key, defaultValue)
 	if intValue <= 0 {
-		global.Info("Got invalid value, positive number expected.", key, intValue)
+		global.Warn("Got invalid value, positive number expected.", key, intValue)
 		return defaultValue
 	}
 
