@@ -8,6 +8,11 @@ import (
 	"testing"
 )
 
+var (
+	validTraceIDRe = regexp.MustCompile(`^[0-9a-f]{32}$`)
+	validSpanIDRe  = regexp.MustCompile(`^[0-9a-f]{16}$`)
+)
+
 func FuzzTraceIDFromHex(f *testing.F) {
 	// Seed corpus with valid and edge-case examples.
 	f.Add("00000000000000000000000000000001") // Lowest valid (non-zero).
@@ -15,8 +20,6 @@ func FuzzTraceIDFromHex(f *testing.F) {
 	f.Add("ffffffffffffffffffffffffffffffff") // Highest valid.
 	f.Add("0123456789abcdefabcdefabcdefabcd")
 	f.Add("invalidhexstringnot32chars") // Invalid.
-
-	validTraceIDRe := regexp.MustCompile(`^[0-9a-f]{32}$`)
 
 	f.Fuzz(func(t *testing.T, s string) {
 		id, err := TraceIDFromHex(s)
@@ -47,8 +50,6 @@ func FuzzSpanIDFromHex(f *testing.F) {
 	f.Add("ffffffffffffffff") // Highest valid.
 	f.Add("abcdefabcdefabcd")
 	f.Add("invalidhex") // Invalid.
-
-	validSpanIDRe := regexp.MustCompile(`^[0-9a-f]{16}$`)
 
 	f.Fuzz(func(t *testing.T, s string) {
 		id, err := SpanIDFromHex(s)

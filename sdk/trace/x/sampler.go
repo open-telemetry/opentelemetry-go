@@ -10,6 +10,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -34,6 +35,11 @@ type probabilitySampler struct {
 	threshold   uint64
 	thkv        string
 	description string
+
+	// combineErrOnce ensures the error from combining the tracestate is
+	// handled only once. Reporting the same error for every sampling
+	// decision is redundant and can grow logs without bound.
+	combineErrOnce sync.Once
 }
 
 // ShouldSample implements sdktrace.Sampler.
@@ -75,8 +81,12 @@ func (ps *probabilitySampler) ShouldSample(p sdktrace.SamplingParameters) sdktra
 
 	combined, err := state.Insert("ot", newOtts)
 	if err != nil {
-		// This should never happen, but we handle it here for code hygiene.
-		otel.Handle(fmt.Errorf("could not combine tracestate: %w", err))
+		// This can happen when the incoming "ot" entry is invalid, for
+		// example when combining it with the threshold would exceed the
+		// maximum length of a tracestate value.
+		ps.combineErrOnce.Do(func() {
+			otel.Handle(fmt.Errorf("could not combine tracestate: %w", err))
+		})
 		return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample, Tracestate: state}
 	}
 	return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample, Tracestate: combined}

@@ -172,7 +172,7 @@ func equalGauges[N int64 | float64](a, b metricdata.Gauge[N], cfg config) (reaso
 		a.DataPoints,
 		b.DataPoints,
 		func(dp metricdata.DataPoint[N]) string {
-			return fmt.Sprintf("DataPoint [%v]", dp.Attributes.Encoded(attribute.DefaultEncoder()))
+			return "DataPoint " + dp.Attributes.String()
 		},
 		func(a, b metricdata.DataPoint[N]) []string {
 			return equalDataPoints(a, b, cfg)
@@ -201,7 +201,7 @@ func equalSums[N int64 | float64](a, b metricdata.Sum[N], cfg config) (reasons [
 		a.DataPoints,
 		b.DataPoints,
 		func(dp metricdata.DataPoint[N]) string {
-			return fmt.Sprintf("DataPoint [%v]", dp.Attributes.Encoded(attribute.DefaultEncoder()))
+			return "DataPoint " + dp.Attributes.String()
 		},
 		func(a, b metricdata.DataPoint[N]) []string {
 			return equalDataPoints(a, b, cfg)
@@ -227,7 +227,7 @@ func equalHistograms[N int64 | float64](a, b metricdata.Histogram[N], cfg config
 		a.DataPoints,
 		b.DataPoints,
 		func(dp metricdata.HistogramDataPoint[N]) string {
-			return fmt.Sprintf("HistogramDataPoint [%v]", dp.Attributes.Encoded(attribute.DefaultEncoder()))
+			return "HistogramDataPoint " + dp.Attributes.String()
 		},
 		func(a, b metricdata.HistogramDataPoint[N]) []string {
 			return equalHistogramDataPoints(a, b, cfg)
@@ -248,8 +248,8 @@ func equalDataPoints[N int64 | float64](
 	if !a.Attributes.Equals(&b.Attributes) {
 		reasons = append(reasons, notEqualStr(
 			"Attributes",
-			a.Attributes.Encoded(attribute.DefaultEncoder()),
-			b.Attributes.Encoded(attribute.DefaultEncoder()),
+			a.Attributes.String(),
+			b.Attributes.String(),
 		))
 	}
 
@@ -295,8 +295,8 @@ func equalHistogramDataPoints[N int64 | float64](
 	if !a.Attributes.Equals(&b.Attributes) {
 		reasons = append(reasons, notEqualStr(
 			"Attributes",
-			a.Attributes.Encoded(attribute.DefaultEncoder()),
-			b.Attributes.Encoded(attribute.DefaultEncoder()),
+			a.Attributes.String(),
+			b.Attributes.String(),
 		))
 	}
 	if !cfg.ignoreTimestamp {
@@ -362,7 +362,7 @@ func equalExponentialHistograms[N int64 | float64](
 		a.DataPoints,
 		b.DataPoints,
 		func(dp metricdata.ExponentialHistogramDataPoint[N]) string {
-			return fmt.Sprintf("ExponentialHistogramDataPoint [%v]", dp.Attributes.Encoded(attribute.DefaultEncoder()))
+			return "ExponentialHistogramDataPoint " + dp.Attributes.String()
 		},
 		func(a, b metricdata.ExponentialHistogramDataPoint[N]) []string {
 			return equalExponentialHistogramDataPoints(a, b, cfg)
@@ -383,8 +383,8 @@ func equalExponentialHistogramDataPoints[N int64 | float64](
 	if !a.Attributes.Equals(&b.Attributes) {
 		reasons = append(reasons, notEqualStr(
 			"Attributes",
-			a.Attributes.Encoded(attribute.DefaultEncoder()),
-			b.Attributes.Encoded(attribute.DefaultEncoder()),
+			a.Attributes.String(),
+			b.Attributes.String(),
 		))
 	}
 	if !cfg.ignoreTimestamp {
@@ -458,7 +458,7 @@ func equalSummary(a, b metricdata.Summary, cfg config) (reasons []string) {
 		a.DataPoints,
 		b.DataPoints,
 		func(dp metricdata.SummaryDataPoint) string {
-			return fmt.Sprintf("SummaryDataPoint [%v]", dp.Attributes.Encoded(attribute.DefaultEncoder()))
+			return "SummaryDataPoint " + dp.Attributes.String()
 		},
 		func(a, b metricdata.SummaryDataPoint) []string {
 			return equalSummaryDataPoint(a, b, cfg)
@@ -474,8 +474,8 @@ func equalSummaryDataPoint(a, b metricdata.SummaryDataPoint, cfg config) (reason
 	if !a.Attributes.Equals(&b.Attributes) {
 		reasons = append(reasons, notEqualStr(
 			"Attributes",
-			a.Attributes.Encoded(attribute.DefaultEncoder()),
-			b.Attributes.Encoded(attribute.DefaultEncoder()),
+			a.Attributes.String(),
+			b.Attributes.String(),
 		))
 	}
 	if !cfg.ignoreTimestamp {
