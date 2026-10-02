@@ -403,7 +403,7 @@ func (t *BridgeTracer) baggageSetHook(ctx context.Context, list iBaggage.List) c
 		return ctx
 	}
 	for k, v := range list {
-		bSpan.setBaggageItemOnly(k, v.Value)
+		bSpan.setBaggageItemOnly(k, v.Value())
 	}
 	return ctx
 }
@@ -440,7 +440,7 @@ func (t *BridgeTracer) baggageGetHook(ctx context.Context, list iBaggage.List) i
 
 	for k, v := range items {
 		// Overwrite according to OpenTelemetry specification.
-		merged[k] = iBaggage.Item{Value: v}
+		merged[k] = iBaggage.NewItemWithProperties(v, nil)
 	}
 
 	return merged

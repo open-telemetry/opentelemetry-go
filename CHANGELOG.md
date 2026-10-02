@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
-## [1.47.0/0.69.0/0.23.0/0.1.0] - 2026-09-28
+## [1.47.0/0.69.0/0.23.0/0.1.0] - 2026-10-02
 
 This release contains the first stable release of the OpenTelemetry Go Logs API and SDK.
 Our project stability guarantees now apply to the following modules:
@@ -45,6 +45,9 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Fixed
 
+- Count valid U+FFFD replacement characters toward attribute value length limits in `go.opentelemetry.io/otel/trace`, `go.opentelemetry.io/otel/sdk/trace`, and `go.opentelemetry.io/otel/sdk/log`.
+- Truncate string attribute values to empty strings when the configured length limit is zero, including malformed UTF-8, in `go.opentelemetry.io/otel/trace`, `go.opentelemetry.io/otel/sdk/trace`, and `go.opentelemetry.io/otel/sdk/log`. (#9054)
+- Fix a data race in `NewPeriodicReader` where `r.inst` was assigned after the background goroutine was launched in `go.opentelemetry.io/otel/sdk/metric`. (#9028)
 - Prevent precision loss for large `int64` values in `Sum`, `Histogram`, and `ExponentialHistogram` aggregations in `go.opentelemetry.io/otel/sdk/metric`. (#8981)
 - Ensure `grpc.DialOption` values passed via `WithDialOption` take precedence over conflicting internally-computed defaults in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`,
@@ -62,6 +65,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Retain instrument advisory attributes configured with `go.opentelemetry.io/otel/metric/x.WithDefaultAttributes` when a matching View in `go.opentelemetry.io/otel/sdk/metric` does not specify an attribute filter. (#8859)
 - Ignore HTTP URL paths when building OTLP/gRPC metric exporter targets from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`, while preserving `unix://` and `unix-abstract://` targets; treat `unix-abstract://` endpoints as insecure in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#8862)
 - Ignore HTTP(S) paths when deriving gRPC trace exporter endpoints from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#8852)
+- Bound memory used while parsing dense W3C property metadata by storing it compactly and materializing `Property` values on demand in `go.opentelemetry.io/otel/baggage` and `go.opentelemetry.io/otel/propagation`.
 
 ### Removed
 
