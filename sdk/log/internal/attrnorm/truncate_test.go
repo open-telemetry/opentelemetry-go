@@ -49,6 +49,11 @@ func TestTruncateAttr(t *testing.T) {
 		},
 		{
 			limit: 0,
+			attr:  attribute.String(key, "\x80"),
+			want:  attribute.String(key, ""),
+		},
+		{
+			limit: 0,
 			attr:  attribute.BoolSlice(key, []bool{true, false}),
 			want:  attribute.BoolSlice(key, []bool{true, false}),
 		},
@@ -787,6 +792,8 @@ func TestTruncateString(t *testing.T) {
 			groups: []group{
 				{0, "Some text", ""},
 				{0, "", ""},
+				{0, "\x80", ""},
+				{0, "\uFFFD", ""},
 			},
 		},
 	}

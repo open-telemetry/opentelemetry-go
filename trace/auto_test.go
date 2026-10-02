@@ -1097,6 +1097,8 @@ func TestTruncate(t *testing.T) {
 			groups: []group{
 				{0, "Some text", ""},
 				{0, "", ""},
+				{0, "\x80", ""},
+				{0, "\uFFFD", ""},
 			},
 		},
 	}
