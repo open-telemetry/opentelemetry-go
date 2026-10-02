@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Prevent processor operations from overlapping processor shutdown or being invoked after `TracerProvider` shutdown in `go.opentelemetry.io/otel/sdk/trace`. (#TBD)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

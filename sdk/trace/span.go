@@ -465,6 +465,15 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 		defer s.tracer.inst.SpanEnded(ctx, s)
 	}
 
+	// The processor list is only safe to read after admission succeeds: a
+	// list read beforehand could still include a processor that finishes
+	// being unregistered (and shut down) while this call is parked waiting
+	// for admission to reopen.
+	if !s.tracer.provider.beginProcessorOperation() {
+		return
+	}
+	defer s.tracer.provider.endProcessorOperation()
+
 	sps := s.tracer.provider.getSpanProcessors()
 	if len(sps) == 0 {
 		return
