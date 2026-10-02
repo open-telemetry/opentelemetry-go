@@ -36,7 +36,8 @@ var (
 )
 
 type bridgeSpanContext struct {
-	bag baggage.Baggage
+	bagMu sync.RWMutex
+	bag   baggage.Baggage
 	trace.SpanContext
 }
 
@@ -57,7 +58,7 @@ func newBridgeSpanContext(otelSpanContext trace.SpanContext, parentOtSpanContext
 }
 
 func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
-	for _, m := range c.bag.Members() {
+	for _, m := range c.getBaggage().Members() {
 		if !handler(m.Key(), m.Value()) {
 			return
 		}
@@ -69,11 +70,19 @@ func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
 	if err != nil {
 		return
 	}
+	c.bagMu.Lock()
+	defer c.bagMu.Unlock()
 	c.bag, _ = c.bag.SetMember(m)
 }
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) baggage.Member {
-	return c.bag.Member(restrictedKey)
+	return c.getBaggage().Member(restrictedKey)
+}
+
+func (c *bridgeSpanContext) getBaggage() baggage.Baggage {
+	c.bagMu.RLock()
+	defer c.bagMu.RUnlock()
+	return c.bag
 }
 
 type bridgeSpan struct {
@@ -722,7 +731,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format, carrier any) error {
 		sc:   bridgeSC.SpanContext,
 	}
 	ctx := trace.ContextWithSpan(context.Background(), fs)
-	ctx = baggage.ContextWithBaggage(ctx, bridgeSC.bag)
+	ctx = baggage.ContextWithBaggage(ctx, bridgeSC.getBaggage())
 	t.getPropagator().Inject(ctx, textCarrier)
 	return nil
 }
