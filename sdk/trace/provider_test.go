@@ -291,7 +291,7 @@ func TestUnregisterSpanProcessorWaitsForInFlightOnEnd(t *testing.T) {
 	sp := &blockingSpanProcessor{started: make(chan struct{}), release: make(chan struct{})}
 	tp.RegisterSpanProcessor(sp)
 
-	_, span := tp.Tracer("t").Start(context.Background(), "s")
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
 	endDone := make(chan struct{})
 	go func() {
 		span.End()
@@ -330,7 +330,7 @@ func TestUnregisterSpanProcessorPausesNewOperations(t *testing.T) {
 	tp.RegisterSpanProcessor(sp1)
 	tp.RegisterSpanProcessor(sp2)
 
-	_, span1 := tp.Tracer("t").Start(context.Background(), "s1")
+	_, span1 := tp.Tracer("t").Start(t.Context(), "s1")
 	end1Done := make(chan struct{})
 	go func() {
 		span1.End()
@@ -355,7 +355,7 @@ func TestUnregisterSpanProcessorPausesNewOperations(t *testing.T) {
 
 	span2Done := make(chan struct{})
 	go func() {
-		_, span2 := tp.Tracer("t").Start(context.Background(), "s2")
+		_, span2 := tp.Tracer("t").Start(t.Context(), "s2")
 		span2.End()
 		close(span2Done)
 	}()
@@ -384,7 +384,7 @@ func TestShutdownContextCanceledDuringDrain(t *testing.T) {
 	sp := &blockingSpanProcessor{started: make(chan struct{}), release: make(chan struct{})}
 	tp.RegisterSpanProcessor(sp)
 
-	_, span := tp.Tracer("t").Start(context.Background(), "s")
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
 	endDone := make(chan struct{})
 	go func() {
 		span.End()
@@ -392,7 +392,7 @@ func TestShutdownContextCanceledDuringDrain(t *testing.T) {
 	}()
 	<-sp.started
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
 	defer cancel()
 	err := tp.Shutdown(ctx)
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
@@ -412,7 +412,7 @@ func TestShutdownContextCanceledBeforeDrain(t *testing.T) {
 	sp := &basicSpanProcessor{}
 	tp.RegisterSpanProcessor(sp)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
 	err := tp.Shutdown(ctx)
@@ -439,7 +439,7 @@ func TestStartProcessorOperationEndsOnPanic(t *testing.T) {
 		defer func() {
 			_ = recover()
 		}()
-		tp.Tracer("t").Start(context.Background(), "s")
+		tp.Tracer("t").Start(t.Context(), "s")
 	}()
 
 	// A panicking OnStart must not leak the processor-operations admission
