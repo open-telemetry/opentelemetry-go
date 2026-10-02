@@ -9,6 +9,7 @@ package attrnorm
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -178,6 +179,16 @@ func TestTruncateAttr(t *testing.T) {
 			attr:  attribute.StringSlice(key, []string{"日", "本"}),
 			want:  attribute.StringSlice(key, []string{"日", "本"}),
 		},
+		{
+			limit: 2,
+			attr:  attribute.String(key, "a\uFFFDbcd"),
+			want:  attribute.String(key, "a\uFFFD"),
+		},
+		{
+			limit: 1,
+			attr:  attribute.StringSlice(key, []string{"\uFFFD\uFFFD", "ok"}),
+			want:  attribute.StringSlice(key, []string{"\uFFFD", "o"}),
+		},
 		// SLICE cases
 		{
 			limit: -1,
@@ -199,6 +210,11 @@ func TestTruncateAttr(t *testing.T) {
 			limit: 1,
 			attr:  attribute.Slice(key, attribute.SliceValue(attribute.StringValue("value"))),
 			want:  attribute.Slice(key, attribute.SliceValue(attribute.StringValue("v"))),
+		},
+		{
+			limit: 1,
+			attr:  attribute.Slice(key, attribute.StringValue("\uFFFD\uFFFD")),
+			want:  attribute.Slice(key, attribute.StringValue("\uFFFD")),
 		},
 		{
 			// STRINGSLICE within SLICE: each string element is truncated.
@@ -326,6 +342,11 @@ func TestTruncateAttr(t *testing.T) {
 			limit: 1,
 			attr:  attribute.Map(key, attribute.Map("map", attribute.String("nested", "value"))),
 			want:  attribute.Map(key, attribute.Map("map", attribute.String("nested", "v"))),
+		},
+		{
+			limit: 1,
+			attr:  attribute.Map(key, attribute.String("nested", "\uFFFD\uFFFD")),
+			want:  attribute.Map(key, attribute.String("nested", "\uFFFD")),
 		},
 		{
 			// SLICE within MAP: recursive truncation.
@@ -744,6 +765,19 @@ func TestTruncateString(t *testing.T) {
 				{12, "こんにちは", "こんにちは"},
 			},
 		},
+		{
+			name: "ReplacementRune",
+			groups: []group{
+				{5, strings.Repeat("\uFFFD", 1000), strings.Repeat("\uFFFD", 5)},
+				{5, strings.Repeat("\uFFFD", 100) + "abcdef", strings.Repeat("\uFFFD", 5)},
+				{2, "a\uFFFDbcd", "a\uFFFD"},
+				{3, "ab\uFFFDcd", "ab\uFFFD"},
+				{2, "a\uFFFD", "a\uFFFD"},
+				{0, "\uFFFD", ""},
+				{2, "a\x80\uFFFDcd", "a\uFFFD"},
+				{3, "a\uFFFD\x80cd", "a\uFFFDc"},
+			},
+		},
 
 		// Truncation with invalid UTF-8 characters
 		{
@@ -1007,6 +1041,7 @@ func BenchmarkTruncate(b *testing.B) {
 	b.Run("Short", run(10, "Short Text"))
 	b.Run("ASCII", run(5, "Hello, World!"))
 	b.Run("ValidUTF-8", run(10, "hello 😊 world 🌍🚀"))
+	b.Run("ReplacementRune", run(5, strings.Repeat("\uFFFD", 100)))
 	b.Run("InvalidUTF-8", run(6, "€"[0:2]+"hello€€"))
 	b.Run("MixedUTF-8", run(14, "\x80😊\x80 Hello\x80World🌍\x80🚀\x80"))
 }

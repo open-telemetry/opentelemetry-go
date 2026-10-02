@@ -9,6 +9,7 @@ import (
 	"errors"
 	"math"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -885,9 +886,6 @@ func TestSpanAttributeLimits(t *testing.T) {
 func TestSpanAttributeValueLimits(t *testing.T) {
 	value := "hello world"
 
-	aStr := attribute.String("string", value)
-	aStrSlice := attribute.StringSlice("slice", []string{value, value})
-
 	eq := func(a, b []telemetry.Attr) bool {
 		if len(a) != len(b) {
 			return false
@@ -901,19 +899,23 @@ func TestSpanAttributeValueLimits(t *testing.T) {
 	}
 
 	tests := []struct {
-		limit int
-		want  string
+		limit       int
+		value, want string
 	}{
-		{0, ""},
-		{2, value[:2]},
-		{11, value},
-		{-1, value},
+		{0, value, ""},
+		{2, value, value[:2]},
+		{11, value, value},
+		{-1, value, value},
+		{1, "\uFFFD\uFFFD", "\uFFFD"},
 	}
 	for _, test := range tests {
 		t.Run("Limit/"+strconv.Itoa(test.limit), func(t *testing.T) {
 			orig := maxSpan.AttrValueLen
 			maxSpan.AttrValueLen = test.limit
 			t.Cleanup(func() { maxSpan.AttrValueLen = orig })
+
+			aStr := attribute.String("string", test.value)
+			aStrSlice := attribute.StringSlice("slice", []string{test.value, test.value})
 
 			builder := spanBuilder{}
 
@@ -1049,6 +1051,16 @@ func TestTruncate(t *testing.T) {
 				{12, "こんにちは", "こんにちは"},
 			},
 		},
+		{
+			name: "ReplacementRune",
+			groups: []group{
+				{1, "\uFFFD", "\uFFFD"},
+				{1, "\uFFFD\uFFFD", "\uFFFD"},
+				{2, "a\uFFFDb", "a\uFFFD"},
+				{3, "a\uFFFD\x80b\uFFFD", "a\uFFFDb"},
+				{5, strings.Repeat("\uFFFD", 1000), strings.Repeat("\uFFFD", 5)},
+			},
+		},
 
 		// Truncation with invalid UTF-8 characters
 		{
@@ -1139,6 +1151,7 @@ func BenchmarkTruncate(b *testing.B) {
 	b.Run("Short", run(10, "Short Text"))
 	b.Run("ASCII", run(5, "Hello, World!"))
 	b.Run("ValidUTF-8", run(10, "hello 😊 world 🌍🚀"))
+	b.Run("ReplacementRune", run(5, strings.Repeat("\uFFFD", 1000)))
 	b.Run("InvalidUTF-8", run(6, "€"[0:2]+"hello€€"))
 	b.Run("MixedUTF-8", run(14, "\x80😊\x80 Hello\x80World🌍\x80🚀\x80"))
 }
