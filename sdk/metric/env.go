@@ -5,6 +5,7 @@ package metric
 
 import (
 	"errors"
+	"math"
 	"os"
 	"strconv"
 	"time"
@@ -38,7 +39,7 @@ func envDuration(key string, defaultValue time.Duration) time.Duration {
 		global.Error(errNonPositiveDuration, "non-positive duration", "environment variable", key, "value", v)
 		return defaultValue
 	}
-	if d > int64(time.Duration(1<<63-1)/time.Millisecond) {
+	if d > math.MaxInt64/int64(time.Millisecond) {
 		global.Error(errDurationOverflow, "duration overflows time.Duration", "environment variable", key, "value", v)
 		return defaultValue
 	}

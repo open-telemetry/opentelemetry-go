@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -408,9 +409,9 @@ func newResponseError(header http.Header, wrapped error) error {
 
 func retryAfterDuration(v string) time.Duration {
 	if t, err := strconv.ParseInt(v, 10, 64); err == nil && t >= 0 {
-		const maxRetryAfterSeconds = int64(1<<63-1) / int64(time.Second)
+		const maxRetryAfterSeconds = math.MaxInt64 / int64(time.Second)
 		if t > maxRetryAfterSeconds {
-			return time.Duration(1<<63 - 1)
+			return time.Duration(math.MaxInt64)
 		}
 		return time.Duration(t) * time.Second
 	}
