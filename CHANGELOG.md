@@ -59,6 +59,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`. (#8805, #8834, #8836)
 - Treat overflowing `OTEL_METRIC_EXPORT_INTERVAL` and `OTEL_METRIC_EXPORT_TIMEOUT` values as invalid in `go.opentelemetry.io/otel/sdk/metric`. (#8800)
 - Prevent a panic in `NewFixedSizeReservoir` and `FixedSizeReservoirProvider` when given a negative size in `go.opentelemetry.io/otel/sdk/metric/exemplar`; negative sizes are now clamped to zero, consistent with a size of zero. (#8832)
+- Treat a NaN fraction passed to `TraceIDRatioBased` as zero, and reject `OTEL_TRACES_SAMPLER_ARG=NaN` as an invalid trace ID ratio, in `go.opentelemetry.io/otel/sdk/trace`. (#8959)
 - Preserve exponential histogram `ZeroThreshold` during OTLP metric export in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric`. (#8801)
 - Ensure metric helpers in `go.opentelemetry.io/otel/semconv/v1.32.0`, `go.opentelemetry.io/otel/semconv/v1.33.0`, and `go.opentelemetry.io/otel/semconv/v1.34.0` record measurements only once when no attributes are provided. (#8849)
 - Treat empty `OTEL_TRACES_SAMPLER` and `OTEL_TRACES_SAMPLER_ARG` values as unset in `go.opentelemetry.io/otel/sdk/trace`. (#8873)
