@@ -75,6 +75,7 @@ type TracerProvider struct {
 	mu             sync.Mutex
 	namedTracer    map[instrumentation.Scope]*tracer
 	spanProcessors atomic.Pointer[spanProcessorStates]
+	hasOnEnding    atomic.Bool
 
 	isShutdown atomic.Bool
 
@@ -132,6 +133,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	for _, sp := range o.processors {
 		spss = append(spss, newSpanProcessorState(sp))
 	}
+	tp.hasOnEnding.Store(spss.hasOnEnding())
 	tp.spanProcessors.Store(&spss)
 
 	return tp
@@ -227,6 +229,9 @@ func (p *TracerProvider) RegisterSpanProcessor(sp SpanProcessor) {
 	newSPS := make(spanProcessorStates, 0, len(current)+1)
 	newSPS = append(newSPS, current...)
 	newSPS = append(newSPS, newSpanProcessorState(sp))
+	// Set hasOnEnding before storing the new list so a concurrent Span.End
+	// that observes the new processor also observes the flag.
+	p.hasOnEnding.Store(newSPS.hasOnEnding())
 	p.spanProcessors.Store(&newSPS)
 }
 
@@ -273,6 +278,13 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 	spss = spss[:len(spss)-1]
 
 	p.spanProcessors.Store(&spss)
+	// Set hasOnEnding after storing the trimmed list. A concurrent Span.End
+	// that already loaded the old list will still call OnEnding because it
+	// iterates sps directly; a Span.End that loads the new list will also
+	// see the updated flag. The narrow window where a Span.End holds the old
+	// list but reads the new flag=false is an acceptable boundary condition
+	// during concurrent unregistration.
+	p.hasOnEnding.Store(spss.hasOnEnding())
 }
 
 // ForceFlush immediately exports all spans that have not yet been exported for
@@ -326,6 +338,7 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 		retErr = errors.Join(retErr, err)
 	}
 	p.spanProcessors.Store(&spanProcessorStates{})
+	p.hasOnEnding.Store(false)
 	return retErr
 }
 

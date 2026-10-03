@@ -6,6 +6,8 @@ package trace
 import (
 	"context"
 	"sync"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 // SpanProcessor is a processing pipeline for spans in the trace signal.
@@ -49,13 +51,36 @@ type SpanProcessor interface {
 	// must never be done outside of a new major release.
 }
 
+// onEndingSpanProcessor is the unexported interface that mirrors
+// [go.opentelemetry.io/otel/sdk/trace/x.OnEndingSpanProcessor]. It is
+// detected by structural type assertion at registration time.
+type onEndingSpanProcessor interface {
+	OnEnding(ReadWriteSpan, trace.Span)
+}
+
 type spanProcessorState struct {
-	sp    SpanProcessor
-	state sync.Once
+	sp       SpanProcessor
+	onEnding onEndingSpanProcessor
+	state    sync.Once
 }
 
 func newSpanProcessorState(sp SpanProcessor) *spanProcessorState {
-	return &spanProcessorState{sp: sp}
+	s := &spanProcessorState{sp: sp}
+	if oesp, ok := sp.(onEndingSpanProcessor); ok {
+		s.onEnding = oesp
+	}
+	return s
 }
 
 type spanProcessorStates []*spanProcessorState
+
+// hasOnEnding reports whether any processor in the slice implements the
+// OnEnding callback.
+func (s spanProcessorStates) hasOnEnding() bool {
+	for _, sps := range s {
+		if sps.onEnding != nil {
+			return true
+		}
+	}
+	return false
+}
