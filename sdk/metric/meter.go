@@ -481,7 +481,17 @@ func warnRepeatedObservableCallbacks(id Instrument) {
 // instruments, asynchronous callbacks can "forget" attribute sets that are no
 // longer relevant by omitting the observation during the callback.
 //
-// The returned Registration can be used to unregister f.
+// The returned Registration can be used to unregister f. Unregister removes
+// f from all collection cycles and then waits for any call of f in progress
+// on another goroutine to return, so once Unregister returns f is neither
+// running nor called again.
+//
+// Unregister does not wait when it is called from within a callback run by
+// this SDK during collection, since waiting there could deadlock. This
+// allows f to unregister itself. A call of f in progress on another
+// Reader's collection may then still be running when Unregister returns. A
+// goroutine started by a callback is not within the callback: its call to
+// Unregister waits, so the callback must not wait for that goroutine.
 func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) (metric.Registration, error) {
 	if len(insts) == 0 {
 		// Don't allocate a observer if not needed.
@@ -595,9 +605,9 @@ func (r observer) ObserveFloat64(o metric.Float64Observable, v float64, opts ...
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	set := resolveAttributes(c.Attributes(), rawKVs)
-	// Access to r.pipe.float64Measure is already guarded by a lock in pipeline.produce.
-	// TODO (#5946): Refactor pipeline and observable measures.
+	r.pipe.Lock()
 	measures := r.pipe.float64Measures[oImpl.observableID]
+	r.pipe.Unlock()
 	for _, m := range measures {
 		m(context.Background(), v, set)
 	}
@@ -628,9 +638,9 @@ func (r observer) ObserveInt64(o metric.Int64Observable, v int64, opts ...metric
 	c := metric.NewObserveConfig(opts)
 	rawKVs := extractRawKVs(opts)
 	set := resolveAttributes(c.Attributes(), rawKVs)
-	// Access to r.pipe.int64Measures is already guarded b a lock in pipeline.produce.
-	// TODO (#5946): Refactor pipeline and observable measures.
+	r.pipe.Lock()
 	measures := r.pipe.int64Measures[oImpl.observableID]
+	r.pipe.Unlock()
 	for _, m := range measures {
 		m(context.Background(), v, set)
 	}

@@ -169,6 +169,34 @@ func BenchmarkCollect(b *testing.B) {
 	}
 }
 
+func BenchmarkCollectCallbacks(b *testing.B) {
+	for _, n := range []int{1, 10} {
+		b.Run(fmt.Sprintf("%d", n), func(b *testing.B) {
+			r := NewManualReader()
+			mp := NewMeterProvider(WithReader(r))
+			m := mp.Meter("benchCollectCallbacks")
+
+			oc, err := m.Int64ObservableCounter("int64-observable-counter")
+			assert.NoError(b, err)
+			for range n {
+				_, err := m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+					o.ObserveInt64(oc, 1)
+					return nil
+				}, oc)
+				assert.NoError(b, err)
+			}
+
+			ctx := b.Context()
+			var rm metricdata.ResourceMetrics
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_ = r.Collect(ctx, &rm)
+			}
+		})
+	}
+}
+
 func benchCollectViews(views ...View) func(*testing.B) {
 	setup := func(name string) (metric.Meter, Reader) {
 		r := NewManualReader()
