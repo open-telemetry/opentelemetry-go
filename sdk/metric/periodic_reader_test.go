@@ -276,6 +276,57 @@ func TestPeriodicReader(t *testing.T) {
 	})
 }
 
+func TestPeriodicReaderShutsDownExternalProducerAfterExporter(t *testing.T) {
+	var calls []string
+	producer := &shutdownExternalProducer{
+		testExternalProducer: testExternalProducer{
+			produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+				calls = append(calls, "produce")
+				return nil, nil
+			},
+		},
+		shutdownFunc: func(context.Context) error {
+			calls = append(calls, "producer shutdown")
+			return nil
+		},
+	}
+	exporter := &fnExporter{
+		exportFunc: func(context.Context, *metricdata.ResourceMetrics) error {
+			calls = append(calls, "export")
+			return nil
+		},
+		shutdownFunc: func(context.Context) error {
+			calls = append(calls, "exporter shutdown")
+			return nil
+		},
+	}
+	r := NewPeriodicReader(exporter, WithProducer(producer))
+	r.register(testSDKProducer{})
+
+	require.NoError(t, r.Shutdown(t.Context()))
+	assert.Equal(t, []string{"produce", "export", "exporter shutdown", "producer shutdown"}, calls)
+}
+
+func TestPeriodicReaderShutsDownExternalProducerAfterExportTimeout(t *testing.T) {
+	var producerShutdown bool
+	producer := &shutdownExternalProducer{shutdownFunc: func(ctx context.Context) error {
+		producerShutdown = true
+		return ctx.Err()
+	}}
+	var exportStarted bool
+	exporter := &fnExporter{exportFunc: func(ctx context.Context, _ *metricdata.ResourceMetrics) error {
+		exportStarted = true
+		<-ctx.Done()
+		return ctx.Err()
+	}}
+	r := NewPeriodicReader(exporter, WithTimeout(time.Second), WithProducer(producer))
+	r.register(testSDKProducer{})
+
+	assert.ErrorIs(t, r.Shutdown(t.Context()), context.DeadlineExceeded)
+	assert.True(t, exportStarted)
+	assert.True(t, producerShutdown)
+}
+
 type chErrorHandler struct {
 	Err chan error
 }

@@ -90,6 +90,19 @@ func TestShutdownDoesNotPanicForEmptyMeterProvider(t *testing.T) {
 	assert.NotPanics(t, func() { _ = mp.Shutdown(t.Context()) })
 }
 
+func TestMeterProviderShutsDownExternalProducer(t *testing.T) {
+	var shutdowns int
+	producer := &shutdownExternalProducer{shutdownFunc: func(context.Context) error {
+		shutdowns++
+		return nil
+	}}
+	reader := NewManualReader(WithProducer(producer))
+	provider := NewMeterProvider(WithReader(reader))
+
+	require.NoError(t, provider.Shutdown(t.Context()))
+	assert.Equal(t, 1, shutdowns)
+}
+
 func TestMeterProviderReturnsSameMeter(t *testing.T) {
 	mp := MeterProvider{}
 	mtr := mp.Meter("")
