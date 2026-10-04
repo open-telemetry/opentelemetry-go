@@ -13,7 +13,7 @@ import (
 
 func TestContextWithList(t *testing.T) {
 	ctx := t.Context()
-	l := List{"foo": {Value: "1"}}
+	l := List{"foo": NewItemWithProperties("1", nil)}
 
 	nCtx := ContextWithList(ctx, l)
 	assert.Equal(t, baggageState{list: l}, nCtx.Value(baggageKey))
@@ -21,7 +21,7 @@ func TestContextWithList(t *testing.T) {
 }
 
 func TestClearContextOfList(t *testing.T) {
-	l := List{"foo": {Value: "1"}}
+	l := List{"foo": NewItemWithProperties("1", nil)}
 
 	ctx := t.Context()
 	ctx = context.WithValue(ctx, baggageKey, l)
@@ -37,7 +37,7 @@ func TestListFromContext(t *testing.T) {
 	ctx := t.Context()
 	assert.Nil(t, ListFromContext(ctx))
 
-	l := List{"foo": {Value: "1"}}
+	l := List{"foo": NewItemWithProperties("1", nil)}
 	ctx = context.WithValue(ctx, baggageKey, baggageState{list: l})
 	assert.Equal(t, l, ListFromContext(ctx))
 }

@@ -5,5 +5,5 @@ package otlptrace
 
 // Version is the current release version of the OpenTelemetry OTLP trace exporter in use.
 func Version() string {
-	return "1.47.0-rc.1"
+	return "1.47.0"
 }

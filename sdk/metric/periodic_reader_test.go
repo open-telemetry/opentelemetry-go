@@ -5,8 +5,11 @@ package metric
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1228,4 +1231,61 @@ func TestPeriodicReaderMetricFilter(t *testing.T) {
 	require.NoError(t, rdr.Collect(ctx, rm))
 	assert.Equal(t, 0, sumDataPointCount(rm, "dropped"))
 	assert.Equal(t, 1, sumDataPointCount(rm, "kept"))
+}
+func TestNewPeriodicReaderInstRace(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Sentinel error we use to see if setup failed
+	errInit := errors.New("instrumentation setup failed")
+
+	var collects atomic.Int64
+	var initHandled atomic.Bool
+	firstCollect := make(chan struct{})
+	var once sync.Once
+	origErrorHandler := otel.GetErrorHandler()
+
+	// Collect has been set up to return a registration error when it runs. We intentionally
+	// trigger an initialization error, however. We expect that all registration errors (i.e.
+	// all runs of collect) to appear after initialization was attempted.
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		switch {
+		case errors.Is(err, ErrReaderNotRegistered):
+			// Count number of collects and signal to our dummy meter provider to allow
+			// initialization of the reader to continue
+			collects.Add(1)
+			once.Do(func() { close(firstCollect) })
+		case errors.Is(err, errInit):
+			initHandled.Store(true)
+			// We expect initialization to occur before any collects
+			if collects.Load() > 0 {
+				t.Error("reader collected before instrumentation setup finished")
+			}
+		}
+	}))
+	t.Cleanup(func() { otel.SetErrorHandler(origErrorHandler) })
+
+	origMP := otel.GetMeterProvider()
+	otel.SetMeterProvider(&blockingErrMeterProvider{err: errInit, wait: func() {
+		// Doing this pauses initialization for a while so we can let some collect iterations run
+		select {
+		case <-firstCollect:
+		case <-time.After(20 * time.Millisecond):
+		}
+	}})
+	t.Cleanup(func() { otel.SetMeterProvider(origMP) })
+
+	r := NewPeriodicReader(new(fnExporter), WithInterval(time.Millisecond))
+	require.NoError(t, r.Shutdown(t.Context()))
+	assert.True(t, initHandled.Load(), "instrumentation setup error was not handled")
+}
+
+type blockingErrMeterProvider struct {
+	metric.MeterProvider
+	err  error
+	wait func()
+}
+
+func (m *blockingErrMeterProvider) Meter(string, ...metric.MeterOption) metric.Meter {
+	m.wait()
+	return &errMeter{err: m.err}
 }
