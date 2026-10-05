@@ -9,6 +9,7 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 ## Features
 
 - [Self-Observability](#self-observability)
+- [Attribute Cache](#attribute-cache)
 
 ### Self-Observability
 
@@ -43,6 +44,35 @@ Disable self-observability metrics.
 
 ```console
 unset OTEL_GO_X_OBSERVABILITY
+```
+
+### Attribute Cache
+
+The OTLP gRPC metric exporter can cache the OTLP form of data point attribute sets across exports, so a set that repeats every export is converted only once.
+
+This experimental feature is disabled by default.
+To enable it, set the `OTEL_GO_X_OTLP_ATTRIBUTE_CACHE_SIZE` environment variable to the maximum number of attribute sets to cache.
+The value must be a positive integer.
+A value of `0` disables the cache, and all other values are ignored.
+
+When the cache is full, new attribute sets are converted without being cached.
+At most every 10 minutes, a full cache is cleared so it can adapt to attribute sets that change over time.
+For the best results, set the value above the number of distinct attribute sets the process exports.
+A smaller cache still speeds up the attribute sets it holds.
+Memory use grows with the number of cached attribute sets and their size.
+
+#### Examples
+
+Cache up to 10000 attribute sets.
+
+```console
+export OTEL_GO_X_OTLP_ATTRIBUTE_CACHE_SIZE=10000
+```
+
+Disable the cache.
+
+```console
+unset OTEL_GO_X_OTLP_ATTRIBUTE_CACHE_SIZE
 ```
 
 ## Compatibility and Stability

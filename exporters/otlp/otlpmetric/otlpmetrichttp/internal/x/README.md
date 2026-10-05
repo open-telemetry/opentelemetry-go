@@ -9,6 +9,7 @@ See the [Compatibility and Stability](#compatibility-and-stability) section for 
 ## Features
 
 - [Observability](#observability)
+- [Attribute Cache](#attribute-cache)
 
 ### Observability
 
@@ -25,6 +26,19 @@ When enabled, the exporter will create the following metrics using the global `M
 Please see the [Semantic conventions for OpenTelemetry SDK metrics] documentation for more details on these metrics.
 
 [Semantic conventions for OpenTelemetry SDK metrics]: https://github.com/open-telemetry/semantic-conventions/blob/v1.43.0/docs/otel/sdk-metrics.md
+
+### Attribute Cache
+
+The `otlpmetrichttp` exporter can cache the OTLP form of data point attribute sets across exports, so a set that repeats every export is converted only once.
+
+To opt-in, set the environment variable `OTEL_GO_X_OTLP_ATTRIBUTE_CACHE_SIZE` to the maximum number of attribute sets to cache, as a positive integer.
+The cache is disabled when the variable is unset or `0`, and all other values are ignored.
+
+When the cache is full, new attribute sets are converted without being cached.
+At most every 10 minutes, a full cache is cleared so it can adapt to attribute sets that change over time.
+For the best results, set the value above the number of distinct attribute sets the process exports.
+A smaller cache still speeds up the attribute sets it holds.
+Memory use grows with the number of cached attribute sets and their size.
 
 ## Compatibility and Stability
 

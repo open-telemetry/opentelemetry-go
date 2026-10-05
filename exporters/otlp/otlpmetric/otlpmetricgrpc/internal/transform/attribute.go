@@ -7,10 +7,71 @@
 package transform
 
 import (
+	"sync"
+	"sync/atomic"
+	"time"
+
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 )
+
+// maxCachedAttributeSets limits attrCache's size; 0 (the default) disables the cache.
+// Refreshed on every export rather than at init, so t.Setenv works and go test tracks it.
+var maxCachedAttributeSets atomic.Int64
+
+func loadAttrCacheSize() {
+	n, _ := x.AttributeCacheSize.Lookup()
+	maxCachedAttributeSets.Store(int64(n))
+}
+
+// minAttrCacheClearInterval rate-limits clearing a full cache, so an undersized cache keeps
+// reusing the sets it holds instead of thrashing, while still adapting to changing sets.
+const minAttrCacheClearInterval = 10 * time.Minute
+
+// attrCache stores converted OTLP attributes keyed by equivalent attribute sets.
+var (
+	attrCacheMu        sync.Mutex
+	attrCache          = map[attribute.Distinct][]*cpb.KeyValue{}
+	attrCacheLastClear time.Time
+	attrCacheNow       = time.Now
+)
+
+// cachedAttrs converts set to OTLP key-values and reuses a cached result when available.
+func cachedAttrs(set attribute.Set) []*cpb.KeyValue {
+	if set.Len() == 0 {
+		return nil
+	}
+	size := int(maxCachedAttributeSets.Load())
+	if size == 0 {
+		return AttrIter(set.Iter())
+	}
+
+	key := set.Equivalent()
+
+	attrCacheMu.Lock()
+	defer attrCacheMu.Unlock()
+
+	if out, ok := attrCache[key]; ok {
+		return out
+	}
+
+	out := AttrIter(set.Iter())
+	if len(attrCache) >= size {
+		now := attrCacheNow()
+		if attrCacheLastClear.IsZero() {
+			attrCacheLastClear = now
+		}
+		if now.Sub(attrCacheLastClear) < minAttrCacheClearInterval {
+			return out
+		}
+		clear(attrCache)
+		attrCacheLastClear = now
+	}
+	attrCache[key] = out
+	return out
+}
 
 // AttrIter transforms an attribute iterator into OTLP key-values.
 func AttrIter(iter attribute.Iterator) []*cpb.KeyValue {

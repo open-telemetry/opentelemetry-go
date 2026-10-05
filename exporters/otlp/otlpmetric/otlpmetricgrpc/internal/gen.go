@@ -27,8 +27,10 @@ package internal
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/otest/client_test.go.tmpl "--data={\"internalImportPath\": \"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal\"}" --out=otest/client_test.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/otest/collector.go.tmpl "--data={\"oconfImportPath\": \"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/oconf\"}" --out=otest/collector.go
 
-//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/transform/attribute.go.tmpl "--data={}" --out=transform/attribute.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/transform/attribute.go.tmpl "--data={\"xImportPath\": \"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x\"}" --out=transform/attribute.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/transform/attribute_test.go.tmpl "--data={}" --out=transform/attribute_test.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/transform/attribute_cache_test.go.tmpl "--data={}" --out=transform/attribute_cache_test.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/transform/benchmark_test.go.tmpl "--data={}" --out=transform/benchmark_test.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/transform/error.go.tmpl "--data={}" --out=transform/error.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/transform/error_test.go.tmpl "--data={}" --out=transform/error_test.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlpmetric/transform/metricdata.go.tmpl "--data={}" --out=transform/metricdata.go
@@ -39,3 +41,5 @@ package internal
 
 //go:generate gotmpl --body=../../../../../internal/shared/x/x.go.tmpl "--data={ \"pkg\": \"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc\" }" --out=x/x.go
 //go:generate gotmpl --body=../../../../../internal/shared/x/x_test.go.tmpl "--data={}" --out=x/x_test.go
+//go:generate gotmpl --body=../../../../../internal/shared/x/attrcache.go.tmpl "--data={ \"exporter\": \"gRPC\" }" --out=x/attrcache.go
+//go:generate gotmpl --body=../../../../../internal/shared/x/attrcache_test.go.tmpl "--data={}" --out=x/attrcache_test.go
