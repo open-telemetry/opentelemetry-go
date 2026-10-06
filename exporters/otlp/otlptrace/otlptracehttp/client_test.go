@@ -344,10 +344,15 @@ func TestTimeoutBoundsRetry(t *testing.T) {
 	mu.Unlock()
 	assert.Positive(t, got)
 
+	// A request already sent before the export context expired can reach
+	// this handler after ExportSpans returns and bump calls by one. That
+	// in-flight attempt is not a new retry. The retry loop stops with the
+	// export timeout, so it must not keep issuing requests until
+	// MaxElapsedTime.
 	time.Sleep(50 * time.Millisecond)
 	mu.Lock()
 	defer mu.Unlock()
-	assert.Equal(t, got, calls, "requests continued after the export timeout")
+	assert.LessOrEqual(t, calls, got+1, "requests continued after the export timeout")
 }
 
 func TestWithHTTPClientIgnoresExporterTimeout(t *testing.T) {
