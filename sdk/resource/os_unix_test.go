@@ -52,6 +52,55 @@ func TestUnameError(t *testing.T) {
 	resource.SetDefaultUnameProvider()
 }
 
+func TestPlatformOSDescription(t *testing.T) {
+	testCases := []struct {
+		name          string
+		unameProvider func(*unix.Utsname) error
+		wantErr       bool
+		expectedSub   string
+	}{
+		{
+			name:          "Default provider",
+			unameProvider: nil,
+			wantErr:       false,
+		},
+		{
+			name:          "Uname error propagates",
+			unameProvider: fakeUnameProviderWithError,
+			wantErr:       true,
+		},
+		{
+			name:          "Fake uname with OS release",
+			unameProvider: fakeUnameProvider,
+			wantErr:       false,
+			expectedSub:   "Mock OS DESKTOP-PC 5.0.0 #1 SMP Thu May 6 12:34:56 UTC 2021 x86_64",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.unameProvider != nil {
+				resource.SetUnameProvider(tc.unameProvider)
+				defer resource.SetDefaultUnameProvider()
+			}
+
+			description, err := resource.PlatformOSDescription()
+
+			if tc.wantErr {
+				require.Error(t, err)
+				require.Empty(t, description)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotEmpty(t, description)
+			if tc.expectedSub != "" {
+				require.Contains(t, description, tc.expectedSub)
+			}
+		})
+	}
+}
+
 func TestGetFirstAvailableFile(t *testing.T) {
 	tempDir := t.TempDir()
 
