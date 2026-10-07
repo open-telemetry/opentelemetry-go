@@ -9,16 +9,16 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/otel v1.47.0-rc.1
-	go.opentelemetry.io/otel/log v1.47.0-rc.1
-	go.opentelemetry.io/otel/metric v1.47.0-rc.1
-	go.opentelemetry.io/otel/sdk v1.47.0-rc.1
-	go.opentelemetry.io/otel/sdk/log v1.47.0-rc.1
-	go.opentelemetry.io/otel/sdk/log/logtest v0.22.0
-	go.opentelemetry.io/otel/sdk/metric v1.47.0-rc.1
-	go.opentelemetry.io/otel/trace v1.47.0-rc.1
+	go.opentelemetry.io/otel v1.47.0
+	go.opentelemetry.io/otel/log v1.47.0
+	go.opentelemetry.io/otel/metric v1.47.0
+	go.opentelemetry.io/otel/sdk v1.47.0
+	go.opentelemetry.io/otel/sdk/log v1.47.0
+	go.opentelemetry.io/otel/sdk/log/logtest v0.23.0
+	go.opentelemetry.io/otel/sdk/metric v1.47.0
+	go.opentelemetry.io/otel/trace v1.47.0
 	go.opentelemetry.io/proto/otlp v1.11.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260921155816-b14227669459
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20261005182115-fad411399dd8
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
 )
@@ -34,7 +34,7 @@ require (
 	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260921155816-b14227669459 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20261005182115-fad411399dd8 // indirect
 )
 
 replace go.opentelemetry.io/otel => ../../../..
