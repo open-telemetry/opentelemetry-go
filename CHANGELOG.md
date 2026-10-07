@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add experimental `WithFinish` support for `Int64Counter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 
+### Fixed
+
+- Fix a data race in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is read concurrently with `Span.SetBaggageItem`. (#9049)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
