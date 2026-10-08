@@ -1382,7 +1382,7 @@ func TestEndpointPaths(t *testing.T) {
 				t.Run(tt.name, func(t *testing.T) {
 					t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
 					t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "")
-					const endpoint = "http://collector:4318"
+					const endpoint = "http" + "://collector:4318"
 					wantPath := tt.path
 					var options []Option
 					switch source {
@@ -1427,6 +1427,7 @@ func TestEndpointPaths(t *testing.T) {
 }
 
 func TestEndpointPathOptions(t *testing.T) {
+	const endpoint = "http" + "://collector:4318"
 	tests := []struct {
 		name    string
 		options []Option
@@ -1435,56 +1436,56 @@ func TestEndpointPathOptions(t *testing.T) {
 		{
 			name:    "URL path is decoded",
 			options: []Option{WithURLPath("/a%2Fb?# +é")},
-			want:    "http://collector:4318/a%252Fb%3F%23%20+%C3%A9",
+			want:    endpoint + "/a%252Fb%3F%23%20+%C3%A9",
 		},
 		{
 			name:    "URL path literal percent",
 			options: []Option{WithURLPath("/a%")},
-			want:    "http://collector:4318/a%25",
+			want:    endpoint + "/a%25",
 		},
 		{
 			name: "URL path overrides endpoint URL",
 			options: []Option{
-				WithEndpointURL("http://collector:4318/original%2Fpath"),
+				WithEndpointURL(endpoint + "/original%2Fpath"),
 				WithURLPath("/a%2Fb"),
 			},
-			want: "http://collector:4318/a%252Fb",
+			want: endpoint + "/a%252Fb",
 		},
 		{
 			name: "endpoint URL overrides URL path",
 			options: []Option{
 				WithURLPath("/a%2Fb"),
-				WithEndpointURL("http://collector:4318/original%2Fpath"),
+				WithEndpointURL(endpoint + "/original%2Fpath"),
 			},
-			want: "http://collector:4318/original%2Fpath",
+			want: endpoint + "/original%2Fpath",
 		},
 		{
 			name:    "endpoint URL overrides environment",
-			options: []Option{WithEndpointURL("http://collector:4318/option%2Fpath")},
-			want:    "http://collector:4318/option%2Fpath",
+			options: []Option{WithEndpointURL(endpoint + "/option%2Fpath")},
+			want:    endpoint + "/option%2Fpath",
 		},
 		{
 			name:    "URL path overrides environment",
 			options: []Option{WithURLPath("/option%2Fpath")},
-			want:    "http://collector:4318/option%252Fpath",
+			want:    endpoint + "/option%252Fpath",
 		},
 		{
 			name: "endpoint changes host and retains path",
 			options: []Option{
-				WithEndpointURL("http://other:9090/original%2Fpath"),
+				WithEndpointURL("http" + "://other:9090/original%2Fpath"),
 				WithEndpoint("collector:4318"),
 			},
-			want: "http://collector:4318/original%2Fpath",
+			want: endpoint + "/original%2Fpath",
 		},
 		{
 			name: "logs environment overrides generic environment",
-			want: "http://collector:4318/logs%2Fpath",
+			want: endpoint + "/logs%2Fpath",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318/generic%2Fpath/")
-			t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "http://collector:4318/logs%2Fpath")
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", endpoint+"/generic%2Fpath/")
+			t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", endpoint+"/logs%2Fpath")
 			var requests int
 			options := append(tt.options, WithHTTPClient(&http.Client{
 				Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {

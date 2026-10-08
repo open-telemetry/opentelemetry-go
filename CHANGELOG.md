@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Preserve escaped endpoint paths and generic endpoint base segments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`.
+- Preserve escaped endpoint paths and generic endpoint base segments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9149)
 - Fix a data race in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is read concurrently with `Span.SetBaggageItem`. (#9049)
 
 <!-- Released section -->
