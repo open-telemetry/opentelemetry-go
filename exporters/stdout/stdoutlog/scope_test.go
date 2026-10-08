@@ -5,6 +5,7 @@ package stdoutlog_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"math"
@@ -213,7 +214,7 @@ func testScopeOutput(t *testing.T, attributes []attribute.KeyValue, wantAttribut
 			exporter, err := stdoutlog.New(options...)
 			require.NoError(t, err)
 			provider := sdklog.NewLoggerProvider(sdklog.WithProcessor(sdklog.NewSimpleProcessor(exporter)))
-			t.Cleanup(func() { assert.NoError(t, provider.Shutdown(t.Context())) })
+			t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.WithoutCancel(t.Context()))) })
 			logger := provider.Logger("scope-name",
 				log.WithInstrumentationVersion("scope-version"),
 				log.WithSchemaURL("https://example.com/scope-schema"),
