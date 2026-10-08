@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
@@ -551,6 +552,150 @@ func TestNewConfig(t *testing.T) {
 
 			for _, errMsg := range tc.errs {
 				assert.ErrorContains(t, err, errMsg)
+			}
+		})
+	}
+}
+
+func TestNewConfigInsecureEnvironment(t *testing.T) {
+	for _, keys := range [][]string{envEndpoint, envInsecure, envHeaders, envCompression, envTimeout, envTLSCert} {
+		for _, key := range keys {
+			t.Setenv(key, "")
+		}
+	}
+	for _, keys := range envTLSClient {
+		t.Setenv(keys.Certificate, "")
+		t.Setenv(keys.Key, "")
+	}
+
+	const (
+		logsKey = "OTEL_EXPORTER_OTLP_LOGS_INSECURE"
+		otlpKey = "OTEL_EXPORTER_OTLP_INSECURE"
+	)
+	type testCase struct {
+		name     string
+		envars   map[string]string
+		options  []Option
+		want     setting[bool]
+		errKey   string
+		errValue string
+	}
+	tests := []testCase{
+		{name: "unset"},
+		{name: "empty", envars: map[string]string{logsKey: "", otlpKey: ""}},
+		{
+			name:   "unset logs uses generic true",
+			envars: map[string]string{otlpKey: "true"},
+			want:   newSetting(true),
+		},
+		{
+			name:   "empty logs uses generic true",
+			envars: map[string]string{logsKey: "", otlpKey: "true"},
+			want:   newSetting(true),
+		},
+		{
+			name:     "invalid logs with unset generic",
+			envars:   map[string]string{logsKey: "NoT"},
+			want:     newSetting(false),
+			errKey:   logsKey,
+			errValue: "NoT",
+		},
+	}
+
+	for _, key := range []string{logsKey, otlpKey} {
+		for _, value := range []struct {
+			raw     string
+			want    bool
+			invalid bool
+		}{
+			{"true", true, false},
+			{"True", true, false},
+			{"TRUE", true, false},
+			{"tRuE", true, false},
+			{"false", false, false},
+			{"False", false, false},
+			{"FALSE", false, false},
+			{"fAlSe", false, false},
+			{"1", false, true},
+			{"yes", false, true},
+			{"NoT", false, true},
+		} {
+			tc := testCase{
+				name:   key + "/" + value.raw,
+				envars: map[string]string{key: value.raw},
+				want:   newSetting(value.want),
+			}
+			if value.invalid {
+				tc.errKey, tc.errValue = key, value.raw
+			}
+			tests = append(tests, tc)
+		}
+	}
+	for _, value := range []string{"true", "false", "invalid", ""} {
+		tests = append(tests, testCase{
+			name:     "invalid logs overrides generic/" + value,
+			envars:   map[string]string{logsKey: "NoT", otlpKey: value},
+			want:     newSetting(false),
+			errKey:   logsKey,
+			errValue: "NoT",
+		})
+	}
+	for _, value := range []string{"true", "false"} {
+		for _, generic := range []string{"true", "false", "invalid"} {
+			tests = append(tests, testCase{
+				name:   "logs " + value + " overrides generic/" + generic,
+				envars: map[string]string{logsKey: value, otlpKey: generic},
+				want:   newSetting(value == "true"),
+			})
+		}
+	}
+	for _, tc := range []struct {
+		name   string
+		option Option
+		want   bool
+	}{
+		{"WithInsecure", WithInsecure(), true},
+		{"WithEndpointURL/http", WithEndpointURL("http://localhost:4318/v1/logs"), true},
+		{"WithEndpointURL/https", WithEndpointURL("https://localhost:4318/v1/logs"), false},
+	} {
+		tests = append(tests, testCase{
+			name:    tc.name + " overrides invalid environment",
+			envars:  map[string]string{logsKey: "NoT", otlpKey: "invalid"},
+			options: []Option{tc.option},
+			want:    newSetting(tc.want),
+		})
+	}
+	for _, key := range []string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "OTEL_EXPORTER_OTLP_ENDPOINT"} {
+		for _, scheme := range []string{"http", "https"} {
+			tests = append(tests, testCase{
+				name:   key + "/" + scheme + " overrides invalid Boolean",
+				envars: map[string]string{key: scheme + "://localhost:4318", logsKey: "NoT", otlpKey: "invalid"},
+				want:   newSetting(scheme == "http"),
+			})
+		}
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, key := range []string{logsKey, otlpKey} {
+				t.Setenv(key, "")
+				require.NoError(t, os.Unsetenv(key))
+			}
+			for key, value := range tc.envars {
+				t.Setenv(key, value)
+			}
+
+			orig := otel.GetErrorHandler()
+			t.Cleanup(func() { otel.SetErrorHandler(orig) })
+			var errs []error
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { errs = append(errs, err) }))
+
+			assert.Equal(t, tc.want, newConfig(tc.options).insecure)
+			if tc.errKey == "" {
+				assert.Empty(t, errs)
+			} else {
+				require.Len(t, errs, 1)
+				assert.ErrorContains(t, errs[0], "invalid "+tc.errKey+" value "+tc.errValue)
 			}
 		})
 	}

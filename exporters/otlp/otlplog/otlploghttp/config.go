@@ -123,7 +123,7 @@ func newConfig(options []Option) config {
 	)
 	c.insecure = c.insecure.Resolve(
 		loadInsecureFromEnvEndpoint(envEndpoint),
-		getenv[bool](envInsecure, convInsecure),
+		loadInsecureFromEnv(envInsecure),
 	)
 	c.tlsCfg = c.tlsCfg.Resolve(
 		loadEnvTLS[*tls.Config](),
@@ -583,15 +583,27 @@ func convPath(s string) (string, error) {
 	return path.Join(u.Path, defaultPath), nil
 }
 
-// convInsecure converts s from a string to a bool without case sensitivity.
-// If s is invalid, it returns an error.
-func convInsecure(s string) (bool, error) {
-	s = strings.ToLower(s)
-	if s != "true" && s != "false" {
-		return false, fmt.Errorf("can't convert %q to bool", s)
-	}
+// loadInsecureFromEnv resolves the first nonempty Boolean value. Invalid values
+// resolve to false instead of falling back to a lower-priority variable.
+func loadInsecureFromEnv(keys []string) resolver[bool] {
+	return func(s setting[bool]) setting[bool] {
+		if s.Set {
+			return s
+		}
 
-	return s == "true", nil
+		for _, key := range keys {
+			if value := os.Getenv(key); value != "" {
+				insecure := strings.EqualFold(value, "true")
+				if !insecure && !strings.EqualFold(value, "false") {
+					otel.Handle(
+						fmt.Errorf("invalid %s value %s: can't convert %q to bool, using false", key, value, value),
+					)
+				}
+				return newSetting(insecure)
+			}
+		}
+		return s
+	}
 }
 
 // loadInsecureFromEnvEndpoint returns a resolver that fetches the insecure
