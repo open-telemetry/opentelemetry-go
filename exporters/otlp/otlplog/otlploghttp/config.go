@@ -318,8 +318,13 @@ func WithHeaders(headers map[string]string) Option {
 //
 // By default, if an environment variable is not set, and this option is not
 // passed, a timeout of 10 seconds will be used.
+// Negative values are reported to the OpenTelemetry error handler and ignored.
 func WithTimeout(duration time.Duration) Option {
 	return fnOpt(func(c config) config {
+		if duration < 0 {
+			otel.Handle(fmt.Errorf("invalid timeout value %s: must be non-negative", duration))
+			return c
+		}
 		c.timeout = newSetting(duration)
 		return c
 	})
@@ -677,12 +682,18 @@ func convCompression(s string) (Compression, error) {
 }
 
 // convDuration interprets s as a number of milliseconds and returns the
-// corresponding duration. If s does not contain an integer, 0 and an error are
-// returned.
+// corresponding duration. If s does not contain a nonnegative integer that fits
+// in a time.Duration, 0 and an error are returned.
 func convDuration(s string) (time.Duration, error) {
-	d, err := strconv.Atoi(s)
+	d, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return 0, err
+	}
+	if d < 0 {
+		return 0, errors.New("timeout must be non-negative")
+	}
+	if d > int64(time.Duration(1<<63-1)/time.Millisecond) {
+		return 0, errors.New("duration overflows time.Duration")
 	}
 	// OTel durations are defined in milliseconds.
 	return time.Duration(d) * time.Millisecond, nil

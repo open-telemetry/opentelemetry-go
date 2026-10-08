@@ -387,7 +387,7 @@ func TestNewConfig(t *testing.T) {
 				`tls: failed to find any PEM data in certificate input`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_HEADERS value invalid key=value: invalid header key: invalid key`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_COMPRESSION value xz: unknown compression: xz`,
-				`invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value 100 seconds: strconv.Atoi: parsing "100 seconds": invalid syntax`,
+				`invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value 100 seconds: strconv.ParseInt: parsing "100 seconds": invalid syntax`,
 			},
 		},
 		{
@@ -551,6 +551,184 @@ func TestNewConfig(t *testing.T) {
 
 			for _, errMsg := range tc.errs {
 				assert.ErrorContains(t, err, errMsg)
+			}
+		})
+	}
+}
+
+func TestNewConfigTimeoutEnvironment(t *testing.T) {
+	testcases := []struct {
+		name    string
+		value   string
+		want    time.Duration
+		wantErr bool
+	}{
+		{name: "Negative", value: "-1", want: defaultTimeout, wantErr: true},
+		{name: "Zero", value: "0", want: 0},
+		{name: "Positive", value: "15000", want: 15 * time.Second},
+		{name: "Int32Max", value: "2147483647", want: 2147483647 * time.Millisecond},
+		{name: "MaxMilliseconds", value: "9223372036854", want: 9223372036854 * time.Millisecond},
+		{name: "DurationOverflow", value: "9223372036855", want: defaultTimeout, wantErr: true},
+		{name: "DurationOverflowToPositive", value: "18446744073710", want: defaultTimeout, wantErr: true},
+		{name: "Malformed", value: "100 seconds", want: defaultTimeout, wantErr: true},
+		{name: "Fractional", value: "1.5", want: defaultTimeout, wantErr: true},
+		{name: "Int64Overflow", value: "9223372036854775808", want: defaultTimeout, wantErr: true},
+	}
+
+	for _, key := range envTimeout {
+		t.Run(key, func(t *testing.T) {
+			for _, tc := range testcases {
+				t.Run(tc.name, func(t *testing.T) {
+					for _, env := range envTimeout {
+						t.Setenv(env, "")
+					}
+					t.Setenv(key, tc.value)
+
+					var errs []error
+					orig := otel.GetErrorHandler()
+					otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+						errs = append(errs, err)
+					}))
+					t.Cleanup(func() { otel.SetErrorHandler(orig) })
+
+					cfg := newConfig(nil)
+					assert.Equal(t, newSetting(tc.want), cfg.timeout)
+					if tc.wantErr {
+						if assert.Len(t, errs, 1) {
+							assert.ErrorContains(t, errs[0], "invalid "+key+" value "+tc.value)
+						}
+					} else {
+						assert.Empty(t, errs)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestNewConfigTimeoutPrecedence(t *testing.T) {
+	testcases := []struct {
+		name      string
+		generic   string
+		logs      string
+		durations []time.Duration
+		want      time.Duration
+		wantErr   string
+	}{
+		{
+			name:    "InvalidLogsUsesGeneric",
+			generic: "15000",
+			logs:    "-1",
+			want:    15 * time.Second,
+			wantErr: "invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value -1",
+		},
+		{
+			name:    "OverflowLogsUsesGeneric",
+			generic: "15000",
+			logs:    "9223372036855",
+			want:    15 * time.Second,
+			wantErr: "invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value 9223372036855",
+		},
+		{
+			name:    "ValidLogsOverridesInvalidGeneric",
+			generic: "-1",
+			logs:    "15000",
+			want:    15 * time.Second,
+		},
+		{
+			name:    "ZeroLogsOverridesGeneric",
+			generic: "15000",
+			logs:    "0",
+			want:    0,
+		},
+		{
+			name:      "NegativeOptionUsesDefault",
+			durations: []time.Duration{-time.Nanosecond},
+			want:      defaultTimeout,
+			wantErr:   "timeout",
+		},
+		{
+			name:      "NegativeOptionUsesGeneric",
+			generic:   "15000",
+			durations: []time.Duration{-time.Nanosecond},
+			want:      15 * time.Second,
+			wantErr:   "timeout",
+		},
+		{
+			name:      "NegativeOptionUsesLogs",
+			generic:   "30000",
+			logs:      "15000",
+			durations: []time.Duration{-time.Nanosecond},
+			want:      15 * time.Second,
+			wantErr:   "timeout",
+		},
+		{
+			name:      "NegativeOptionPreservesPriorOption",
+			logs:      "15000",
+			durations: []time.Duration{time.Second, -time.Nanosecond},
+			want:      time.Second,
+			wantErr:   "timeout",
+		},
+		{
+			name:      "ValidOptionAfterNegativeOption",
+			durations: []time.Duration{-time.Nanosecond, time.Second},
+			want:      time.Second,
+			wantErr:   "timeout",
+		},
+		{
+			name:      "ValidOptionIgnoresInvalidEnvironment",
+			generic:   "-1",
+			logs:      "9223372036855",
+			durations: []time.Duration{time.Second},
+			want:      time.Second,
+		},
+		{
+			name:      "ZeroOptionOverridesEnvironment",
+			logs:      "15000",
+			durations: []time.Duration{0},
+			want:      0,
+		},
+		{
+			name:      "SubmillisecondOption",
+			durations: []time.Duration{time.Nanosecond},
+			want:      time.Nanosecond,
+		},
+		{
+			name:      "MaxDurationOption",
+			durations: []time.Duration{1<<63 - 1},
+			want:      1<<63 - 1,
+		},
+		{
+			name:      "LastValidOptionWins",
+			durations: []time.Duration{time.Second, 2 * time.Second},
+			want:      2 * time.Second,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", tc.generic)
+			t.Setenv("OTEL_EXPORTER_OTLP_LOGS_TIMEOUT", tc.logs)
+
+			var errs []error
+			orig := otel.GetErrorHandler()
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+				errs = append(errs, err)
+			}))
+			t.Cleanup(func() { otel.SetErrorHandler(orig) })
+
+			var options []Option
+			for _, duration := range tc.durations {
+				options = append(options, WithTimeout(duration))
+			}
+			cfg := newConfig(options)
+			assert.Equal(t, newSetting(tc.want), cfg.timeout)
+			if tc.wantErr != "" {
+				if assert.Len(t, errs, 1) {
+					assert.ErrorContains(t, errs[0], tc.wantErr)
+				}
+			} else {
+				assert.Empty(t, errs)
 			}
 		})
 	}

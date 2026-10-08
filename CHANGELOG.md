@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Reject negative and overflowing export timeouts in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, preserving valid fallback configuration. (#9155)
 - Fix a data race in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is read concurrently with `Span.SetBaggageItem`. (#9049)
 
 <!-- Released section -->
