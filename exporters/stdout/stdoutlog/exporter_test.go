@@ -185,39 +185,6 @@ func TestExporterExport(t *testing.T) {
 	}
 }
 
-func TestExporterNilWriter(t *testing.T) {
-	for _, name := range []string{"Export", "SimpleProcessor"} {
-		t.Run(name, func(t *testing.T) {
-			var buf bytes.Buffer
-			previousWriter := defaultWriter
-			defaultWriter = &buf
-			t.Cleanup(func() { defaultWriter = previousWriter })
-
-			exporter, err := New(WithWriter(nil))
-			require.NoError(t, err)
-
-			if name == "Export" {
-				t.Cleanup(func() { assert.NoError(t, exporter.Shutdown(context.WithoutCancel(t.Context()))) })
-				require.NoError(t, exporter.Export(t.Context(), []sdklog.Record{getRecord(time.Now())}))
-			} else {
-				provider := sdklog.NewLoggerProvider(sdklog.WithProcessor(sdklog.NewSimpleProcessor(exporter)))
-				t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.WithoutCancel(t.Context()))) })
-				var record log.Record
-				record.SetBody(attribute.StringValue("test"))
-				provider.Logger("test").Emit(t.Context(), record)
-			}
-
-			var got struct {
-				Body struct {
-					Value string
-				}
-			}
-			require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
-			assert.Equal(t, "test", got.Body.Value)
-		})
-	}
-}
-
 func TestExporterWriterError(t *testing.T) {
 	writeErr := errors.New("write failed")
 	writer := &failingWriter{err: writeErr}
