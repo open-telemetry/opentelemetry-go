@@ -197,11 +197,11 @@ func TestExporterNilWriter(t *testing.T) {
 			require.NoError(t, err)
 
 			if name == "Export" {
-				t.Cleanup(func() { assert.NoError(t, exporter.Shutdown(context.Background())) })
+				t.Cleanup(func() { assert.NoError(t, exporter.Shutdown(context.WithoutCancel(t.Context()))) })
 				require.NoError(t, exporter.Export(t.Context(), []sdklog.Record{getRecord(time.Now())}))
 			} else {
 				provider := sdklog.NewLoggerProvider(sdklog.WithProcessor(sdklog.NewSimpleProcessor(exporter)))
-				t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.Background())) })
+				t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.WithoutCancel(t.Context()))) })
 				var record log.Record
 				record.SetBody(attribute.StringValue("test"))
 				provider.Logger("test").Emit(t.Context(), record)
@@ -232,7 +232,7 @@ func TestExporterWriterError(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			exporter, err := New(tc.options...)
 			require.NoError(t, err)
-			t.Cleanup(func() { assert.NoError(t, exporter.Shutdown(context.Background())) })
+			t.Cleanup(func() { assert.NoError(t, exporter.Shutdown(context.WithoutCancel(t.Context()))) })
 			err = exporter.Export(t.Context(), []sdklog.Record{getRecord(time.Now())})
 			assert.ErrorIs(t, err, writeErr)
 		})
