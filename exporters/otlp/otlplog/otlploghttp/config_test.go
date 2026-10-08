@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
@@ -39,6 +40,13 @@ Lhnm4N/QDk5rek0=
 MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgN8HEXiXhvByrJ1zK
 SFT6Y2l2KqDWwWzKf+t4CyWrNKehRANCAAS9nWSkmPCxShxnp43F+PrOtbGV7sNf
 kbQ/kxzi9Ego0ZJdiXxkmv/C05QFddCW7Y0ZsJCLHGogQsYnWJBXUZOV
+-----END PRIVATE KEY-----
+`
+	mismatchedPrivateKey = `
+-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgHBGLNXKfmMmxbPCc
+8x4FlFAjxMVItDKT97/+z38BBfihRANCAAQPT2hf0xJYsDB3jTZW5qgN1KC62ByN
+e2hJ8B5tcYFbwKqz3lqHFADw5oi9X9VgvQrhaObs7FrIJ0rbP9HdT2uP
 -----END PRIVATE KEY-----
 `
 )
@@ -551,6 +559,216 @@ func TestNewConfig(t *testing.T) {
 
 			for _, errMsg := range tc.errs {
 				assert.ErrorContains(t, err, errMsg)
+			}
+		})
+	}
+}
+
+func TestNewConfigTLSClientEnvironment(t *testing.T) {
+	for _, key := range []string{
+		"OTEL_EXPORTER_OTLP_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_CLIENT_KEY",
+		"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY",
+	} {
+		t.Setenv(key, "")
+		require.NoError(t, os.Unsetenv(key))
+	}
+
+	crt, err := tls.X509KeyPair([]byte(weakCertificate), []byte(weakPrivateKey))
+	require.NoError(t, err)
+	explicitTLS := &tls.Config{ServerName: "explicit"}
+
+	for _, tc := range []struct {
+		name    string
+		envars  map[string]string
+		options []Option
+		reads   []string
+		err     string
+	}{
+		{name: "Unset"},
+		{
+			name: "GenericPair",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE": "generic.pem",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":         "generic.key",
+			},
+			reads: []string{"generic.pem", "generic.key"},
+		},
+		{
+			name: "LogsPairPrecedence",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE":      "generic.pem",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":              "generic.key",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "logs.pem",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":         "logs.key",
+			},
+			reads: []string{"logs.pem", "logs.key"},
+		},
+		{
+			name: "LogsCertificateWithGenericKey",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "logs.pem",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":              "generic.key",
+			},
+			reads: []string{"logs.pem", "generic.key"},
+		},
+		{
+			name: "GenericCertificateWithLogsKey",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE": "generic.pem",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":    "logs.key",
+			},
+			reads: []string{"generic.pem", "logs.key"},
+		},
+		{
+			name: "LogsCertificateOverridesGenericPair",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE":      "generic.pem",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":              "generic.key",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "logs.pem",
+			},
+			reads: []string{"logs.pem", "generic.key"},
+		},
+		{
+			name: "LogsKeyOverridesGenericPair",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE": "generic.pem",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":         "generic.key",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":    "logs.key",
+			},
+			reads: []string{"generic.pem", "logs.key"},
+		},
+		{
+			name: "EmptyLogsCertificateFallsBack",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE":      "generic.pem",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":         "logs.key",
+			},
+			reads: []string{"generic.pem", "logs.key"},
+		},
+		{
+			name: "EmptyLogsKeyFallsBack",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "logs.pem",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":              "generic.key",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":         "",
+			},
+			reads: []string{"logs.pem", "generic.key"},
+		},
+		{
+			name: "CertificateWithoutKey",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "logs.pem",
+			},
+		},
+		{
+			name: "KeyWithoutCertificate",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY": "logs.key",
+			},
+		},
+		{
+			name: "InvalidLogsCertificateOverridesGenericPair",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE":      "generic.pem",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":              "generic.key",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "invalid.pem",
+			},
+			reads: []string{"invalid.pem", "generic.key"},
+			err:   "tls: failed to find any PEM data in certificate input",
+		},
+		{
+			name: "InvalidLogsKeyOverridesGenericPair",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE": "generic.pem",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":         "generic.key",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":    "invalid.key",
+			},
+			reads: []string{"generic.pem", "invalid.key"},
+			err:   "tls: failed to find any PEM data in key input",
+		},
+		{
+			name: "MismatchedLogsKeyOverridesGenericPair",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE": "generic.pem",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":         "generic.key",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":    "mismatched.key",
+			},
+			reads: []string{"generic.pem", "mismatched.key"},
+			err:   "tls: private key does not match public key",
+		},
+		{
+			name: "MissingLogsCertificateOverridesGenericPair",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE":      "generic.pem",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":              "generic.key",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "missing.pem",
+			},
+			reads: []string{"missing.pem"},
+			err:   "file does not exist: missing.pem",
+		},
+		{
+			name: "OptionPrecedence",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "missing.pem",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":              "invalid.key",
+			},
+			options: []Option{WithTLSClientConfig(explicitTLS)},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for key, value := range tc.envars {
+				t.Setenv(key, value)
+			}
+
+			origReadFile := readFile
+			t.Cleanup(func() { readFile = origReadFile })
+			var reads []string
+			readFile = func(name string) ([]byte, error) {
+				reads = append(reads, name)
+				switch name {
+				case "generic.pem", "logs.pem":
+					return []byte(weakCertificate), nil
+				case "generic.key", "logs.key":
+					return []byte(weakPrivateKey), nil
+				case "mismatched.key":
+					return []byte(mismatchedPrivateKey), nil
+				case "invalid.pem", "invalid.key":
+					return []byte("invalid PEM"), nil
+				default:
+					return nil, fmt.Errorf("file does not exist: %s", name)
+				}
+			}
+
+			origHandler := otel.GetErrorHandler()
+			t.Cleanup(func() { otel.SetErrorHandler(origHandler) })
+			var gotErr error
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+				gotErr = errors.Join(gotErr, e)
+			}))
+
+			cfg := newConfig(tc.options)
+			assert.Equal(t, tc.reads, reads)
+			var want setting[*tls.Config]
+			switch {
+			case len(tc.options) != 0:
+				want = newSetting(explicitTLS)
+			case tc.err != "":
+				assert.ErrorContains(t, gotErr, "failed to load TLS:")
+				assert.ErrorContains(t, gotErr, tc.err)
+			case len(tc.reads) != 0:
+				want = newSetting(&tls.Config{Certificates: []tls.Certificate{crt}})
+			}
+			if tc.err == "" {
+				assert.NoError(t, gotErr)
+			}
+			assertTLSConfig(t, want, cfg.tlsCfg)
+			if len(tc.options) != 0 {
+				assert.Equal(t, explicitTLS.ServerName, cfg.tlsCfg.Value.ServerName)
 			}
 		})
 	}

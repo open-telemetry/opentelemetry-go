@@ -460,15 +460,19 @@ func loadEnvTLS[T *tls.Config]() resolver[T] {
 		}
 
 		var certs []tls.Certificate
+		var cert, key string
 		for _, pair := range envTLSClient {
-			cert := os.Getenv(pair.Certificate)
-			key := os.Getenv(pair.Key)
-			if cert != "" && key != "" {
-				var e error
-				certs, e = loadCertificates(cert, key)
-				err = errors.Join(err, e)
-				break
+			if cert == "" {
+				cert = os.Getenv(pair.Certificate)
 			}
+			if key == "" {
+				key = os.Getenv(pair.Key)
+			}
+		}
+		if cert != "" && key != "" {
+			var e error
+			certs, e = loadCertificates(cert, key)
+			err = errors.Join(err, e)
 		}
 
 		if err != nil {
