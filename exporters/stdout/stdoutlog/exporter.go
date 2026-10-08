@@ -4,8 +4,11 @@
 package stdoutlog
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal/counter"
@@ -19,7 +22,7 @@ var _ log.Exporter = &Exporter{}
 // Exporter writes JSON-encoded log records to an [io.Writer] ([os.Stdout] by default).
 // Exporter must be created with [New].
 type Exporter struct {
-	encoder    atomic.Pointer[json.Encoder]
+	writer     atomic.Pointer[exportWriter]
 	stopped    atomic.Bool
 	timestamps bool
 	inst       *observ.Instrumentation
@@ -29,15 +32,17 @@ type Exporter struct {
 func New(options ...Option) (*Exporter, error) {
 	cfg := newConfig(options)
 
-	enc := json.NewEncoder(cfg.Writer)
+	w := &exportWriter{writer: cfg.Writer, available: make(chan struct{}, 1)}
+	w.available <- struct{}{}
+	w.encoder = json.NewEncoder(&w.buffer)
 	if cfg.PrettyPrint {
-		enc.SetIndent("", "\t")
+		w.encoder.SetIndent("", "\t")
 	}
 
 	e := &Exporter{
 		timestamps: cfg.Timestamps,
 	}
-	e.encoder.Store(enc)
+	e.writer.Store(w)
 
 	var err error
 	e.inst, err = observ.NewInstrumentation(counter.NextExporterID())
@@ -46,13 +51,18 @@ func New(options ...Option) (*Exporter, error) {
 
 // Export exports log records to the writer. It returns [log.ErrExporterShutdown]
 // if called after Shutdown.
+//
+// Cancellation stops waiting for the writer, but cannot interrupt an in-progress
+// [io.Writer.Write]. At most one write can remain in progress, and subsequent
+// exports wait for it with their own contexts. Only encoded JSON is retained
+// after Export returns; the supplied records are not retained.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error) {
-	enc := e.encoder.Load()
+	w := e.writer.Load()
 	if e.stopped.Load() {
 		return log.ErrExporterShutdown
 	}
 
-	if enc == nil {
+	if w == nil {
 		return nil
 	}
 
@@ -70,9 +80,25 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error)
 			return err
 		}
 
-		// Encode record, one by one.
-		recordJSON := e.newRecordJSON(record)
-		if err := enc.Encode(recordJSON); err != nil {
+		if err := w.acquire(ctx); err != nil {
+			return err
+		}
+		if e.stopped.Load() {
+			w.release()
+			return log.ErrExporterShutdown
+		}
+
+		// Encode before starting the write so it cannot outlive record ownership.
+		w.buffer.Reset()
+		if err := w.encoder.Encode(e.newRecordJSON(record)); err != nil {
+			w.release()
+			return err
+		}
+		if err := ctx.Err(); err != nil {
+			w.release()
+			return err
+		}
+		if err := w.write(ctx); err != nil {
 			return err
 		}
 		success++
@@ -82,15 +108,86 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error)
 
 // Shutdown shuts down the Exporter. Calls to Export after Shutdown return
 // [log.ErrExporterShutdown].
-func (e *Exporter) Shutdown(context.Context) error {
-	// Store stopped first so Export cannot observe a cleared encoder while the
+// The first call waits for an in-progress write to complete or ctx to end,
+// without closing the writer. A write may complete after Shutdown returns if
+// ctx ends first. Subsequent calls to Shutdown or ForceFlush do nothing.
+func (e *Exporter) Shutdown(ctx context.Context) error {
+	// Store stopped first so Export cannot observe a cleared writer while the
 	// Exporter still appears active.
 	e.stopped.Store(true)
-	e.encoder.Store(nil)
+	if w := e.writer.Swap(nil); w != nil {
+		return w.wait(ctx)
+	}
 	return nil
 }
 
-// ForceFlush performs no action.
-func (*Exporter) ForceFlush(context.Context) error {
+// ForceFlush waits for an in-progress write to complete or ctx to end.
+// It does not call Flush on the writer and does nothing after Shutdown.
+func (e *Exporter) ForceFlush(ctx context.Context) error {
+	if w := e.writer.Load(); w != nil && !e.stopped.Load() {
+		return w.wait(ctx)
+	}
 	return nil
+}
+
+// exportWriter keeps its buffer unavailable until Write actually returns, even
+// if Export has already returned. This bounds background work to one write and
+// one encoded record, and prevents a subsequent export from reusing its bytes.
+type exportWriter struct {
+	writer    io.Writer
+	buffer    bytes.Buffer
+	encoder   *json.Encoder
+	available chan struct{}
+}
+
+func (w *exportWriter) acquire(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-w.available:
+		if err := ctx.Err(); err != nil {
+			w.release()
+			return err
+		}
+		return nil
+	}
+}
+
+func (w *exportWriter) release() {
+	w.available <- struct{}{}
+}
+
+func (w *exportWriter) wait(ctx context.Context) error {
+	if err := w.acquire(ctx); err != nil {
+		return err
+	}
+	w.release()
+	return nil
+}
+
+// write transfers the acquired buffer to the writing goroutine until it returns.
+func (w *exportWriter) write(ctx context.Context) error {
+	result := make(chan error, 1)
+	go func() {
+		var err error
+		defer func() {
+			// A writer callback now runs outside the caller's recovery boundary.
+			// Contain its panic and always make the buffer available again.
+			if p := recover(); p != nil {
+				err = fmt.Errorf("stdoutlog: writer panicked: %v", p)
+			}
+			result <- err
+			w.release()
+		}()
+		_, err = w.writer.Write(w.buffer.Bytes())
+	}()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-result:
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+		return err
+	}
 }
