@@ -47,6 +47,7 @@ type Option interface {
 }
 
 // WithWriter sets the export stream destination.
+// If w is nil, this option has no effect.
 func WithWriter(w io.Writer) Option {
 	return writerOption{w}
 }
@@ -56,7 +57,9 @@ type writerOption struct {
 }
 
 func (o writerOption) apply(cfg config) config {
-	cfg.Writer = o.W
+	if o.W != nil {
+		cfg.Writer = o.W
+	}
 	return cfg
 }
 
