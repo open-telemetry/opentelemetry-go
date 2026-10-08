@@ -4,6 +4,7 @@
 package stdoutlog
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"strconv"
@@ -94,6 +95,58 @@ func TestExporterWriterPanic(t *testing.T) {
 	assert.ErrorContains(t, e.Export(t.Context(), []sdklog.Record{{}}), "writer panic")
 	assert.NoError(t, e.Export(t.Context(), []sdklog.Record{{}}))
 	assert.Equal(t, 2, calls)
+}
+
+func TestExporterEncodingErrorRecovery(t *testing.T) {
+	var buf bytes.Buffer
+	e, err := New(WithWriter(&buf))
+	require.NoError(t, err)
+	var record sdklog.Record
+	// time.Time cannot be JSON encoded when its year is outside [0, 9999].
+	record.SetTimestamp(time.Date(10000, 1, 1, 0, 0, 0, 0, time.UTC))
+	assert.Error(t, e.Export(t.Context(), []sdklog.Record{record}))
+	assert.Empty(t, buf.String())
+
+	record.SetTimestamp(time.Now())
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	assert.NoError(t, e.Export(ctx, []sdklog.Record{record}))
+	assert.NotEmpty(t, buf.String())
+}
+
+func TestExporterShutdownWhileWaitingForWrite(t *testing.T) {
+	w, release := newBlockedWriter(t)
+	e, err := New(WithWriter(w))
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	result := make(chan error, 1)
+	go func() { result <- e.Export(ctx, []sdklog.Record{{}}) }()
+	waitForWrite(t, w.entered)
+	cancel()
+	require.ErrorIs(t, waitForExport(t, result), context.Canceled)
+
+	// Wait until the next export is trying to acquire the still-blocked writer.
+	waiting := &waitingContext{Context: t.Context(), waiting: make(chan struct{})}
+	go func() { result <- e.Export(waiting, []sdklog.Record{{}}) }()
+	waitForWrite(t, waiting.waiting)
+	ctx, cancel = context.WithTimeout(t.Context(), 10*time.Millisecond)
+	defer cancel()
+	require.ErrorIs(t, e.Shutdown(ctx), context.DeadlineExceeded)
+	release()
+	assert.ErrorIs(t, waitForExport(t, result), sdklog.ErrExporterShutdown)
+	assert.Empty(t, w.entered, "an export waiting before shutdown must not start another write")
+}
+
+type waitingContext struct {
+	context.Context
+	waiting chan struct{}
+	once    sync.Once
+}
+
+func (c *waitingContext) Done() <-chan struct{} {
+	c.once.Do(func() { close(c.waiting) })
+	return c.Context.Done()
 }
 
 type writerFunc func([]byte) (int, error)
