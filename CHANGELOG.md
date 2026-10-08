@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Honor export cancellation and deadlines while writing logs in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`, bounding outstanding writes to one encoded record per exporter.
+- Honor export cancellation and deadlines while writing logs in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`, bounding outstanding writes to one encoded record per exporter. (#9154)
 - Fix a data race in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is read concurrently with `Span.SetBaggageItem`. (#9049)
 
 <!-- Released section -->
