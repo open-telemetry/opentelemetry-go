@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	stdlog "log"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -208,6 +209,79 @@ func TestNewBatchConfig(t *testing.T) {
 				t.Setenv(key, value)
 			}
 			assert.Equal(t, tc.want, newBatchConfig(tc.options))
+		})
+	}
+}
+
+func TestNewBatchConfigDurationEnvironment(t *testing.T) {
+	const maxMillis = int64(math.MaxInt64) / int64(time.Millisecond)
+	maxValidMillis := maxMillis
+	if strconv.IntSize == 32 {
+		maxValidMillis = math.MaxInt32
+	}
+	testcases := []struct {
+		name    string
+		value   string
+		want    time.Duration
+		wantErr bool
+	}{
+		{"Unset", "", 0, false},
+		{"Millisecond", "1", time.Millisecond, false},
+		{"Zero", "0", 0, false},
+		{"Negative", "-1", 0, false},
+		{"MaxInt32", strconv.FormatInt(math.MaxInt32, 10), time.Duration(math.MaxInt32) * time.Millisecond, false},
+		{
+			"MaxMilliseconds",
+			strconv.FormatInt(maxValidMillis, 10),
+			time.Duration(maxValidMillis) * time.Millisecond,
+			false,
+		},
+		{"MinMilliseconds", strconv.FormatInt(-maxValidMillis, 10), 0, false},
+		{"PositiveOverflow", strconv.FormatInt(maxMillis+1, 10), 0, true},
+		{"PositiveOverflowWrapsPositive", "18446744073710", 0, true},
+		{"NegativeOverflowWrapsPositive", strconv.FormatInt(-maxMillis-1, 10), 0, true},
+		{"MaxInt64", strconv.FormatInt(math.MaxInt64, 10), 0, true},
+		{"MinInt64", strconv.FormatInt(math.MinInt64, 10), 0, true},
+		{"InvalidInteger", "abc", 0, true},
+		{"IntegerOverflow", "9223372036854775808", 0, true},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(envarExpInterval, tc.value)
+			t.Setenv(envarExpTimeout, tc.value)
+
+			var errs []error
+			original := otel.GetErrorHandler()
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { errs = append(errs, err) }))
+			t.Cleanup(func() { otel.SetErrorHandler(original) })
+
+			wantInterval, wantTimeout := tc.want, tc.want
+			if tc.want == 0 {
+				wantInterval, wantTimeout = dfltExpInterval, dfltExpTimeout
+			}
+			cfg := newBatchConfig(nil)
+			assert.Equal(t, wantInterval, cfg.expInterval.Value)
+			assert.Equal(t, wantTimeout, cfg.expTimeout.Value)
+			assert.True(t, cfg.expInterval.Set)
+			assert.True(t, cfg.expTimeout.Set)
+			if tc.wantErr {
+				require.Len(t, errs, 2)
+				assert.ErrorContains(t, errs[0], envarExpInterval)
+				assert.ErrorContains(t, errs[0], tc.value)
+				assert.ErrorContains(t, errs[1], envarExpTimeout)
+				assert.ErrorContains(t, errs[1], tc.value)
+			} else {
+				assert.Empty(t, errs)
+			}
+
+			errs = nil
+			cfg = newBatchConfig([]BatchProcessorOption{
+				WithExportInterval(17 * time.Millisecond),
+				WithExportTimeout(42 * time.Millisecond),
+			})
+			assert.Equal(t, 17*time.Millisecond, cfg.expInterval.Value)
+			assert.Equal(t, 42*time.Millisecond, cfg.expTimeout.Value)
+			assert.Empty(t, errs, "explicit options should take precedence")
 		})
 	}
 }

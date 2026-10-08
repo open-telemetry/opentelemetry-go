@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Reject overflowing log export interval and timeout environment variables in `go.opentelemetry.io/otel/sdk/log`. (#9081)
 - Fix a data race in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is read concurrently with `Span.SetBaggageItem`. (#9049)
 
 <!-- Released section -->

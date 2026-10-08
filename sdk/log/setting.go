@@ -5,6 +5,7 @@ package log
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"time"
@@ -71,9 +72,9 @@ func clearLessThanOne[T ~int | ~int64]() resolver[T] {
 // If the input setting to the resolver is set, the environment variable will
 // not be applied.
 //
-// If the environment variable value associated with key is not an integer, an
-// error will be sent to the OTel error handler and the setting will not be
-// updated.
+// If the environment variable value associated with key is not an integer or
+// overflows a duration, an error will be sent to the OTel error handler and the
+// setting will not be updated.
 //
 // If the setting value has type [time.Duration], the environment variable will
 // be interpreted as a duration in milliseconds.
@@ -92,7 +93,12 @@ func getenv[T ~int | ~int64](key string) resolver[T] {
 				switch any(s.Value).(type) {
 				case time.Duration:
 					// OTel duration envar are in millisecond.
-					s.Value = T(time.Duration(n) * time.Millisecond)
+					d := time.Duration(n)
+					if d > math.MaxInt64/time.Millisecond || d < math.MinInt64/time.Millisecond {
+						otel.Handle(fmt.Errorf("invalid %s value %s: duration overflows time.Duration", key, v))
+						return s
+					}
+					s.Value = T(d * time.Millisecond)
 				default:
 					s.Value = T(n)
 				}
