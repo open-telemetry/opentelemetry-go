@@ -63,6 +63,9 @@ the filepath to the client's private key to use in mTLS communication in PEM for
 OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY takes precedence over OTEL_EXPORTER_OTLP_CLIENT_KEY.
 The configuration can be overridden by the [WithTLSClientConfig] option.
 
+The client certificate and key paths are resolved independently, so a Logs-specific
+path can be combined with the other generic path.
+
 [W3C Baggage HTTP Header Content Format]: https://www.w3.org/TR/baggage/#header-content
 */
 package otlploghttp
