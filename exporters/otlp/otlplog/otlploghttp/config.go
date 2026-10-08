@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -93,7 +92,7 @@ func (f fnOpt) applyHTTPOption(c config) config { return f(c) }
 
 type config struct {
 	endpoint        setting[string]
-	path            setting[string]
+	path            setting[string] // Escaped URL path.
 	insecure        setting[bool]
 	tlsCfg          setting[*tls.Config]
 	headers         setting[map[string]string]
@@ -199,7 +198,7 @@ func WithEndpointURL(rawURL string) Option {
 	}
 	return fnOpt(func(c config) config {
 		c.endpoint = newSetting(u.Host)
-		c.path = newSetting(u.Path)
+		c.path = newSetting(u.EscapedPath())
 		c.insecure = insecureFromScheme(c.insecure, u.Scheme)
 		return c
 	})
@@ -244,7 +243,8 @@ func WithCompression(compression Compression) Option {
 // passed, "/v1/logs" will be used.
 func WithURLPath(urlPath string) Option {
 	return fnOpt(func(c config) config {
-		c.path = newSetting(urlPath)
+		u := url.URL{Path: urlPath}
+		c.path = newSetting(u.EscapedPath())
 		return c
 	})
 }
@@ -558,7 +558,7 @@ func convEndpoint(s string) (string, error) {
 	return u.Host, nil
 }
 
-// convPathExact converts s from a URL string to the exact path if s is a valid
+// convPathExact converts s from a URL string to the escaped path if s is a valid
 // URL. Otherwise, "" and an error are returned.
 //
 // If the path contained in s is empty, "/" is returned.
@@ -570,17 +570,22 @@ func convPathExact(s string) (string, error) {
 	if u.Path == "" {
 		return "/", nil
 	}
-	return u.Path, nil
+	return u.EscapedPath(), nil
 }
 
-// convPath converts s from a URL string to an OTLP endpoint path if s is a
+// convPath converts s from a URL string to an escaped OTLP endpoint path if s is a
 // valid URL. Otherwise, "" and an error are returned.
 func convPath(s string) (string, error) {
 	u, err := url.Parse(s)
 	if err != nil {
 		return "", err
 	}
-	return path.Join(u.Path, defaultPath), nil
+	p := u.EscapedPath()
+	// Reuse a trailing slash without cleaning the configured base path.
+	if strings.HasSuffix(p, "/") {
+		return p + strings.TrimPrefix(defaultPath, "/"), nil
+	}
+	return p + defaultPath, nil
 }
 
 // convInsecure converts s from a string to a bool without case sensitivity.
