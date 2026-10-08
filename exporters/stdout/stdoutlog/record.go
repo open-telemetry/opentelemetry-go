@@ -4,11 +4,11 @@
 package stdoutlog
 
 import (
+	"encoding/json"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
@@ -27,12 +27,20 @@ type recordJSON struct {
 	SpanID            trace.SpanID
 	TraceFlags        trace.TraceFlags
 	Resource          *resource.Resource
-	Scope             instrumentation.Scope
+	Scope             scopeJSON
 	DroppedAttributes int
+}
+
+type scopeJSON struct {
+	Name       string
+	Version    string
+	SchemaURL  string
+	Attributes json.RawMessage
 }
 
 func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 	res := r.Resource()
+	scope := r.InstrumentationScope()
 	newRecord := recordJSON{
 		EventName:    r.EventName(),
 		Severity:     r.Severity(),
@@ -46,7 +54,14 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 		Attributes: make([]attribute.KeyValue, 0, r.AttributesLen()),
 
 		Resource: res,
-		Scope:    r.InstrumentationScope(),
+		Scope: scopeJSON{
+			Name:      scope.Name,
+			Version:   scope.Version,
+			SchemaURL: scope.SchemaURL,
+			// Set.String retains nested values, including non-finite floats,
+			// without relying on the Set's pointer-receiver JSON marshaler.
+			Attributes: json.RawMessage(scope.Attributes.String()),
+		},
 
 		DroppedAttributes: r.DroppedAttributes(),
 	}
