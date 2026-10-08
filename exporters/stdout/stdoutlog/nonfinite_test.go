@@ -35,6 +35,13 @@ func TestExporterNonFiniteValues(t *testing.T) {
 		{"positive infinity", attribute.Float64Value(math.Inf(1)), `{"Type":"FLOAT64","Value":"Infinity"}`},
 		{"negative infinity", attribute.Float64Value(math.Inf(-1)), `{"Type":"FLOAT64","Value":"-Infinity"}`},
 		{
+			name: "finite float slice",
+			value: attribute.Float64SliceValue([]float64{
+				1.5, math.Copysign(0, -1), math.SmallestNonzeroFloat64, math.MaxFloat64,
+			}),
+			want: `{"Type":"FLOAT64SLICE","Value":[1.5,-0,5e-324,1.7976931348623157e+308]}`,
+		},
+		{
 			name:  "float slice",
 			value: attribute.Float64SliceValue([]float64{1.5, math.NaN(), math.Inf(1), math.Inf(-1), math.Copysign(0, -1)}),
 			want:  `{"Type":"FLOAT64SLICE","Value":[1.5,"NaN","Infinity","-Infinity",-0]}`,

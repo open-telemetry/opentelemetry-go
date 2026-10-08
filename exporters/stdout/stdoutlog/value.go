@@ -32,11 +32,17 @@ func newValueJSON(v attribute.Value) valueJSON {
 		result.Value = float64JSON(v.AsFloat64())
 	case attribute.FLOAT64SLICE:
 		values := v.AsFloat64Slice()
-		converted := make([]any, len(values))
-		for i, f := range values {
-			converted[i] = float64JSON(f)
+		result.Value = values
+		for _, f := range values {
+			if math.IsNaN(f) || math.IsInf(f, 0) {
+				converted := make([]any, len(values))
+				for i, value := range values {
+					converted[i] = float64JSON(value)
+				}
+				result.Value = converted
+				break
+			}
 		}
-		result.Value = converted
 	case attribute.SLICE:
 		values := v.AsSlice()
 		converted := make([]valueJSON, len(values))
