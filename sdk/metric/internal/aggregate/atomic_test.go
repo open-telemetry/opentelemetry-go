@@ -530,28 +530,35 @@ func TestLazyLimitedSyncMapLimit(t *testing.T) {
 }
 
 func TestLazyLimitedSyncMapOverflowAttributeBeforeLimit(t *testing.T) {
-	newValue := func(attribute.Set) any { return new(int) }
+	newValue := func(attr attribute.Set) *attribute.Set {
+		a := attr
+		return &a
+	}
 
 	t.Run("NoLimit", func(t *testing.T) {
-		m := newLazyLimitedSyncMap[any](0, newValue, nil)
+		m := newLazyLimitedSyncMap[*attribute.Set](0, newValue, nil)
 		v1 := lazyLoadOrStore(&m, overflowSet)
 		assert.Equal(t, 1, m.Len())
+		assert.Equal(t, overflowSet, *v1)
 
 		attr := attribute.NewSet(attribute.String("key", "1"))
 		v2 := lazyLoadOrStore(&m, attr)
 		assert.Equal(t, 2, m.Len())
 		assert.NotSame(t, v1, v2)
+		assert.Equal(t, attr, *v2)
 	})
 
 	t.Run("WithLimit", func(t *testing.T) {
-		m := newLazyLimitedSyncMap[any](3, newValue, nil)
+		m := newLazyLimitedSyncMap[*attribute.Set](3, newValue, nil)
 		v1 := lazyLoadOrStore(&m, overflowSet)
 		assert.Equal(t, 1, m.Len())
+		assert.Equal(t, overflowSet, *v1)
 
 		attr2 := attribute.NewSet(attribute.String("key", "2"))
 		v2 := lazyLoadOrStore(&m, attr2)
 		assert.Equal(t, 2, m.Len())
 		assert.NotSame(t, v1, v2)
+		assert.Equal(t, attr2, *v2)
 
 		attr3 := attribute.NewSet(attribute.String("key", "3"))
 		v3 := lazyLoadOrStore(&m, attr3)
@@ -569,6 +576,7 @@ func TestLazyLimitedSyncMapOverflowAttributeBeforeLimit(t *testing.T) {
 		v5 := lazyLoadOrStore(&m, overflowSet)
 		assert.Equal(t, 1, m.Len())
 		assert.Same(t, v1, v5)
+		assert.Equal(t, overflowSet, *v5)
 
 		v6 := lazyLoadOrStore(&m, attr2)
 		assert.Equal(t, 2, m.Len())

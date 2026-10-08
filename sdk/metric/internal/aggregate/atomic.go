@@ -308,7 +308,8 @@ func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes) V {
 	var fltrAttr attribute.Set
 	targetDistinct := distinct
 	// Determine if we need to use overflow
-	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
+	overflowed := m.aggLimit > 0 && m.len >= m.aggLimit-1
+	if overflowed {
 		fltrAttr = overflowSet
 		targetDistinct = overflowSet.Equivalent()
 		m.overflow.Store(true)
@@ -331,7 +332,7 @@ func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes) V {
 	}
 
 	// create new entry
-	if targetDistinct != overflowSet.Equivalent() {
+	if !overflowed {
 		fltrAttr = lazy.Set()
 	}
 	newVal := m.newValue(fltrAttr)
