@@ -47,6 +47,10 @@ type Option interface {
 }
 
 // WithWriter sets the export stream destination.
+// The application owns w; the exporter does not close or flush it.
+// An in-progress Write may complete after an export's context ends. The exporter
+// waits for that write before starting another, retaining at most one record's
+// encoded JSON while it is blocked.
 func WithWriter(w io.Writer) Option {
 	return writerOption{w}
 }
