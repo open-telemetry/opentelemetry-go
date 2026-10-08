@@ -26,8 +26,8 @@ The configuration can be overridden by the [WithEndpoint], [WithEndpointURL], [W
 
 OTEL_EXPORTER_OTLP_INSECURE, OTEL_EXPORTER_OTLP_LOGS_INSECURE (default: "false") -
 setting "true" disables client transport security for the exporter's HTTP connection.
-Values are case-insensitive. Any other nonempty value is interpreted as "false",
-and unrecognized values are reported to the OpenTelemetry error handler.
+Values are case-insensitive. Any other nonempty value is interpreted as "false".
+Unrecognized values used for configuration are reported to the OpenTelemetry error handler.
 Empty values are treated as unset.
 OTEL_EXPORTER_OTLP_LOGS_INSECURE takes precedence over OTEL_EXPORTER_OTLP_INSECURE.
 The configuration can be overridden by the [WithInsecure] and [WithTLSClientConfig] options.

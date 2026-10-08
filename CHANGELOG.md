@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Interpret invalid nonempty insecure environment variable values as false in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, preserving Logs-specific precedence over the generic setting and reporting the invalid value. (#9152)
 - Fix a data race in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is read concurrently with `Span.SetBaggageItem`. (#9049)
 
 <!-- Released section -->
@@ -49,7 +50,6 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Fixed
 
-- Interpret invalid nonempty insecure environment variable values as false in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, preserving Logs-specific precedence over the generic setting and reporting the invalid value.
 - Count valid U+FFFD replacement characters toward attribute value length limits in `go.opentelemetry.io/otel/trace`, `go.opentelemetry.io/otel/sdk/trace`, and `go.opentelemetry.io/otel/sdk/log`.
 - Truncate string attribute values to empty strings when the configured length limit is zero, including malformed UTF-8, in `go.opentelemetry.io/otel/trace`, `go.opentelemetry.io/otel/sdk/trace`, and `go.opentelemetry.io/otel/sdk/log`. (#9054)
 - Fix a data race in `NewPeriodicReader` where `r.inst` was assigned after the background goroutine was launched in `go.opentelemetry.io/otel/sdk/metric`. (#9028)
