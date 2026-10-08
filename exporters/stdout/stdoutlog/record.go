@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
-	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -21,13 +20,13 @@ type recordJSON struct {
 	EventName         string     `json:",omitempty"`
 	Severity          log.Severity
 	SeverityText      string
-	Body              attribute.Value
-	Attributes        []attribute.KeyValue
+	Body              valueJSON
+	Attributes        []keyValueJSON
 	TraceID           trace.TraceID
 	SpanID            trace.SpanID
 	TraceFlags        trace.TraceFlags
-	Resource          *resource.Resource
-	Scope             instrumentation.Scope
+	Resource          any
+	Scope             any
 	DroppedAttributes int
 }
 
@@ -37,13 +36,13 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 		EventName:    r.EventName(),
 		Severity:     r.Severity(),
 		SeverityText: r.SeverityText(),
-		Body:         r.Body(),
+		Body:         newValueJSON(r.Body()),
 
 		TraceID:    r.TraceID(),
 		SpanID:     r.SpanID(),
 		TraceFlags: r.TraceFlags(),
 
-		Attributes: make([]attribute.KeyValue, 0, r.AttributesLen()),
+		Attributes: make([]keyValueJSON, 0, r.AttributesLen()),
 
 		Resource: res,
 		Scope:    r.InstrumentationScope(),
@@ -52,9 +51,21 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 	}
 
 	r.WalkAttributes(func(kv attribute.KeyValue) bool {
-		newRecord.Attributes = append(newRecord.Attributes, kv)
+		newRecord.Attributes = append(newRecord.Attributes, newKeyValueJSON(kv))
 		return true
 	})
+
+	// Preserve the existing nil/empty resource and empty scope representations.
+	if res.Len() > 0 {
+		newRecord.Resource = newAttributeSetJSON(res.Iter())
+	}
+	scope := r.InstrumentationScope()
+	if scope.Attributes.Len() > 0 {
+		newRecord.Scope = scopeJSON{
+			Scope:      scope,
+			Attributes: newAttributeSetJSON(scope.Attributes.Iter()),
+		}
+	}
 
 	if e.timestamps {
 		timestamp := r.Timestamp()
@@ -65,4 +76,17 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 	}
 
 	return newRecord
+}
+
+type scopeJSON struct {
+	instrumentation.Scope
+	Attributes []keyValueJSON
+}
+
+func newAttributeSetJSON(iter attribute.Iterator) []keyValueJSON {
+	attrs := make([]keyValueJSON, 0, iter.Len())
+	for iter.Next() {
+		attrs = append(attrs, newKeyValueJSON(iter.Attribute()))
+	}
+	return attrs
 }

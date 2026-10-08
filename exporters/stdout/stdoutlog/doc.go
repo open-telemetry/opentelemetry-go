@@ -3,6 +3,9 @@
 
 // Package stdoutlog provides an exporter for OpenTelemetry logs.
 //
+// Non-finite floating-point values are exported as the JSON strings "NaN",
+// "Infinity", and "-Infinity".
+//
 // The exporter is intended to be used for testing and debugging; it is not
 // meant for production use. Additionally, it does not provide an interchange
 // format for OpenTelemetry that is supported with any stability or
