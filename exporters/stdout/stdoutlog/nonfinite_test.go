@@ -42,9 +42,11 @@ func TestExporterNonFiniteValues(t *testing.T) {
 			want: `{"Type":"FLOAT64SLICE","Value":[1.5,-0,5e-324,1.7976931348623157e+308]}`,
 		},
 		{
-			name:  "float slice",
-			value: attribute.Float64SliceValue([]float64{1.5, math.NaN(), math.Inf(1), math.Inf(-1), math.Copysign(0, -1)}),
-			want:  `{"Type":"FLOAT64SLICE","Value":[1.5,"NaN","Infinity","-Infinity",-0]}`,
+			name: "float slice",
+			value: attribute.Float64SliceValue(
+				[]float64{1.5, math.NaN(), math.Inf(1), math.Inf(-1), math.Copysign(0, -1)},
+			),
+			want: `{"Type":"FLOAT64SLICE","Value":[1.5,"NaN","Infinity","-Infinity",-0]}`,
 		},
 		{
 			name: "heterogeneous slice",
@@ -127,7 +129,11 @@ func TestExporterNonFiniteValues(t *testing.T) {
 						scope = sortedJSONAttributes(wantKV)
 					}
 					records := []sdklog.Record{
-						nonFiniteRecordFactory("before").NewRecord(), factory.NewRecord(), nonFiniteRecordFactory("after").NewRecord(),
+						nonFiniteRecordFactory(
+							"before",
+						).NewRecord(),
+						factory.NewRecord(),
+						nonFiniteRecordFactory("after").NewRecord(),
 					}
 					require.NoError(t, exporter.Export(t.Context(), records))
 					got := decodeExportedJSON(t, &buf)
