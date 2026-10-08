@@ -595,7 +595,9 @@ func loadInsecureFromEnv(keys []string) resolver[bool] {
 			if value := os.Getenv(key); value != "" {
 				insecure := strings.EqualFold(value, "true")
 				if !insecure && !strings.EqualFold(value, "false") {
-					otel.Handle(fmt.Errorf("invalid %s value %s: can't convert %q to bool, using false", key, value, value))
+					otel.Handle(
+						fmt.Errorf("invalid %s value %s: can't convert %q to bool, using false", key, value, value),
+					)
 				}
 				return newSetting(insecure)
 			}
