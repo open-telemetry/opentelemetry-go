@@ -529,6 +529,54 @@ func TestLazyLimitedSyncMapLimit(t *testing.T) {
 	assert.Same(t, v7, v8, "Subsequent keys should return same overflow value")
 }
 
+func TestLazyLimitedSyncMapOverflowAttributeBeforeLimit(t *testing.T) {
+	newValue := func(attribute.Set) any { return new(int) }
+
+	t.Run("NoLimit", func(t *testing.T) {
+		m := newLazyLimitedSyncMap[any](0, newValue, nil)
+		v1 := lazyLoadOrStore(&m, overflowSet)
+		assert.Equal(t, 1, m.Len())
+
+		attr := attribute.NewSet(attribute.String("key", "1"))
+		v2 := lazyLoadOrStore(&m, attr)
+		assert.Equal(t, 2, m.Len())
+		assert.NotSame(t, v1, v2)
+	})
+
+	t.Run("WithLimit", func(t *testing.T) {
+		m := newLazyLimitedSyncMap[any](3, newValue, nil)
+		v1 := lazyLoadOrStore(&m, overflowSet)
+		assert.Equal(t, 1, m.Len())
+
+		attr2 := attribute.NewSet(attribute.String("key", "2"))
+		v2 := lazyLoadOrStore(&m, attr2)
+		assert.Equal(t, 2, m.Len())
+		assert.NotSame(t, v1, v2)
+
+		attr3 := attribute.NewSet(attribute.String("key", "3"))
+		v3 := lazyLoadOrStore(&m, attr3)
+		assert.Equal(t, 2, m.Len())
+		assert.Same(t, v1, v3)
+
+		attr4 := attribute.NewSet(attribute.String("key", "4"))
+		v4 := lazyLoadOrStore(&m, attr4)
+		assert.Equal(t, 2, m.Len())
+		assert.Same(t, v3, v4)
+
+		m.Clear()
+		assert.Equal(t, 0, m.Len())
+
+		v5 := lazyLoadOrStore(&m, overflowSet)
+		assert.Equal(t, 1, m.Len())
+		assert.Same(t, v1, v5)
+
+		v6 := lazyLoadOrStore(&m, attr2)
+		assert.Equal(t, 2, m.Len())
+		assert.Same(t, v2, v6)
+		assert.NotSame(t, v5, v6)
+	})
+}
+
 func TestLazyLimitedSyncMapConcurrentSafe(t *testing.T) {
 	m := newLazyLimitedSyncMap[any](5, func(attribute.Set) any { return 1 }, nil)
 	attr := attribute.NewSet(attribute.String("k", "v"))

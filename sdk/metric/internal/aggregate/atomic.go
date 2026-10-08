@@ -254,6 +254,7 @@ type lazyLimitedSyncMap[V any] struct {
 	len      int
 	lenMux   sync.Mutex
 	cycle    atomic.Uint64
+	overflow atomic.Bool
 
 	newValue  func(attribute.Set) V
 	resetFunc func(V)
@@ -278,12 +279,15 @@ func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes) V {
 		}
 	}
 
-	// If the overflow set exists and is active in current cycle, assume we overflowed.
-	actualOverflow, loadedOverflow := m.m.Load(overflowSet.Equivalent())
-	if loadedOverflow {
-		ent := actualOverflow.(*entry[V])
-		if ent.cycle.Load() == currentCycle {
-			return ent.value
+	// If aggregation overflow has already happened due to exceeding the limit,
+	// any new attribute set will be aggregated into the overflow set.
+	if m.aggLimit > 0 && m.overflow.Load() {
+		actualOverflow, loadedOverflow := m.m.Load(overflowSet.Equivalent())
+		if loadedOverflow {
+			ent := actualOverflow.(*entry[V])
+			if ent.cycle.Load() == currentCycle {
+				return ent.value
+			}
 		}
 	}
 
@@ -307,6 +311,7 @@ func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes) V {
 	if m.aggLimit > 0 && m.len >= m.aggLimit-1 {
 		fltrAttr = overflowSet
 		targetDistinct = overflowSet.Equivalent()
+		m.overflow.Store(true)
 		actual, loaded = m.m.Load(targetDistinct)
 		if loaded {
 			ent := actual.(*entry[V])
@@ -344,6 +349,7 @@ func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes) V {
 func (m *lazyLimitedSyncMap[V]) Clear() {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
+	m.overflow.Store(false)
 	m.cycle.Add(1)
 	m.len = 0
 
