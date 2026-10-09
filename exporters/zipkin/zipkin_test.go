@@ -35,9 +35,7 @@ func TestNewRawExporter(t *testing.T) {
 		exp, err := New(defaultCollectorURL, opts...)
 		require.NoError(t, err)
 		assert.Equal(t, exp.logger, emptyLogger)
-		require.NotPanics(t, func() {
-			assert.NoError(t, exp.ExportSpans(t.Context(), nil))
-		})
+		assert.NoError(t, exp.ExportSpans(t.Context(), nil))
 	}
 }
 
@@ -400,7 +398,7 @@ func TestLogrFormatting(t *testing.T) {
 		buf.Reset()
 		exp, err := New("", opts...)
 		require.NoError(t, err)
-		require.NotPanics(t, func() { exp.logf(format, args...) })
+		exp.logf(format, args...)
 		assert.Equal(t, want, buf.String())
 	}
 }
