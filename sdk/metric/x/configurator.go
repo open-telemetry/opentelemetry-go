@@ -57,8 +57,7 @@ func (o meterEnabledOption) applyMeterConfig(c *MeterConfig) {
 // Implementations must return quickly and must not block. A slow call delays
 // the Meter call that triggered it, and any concurrent Meter call for the same
 // scope, since a Meter is not returned before its initial configuration is
-// applied. A Set walk delays any concurrent Set and the MeterProvider's
-// Shutdown until it completes. Implementations must not call Meter on the same
+// applied. A Set walk delays any concurrent Set until it completes. Implementations must not call Meter on the same
 // MeterProvider for the scope being configured; doing so deadlocks.
 // Implementations must also not panic; a panic is not recovered and
 // propagates to the caller of Meter or [MeterConfiguratorHandle.Set].

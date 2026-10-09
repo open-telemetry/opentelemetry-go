@@ -84,6 +84,11 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 		claimed := mco.RegisterOnUpdate(func() {
 			fn, version := mp.configurator()
 			mp.meters.Range(func(s instrumentation.Scope, m metric.Meter) {
+				// Shutdown does not wait for the walk, so stop calling the
+				// configurator for a provider that is shut down.
+				if mp.stopped.Load() {
+					return
+				}
 				gm, ok := m.(*configuratorMeter)
 				if !ok {
 					return

@@ -25,11 +25,13 @@ import (
 // MeterProvider has been shut down cannot be claimed again; create a new
 // Handle for a new MeterProvider.
 type MeterConfiguratorHandle struct {
-	mu           sync.Mutex // guards onUpdate, version, and registered; serializes Set, RegisterOnUpdate, and Unregister; see Set's doc comment
+	mu           sync.Mutex // guards version and registered; serializes Set and RegisterOnUpdate; see Set's doc comment
 	configurator atomic.Pointer[versionedConfigurator]
-	onUpdate     func() // set/read under mu; see RegisterOnUpdate/Unregister
-	version      uint64 // bumped once per Set call, guarded by mu; see Set
-	registered   bool   // claimed by a MeterProvider; guarded by mu; see RegisterOnUpdate/Unregister
+	// onUpdate is atomic so Unregister can clear it without waiting for an
+	// in-progress Set walk; see RegisterOnUpdate/Unregister.
+	onUpdate   atomic.Pointer[func()]
+	version    uint64 // bumped once per Set call, guarded by mu; see Set
+	registered bool   // claimed by a MeterProvider; guarded by mu; see RegisterOnUpdate/Unregister
 }
 
 // errHandleAlreadyRegistered is logged when a MeterConfiguratorHandle already
@@ -65,11 +67,13 @@ func NewMeterConfiguratorHandle() *MeterConfiguratorHandle {
 // Concurrent calls to Set are serialized: a Set call blocks until any
 // already-in-progress Set, including its cache walk, has completed. This
 // keeps one Set's cache walk from partially overwriting another's result
-// across different meters. Set shares its lock with RegisterOnUpdate and
-// Unregister, so the callback registered via RegisterOnUpdate, and the fn
-// passed to Set, must not call Set, RegisterOnUpdate, or Unregister (directly,
-// or indirectly, e.g. via Shutdown) on the same handle; doing so deadlocks,
-// since this lock is not reentrant.
+// across different meters. Set shares its lock with RegisterOnUpdate, so the
+// callback registered via RegisterOnUpdate, and the fn passed to Set, must not
+// call Set or RegisterOnUpdate on the same handle; doing so deadlocks, since
+// this lock is not reentrant.
+//
+// Shutting down the MeterProvider does not wait for an in-progress walk; the
+// walk stops at its next Meter instead.
 //
 // Passing a nil fn clears the configurator, reverting to the same default
 // behavior as a handle that has never had Set called on it (the Meter
@@ -79,8 +83,8 @@ func (h *MeterConfiguratorHandle) Set(fn MeterConfigurator) {
 	defer h.mu.Unlock()
 	h.version++
 	h.configurator.Store(&versionedConfigurator{fn: fn, version: h.version})
-	if h.onUpdate != nil {
-		h.onUpdate()
+	if f := h.onUpdate.Load(); f != nil {
+		(*f)()
 	}
 }
 
@@ -167,20 +171,18 @@ func (o meterConfiguratorProviderOption) RegisterOnUpdate(fn func()) bool {
 		return false
 	}
 	o.handle.registered = true
-	o.handle.onUpdate = fn
+	o.handle.onUpdate.Store(&fn)
 	return true
 }
 
 // Unregister retires the handle, clearing onUpdate so a Set call afterward no
 // longer walks this (now presumably shut down) MeterProvider. The claim is
 // kept, so no other MeterProvider can claim the handle, and repeated calls
-// cannot affect anyone else.
+// cannot affect anyone else. It does not take the handle's lock, so it never
+// waits for an in-progress Set walk.
 //
 // Called by sdk/metric during [sdkmetric.MeterProvider.Shutdown],
 // only for a provider whose RegisterOnUpdate call actually claimed it.
 func (o meterConfiguratorProviderOption) Unregister() {
-	o.handle.mu.Lock()
-	defer o.handle.mu.Unlock()
-
-	o.handle.onUpdate = nil
+	o.handle.onUpdate.Store(nil)
 }

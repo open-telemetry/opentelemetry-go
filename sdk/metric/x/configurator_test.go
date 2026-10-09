@@ -4,7 +4,10 @@
 package x
 
 import (
+	"context"
+	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -234,6 +237,56 @@ func TestMeterConfiguratorBlockedCallDoesNotBlockOtherScopes(t *testing.T) {
 	<-slowDone
 
 	assert.True(t, fastReturned, "a configurator blocked on one scope must not block Meter creation for another")
+}
+
+func TestMeterConfiguratorShutdownDoesNotWaitForSetWalk(t *testing.T) {
+	h := NewMeterConfiguratorHandle()
+	mp := sdkmetric.NewMeterProvider(WithMeterConfigurator(h))
+	_ = mp.Meter("slow")
+	for i := range 10 {
+		_ = mp.Meter(strconv.Itoa(i))
+	}
+
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var released, callsAfterRelease atomic.Bool
+	setDone := make(chan struct{})
+	go func() {
+		defer close(setDone)
+		h.Set(func(s instrumentation.Scope) MeterConfig {
+			if released.Load() {
+				callsAfterRelease.Store(true)
+			}
+			if s.Name == "slow" {
+				close(entered)
+				<-release
+			}
+			return MeterConfig{}
+		})
+	}()
+	<-entered // the Set walk is now blocked on "slow"
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	shutdownDone := make(chan struct{})
+	go func() {
+		defer close(shutdownDone)
+		_ = mp.Shutdown(ctx)
+	}()
+
+	var shutdownReturned bool
+	select {
+	case <-shutdownDone:
+		shutdownReturned = true
+	case <-time.After(5 * time.Second):
+	}
+	released.Store(true)
+	close(release)
+	<-setDone
+	<-shutdownDone
+
+	assert.True(t, shutdownReturned, "Shutdown must not wait for an in-progress Set walk")
+	assert.False(t, callsAfterRelease.Load(), "a Set walk must stop once the MeterProvider is shut down")
 }
 
 func TestMeterConfiguratorHandleSetNoConfigurator(t *testing.T) {
