@@ -133,12 +133,10 @@ func TestForceFlushAndShutdownTraceProviderWithoutProcessor(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			stp := NewTracerProvider(tc.opts...)
-			require.NotPanics(t, func() {
-				_, span := stp.Tracer("test").Start(t.Context(), "test")
-				span.End()
-				assert.NoError(t, stp.ForceFlush(t.Context()))
-				assert.NoError(t, stp.Shutdown(t.Context()))
-			})
+			_, span := stp.Tracer("test").Start(t.Context(), "test")
+			span.End()
+			assert.NoError(t, stp.ForceFlush(t.Context()))
+			assert.NoError(t, stp.Shutdown(t.Context()))
 			assert.True(t, stp.isShutdown.Load())
 		})
 	}
@@ -247,12 +245,10 @@ func TestShutdownTraceProvider(t *testing.T) {
 				stp = NewTracerProvider(tc.opts(sp, recorder)...)
 			}
 
-			require.NotPanics(t, func() {
-				_, span := stp.Tracer("test").Start(t.Context(), "test")
-				span.End()
-				assert.NoError(t, stp.ForceFlush(t.Context()))
-				assert.NoError(t, stp.Shutdown(t.Context()))
-			})
+			_, span := stp.Tracer("test").Start(t.Context(), "test")
+			span.End()
+			assert.NoError(t, stp.ForceFlush(t.Context()))
+			assert.NoError(t, stp.Shutdown(t.Context()))
 			assert.Len(t, recorder.spansStarted, 1)
 			assert.Len(t, recorder.spansEnded, 1)
 			assert.Equal(t, 1, recorder.shutdownCount)
