@@ -381,22 +381,14 @@ func TestRegistrationDelegation(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 2, mImpl.registry.Len(), "third callback not registered")
 
-	preNilReg, err := m.RegisterCallback(nil, actr)
-	require.NoError(t, err)
-
 	mp := &testMeterProvider{}
 	globalMeterProvider.setDelegate(mp)
-
-	postNilReg, err := m.RegisterCallback(nil, actr)
-	require.NoError(t, err)
 
 	testCollect(t, m) // This is a hacky way to emulate a read from an exporter
 	require.False(t, called0, "pre-delegation unregistered callback called")
 	require.True(t, called1, "second callback not called")
 	require.True(t, called2, "third callback not called")
 
-	assert.NoError(t, preNilReg.Unregister())
-	assert.NoError(t, postNilReg.Unregister())
 	assert.NoError(t, reg1.Unregister(), "unregister second callback")
 	called1, called2 = false, false // reset called capture
 	testCollect(t, m)               // This is a hacky way to emulate a read from an exporter
@@ -406,6 +398,30 @@ func TestRegistrationDelegation(t *testing.T) {
 	assert.NotPanics(t, func() {
 		assert.NoError(t, reg1.Unregister(), "duplicate unregister calls")
 	})
+}
+
+func TestNilCallbackDelegation(t *testing.T) {
+	provider := &meterProvider{}
+	m := provider.Meter("nil-callback")
+	counter, err := m.Int64ObservableCounter("counter")
+	require.NoError(t, err)
+
+	before, err := m.RegisterCallback(nil, counter)
+	require.NoError(t, err)
+	require.NotNil(t, before)
+	provider.setDelegate(&testMeterProvider{})
+
+	after, err := m.RegisterCallback(nil, counter)
+	require.NoError(t, err)
+	require.NotNil(t, after)
+	testCollect(t, m)
+
+	delegate := m.(*meter).delegate.(*testMeter)
+	require.Len(t, delegate.callbacks, 2)
+	assert.Nil(t, delegate.callbacks[0])
+	assert.Nil(t, delegate.callbacks[1])
+	assert.NoError(t, before.Unregister())
+	assert.NoError(t, after.Unregister())
 }
 
 func TestMeterIdentity(t *testing.T) {
