@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Ignore nil callbacks passed to `WithInt64Callback` and `WithFloat64Callback` in `go.opentelemetry.io/otel/metric`, and to `RegisterCallback` in `go.opentelemetry.io/otel/sdk/metric`, to prevent panics during metric collection.
+- Ignore nil callbacks passed to `WithInt64Callback` and `WithFloat64Callback` in `go.opentelemetry.io/otel/metric`, and to `RegisterCallback` in `go.opentelemetry.io/otel/sdk/metric`, including delegation through global meters in `go.opentelemetry.io/otel`, to prevent panics during metric collection.
 
 - Preserve input span event timestamps when using `WithoutTimestamps` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9092)
 - Bound export retries by `WithTimeout` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,

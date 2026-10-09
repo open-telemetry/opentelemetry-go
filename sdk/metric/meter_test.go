@@ -1161,6 +1161,10 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	preFloat64Ctr, err := preMtr.Float64ObservableCounter("pre.float64.counter")
 	require.NoError(t, err)
 
+	preNilReg, err := preMtr.RegisterCallback(nil, preInt64Ctr, preFloat64Ctr)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, preNilReg.Unregister()) })
+
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr), WithResource(resource.Empty()))
 	otel.SetMeterProvider(mp)
@@ -1170,6 +1174,10 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	require.NoError(t, err)
 	postFloat64Ctr, err := postMtr.Float64ObservableCounter("post.float64.counter")
 	require.NoError(t, err)
+
+	postNilReg, err := preMtr.RegisterCallback(nil, postInt64Ctr, postFloat64Ctr)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, postNilReg.Unregister()) })
 
 	cb := func(_ context.Context, o metric.Observer) error {
 		o.ObserveInt64(preInt64Ctr, 1)
