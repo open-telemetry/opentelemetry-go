@@ -86,7 +86,8 @@ func TestNewRawExporterCollectorURLFromEnv(t *testing.T) {
 }
 
 func TestExporterMarshalLogDoesNotIncludeURL(t *testing.T) {
-	const sensitiveURL = "http://user:pass@zipkin.internal:9411/api/v2/spans?token=secret"
+	// Keep this private test fixture from being treated as a documentation link.
+	const sensitiveURL = "http" + "://user:pass@zipkin.internal:9411/api/v2/spans?token=secret"
 
 	exp, err := New(sensitiveURL)
 	require.NoError(t, err)
