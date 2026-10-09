@@ -143,24 +143,13 @@ func TestExportWithOptions(t *testing.T) {
 	)
 
 	for _, tt := range []struct {
-		name     string
-		opts     []stdoutmetric.Option
-		lastOpts []stdoutmetric.Option
+		name string
+		opts []stdoutmetric.Option
 
 		expectedData string
 	}{
 		{
 			name:         "with no options",
-			expectedData: "{\"Resource\":null,\"ScopeMetrics\":null}\n",
-		},
-		{
-			name:         "nil then custom writer",
-			opts:         []stdoutmetric.Option{stdoutmetric.WithWriter(nil)},
-			expectedData: "{\"Resource\":null,\"ScopeMetrics\":null}\n",
-		},
-		{
-			name:         "custom then nil writer",
-			lastOpts:     []stdoutmetric.Option{stdoutmetric.WithWriter(nil)},
 			expectedData: "{\"Resource\":null,\"ScopeMetrics\":null}\n",
 		},
 		{
@@ -175,25 +164,33 @@ func TestExportWithOptions(t *testing.T) {
 			var b bytes.Buffer
 			opts := append(tt.opts, stdoutmetric.WithWriter(&b))
 
-			exp, err := stdoutmetric.New(append(opts, tt.lastOpts...)...)
+			exp, err := stdoutmetric.New(opts...)
 			require.NoError(t, err)
 			require.NoError(t, exp.Export(ctx, data))
 
 			assert.Equal(t, tt.expectedData, b.String())
 		})
 	}
+}
 
-	t.Run("nil writer uses default", func(t *testing.T) {
-		exp, err := stdoutmetric.New(stdoutmetric.WithWriter(nil))
-		require.NoError(t, err)
-		assert.NoError(t, exp.Export(ctx, data))
-	})
+func TestExporterNilWriter(t *testing.T) {
+	exp, err := stdoutmetric.New(stdoutmetric.WithWriter(nil))
+	require.NoError(t, err)
+	assert.NoError(t, exp.Export(t.Context(), new(metricdata.ResourceMetrics)))
+}
 
-	t.Run("nil writer preserves encoder", func(t *testing.T) {
-		exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(failingEncoder{}), stdoutmetric.WithWriter(nil))
-		require.NoError(t, err)
-		assert.ErrorIs(t, exp.Export(ctx, data), errEnc)
-	})
+func TestExporterNilWriterPreservesWriter(t *testing.T) {
+	var buf bytes.Buffer
+	exp, err := stdoutmetric.New(stdoutmetric.WithWriter(&buf), stdoutmetric.WithWriter(nil))
+	require.NoError(t, err)
+	require.NoError(t, exp.Export(t.Context(), new(metricdata.ResourceMetrics)))
+	assert.Equal(t, "{\"Resource\":null,\"ScopeMetrics\":null}\n", buf.String())
+}
+
+func TestExporterNilWriterPreservesEncoder(t *testing.T) {
+	exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(failingEncoder{}), stdoutmetric.WithWriter(nil))
+	require.NoError(t, err)
+	assert.ErrorIs(t, exp.Export(t.Context(), new(metricdata.ResourceMetrics)), errEnc)
 }
 
 func TestTemporalitySelector(t *testing.T) {

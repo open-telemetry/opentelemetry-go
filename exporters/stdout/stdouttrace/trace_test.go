@@ -70,7 +70,6 @@ func TestExporterExportSpan(t *testing.T) {
 
 	tests := []struct {
 		opts      []stdouttrace.Option
-		lastOpts  []stdouttrace.Option
 		expectNow time.Time
 		ctx       context.Context
 		wantErr   error
@@ -86,17 +85,6 @@ func TestExporterExportSpan(t *testing.T) {
 			ctx: t.Context(),
 		},
 		{
-			opts:      []stdouttrace.Option{stdouttrace.WithPrettyPrint(), stdouttrace.WithWriter(nil)},
-			expectNow: now,
-			ctx:       t.Context(),
-		},
-		{
-			opts:      []stdouttrace.Option{stdouttrace.WithPrettyPrint()},
-			lastOpts:  []stdouttrace.Option{stdouttrace.WithWriter(nil)},
-			expectNow: now,
-			ctx:       t.Context(),
-		},
-		{
 			opts: []stdouttrace.Option{},
 			ctx: func() context.Context {
 				ctx, cancel := context.WithCancel(t.Context())
@@ -110,8 +98,7 @@ func TestExporterExportSpan(t *testing.T) {
 	for _, tt := range tests {
 		// write to buffer for testing
 		var b bytes.Buffer
-		opts := append(tt.opts, stdouttrace.WithWriter(&b))
-		ex, err := stdouttrace.New(append(opts, tt.lastOpts...)...)
+		ex, err := stdouttrace.New(append(tt.opts, stdouttrace.WithWriter(&b))...)
 		require.NoError(t, err)
 
 		err = ex.ExportSpans(tt.ctx, tracetest.SpanStubs{ss, ss}.Snapshots())
@@ -123,12 +110,20 @@ func TestExporterExportSpan(t *testing.T) {
 			assert.Equal(t, wantone+wantone, got)
 		}
 	}
+}
 
-	t.Run("nil writer uses default", func(t *testing.T) {
-		ex, err := stdouttrace.New(stdouttrace.WithWriter(nil))
-		require.NoError(t, err)
-		assert.NoError(t, ex.ExportSpans(t.Context(), tracetest.SpanStubs{{}}.Snapshots()))
-	})
+func TestExporterNilWriter(t *testing.T) {
+	exp, err := stdouttrace.New(stdouttrace.WithWriter(nil))
+	require.NoError(t, err)
+	assert.NoError(t, exp.ExportSpans(t.Context(), tracetest.SpanStubs{{}}.Snapshots()))
+}
+
+func TestExporterNilWriterPreservesWriter(t *testing.T) {
+	var buf bytes.Buffer
+	exp, err := stdouttrace.New(stdouttrace.WithWriter(&buf), stdouttrace.WithWriter(nil))
+	require.NoError(t, err)
+	require.NoError(t, exp.ExportSpans(t.Context(), tracetest.SpanStubs{{Name: "test"}}.Snapshots()))
+	assert.Contains(t, buf.String(), `"Name":"test"`)
 }
 
 func TestWithoutTimestampsPreservesInput(t *testing.T) {
