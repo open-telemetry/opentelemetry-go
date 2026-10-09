@@ -114,9 +114,7 @@ func TestExporterExportSpan(t *testing.T) {
 		ex, err := stdouttrace.New(append(opts, tt.lastOpts...)...)
 		require.NoError(t, err)
 
-		require.NotPanics(t, func() {
-			err = ex.ExportSpans(tt.ctx, tracetest.SpanStubs{ss, ss}.Snapshots())
-		})
+		err = ex.ExportSpans(tt.ctx, tracetest.SpanStubs{ss, ss}.Snapshots())
 		assert.Equal(t, tt.wantErr, err)
 
 		if tt.wantErr == nil {
@@ -129,9 +127,7 @@ func TestExporterExportSpan(t *testing.T) {
 	t.Run("nil writer uses default", func(t *testing.T) {
 		ex, err := stdouttrace.New(stdouttrace.WithWriter(nil))
 		require.NoError(t, err)
-		require.NotPanics(t, func() {
-			assert.NoError(t, ex.ExportSpans(t.Context(), tracetest.SpanStubs{{}}.Snapshots()))
-		})
+		assert.NoError(t, ex.ExportSpans(t.Context(), tracetest.SpanStubs{{}}.Snapshots()))
 	})
 }
 

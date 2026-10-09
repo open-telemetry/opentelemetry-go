@@ -177,9 +177,7 @@ func TestExportWithOptions(t *testing.T) {
 
 			exp, err := stdoutmetric.New(append(opts, tt.lastOpts...)...)
 			require.NoError(t, err)
-			require.NotPanics(t, func() {
-				assert.NoError(t, exp.Export(ctx, data))
-			})
+			require.NoError(t, exp.Export(ctx, data))
 
 			assert.Equal(t, tt.expectedData, b.String())
 		})
@@ -188,17 +186,13 @@ func TestExportWithOptions(t *testing.T) {
 	t.Run("nil writer uses default", func(t *testing.T) {
 		exp, err := stdoutmetric.New(stdoutmetric.WithWriter(nil))
 		require.NoError(t, err)
-		require.NotPanics(t, func() {
-			assert.NoError(t, exp.Export(ctx, data))
-		})
+		assert.NoError(t, exp.Export(ctx, data))
 	})
 
 	t.Run("nil writer preserves encoder", func(t *testing.T) {
 		exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(failingEncoder{}), stdoutmetric.WithWriter(nil))
 		require.NoError(t, err)
-		require.NotPanics(t, func() {
-			assert.ErrorIs(t, exp.Export(ctx, data), errEnc)
-		})
+		assert.ErrorIs(t, exp.Export(ctx, data), errEnc)
 	})
 }
 
