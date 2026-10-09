@@ -52,12 +52,79 @@ func (ts *readerTestSuite) TestSDKProducer() {
 }
 
 func (ts *readerTestSuite) TestExternalProducer() {
-	ts.Reader = ts.Factory(WithProducer(testExternalProducer{}))
-	ts.Reader.register(testSDKProducer{})
-	m := metricdata.ResourceMetrics{}
-	err := ts.Reader.Collect(context.Background(), &m)
-	ts.NoError(err)
-	ts.Equal(testResourceMetricsAB, m)
+	for _, tc := range []struct {
+		name string
+		opts []ReaderOption
+		want metricdata.ResourceMetrics
+	}{
+		{
+			name: "external producer",
+			opts: []ReaderOption{WithProducer(testExternalProducer{})},
+			want: testResourceMetricsAB,
+		},
+		{
+			name: "nil producer",
+			opts: []ReaderOption{WithProducer(nil)},
+			want: testResourceMetricsA,
+		},
+		{
+			name: "nil producers preserve external producer",
+			opts: []ReaderOption{WithProducer(nil), WithProducer(testExternalProducer{}), WithProducer(nil)},
+			want: testResourceMetricsAB,
+		},
+		{
+			name: "nil producers preserve external producer order",
+			opts: []ReaderOption{
+				WithProducer(nil),
+				WithProducer(testExternalProducer{}),
+				WithProducer(nil),
+				WithProducer(testExternalProducer{produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+					return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
+				}}),
+				WithProducer(nil),
+			},
+			want: metricdata.ResourceMetrics{
+				Resource:     testResourceMetricsA.Resource,
+				ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsA, testScopeMetricsB, testScopeMetricsA},
+			},
+		},
+	} {
+		ts.Run(tc.name, func() {
+			ts.Reader = ts.Factory(tc.opts...)
+			defer func() { _ = ts.Reader.Shutdown(context.Background()) }()
+			ts.Reader.register(testSDKProducer{})
+			m := metricdata.ResourceMetrics{}
+			err := ts.Reader.Collect(context.Background(), &m)
+			ts.NoError(err)
+			ts.Equal(tc.want, m)
+		})
+	}
+}
+
+func (ts *readerTestSuite) TestCardinalityLimit() {
+	selector := func(InstrumentKind) (int, bool) { return 5, false }
+	for _, tc := range []struct {
+		name         string
+		opts         []ReaderOption
+		wantLimit    int
+		wantFallback bool
+	}{
+		{name: "default", wantFallback: true},
+		{name: "nil selector uses default", opts: []ReaderOption{WithCardinalityLimitSelector(nil)}, wantFallback: true},
+		{
+			name:      "nil selectors preserve previous",
+			opts:      []ReaderOption{WithCardinalityLimitSelector(nil), WithCardinalityLimitSelector(selector), WithCardinalityLimitSelector(nil)},
+			wantLimit: 5,
+		},
+	} {
+		ts.Run(tc.name, func() {
+			ts.Reader = ts.Factory(tc.opts...)
+			defer func() { _ = ts.Reader.Shutdown(context.Background()) }()
+			limit, fallback := ts.Reader.cardinalityLimit(InstrumentKindCounter)
+			ts.Equal(tc.wantLimit, limit)
+			ts.Equal(tc.wantFallback, fallback)
+		})
+	}
 }
 
 func (ts *readerTestSuite) TestCollectAfterShutdown() {

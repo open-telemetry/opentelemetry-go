@@ -74,6 +74,7 @@ func WithRegisterer(reg prometheus.Registerer) Option {
 // WithAggregationSelector configure the Aggregation Selector the exporter will
 // use. If no AggregationSelector is provided the DefaultAggregationSelector is
 // used.
+// If agg is nil, this option does nothing.
 func WithAggregationSelector(agg metric.AggregationSelector) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.readerOpts = append(cfg.readerOpts, metric.WithAggregationSelector(agg))
@@ -83,6 +84,7 @@ func WithAggregationSelector(agg metric.AggregationSelector) Option {
 
 // WithProducer configure the metric Producer the exporter will use as a source
 // of external metric data.
+// If producer is nil, this option does nothing.
 func WithProducer(producer metric.Producer) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.readerOpts = append(cfg.readerOpts, metric.WithProducer(producer))

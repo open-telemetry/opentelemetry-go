@@ -701,6 +701,41 @@ func TestPrometheusExporter(t *testing.T) {
 		},
 	}
 
+	var selectorCalled, producerCalled bool
+	for _, tc := range []struct {
+		name                string
+		options             []Option
+		checkMetricFamilies func(testing.TB, []*dto.MetricFamily)
+	}{
+		{name: "nil aggregation selector", options: []Option{WithAggregationSelector(nil)}},
+		{name: "nil producer", options: []Option{WithProducer(nil)}},
+		{
+			name: "nil options preserve configured reader",
+			options: []Option{
+				WithAggregationSelector(func(kind metric.InstrumentKind) metric.Aggregation {
+					selectorCalled = true
+					return metric.DefaultAggregationSelector(kind)
+				}),
+				WithAggregationSelector(nil),
+				WithProducer(producerFunc(func(context.Context) ([]metricdata.ScopeMetrics, error) {
+					producerCalled = true
+					return nil, nil
+				})),
+				WithProducer(nil),
+			},
+			checkMetricFamilies: func(t testing.TB, _ []*dto.MetricFamily) {
+				assert.True(t, selectorCalled)
+				assert.True(t, producerCalled)
+			},
+		},
+	} {
+		counterCase := testCases[0]
+		counterCase.name = "counter with " + tc.name
+		counterCase.options = append(append([]Option{}, counterCase.options...), tc.options...)
+		counterCase.checkMetricFamilies = tc.checkMetricFamilies
+		testCases = append(testCases, counterCase)
+	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := t.Context()
