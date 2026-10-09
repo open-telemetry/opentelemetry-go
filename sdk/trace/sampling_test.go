@@ -64,38 +64,15 @@ func TestParentBasedWithNoParent(t *testing.T) {
 func TestParentBasedWithSamplerOptions(t *testing.T) {
 	testCases := []struct {
 		name                            string
-		samplerOption                   ParentBasedSamplerOption
+		option                          func(Sampler) ParentBasedSamplerOption
 		isParentRemote, isParentSampled bool
-		expectedDecision                SamplingDecision
+		customSampler                   Sampler
+		customDecision                  SamplingDecision
 	}{
-		{
-			"localParentSampled",
-			WithLocalParentSampled(NeverSample()),
-			false,
-			true,
-			Drop,
-		},
-		{
-			"localParentNotSampled",
-			WithLocalParentNotSampled(AlwaysSample()),
-			false,
-			false,
-			RecordAndSample,
-		},
-		{
-			"remoteParentSampled",
-			WithRemoteParentSampled(NeverSample()),
-			true,
-			true,
-			Drop,
-		},
-		{
-			"remoteParentNotSampled",
-			WithRemoteParentNotSampled(AlwaysSample()),
-			true,
-			false,
-			RecordAndSample,
-		},
+		{"localParentSampled", WithLocalParentSampled, false, true, NeverSample(), Drop},
+		{"localParentNotSampled", WithLocalParentNotSampled, false, false, AlwaysSample(), RecordAndSample},
+		{"remoteParentSampled", WithRemoteParentSampled, true, true, NeverSample(), Drop},
+		{"remoteParentNotSampled", WithRemoteParentNotSampled, true, false, AlwaysSample(), RecordAndSample},
 	}
 
 	for _, tc := range testCases {
@@ -107,43 +84,36 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 				SpanID:  spanID,
 				Remote:  tc.isParentRemote,
 			}
+			defaultDecision := Drop
 			if tc.isParentSampled {
 				pscc.TraceFlags = trace.FlagsSampled
+				defaultDecision = RecordAndSample
 			}
-
 			params := SamplingParameters{
-				ParentContext: trace.ContextWithSpanContext(
-					t.Context(),
-					trace.NewSpanContext(pscc),
-				),
+				ParentContext: trace.ContextWithSpanContext(t.Context(), trace.NewSpanContext(pscc)),
 			}
+			defaultDescription := ParentBased(AlwaysSample()).Description()
+			customDescription := ParentBased(AlwaysSample(), tc.option(tc.customSampler)).Description()
 
-			sampler := ParentBased(
-				nil,
-				tc.samplerOption,
-			)
-
-			var wantStr, gotStr string
-			switch tc.expectedDecision {
-			case RecordAndSample:
-				wantStr = "RecordAndSample"
-			case Drop:
-				wantStr = "Drop"
-			default:
-				wantStr = "unknown"
+			for _, scenario := range []struct {
+				name                string
+				options             []ParentBasedSamplerOption
+				expectedDecision    SamplingDecision
+				expectedDescription string
+			}{
+				{"custom", []ParentBasedSamplerOption{tc.option(tc.customSampler)}, tc.customDecision, customDescription},
+				{"nil", []ParentBasedSamplerOption{tc.option(nil)}, defaultDecision, defaultDescription},
+				{"custom then nil", []ParentBasedSamplerOption{tc.option(tc.customSampler), tc.option(nil)}, tc.customDecision, customDescription},
+				{"nil then custom", []ParentBasedSamplerOption{tc.option(nil), tc.option(tc.customSampler)}, tc.customDecision, customDescription},
+			} {
+				t.Run(scenario.name, func(t *testing.T) {
+					sampler := ParentBased(AlwaysSample(), scenario.options...)
+					require.NotPanics(t, func() {
+						assert.Equal(t, scenario.expectedDecision, sampler.ShouldSample(params).Decision)
+						assert.Equal(t, scenario.expectedDescription, sampler.Description())
+					})
+				})
 			}
-
-			actualDecision := sampler.ShouldSample(params).Decision
-			switch actualDecision {
-			case RecordAndSample:
-				gotStr = "RecordAndSample"
-			case Drop:
-				gotStr = "Drop"
-			default:
-				gotStr = "unknown"
-			}
-
-			assert.Equalf(t, tc.expectedDecision, actualDecision, "want %s, got %s", wantStr, gotStr)
 		})
 	}
 }
