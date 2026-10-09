@@ -363,9 +363,12 @@ func WithBatcher(e SpanExporter, opts ...BatchSpanProcessorOption) TracerProvide
 }
 
 // WithSpanProcessor registers the SpanProcessor with a TracerProvider.
+// If sp is nil, this option has no effect.
 func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
-		cfg.processors = append(cfg.processors, sp)
+		if sp != nil {
+			cfg.processors = append(cfg.processors, sp)
+		}
 		return cfg
 	})
 }
