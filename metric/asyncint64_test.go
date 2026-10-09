@@ -19,50 +19,52 @@ func TestInt64ObservableConfiguration(t *testing.T) {
 		desc         = "Instrument description."
 		uBytes       = "By"
 	)
-
-	run := func(got int64ObservableConfig) func(*testing.T) {
-		return func(t *testing.T) {
-			assert.Equal(t, desc, got.Description(), "description")
-			assert.Equal(t, uBytes, got.Unit(), "unit")
-
-			// Functions are not comparable.
-			cBacks := got.Callbacks()
-			require.Len(t, cBacks, 1, "callbacks")
-			o := &int64Observer{}
-			err := cBacks[0](t.Context(), o)
-			require.NoError(t, err)
-			assert.Equal(t, token, o.got, "callback not set")
-		}
-	}
-
 	cback := func(_ context.Context, obsrv Int64Observer) error {
 		obsrv.Observe(token)
 		return nil
 	}
-
-	t.Run("Int64ObservableCounter", run(
-		NewInt64ObservableCounterConfig(
-			WithDescription(desc),
-			WithUnit(uBytes),
-			WithInt64Callback(cback),
-		),
-	))
-
-	t.Run("Int64ObservableUpDownCounter", run(
-		NewInt64ObservableUpDownCounterConfig(
-			WithDescription(desc),
-			WithUnit(uBytes),
-			WithInt64Callback(cback),
-		),
-	))
-
-	t.Run("Int64ObservableGauge", run(
-		NewInt64ObservableGaugeConfig(
-			WithDescription(desc),
-			WithUnit(uBytes),
-			WithInt64Callback(cback),
-		),
-	))
+	run := func(got int64ObservableConfig, wantCallbacks int) func(*testing.T) {
+		return func(t *testing.T) {
+			assert.Equal(t, desc, got.Description(), "description")
+			assert.Equal(t, uBytes, got.Unit(), "unit")
+			callbacks := got.Callbacks()
+			require.Len(t, callbacks, wantCallbacks, "callbacks")
+			for _, callback := range callbacks {
+				o := &int64Observer{}
+				require.NoError(t, callback(t.Context(), o))
+				assert.Equal(t, token, o.got, "callback not set")
+			}
+		}
+	}
+	for _, tc := range []struct {
+		name          string
+		callbacks     []Int64Callback
+		wantCallbacks int
+	}{
+		{name: "NoCallbacks"},
+		{name: "NilCallback", callbacks: []Int64Callback{nil}},
+		{name: "Callback", callbacks: []Int64Callback{cback}, wantCallbacks: 1},
+		{name: "NilBeforeAndAfterCallback", callbacks: []Int64Callback{nil, cback, nil}, wantCallbacks: 1},
+		{name: "CallbacksWithNil", callbacks: []Int64Callback{cback, nil, cback}, wantCallbacks: 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			counterOpts := []Int64ObservableCounterOption{WithDescription(desc), WithUnit(uBytes)}
+			upDownOpts := []Int64ObservableUpDownCounterOption{WithDescription(desc), WithUnit(uBytes)}
+			gaugeOpts := []Int64ObservableGaugeOption{WithDescription(desc), WithUnit(uBytes)}
+			for _, callback := range tc.callbacks {
+				option := WithInt64Callback(callback)
+				counterOpts = append(counterOpts, option)
+				upDownOpts = append(upDownOpts, option)
+				gaugeOpts = append(gaugeOpts, option)
+			}
+			t.Run("Int64ObservableCounter", run(NewInt64ObservableCounterConfig(counterOpts...), tc.wantCallbacks))
+			t.Run(
+				"Int64ObservableUpDownCounter",
+				run(NewInt64ObservableUpDownCounterConfig(upDownOpts...), tc.wantCallbacks),
+			)
+			t.Run("Int64ObservableGauge", run(NewInt64ObservableGaugeConfig(gaugeOpts...), tc.wantCallbacks))
+		})
+	}
 }
 
 type int64ObservableConfig interface {

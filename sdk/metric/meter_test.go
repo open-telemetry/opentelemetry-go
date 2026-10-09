@@ -197,6 +197,14 @@ func TestMeterCreatesInstruments(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
+	registerNilCallback := func(t *testing.T, m metric.Meter, instrument metric.Observable) {
+		t.Helper()
+		registration, err := m.RegisterCallback(nil, instrument)
+		require.NoError(t, err)
+		require.NotNil(t, registration)
+		t.Cleanup(func() { assert.NoError(t, registration.Unregister()) })
+	}
+
 	alice := attribute.NewSet(
 		attribute.String("name", "Alice"),
 		attribute.Bool("admin", true),
@@ -219,6 +227,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Int64ObservableCounter(
 					"aint",
+					metric.WithInt64Callback(nil),
 					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
 						o.Observe(4, optAlice)
 						return nil
@@ -227,8 +236,10 @@ func TestMeterCreatesInstruments(t *testing.T) {
 						o.Observe(5, optBob)
 						return nil
 					}),
+					metric.WithInt64Callback(nil),
 				)
 				assert.NoError(t, err)
+				registerNilCallback(t, m, ctr)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveInt64(ctr, 3)
 					return nil
@@ -253,6 +264,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Int64ObservableUpDownCounter(
 					"aint",
+					metric.WithInt64Callback(nil),
 					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
 						o.Observe(4, optAlice)
 						return nil
@@ -261,8 +273,10 @@ func TestMeterCreatesInstruments(t *testing.T) {
 						o.Observe(5, optBob)
 						return nil
 					}),
+					metric.WithInt64Callback(nil),
 				)
 				assert.NoError(t, err)
+				registerNilCallback(t, m, ctr)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveInt64(ctr, 11)
 					return nil
@@ -287,6 +301,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				gauge, err := m.Int64ObservableGauge(
 					"agauge",
+					metric.WithInt64Callback(nil),
 					metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
 						o.Observe(4, optAlice)
 						return nil
@@ -295,8 +310,10 @@ func TestMeterCreatesInstruments(t *testing.T) {
 						o.Observe(5, optBob)
 						return nil
 					}),
+					metric.WithInt64Callback(nil),
 				)
 				assert.NoError(t, err)
+				registerNilCallback(t, m, gauge)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveInt64(gauge, 11)
 					return nil
@@ -319,6 +336,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Float64ObservableCounter(
 					"afloat",
+					metric.WithFloat64Callback(nil),
 					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
 						o.Observe(4, optAlice)
 						return nil
@@ -327,8 +345,10 @@ func TestMeterCreatesInstruments(t *testing.T) {
 						o.Observe(5, optBob)
 						return nil
 					}),
+					metric.WithFloat64Callback(nil),
 				)
 				assert.NoError(t, err)
+				registerNilCallback(t, m, ctr)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveFloat64(ctr, 3)
 					return nil
@@ -353,6 +373,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				ctr, err := m.Float64ObservableUpDownCounter(
 					"afloat",
+					metric.WithFloat64Callback(nil),
 					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
 						o.Observe(4, optAlice)
 						return nil
@@ -361,8 +382,10 @@ func TestMeterCreatesInstruments(t *testing.T) {
 						o.Observe(5, optBob)
 						return nil
 					}),
+					metric.WithFloat64Callback(nil),
 				)
 				assert.NoError(t, err)
+				registerNilCallback(t, m, ctr)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveFloat64(ctr, 11)
 					return nil
@@ -387,6 +410,7 @@ func TestMeterCreatesInstruments(t *testing.T) {
 			fn: func(t *testing.T, m metric.Meter) {
 				gauge, err := m.Float64ObservableGauge(
 					"agauge",
+					metric.WithFloat64Callback(nil),
 					metric.WithFloat64Callback(func(_ context.Context, o metric.Float64Observer) error {
 						o.Observe(4, optAlice)
 						return nil
@@ -395,8 +419,10 @@ func TestMeterCreatesInstruments(t *testing.T) {
 						o.Observe(5, optBob)
 						return nil
 					}),
+					metric.WithFloat64Callback(nil),
 				)
 				assert.NoError(t, err)
+				registerNilCallback(t, m, gauge)
 				_, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
 					o.ObserveFloat64(gauge, 11)
 					return nil
