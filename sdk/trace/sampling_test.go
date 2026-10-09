@@ -108,10 +108,8 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 			} {
 				t.Run(scenario.name, func(t *testing.T) {
 					sampler := ParentBased(AlwaysSample(), scenario.options...)
-					require.NotPanics(t, func() {
-						assert.Equal(t, scenario.expectedDecision, sampler.ShouldSample(params).Decision)
-						assert.Equal(t, scenario.expectedDescription, sampler.Description())
-					})
+					assert.Equal(t, scenario.expectedDecision, sampler.ShouldSample(params).Decision)
+					assert.Equal(t, scenario.expectedDescription, sampler.Description())
 				})
 			}
 		})
