@@ -214,24 +214,11 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 			},
 		},
 		{
-			name:    "NilProcessor",
-			options: []LoggerProviderOption{WithProcessor(nil)},
-			want: &LoggerProvider{
-				resource:                  resource.Default(),
-				attributeCountLimit:       defaultAttrCntLim,
-				attributeValueLengthLimit: defaultAttrValLenLim,
-				attributeValueDepthLimit:  defaultAttrValDepthLim,
-			},
-		},
-		{
 			name: "Options",
 			options: []LoggerProviderOption{
 				WithResource(res),
-				WithProcessor(nil),
 				WithProcessor(p0),
-				WithProcessor(nil),
 				WithProcessor(p1),
-				WithProcessor(nil),
 				WithAttributeCountLimit(attrCntLim),
 				WithAttributeValueLengthLimit(attrValLenLim),
 				WithAttributeValueDepthLimit(attrValDepthLim),
@@ -310,13 +297,39 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 			for key, value := range tc.envars {
 				t.Setenv(key, value)
 			}
-			provider := NewLoggerProvider(tc.options...)
-			assert.Equal(t, tc.want, provider)
-			provider.Logger("test").Emit(t.Context(), log.Record{})
-			require.NoError(t, provider.ForceFlush(t.Context()))
-			require.NoError(t, provider.Shutdown(t.Context()))
+			assert.Equal(t, tc.want, NewLoggerProvider(tc.options...))
 		})
 	}
+}
+
+func TestLoggerProviderNilProcessor(t *testing.T) {
+	provider := NewLoggerProvider(WithProcessor(nil))
+	assert.Empty(t, provider.processors)
+
+	logger := provider.Logger("test")
+	assert.False(t, logger.Enabled(t.Context(), log.EnabledParameters{}))
+	logger.Emit(t.Context(), log.Record{})
+	require.NoError(t, provider.ForceFlush(t.Context()))
+	require.NoError(t, provider.Shutdown(t.Context()))
+	assert.True(t, provider.stopped.Load())
+}
+
+func TestLoggerProviderNilProcessorPreservesProcessors(t *testing.T) {
+	first, second := newProcessor("first"), newProcessor("second")
+	provider := NewLoggerProvider(WithProcessor(first), WithProcessor(nil), WithProcessor(second))
+	assert.Equal(t, []Processor{first, second}, provider.processors)
+
+	logger := provider.Logger("test")
+	assert.True(t, logger.Enabled(t.Context(), log.EnabledParameters{}))
+	logger.Emit(t.Context(), log.Record{})
+	assert.Len(t, first.records, 1)
+	assert.Len(t, second.records, 1)
+	require.NoError(t, provider.ForceFlush(t.Context()))
+	require.NoError(t, provider.Shutdown(t.Context()))
+	assert.Equal(t, 1, first.forceFlushCalls)
+	assert.Equal(t, 1, second.forceFlushCalls)
+	assert.Equal(t, 1, first.shutdownCalls)
+	assert.Equal(t, 1, second.shutdownCalls)
 }
 
 func TestLoggerProviderAttributeValueDepthLimitFallback(t *testing.T) {
