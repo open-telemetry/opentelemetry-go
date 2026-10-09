@@ -31,11 +31,14 @@ import (
 )
 
 func TestNewRawExporter(t *testing.T) {
-	_, err := New(
-		defaultCollectorURL,
-	)
-
-	assert.NoError(t, err)
+	for _, opts := range [][]Option{nil, {WithLogger(nil)}} {
+		exp, err := New(defaultCollectorURL, opts...)
+		require.NoError(t, err)
+		assert.Equal(t, exp.logger, emptyLogger)
+		require.NotPanics(t, func() {
+			assert.NoError(t, exp.ExportSpans(t.Context(), nil))
+		})
+	}
 }
 
 func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
@@ -326,7 +329,7 @@ func TestExportSpans(t *testing.T) {
 	defer collector.Close()
 	ls := &logStore{T: t}
 	logger := logStoreLogger(ls)
-	exporter, err := New(collector.url, WithLogger(logger))
+	exporter, err := New(collector.url, WithLogger(nil), WithLogger(logger), WithLogger(nil))
 	require.NoError(t, err)
 	ctx := t.Context()
 	require.Empty(t, ls.Messages)
@@ -387,14 +390,18 @@ func TestLogrFormatting(t *testing.T) {
 	l := funcr.New(func(prefix, args string) {
 		_, _ = fmt.Fprint(&buf, prefix, args)
 	}, funcr.Options{})
-	exp, err := New("", WithLogr(l))
-	require.NoError(t, err)
-
-	exp.logf(format, args...)
-
 	want := "\"level\"=0 \"msg\"=\"string \\\"s\\\", int 1\""
-	got := buf.String()
-	assert.Equal(t, want, got)
+	for _, opts := range [][]Option{
+		{WithLogr(l)},
+		{WithLogr(l), WithLogger(nil)},
+		{WithLogger(nil), WithLogr(l)},
+	} {
+		buf.Reset()
+		exp, err := New("", opts...)
+		require.NoError(t, err)
+		require.NotPanics(t, func() { exp.logf(format, args...) })
+		assert.Equal(t, want, buf.String())
+	}
 }
 
 func TestWithHeaders(t *testing.T) {
