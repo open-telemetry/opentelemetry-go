@@ -64,15 +64,38 @@ func TestParentBasedWithNoParent(t *testing.T) {
 func TestParentBasedWithSamplerOptions(t *testing.T) {
 	testCases := []struct {
 		name                            string
-		option                          func(Sampler) ParentBasedSamplerOption
+		samplerOption                   ParentBasedSamplerOption
 		isParentRemote, isParentSampled bool
-		customSampler                   Sampler
-		customDecision                  SamplingDecision
+		expectedDecision                SamplingDecision
 	}{
-		{"localParentSampled", WithLocalParentSampled, false, true, NeverSample(), Drop},
-		{"localParentNotSampled", WithLocalParentNotSampled, false, false, AlwaysSample(), RecordAndSample},
-		{"remoteParentSampled", WithRemoteParentSampled, true, true, NeverSample(), Drop},
-		{"remoteParentNotSampled", WithRemoteParentNotSampled, true, false, AlwaysSample(), RecordAndSample},
+		{
+			"localParentSampled",
+			WithLocalParentSampled(NeverSample()),
+			false,
+			true,
+			Drop,
+		},
+		{
+			"localParentNotSampled",
+			WithLocalParentNotSampled(AlwaysSample()),
+			false,
+			false,
+			RecordAndSample,
+		},
+		{
+			"remoteParentSampled",
+			WithRemoteParentSampled(NeverSample()),
+			true,
+			true,
+			Drop,
+		},
+		{
+			"remoteParentNotSampled",
+			WithRemoteParentNotSampled(AlwaysSample()),
+			true,
+			false,
+			RecordAndSample,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -84,35 +107,104 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 				SpanID:  spanID,
 				Remote:  tc.isParentRemote,
 			}
-			defaultDecision := Drop
 			if tc.isParentSampled {
 				pscc.TraceFlags = trace.FlagsSampled
-				defaultDecision = RecordAndSample
 			}
-			params := SamplingParameters{
-				ParentContext: trace.ContextWithSpanContext(t.Context(), trace.NewSpanContext(pscc)),
-			}
-			defaultDescription := ParentBased(AlwaysSample()).Description()
-			customDescription := ParentBased(AlwaysSample(), tc.option(tc.customSampler)).Description()
 
-			for _, scenario := range []struct {
-				name                string
-				options             []ParentBasedSamplerOption
-				expectedDecision    SamplingDecision
-				expectedDescription string
-			}{
-				{"custom", []ParentBasedSamplerOption{tc.option(tc.customSampler)}, tc.customDecision, customDescription},
-				{"nil", []ParentBasedSamplerOption{tc.option(nil)}, defaultDecision, defaultDescription},
-				{"custom then nil", []ParentBasedSamplerOption{tc.option(tc.customSampler), tc.option(nil)}, tc.customDecision, customDescription},
-				{"nil then custom", []ParentBasedSamplerOption{tc.option(nil), tc.option(tc.customSampler)}, tc.customDecision, customDescription},
-			} {
-				t.Run(scenario.name, func(t *testing.T) {
-					sampler := ParentBased(AlwaysSample(), scenario.options...)
-					assert.Equal(t, scenario.expectedDecision, sampler.ShouldSample(params).Decision)
-					assert.Equal(t, scenario.expectedDescription, sampler.Description())
-				})
+			params := SamplingParameters{
+				ParentContext: trace.ContextWithSpanContext(
+					t.Context(),
+					trace.NewSpanContext(pscc),
+				),
 			}
+
+			sampler := ParentBased(
+				nil,
+				tc.samplerOption,
+			)
+
+			var wantStr, gotStr string
+			switch tc.expectedDecision {
+			case RecordAndSample:
+				wantStr = "RecordAndSample"
+			case Drop:
+				wantStr = "Drop"
+			default:
+				wantStr = "unknown"
+			}
+
+			actualDecision := sampler.ShouldSample(params).Decision
+			switch actualDecision {
+			case RecordAndSample:
+				gotStr = "RecordAndSample"
+			case Drop:
+				gotStr = "Drop"
+			default:
+				gotStr = "unknown"
+			}
+
+			assert.Equalf(t, tc.expectedDecision, actualDecision, "want %s, got %s", wantStr, gotStr)
 		})
+	}
+}
+
+func TestParentBasedWithNilSamplerOptions(t *testing.T) {
+	sampler := ParentBased(AlwaysSample(),
+		WithLocalParentSampled(nil),
+		WithLocalParentNotSampled(nil),
+		WithRemoteParentSampled(nil),
+		WithRemoteParentNotSampled(nil),
+	)
+
+	assert.Equal(t, ParentBased(AlwaysSample()).Description(), sampler.Description())
+	assert.Equal(
+		t,
+		RecordAndSample,
+		sampler.ShouldSample(parentBasedSamplingParameters(t, false, trace.FlagsSampled)).Decision,
+	)
+	assert.Equal(t, Drop, sampler.ShouldSample(parentBasedSamplingParameters(t, false, 0)).Decision)
+	assert.Equal(
+		t,
+		RecordAndSample,
+		sampler.ShouldSample(parentBasedSamplingParameters(t, true, trace.FlagsSampled)).Decision,
+	)
+	assert.Equal(t, Drop, sampler.ShouldSample(parentBasedSamplingParameters(t, true, 0)).Decision)
+}
+
+func TestParentBasedWithNilSamplerOptionsPreservesCustomSamplers(t *testing.T) {
+	opts := []ParentBasedSamplerOption{
+		WithLocalParentSampled(NeverSample()),
+		WithLocalParentNotSampled(AlwaysSample()),
+		WithRemoteParentSampled(NeverSample()),
+		WithRemoteParentNotSampled(AlwaysSample()),
+	}
+	wantDescription := ParentBased(AlwaysSample(), opts...).Description()
+	sampler := ParentBased(AlwaysSample(), append(opts,
+		WithLocalParentSampled(nil),
+		WithLocalParentNotSampled(nil),
+		WithRemoteParentSampled(nil),
+		WithRemoteParentNotSampled(nil),
+	)...)
+
+	assert.Equal(t, wantDescription, sampler.Description())
+	assert.Equal(t, Drop, sampler.ShouldSample(parentBasedSamplingParameters(t, false, trace.FlagsSampled)).Decision)
+	assert.Equal(t, RecordAndSample, sampler.ShouldSample(parentBasedSamplingParameters(t, false, 0)).Decision)
+	assert.Equal(t, Drop, sampler.ShouldSample(parentBasedSamplingParameters(t, true, trace.FlagsSampled)).Decision)
+	assert.Equal(t, RecordAndSample, sampler.ShouldSample(parentBasedSamplingParameters(t, true, 0)).Decision)
+}
+
+func parentBasedSamplingParameters(t *testing.T, remote bool, flags trace.TraceFlags) SamplingParameters {
+	t.Helper()
+	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	config := trace.SpanContextConfig{
+		TraceID:    traceID,
+		SpanID:     spanID,
+		Remote:     remote,
+		TraceFlags: flags,
+	}
+	return SamplingParameters{
+		ParentContext: trace.ContextWithSpanContext(t.Context(), trace.NewSpanContext(config)),
 	}
 }
 
