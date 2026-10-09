@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Ignore nil temporality, aggregation, cardinality limit selector, and producer options in `go.opentelemetry.io/otel/sdk/metric`, including aggregation selector and producer options used by `go.opentelemetry.io/otel/exporters/prometheus`. (#9166)
 - Preserve input span event timestamps when using `WithoutTimestamps` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9092)
 - Bound export retries by `WithTimeout` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, and
