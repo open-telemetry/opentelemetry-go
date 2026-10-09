@@ -214,11 +214,24 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 			},
 		},
 		{
+			name:    "NilProcessor",
+			options: []LoggerProviderOption{WithProcessor(nil)},
+			want: &LoggerProvider{
+				resource:                  resource.Default(),
+				attributeCountLimit:       defaultAttrCntLim,
+				attributeValueLengthLimit: defaultAttrValLenLim,
+				attributeValueDepthLimit:  defaultAttrValDepthLim,
+			},
+		},
+		{
 			name: "Options",
 			options: []LoggerProviderOption{
 				WithResource(res),
+				WithProcessor(nil),
 				WithProcessor(p0),
+				WithProcessor(nil),
 				WithProcessor(p1),
+				WithProcessor(nil),
 				WithAttributeCountLimit(attrCntLim),
 				WithAttributeValueLengthLimit(attrValLenLim),
 				WithAttributeValueDepthLimit(attrValDepthLim),
@@ -297,7 +310,11 @@ func TestNewLoggerProviderConfiguration(t *testing.T) {
 			for key, value := range tc.envars {
 				t.Setenv(key, value)
 			}
-			assert.Equal(t, tc.want, NewLoggerProvider(tc.options...))
+			provider := NewLoggerProvider(tc.options...)
+			assert.Equal(t, tc.want, provider)
+			provider.Logger("test").Emit(t.Context(), log.Record{})
+			require.NoError(t, provider.ForceFlush(t.Context()))
+			require.NoError(t, provider.Shutdown(t.Context()))
 		})
 	}
 }
