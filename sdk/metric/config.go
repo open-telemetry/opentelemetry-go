@@ -141,12 +141,17 @@ func WithReader(r Reader) Option {
 //
 // Views are appended to existing ones in a MeterProvider if this option is
 // used multiple times.
+// Nil views are ignored.
 //
 // By default, if this option is not used, the MeterProvider will use the
 // default view.
 func WithView(views ...View) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.views = append(cfg.views, views...)
+		for _, view := range views {
+			if view != nil {
+				cfg.views = append(cfg.views, view)
+			}
+		}
 		return cfg
 	})
 }

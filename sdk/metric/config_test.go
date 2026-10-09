@@ -211,17 +211,56 @@ func TestWithReader(t *testing.T) {
 }
 
 func TestWithView(t *testing.T) {
-	c := newConfig([]Option{WithView(
-		NewView(
-			Instrument{Kind: InstrumentKindObservableCounter},
-			Stream{Name: "a"},
-		),
-		NewView(
-			Instrument{Kind: InstrumentKindCounter},
-			Stream{Name: "b"},
-		),
-	)})
-	assert.Len(t, c.views, 2)
+	viewA := NewView(Instrument{Kind: InstrumentKindCounter}, Stream{Name: "a"})
+	viewB := NewView(Instrument{Kind: InstrumentKindCounter}, Stream{Name: "b"})
+	for _, tc := range []struct {
+		name      string
+		opts      []Option
+		wantViews []string
+	}{
+		{name: "default"},
+		{name: "nil view", opts: []Option{WithView(nil)}},
+		{name: "nil views", opts: []Option{WithView([]View{nil, nil}...)}},
+		{name: "valid views", opts: []Option{WithView(viewA, viewB)}, wantViews: []string{"a", "b"}},
+		{
+			name:      "mixed views preserve order across options",
+			opts:      []Option{WithView(nil, viewB), WithView(nil), WithView(viewA, nil)},
+			wantViews: []string{"b", "a"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := newConfig(tc.opts)
+			require.Len(t, c.views, len(tc.wantViews))
+			for i, view := range c.views {
+				stream, match := view(Instrument{Kind: InstrumentKindCounter})
+				require.True(t, match)
+				assert.Equal(t, tc.wantViews[i], stream.Name)
+			}
+
+			reader := NewManualReader()
+			opts := append([]Option{WithReader(reader)}, tc.opts...)
+			provider := NewMeterProvider(opts...)
+			t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+			counter, err := provider.Meter("test").Int64Counter("c")
+			require.NoError(t, err)
+			counter.Add(t.Context(), 1)
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+			require.Len(t, rm.ScopeMetrics, 1)
+			wantMetrics := tc.wantViews
+			if len(wantMetrics) == 0 {
+				wantMetrics = []string{"c"}
+			}
+			require.Len(t, rm.ScopeMetrics[0].Metrics, len(wantMetrics))
+			for i, metric := range rm.ScopeMetrics[0].Metrics {
+				assert.Equal(t, wantMetrics[i], metric.Name)
+				sum, ok := metric.Data.(metricdata.Sum[int64])
+				require.True(t, ok)
+				require.Len(t, sum.DataPoints, 1)
+				assert.Equal(t, int64(1), sum.DataPoints[0].Value)
+			}
+		})
+	}
 }
 
 func TestWithExemplarFilterOff(t *testing.T) {
