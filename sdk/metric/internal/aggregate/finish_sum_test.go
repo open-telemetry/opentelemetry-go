@@ -5,6 +5,7 @@ package aggregate
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -364,6 +365,145 @@ func TestFinishSumConcurrentSafeShutdown(t *testing.T) {
 	require.NoError(t, agg.Wait(t.Context()))
 	var data metricdata.Aggregation
 	assert.Zero(t, agg.ComputeAggregation(&data))
+}
+
+func TestFinishSumWaitCancellationDuringCreation(t *testing.T) {
+	for _, populated := range []bool{false, true} {
+		t.Run(fmt.Sprint("populated=", populated), func(t *testing.T) {
+			entered, release := make(chan struct{}), make(chan struct{})
+			store := newFinishSum(true, metricdata.CumulativeTemporality, 0,
+				func(attrs attribute.Set) FilteredExemplarReservoir[int64] {
+					if attrs.Equals(&bob) {
+						close(entered)
+						<-release
+					}
+					return DropReservoir[int64](attrs)
+				})
+			if populated {
+				store.measure(t.Context(), 1, newLazyFilteredAttributes(alice, nil))
+			}
+
+			measured := make(chan struct{})
+			done := make(chan struct{})
+			var shutdownErr error
+			started := false
+			go func() {
+				defer close(measured)
+				store.measure(t.Context(), 1, newLazyFilteredAttributes(bob, nil))
+			}()
+			defer func() {
+				close(release)
+				<-measured
+				if started {
+					<-done
+				}
+				if !populated {
+					assert.Zero(t, store.values.Len(), "late publication retained a stopped series")
+				}
+				require.NoError(t, store.wait(t.Context()))
+				assert.Zero(t, store.values.Len())
+			}()
+			select {
+			case <-entered:
+			case <-time.After(time.Second):
+				t.Fatal("measurement did not enter reservoir construction")
+			}
+
+			ctx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
+			defer cancel()
+			started = true
+			go func() {
+				defer close(done)
+				shutdownErr = store.wait(ctx)
+			}()
+			select {
+			case <-done:
+				assert.ErrorIs(t, shutdownErr, context.DeadlineExceeded)
+			case <-time.After(time.Second):
+				t.Error("shutdown ignored cancellation during reservoir construction")
+			}
+			assert.True(t, store.stopped.Load())
+		})
+	}
+}
+
+func TestFinishSumWaitCancellationDuringCollection(t *testing.T) {
+	reservoir := &blockingFinishSumCollectionReservoir{
+		entered: make(chan struct{}),
+		release: make(chan struct{}),
+	}
+	store := newFinishSum(true, metricdata.CumulativeTemporality, 0,
+		func(attribute.Set) FilteredExemplarReservoir[int64] { return reservoir })
+	store.measure(t.Context(), 1, newLazyFilteredAttributes(alice, nil))
+	collected := make(chan struct{})
+	done := make(chan struct{})
+	var shutdownErr error
+	started := false
+	go func() {
+		defer close(collected)
+		var data metricdata.Aggregation
+		store.collect(&data)
+	}()
+	defer func() {
+		close(reservoir.release)
+		<-collected
+		if started {
+			<-done
+		}
+		require.NoError(t, store.wait(t.Context()))
+		assert.Zero(t, store.values.Len())
+	}()
+	select {
+	case <-reservoir.entered:
+	case <-time.After(time.Second):
+		t.Fatal("collection did not enter reservoir")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
+	defer cancel()
+	started = true
+	go func() {
+		defer close(done)
+		shutdownErr = store.wait(ctx)
+	}()
+	select {
+	case <-done:
+		assert.ErrorIs(t, shutdownErr, context.DeadlineExceeded)
+	case <-time.After(time.Second):
+		t.Error("shutdown ignored cancellation during collection")
+	}
+	assert.True(t, store.stopped.Load())
+}
+
+func TestFinishSumWaitCanceledBeforeCollection(t *testing.T) {
+	store := newFinishSum(true, metricdata.CumulativeTemporality, 0, dropExemplars[int64])
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	assert.ErrorIs(t, store.wait(ctx), context.Canceled)
+	require.NoError(t, store.wait(t.Context()))
+}
+
+type blockingFinishSumCollectionReservoir struct {
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (*blockingFinishSumCollectionReservoir) Offer(context.Context, int64, lazyFilteredAttributes) {}
+
+func (r *blockingFinishSumCollectionReservoir) Collect(*[]exemplar.Exemplar) {
+	close(r.entered)
+	<-r.release
+}
+
+func BenchmarkFinishSumCollect(b *testing.B) {
+	agg := Builder[int64]{ReservoirFunc: dropExemplars[int64]}.FinishSum(true)
+	agg.Measure(b.Context(), 1, alice)
+	var data metricdata.Aggregation
+	agg.ComputeAggregation(&data)
+	b.ReportAllocs()
+	for b.Loop() {
+		agg.ComputeAggregation(&data)
+	}
 }
 
 type blockingFinishSumReservoir struct {

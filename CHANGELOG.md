@@ -10,7 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add experimental `WithFinish` support for `Int64Counter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
+- Add experimental `WithFinish` support for `Int64Counter` Sum aggregation,
+  including cancellable provider shutdown, in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 
 ### Fixed
 

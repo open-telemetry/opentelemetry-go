@@ -5,8 +5,6 @@ package aggregate
 
 import (
 	"context"
-	"runtime"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -137,8 +135,8 @@ type FinishSum[N int64 | float64] struct {
 }
 
 type finishSum[N int64 | float64] struct {
-	collectMu sync.Mutex
-	stopped   atomic.Bool
+	collectSem chan struct{}
+	stopped    atomic.Bool
 
 	values      limitedSyncMap[*finishSumValue[N]]
 	start       time.Time
@@ -160,6 +158,7 @@ func newFinishSum[N int64 | float64](
 		start = now()
 	}
 	return &finishSum[N]{
+		collectSem: make(chan struct{}, 1),
 		values: limitedSyncMap[*finishSumValue[N]]{
 			aggLimit: limit,
 		},
@@ -243,8 +242,8 @@ func (s *finishSum[N]) finish(
 func (s *finishSum[N]) collect(
 	dest *metricdata.Aggregation, //nolint:gocritic // Required by ComputeAggregation.
 ) int {
-	s.collectMu.Lock()
-	defer s.collectMu.Unlock()
+	s.collectSem <- struct{}{}
+	defer func() { <-s.collectSem }()
 	if s.stopped.Load() {
 		return 0
 	}
@@ -293,7 +292,7 @@ func (s *finishSum[N]) wait(ctx context.Context) error {
 	if err := s.lockCollection(ctx); err != nil {
 		return err
 	}
-	defer s.collectMu.Unlock()
+	defer func() { <-s.collectSem }()
 
 	var err error
 	s.values.Range(func(_, raw any) bool {
@@ -301,20 +300,24 @@ func (s *finishSum[N]) wait(ctx context.Context) error {
 		return err == nil
 	})
 	if err == nil {
-		s.values.Clear()
+		err = s.values.ClearContext(ctx)
 	}
 	return err
 }
 
 func (s *finishSum[N]) lockCollection(ctx context.Context) error {
-	for {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case s.collectSem <- struct{}{}:
 		if err := ctx.Err(); err != nil {
+			<-s.collectSem
 			return err
 		}
-		if s.collectMu.TryLock() {
-			return nil
-		}
-		runtime.Gosched()
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
