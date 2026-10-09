@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Ignore nil loggers passed to `WithLogger` in `go.opentelemetry.io/otel/exporters/zipkin`, preserving the default or previously configured logger.
+- Ignore nil loggers passed to `WithLogger` in `go.opentelemetry.io/otel/exporters/zipkin`, preserving the default or previously configured logger. (#9165)
 - Preserve input span event timestamps when using `WithoutTimestamps` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9092)
 - Bound export retries by `WithTimeout` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, and
