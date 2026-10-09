@@ -5,6 +5,7 @@ package metric
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel/metric"
 )
@@ -18,6 +19,10 @@ type configuratorMeter struct {
 	// config holds the configurator's decision for the meter's scope. The
 	// meter's instrument wrappers point at it, so they share its state.
 	config versionedMeterConfig
+
+	// initOnce applies the configurator's initial decision once. Every Meter
+	// call for the scope waits on it, so no caller gets the meter before then.
+	initOnce sync.Once
 
 	// int64Wrappers and float64Wrappers return the same wrapper for the same
 	// base instrument, so repeated instrument creation returns an identical

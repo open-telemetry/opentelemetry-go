@@ -6,12 +6,14 @@ package metric
 import (
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // testMeterConfig satisfies meterConfigReader without importing sdk/metric/x.
@@ -351,6 +353,56 @@ func TestConfiguratorStaleApplyLosesRaceToNewerSet(t *testing.T) {
 
 	assert.False(t, cachedConfiguratorMeter(t, mp, "race").config.Load(),
 		"final state must match the newer Set() walk, not the stale value the delayed apply step read")
+}
+
+// TestConfiguratorConcurrentMeterWaitsForInitialConfig asserts that a meter
+// returned to a concurrent caller for the same scope has its initial
+// configuration applied before it can record.
+func TestConfiguratorConcurrentMeterWaitsForInitialConfig(t *testing.T) {
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	var firstCall atomic.Bool
+	fn := func(instrumentation.Scope) any {
+		if firstCall.CompareAndSwap(false, true) {
+			close(entered)
+			<-release
+		}
+		return testMeterConfig{enabled: false}
+	}
+
+	rdr := NewManualReader()
+	mp := NewMeterProvider(WithReader(rdr), testConfiguratorOpt{fn: fn})
+	defer mp.Shutdown(t.Context()) //nolint:errcheck
+
+	creatorDone := make(chan struct{})
+	go func() {
+		defer close(creatorDone)
+		_ = mp.Meter("race")
+	}()
+	<-entered // the meter is created and its configurator call is stalled
+
+	recorded := make(chan struct{})
+	go func() {
+		defer close(recorded)
+		c, err := mp.Meter("race").Int64Counter("c")
+		assert.NoError(t, err)
+		c.Add(t.Context(), 7)
+	}()
+
+	// Give the concurrent caller the chance to record while the initial
+	// configuration is still pending. A correct provider blocks it instead.
+	select {
+	case <-recorded:
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(release)
+	<-creatorDone
+	<-recorded
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, rdr.Collect(t.Context(), &rm))
+	assert.Nil(t, findMetricByName(&rm, "c"),
+		"a measurement made before the initial configuration was applied must not be exported")
 }
 
 // Asserts the callback must not run, and its error must not propagate,

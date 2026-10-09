@@ -150,24 +150,25 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 		"Attributes", s.Attributes,
 	)
 
-	var cfgMeter *configuratorMeter
 	m := mp.meters.Lookup(s, func() metric.Meter {
 		m := newMeter(s, mp.pipes)
 		if mp.configurator == nil {
 			return m
 		}
-		cfgMeter = newConfiguratorMeter(m)
-		return cfgMeter
+		return newConfiguratorMeter(m)
 	})
-	// Apply the configurator outside the cache lock: it runs arbitrary user
-	// code, and a configurator that calls Meter for the same MeterProvider
-	// would deadlock on the cache's non-reentrant lock otherwise.
-	// An already-cached meter either already has it applied, or will get it from a concurrent Set walk.
-	if cfgMeter != nil {
-		fn, version := mp.configurator()
-		if cr, ok := fn(s).(meterConfigReader); ok {
-			cfgMeter.setEnabledIfNewer(version, cr.Enabled())
-		}
+	// Apply the configurator outside the cache lock, so a slow configurator
+	// only delays callers for this scope. initOnce makes concurrent callers
+	// for the scope wait until it is applied, so none can record before the
+	// initial configuration. The meter is already cached, so a concurrent Set
+	// walk also reaches it; the versioned store keeps the newest decision.
+	if cm, ok := m.(*configuratorMeter); ok {
+		cm.initOnce.Do(func() {
+			fn, version := mp.configurator()
+			if cr, ok := fn(s).(meterConfigReader); ok {
+				cm.setEnabledIfNewer(version, cr.Enabled())
+			}
+		})
 	}
 	return m
 }
