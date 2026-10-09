@@ -15,6 +15,21 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
 )
 
+// meterConfiguratorSnapshotFunc snapshots the currently installed configurator
+// and the version it was set under. Callers evaluating multiple scopes against
+// the same snapshot should call it once and reuse the returned per-scope
+// function and version, rather than calling it again per scope.
+type meterConfiguratorSnapshotFunc func() (func(instrumentation.Scope) any, uint64)
+
+type meterConfigReader interface{ Enabled() bool }
+
+type meterConfiguratorOption interface {
+	Experimental()
+	MeterConfiguratorSnapshot() func() (func(instrumentation.Scope) any, uint64)
+	RegisterOnUpdate(func()) bool
+	Unregister()
+}
+
 // MeterProvider handles the creation and coordination of Meters. All Meters
 // created by a MeterProvider will be associated with the same Resource, have
 // the same Views applied to them, and have their produced metric telemetry
@@ -23,7 +38,17 @@ type MeterProvider struct {
 	embedded.MeterProvider
 
 	pipes  pipelines
-	meters cache[instrumentation.Scope, *meter]
+	meters cache[instrumentation.Scope, metric.Meter]
+	// configurator is only written in NewMeterProvider before mp is returned to
+	// any caller (reset to nil if its handle claim was rejected), and never
+	// reassigned after.
+	configurator meterConfiguratorSnapshotFunc
+	// configuratorUnregister retires configurator's MeterConfiguratorHandle
+	// during Shutdown. It's nil if:
+	//  - no configurator was wired, or
+	//  - its RegisterOnUpdate call did not claim the handle. Same single-write-before-return
+	//    rule as configurator above.
+	configuratorUnregister func()
 
 	forceFlush, shutdown func(context.Context) error
 	stopped              atomic.Bool
@@ -47,6 +72,43 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 		forceFlush: flush,
 		shutdown:   sdown,
 	}
+
+	var mco meterConfiguratorOption
+	for _, o := range options {
+		if m, ok := o.(meterConfiguratorOption); ok {
+			mco = m
+		}
+	}
+	if mco != nil {
+		mp.configurator = mco.MeterConfiguratorSnapshot()
+		claimed := mco.RegisterOnUpdate(func() {
+			fn, version := mp.configurator()
+			mp.meters.Range(func(s instrumentation.Scope, m metric.Meter) {
+				// Shutdown does not wait for the walk, so stop calling the
+				// configurator for a provider that is shut down.
+				if mp.stopped.Load() {
+					return
+				}
+				gm, ok := m.(*configuratorMeter)
+				if !ok {
+					return
+				}
+				if cr, ok := fn(s).(meterConfigReader); ok {
+					gm.setEnabledIfNewer(version, cr.Enabled())
+				}
+			})
+		})
+		if claimed {
+			mp.configuratorUnregister = mco.Unregister
+		} else {
+			// A provider whose claim was rejected ignores the handle entirely,
+			// so its new meters don't read a configurator its cache walk never
+			// applies. Its callback was never stored, so nothing else reads
+			// this field concurrently.
+			mp.configurator = nil
+		}
+	}
+
 	// Log after creation so all readers show correctly they are registered.
 	global.Info(
 		"MeterProvider created",
@@ -93,9 +155,27 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 		"Attributes", s.Attributes,
 	)
 
-	return mp.meters.Lookup(s, func() *meter {
-		return newMeter(s, mp.pipes)
+	m := mp.meters.Lookup(s, func() metric.Meter {
+		m := newMeter(s, mp.pipes)
+		if mp.configurator == nil {
+			return m
+		}
+		return newConfiguratorMeter(m)
 	})
+	// Apply the configurator outside the cache lock, so a slow configurator
+	// only delays callers for this scope. initOnce makes concurrent callers
+	// for the scope wait until it is applied, so none can record before the
+	// initial configuration. The meter is already cached, so a concurrent Set
+	// walk also reaches it; the versioned store keeps the newest decision.
+	if cm, ok := m.(*configuratorMeter); ok {
+		cm.initOnce.Do(func() {
+			fn, version := mp.configurator()
+			if cr, ok := fn(s).(meterConfigReader); ok {
+				cm.setEnabledIfNewer(version, cr.Enabled())
+			}
+		})
+	}
+	return m
 }
 
 // ForceFlush flushes all pending telemetry.
@@ -142,6 +222,9 @@ func (mp *MeterProvider) Shutdown(ctx context.Context) error {
 	// See https://go.dev/ref/mem#atomic and https://pkg.go.dev/sync/atomic.
 
 	mp.stopped.Store(true)
+	if mp.configuratorUnregister != nil {
+		mp.configuratorUnregister()
+	}
 	if mp.shutdown != nil {
 		return mp.shutdown(ctx)
 	}
