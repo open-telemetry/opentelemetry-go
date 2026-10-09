@@ -185,6 +185,27 @@ func TestExporterExport(t *testing.T) {
 	}
 }
 
+func TestExporterWriterError(t *testing.T) {
+	writeErr := errors.New("write failed")
+	writer := &failingWriter{err: writeErr}
+	for _, tc := range []struct {
+		name    string
+		options []Option
+	}{
+		{name: "WithWriter", options: []Option{WithWriter(writer)}},
+		{name: "WithNilWriterThenWriter", options: []Option{WithWriter(nil), WithWriter(writer)}},
+		{name: "WithWriterThenNilWriter", options: []Option{WithWriter(writer), WithWriter(nil)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			exporter, err := New(tc.options...)
+			require.NoError(t, err)
+			t.Cleanup(func() { assert.NoError(t, exporter.Shutdown(context.WithoutCancel(t.Context()))) })
+			err = exporter.Export(t.Context(), []sdklog.Record{getRecord(time.Now())})
+			assert.ErrorIs(t, err, writeErr)
+		})
+	}
+}
+
 func getJSON(now *time.Time) string {
 	var timestamps string
 	if now != nil {
