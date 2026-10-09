@@ -112,8 +112,23 @@ func (meterConfiguratorProviderOption) Experimental() {}
 // Combining this option with other experimental MeterProvider options is not
 // yet supported.
 func WithMeterConfigurator(h *MeterConfiguratorHandle) sdkmetric.Option {
+	if h == nil {
+		return noopProviderOption{}
+	}
 	return meterConfiguratorProviderOption{handle: h}
 }
+
+// noopProviderOption is returned for a nil handle. It does not implement the
+// configurator methods, so the MeterProvider never selects it and it cannot
+// replace an earlier handle.
+type noopProviderOption struct {
+	// nil embed; skip guard in newConfig prevents apply from being called.
+	sdkmetric.Option
+}
+
+// Experimental marks this as an experimental option so the skip guard in
+// newConfig skips calling the nil embedded apply.
+func (noopProviderOption) Experimental() {}
 
 // MeterConfiguratorSnapshot returns a closure over the handle so sdk/metric
 // can call it via duck-type without importing this package. Calling the
@@ -125,9 +140,6 @@ func WithMeterConfigurator(h *MeterConfiguratorHandle) sdkmetric.Option {
 func (o meterConfiguratorProviderOption) MeterConfiguratorSnapshot() func() (func(instrumentation.Scope) any, uint64) {
 	defaultFn := func(instrumentation.Scope) any { return MeterConfig{} }
 	return func() (func(instrumentation.Scope) any, uint64) {
-		if o.handle == nil {
-			return defaultFn, 0
-		}
 		vc := o.handle.configurator.Load()
 		if vc == nil {
 			// Set has never been called on this handle.
@@ -144,13 +156,9 @@ func (o meterConfiguratorProviderOption) MeterConfiguratorSnapshot() func() (fun
 // RegisterOnUpdate is called once at construction by sdk/metric during [sdkmetric.NewMeterProvider]
 // to register the cache walk callback.
 // Subsequent [MeterConfiguratorHandle.Set] calls trigger it. Reports whether this call
-// claimed the handle (fn is not stored in both cases):
-//   - false if the handle is nil, or
-//   - already claimed by another MeterProvider (see [MeterConfiguratorHandle]'s doc comment).
+// claimed the handle; it reports false, without storing fn, if the handle is
+// already claimed by another MeterProvider (see [MeterConfiguratorHandle]'s doc comment).
 func (o meterConfiguratorProviderOption) RegisterOnUpdate(fn func()) bool {
-	if o.handle == nil {
-		return false
-	}
 	o.handle.mu.Lock()
 	defer o.handle.mu.Unlock()
 
@@ -171,10 +179,6 @@ func (o meterConfiguratorProviderOption) RegisterOnUpdate(fn func()) bool {
 // Called by sdk/metric during [sdkmetric.MeterProvider.Shutdown],
 // only for a provider whose RegisterOnUpdate call actually claimed it.
 func (o meterConfiguratorProviderOption) Unregister() {
-	if o.handle == nil {
-		return
-	}
-
 	o.handle.mu.Lock()
 	defer o.handle.mu.Unlock()
 

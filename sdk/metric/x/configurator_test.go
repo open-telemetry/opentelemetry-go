@@ -253,26 +253,18 @@ func TestMeterConfiguratorHandleSetNoConfigurator(t *testing.T) {
 
 func TestWithMeterConfiguratorNilHandle(t *testing.T) {
 	opt := WithMeterConfigurator(nil)
-	ex := opt.(meterConfiguratorOptionExtractor)
 
-	// nil handle must not panic; must behave as if the option were omitted.
-	snapshot := ex.MeterConfiguratorSnapshot()
-	fn, version := snapshot()
-	assert.Equal(t, uint64(0), version, "nil handle must report version 0")
-	result := fn(instrumentation.Scope{Name: "test"})
-	cfg, ok := result.(interface{ Enabled() bool })
-	require.True(t, ok)
-	assert.True(t, cfg.Enabled(), "nil handle must fall back to zero MeterConfig")
+	type experimental interface{ Experimental() }
+	_, ok := opt.(experimental)
+	assert.True(t, ok, "must implement Experimental() so newConfig skips it")
 
-	// RegisterOnUpdate on a nil handle must not panic.
-	assert.NotPanics(t, func() {
-		opt.(meterConfiguratorOnUpdateRegistrar).RegisterOnUpdate(func() {})
-	})
-
-	// Unregister on a nil handle must not panic.
-	assert.NotPanics(t, func() {
-		opt.(meterConfiguratorUnregistrar).Unregister()
-	})
+	// Without the configurator methods, the MeterProvider never selects it.
+	_, ok = opt.(meterConfiguratorOptionExtractor)
+	assert.False(t, ok, "a nil handle must not provide a configurator")
+	_, ok = opt.(meterConfiguratorOnUpdateRegistrar)
+	assert.False(t, ok, "a nil handle must not register for updates")
+	_, ok = opt.(meterConfiguratorUnregistrar)
+	assert.False(t, ok, "a nil handle must not unregister")
 }
 
 func TestMeterConfiguratorHandleSetNilClears(t *testing.T) {

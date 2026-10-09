@@ -366,3 +366,26 @@ func TestGatingInstrumentIdentity(t *testing.T) {
 	//nolint:testifylint // see above
 	assert.True(t, o1 == o2, "repeated async instrument creation must return an equal instrument")
 }
+
+func TestGatingNilHandleDoesNotOverride(t *testing.T) {
+	h := NewMeterConfiguratorHandle()
+	gatingSetAll(h, false)
+	rdr := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(rdr),
+		WithMeterConfigurator(h),
+		WithMeterConfigurator(nil),
+	)
+
+	c, err := mp.Meter("scope").Int64Counter("counter")
+	require.NoError(t, err)
+	c.Add(t.Context(), 1)
+
+	assert.Zero(t, gatingPoints(t, rdr)["counter"], "a nil handle must not replace an earlier handle")
+}
+
+func TestGatingNilHandleIsStable(t *testing.T) {
+	want := sdkmetric.NewMeterProvider().Meter("scope")
+	got := sdkmetric.NewMeterProvider(WithMeterConfigurator(nil)).Meter("scope")
+	assert.IsType(t, want, got, "a nil handle must leave the provider as if the option were omitted")
+}
