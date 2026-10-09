@@ -31,12 +31,38 @@ import (
 )
 
 func TestNewRawExporter(t *testing.T) {
-	for _, opts := range [][]Option{nil, {WithLogger(nil)}} {
-		exp, err := New(defaultCollectorURL, opts...)
-		require.NoError(t, err)
-		assert.Equal(t, exp.logger, emptyLogger)
-		assert.NoError(t, exp.ExportSpans(t.Context(), nil))
-	}
+	_, err := New(
+		defaultCollectorURL,
+	)
+
+	assert.NoError(t, err)
+}
+
+func TestWithNilLogger(t *testing.T) {
+	exp, err := New(defaultCollectorURL, WithLogger(nil))
+	require.NoError(t, err)
+	assert.Equal(t, exp.logger, emptyLogger)
+	assert.NoError(t, exp.ExportSpans(t.Context(), nil))
+}
+
+func TestWithNilLoggerPreservesLogger(t *testing.T) {
+	var buf bytes.Buffer
+	logger := log.New(&buf, "", 0)
+	exp, err := New(defaultCollectorURL, WithLogger(logger), WithLogger(nil))
+	require.NoError(t, err)
+	require.NoError(t, exp.ExportSpans(t.Context(), nil))
+	assert.Contains(t, buf.String(), "no spans to export")
+}
+
+func TestWithNilLoggerPreservesLogr(t *testing.T) {
+	var buf bytes.Buffer
+	logger := funcr.New(func(_, args string) {
+		_, _ = buf.WriteString(args)
+	}, funcr.Options{})
+	exp, err := New(defaultCollectorURL, WithLogr(logger), WithLogger(nil))
+	require.NoError(t, err)
+	require.NoError(t, exp.ExportSpans(t.Context(), nil))
+	assert.Contains(t, buf.String(), "no spans to export")
 }
 
 func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
@@ -328,7 +354,7 @@ func TestExportSpans(t *testing.T) {
 	defer collector.Close()
 	ls := &logStore{T: t}
 	logger := logStoreLogger(ls)
-	exporter, err := New(collector.url, WithLogger(nil), WithLogger(logger), WithLogger(nil))
+	exporter, err := New(collector.url, WithLogger(logger))
 	require.NoError(t, err)
 	ctx := t.Context()
 	require.Empty(t, ls.Messages)
@@ -389,18 +415,14 @@ func TestLogrFormatting(t *testing.T) {
 	l := funcr.New(func(prefix, args string) {
 		_, _ = fmt.Fprint(&buf, prefix, args)
 	}, funcr.Options{})
+	exp, err := New("", WithLogr(l))
+	require.NoError(t, err)
+
+	exp.logf(format, args...)
+
 	want := "\"level\"=0 \"msg\"=\"string \\\"s\\\", int 1\""
-	for _, opts := range [][]Option{
-		{WithLogr(l)},
-		{WithLogr(l), WithLogger(nil)},
-		{WithLogger(nil), WithLogr(l)},
-	} {
-		buf.Reset()
-		exp, err := New("", opts...)
-		require.NoError(t, err)
-		exp.logf(format, args...)
-		assert.Equal(t, want, buf.String())
-	}
+	got := buf.String()
+	assert.Equal(t, want, got)
 }
 
 func TestWithHeaders(t *testing.T) {
