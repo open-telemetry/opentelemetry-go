@@ -69,6 +69,9 @@ Supported value: "http/protobuf", "http/json".
 OTEL_EXPORTER_OTLP_TRACES_PROTOCOL takes precedence over OTEL_EXPORTER_OTLP_PROTOCOL.
 The configuration can be overridden by [WithEncoding] option.
 
+See [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/x] for
+information about the experimental features.
+
 [W3C Baggage HTTP Header Content Format]: https://www.w3.org/TR/baggage/#header-content
 */
 package otlptracehttp
