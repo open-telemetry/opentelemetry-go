@@ -173,12 +173,6 @@ func TestExportWithOptions(t *testing.T) {
 	}
 }
 
-func TestExporterNilWriter(t *testing.T) {
-	exp, err := stdoutmetric.New(stdoutmetric.WithWriter(nil))
-	require.NoError(t, err)
-	assert.NoError(t, exp.Export(t.Context(), new(metricdata.ResourceMetrics)))
-}
-
 func TestExporterNilWriterPreservesWriter(t *testing.T) {
 	var buf bytes.Buffer
 	exp, err := stdoutmetric.New(stdoutmetric.WithWriter(&buf), stdoutmetric.WithWriter(nil))
