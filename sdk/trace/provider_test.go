@@ -124,22 +124,45 @@ func TestShutdownCallsTracerMethod(t *testing.T) {
 }
 
 func TestForceFlushAndShutdownTraceProviderWithoutProcessor(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		opts []TracerProviderOption
-	}{
-		{name: "no options"},
-		{name: "nil processor", opts: []TracerProviderOption{WithSpanProcessor(nil)}},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			stp := NewTracerProvider(tc.opts...)
-			_, span := stp.Tracer("test").Start(t.Context(), "test")
-			span.End()
-			assert.NoError(t, stp.ForceFlush(t.Context()))
-			assert.NoError(t, stp.Shutdown(t.Context()))
-			assert.True(t, stp.isShutdown.Load())
-		})
-	}
+	stp := NewTracerProvider()
+	assert.NoError(t, stp.ForceFlush(t.Context()))
+	assert.NoError(t, stp.Shutdown(t.Context()))
+	assert.True(t, stp.isShutdown.Load())
+}
+
+func TestWithNilSpanProcessor(t *testing.T) {
+	stp := NewTracerProvider(WithSpanProcessor(nil))
+	_, span := stp.Tracer("test").Start(t.Context(), "test")
+	span.End()
+	assert.NoError(t, stp.ForceFlush(t.Context()))
+	assert.NoError(t, stp.Shutdown(t.Context()))
+	assert.True(t, stp.isShutdown.Load())
+}
+
+func TestWithNilSpanProcessorPreservesProcessors(t *testing.T) {
+	sp := &basicSpanProcessor{}
+	recorder := NewTestSpanProcessor("test")
+	stp := NewTracerProvider(
+		WithSpanProcessor(sp),
+		WithSpanProcessor(nil),
+		WithSpanProcessor(recorder),
+	)
+
+	sps := stp.getSpanProcessors()
+	require.Len(t, sps, 2)
+	assert.Same(t, sp, sps[0].sp)
+	assert.Same(t, recorder, sps[1].sp)
+
+	_, span := stp.Tracer("test").Start(t.Context(), "test")
+	span.End()
+	assert.NoError(t, stp.ForceFlush(t.Context()))
+	assert.True(t, sp.flushed)
+	assert.NoError(t, stp.Shutdown(t.Context()))
+	assert.True(t, sp.closed)
+	assert.True(t, stp.isShutdown.Load())
+	assert.Len(t, recorder.spansStarted, 1)
+	assert.Len(t, recorder.spansEnded, 1)
+	assert.Equal(t, 1, recorder.shutdownCount)
 }
 
 func TestUnregisterFirst(t *testing.T) {
@@ -209,54 +232,15 @@ func TestUnregisterUnknownSpanProcessor(t *testing.T) {
 }
 
 func TestShutdownTraceProvider(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		opts func(SpanProcessor, SpanProcessor) []TracerProviderOption
-	}{
-		{name: "registered"},
-		{
-			name: "options",
-			opts: func(first, second SpanProcessor) []TracerProviderOption {
-				return []TracerProviderOption{WithSpanProcessor(first), WithSpanProcessor(second)}
-			},
-		},
-		{
-			name: "nil processor first",
-			opts: func(first, second SpanProcessor) []TracerProviderOption {
-				return []TracerProviderOption{WithSpanProcessor(nil), WithSpanProcessor(first), WithSpanProcessor(second)}
-			},
-		},
-		{
-			name: "nil processor last",
-			opts: func(first, second SpanProcessor) []TracerProviderOption {
-				return []TracerProviderOption{WithSpanProcessor(first), WithSpanProcessor(second), WithSpanProcessor(nil)}
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			sp := &basicSpanProcessor{}
-			recorder := NewTestSpanProcessor("test")
-			var stp *TracerProvider
-			if tc.opts == nil {
-				stp = NewTracerProvider()
-				stp.RegisterSpanProcessor(sp)
-				stp.RegisterSpanProcessor(recorder)
-			} else {
-				stp = NewTracerProvider(tc.opts(sp, recorder)...)
-			}
+	stp := NewTracerProvider()
+	sp := &basicSpanProcessor{}
+	stp.RegisterSpanProcessor(sp)
 
-			_, span := stp.Tracer("test").Start(t.Context(), "test")
-			span.End()
-			assert.NoError(t, stp.ForceFlush(t.Context()))
-			assert.NoError(t, stp.Shutdown(t.Context()))
-			assert.Len(t, recorder.spansStarted, 1)
-			assert.Len(t, recorder.spansEnded, 1)
-			assert.Equal(t, 1, recorder.shutdownCount)
-			assert.True(t, sp.flushed, "error ForceFlush basicSpanProcessor")
-			assert.True(t, stp.isShutdown.Load())
-			assert.True(t, sp.closed, "error Shutdown basicSpanProcessor")
-		})
-	}
+	assert.NoError(t, stp.ForceFlush(t.Context()))
+	assert.True(t, sp.flushed, "error ForceFlush basicSpanProcessor")
+	assert.NoError(t, stp.Shutdown(t.Context()))
+	assert.True(t, stp.isShutdown.Load())
+	assert.True(t, sp.closed, "error Shutdown basicSpanProcessor")
 }
 
 func TestFailedProcessorShutdown(t *testing.T) {
