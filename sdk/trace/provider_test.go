@@ -130,6 +130,41 @@ func TestForceFlushAndShutdownTraceProviderWithoutProcessor(t *testing.T) {
 	assert.True(t, stp.isShutdown.Load())
 }
 
+func TestWithNilSpanProcessor(t *testing.T) {
+	stp := NewTracerProvider(WithSpanProcessor(nil))
+	_, span := stp.Tracer("test").Start(t.Context(), "test")
+	span.End()
+	assert.NoError(t, stp.ForceFlush(t.Context()))
+	assert.NoError(t, stp.Shutdown(t.Context()))
+	assert.True(t, stp.isShutdown.Load())
+}
+
+func TestWithNilSpanProcessorPreservesProcessors(t *testing.T) {
+	sp := &basicSpanProcessor{}
+	recorder := NewTestSpanProcessor("test")
+	stp := NewTracerProvider(
+		WithSpanProcessor(sp),
+		WithSpanProcessor(nil),
+		WithSpanProcessor(recorder),
+	)
+
+	sps := stp.getSpanProcessors()
+	require.Len(t, sps, 2)
+	assert.Same(t, sp, sps[0].sp)
+	assert.Same(t, recorder, sps[1].sp)
+
+	_, span := stp.Tracer("test").Start(t.Context(), "test")
+	span.End()
+	assert.NoError(t, stp.ForceFlush(t.Context()))
+	assert.True(t, sp.flushed)
+	assert.NoError(t, stp.Shutdown(t.Context()))
+	assert.True(t, sp.closed)
+	assert.True(t, stp.isShutdown.Load())
+	assert.Len(t, recorder.spansStarted, 1)
+	assert.Len(t, recorder.spansEnded, 1)
+	assert.Equal(t, 1, recorder.shutdownCount)
+}
+
 func TestUnregisterFirst(t *testing.T) {
 	stp := NewTracerProvider()
 	sp1 := &basicSpanProcessor{}
