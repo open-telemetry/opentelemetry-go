@@ -701,41 +701,6 @@ func TestPrometheusExporter(t *testing.T) {
 		},
 	}
 
-	var selectorCalled, producerCalled bool
-	for _, tc := range []struct {
-		name                string
-		options             []Option
-		checkMetricFamilies func(testing.TB, []*dto.MetricFamily)
-	}{
-		{name: "nil aggregation selector", options: []Option{WithAggregationSelector(nil)}},
-		{name: "nil producer", options: []Option{WithProducer(nil)}},
-		{
-			name: "nil options preserve configured reader",
-			options: []Option{
-				WithAggregationSelector(func(kind metric.InstrumentKind) metric.Aggregation {
-					selectorCalled = true
-					return metric.DefaultAggregationSelector(kind)
-				}),
-				WithAggregationSelector(nil),
-				WithProducer(producerFunc(func(context.Context) ([]metricdata.ScopeMetrics, error) {
-					producerCalled = true
-					return nil, nil
-				})),
-				WithProducer(nil),
-			},
-			checkMetricFamilies: func(t testing.TB, _ []*dto.MetricFamily) {
-				assert.True(t, selectorCalled)
-				assert.True(t, producerCalled)
-			},
-		},
-	} {
-		counterCase := testCases[0]
-		counterCase.name = "counter with " + tc.name
-		counterCase.options = append(append([]Option{}, counterCase.options...), tc.options...)
-		counterCase.checkMetricFamilies = tc.checkMetricFamilies
-		testCases = append(testCases, counterCase)
-	}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := t.Context()
@@ -805,6 +770,68 @@ func TestPrometheusExporter(t *testing.T) {
 			tc.checkMetricFamilies(t, mfs)
 		})
 	}
+}
+
+func TestNilReaderOptions(t *testing.T) {
+	exporter, err := New(
+		WithRegisterer(prometheus.NewRegistry()),
+		WithAggregationSelector(nil),
+		WithProducer(nil),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+	counter, err := provider.Meter("test").Int64Counter("counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, exporter.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	assert.Equal(t, "counter", rm.ScopeMetrics[0].Metrics[0].Name)
+	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 1)
+	assert.Equal(t, int64(1), sum.DataPoints[0].Value)
+}
+
+func TestNilReaderOptionsPreservePrevious(t *testing.T) {
+	selectorCalled := false
+	external := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{Name: "external"},
+		Metrics: []metricdata.Metrics{{
+			Name: "external",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints:  []metricdata.DataPoint[int64]{{Value: 2}},
+			},
+		}},
+	}
+	exporter, err := New(
+		WithRegisterer(prometheus.NewRegistry()),
+		WithAggregationSelector(func(kind metric.InstrumentKind) metric.Aggregation {
+			selectorCalled = true
+			return metric.DefaultAggregationSelector(kind)
+		}),
+		WithAggregationSelector(nil),
+		WithProducer(producerFunc(func(context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{external}, nil
+		})),
+		WithProducer(nil),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+	counter, err := provider.Meter("test").Int64Counter("counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, exporter.Collect(t.Context(), &rm))
+	assert.True(t, selectorCalled)
+	require.Len(t, rm.ScopeMetrics, 2)
+	assert.Equal(t, external, rm.ScopeMetrics[1])
 }
 
 func TestMultiScopes(t *testing.T) {

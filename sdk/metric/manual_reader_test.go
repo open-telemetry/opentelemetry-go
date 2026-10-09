@@ -44,37 +44,22 @@ var (
 	cumulativeTemporalitySelector = func(InstrumentKind) metricdata.Temporality { return metricdata.CumulativeTemporality }
 )
 
-func TestManualReaderSelectors(t *testing.T) {
+func TestManualReaderTemporality(t *testing.T) {
 	tests := []struct {
 		name    string
 		options []ManualReaderOption
 		// Currently only testing constant temporality. This should be expanded
 		// if we put more advanced selection in the SDK
 		wantTemporality metricdata.Temporality
-		wantAggregation Aggregation
 	}{
 		{
 			name:            "default",
 			wantTemporality: metricdata.CumulativeTemporality,
 		},
 		{
-			name:            "nil temporality selector uses default",
-			options:         []ManualReaderOption{WithTemporalitySelector(nil)},
-			wantTemporality: metricdata.CumulativeTemporality,
-		},
-		{
 			name: "delta",
 			options: []ManualReaderOption{
 				WithTemporalitySelector(deltaTemporalitySelector),
-			},
-			wantTemporality: metricdata.DeltaTemporality,
-		},
-		{
-			name: "nil temporality selector preserves previous",
-			options: []ManualReaderOption{
-				WithTemporalitySelector(nil),
-				WithTemporalitySelector(deltaTemporalitySelector),
-				WithTemporalitySelector(nil),
 			},
 			wantTemporality: metricdata.DeltaTemporality,
 		},
@@ -86,21 +71,6 @@ func TestManualReaderSelectors(t *testing.T) {
 			},
 			wantTemporality: metricdata.CumulativeTemporality,
 		},
-		{
-			name:            "nil aggregation selector uses default",
-			options:         []ManualReaderOption{WithAggregationSelector(nil)},
-			wantTemporality: metricdata.CumulativeTemporality,
-		},
-		{
-			name: "nil aggregation selector preserves previous",
-			options: []ManualReaderOption{
-				WithAggregationSelector(nil),
-				WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDrop{} }),
-				WithAggregationSelector(nil),
-			},
-			wantTemporality: metricdata.CumulativeTemporality,
-			wantAggregation: AggregationDrop{},
-		},
 	}
 
 	for _, tt := range tests {
@@ -108,13 +78,27 @@ func TestManualReaderSelectors(t *testing.T) {
 			var undefinedInstrument InstrumentKind
 			rdr := NewManualReader(tt.options...)
 			assert.Equal(t, tt.wantTemporality, rdr.temporality(undefinedInstrument))
-			wantAggregation := tt.wantAggregation
-			if wantAggregation == nil {
-				wantAggregation = DefaultAggregationSelector(InstrumentKindCounter)
-			}
-			assert.Equal(t, wantAggregation, rdr.aggregation(InstrumentKindCounter))
 		})
 	}
+}
+
+func TestManualReaderNilTemporalitySelector(t *testing.T) {
+	rdr := NewManualReader(WithTemporalitySelector(nil))
+	assert.Equal(t, metricdata.CumulativeTemporality, rdr.temporality(InstrumentKindCounter))
+
+	rdr = NewManualReader(WithTemporalitySelector(deltaTemporalitySelector), WithTemporalitySelector(nil))
+	assert.Equal(t, metricdata.DeltaTemporality, rdr.temporality(InstrumentKindCounter))
+}
+
+func TestManualReaderNilAggregationSelector(t *testing.T) {
+	rdr := NewManualReader(WithAggregationSelector(nil))
+	assert.Equal(t, DefaultAggregationSelector(InstrumentKindCounter), rdr.aggregation(InstrumentKindCounter))
+
+	rdr = NewManualReader(
+		WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDrop{} }),
+		WithAggregationSelector(nil),
+	)
+	assert.Equal(t, AggregationDrop{}, rdr.aggregation(InstrumentKindCounter))
 }
 
 func TestManualReaderCollect(t *testing.T) {

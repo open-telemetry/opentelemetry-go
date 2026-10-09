@@ -94,18 +94,6 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name:    "nil reader options",
-			options: []Option{WithAggregationSelector(nil), WithProducer(nil)},
-			wantConfig: config{
-				translationStrategy: otlptranslator.UnderscoreEscapingWithSuffixes,
-				registerer:          prometheus.DefaultRegisterer,
-				readerOpts: []metric.ManualReaderOption{
-					metric.WithAggregationSelector(nil),
-					metric.WithProducer(nil),
-				},
-			},
-		},
-		{
 			name: "without target_info metric",
 			options: []Option{
 				WithoutTargetInfo(),
