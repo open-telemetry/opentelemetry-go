@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add experimental `WithFinish` support for `Int64Counter` Sum aggregation,
+  including cancellable provider shutdown, in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
+
 ### Fixed
 
 - Preserve input span event timestamps when using `WithoutTimestamps` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9092)
