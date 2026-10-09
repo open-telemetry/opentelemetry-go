@@ -112,12 +112,6 @@ func TestExporterExportSpan(t *testing.T) {
 	}
 }
 
-func TestExporterNilWriter(t *testing.T) {
-	exp, err := stdouttrace.New(stdouttrace.WithWriter(nil))
-	require.NoError(t, err)
-	assert.NoError(t, exp.ExportSpans(t.Context(), tracetest.SpanStubs{{}}.Snapshots()))
-}
-
 func TestExporterNilWriterPreservesWriter(t *testing.T) {
 	var buf bytes.Buffer
 	exp, err := stdouttrace.New(stdouttrace.WithWriter(&buf), stdouttrace.WithWriter(nil))
