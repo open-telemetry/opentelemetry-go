@@ -14,9 +14,11 @@
 //
 //   - Views matching an instrument are grouped by target stream name. Non-renaming
 //     views apply across each stream group for the instrument.
-//   - A view that returns the instrument's own Name, Description, or Unit is
-//     treated as leaving that property unspecified. A direct View function can
-//     explicitly alter or zero these fields by returning different values.
+//   - A view that returns an empty Name or the instrument's own Name is treated
+//     as leaving the stream name unspecified. A view that returns the
+//     instrument's own Description or Unit is treated as leaving that property
+//     unspecified; a direct View function can explicitly alter or zero
+//     Description and Unit by returning different values.
 //   - Scalar properties (Description, Unit, ExemplarReservoirProviderSelector)
 //     follow last-wins precedence among matching views.
 //   - Aggregations follow last-wins precedence. If an invalid or incompatible
