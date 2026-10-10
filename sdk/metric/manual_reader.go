@@ -97,9 +97,10 @@ func (mr *ManualReader) cardinalityLimit(kind InstrumentKind) (int, bool) {
 }
 
 // Shutdown closes any connections and frees any resources used by the reader.
+// External Producers with a Shutdown method are shut down afterward.
 //
 // This method is safe to call concurrently.
-func (mr *ManualReader) Shutdown(context.Context) error {
+func (mr *ManualReader) Shutdown(ctx context.Context) error {
 	err := ErrReaderShutdown
 	mr.shutdownOnce.Do(func() {
 		// Any future call to Collect will now return ErrReaderShutdown.
@@ -107,11 +108,12 @@ func (mr *ManualReader) Shutdown(context.Context) error {
 			produce: shutdownProducer{}.produce,
 		})
 		mr.mu.Lock()
-		defer mr.mu.Unlock()
 		mr.isShutdown = true
 		// release references to Producer(s)
+		producers := mr.externalProducers.Load().([]Producer)
 		mr.externalProducers.Store([]Producer{})
-		err = nil
+		mr.mu.Unlock()
+		err = shutdownProducers(ctx, producers)
 	})
 	return err
 }

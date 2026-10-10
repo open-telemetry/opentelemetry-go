@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 type tracer struct {
@@ -34,12 +35,14 @@ func (tr *tracer) Start(
 	name string,
 	options ...trace.SpanStartOption,
 ) (context.Context, trace.Span) {
-	config := trace.NewSpanStartConfig(options...)
-
 	if ctx == nil {
 		// Prevent trace.ContextWithSpan from panicking.
 		ctx = context.Background()
 	}
+	if tr.provider.isShutdown.Load() {
+		return noop.Tracer{}.Start(ctx, name, options...)
+	}
+	config := trace.NewSpanStartConfig(options...)
 
 	// For local spans created by this SDK, track child span count.
 	if p := trace.SpanFromContext(ctx); p != nil {

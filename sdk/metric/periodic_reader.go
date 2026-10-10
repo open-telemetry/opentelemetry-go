@@ -372,7 +372,8 @@ func (r *PeriodicReader) ForceFlush(ctx context.Context) error {
 	return r.exporter.ForceFlush(ctx)
 }
 
-// Shutdown flushes pending telemetry and then stops the export pipeline.
+// Shutdown flushes pending telemetry, stops the export pipeline, and shuts down
+// external Producers with a Shutdown method.
 //
 // This method is safe to call concurrently.
 func (r *PeriodicReader) Shutdown(ctx context.Context) error {
@@ -429,10 +430,14 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 		}
 
 		r.mu.Lock()
-		defer r.mu.Unlock()
 		r.isShutdown = true
 		// release references to Producer(s)
+		producers := r.externalProducers.Load().([]Producer)
 		r.externalProducers.Store([]Producer{})
+		r.mu.Unlock()
+		if producerErr := shutdownProducers(originalCtx, producers); producerErr != nil {
+			err = errors.Join(err, producerErr)
+		}
 	})
 	return err
 }
