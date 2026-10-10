@@ -252,6 +252,24 @@ func (i *inserter[N]) Instrument(
 	allowedKeys []attribute.Key,
 	readerAggregation Aggregation,
 ) ([]aggregate.Measure[N], error) {
+	var measures []aggregate.Measure[N]
+	err := i.forEachStream(
+		inst,
+		allowedKeys,
+		readerAggregation,
+		i.newStreamAggregation,
+		func(agg aggVal[N]) { measures = append(measures, agg.Measure) },
+	)
+	return measures, err
+}
+
+func (i *inserter[N]) forEachStream(
+	inst Instrument,
+	allowedKeys []attribute.Key,
+	readerAggregation Aggregation,
+	newAggregation streamAggregationFactory[N],
+	yield func(aggVal[N]),
+) error {
 	if i.pipeline.viewMatchingMode == viewMatchingModeComposable {
 		var matches []Stream
 		for _, v := range i.pipeline.views {
@@ -260,11 +278,11 @@ func (i *inserter[N]) Instrument(
 			}
 		}
 		if len(matches) > 0 {
-			return i.composableInstrument(inst, matches, allowedKeys, readerAggregation)
+			return i.composableInstrument(inst, matches, allowedKeys, readerAggregation, newAggregation, yield)
 		}
-		return i.defaultInstrument(inst, allowedKeys, readerAggregation)
+		return i.defaultInstrument(inst, allowedKeys, readerAggregation, newAggregation, yield)
 	}
-	return i.independentInstrument(inst, allowedKeys, readerAggregation)
+	return i.independentInstrument(inst, allowedKeys, readerAggregation, newAggregation, yield)
 }
 
 // defaultInstrument resolves the implicit default stream when no views match.
@@ -272,20 +290,24 @@ func (i *inserter[N]) defaultInstrument(
 	inst Instrument,
 	allowedKeys []attribute.Key,
 	readerAggregation Aggregation,
-) ([]aggregate.Measure[N], error) {
+	newAggregation streamAggregationFactory[N],
+	yield func(aggVal[N]),
+) error {
 	stream := Stream{
 		Name:        inst.Name,
 		Description: inst.Description,
 		Unit:        inst.Unit,
 	}
-	in, _, e := i.cachedAggregator(inst.Scope, inst.Kind, stream, allowedKeys, readerAggregation)
-	if e != nil {
-		return nil, errors.Join(errCreatingAggregators, e)
+	agg := i.cachedAggregator(
+		inst.Scope, inst.Kind, stream, allowedKeys, readerAggregation, newAggregation,
+	)
+	if agg.Err != nil {
+		return errors.Join(errCreatingAggregators, agg.Err)
 	}
-	if in != nil {
-		return []aggregate.Measure[N]{in}, nil
+	if agg.Measure != nil {
+		yield(agg)
 	}
-	return nil, nil
+	return nil
 }
 
 // independentInstrument resolves views using independent matching semantics.
@@ -293,13 +315,14 @@ func (i *inserter[N]) independentInstrument(
 	inst Instrument,
 	allowedKeys []attribute.Key,
 	readerAggregation Aggregation,
-) ([]aggregate.Measure[N], error) {
+	newAggregation streamAggregationFactory[N],
+	yield func(aggVal[N]),
+) error {
 	var (
-		matched  bool
-		measures []aggregate.Measure[N]
+		matched bool
+		err     error
 	)
 
-	var err error
 	seen := make(map[uint64]struct{})
 	for _, v := range i.pipeline.views {
 		stream, match := v(inst)
@@ -308,7 +331,7 @@ func (i *inserter[N]) independentInstrument(
 		}
 		matched = true
 		agg := i.cachedAggregator(
-			inst.Scope, inst.Kind, stream, allowedKeys, readerAggregation, i.newStreamAggregation,
+			inst.Scope, inst.Kind, stream, allowedKeys, readerAggregation, newAggregation,
 		)
 		if agg.Err != nil {
 			err = errors.Join(err, agg.Err)
@@ -321,7 +344,7 @@ func (i *inserter[N]) independentInstrument(
 			continue
 		}
 		seen[agg.ID] = struct{}{}
-		measures = append(measures, agg.Measure)
+		yield(agg)
 	}
 
 	if err != nil {
@@ -329,15 +352,14 @@ func (i *inserter[N]) independentInstrument(
 	}
 
 	if matched {
-		return measures, err
+		return err
 	}
 
-	defMeasures, defErr := i.defaultInstrument(inst, allowedKeys, readerAggregation)
+	defErr := i.defaultInstrument(inst, allowedKeys, readerAggregation, newAggregation, yield)
 	if defErr != nil {
 		err = errors.Join(err, defErr)
 	}
-	measures = append(measures, defMeasures...)
-	return measures, err
+	return err
 }
 
 // composeAttributeFilters combines attribute filters from matching views using logical AND.
@@ -376,7 +398,9 @@ func (i *inserter[N]) composableInstrument(
 	matches []Stream,
 	allowedKeys []attribute.Key,
 	readerAggregation Aggregation,
-) ([]aggregate.Measure[N], error) {
+	newAggregation streamAggregationFactory[N],
+	yield func(aggVal[N]),
+) error {
 	var explicitNames []string
 	seenNames := make(map[string]struct{})
 	for _, m := range matches {
@@ -395,9 +419,8 @@ func (i *inserter[N]) composableInstrument(
 	}
 
 	var (
-		measures []aggregate.Measure[N]
-		err      error
-		seen     = make(map[uint64]struct{})
+		err  error
+		seen = make(map[uint64]struct{})
 	)
 
 	for _, name := range targetNames {
@@ -456,24 +479,26 @@ func (i *inserter[N]) composableInstrument(
 
 		resolved.AttributeFilter = composeAttributeFilters(groupStreams)
 
-		in, id, e := i.cachedAggregator(inst.Scope, inst.Kind, resolved, allowedKeys, readerAggregation)
-		if e != nil {
-			err = errors.Join(err, e)
+		agg := i.cachedAggregator(
+			inst.Scope, inst.Kind, resolved, allowedKeys, readerAggregation, newAggregation,
+		)
+		if agg.Err != nil {
+			err = errors.Join(err, agg.Err)
 		}
-		if in == nil {
+		if agg.Measure == nil {
 			continue
 		}
-		if _, ok := seen[id]; ok {
+		if _, ok := seen[agg.ID]; ok {
 			continue
 		}
-		seen[id] = struct{}{}
-		measures = append(measures, in)
+		seen[agg.ID] = struct{}{}
+		yield(agg)
 	}
 
 	if err != nil {
 		err = errors.Join(errCreatingAggregators, err)
 	}
-	return measures, err
+	return err
 }
 
 // addCallback registers a single instrument callback to be run when
