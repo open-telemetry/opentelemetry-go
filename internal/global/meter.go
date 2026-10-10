@@ -588,6 +588,9 @@ func (uo *unwrapObs) ObserveInt64(inst metric.Int64Observable, value int64, opts
 }
 
 func unwrapCallback(f metric.Callback) metric.Callback {
+	if f == nil {
+		return nil
+	}
 	return func(ctx context.Context, obs metric.Observer) error {
 		return f(ctx, &unwrapObs{obs: obs})
 	}

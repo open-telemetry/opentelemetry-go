@@ -400,6 +400,30 @@ func TestRegistrationDelegation(t *testing.T) {
 	})
 }
 
+func TestNilCallbackDelegation(t *testing.T) {
+	provider := &meterProvider{}
+	m := provider.Meter("nil-callback")
+	counter, err := m.Int64ObservableCounter("counter")
+	require.NoError(t, err)
+
+	before, err := m.RegisterCallback(nil, counter)
+	require.NoError(t, err)
+	require.NotNil(t, before)
+	provider.setDelegate(&testMeterProvider{})
+
+	after, err := m.RegisterCallback(nil, counter)
+	require.NoError(t, err)
+	require.NotNil(t, after)
+	testCollect(t, m)
+
+	delegate := m.(*meter).delegate.(*testMeter)
+	require.Len(t, delegate.callbacks, 2)
+	assert.Nil(t, delegate.callbacks[0])
+	assert.Nil(t, delegate.callbacks[1])
+	assert.NoError(t, before.Unregister())
+	assert.NoError(t, after.Unregister())
+}
+
 func TestMeterIdentity(t *testing.T) {
 	type id struct{ name, ver, url, attr string }
 

@@ -191,6 +191,96 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 	wg.Wait()
 }
 
+func TestMeterNilCallbackOptions(t *testing.T) {
+	reader := NewManualReader()
+	provider := NewMeterProvider(WithReader(reader), WithResource(resource.Empty()))
+	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(t.Context())) })
+	m := provider.Meter("nil-callback")
+
+	_, err := m.Int64ObservableCounter("int64.counter",
+		metric.WithInt64Callback(func(_ context.Context, observer metric.Int64Observer) error {
+			observer.Observe(1)
+			return nil
+		}),
+		metric.WithInt64Callback(nil),
+	)
+	require.NoError(t, err)
+	_, err = m.Float64ObservableCounter("float64.counter",
+		metric.WithFloat64Callback(func(_ context.Context, observer metric.Float64Observer) error {
+			observer.Observe(2)
+			return nil
+		}),
+		metric.WithFloat64Callback(nil),
+	)
+	require.NoError(t, err)
+
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &got))
+	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
+		Resource: resource.Empty(),
+		ScopeMetrics: []metricdata.ScopeMetrics{{
+			Scope: instrumentation.Scope{Name: "nil-callback"},
+			Metrics: []metricdata.Metrics{
+				{
+					Name: "int64.counter",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints:  []metricdata.DataPoint[int64]{{Value: 1}},
+					},
+				},
+				{
+					Name: "float64.counter",
+					Data: metricdata.Sum[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints:  []metricdata.DataPoint[float64]{{Value: 2}},
+					},
+				},
+			},
+		}},
+	}, got, metricdatatest.IgnoreTimestamp())
+}
+
+func TestRegisterNilCallback(t *testing.T) {
+	reader := NewManualReader()
+	provider := NewMeterProvider(WithReader(reader), WithResource(resource.Empty()))
+	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(t.Context())) })
+	m := provider.Meter("nil-callback")
+	counter, err := m.Int64ObservableCounter("counter")
+	require.NoError(t, err)
+
+	valid, err := m.RegisterCallback(func(_ context.Context, observer metric.Observer) error {
+		observer.ObserveInt64(counter, 7)
+		return nil
+	}, counter)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, valid.Unregister()) })
+
+	registration, err := m.RegisterCallback(nil, counter)
+	require.NoError(t, err)
+	require.NotNil(t, registration)
+
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &got))
+	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
+		Resource: resource.Empty(),
+		ScopeMetrics: []metricdata.ScopeMetrics{{
+			Scope: instrumentation.Scope{Name: "nil-callback"},
+			Metrics: []metricdata.Metrics{{
+				Name: "counter",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Value: 7}},
+				},
+			}},
+		}},
+	}, got, metricdatatest.IgnoreTimestamp())
+	require.NoError(t, registration.Unregister())
+	assert.NoError(t, registration.Unregister())
+}
+
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
 	// The synchronous measurement methods must ignore the context cancellation.
