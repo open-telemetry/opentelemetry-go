@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithViewMatchingMode` and `ViewMatchingMode` in `go.opentelemetry.io/otel/sdk/metric/x` to support composable view matching. (#8510)
+
 ### Fixed
 
 - Preserve input span event timestamps when using `WithoutTimestamps` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9092)
