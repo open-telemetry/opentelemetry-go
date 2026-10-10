@@ -3,7 +3,8 @@
 
 /*
 Package otlploghttp provides an OTLP log exporter. The exporter uses HTTP to
-transport OTLP protobuf payloads.
+transport OTLP payloads. By default, payloads are serialized in protobuf binary
+format. OTLP/JSON serialization can be selected with [WithEncoding].
 
 Exporter values should be created using [New].
 
@@ -47,6 +48,12 @@ the compression strategy the exporter uses to compress the HTTP body.
 Supported value: "gzip".
 OTEL_EXPORTER_OTLP_LOGS_COMPRESSION takes precedence over OTEL_EXPORTER_OTLP_COMPRESSION.
 The configuration can be overridden by the [WithCompression] option.
+
+OTEL_EXPORTER_OTLP_PROTOCOL, OTEL_EXPORTER_OTLP_LOGS_PROTOCOL (default: "http/protobuf") -
+the transport and encoding protocol used to export OTLP payloads.
+Supported values: "http/protobuf", "http/json".
+OTEL_EXPORTER_OTLP_LOGS_PROTOCOL takes precedence over OTEL_EXPORTER_OTLP_PROTOCOL.
+The configuration can be overridden by [WithEncoding] option.
 
 OTEL_EXPORTER_OTLP_CERTIFICATE, OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE (default: none) -
 the filepath to the trusted certificate to use when verifying a server's TLS credentials.
