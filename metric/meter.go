@@ -265,6 +265,11 @@ type Meter interface {
 	// If Unregister of the returned Registration is called, f needs to be
 	// unregistered and not called during collection.
 	//
+	// If Unregister is called from within a callback, including f itself, it
+	// may return without waiting for a call of f in progress on another
+	// goroutine to return, as waiting could deadlock. That call may then
+	// still be running when Unregister returns.
+	//
 	// The instruments f is registered with are the only instruments that f may
 	// observe values for.
 	//
@@ -333,6 +338,9 @@ type Registration interface {
 	embedded.Registration
 
 	// Unregister removes the callback registration from a Meter.
+	//
+	// See Meter.RegisterCallback for how Unregister needs to interact with
+	// calls of the callback that are in progress.
 	//
 	// Implementations of this method need to be idempotent and safe for a user
 	//  to call concurrently.
