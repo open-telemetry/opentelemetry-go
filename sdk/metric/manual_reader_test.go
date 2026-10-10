@@ -401,3 +401,136 @@ func BenchmarkManualReaderInstrumentation(b *testing.B) {
 		run(b, true)
 	})
 }
+
+func TestManualReaderMetricFilter(t *testing.T) {
+	ctx := t.Context()
+
+	tests := []struct {
+		name       string
+		testMetric func(string) int
+		wantCount  int
+	}{
+		{
+			name: "Accept keeps the metric",
+			testMetric: func(string) int {
+				return metricFilterAccept
+			},
+			wantCount: 1,
+		},
+		{
+			name: "Drop removes the metric",
+			testMetric: func(string) int {
+				return metricFilterDrop
+			},
+			wantCount: 0,
+		},
+		{
+			name: "Accept_Partial with all attributes accepted keeps the metric",
+			testMetric: func(string) int {
+				return metricFilterAcceptPartial
+			},
+			wantCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filter := testMetricFilterOption{
+				testMetric: func(_ instrumentation.Scope, name string, _ metricdata.Aggregation, _ string) int {
+					return tt.testMetric(name)
+				},
+				testAttributes: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, _ attribute.Set) int {
+					return metricFilterAttrAccept
+				},
+			}
+
+			rdr := NewManualReader(filter)
+			mp := NewMeterProvider(WithReader(rdr))
+			meter := mp.Meter("test")
+
+			counter, err := meter.Int64Counter("filtered")
+			require.NoError(t, err)
+			counter.Add(ctx, 1)
+
+			rm := &metricdata.ResourceMetrics{}
+			require.NoError(t, rdr.Collect(ctx, rm))
+			assert.Equal(t, tt.wantCount, sumDataPointCount(rm, "filtered"))
+		})
+	}
+}
+
+func TestManualReaderMetricFilterAcceptPartial(t *testing.T) {
+	ctx := t.Context()
+
+	filter := testMetricFilterOption{
+		testMetric: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string) int {
+			return metricFilterAcceptPartial
+		},
+		testAttributes: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, attrs attribute.Set) int {
+			for _, attr := range attrs.ToSlice() {
+				if attr.Key == "drop" {
+					return metricFilterAttrDrop
+				}
+			}
+			return metricFilterAttrAccept
+		},
+	}
+
+	rdr := NewManualReader(filter)
+	mp := NewMeterProvider(WithReader(rdr))
+	meter := mp.Meter("test")
+
+	counter, err := meter.Int64Counter("partial")
+	require.NoError(t, err)
+	counter.Add(ctx, 1, metric.WithAttributes(attribute.String("keep", "true")))
+	counter.Add(ctx, 1, metric.WithAttributes(attribute.String("drop", "true")))
+
+	rm := &metricdata.ResourceMetrics{}
+	require.NoError(t, rdr.Collect(ctx, rm))
+	assert.Equal(t, 1, sumDataPointCount(rm, "partial"))
+}
+
+func TestMetricFilterPointKind(t *testing.T) {
+	collect := func(t *testing.T, drop func(metricdata.Aggregation) bool) *metricdata.Metrics {
+		t.Helper()
+		rdr := NewManualReader(testAggregationMetricFilter{
+			testMetric: func(_ instrumentation.Scope, _ string, data metricdata.Aggregation, _ string) int {
+				if drop(data) {
+					return metricFilterDrop
+				}
+				return metricFilterAccept
+			},
+		})
+		mp := NewMeterProvider(
+			WithReader(rdr),
+			WithView(NewView(
+				Instrument{Name: "counter"},
+				Stream{Aggregation: AggregationExplicitBucketHistogram{}},
+			)),
+		)
+		counter, err := mp.Meter("test").Int64Counter("counter")
+		require.NoError(t, err)
+		counter.Add(t.Context(), 1)
+
+		rm := metricdata.ResourceMetrics{}
+		require.NoError(t, rdr.Collect(t.Context(), &rm))
+		return findMetricByName(&rm, "counter")
+	}
+
+	t.Run("Drop Histogram", func(t *testing.T) {
+		metric := collect(t, func(data metricdata.Aggregation) bool {
+			_, ok := data.(metricdata.Histogram[int64])
+			return ok
+		})
+		assert.Nil(t, metric)
+	})
+	t.Run("Drop Sum", func(t *testing.T) {
+		metric := collect(t, func(data metricdata.Aggregation) bool {
+			_, ok := data.(metricdata.Sum[int64])
+			return ok
+		})
+		require.NotNil(t, metric)
+		_, ok := metric.Data.(metricdata.Histogram[int64])
+		assert.True(t, ok)
+	})
+}

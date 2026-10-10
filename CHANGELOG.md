@@ -32,6 +32,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Added
 
+- Add experimental MetricFilter support to go.opentelemetry.io/otel/sdk/metric. (#8461)  
 - Add `String` method for `KeyValue` type in `go.opentelemetry.io/otel/attribute`. (#8205)
 - Add `String` method for `Set` type in `go.opentelemetry.io/otel/attribute`. (#8347)
 - Add `WithMaxExportBatchSize` to `go.opentelemetry.io/otel/sdk/metric` to configure the maximum export batch size for `PeriodicReader`. (#8960)

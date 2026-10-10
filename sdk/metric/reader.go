@@ -122,6 +122,33 @@ type produceHolder struct {
 	produce func(context.Context, *metricdata.ResourceMetrics) error
 }
 
+func wrapProduce(
+	produce func(context.Context, *metricdata.ResourceMetrics) error,
+	filter metricFilter,
+) func(context.Context, *metricdata.ResourceMetrics) error {
+	return func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+		err := produce(ctx, rm)
+		if err != nil || filter == nil {
+			return err
+		}
+		rm.ScopeMetrics = filterScopeMetrics(rm.ScopeMetrics, filter)
+		return nil
+	}
+}
+
+type filteringProducer struct {
+	inner  Producer
+	filter metricFilter
+}
+
+func (p *filteringProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+	sm, err := p.inner.Produce(ctx)
+	if err != nil || p.filter == nil {
+		return sm, err
+	}
+	return filterScopeMetrics(sm, p.filter), nil
+}
+
 // shutdownProducer produces an ErrReaderShutdown error always.
 type shutdownProducer struct{}
 

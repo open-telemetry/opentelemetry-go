@@ -79,6 +79,7 @@ type pipeline struct {
 	multiCallbacks   list.List
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+	metricFilter     metricFilter
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
@@ -402,7 +403,6 @@ func (i *inserter[N]) cachedAggregator(
 		b := aggregate.Builder[N]{
 			Temporality: i.pipeline.reader.temporality(kind),
 			ReservoirFunc: reservoirFunc[N](
-				kind,
 				stream.ExemplarReservoirProviderSelector(stream.Aggregation),
 				i.pipeline.exemplarFilter,
 			),
@@ -418,6 +418,7 @@ func (i *inserter[N]) cachedAggregator(
 		if in == nil { // Drop aggregator.
 			return aggVal[N]{0, nil, nil}
 		}
+
 		i.pipeline.addSync(scope, instrumentSync{
 			// Use the first-seen name casing for this and all subsequent
 			// requests of this instrument.
@@ -641,6 +642,9 @@ func newPipelines(
 	pipes := make([]*pipeline, 0, len(readers))
 	for _, r := range readers {
 		p := newPipeline(res, r, views, exemplarFilter, cardinalityLimit)
+		if r, ok := r.(interface{ getMetricFilter() metricFilter }); ok {
+			p.metricFilter = r.getMetricFilter()
+		}
 		r.register(p)
 		pipes = append(pipes, p)
 	}
