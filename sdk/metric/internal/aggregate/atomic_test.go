@@ -445,17 +445,286 @@ func BenchmarkSyncMap(b *testing.B) {
 			m.Clear()
 		}
 	})
+
+	b.Run("lazyLimitedSyncMap/LoadOrStoreNoClear", func(b *testing.B) {
+		m := newLazyLimitedSyncMap[any](10, newValue, nil)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			lazyLoadOrStore(&m, attr)
+		}
+	})
+
+	b.Run("lazyLimitedSyncMap/LoadOrStoreWithClear", func(b *testing.B) {
+		m := newLazyLimitedSyncMap[any](10, newValue, nil)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			m.Clear()
+			lazyLoadOrStore(&m, attr)
+		}
+	})
+
+	b.Run("lazyLimitedSyncMap/OnlyClear", func(b *testing.B) {
+		m := newLazyLimitedSyncMap[any](10, newValue, nil)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			m.Clear()
+		}
+	})
+}
+
+func lazyLoadOrStore[V any](m *lazyLimitedSyncMap[V], attr attribute.Set) V {
+	return m.LoadOrStoreAttr(newLazyFilteredAttributes(attr, nil))
+}
+
+func TestLazyLimitedSyncMapLimit(t *testing.T) {
+	newVal := func(attribute.Set) any { return new(int) }
+	m := newLazyLimitedSyncMap[any](3, newVal, nil)
+
+	attr1 := attribute.NewSet(attribute.String("key", "1"))
+	attr2 := attribute.NewSet(attribute.String("key", "2"))
+	attr3 := attribute.NewSet(attribute.String("key", "3"))
+	attr4 := attribute.NewSet(attribute.String("key", "4"))
+
+	// Add first (normal)
+	v1 := lazyLoadOrStore(&m, attr1)
+	assert.Equal(t, 1, m.Len())
+
+	// Add second (normal)
+	v2 := lazyLoadOrStore(&m, attr2)
+	assert.Equal(t, 2, m.Len())
+
+	// Add third (overflow)
+	v3 := lazyLoadOrStore(&m, attr3)
+	assert.Equal(t, 3, m.Len()) // Overflow counts as the 3rd entry
+	assert.NotSame(t, v1, v3)
+	assert.NotSame(t, v2, v3)
+
+	// Add fourth (overflow) - should return same overflow value
+	v4 := lazyLoadOrStore(&m, attr4)
+	assert.Same(t, v3, v4)
+
+	// Clear the map. Should be able to add new keys up to limit again.
+	m.Clear()
+	assert.Equal(t, 0, m.Len())
+
+	attr5 := attribute.NewSet(attribute.String("key", "5"))
+	attr6 := attribute.NewSet(attribute.String("key", "6"))
+	attr7 := attribute.NewSet(attribute.String("key", "7"))
+	attr8 := attribute.NewSet(attribute.String("key", "8"))
+
+	v5 := lazyLoadOrStore(&m, attr5)
+	assert.Equal(t, 1, m.Len())
+
+	v6 := lazyLoadOrStore(&m, attr6)
+	assert.Equal(t, 2, m.Len())
+
+	assert.NotSame(t, v5, v6, "Different keys should return different values")
+
+	v7 := lazyLoadOrStore(&m, attr7)
+	assert.Equal(t, 3, m.Len()) // Overflow counts as 3rd entry
+	assert.NotSame(t, v5, v7, "Overflow should be different from normal values")
+	assert.NotSame(t, v6, v7, "Overflow should be different from normal values")
+
+	v8 := lazyLoadOrStore(&m, attr8)
+	assert.Same(t, v7, v8, "Subsequent keys should return same overflow value")
+}
+
+func TestLazyLimitedSyncMapOverflowAttributeBeforeLimit(t *testing.T) {
+	newValue := func(attr attribute.Set) *attribute.Set {
+		a := attr
+		return &a
+	}
+
+	t.Run("NoLimit", func(t *testing.T) {
+		m := newLazyLimitedSyncMap[*attribute.Set](0, newValue, nil)
+		v1 := lazyLoadOrStore(&m, overflowSet)
+		assert.Equal(t, 1, m.Len())
+		assert.Equal(t, overflowSet, *v1)
+
+		attr := attribute.NewSet(attribute.String("key", "1"))
+		v2 := lazyLoadOrStore(&m, attr)
+		assert.Equal(t, 2, m.Len())
+		assert.NotSame(t, v1, v2)
+		assert.Equal(t, attr, *v2)
+	})
+
+	t.Run("WithLimit", func(t *testing.T) {
+		m := newLazyLimitedSyncMap[*attribute.Set](3, newValue, nil)
+		v1 := lazyLoadOrStore(&m, overflowSet)
+		assert.Equal(t, 1, m.Len())
+		assert.Equal(t, overflowSet, *v1)
+
+		attr2 := attribute.NewSet(attribute.String("key", "2"))
+		v2 := lazyLoadOrStore(&m, attr2)
+		assert.Equal(t, 2, m.Len())
+		assert.NotSame(t, v1, v2)
+		assert.Equal(t, attr2, *v2)
+
+		attr3 := attribute.NewSet(attribute.String("key", "3"))
+		v3 := lazyLoadOrStore(&m, attr3)
+		assert.Equal(t, 2, m.Len())
+		assert.Same(t, v1, v3)
+
+		attr4 := attribute.NewSet(attribute.String("key", "4"))
+		v4 := lazyLoadOrStore(&m, attr4)
+		assert.Equal(t, 2, m.Len())
+		assert.Same(t, v3, v4)
+
+		m.Clear()
+		assert.Equal(t, 0, m.Len())
+
+		v5 := lazyLoadOrStore(&m, overflowSet)
+		assert.Equal(t, 1, m.Len())
+		assert.Same(t, v1, v5)
+		assert.Equal(t, overflowSet, *v5)
+
+		v6 := lazyLoadOrStore(&m, attr2)
+		assert.Equal(t, 2, m.Len())
+		assert.Same(t, v2, v6)
+		assert.NotSame(t, v5, v6)
+	})
+}
+
+func TestLazyLimitedSyncMapConcurrentSafe(t *testing.T) {
+	m := newLazyLimitedSyncMap[any](5, func(attribute.Set) any { return 1 }, nil)
+	attr := attribute.NewSet(attribute.String("k", "v"))
+
+	var wg sync.WaitGroup
+	// 100 routines trying to read/write the same key
+	for range 100 {
+		wg.Go(func() {
+			lazyLoadOrStore(&m, attr)
+		})
+	}
+	wg.Wait()
+	assert.Equal(t, 1, m.Len())
+
+	// 10 routines trying to read/write DIFFERENT keys exceeding limit
+	var wg2 sync.WaitGroup
+	attrs := []attribute.Set{
+		attribute.NewSet(attribute.String("k", "1")),
+		attribute.NewSet(attribute.String("k", "2")),
+		attribute.NewSet(attribute.String("k", "3")),
+		attribute.NewSet(attribute.String("k", "4")),
+		attribute.NewSet(attribute.String("k", "5")),
+		attribute.NewSet(attribute.String("k", "6")),
+		attribute.NewSet(attribute.String("k", "7")),
+		attribute.NewSet(attribute.String("k", "8")),
+		attribute.NewSet(attribute.String("k", "9")),
+		attribute.NewSet(attribute.String("k", "10")),
+	}
+	for _, a := range attrs {
+		attrCopy := a
+		wg2.Go(func() {
+			lazyLoadOrStore(&m, attrCopy)
+		})
+	}
+	wg2.Wait()
+	// Map should be at limit (5)
+	assert.Equal(t, 5, m.Len())
+}
+
+func TestLazyLimitedSyncMap_ClearAndReuse(t *testing.T) {
+	var m lazyLimitedSyncMap[any]
+	m.aggLimit = 10
+	attr1 := attribute.NewSet(attribute.String("k", "v"))
+
+	allocCount := 0
+	newVal := func(attribute.Set) any {
+		allocCount++
+		return allocCount
+	}
+
+	// Cycle 0
+	m.newValue = func(attribute.Set) any { return newVal(attr1) }
+	v1 := lazyLoadOrStore(&m, attr1)
+	assert.Equal(t, 1, v1)
+	assert.Equal(t, 1, m.Len())
+
+	// Clear -> moves to Cycle 1
+	m.Clear()
+	assert.Equal(t, 0, m.Len())
+
+	// Re-inserting the same key should reuse the map entry, without calling newVal
+	v2 := lazyLoadOrStore(&m, attr1)
+	assert.Equal(t, 1, v2, "Value should be reused without calling newVal")
+	assert.Equal(t, 1, m.Len())
+
+	// Check underlying map length to ensure no growth
+	physLen := 0
+	m.m.Range(func(_, _ any) bool {
+		physLen++
+		return true
+	})
+	assert.Equal(t, 1, physLen, "Underlying map should not grow when reusing keys")
+}
+
+func TestLazyLimitedSyncMap_RangeAndGC(t *testing.T) {
+	var m lazyLimitedSyncMap[any]
+	m.aggLimit = 10
+	attr1 := attribute.NewSet(attribute.String("k", "v"))
+
+	newVal := func(attribute.Set) any { return 1 }
+
+	// Cycle 0: add item
+	m.newValue = newVal
+	lazyLoadOrStore(&m, attr1)
+
+	// Cycle 1: item is stale
+	m.Clear()
+
+	// Range should yield nothing
+	yieldCount := 0
+	m.Range(func(_, _ any) bool {
+		yieldCount++
+		return true
+	})
+	assert.Equal(t, 0, yieldCount, "Stale items should not be yielded")
+
+	// Move to Cycle 2. Clear should trigger GC for Cycle 0 item.
+	m.Clear() // Cycle 2
+
+	// Underlying map should now be empty
+	physLen := 0
+	m.m.Range(func(_, _ any) bool { physLen++; return true })
+	assert.Equal(t, 0, physLen, "Item should be GC'd after 2 cycles in Clear")
+}
+
+func TestLazyLimitedSyncMap_Reset(t *testing.T) {
+	var m lazyLimitedSyncMap[*int]
+	m.aggLimit = 10
+	attr1 := attribute.NewSet(attribute.String("k", "v"))
+
+	m.newValue = func(attribute.Set) *int {
+		v := 1
+		return &v
+	}
+	m.resetFunc = func(v *int) {
+		*v = 0
+	}
+
+	// Cycle 0
+	v1 := lazyLoadOrStore(&m, attr1)
+	assert.Equal(t, 1, *v1)
+
+	// Clear -> moves to Cycle 1, should call resetFunc
+	m.Clear()
+
+	// Re-inserting the same key should reuse the map entry and it should be reset!
+	v2 := lazyLoadOrStore(&m, attr1)
+	assert.Equal(t, 0, *v2, "Value should be reset by resetFunc")
+	assert.Same(t, v1, v2, "Entry should be reused")
 }
 
 func TestHotColdMap(t *testing.T) {
 	t.Run("BasicWriteAndCollect", func(t *testing.T) {
 		var m hotColdMap[int]
-		m.init(10)
+		m.init(10, func(attribute.Set) int { return 100 }, nil)
 		set := attribute.NewSet(attribute.String("k", "v"))
 		lazy := newLazyFilteredAttributes(set, nil)
 
 		hotIdx := m.start()
-		val := m.hot(hotIdx).LoadOrStoreAttr(lazy, func(attribute.Set) int { return 100 })
+		val := m.hot(hotIdx).LoadOrStoreAttr(lazy)
 		m.done(hotIdx)
 		assert.Equal(t, 100, val)
 
@@ -474,7 +743,11 @@ func TestHotColdMap(t *testing.T) {
 
 	t.Run("LimitEnforcement", func(t *testing.T) {
 		var m hotColdMap[int]
-		m.init(2) // Limit of 2: 1 normal + 1 overflow
+		next := 0
+		m.init(2, func(attribute.Set) int {
+			next++
+			return next
+		}, nil) // Limit of 2: 1 normal + 1 overflow
 		set1 := attribute.NewSet(attribute.String("k", "1"))
 		set2 := attribute.NewSet(attribute.String("k", "2"))
 		set3 := attribute.NewSet(attribute.String("k", "3"))
@@ -484,9 +757,9 @@ func TestHotColdMap(t *testing.T) {
 		lazy3 := newLazyFilteredAttributes(set3, nil)
 
 		hotIdx := m.start()
-		val1 := m.hot(hotIdx).LoadOrStoreAttr(lazy1, func(attribute.Set) int { return 1 })
-		val2 := m.hot(hotIdx).LoadOrStoreAttr(lazy2, func(attribute.Set) int { return 2 })
-		val3 := m.hot(hotIdx).LoadOrStoreAttr(lazy3, func(attribute.Set) int { return 3 })
+		val1 := m.hot(hotIdx).LoadOrStoreAttr(lazy1)
+		val2 := m.hot(hotIdx).LoadOrStoreAttr(lazy2)
+		val3 := m.hot(hotIdx).LoadOrStoreAttr(lazy3)
 		m.done(hotIdx)
 
 		assert.Equal(t, 1, val1)
@@ -507,7 +780,11 @@ func TestHotColdMap(t *testing.T) {
 
 	t.Run("LimitBudgetRestorationAfterClear", func(t *testing.T) {
 		var m hotColdMap[int]
-		m.init(3) // Limit of 3: 2 normal + 1 overflow
+		next := 0
+		m.init(3, func(attribute.Set) int {
+			next++
+			return next
+		}, nil) // Limit of 3: 2 normal + 1 overflow
 
 		set1 := attribute.NewSet(attribute.String("k", "1"))
 		set2 := attribute.NewSet(attribute.String("k", "2"))
@@ -516,8 +793,8 @@ func TestHotColdMap(t *testing.T) {
 
 		// Cycle 1: store 2 sets.
 		hotIdx := m.start()
-		val1 := m.hot(hotIdx).LoadOrStoreAttr(lazy1, func(attribute.Set) int { return 1 })
-		val2 := m.hot(hotIdx).LoadOrStoreAttr(lazy2, func(attribute.Set) int { return 2 })
+		val1 := m.hot(hotIdx).LoadOrStoreAttr(lazy1)
+		val2 := m.hot(hotIdx).LoadOrStoreAttr(lazy2)
 		m.done(hotIdx)
 		assert.Equal(t, 1, val1)
 		assert.Equal(t, 2, val2)
@@ -535,8 +812,8 @@ func TestHotColdMap(t *testing.T) {
 		lazy4 := newLazyFilteredAttributes(set4, nil)
 
 		hotIdx = m.start()
-		val3 := m.hot(hotIdx).LoadOrStoreAttr(lazy3, func(attribute.Set) int { return 3 })
-		val4 := m.hot(hotIdx).LoadOrStoreAttr(lazy4, func(attribute.Set) int { return 4 })
+		val3 := m.hot(hotIdx).LoadOrStoreAttr(lazy3)
+		val4 := m.hot(hotIdx).LoadOrStoreAttr(lazy4)
 		m.done(hotIdx)
 		assert.Equal(t, 3, val3)
 		assert.Equal(t, 4, val4)
@@ -555,7 +832,12 @@ func TestHotColdMap(t *testing.T) {
 
 func TestHotColdMapConcurrentSafe(t *testing.T) {
 	var m hotColdMap[int]
-	m.init(100)
+	m.init(100, func(attr attribute.Set) int {
+		if v, ok := attr.Value("k"); ok && v.AsString() == "blocked" {
+			return 999
+		}
+		return 1
+	}, nil)
 
 	initialHotIdx := hotIdx(m.startedCountAndHotIdx.Load() >> 63)
 
@@ -574,7 +856,7 @@ func TestHotColdMapConcurrentSafe(t *testing.T) {
 
 		set := attribute.NewSet(attribute.String("k", "blocked"))
 		lazy := newLazyFilteredAttributes(set, nil)
-		_ = m.hot(hotIdx).LoadOrStoreAttr(lazy, func(attribute.Set) int { return 999 })
+		_ = m.hot(hotIdx).LoadOrStoreAttr(lazy)
 		blockedWriterDone.Store(true)
 	})
 
@@ -603,7 +885,7 @@ func TestHotColdMapConcurrentSafe(t *testing.T) {
 			defer m.done(hotIdx)
 			set := attribute.NewSet(attribute.String("k", k))
 			lazy := newLazyFilteredAttributes(set, nil)
-			_ = m.hot(hotIdx).LoadOrStoreAttr(lazy, func(attribute.Set) int { return i })
+			_ = m.hot(hotIdx).LoadOrStoreAttr(lazy)
 		})
 	}
 

@@ -573,14 +573,6 @@ func TestHistogramDatapointReuseLeakedStaleValues(t *testing.T) {
 func TestHistogramMinMaxUnset(t *testing.T) {
 	alice := attribute.NewSet(attribute.String("user", "alice"))
 
-	h := &deltaHistogram[int64]{
-		noMinMax: false,
-		noSum:    false,
-		bounds:   []float64{1, 5},
-		start:    time.Now(),
-	}
-	h.vals.init(0)
-
 	hPt := &histogramPoint[int64]{
 		attrs: alice,
 		histogramPointCounters: histogramPointCounters[int64]{
@@ -590,12 +582,19 @@ func TestHistogramMinMaxUnset(t *testing.T) {
 	}
 	// hPt.minMax.set is false by default
 
+	h := &deltaHistogram[int64]{
+		noMinMax: false,
+		noSum:    false,
+		bounds:   []float64{1, 5},
+		start:    time.Now(),
+	}
+	h.vals.init(0, func(attribute.Set) *histogramPoint[int64] {
+		return hPt
+	}, nil)
+
 	hotIdx := h.vals.start()
 	h.vals.hot(hotIdx).LoadOrStoreAttr(
 		newLazyFilteredAttributes(alice, nil),
-		func(attribute.Set) *histogramPoint[int64] {
-			return hPt
-		},
 	)
 	h.vals.done(hotIdx)
 
