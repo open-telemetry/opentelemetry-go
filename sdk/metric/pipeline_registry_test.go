@@ -713,6 +713,7 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 		[]View{dropView, bazDroppedView, bazActiveView},
 		exemplar.AlwaysOffFilter,
 		0,
+		viewMatchingModeIndependent,
 	)
 	var vcDrop cache[string, instID]
 	riDrop := newResolver[int64](pDrop, &vcDrop)

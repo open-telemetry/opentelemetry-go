@@ -253,18 +253,6 @@ func (i *inserter[N]) Instrument(
 	optIn bool,
 	readerAggregation Aggregation,
 ) ([]aggregate.Measure[N], error) {
-	if i.pipeline.viewMatchingMode == viewMatchingModeComposable {
-		var matches []Stream
-		for _, v := range i.pipeline.views {
-			if s, match := v(inst); match {
-				matches = append(matches, s)
-			}
-		}
-		if len(matches) > 0 {
-			return i.composableInstrument(inst, matches, allowedKeys, optIn, readerAggregation, i.newStreamAggregation)
-		}
-		return i.defaultInstrument(inst, allowedKeys, readerAggregation)
-	}
 	var measures []aggregate.Measure[N]
 	err := i.forEachStream(
 		inst,
@@ -278,6 +266,56 @@ func (i *inserter[N]) Instrument(
 }
 
 func (i *inserter[N]) forEachStream(
+	inst Instrument,
+	allowedKeys []attribute.Key,
+	optIn bool,
+	readerAggregation Aggregation,
+	newAggregation streamAggregationFactory[N],
+	yield func(aggVal[N]),
+) error {
+	if i.pipeline.viewMatchingMode == viewMatchingModeComposable {
+		var matches []Stream
+		for _, v := range i.pipeline.views {
+			if s, match := v(inst); match {
+				matches = append(matches, s)
+			}
+		}
+		if len(matches) > 0 {
+			return i.composableInstrument(inst, matches, allowedKeys, optIn, readerAggregation, newAggregation, yield)
+		}
+		return i.defaultInstrument(inst, allowedKeys, optIn, readerAggregation, newAggregation, yield)
+	}
+	return i.independentInstrument(inst, allowedKeys, optIn, readerAggregation, newAggregation, yield)
+}
+
+// defaultInstrument resolves the implicit default stream when no views match.
+func (i *inserter[N]) defaultInstrument(
+	inst Instrument,
+	allowedKeys []attribute.Key,
+	optIn bool,
+	readerAggregation Aggregation,
+	newAggregation streamAggregationFactory[N],
+	yield func(aggVal[N]),
+) error {
+	stream := Stream{
+		Name:        inst.Name,
+		Description: inst.Description,
+		Unit:        inst.Unit,
+	}
+	agg := i.cachedAggregator(
+		inst.Scope, inst.Kind, stream, allowedKeys, optIn, readerAggregation, newAggregation,
+	)
+	if agg.Err != nil {
+		return errors.Join(errCreatingAggregators, agg.Err)
+	}
+	if agg.Measure != nil {
+		yield(agg)
+	}
+	return nil
+}
+
+// independentInstrument resolves views using independent matching semantics.
+func (i *inserter[N]) independentInstrument(
 	inst Instrument,
 	allowedKeys []attribute.Key,
 	optIn bool,
@@ -307,6 +345,7 @@ func (i *inserter[N]) forEachStream(
 			continue
 		}
 		if _, ok := seen[agg.ID]; ok {
+			// This aggregate function has already been added.
 			continue
 		}
 		seen[agg.ID] = struct{}{}
@@ -321,23 +360,9 @@ func (i *inserter[N]) forEachStream(
 		return err
 	}
 
-	// Apply implicit default view if no explicit matched.
-	stream := Stream{
-		Name:        inst.Name,
-		Description: inst.Description,
-		Unit:        inst.Unit,
-	}
-	agg := i.cachedAggregator(
-		inst.Scope, inst.Kind, stream, allowedKeys, optIn, readerAggregation, newAggregation,
-	)
-	if agg.Err != nil {
-		if err == nil {
-			err = errCreatingAggregators
-		}
-		err = errors.Join(err, agg.Err)
-	}
-	if agg.Measure != nil {
-		yield(agg)
+	defErr := i.defaultInstrument(inst, allowedKeys, optIn, readerAggregation, newAggregation, yield)
+	if defErr != nil {
+		err = errors.Join(err, defErr)
 	}
 	return err
 }
@@ -380,7 +405,8 @@ func (i *inserter[N]) composableInstrument(
 	optIn bool,
 	readerAggregation Aggregation,
 	newAggregation streamAggregationFactory[N],
-) ([]aggregate.Measure[N], error) {
+	yield func(aggVal[N]),
+) error {
 	var explicitNames []string
 	seenNames := make(map[string]struct{})
 	for _, m := range matches {
@@ -399,9 +425,8 @@ func (i *inserter[N]) composableInstrument(
 	}
 
 	var (
-		measures []aggregate.Measure[N]
-		err      error
-		seen     = make(map[uint64]struct{})
+		err  error
+		seen = make(map[uint64]struct{})
 	)
 
 	for _, name := range targetNames {
@@ -430,15 +455,11 @@ func (i *inserter[N]) composableInstrument(
 			}
 		}
 
-<<<<<<< HEAD
-=======
 		// The last matching view that specifies an aggregation takes precedence. If that
 		// aggregation is invalid or incompatible with the instrument kind, fall back to preceding
 		// matching views in reverse registration order before falling back to the reader default.
->>>>>>> a7218cd (Address review comment: validate aggregation config and handle direct view fallback)
 		var chosenAgg Aggregation
-		for j := len(groupStreams) - 1; j >= 0; j-- {
-			s := groupStreams[j]
+		for _, s := range slices.Backward(groupStreams) {
 			if s.Aggregation != nil {
 				if e := s.Aggregation.err(); e != nil {
 					global.Error(
@@ -477,13 +498,13 @@ func (i *inserter[N]) composableInstrument(
 			continue
 		}
 		seen[agg.ID] = struct{}{}
-		measures = append(measures, agg.Measure)
+		yield(agg)
 	}
 
 	if err != nil {
 		err = errors.Join(errCreatingAggregators, err)
 	}
-	return measures, err
+	return err
 }
 
 // addCallback registers a single instrument callback to be run when
@@ -558,7 +579,7 @@ func (i *inserter[N]) readerDefaultAggregation(kind InstrumentKind) Aggregation 
 //
 // If the instrument defines an unknown or incompatible aggregation, an error
 // is returned.
-func (i *inserter[N]) cachedAggregator( // nolint:revive // optIn is not a control flag.
+func (i *inserter[N]) cachedAggregator(
 	scope instrumentation.Scope,
 	kind InstrumentKind,
 	stream Stream,
