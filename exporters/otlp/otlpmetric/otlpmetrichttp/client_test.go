@@ -158,7 +158,106 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
-		assert.ErrorAs(t, err, new(retryableError))
+		require.Error(t, err)
+		timedOut := errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "exporter export timeout")
+		if !timedOut {
+			assert.ErrorAs(t, err, new(retryableError))
+		}
+	})
+
+	t.Run("WithTimeout bounds retry", func(t *testing.T) {
+		const queued = 1000
+		rCh := make(chan otest.ExportResult, queued)
+		for range queued {
+			rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+				Status: http.StatusServiceUnavailable,
+				Err:    errors.New("unavailable"),
+			}}
+		}
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(50*time.Millisecond),
+			WithRetry(RetryConfig{
+				Enabled:         true,
+				InitialInterval: time.Millisecond,
+				MaxInterval:     time.Millisecond,
+				MaxElapsedTime:  time.Minute,
+			}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		start := time.Now()
+		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
+		elapsed := time.Since(start)
+
+		require.Error(t, err)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			assert.ErrorContains(t, err, "exporter export timeout")
+		}
+		assert.Less(t, elapsed, 5*time.Second, "export retried until MaxElapsedTime")
+		assert.NotEqual(t, queued, len(rCh), "collector received no requests")
+
+		time.Sleep(50 * time.Millisecond)
+		remaining := len(rCh)
+		time.Sleep(50 * time.Millisecond)
+		assert.Len(t, rCh, remaining, "requests continued after the export timeout")
+	})
+
+	t.Run("WithHTTPClient ignores WithTimeout", func(t *testing.T) {
+		rCh := make(chan otest.ExportResult, 1)
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(time.Millisecond),
+			WithHTTPClient(&http.Client{}),
+			WithRetry(RetryConfig{Enabled: false}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		done := make(chan error, 1)
+		go func() {
+			done <- exp.Export(ctx, &metricdata.ResourceMetrics{})
+		}()
+		select {
+		case err := <-done:
+			t.Fatalf("export finished before the collector responded: %v", err)
+		case <-time.After(50 * time.Millisecond):
+		}
+		rCh <- otest.ExportResult{}
+		select {
+		case err := <-done:
+			assert.NoError(t, err)
+		case <-time.After(2 * time.Second):
+			t.Fatal("export did not finish")
+		}
+	})
+
+	t.Run("WithTimeout zero", func(t *testing.T) {
+		rCh := make(chan otest.ExportResult, 2)
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusServiceUnavailable,
+			Err:    errors.New("unavailable"),
+		}}
+		rCh <- otest.ExportResult{}
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(0),
+			WithRetry(RetryConfig{
+				Enabled:         true,
+				InitialInterval: time.Millisecond,
+				MaxInterval:     time.Millisecond,
+				MaxElapsedTime:  time.Second,
+			}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		assert.Empty(t, rCh)
 	})
 
 	t.Run("WithCompressionGZip", func(t *testing.T) {
