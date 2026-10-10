@@ -827,7 +827,7 @@ func TestViewMatchingModeComposable(t *testing.T) {
 			p := newPipeline(resource.Empty(), r, tt.views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
 			var vc cache[string, instID]
 			ins := newInserter[int64](p, &vc)
-			got, err := ins.Instrument(tt.inst, tt.allowedKeys, DefaultAggregationSelector(tt.inst.Kind))
+			got, err := ins.Instrument(tt.inst, tt.allowedKeys, false, DefaultAggregationSelector(tt.inst.Kind))
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
 			} else {
@@ -869,7 +869,7 @@ func TestViewMatchingModeComposableExemplarSelectorLastWins(t *testing.T) {
 	ins := newInserter[int64](p, &vc)
 	got, err := ins.Instrument(
 		Instrument{Name: "foo", Kind: InstrumentKindCounter},
-		nil,
+		nil, false,
 		DefaultAggregationSelector(InstrumentKindCounter),
 	)
 	require.NoError(t, err)
@@ -894,7 +894,7 @@ func TestViewMatchingModeComposableAggregationLastWins(t *testing.T) {
 	ins := newInserter[int64](p, &vc)
 	got, err := ins.Instrument(
 		Instrument{Name: "foo", Kind: InstrumentKindCounter},
-		nil,
+		nil, false,
 		DefaultAggregationSelector(InstrumentKindCounter),
 	)
 	require.NoError(t, err)
@@ -991,7 +991,7 @@ func TestViewMatchingModeComposableDefaultAttributes(t *testing.T) {
 	allowed := []attribute.Key{"k1"}
 	got, err := ins.Instrument(
 		Instrument{Name: "foo", Kind: InstrumentKindCounter},
-		allowed,
+		allowed, false,
 		DefaultAggregationSelector(InstrumentKindCounter),
 	)
 	require.NoError(t, err)
@@ -1026,7 +1026,7 @@ func TestViewMatchingModeComposableDefaultAttributes(t *testing.T) {
 	ins2 := newInserter[int64](pWithFilter, &vc2)
 	got2, err2 := ins2.Instrument(
 		Instrument{Name: "foo", Kind: InstrumentKindCounter},
-		allowed,
+		allowed, false,
 		DefaultAggregationSelector(InstrumentKindCounter),
 	)
 	require.NoError(t, err2)
@@ -1076,7 +1076,7 @@ func TestViewMatchingModeComposableInvalidAggregationDirectView(t *testing.T) {
 	ins := newInserter[int64](p, &vc)
 	got, err := ins.Instrument(
 		Instrument{Name: "foo", Kind: InstrumentKindCounter},
-		nil,
+		nil, false,
 		DefaultAggregationSelector(InstrumentKindCounter),
 	)
 	require.NoError(t, err)
@@ -1110,7 +1110,7 @@ func TestViewMatchingModeComposableCaseVariantTargetNames(t *testing.T) {
 	ins := newInserter[int64](p, &vc)
 	got, err := ins.Instrument(
 		Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "1", Description: "orig"},
-		nil,
+		nil, false,
 		DefaultAggregationSelector(InstrumentKindCounter),
 	)
 	require.NoError(t, err)
@@ -1152,7 +1152,7 @@ func TestViewMatchingModeComposableDirectViewZeroedFields(t *testing.T) {
 		ins := newInserter[int64](p, &vc)
 		got, err := ins.Instrument(
 			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
-			nil,
+			nil, false,
 			DefaultAggregationSelector(InstrumentKindCounter),
 		)
 		require.NoError(t, err)
@@ -1187,7 +1187,7 @@ func TestViewMatchingModeComposableDirectViewZeroedFields(t *testing.T) {
 		ins := newInserter[int64](p, &vc)
 		got, err := ins.Instrument(
 			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
-			nil,
+			nil, false,
 			DefaultAggregationSelector(InstrumentKindCounter),
 		)
 		require.NoError(t, err)
@@ -1230,7 +1230,7 @@ func TestViewMatchingModeComposableDirectViewZeroedFields(t *testing.T) {
 		ins := newInserter[int64](p, &vc)
 		got, err := ins.Instrument(
 			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
-			nil,
+			nil, false,
 			DefaultAggregationSelector(InstrumentKindCounter),
 		)
 		require.NoError(t, err)
@@ -1267,7 +1267,7 @@ func TestViewMatchingModeComposableDirectViewZeroedFields(t *testing.T) {
 		ins := newInserter[int64](p, &vc)
 		got, err := ins.Instrument(
 			Instrument{Name: "foo", Kind: InstrumentKindCounter, Unit: "ms", Description: "original desc"},
-			nil,
+			nil, false,
 			DefaultAggregationSelector(InstrumentKindCounter),
 		)
 		require.NoError(t, err)
