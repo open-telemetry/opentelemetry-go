@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Decompress gzip OTLP/HTTP log responses when the request sets `Accept-Encoding` explicitly in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`.
+- Decompress gzip OTLP/HTTP log responses when the request sets `Accept-Encoding` explicitly in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9181)
 - Preserve input span event timestamps when using `WithoutTimestamps` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9092)
 - Bound export retries by `WithTimeout` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, and
