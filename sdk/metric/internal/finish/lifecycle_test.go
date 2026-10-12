@@ -310,8 +310,8 @@ func TestLifecycleRetireWaitsForMeasurement(t *testing.T) {
 		runtime.Gosched()
 	}
 	select {
-	case <-retired:
-		t.Fatal("retirement completed with a measurement in flight")
+	case err := <-retired:
+		t.Fatalf("retirement completed with a measurement in flight: %v", err)
 	default:
 	}
 

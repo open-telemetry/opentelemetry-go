@@ -109,8 +109,8 @@ func TestRegistryConcurrentShutdownWaits(t *testing.T) {
 	second := make(chan error, 1)
 	go func() { second <- registry.Shutdown(t.Context()) }()
 	select {
-	case <-second:
-		t.Fatal("concurrent shutdown returned before the registered wait completed")
+	case err := <-second:
+		t.Fatalf("concurrent shutdown returned before the registered wait completed: %v", err)
 	default:
 	}
 
