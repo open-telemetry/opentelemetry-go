@@ -224,6 +224,38 @@ func TestWithView(t *testing.T) {
 	assert.Len(t, c.views, 2)
 }
 
+func TestWithNilViewUsesDefault(t *testing.T) {
+	reader := NewManualReader()
+	provider := NewMeterProvider(WithReader(reader), WithView(nil))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+	counter, err := provider.Meter("test").Int64Counter("counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	assert.Equal(t, "counter", rm.ScopeMetrics[0].Metrics[0].Name)
+	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 1)
+	assert.Equal(t, int64(1), sum.DataPoints[0].Value)
+}
+
+func TestWithNilViewPreservesViewOrder(t *testing.T) {
+	viewA := NewView(Instrument{Kind: InstrumentKindCounter}, Stream{Name: "a"})
+	viewB := NewView(Instrument{Kind: InstrumentKindCounter}, Stream{Name: "b"})
+	cfg := newConfig([]Option{WithView(viewA, nil), WithView(nil, viewB)})
+	require.Len(t, cfg.views, 2)
+	stream, match := cfg.views[0](Instrument{Kind: InstrumentKindCounter})
+	require.True(t, match)
+	assert.Equal(t, "a", stream.Name)
+	stream, match = cfg.views[1](Instrument{Kind: InstrumentKindCounter})
+	require.True(t, match)
+	assert.Equal(t, "b", stream.Name)
+}
+
 func TestWithExemplarFilterOff(t *testing.T) {
 	for _, tc := range []struct {
 		desc                   string
