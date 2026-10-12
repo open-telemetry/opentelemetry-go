@@ -82,6 +82,25 @@ func TestManualReaderTemporality(t *testing.T) {
 	}
 }
 
+func TestManualReaderNilTemporalitySelector(t *testing.T) {
+	rdr := NewManualReader(WithTemporalitySelector(nil))
+	assert.Equal(t, metricdata.CumulativeTemporality, rdr.temporality(InstrumentKindCounter))
+
+	rdr = NewManualReader(WithTemporalitySelector(deltaTemporalitySelector), WithTemporalitySelector(nil))
+	assert.Equal(t, metricdata.DeltaTemporality, rdr.temporality(InstrumentKindCounter))
+}
+
+func TestManualReaderNilAggregationSelector(t *testing.T) {
+	rdr := NewManualReader(WithAggregationSelector(nil))
+	assert.Equal(t, DefaultAggregationSelector(InstrumentKindCounter), rdr.aggregation(InstrumentKindCounter))
+
+	rdr = NewManualReader(
+		WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDrop{} }),
+		WithAggregationSelector(nil),
+	)
+	assert.Equal(t, AggregationDrop{}, rdr.aggregation(InstrumentKindCounter))
+}
+
 func TestManualReaderCollect(t *testing.T) {
 	expiredCtx, cancel := context.WithDeadline(t.Context(), time.Now().Add(-1))
 	defer cancel()

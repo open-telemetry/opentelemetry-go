@@ -240,6 +240,7 @@ type ManualReaderOption interface {
 // WithTemporalitySelector sets the TemporalitySelector a reader will use to
 // determine the Temporality of an instrument based on its kind. If this
 // option is not used, the reader will use the DefaultTemporalitySelector.
+// If selector is nil, this option does nothing.
 func WithTemporalitySelector(selector TemporalitySelector) ManualReaderOption {
 	return temporalitySelectorOption{selector: selector}
 }
@@ -250,7 +251,9 @@ type temporalitySelectorOption struct {
 
 // applyManual returns a manualReaderConfig with option applied.
 func (t temporalitySelectorOption) applyManual(mrc manualReaderConfig) manualReaderConfig {
-	mrc.temporalitySelector = t.selector
+	if t.selector != nil {
+		mrc.temporalitySelector = t.selector
+	}
 	return mrc
 }
 
@@ -258,6 +261,7 @@ func (t temporalitySelectorOption) applyManual(mrc manualReaderConfig) manualRea
 // determine the aggregation to use for an instrument based on its kind. If
 // this option is not used, the reader will use the DefaultAggregationSelector
 // or the aggregation explicitly passed for a view matching an instrument.
+// If selector is nil, this option does nothing.
 func WithAggregationSelector(selector AggregationSelector) ManualReaderOption {
 	return aggregationSelectorOption{selector: selector}
 }
@@ -268,6 +272,8 @@ type aggregationSelectorOption struct {
 
 // applyManual returns a manualReaderConfig with option applied.
 func (t aggregationSelectorOption) applyManual(c manualReaderConfig) manualReaderConfig {
-	c.aggregationSelector = t.selector
+	if t.selector != nil {
+		c.aggregationSelector = t.selector
+	}
 	return c
 }
