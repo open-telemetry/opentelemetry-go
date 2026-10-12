@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Ignore nil writers passed to `WithWriter` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` and
   `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`, preserving the default or previously configured writer or encoder. (#9164)
+- Ignore nil writers passed to `WithWriter` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`, retaining the default or previously configured writer to prevent a panic during log export. (#9148)
 - Ignore nil processors passed to `WithProcessor` in `go.opentelemetry.io/otel/sdk/log` to prevent panics during log emission and provider lifecycle operations. (#9170)
 - Ignore nil views passed to `WithView` in `go.opentelemetry.io/otel/sdk/metric`, preserving valid views and their order. (#9167)
 - Ignore nil samplers passed to `ParentBased` sampler options in `go.opentelemetry.io/otel/sdk/trace`. (#9169)
