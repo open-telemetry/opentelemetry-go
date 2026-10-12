@@ -211,7 +211,11 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 }
 
 // RegisterSpanProcessor adds the given SpanProcessor to the list of SpanProcessors.
+// If sp is nil, this method has no effect.
 func (p *TracerProvider) RegisterSpanProcessor(sp SpanProcessor) {
+	if sp == nil {
+		return
+	}
 	// This check prevents calls during a shutdown.
 	if p.isShutdown.Load() {
 		return
