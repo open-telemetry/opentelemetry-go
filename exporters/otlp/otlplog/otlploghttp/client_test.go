@@ -1457,90 +1457,239 @@ func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
 	assert.Equal(t, "/", got, "a pathless endpoint URL must target the root path, not the default logs path")
 }
 
-func TestEndpointPaths(t *testing.T) {
-	paths := []struct {
-		name string
-		path string
+func TestEndpointPath(t *testing.T) {
+	const endpoint = "http" + "://collector:4318"
+	testCases := []struct {
+		name     string
+		env      map[string]string
+		options  []Option
+		wantPath string
 	}{
-		{name: "no path"},
-		{name: "root", path: "/"},
-		{name: "ordinary base", path: "/prefix"},
-		{name: "trailing slash", path: "/prefix/"},
-		{name: "escaped slash", path: "/a%2Fb"},
-		{name: "lowercase escape", path: "/a%2fb/"},
-		{name: "escaped trailing slash", path: "/a%2F"},
-		{name: "escaped delimiters", path: "/a%3Fb%23c%25d"},
-		{name: "escaped dot segments", path: "/a/%2e%2E/b"},
-		{name: "repeated slashes", path: "/a//b/"},
-		{name: "repeated trailing slashes", path: "/a//"},
-		{name: "dot segments", path: "/a/../b/"},
+		{
+			name:     "generic/no path",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint},
+			wantPath: "/v1/logs",
+		},
+		{
+			name:     "generic/root",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/"},
+			wantPath: "/v1/logs",
+		},
+		{
+			name:     "generic/ordinary base",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/prefix"},
+			wantPath: "/prefix/v1/logs",
+		},
+		{
+			name:     "generic/trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/prefix/"},
+			wantPath: "/prefix/v1/logs",
+		},
+		{
+			name:     "generic/escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%2Fb"},
+			wantPath: "/a%2Fb/v1/logs",
+		},
+		{
+			name:     "generic/lowercase escape",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%2fb/"},
+			wantPath: "/a%2fb/v1/logs",
+		},
+		{
+			name:     "generic/escaped trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%2F"},
+			wantPath: "/a%2F/v1/logs",
+		},
+		{
+			name:     "generic/escaped delimiters",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%3Fb%23c%25d"},
+			wantPath: "/a%3Fb%23c%25d/v1/logs",
+		},
+		{
+			name:     "generic/escaped dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a/%2e%2E/b"},
+			wantPath: "/a/%2e%2E/b/v1/logs",
+		},
+		{
+			name:     "generic/repeated slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a//b/"},
+			wantPath: "/a//b/v1/logs",
+		},
+		{
+			name:     "generic/repeated trailing slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a//"},
+			wantPath: "/a//v1/logs",
+		},
+		{
+			name:     "generic/dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a/../b/"},
+			wantPath: "/a/../b/v1/logs",
+		},
+		{
+			name:     "logs/no path",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint},
+			wantPath: "/",
+		},
+		{
+			name:     "logs/root",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/"},
+			wantPath: "/",
+		},
+		{
+			name:     "logs/ordinary base",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/prefix"},
+			wantPath: "/prefix",
+		},
+		{
+			name:     "logs/trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/prefix/"},
+			wantPath: "/prefix/",
+		},
+		{
+			name:     "logs/escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%2Fb"},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "logs/lowercase escape",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%2fb/"},
+			wantPath: "/a%2fb/",
+		},
+		{
+			name:     "logs/escaped trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%2F"},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "logs/escaped delimiters",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%3Fb%23c%25d"},
+			wantPath: "/a%3Fb%23c%25d",
+		},
+		{
+			name:     "logs/escaped dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a/%2e%2E/b"},
+			wantPath: "/a/%2e%2E/b",
+		},
+		{
+			name:     "logs/repeated slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a//b/"},
+			wantPath: "/a//b/",
+		},
+		{
+			name:     "logs/repeated trailing slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a//"},
+			wantPath: "/a//",
+		},
+		{
+			name:     "logs/dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a/../b/"},
+			wantPath: "/a/../b/",
+		},
+		{
+			name:     "option/no path",
+			options:  []Option{WithEndpointURL(endpoint)},
+			wantPath: "/",
+		},
+		{
+			name:     "option/root",
+			options:  []Option{WithEndpointURL(endpoint + "/")},
+			wantPath: "/",
+		},
+		{
+			name:     "option/ordinary base",
+			options:  []Option{WithEndpointURL(endpoint + "/prefix")},
+			wantPath: "/prefix",
+		},
+		{
+			name:     "option/trailing slash",
+			options:  []Option{WithEndpointURL(endpoint + "/prefix/")},
+			wantPath: "/prefix/",
+		},
+		{
+			name:     "option/escaped slash",
+			options:  []Option{WithEndpointURL(endpoint + "/a%2Fb")},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "option/lowercase escape",
+			options:  []Option{WithEndpointURL(endpoint + "/a%2fb/")},
+			wantPath: "/a%2fb/",
+		},
+		{
+			name:     "option/escaped trailing slash",
+			options:  []Option{WithEndpointURL(endpoint + "/a%2F")},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "option/escaped delimiters",
+			options:  []Option{WithEndpointURL(endpoint + "/a%3Fb%23c%25d")},
+			wantPath: "/a%3Fb%23c%25d",
+		},
+		{
+			name:     "option/escaped dot segments",
+			options:  []Option{WithEndpointURL(endpoint + "/a/%2e%2E/b")},
+			wantPath: "/a/%2e%2E/b",
+		},
+		{
+			name:     "option/repeated slashes",
+			options:  []Option{WithEndpointURL(endpoint + "/a//b/")},
+			wantPath: "/a//b/",
+		},
+		{
+			name:     "option/repeated trailing slashes",
+			options:  []Option{WithEndpointURL(endpoint + "/a//")},
+			wantPath: "/a//",
+		},
+		{
+			name:     "option/dot segments",
+			options:  []Option{WithEndpointURL(endpoint + "/a/../b/")},
+			wantPath: "/a/../b/",
+		},
 	}
-	for _, source := range []string{"generic", "logs", "option"} {
-		t.Run(source, func(t *testing.T) {
-			for _, tt := range paths {
-				t.Run(tt.name, func(t *testing.T) {
-					t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
-					t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "")
-					const endpoint = "http" + "://collector:4318"
-					wantPath := tt.path
-					var options []Option
-					switch source {
-					case "generic":
-						t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", endpoint+tt.path)
-						if !strings.HasSuffix(wantPath, "/") {
-							wantPath += "/"
-						}
-						wantPath += "v1/logs"
-					case "logs":
-						t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", endpoint+tt.path)
-						if wantPath == "" {
-							wantPath = "/"
-						}
-					case "option":
-						options = append(options, WithEndpointURL(endpoint+tt.path))
-					}
-					wantURL := endpoint + wantPath
-					if wantPath == "" {
-						wantPath = "/"
-					}
-
-					var requests int
-					options = append(options, WithHTTPClient(&http.Client{
-						Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
-							requests++
-							assert.Equal(t, wantURL, r.URL.String())
-							assert.Equal(t, wantPath, r.URL.RequestURI())
-							return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
-						}),
-					}))
-					ctx := t.Context()
-					exp, err := New(ctx, options...)
-					require.NoError(t, err)
-					t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.WithoutCancel(ctx))) })
-					require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
-					assert.Equal(t, 1, requests)
-				})
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+			t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "")
+			for key, value := range tt.env {
+				t.Setenv(key, value)
 			}
+
+			var requests int
+			options := append(tt.options, WithHTTPClient(&http.Client{
+				Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+					requests++
+					assert.Equal(t, "http", r.URL.Scheme)
+					assert.Equal(t, "collector:4318", r.URL.Host)
+					assert.Equal(t, tt.wantPath, r.URL.RequestURI())
+					return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
+				}),
+			}))
+			ctx := t.Context()
+			exp, err := New(ctx, options...)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.WithoutCancel(ctx))) })
+			require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+			assert.Equal(t, 1, requests)
 		})
 	}
 }
 
 func TestEndpointPathOptions(t *testing.T) {
 	const endpoint = "http" + "://collector:4318"
-	tests := []struct {
-		name    string
-		options []Option
-		want    string
+	testCases := []struct {
+		name     string
+		options  []Option
+		wantPath string
 	}{
 		{
-			name:    "URL path is decoded",
-			options: []Option{WithURLPath("/a%2Fb?# +é")},
-			want:    endpoint + "/a%252Fb%3F%23%20+%C3%A9",
+			name:     "URL path is decoded",
+			options:  []Option{WithURLPath("/a%2Fb?# +é")},
+			wantPath: "/a%252Fb%3F%23%20+%C3%A9",
 		},
 		{
-			name:    "URL path literal percent",
-			options: []Option{WithURLPath("/a%")},
-			want:    endpoint + "/a%25",
+			name:     "URL path literal percent",
+			options:  []Option{WithURLPath("/a%")},
+			wantPath: "/a%25",
 		},
 		{
 			name: "URL path overrides endpoint URL",
@@ -1548,7 +1697,7 @@ func TestEndpointPathOptions(t *testing.T) {
 				WithEndpointURL(endpoint + "/original%2Fpath"),
 				WithURLPath("/a%2Fb"),
 			},
-			want: endpoint + "/a%252Fb",
+			wantPath: "/a%252Fb",
 		},
 		{
 			name: "endpoint URL overrides URL path",
@@ -1556,17 +1705,17 @@ func TestEndpointPathOptions(t *testing.T) {
 				WithURLPath("/a%2Fb"),
 				WithEndpointURL(endpoint + "/original%2Fpath"),
 			},
-			want: endpoint + "/original%2Fpath",
+			wantPath: "/original%2Fpath",
 		},
 		{
-			name:    "endpoint URL overrides environment",
-			options: []Option{WithEndpointURL(endpoint + "/option%2Fpath")},
-			want:    endpoint + "/option%2Fpath",
+			name:     "endpoint URL overrides environment",
+			options:  []Option{WithEndpointURL(endpoint + "/option%2Fpath")},
+			wantPath: "/option%2Fpath",
 		},
 		{
-			name:    "URL path overrides environment",
-			options: []Option{WithURLPath("/option%2Fpath")},
-			want:    endpoint + "/option%252Fpath",
+			name:     "URL path overrides environment",
+			options:  []Option{WithURLPath("/option%2Fpath")},
+			wantPath: "/option%252Fpath",
 		},
 		{
 			name: "endpoint changes host and retains path",
@@ -1574,14 +1723,14 @@ func TestEndpointPathOptions(t *testing.T) {
 				WithEndpointURL("http" + "://other:9090/original%2Fpath"),
 				WithEndpoint("collector:4318"),
 			},
-			want: endpoint + "/original%2Fpath",
+			wantPath: "/original%2Fpath",
 		},
 		{
-			name: "logs environment overrides generic environment",
-			want: endpoint + "/logs%2Fpath",
+			name:     "logs environment overrides generic environment",
+			wantPath: "/logs%2Fpath",
 		},
 	}
-	for _, tt := range tests {
+	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", endpoint+"/generic%2Fpath/")
 			t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", endpoint+"/logs%2Fpath")
@@ -1589,7 +1738,9 @@ func TestEndpointPathOptions(t *testing.T) {
 			options := append(tt.options, WithHTTPClient(&http.Client{
 				Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
 					requests++
-					assert.Equal(t, tt.want, r.URL.String())
+					assert.Equal(t, "http", r.URL.Scheme)
+					assert.Equal(t, "collector:4318", r.URL.Host)
+					assert.Equal(t, tt.wantPath, r.URL.RequestURI())
 					return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
 				}),
 			}))

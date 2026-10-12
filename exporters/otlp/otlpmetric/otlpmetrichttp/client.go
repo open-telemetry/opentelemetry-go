@@ -92,9 +92,10 @@ func newClient(cfg oconf.Config) (*client, error) {
 	}
 
 	u := &url.URL{
-		Scheme: "https",
-		Host:   cfg.Metrics.Endpoint,
-		Path:   cfg.Metrics.URLPath,
+		Scheme:  "https",
+		Host:    cfg.Metrics.Endpoint,
+		Path:    cfg.Metrics.URLPath,
+		RawPath: cfg.Metrics.URLRawPath,
 	}
 	if cfg.Metrics.Insecure {
 		u.Scheme = "http"
