@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -230,7 +231,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 				return nil
 			}
 
-			if resp.Header.Get("Content-Type") == "application/x-protobuf" {
+			if isProtobufContentType(resp.Header.Get("Content-Type")) {
 				var respProto collogpb.ExportLogsServiceResponse
 				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
 					return err
@@ -367,6 +368,17 @@ func newResponseError(header http.Header, wrapped error) error {
 
 	rErr.err = wrapped
 	return rErr
+}
+
+// isProtobufContentType reports whether the Content-Type value denotes a
+// protobuf-encoded OTLP payload. Media type tokens are case-insensitive and
+// parameters are ignored, as required by RFC 9110 section 8.3.
+func isProtobufContentType(contentType string) bool {
+	mediatype, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(mediatype, "application/x-protobuf")
 }
 
 func retryAfterDuration(v string) time.Duration {

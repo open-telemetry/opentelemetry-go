@@ -565,6 +565,59 @@ func TestClient(t *testing.T) {
 	})
 }
 
+func TestClientContentType(t *testing.T) {
+	// A protobuf partial-success response is used so a correctly parsed body
+	// produces a distinguishable error.
+	partialSuccess := func() []byte {
+		resp := collogpb.ExportLogsServiceResponse{
+			PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+				RejectedLogRecords: 1,
+				ErrorMessage:       "case insensitive",
+			},
+		}
+		b, err := proto.Marshal(&resp)
+		require.NoError(t, err)
+		return b
+	}()
+
+	tests := []struct {
+		name        string
+		contentType string
+		parseable   bool
+	}{
+		{name: "canonical", contentType: "application/x-protobuf", parseable: true},
+		{name: "mixed case", contentType: "Application/X-Protobuf", parseable: true},
+		{name: "upper case", contentType: "APPLICATION/X-PROTOBUF", parseable: true},
+		{name: "parameters", contentType: "application/x-protobuf; charset=utf-8", parseable: true},
+		{name: "unsupported text", contentType: "text/plain; charset=utf-8", parseable: false},
+		{name: "malformed", contentType: "application/x-protobuf;charset", parseable: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls int
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				calls++
+				w.Header().Set("Content-Type", tc.contentType)
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write(partialSuccess)
+			}))
+			t.Cleanup(srv.Close)
+
+			opts := []Option{WithEndpoint(srv.Listener.Addr().String()), WithInsecure()}
+			c, err := newHTTPClient(t.Context(), newConfig(opts))
+			require.NoError(t, err)
+
+			err = c.UploadLogs(t.Context(), resourceLogs)
+			if tc.parseable {
+				assert.ErrorIs(t, err, internal.PartialSuccess{})
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, 1, calls, "request must not be retried")
+		})
+	}
+}
+
 func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 	ctx := t.Context()
 	coll, err := newHTTPCollector("", nil, withHTTPCollectorRespondingPlainText())
