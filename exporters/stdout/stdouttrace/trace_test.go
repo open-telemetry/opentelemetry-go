@@ -112,6 +112,14 @@ func TestExporterExportSpan(t *testing.T) {
 	}
 }
 
+func TestExporterNilWriterPreservesWriter(t *testing.T) {
+	var buf bytes.Buffer
+	exp, err := stdouttrace.New(stdouttrace.WithWriter(&buf), stdouttrace.WithWriter(nil))
+	require.NoError(t, err)
+	require.NoError(t, exp.ExportSpans(t.Context(), tracetest.SpanStubs{{Name: "test"}}.Snapshots()))
+	assert.Contains(t, buf.String(), `"Name":"test"`)
+}
+
 func TestWithoutTimestampsPreservesInput(t *testing.T) {
 	now := time.Now()
 	span := tracetest.SpanStub{
