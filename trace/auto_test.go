@@ -8,11 +8,14 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+	"weak"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -310,6 +313,43 @@ func TestTracerStartAddsSpanToCtx(t *testing.T) {
 	assert.Same(t, s, SpanFromContext(ctx))
 }
 
+func TestTracerStartSiblingsHookCtx(t *testing.T) {
+	orig := start
+	t.Cleanup(func() { start = orig })
+
+	hookCtxs := map[Span]context.Context{}
+	start = func(ctx context.Context, s *autoSpan, _ *SpanContext, _ *bool, _ *SpanContext) {
+		hookCtxs[s] = ctx
+	}
+
+	tr := newAutoTracerProvider().Tracer(tName)
+	ctx, parent := tr.Start(t.Context(), "parent")
+	_, a := tr.Start(ctx, "a")
+	_, b := tr.Start(ctx, "b")
+
+	assert.Same(t, parent, SpanFromContext(hookCtxs[parent]))
+	assert.Same(t, a, SpanFromContext(hookCtxs[a]))
+	assert.Same(t, b, SpanFromContext(hookCtxs[b]))
+}
+
+func TestTracerStartSpanRetainsHookCtx(t *testing.T) {
+	orig := start
+	t.Cleanup(func() { start = orig })
+
+	var weakHookCtx weak.Pointer[byte]
+	start = func(ctx context.Context, _ *autoSpan, _ *SpanContext, _ *bool, _ *SpanContext) {
+		ctxAddr := (*byte)(reflect.ValueOf(ctx).UnsafePointer())
+		weakHookCtx = weak.Make(ctxAddr)
+	}
+
+	tr := newAutoTracerProvider().Tracer(tName)
+	_, span := tr.Start(t.Context(), "span")
+
+	runtime.GC()
+	assert.NotNil(t, weakHookCtx.Value(), "hook context collected while span is alive")
+	runtime.KeepAlive(span)
+}
+
 func TestTracerConcurrentSafe(t *testing.T) {
 	t.Parallel()
 
@@ -376,6 +416,7 @@ func TestSpanCreation(t *testing.T) {
 		}
 	}
 
+	var startCtx context.Context
 	testcases := []struct {
 		TestName string
 		SpanName string
@@ -440,6 +481,19 @@ func TestSpanCreation(t *testing.T) {
 			},
 			Eval: func(t *testing.T, _ context.Context, s *autoSpan) {
 				assert.False(t, s.sampled.Load(), "sampled")
+			},
+		},
+		{
+			TestName: "StartReceivesSpanCtx",
+			Setup: func(t *testing.T) {
+				orig := start
+				t.Cleanup(func() { start = orig })
+				start = func(ctx context.Context, _ *autoSpan, _ *SpanContext, _ *bool, _ *SpanContext) {
+					startCtx = ctx
+				}
+			},
+			Eval: func(t *testing.T, _ context.Context, s *autoSpan) {
+				assert.Same(t, s, SpanFromContext(startCtx))
 			},
 		},
 		{
