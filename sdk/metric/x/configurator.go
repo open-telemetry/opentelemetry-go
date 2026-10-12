@@ -34,7 +34,12 @@ type MeterConfigOption interface {
 }
 
 // WithMeterEnabled sets whether the Meter is enabled.
-// A disabled Meter does not record any measurements.
+//
+// A disabled Meter drops new measurements and skips callback invocations,
+// while the SDK continues to export earlier cumulative data. This differs from
+// the specification's current no-op requirement for a disabled Meter and can
+// change; see
+// https://github.com/open-telemetry/opentelemetry-specification/issues/5301.
 func WithMeterEnabled(enabled bool) MeterConfigOption {
 	return meterEnabledOption(enabled)
 }
