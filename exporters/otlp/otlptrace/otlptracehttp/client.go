@@ -63,13 +63,14 @@ var ourTransport = &http.Transport{
 var errInsecureEndpointWithTLS = errors.New("insecure HTTP endpoint cannot use TLS client configuration")
 
 type client struct {
-	name        string
-	cfg         otlpconfig.SignalConfig
-	generalCfg  otlpconfig.Config
-	requestFunc retry.RequestFunc
-	client      *http.Client
-	stopCh      chan struct{}
-	stopOnce    sync.Once
+	name          string
+	cfg           otlpconfig.SignalConfig
+	generalCfg    otlpconfig.Config
+	requestFunc   retry.RequestFunc
+	client        *http.Client
+	exportTimeout time.Duration
+	stopCh        chan struct{}
+	stopOnce      sync.Once
 
 	instID int64
 	inst   *observ.Instrumentation
@@ -82,11 +83,14 @@ func NewClient(opts ...Option) otlptrace.Client {
 	cfg := otlpconfig.NewHTTPConfig(asHTTPOptions(opts)...)
 
 	httpClient := cfg.Traces.HTTPClient
-
+	var exportTimeout time.Duration
 	if httpClient == nil {
+		// WithHTTPClient takes precedence over WithTimeout, so the exporter
+		// timeout is applied only for the client constructed here.
+		exportTimeout = cfg.Traces.Timeout
 		httpClient = &http.Client{
 			Transport: ourTransport,
-			Timeout:   cfg.Traces.Timeout,
+			Timeout:   exportTimeout,
 		}
 
 		if cfg.Traces.TLSCfg != nil || cfg.Traces.Proxy != nil {
@@ -104,13 +108,14 @@ func NewClient(opts ...Option) otlptrace.Client {
 
 	stopCh := make(chan struct{})
 	return &client{
-		name:        "traces",
-		cfg:         cfg.Traces,
-		generalCfg:  cfg,
-		requestFunc: cfg.RetryConfig.RequestFunc(evaluate),
-		stopCh:      stopCh,
-		client:      httpClient,
-		instID:      counter.NextExporterID(),
+		name:          "traces",
+		cfg:           cfg.Traces,
+		generalCfg:    cfg,
+		requestFunc:   cfg.RetryConfig.RequestFunc(evaluate),
+		stopCh:        stopCh,
+		client:        httpClient,
+		exportTimeout: exportTimeout,
+		instID:        counter.NextExporterID(),
 	}
 }
 
@@ -475,8 +480,14 @@ func (c *client) getScheme() string {
 
 func (c *client) contextWithStop(ctx context.Context) (context.Context, context.CancelFunc) {
 	// Unify the parent context Done signal with the client's stop
-	// channel.
-	ctx, cancel := context.WithCancel(ctx)
+	// channel. A positive timeout also bounds retries, matching the gRPC
+	// exporters. WithTimeout(0) installs no deadline.
+	var cancel context.CancelFunc
+	if c.exportTimeout > 0 {
+		ctx, cancel = context.WithTimeoutCause(ctx, c.exportTimeout, errors.New("exporter export timeout"))
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
+	}
 	go func(ctx context.Context, cancel context.CancelFunc) {
 		select {
 		case <-ctx.Done():
