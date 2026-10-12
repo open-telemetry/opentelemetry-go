@@ -36,7 +36,11 @@ func TestExporterNonFiniteValues(t *testing.T) {
 		{"negative infinity", attribute.Float64Value(math.Inf(-1)), `{"Type":"FLOAT64","Value":"-Infinity"}`},
 		{"finite float", attribute.Float64Value(1e-7), `{"Type":"FLOAT64","Value":1e-07}`},
 		{"int64", attribute.Int64Value(math.MaxInt64), `{"Type":"INT64","Value":9223372036854775807}`},
-		{"JSON-looking string", attribute.StringValue(`{"admin":true}`), `{"Type":"STRING","Value":"{\"admin\":true}"}`},
+		{
+			"JSON-looking string",
+			attribute.StringValue(`{"admin":true}`),
+			`{"Type":"STRING","Value":"{\"admin\":true}"}`,
+		},
 		{"byte slice", attribute.ByteSliceValue([]byte{0, 1, 255}), `{"Type":"BYTESLICE","Value":"AAH/"}`},
 		{"empty", attribute.Value{}, `{"Type":"EMPTY","Value":null}`},
 		{
@@ -226,7 +230,11 @@ func TestExporterEmptyCollections(t *testing.T) {
 			require.NoError(t, exporter.Export(t.Context(), []sdklog.Record{factory.NewRecord()}))
 			got := decodeExportedJSON(t, &buf)
 			require.Len(t, got, 1)
-			assertDebugJSON(t, expectedRecordJSON("empty", `{"Type":"STRING","Value":"empty"}`, `[]`, tc.want, `{}`), got[0])
+			assertDebugJSON(
+				t,
+				expectedRecordJSON("empty", `{"Type":"STRING","Value":"empty"}`, `[]`, tc.want, `{}`),
+				got[0],
+			)
 		})
 	}
 }
