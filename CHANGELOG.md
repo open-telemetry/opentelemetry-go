@@ -11,11 +11,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Ignore nil processors passed to `WithProcessor` in `go.opentelemetry.io/otel/sdk/log` to prevent panics during log emission and provider lifecycle operations. (#9170)
+- Ignore nil views passed to `WithView` in `go.opentelemetry.io/otel/sdk/metric`, preserving valid views and their order. (#9167)
+- Ignore nil samplers passed to `ParentBased` sampler options in `go.opentelemetry.io/otel/sdk/trace`. (#9169)
+- Ignore nil temporality, aggregation, cardinality limit selector, and producer options in `go.opentelemetry.io/otel/sdk/metric`, including aggregation selector and producer options used by `go.opentelemetry.io/otel/exporters/prometheus`. (#9166)
+- Ignore nil loggers passed to `WithLogger` in `go.opentelemetry.io/otel/exporters/zipkin`, preserving the default or previously configured logger. (#9165)
+- Ignore nil callbacks passed to `WithInt64Callback` and `WithFloat64Callback` in `go.opentelemetry.io/otel/metric`, and to `RegisterCallback` in `go.opentelemetry.io/otel/sdk/metric`, including delegation through global meters in `go.opentelemetry.io/otel`, to prevent panics during metric collection. (#9171)
 - Preserve input span event timestamps when using `WithoutTimestamps` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9092)
 - Bound export retries by `WithTimeout` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, and
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9080)
 - Fix a data race in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is read concurrently with `Span.SetBaggageItem`. (#9049)
+- Pass the context containing the new span to the auto-instrumentation hook in `go.opentelemetry.io/otel/trace`. (#9029)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
