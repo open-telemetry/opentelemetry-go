@@ -65,6 +65,28 @@ func TestFloat64ObservableConfiguration(t *testing.T) {
 	))
 }
 
+func TestWithFloat64CallbackIgnoresNil(t *testing.T) {
+	nilOption := WithFloat64Callback(nil)
+	assert.Empty(t, NewFloat64ObservableCounterConfig(nilOption).Callbacks())
+	assert.Empty(t, NewFloat64ObservableUpDownCounterConfig(nilOption).Callbacks())
+	assert.Empty(t, NewFloat64ObservableGaugeConfig(nilOption).Callbacks())
+
+	callback := WithFloat64Callback(func(_ context.Context, observer Float64Observer) error {
+		observer.Observe(43.0)
+		return nil
+	})
+	checkCallbacks := func(callbacks []Float64Callback) {
+		t.Helper()
+		require.Len(t, callbacks, 1)
+		observer := &float64Observer{}
+		require.NoError(t, callbacks[0](t.Context(), observer))
+		assert.Equal(t, float64(43.0), observer.got)
+	}
+	checkCallbacks(NewFloat64ObservableCounterConfig(callback, nilOption).Callbacks())
+	checkCallbacks(NewFloat64ObservableUpDownCounterConfig(callback, nilOption).Callbacks())
+	checkCallbacks(NewFloat64ObservableGaugeConfig(callback, nilOption).Callbacks())
+}
+
 type float64ObservableConfig interface {
 	Description() string
 	Unit() string
