@@ -6,8 +6,10 @@ package finish
 import (
 	"context"
 	"runtime"
+	"strconv"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -336,4 +338,195 @@ func TestLifecycleRetireCancellation(t *testing.T) {
 	require.NoError(t, lifecycle.Retire(t.Context()))
 	_, ok = lifecycle.AcquireMeasurement()
 	assert.False(t, ok)
+}
+
+func TestLifecycleParksUntilMeasurementsComplete(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		collect func(*testing.T, *Lifecycle)
+	}{
+		{"Cumulative", func(t *testing.T, l *Lifecycle) {
+			collection, ok := l.BeginCumulativeCollection(y2k)
+			assert.True(t, ok)
+			if ok {
+				collection.Complete()
+			}
+		}},
+		{"Delta", func(t *testing.T, l *Lifecycle) {
+			collection, ok := l.BeginDeltaCollection(y2k)
+			assert.True(t, ok)
+			if ok {
+				collection.Complete()
+			}
+		}},
+		{"Retire", func(t *testing.T, l *Lifecycle) {
+			assert.NoError(t, l.Retire(t.Context()))
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				var lifecycle Lifecycle
+				first, ok := lifecycle.AcquireMeasurement()
+				require.True(t, ok)
+				last, ok := lifecycle.AcquireMeasurement()
+				require.True(t, ok)
+				done := make(chan struct{})
+				go func() {
+					test.collect(t, &lifecycle)
+					close(done)
+				}()
+
+				// Wait returns only once the collector is durably blocked.
+				synctest.Wait()
+				assert.Equal(t, uint32(lifecycleCollecting), lifecycle.state.Load())
+				first.Release()
+				synctest.Wait()
+				select {
+				case <-done:
+					t.Fatal("collection completed before the last measurement")
+				default:
+				}
+				last.Release()
+				synctest.Wait()
+				<-done
+			})
+		})
+	}
+}
+
+func TestLifecycleRetireParksUntilControlCancellation(t *testing.T) {
+	for _, cancelWhileWaiting := range []bool{false, true} {
+		t.Run(strconv.FormatBool(cancelWhileWaiting), func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				var lifecycle Lifecycle
+				lifecycle.control.Lock()
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				retired := make(chan error, 1)
+				go func() { retired <- lifecycle.Retire(ctx) }()
+				synctest.Wait()
+				if cancelWhileWaiting {
+					cancel()
+					synctest.Wait()
+					assert.ErrorIs(t, <-retired, context.Canceled)
+					assert.Equal(t, uint32(lifecycleActive), lifecycle.state.Load())
+					lifecycle.control.Unlock()
+					require.NoError(t, lifecycle.Retire(t.Context()))
+				} else {
+					lifecycle.control.Unlock()
+					time.Sleep(time.Millisecond)
+					synctest.Wait()
+					require.NoError(t, <-retired)
+				}
+			})
+		})
+	}
+}
+
+func TestLifecycleRetireParksUntilMeasurementCancellation(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		state lifecycleState
+	}{
+		{"Active", lifecycleActive},
+		{"Shared", lifecycleShared},
+		{"FinishPending", lifecycleFinishPending},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				state := test.state
+				var lifecycle Lifecycle
+				measurement, ok := lifecycle.AcquireMeasurement()
+				require.True(t, ok)
+				switch state {
+				case lifecycleShared:
+					shared, ok := lifecycle.AcquireSharedMeasurement()
+					require.True(t, ok)
+					shared.Release()
+				case lifecycleFinishPending:
+					require.True(t, lifecycle.Finish(y2k))
+				}
+				ctx, cancel := context.WithCancel(t.Context())
+				retired := make(chan error, 1)
+				go func() { retired <- lifecycle.Retire(ctx) }()
+				synctest.Wait()
+				cancel()
+				synctest.Wait()
+				assert.ErrorIs(t, <-retired, context.Canceled)
+				assert.Equal(t, uint32(state), lifecycle.state.Load())
+				if state == lifecycleFinishPending {
+					assert.Equal(t, y2k, lifecycle.finished)
+				}
+
+				measurement.Release()
+				// A last release can notify after a canceled waiter exits.
+				lifecycle.writersDone <- struct{}{}
+				// A later waiter must still wait for a newly admitted writer.
+				measurement, ok = lifecycle.AcquireMeasurement()
+				require.True(t, ok)
+				go func() { retired <- lifecycle.Retire(t.Context()) }()
+				synctest.Wait()
+				assert.Equal(t, uint32(lifecycleCollecting), lifecycle.state.Load())
+				measurement.Release()
+				synctest.Wait()
+				require.NoError(t, <-retired)
+				assert.Equal(t, uint32(lifecycleRetired), lifecycle.state.Load())
+			})
+		})
+	}
+}
+
+func TestLifecycleConcurrentSafeCollection(t *testing.T) {
+	var lifecycle Lifecycle
+	for range 1_000 {
+		measurement, ok := lifecycle.AcquireMeasurement()
+		require.True(t, ok)
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		wg.Go(func() {
+			<-start
+			measurement.Release()
+		})
+		wg.Go(func() {
+			<-start
+			collection, ok := lifecycle.BeginCumulativeCollection(y2k)
+			assert.True(t, ok)
+			if ok {
+				collection.Complete()
+			}
+		})
+		close(start)
+		wg.Wait()
+		assert.Equal(t, uint32(lifecycleActive), lifecycle.state.Load())
+		assert.Zero(t, lifecycle.writers.Load())
+	}
+}
+
+func BenchmarkLifecycleMeasurement(b *testing.B) {
+	var lifecycle Lifecycle
+	b.ReportAllocs()
+	for b.Loop() {
+		measurement, _ := lifecycle.AcquireMeasurement()
+		measurement.Release()
+	}
+}
+
+func BenchmarkLifecycleCollectionWithWriter(b *testing.B) {
+	var lifecycle Lifecycle
+	measurements := make(chan Measurement)
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		for measurement := range measurements {
+			measurement.Release()
+		}
+	})
+	b.ReportAllocs()
+	for b.Loop() {
+		measurement, _ := lifecycle.AcquireMeasurement()
+		measurements <- measurement
+		collection, _ := lifecycle.BeginCumulativeCollection(y2k)
+		collection.Complete()
+	}
+	close(measurements)
+	wg.Wait()
 }

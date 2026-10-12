@@ -5,7 +5,6 @@ package finish
 
 import (
 	"context"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -37,6 +36,10 @@ type Lifecycle struct {
 	control sync.Mutex
 	state   atomic.Uint32
 	writers atomic.Uint64
+	waiting atomic.Bool
+	// writersDone is allocated on first contention and published by waiting.
+	// It is never replaced, so a delayed notification cannot race initialization.
+	writersDone chan struct{}
 	// finished is meaningful only while a pending finish is being collected.
 	// Reactivation leaves the old value in place so measurements remain lock-free.
 	finished time.Time
@@ -163,7 +166,35 @@ func (l *Lifecycle) releaseMeasurement() {
 	// atomic.Uint64 has no subtraction operation. Adding MaxUint64 decrements
 	// the writer count modulo 2^64. A matching acquisition guarantees the count
 	// is nonzero.
-	l.writers.Add(^uint64(0))
+	if l.writers.Add(^uint64(0)) == 0 && l.waiting.Load() {
+		select {
+		case l.writersDone <- struct{}{}:
+		default:
+		}
+	}
+}
+
+// waitForMeasurements holds control, so only one waiter can be installed.
+func (l *Lifecycle) waitForMeasurements(ctx context.Context) error {
+	if l.writers.Load() == 0 {
+		return ctx.Err()
+	}
+	if l.writersDone == nil {
+		l.writersDone = make(chan struct{}, 1)
+	}
+	l.waiting.Store(true)
+	defer l.waiting.Store(false)
+	// Publish the waiter before rechecking writers to avoid losing the last
+	// release. Notifications can be stale when a release races a later waiter,
+	// so always recheck the count before reading the aggregate.
+	for l.writers.Load() != 0 {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-l.writersDone:
+		}
+	}
+	return ctx.Err()
 }
 
 // Finish marks an active series lifetime to be retired by its next collection
@@ -221,9 +252,7 @@ func (l *Lifecycle) beginCollection(at time.Time) (Collection, bool) {
 		return Collection{}, false
 	}
 	state = lifecycleState(l.state.Swap(uint32(lifecycleCollecting)))
-	for l.writers.Load() != 0 {
-		runtime.Gosched()
-	}
+	_ = l.waitForMeasurements(context.Background())
 
 	if state == lifecycleFinishPending {
 		return Collection{
@@ -240,26 +269,35 @@ func (l *Lifecycle) beginCollection(at time.Time) (Collection, bool) {
 // measurements to complete and has no effect if the lifetime is already
 // retired. It returns without retiring the lifetime if ctx is canceled first.
 func (l *Lifecycle) Retire(ctx context.Context) error {
-	for {
-		if err := ctx.Err(); err != nil {
-			return err
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if !l.control.TryLock() {
+		// Keep cancellable control acquisition off the measurement path.
+		ticker := time.NewTicker(time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-ticker.C:
+			}
+			if l.control.TryLock() {
+				break
+			}
 		}
-		if l.control.TryLock() {
-			break
-		}
-		runtime.Gosched()
 	}
 	defer l.control.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if lifecycleState(l.state.Load()) == lifecycleRetired {
 		return nil
 	}
 	state := lifecycleState(l.state.Swap(uint32(lifecycleCollecting)))
-	for l.writers.Load() != 0 {
-		if err := ctx.Err(); err != nil {
-			l.state.Store(uint32(state))
-			return err
-		}
-		runtime.Gosched()
+	if err := l.waitForMeasurements(ctx); err != nil {
+		l.state.Store(uint32(state))
+		return err
 	}
 	l.finished = time.Time{}
 	l.state.Store(uint32(lifecycleRetired))
