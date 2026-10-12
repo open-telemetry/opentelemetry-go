@@ -1208,6 +1208,7 @@ func TestPeriodicReaderMetricFilter(t *testing.T) {
 	assert.Equal(t, 0, sumDataPointCount(rm, "dropped"))
 	assert.Equal(t, 1, sumDataPointCount(rm, "kept"))
 }
+
 func TestNewPeriodicReaderInstRace(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
