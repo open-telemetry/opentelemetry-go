@@ -8,10 +8,14 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"reflect"
+	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+	"weak"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -309,6 +313,43 @@ func TestTracerStartAddsSpanToCtx(t *testing.T) {
 	assert.Same(t, s, SpanFromContext(ctx))
 }
 
+func TestTracerStartSiblingsHookCtx(t *testing.T) {
+	orig := start
+	t.Cleanup(func() { start = orig })
+
+	hookCtxs := map[Span]context.Context{}
+	start = func(ctx context.Context, s *autoSpan, _ *SpanContext, _ *bool, _ *SpanContext) {
+		hookCtxs[s] = ctx
+	}
+
+	tr := newAutoTracerProvider().Tracer(tName)
+	ctx, parent := tr.Start(t.Context(), "parent")
+	_, a := tr.Start(ctx, "a")
+	_, b := tr.Start(ctx, "b")
+
+	assert.Same(t, parent, SpanFromContext(hookCtxs[parent]))
+	assert.Same(t, a, SpanFromContext(hookCtxs[a]))
+	assert.Same(t, b, SpanFromContext(hookCtxs[b]))
+}
+
+func TestTracerStartSpanRetainsHookCtx(t *testing.T) {
+	orig := start
+	t.Cleanup(func() { start = orig })
+
+	var weakHookCtx weak.Pointer[byte]
+	start = func(ctx context.Context, _ *autoSpan, _ *SpanContext, _ *bool, _ *SpanContext) {
+		ctxAddr := (*byte)(reflect.ValueOf(ctx).UnsafePointer())
+		weakHookCtx = weak.Make(ctxAddr)
+	}
+
+	tr := newAutoTracerProvider().Tracer(tName)
+	_, span := tr.Start(t.Context(), "span")
+
+	runtime.GC()
+	assert.NotNil(t, weakHookCtx.Value(), "hook context collected while span is alive")
+	runtime.KeepAlive(span)
+}
+
 func TestTracerConcurrentSafe(t *testing.T) {
 	t.Parallel()
 
@@ -375,6 +416,7 @@ func TestSpanCreation(t *testing.T) {
 		}
 	}
 
+	var startCtx context.Context
 	testcases := []struct {
 		TestName string
 		SpanName string
@@ -439,6 +481,19 @@ func TestSpanCreation(t *testing.T) {
 			},
 			Eval: func(t *testing.T, _ context.Context, s *autoSpan) {
 				assert.False(t, s.sampled.Load(), "sampled")
+			},
+		},
+		{
+			TestName: "StartReceivesSpanCtx",
+			Setup: func(t *testing.T) {
+				orig := start
+				t.Cleanup(func() { start = orig })
+				start = func(ctx context.Context, _ *autoSpan, _ *SpanContext, _ *bool, _ *SpanContext) {
+					startCtx = ctx
+				}
+			},
+			Eval: func(t *testing.T, _ context.Context, s *autoSpan) {
+				assert.Same(t, s, SpanFromContext(startCtx))
 			},
 		},
 		{
@@ -885,9 +940,6 @@ func TestSpanAttributeLimits(t *testing.T) {
 func TestSpanAttributeValueLimits(t *testing.T) {
 	value := "hello world"
 
-	aStr := attribute.String("string", value)
-	aStrSlice := attribute.StringSlice("slice", []string{value, value})
-
 	eq := func(a, b []telemetry.Attr) bool {
 		if len(a) != len(b) {
 			return false
@@ -901,19 +953,23 @@ func TestSpanAttributeValueLimits(t *testing.T) {
 	}
 
 	tests := []struct {
-		limit int
-		want  string
+		limit       int
+		value, want string
 	}{
-		{0, ""},
-		{2, value[:2]},
-		{11, value},
-		{-1, value},
+		{0, value, ""},
+		{2, value, value[:2]},
+		{11, value, value},
+		{-1, value, value},
+		{1, "\uFFFD\uFFFD", "\uFFFD"},
 	}
 	for _, test := range tests {
 		t.Run("Limit/"+strconv.Itoa(test.limit), func(t *testing.T) {
 			orig := maxSpan.AttrValueLen
 			maxSpan.AttrValueLen = test.limit
 			t.Cleanup(func() { maxSpan.AttrValueLen = orig })
+
+			aStr := attribute.String("string", test.value)
+			aStrSlice := attribute.StringSlice("slice", []string{test.value, test.value})
 
 			builder := spanBuilder{}
 
@@ -1049,6 +1105,16 @@ func TestTruncate(t *testing.T) {
 				{12, "こんにちは", "こんにちは"},
 			},
 		},
+		{
+			name: "ReplacementRune",
+			groups: []group{
+				{1, "\uFFFD", "\uFFFD"},
+				{1, "\uFFFD\uFFFD", "\uFFFD"},
+				{2, "a\uFFFDb", "a\uFFFD"},
+				{3, "a\uFFFD\x80b\uFFFD", "a\uFFFDb"},
+				{5, strings.Repeat("\uFFFD", 1000), strings.Repeat("\uFFFD", 5)},
+			},
+		},
 
 		// Truncation with invalid UTF-8 characters
 		{
@@ -1097,6 +1163,8 @@ func TestTruncate(t *testing.T) {
 			groups: []group{
 				{0, "Some text", ""},
 				{0, "", ""},
+				{0, "\x80", ""},
+				{0, "\uFFFD", ""},
 			},
 		},
 	}
@@ -1137,6 +1205,7 @@ func BenchmarkTruncate(b *testing.B) {
 	b.Run("Short", run(10, "Short Text"))
 	b.Run("ASCII", run(5, "Hello, World!"))
 	b.Run("ValidUTF-8", run(10, "hello 😊 world 🌍🚀"))
+	b.Run("ReplacementRune", run(5, strings.Repeat("\uFFFD", 1000)))
 	b.Run("InvalidUTF-8", run(6, "€"[0:2]+"hello€€"))
 	b.Run("MixedUTF-8", run(14, "\x80😊\x80 Hello\x80World🌍\x80🚀\x80"))
 }
