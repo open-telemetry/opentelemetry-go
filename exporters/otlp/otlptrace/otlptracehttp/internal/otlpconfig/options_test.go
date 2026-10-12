@@ -695,7 +695,7 @@ func TestHTTPURLPath(t *testing.T) {
 		{
 			name: "generic endpoint escaped slash with trailing slash",
 			env: env{
-				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://endpoint/a%2Fb/",
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://someendpoint/a%2Fb/",
 			},
 			wantPath:    "/a/b/v1/traces",
 			wantRawPath: "/a%2Fb/v1/traces",
@@ -703,7 +703,7 @@ func TestHTTPURLPath(t *testing.T) {
 		{
 			name: "URL path overrides escaped endpoint URL",
 			opts: []GenericOption{
-				WithEndpointURL("https://endpoint/a%2Fb"),
+				WithEndpointURL("https://someendpoint/a%2Fb"),
 				WithURLPath(" /a/b "),
 			},
 			wantPath: "/a/b",
