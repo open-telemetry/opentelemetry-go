@@ -79,6 +79,7 @@ func (ts *readerTestSuite) TestMetricFilterExternalProducer() {
 	ts.NoError(err)
 	ts.Equal(testResourceMetricsA, m)
 }
+
 func (ts *readerTestSuite) TestNilProducer() {
 	ts.Reader = ts.Factory(WithProducer(nil))
 	ts.Reader.register(testSDKProducer{})
