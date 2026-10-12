@@ -60,10 +60,14 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	}
 
 	hc := cfg.httpClient
+	var exportTimeout time.Duration
 	if hc == nil {
+		// WithHTTPClient takes precedence over WithTimeout, so the exporter
+		// timeout is applied only for the client constructed here.
+		exportTimeout = cfg.timeout.Value
 		hc = &http.Client{
 			Transport: ourTransport,
-			Timeout:   cfg.timeout.Value,
+			Timeout:   exportTimeout,
 		}
 
 		if cfg.tlsCfg.Value != nil || cfg.proxy.Value != nil {
@@ -110,6 +114,7 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 		req:             req,
 		requestFunc:     cfg.retryCfg.Value.RequestFunc(evaluate),
 		client:          hc,
+		exportTimeout:   exportTimeout,
 	}
 
 	id := nextExporterID()
@@ -126,6 +131,7 @@ type httpClient struct {
 	maxResponseSize int64
 	requestFunc     retry.RequestFunc
 	client          *http.Client
+	exportTimeout   time.Duration
 
 	inst *observ.Instrumentation
 }
@@ -175,6 +181,12 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 	request, err := c.newRequest(ctx, body)
 	if err != nil {
 		return err
+	}
+
+	if c.exportTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, c.exportTimeout, errors.New("exporter export timeout"))
+		defer cancel()
 	}
 
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
