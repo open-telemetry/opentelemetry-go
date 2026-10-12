@@ -240,6 +240,154 @@ func (l *hotColdWaitGroup) swapHotAndWait() coldIdx {
 	return coldIdx(hotIdxVal)
 }
 
+// entry wraps the user value with a cycle counter to enable lazy deletion.
+type entry[V any] struct {
+	value V
+	cycle atomic.Uint64
+}
+
+// lazyLimitedSyncMap is a custom wrapper around sync.Map that provides
+// cardinality limiting and lazy cleanup using a cycle counter.
+type lazyLimitedSyncMap[V any] struct {
+	m        sync.Map
+	aggLimit int
+	len      int
+	lenMux   sync.Mutex
+	cycle    atomic.Uint64
+	overflow atomic.Bool
+
+	newValue  func(attribute.Set) V
+	resetFunc func(V)
+}
+
+func newLazyLimitedSyncMap[V any](limit int, newValue func(attribute.Set) V, resetFunc func(V)) lazyLimitedSyncMap[V] {
+	return lazyLimitedSyncMap[V]{
+		aggLimit:  limit,
+		newValue:  newValue,
+		resetFunc: resetFunc,
+	}
+}
+
+func (m *lazyLimitedSyncMap[V]) LoadOrStoreAttr(lazy lazyFilteredAttributes) V {
+	distinct := lazy.Distinct()
+	actual, loaded := m.m.Load(distinct)
+	currentCycle := m.cycle.Load()
+	if loaded {
+		ent := actual.(*entry[V])
+		if ent.cycle.Load() == currentCycle {
+			return ent.value
+		}
+	}
+
+	// If aggregation overflow has already happened due to exceeding the limit,
+	// any new attribute set will be aggregated into the overflow set.
+	if m.aggLimit > 0 && m.overflow.Load() {
+		actualOverflow, loadedOverflow := m.m.Load(overflowSet.Equivalent())
+		if loadedOverflow {
+			ent := actualOverflow.(*entry[V])
+			if ent.cycle.Load() == currentCycle {
+				return ent.value
+			}
+		}
+	}
+
+	// Slow path: add or reuse.
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+
+	// re-fetch now that we hold the lock
+	currentCycle = m.cycle.Load()
+	actual, loaded = m.m.Load(distinct)
+	if loaded {
+		ent := actual.(*entry[V])
+		if ent.cycle.Load() == currentCycle {
+			return ent.value
+		}
+	}
+
+	var fltrAttr attribute.Set
+	targetDistinct := distinct
+	// Determine if we need to use overflow
+	overflowed := m.aggLimit > 0 && m.len >= m.aggLimit-1
+	if overflowed {
+		fltrAttr = overflowSet
+		targetDistinct = overflowSet.Equivalent()
+		m.overflow.Store(true)
+		actual, loaded = m.m.Load(targetDistinct)
+		if loaded {
+			ent := actual.(*entry[V])
+			if ent.cycle.Load() == currentCycle {
+				return ent.value
+			}
+		}
+	}
+
+	if loaded {
+		// reuse existing stale entry
+		ent := actual.(*entry[V])
+		existingVal := ent.value
+		ent.cycle.Store(currentCycle)
+		m.len++
+		return existingVal
+	}
+
+	// create new entry
+	if !overflowed {
+		fltrAttr = lazy.Set()
+	}
+	newVal := m.newValue(fltrAttr)
+	newEnt := &entry[V]{value: newVal}
+	newEnt.cycle.Store(currentCycle)
+	actual, loaded = m.m.LoadOrStore(targetDistinct, newEnt)
+	if loaded {
+		ent := actual.(*entry[V])
+		return ent.value
+	}
+	m.len++
+	return newVal
+}
+
+func (m *lazyLimitedSyncMap[V]) Clear() {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+	m.overflow.Store(false)
+	m.cycle.Add(1)
+	m.len = 0
+
+	currentCycle := m.cycle.Load()
+
+	m.m.Range(func(key, value any) bool {
+		ent := value.(*entry[V])
+		c := ent.cycle.Load()
+		if currentCycle >= c+2 {
+			m.m.Delete(key)
+			return true
+		}
+		if m.resetFunc != nil {
+			m.resetFunc(ent.value)
+		}
+		return true
+	})
+}
+
+func (m *lazyLimitedSyncMap[V]) Len() int {
+	m.lenMux.Lock()
+	defer m.lenMux.Unlock()
+	return m.len
+}
+
+func (m *lazyLimitedSyncMap[V]) Range(f func(key, value any) bool) {
+	currentCycle := m.cycle.Load()
+	m.m.Range(func(key, value any) bool {
+		ent := value.(*entry[V])
+		c := ent.cycle.Load()
+		if c == currentCycle {
+			return f(key, ent.value)
+		}
+		return true
+	})
+}
+
 // limitedSyncMap is a sync.Map which enforces the aggregation limit on
 // attribute sets and provides a Len() function.
 type limitedSyncMap[V any] struct {
@@ -359,7 +507,7 @@ func (m *limitedSyncMap[V]) Len() int {
 	return m.len
 }
 
-// hotColdMap manages two [limitedSyncMap] instances so that measurement and
+// hotColdMap manages two [lazyLimitedSyncMap] instances so that measurement and
 // collection operate on separate maps and do not lock each other out.
 //
 // Measurements write to the currently hot map returned by [hotColdMap.hot]
@@ -374,15 +522,15 @@ func (m *limitedSyncMap[V]) Len() int {
 // swapHotAndWait must not be called concurrently.
 type hotColdMap[V any] struct {
 	hotColdWaitGroup
-	hotColdValMap [2]limitedSyncMap[V]
+	hotColdValMap [2]lazyLimitedSyncMap[V]
 }
 
-func (m *hotColdMap[V]) init(limit int) {
-	m.hotColdValMap[0].aggLimit = limit
-	m.hotColdValMap[1].aggLimit = limit
+func (m *hotColdMap[V]) init(limit int, newValue func(attribute.Set) V, resetFunc func(V)) {
+	m.hotColdValMap[0] = newLazyLimitedSyncMap[V](limit, newValue, resetFunc)
+	m.hotColdValMap[1] = newLazyLimitedSyncMap[V](limit, newValue, resetFunc)
 }
 
-func (m *hotColdMap[V]) hot(i hotIdx) *limitedSyncMap[V] {
+func (m *hotColdMap[V]) hot(i hotIdx) *lazyLimitedSyncMap[V] {
 	return &m.hotColdValMap[i]
 }
 
