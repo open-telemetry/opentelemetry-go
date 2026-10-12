@@ -1491,6 +1491,11 @@ func TestEndpointPath(t *testing.T) {
 			wantPath: "/a%2Fb/v1/logs",
 		},
 		{
+			name:     "generic/double-escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%252Fb"},
+			wantPath: "/a%252Fb/v1/logs",
+		},
+		{
 			name:     "generic/lowercase escape",
 			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%2fb/"},
 			wantPath: "/a%2fb/v1/logs",
@@ -1551,6 +1556,11 @@ func TestEndpointPath(t *testing.T) {
 			wantPath: "/a%2Fb",
 		},
 		{
+			name:     "logs/double-escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%252Fb"},
+			wantPath: "/a%252Fb",
+		},
+		{
 			name:     "logs/lowercase escape",
 			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%2fb/"},
 			wantPath: "/a%2fb/",
@@ -1609,6 +1619,11 @@ func TestEndpointPath(t *testing.T) {
 			name:     "option/escaped slash",
 			options:  []Option{WithEndpointURL(endpoint + "/a%2Fb")},
 			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "option/double-escaped slash",
+			options:  []Option{WithEndpointURL(endpoint + "/a%252Fb")},
+			wantPath: "/a%252Fb",
 		},
 		{
 			name:     "option/lowercase escape",
@@ -1698,6 +1713,14 @@ func TestEndpointPathOptions(t *testing.T) {
 				WithURLPath("/a%2Fb"),
 			},
 			wantPath: "/a%252Fb",
+		},
+		{
+			name: "URL path clears endpoint URL escaping",
+			options: []Option{
+				WithEndpointURL(endpoint + "/a%2Fb"),
+				WithURLPath("/a/b"),
+			},
+			wantPath: "/a/b",
 		},
 		{
 			name: "endpoint URL overrides URL path",
