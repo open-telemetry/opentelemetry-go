@@ -4,13 +4,13 @@
 package stdoutlog
 
 import (
+	"encoding/json"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
-	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -21,40 +21,47 @@ type recordJSON struct {
 	EventName         string     `json:",omitempty"`
 	Severity          log.Severity
 	SeverityText      string
-	Body              attribute.Value
-	Attributes        []attribute.KeyValue
+	Body              valueJSON
+	Attributes        []json.RawMessage
 	TraceID           trace.TraceID
 	SpanID            trace.SpanID
 	TraceFlags        trace.TraceFlags
-	Resource          *resource.Resource
-	Scope             instrumentation.Scope
+	Resource          json.RawMessage
+	Scope             scopeJSON
 	DroppedAttributes int
 }
 
 func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 	res := r.Resource()
+	scope := r.InstrumentationScope()
 	newRecord := recordJSON{
 		EventName:    r.EventName(),
 		Severity:     r.Severity(),
 		SeverityText: r.SeverityText(),
-		Body:         r.Body(),
+		Body:         newValueJSON(r.Body()),
 
 		TraceID:    r.TraceID(),
 		SpanID:     r.SpanID(),
 		TraceFlags: r.TraceFlags(),
 
-		Attributes: make([]attribute.KeyValue, 0, r.AttributesLen()),
+		Attributes: make([]json.RawMessage, 0, r.AttributesLen()),
 
-		Resource: res,
-		Scope:    r.InstrumentationScope(),
+		Scope: scopeJSON{
+			Scope:      scope,
+			Attributes: json.RawMessage(scope.Attributes.String()),
+		},
 
 		DroppedAttributes: r.DroppedAttributes(),
 	}
 
 	r.WalkAttributes(func(kv attribute.KeyValue) bool {
-		newRecord.Attributes = append(newRecord.Attributes, kv)
+		newRecord.Attributes = append(newRecord.Attributes, json.RawMessage(kv.String()))
 		return true
 	})
+
+	if res != nil {
+		newRecord.Resource = json.RawMessage(res.Set().String())
+	}
 
 	if e.timestamps {
 		timestamp := r.Timestamp()
@@ -65,4 +72,9 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 	}
 
 	return newRecord
+}
+
+type scopeJSON struct {
+	instrumentation.Scope
+	Attributes json.RawMessage
 }

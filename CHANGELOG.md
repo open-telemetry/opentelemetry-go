@@ -8,8 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Use the non-OTLP `String` methods from `go.opentelemetry.io/otel/attribute` for nested values and attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`, keeping the body's outer type envelope. (#9150)
+
 ### Fixed
 
+- Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Ignore nil writers passed to `WithWriter` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` and
   `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`, preserving the default or previously configured writer or encoder. (#9164)
 - Ignore nil writers passed to `WithWriter` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`, retaining the default or previously configured writer to prevent a panic during log export. (#9148)
