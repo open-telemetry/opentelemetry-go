@@ -421,6 +421,21 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "InvalidGenericEndpoint",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "%invalid",
+			},
+			want: config{
+				endpoint: newSetting(defaultEndpoint),
+				path:     newSetting(endpointPath{Path: defaultPath}),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+			errs: []string{
+				`invalid OTEL_EXPORTER_OTLP_ENDPOINT value %invalid: parse "%invalid": invalid URL escape "%in"`,
+			},
+		},
+		{
 			name: "with percent-encoded headers",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT":           "https://env.endpoint:8080/prefix",
