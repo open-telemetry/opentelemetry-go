@@ -4,6 +4,7 @@
 package stdoutlog
 
 import (
+	"encoding/json"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -21,17 +22,18 @@ type recordJSON struct {
 	Severity          log.Severity
 	SeverityText      string
 	Body              valueJSON
-	Attributes        []keyValueJSON
+	Attributes        []json.RawMessage
 	TraceID           trace.TraceID
 	SpanID            trace.SpanID
 	TraceFlags        trace.TraceFlags
-	Resource          any
-	Scope             any
+	Resource          json.RawMessage
+	Scope             scopeJSON
 	DroppedAttributes int
 }
 
 func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 	res := r.Resource()
+	scope := r.InstrumentationScope()
 	newRecord := recordJSON{
 		EventName:    r.EventName(),
 		Severity:     r.Severity(),
@@ -42,29 +44,23 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 		SpanID:     r.SpanID(),
 		TraceFlags: r.TraceFlags(),
 
-		Attributes: make([]keyValueJSON, 0, r.AttributesLen()),
+		Attributes: make([]json.RawMessage, 0, r.AttributesLen()),
 
-		Resource: res,
-		Scope:    r.InstrumentationScope(),
+		Scope: scopeJSON{
+			Scope:      scope,
+			Attributes: json.RawMessage(scope.Attributes.String()),
+		},
 
 		DroppedAttributes: r.DroppedAttributes(),
 	}
 
 	r.WalkAttributes(func(kv attribute.KeyValue) bool {
-		newRecord.Attributes = append(newRecord.Attributes, newKeyValueJSON(kv))
+		newRecord.Attributes = append(newRecord.Attributes, json.RawMessage(kv.String()))
 		return true
 	})
 
-	// Preserve the existing nil/empty resource and empty scope representations.
-	if res.Len() > 0 {
-		newRecord.Resource = newAttributeSetJSON(res.Iter())
-	}
-	scope := r.InstrumentationScope()
-	if scope.Attributes.Len() > 0 {
-		newRecord.Scope = scopeJSON{
-			Scope:      scope,
-			Attributes: newAttributeSetJSON(scope.Attributes.Iter()),
-		}
+	if res != nil {
+		newRecord.Resource = json.RawMessage(res.Set().String())
 	}
 
 	if e.timestamps {
@@ -80,13 +76,5 @@ func (e *Exporter) newRecordJSON(r sdklog.Record) recordJSON {
 
 type scopeJSON struct {
 	instrumentation.Scope
-	Attributes []keyValueJSON
-}
-
-func newAttributeSetJSON(iter attribute.Iterator) []keyValueJSON {
-	attrs := make([]keyValueJSON, 0, iter.Len())
-	for iter.Next() {
-		attrs = append(attrs, newKeyValueJSON(iter.Attribute()))
-	}
-	return attrs
+	Attributes json.RawMessage
 }

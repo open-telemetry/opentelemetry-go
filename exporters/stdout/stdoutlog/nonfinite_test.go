@@ -34,6 +34,11 @@ func TestExporterNonFiniteValues(t *testing.T) {
 		{"NaN", attribute.Float64Value(math.NaN()), `{"Type":"FLOAT64","Value":"NaN"}`},
 		{"positive infinity", attribute.Float64Value(math.Inf(1)), `{"Type":"FLOAT64","Value":"Infinity"}`},
 		{"negative infinity", attribute.Float64Value(math.Inf(-1)), `{"Type":"FLOAT64","Value":"-Infinity"}`},
+		{"finite float", attribute.Float64Value(1e-7), `{"Type":"FLOAT64","Value":1e-07}`},
+		{"int64", attribute.Int64Value(math.MaxInt64), `{"Type":"INT64","Value":9223372036854775807}`},
+		{"JSON-looking string", attribute.StringValue(`{"admin":true}`), `{"Type":"STRING","Value":"{\"admin\":true}"}`},
+		{"byte slice", attribute.ByteSliceValue([]byte{0, 1, 255}), `{"Type":"BYTESLICE","Value":"AAH/"}`},
+		{"empty", attribute.Value{}, `{"Type":"EMPTY","Value":null}`},
 		{
 			name: "finite float slice",
 			value: attribute.Float64SliceValue([]float64{
@@ -56,11 +61,7 @@ func TestExporterNonFiniteValues(t *testing.T) {
 				attribute.Float64Value(1.5), attribute.Int64Value(math.MaxInt64),
 				attribute.ByteSliceValue([]byte{0, 1, 255}), attribute.Value{},
 			),
-			want: `{"Type":"SLICE","Value":[
-				{"Type":"FLOAT64","Value":"NaN"},{"Type":"STRING","Value":"NaN"},
-				{"Type":"FLOAT64","Value":"Infinity"},{"Type":"FLOAT64","Value":"-Infinity"},
-				{"Type":"FLOAT64","Value":1.5},{"Type":"INT64","Value":9223372036854775807},
-				{"Type":"BYTESLICE","Value":"AAH/"},{"Type":"EMPTY","Value":null}]}`,
+			want: `{"Type":"SLICE","Value":["NaN","NaN","Infinity","-Infinity",1.5,9223372036854775807,"AAH/",null]}`,
 		},
 		{
 			name: "nested map and slice",
@@ -72,13 +73,7 @@ func TestExporterNonFiniteValues(t *testing.T) {
 				)},
 				attribute.String("Duplicate", "first"), attribute.String("duplicate", "second"),
 			),
-			want: `{"Type":"MAP","Value":[
-				{"Key":"Duplicate","Value":{"Type":"STRING","Value":"first"}},
-				{"Key":"a","Value":{"Type":"SLICE","Value":[
-					{"Type":"MAP","Value":[{"Key":"special","Value":{"Type":"FLOAT64","Value":"NaN"}}]},
-					{"Type":"FLOAT64SLICE","Value":["Infinity","-Infinity"]}]}},
-				{"Key":"duplicate","Value":{"Type":"STRING","Value":"second"}},
-				{"Key":"z","Value":{"Type":"STRING","Value":"last"}}]}`,
+			want: `{"Type":"MAP","Value":{"Duplicate":"first","a":[{"special":"NaN"},["Infinity","-Infinity"]],"duplicate":"second","z":"last"}}`,
 		},
 		{
 			name: "other types",
@@ -90,12 +85,7 @@ func TestExporterNonFiniteValues(t *testing.T) {
 				attribute.Float64SliceValue(nil), attribute.SliceValue(), attribute.MapValue(),
 				attribute.ByteSliceValue(nil), attribute.Value{}, attribute.Float64Value(math.NaN()),
 			),
-			want: `{"Type":"SLICE","Value":[
-				{"Type":"BOOL","Value":true},{"Type":"BOOLSLICE","Value":[true,false]},
-				{"Type":"INT64SLICE","Value":[-9223372036854775808,9223372036854775807]},
-				{"Type":"STRINGSLICE","Value":["Infinity","<tag>"]},{"Type":"FLOAT64","Value":-0},
-				{"Type":"FLOAT64SLICE","Value":[]},{"Type":"SLICE","Value":[]},{"Type":"MAP","Value":[]},
-				{"Type":"BYTESLICE","Value":""},{"Type":"EMPTY","Value":null},{"Type":"FLOAT64","Value":"NaN"}]}`,
+			want: `{"Type":"SLICE","Value":[true,[true,false],[-9223372036854775808,9223372036854775807],["Infinity","<tag>"],-0,[],[],{},"",null,"NaN"]}`,
 		},
 	}
 
@@ -114,13 +104,15 @@ func TestExporterNonFiniteValues(t *testing.T) {
 					factory := nonFiniteRecordFactory("special")
 					body, attrs, res, scope := ordinaryJSONFields("special")
 					kv := attribute.KeyValue{Key: "m", Value: tc.value}
-					wantKV := `{"Key":"m","Value":` + tc.want + `}`
+					var wantBody struct{ Value json.RawMessage }
+					require.NoError(t, json.Unmarshal([]byte(tc.want), &wantBody))
+					wantKV := `"m":` + string(wantBody.Value)
 					switch location {
 					case "body":
 						factory.Body, body = tc.value, tc.want
 					case "attribute":
 						factory.Attributes = append(factory.Attributes, kv)
-						attrs = attrs[:len(attrs)-1] + "," + wantKV + "]"
+						attrs = attrs[:len(attrs)-1] + ",{" + wantKV + "}]"
 					case "resource":
 						factory.Resource = resource.NewSchemaless(append(factory.Attributes, kv)...)
 						res = sortedJSONAttributes(wantKV)
@@ -163,7 +155,7 @@ func nonFiniteRecordFactory(name string) logtest.RecordFactory {
 
 func ordinaryJSONFields(name string) (body, attrs, res, scope string) {
 	body = `{"Type":"STRING","Value":"` + name + `"}`
-	attrs = `[{"Key":"z","Value":{"Type":"STRING","Value":"last"}},{"Key":"a","Value":{"Type":"STRING","Value":"first"}}]`
+	attrs = `[{"z":"last"},{"a":"first"}]`
 	res = sortedJSONAttributes("")
 	return body, attrs, res, res
 }
@@ -172,7 +164,7 @@ func sortedJSONAttributes(middle string) string {
 	if middle != "" {
 		middle += ","
 	}
-	return `[{"Key":"a","Value":{"Type":"STRING","Value":"first"}},` + middle + `{"Key":"z","Value":{"Type":"STRING","Value":"last"}}]`
+	return `{"a":"first",` + middle + `"z":"last"}`
 }
 
 func expectedRecordJSON(name, body, attrs, res, scope string) string {
@@ -212,6 +204,31 @@ func assertDebugJSON(t *testing.T, want string, got json.RawMessage) {
 		return result
 	}
 	assert.Equal(t, decode([]byte(want)), decode(got))
+}
+
+func TestExporterEmptyCollections(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		res  *resource.Resource
+		want string
+	}{
+		{"nil resource", nil, `null`},
+		{"empty resource", resource.Empty(), `{}`},
+		{"allocated empty resource", resource.NewSchemaless(), `{}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			exporter, err := New(WithWriter(&buf), WithoutTimestamps())
+			require.NoError(t, err)
+			factory := nonFiniteRecordFactory("empty")
+			factory.Attributes, factory.Resource = nil, tc.res
+			factory.InstrumentationScope.Attributes = attribute.Set{}
+			require.NoError(t, exporter.Export(t.Context(), []sdklog.Record{factory.NewRecord()}))
+			got := decodeExportedJSON(t, &buf)
+			require.Len(t, got, 1)
+			assertDebugJSON(t, expectedRecordJSON("empty", `{"Type":"STRING","Value":"empty"}`, `[]`, tc.want, `{}`), got[0])
+		})
+	}
 }
 
 func TestExporterTimestampMarshalError(t *testing.T) {
@@ -254,7 +271,7 @@ func (w *nonFiniteFailingWriter) Write([]byte) (int, error) {
 	return 0, w.err
 }
 
-func TestExporterWriterError(t *testing.T) {
+func TestExporterWriterErrorStopsBatch(t *testing.T) {
 	want := errors.New("writer unavailable")
 	writer := &nonFiniteFailingWriter{err: want}
 	exporter, err := New(WithWriter(writer))

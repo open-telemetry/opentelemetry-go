@@ -192,7 +192,7 @@ func getJSON(now *time.Time) string {
 		timestamps = "\"Timestamp\":" + string(serializedNow) + ",\"ObservedTimestamp\":" + string(serializedNow) + ","
 	}
 
-	return "{" + timestamps + "\"EventName\":\"testing.event\",\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{\"Type\":\"STRING\",\"Value\":\"test\"},\"Attributes\":[{\"Key\":\"key\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key2\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key3\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key4\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key5\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"bool\",\"Value\":{\"Type\":\"BOOL\",\"Value\":true}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":[{\"Key\":\"foo\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"bar\"}}],\"Scope\":{\"Name\":\"name\",\"Version\":\"version\",\"SchemaURL\":\"https://example.com/custom-schema\",\"Attributes\":{}},\"DroppedAttributes\":10}\n"
+	return "{" + timestamps + `"EventName":"testing.event","Severity":9,"SeverityText":"INFO","Body":{"Type":"STRING","Value":"test"},"Attributes":[{"key":"value"},{"key2":"value"},{"key3":"value"},{"key4":"value"},{"key5":"value"},{"bool":true}],"TraceID":"0102030405060708090a0b0c0d0e0f10","SpanID":"0102030405060708","TraceFlags":"01","Resource":{"foo":"bar"},"Scope":{"Name":"name","Version":"version","SchemaURL":"https://example.com/custom-schema","Attributes":{}},"DroppedAttributes":10}` + "\n"
 }
 
 func getJSONs(now *time.Time) string {
@@ -220,60 +220,30 @@ func getPrettyJSON(now *time.Time) string {
 	},
 	"Attributes": [
 		{
-			"Key": "key",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
+			"key": "value"
 		},
 		{
-			"Key": "key2",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
+			"key2": "value"
 		},
 		{
-			"Key": "key3",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
+			"key3": "value"
 		},
 		{
-			"Key": "key4",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
+			"key4": "value"
 		},
 		{
-			"Key": "key5",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
+			"key5": "value"
 		},
 		{
-			"Key": "bool",
-			"Value": {
-				"Type": "BOOL",
-				"Value": true
-			}
+			"bool": true
 		}
 	],
 	"TraceID": "0102030405060708090a0b0c0d0e0f10",
 	"SpanID": "0102030405060708",
 	"TraceFlags": "01",
-	"Resource": [
-		{
-			"Key": "foo",
-			"Value": {
-				"Type": "STRING",
-				"Value": "bar"
-			}
-		}
-	],
+	"Resource": {
+		"foo": "bar"
+	},
 	"Scope": {
 		"Name": "name",
 		"Version": "version",
