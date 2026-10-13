@@ -71,7 +71,7 @@ func (a *Arena) Exceeds(maxSpans int) bool {
 	// Cap rounds up to whole chunks, so a batch using exactly maxCap slots
 	// plus resource/scope overhead needs one more chunk. Allow that slack
 	// so a default-size batch is retained instead of discarded.
-	if a.Cap() > maxCap+a.kvs.chunkSize {
+	if max(a.Cap(), len(a.avs.chunks)*a.avs.chunkSize) > maxCap+a.kvs.chunkSize {
 		return true
 	}
 	// Slices grow with Go append overshoot (up to ~25%) plus the same
