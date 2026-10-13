@@ -78,11 +78,6 @@ type TracerProvider struct {
 
 	isShutdown atomic.Bool
 
-	processorOperationsMu      sync.Mutex
-	processorOperationsActive  int
-	processorOperationsPauseCh chan struct{}
-	processorOperationsDrainCh chan struct{}
-
 	// These fields are not protected by the lock mu. They are assumed to be
 	// immutable after creation of the TracerProvider.
 	sampler                Sampler
@@ -241,7 +236,8 @@ func (p *TracerProvider) RegisterSpanProcessor(sp SpanProcessor) {
 // Before invoking sp's Shutdown method, this stops admitting new operations
 // that invoke an OnStart, OnEnd, or ForceFlush method on sp and waits for
 // already-admitted operations to complete, so that none of those methods are
-// called on sp once it has been shut down.
+// called on sp once it has been shut down. Other processors remain available
+// while this waits.
 //
 // UnregisterSpanProcessor must not be called directly or indirectly from a
 // SpanProcessor method.
@@ -250,47 +246,48 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 	if p.isShutdown.Load() {
 		return
 	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	// This check prevents calls after a shutdown.
-	if p.isShutdown.Load() {
-		return
-	}
-	old := p.getSpanProcessors()
-	if len(old) == 0 {
-		return
-	}
-	spss := make(spanProcessorStates, len(old))
-	copy(spss, old)
-
-	// stop the span processor if it is started and remove it from the list
-	var stopOnce *spanProcessorState
-	var idx int
-	for i, sps := range spss {
-		if sps.sp == sp {
-			stopOnce = sps
-			idx = i
-		}
-	}
+	stopOnce := p.removeSpanProcessor(sp)
 	if stopOnce == nil {
 		return
 	}
 
-	p.pauseProcessorOperations()
-	defer p.resumeProcessorOperations()
-
+	// p.mu is not held here so that admitted operations, and the processor's
+	// own Shutdown, can still use the provider (e.g. to create tracers).
+	_ = stopOnce.wait(context.Background())
 	stopOnce.state.Do(func() {
 		if err := sp.Shutdown(context.Background()); err != nil {
 			otel.Handle(err)
 		}
 	})
-	if len(spss) > 1 {
-		copy(spss[idx:], spss[idx+1:])
-	}
-	spss[len(spss)-1] = nil
-	spss = spss[:len(spss)-1]
+}
 
+// removeSpanProcessor removes sp from the list of processors and stops
+// admitting new operations for it. It returns nil if sp is not registered.
+func (p *TracerProvider) removeSpanProcessor(sp SpanProcessor) *spanProcessorState {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	// This check prevents calls after a shutdown.
+	if p.isShutdown.Load() {
+		return nil
+	}
+	old := p.getSpanProcessors()
+	idx := -1
+	for i, sps := range old {
+		if sps.sp == sp {
+			idx = i
+		}
+	}
+	if idx < 0 {
+		return nil
+	}
+	stopOnce := old[idx]
+	stopOnce.stop()
+
+	spss := make(spanProcessorStates, 0, len(old)-1)
+	spss = append(spss, old[:idx]...)
+	spss = append(spss, old[idx+1:]...)
 	p.spanProcessors.Store(&spss)
+	return stopOnce
 }
 
 // ForceFlush immediately exports all spans that have not yet been exported for
@@ -300,15 +297,6 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 //
 // This method can be called concurrently.
 func (p *TracerProvider) ForceFlush(ctx context.Context) error {
-	// The processor list is only safe to read after admission succeeds: a
-	// list read beforehand could still include a processor that finishes
-	// being unregistered (and shut down) while this call is parked waiting
-	// for admission to reopen.
-	if !p.beginProcessorOperation() {
-		return nil
-	}
-	defer p.endProcessorOperation()
-
 	spss := p.getSpanProcessors()
 	var err error
 	for _, sps := range spss {
@@ -318,7 +306,7 @@ func (p *TracerProvider) ForceFlush(ctx context.Context) error {
 		default:
 		}
 
-		err = errors.Join(err, sps.sp.ForceFlush(ctx))
+		err = errors.Join(err, sps.forceFlush(ctx))
 	}
 	return err
 }
@@ -346,19 +334,20 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	if p.isShutdown.Load() {
 		return nil
 	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	// This check prevents calls after a shutdown has already been done concurrently.
-	if !p.isShutdown.CompareAndSwap(false, true) { // did toggle?
+	spss, ok := p.beginShutdown()
+	if !ok {
 		return nil
 	}
 
-	if err := p.waitForProcessorOperations(ctx); err != nil {
-		return err
-	}
-
 	var retErr error
-	for _, sps := range p.getSpanProcessors() {
+	for _, sps := range spss {
+		// Admission is already closed for every processor, so spans created
+		// by an exporter during its Shutdown never reach a stopped processor.
+		if err := sps.wait(ctx); err != nil {
+			return err
+		}
+	}
+	for _, sps := range spss {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -375,100 +364,25 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	return retErr
 }
 
+// beginShutdown marks p as shut down and stops admitting new processor
+// operations. It returns false if a shutdown was already started. p.mu is
+// released before returning so that admitted operations can still use p.
+func (p *TracerProvider) beginShutdown() (spanProcessorStates, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	// This check prevents calls after a shutdown has already been done concurrently.
+	if !p.isShutdown.CompareAndSwap(false, true) { // did toggle?
+		return nil, false
+	}
+	spss := p.getSpanProcessors()
+	for _, sps := range spss {
+		sps.stop()
+	}
+	return spss, true
+}
+
 func (p *TracerProvider) getSpanProcessors() spanProcessorStates {
 	return *p.spanProcessors.Load()
-}
-
-func (p *TracerProvider) beginProcessorOperation() bool {
-	p.processorOperationsMu.Lock()
-	for p.processorOperationsPauseCh != nil {
-		if p.isShutdown.Load() {
-			p.processorOperationsMu.Unlock()
-			return false
-		}
-		ch := p.processorOperationsPauseCh
-		p.processorOperationsMu.Unlock()
-		<-ch
-		p.processorOperationsMu.Lock()
-	}
-	if p.isShutdown.Load() {
-		p.processorOperationsMu.Unlock()
-		return false
-	}
-	p.processorOperationsActive++
-	p.processorOperationsMu.Unlock()
-	return true
-}
-
-func (p *TracerProvider) endProcessorOperation() {
-	p.processorOperationsMu.Lock()
-	p.processorOperationsActive--
-	if p.processorOperationsActive == 0 && p.processorOperationsDrainCh != nil {
-		close(p.processorOperationsDrainCh)
-		p.processorOperationsDrainCh = nil
-	}
-	p.processorOperationsMu.Unlock()
-}
-
-// pauseProcessorOperations and resumeProcessorOperations bracket
-// UnregisterSpanProcessor's removal of a single SpanProcessor. The caller
-// must hold p.mu so that at most one of UnregisterSpanProcessor and Shutdown
-// is pausing or stopping admission at a time.
-func (p *TracerProvider) pauseProcessorOperations() {
-	p.processorOperationsMu.Lock()
-	p.processorOperationsPauseCh = make(chan struct{})
-	if p.processorOperationsActive == 0 {
-		p.processorOperationsMu.Unlock()
-		return
-	}
-	p.processorOperationsDrainCh = make(chan struct{})
-	drain := p.processorOperationsDrainCh
-	p.processorOperationsMu.Unlock()
-
-	<-drain
-}
-
-func (p *TracerProvider) resumeProcessorOperations() {
-	p.processorOperationsMu.Lock()
-	ch := p.processorOperationsPauseCh
-	p.processorOperationsPauseCh = nil
-	p.processorOperationsMu.Unlock()
-	close(ch)
-}
-
-// waitForProcessorOperations waits for already-admitted operations to drain,
-// returning ctx.Err() if ctx is done first. The caller is responsible for
-// having already stopped admission of new operations (Shutdown does this by
-// setting isShutdown before calling this method).
-func (p *TracerProvider) waitForProcessorOperations(ctx context.Context) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
-	p.processorOperationsMu.Lock()
-	if p.processorOperationsActive == 0 {
-		p.processorOperationsMu.Unlock()
-		return nil
-	}
-	p.processorOperationsDrainCh = make(chan struct{})
-	done := p.processorOperationsDrainCh
-	p.processorOperationsMu.Unlock()
-
-	return waitForProcessorOperationsCompletion(ctx, done)
-}
-
-func waitForProcessorOperationsCompletion(ctx context.Context, done <-chan struct{}) error {
-	select {
-	case <-done:
-	case <-ctx.Done():
-		// Prefer a completed drain when it races with cancellation.
-		select {
-		case <-done:
-		default:
-			return ctx.Err()
-		}
-	}
-	return nil
 }
 
 // TracerProviderOption configures a TracerProvider.

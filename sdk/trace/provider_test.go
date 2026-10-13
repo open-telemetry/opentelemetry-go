@@ -323,7 +323,7 @@ func TestUnregisterSpanProcessorWaitsForInFlightOnEnd(t *testing.T) {
 	assert.True(t, sp.shutdownCalled.Load())
 }
 
-func TestUnregisterSpanProcessorPausesNewOperations(t *testing.T) {
+func TestUnregisterSpanProcessorKeepsOtherProcessorsAvailable(t *testing.T) {
 	tp := NewTracerProvider()
 	sp1 := &blockingSpanProcessor{started: make(chan struct{}), release: make(chan struct{})}
 	sp2 := &basicSpanProcessor{}
@@ -344,39 +344,125 @@ func TestUnregisterSpanProcessorPausesNewOperations(t *testing.T) {
 		close(unregisterDone)
 	}()
 
-	// Wait until UnregisterSpanProcessor has actually started pausing
-	// admission before a second span's lifecycle begins, rather than
-	// guessing with a fixed sleep.
+	// Unregister must not hold provider-wide state while it drains: tracers
+	// can still be created and spans fully processed by the other processors.
 	require.Eventually(t, func() bool {
-		tp.processorOperationsMu.Lock()
-		defer tp.processorOperationsMu.Unlock()
-		return tp.processorOperationsPauseCh != nil
+		return len(tp.getSpanProcessors()) == 1
 	}, time.Second, time.Millisecond)
-
-	span2Done := make(chan struct{})
-	go func() {
-		_, span2 := tp.Tracer("t").Start(t.Context(), "s2")
-		span2.End()
-		close(span2Done)
-	}()
-
-	// The second span's Start must be parked waiting for admission to
-	// reopen, rather than racing ahead with a processor list that still
-	// contains sp1 after sp1.Shutdown has been invoked.
-	select {
-	case <-span2Done:
-		t.Fatal("second span completed its lifecycle while admission should be paused")
-	case <-time.After(50 * time.Millisecond):
-	}
+	_, span2 := tp.Tracer("t2").Start(t.Context(), "s2")
+	span2.End()
+	assert.False(t, sp1.shutdownCalled.Load())
 
 	close(sp1.release)
 	<-end1Done
 	<-unregisterDone
-	<-span2Done
+	assert.True(t, sp1.shutdownCalled.Load())
 
 	sps := tp.getSpanProcessors()
 	require.Len(t, sps, 1)
 	assert.Same(t, sp2, sps[0].sp)
+}
+
+// tracingSpanProcessor creates a tracer from its provider when OnEnd or
+// Shutdown is called, like an exporter instrumented with the same SDK.
+type tracingSpanProcessor struct {
+	basicSpanProcessor
+
+	tp         *TracerProvider
+	onEndStart chan struct{}
+	release    chan struct{}
+}
+
+func (p *tracingSpanProcessor) OnEnd(ReadOnlySpan) {
+	if p.onEndStart == nil {
+		return
+	}
+	close(p.onEndStart)
+	<-p.release
+	_, s := p.tp.Tracer("nested").Start(context.Background(), "nested")
+	s.End()
+}
+
+func (p *tracingSpanProcessor) Shutdown(ctx context.Context) error {
+	_, s := p.tp.Tracer("shutdown").Start(ctx, "shutdown")
+	s.End()
+	return p.basicSpanProcessor.Shutdown(ctx)
+}
+
+func TestUnregisterSpanProcessorOnEndCreatesTracer(t *testing.T) {
+	tp := NewTracerProvider()
+	sp := &tracingSpanProcessor{tp: tp, onEndStart: make(chan struct{}), release: make(chan struct{})}
+	tp.RegisterSpanProcessor(sp)
+
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	go span.End()
+	<-sp.onEndStart
+
+	done := make(chan struct{})
+	go func() {
+		tp.UnregisterSpanProcessor(sp)
+		close(done)
+	}()
+	require.Eventually(t, func() bool {
+		return len(tp.getSpanProcessors()) == 0
+	}, time.Second, time.Millisecond)
+	close(sp.release)
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("UnregisterSpanProcessor deadlocked with OnEnd creating a tracer")
+	}
+}
+
+func TestProcessorShutdownCreatesSpans(t *testing.T) {
+	tp := NewTracerProvider()
+	sp := &tracingSpanProcessor{tp: tp}
+	tp.RegisterSpanProcessor(sp)
+	tr := tp.Tracer("t")
+
+	done := make(chan struct{})
+	go func() {
+		tp.UnregisterSpanProcessor(sp)
+		_, s := tr.Start(t.Context(), "after")
+		s.End()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("deadlock when a processor creates spans during Unregister Shutdown")
+	}
+
+	tp2 := NewTracerProvider()
+	sp2 := &tracingSpanProcessor{tp: tp2}
+	tp2.RegisterSpanProcessor(sp2)
+	done2 := make(chan struct{})
+	go func() {
+		assert.NoError(t, tp2.Shutdown(t.Context()))
+		close(done2)
+	}()
+	select {
+	case <-done2:
+	case <-time.After(5 * time.Second):
+		t.Fatal("deadlock when a processor creates spans during provider Shutdown")
+	}
+}
+
+func TestForceFlushHonorsContextWhileProcessorUnregisters(t *testing.T) {
+	tp := NewTracerProvider()
+	sp := &blockingSpanProcessor{started: make(chan struct{}), release: make(chan struct{})}
+	tp.RegisterSpanProcessor(sp)
+	tp.RegisterSpanProcessor(&basicSpanProcessor{})
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	go span.End()
+	<-sp.started
+	go tp.UnregisterSpanProcessor(sp)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	assert.ErrorIs(t, tp.ForceFlush(ctx), context.Canceled)
+	close(sp.release)
 }
 
 func TestShutdownContextCanceledDuringDrain(t *testing.T) {

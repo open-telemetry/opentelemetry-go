@@ -64,19 +64,9 @@ func (tr *tracer) Start(
 	}
 
 	if rw, ok := s.(ReadWriteSpan); ok && s.IsRecording() {
-		// The processor list is only safe to read after admission succeeds:
-		// a list read beforehand could still include a processor that
-		// finishes being unregistered (and shut down) while this call is
-		// parked waiting for admission to reopen.
-		if tr.provider.beginProcessorOperation() {
-			func() {
-				defer tr.provider.endProcessorOperation()
-				sps := tr.provider.getSpanProcessors()
-				for _, sp := range sps {
-					// Use original context.
-					sp.sp.OnStart(ctx, rw)
-				}
-			}()
+		for _, sp := range tr.provider.getSpanProcessors() {
+			// Use original context.
+			sp.onStart(ctx, rw)
 		}
 	}
 	if rtt, ok := s.(runtimeTracer); ok {

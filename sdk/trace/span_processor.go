@@ -52,6 +52,14 @@ type SpanProcessor interface {
 type spanProcessorState struct {
 	sp    SpanProcessor
 	state sync.Once
+
+	// admissionMu protects the fields below. They track the operations
+	// (OnStart, OnEnd, ForceFlush) currently in flight on sp so that sp's
+	// Shutdown is not invoked until they complete and no new ones start.
+	admissionMu sync.Mutex
+	active      int
+	stopped     bool
+	drained     chan struct{}
 }
 
 func newSpanProcessorState(sp SpanProcessor) *spanProcessorState {
@@ -59,3 +67,85 @@ func newSpanProcessorState(sp SpanProcessor) *spanProcessorState {
 }
 
 type spanProcessorStates []*spanProcessorState
+
+// begin reports whether a new operation on sp is admitted. If it returns true,
+// the caller must call end when the operation completes.
+func (s *spanProcessorState) begin() bool {
+	s.admissionMu.Lock()
+	defer s.admissionMu.Unlock()
+	if s.stopped {
+		return false
+	}
+	s.active++
+	return true
+}
+
+func (s *spanProcessorState) end() {
+	s.admissionMu.Lock()
+	defer s.admissionMu.Unlock()
+	s.active--
+	if s.active == 0 && s.stopped {
+		close(s.drained)
+	}
+}
+
+// stop closes admission of new operations. It does not wait for admitted
+// operations to complete; use wait for that. It is safe to call repeatedly.
+func (s *spanProcessorState) stop() {
+	s.admissionMu.Lock()
+	defer s.admissionMu.Unlock()
+	if s.stopped {
+		return
+	}
+	s.stopped = true
+	s.drained = make(chan struct{})
+	if s.active == 0 {
+		close(s.drained)
+	}
+}
+
+// wait blocks until all operations admitted before stop have completed,
+// returning ctx.Err() if ctx is done first. stop must have been called.
+func (s *spanProcessorState) wait(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case <-s.drained:
+	case <-ctx.Done():
+		// Prefer a completed drain when it races with cancellation.
+		select {
+		case <-s.drained:
+		default:
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
+// onStart, onEnd, and forceFlush invoke the processor method only if
+// admission is open. The admission count is released even if the processor
+// panics so that shutdown cannot be blocked forever.
+func (s *spanProcessorState) onStart(ctx context.Context, rw ReadWriteSpan) {
+	if !s.begin() {
+		return
+	}
+	defer s.end()
+	s.sp.OnStart(ctx, rw)
+}
+
+func (s *spanProcessorState) onEnd(snap ReadOnlySpan) {
+	if !s.begin() {
+		return
+	}
+	defer s.end()
+	s.sp.OnEnd(snap)
+}
+
+func (s *spanProcessorState) forceFlush(ctx context.Context) error {
+	if !s.begin() {
+		return nil
+	}
+	defer s.end()
+	return s.sp.ForceFlush(ctx)
+}
