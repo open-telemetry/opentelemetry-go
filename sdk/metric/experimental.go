@@ -49,10 +49,10 @@ func validateExperimental(options []experimentalOption, conflicts []experimental
 
 	var errs []error
 	for _, c := range conflicts {
-		a, okA := present[c[0]]
-		b, okB := present[c[1]]
+		optA, okA := present[c[0]]
+		optB, okB := present[c[1]]
 		if okA && okB {
-			errs = append(errs, fmt.Errorf("experimental option %T cannot be used with %T", a, b))
+			errs = append(errs, fmt.Errorf("experimental option %T cannot be used with %T", optA, optB))
 		}
 	}
 	return errors.Join(errs...)
