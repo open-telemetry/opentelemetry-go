@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Preserve escaped endpoint paths and generic endpoint base segments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`,
   `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, and
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9149)
+- Reject overflowing log export interval and timeout environment variables in `go.opentelemetry.io/otel/sdk/log`. (#9081)
 - Ignore nil writers passed to `WithWriter` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` and
   `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`, preserving the default or previously configured writer or encoder. (#9164)
 - Ignore nil writers passed to `WithWriter` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`, retaining the default or previously configured writer to prevent a panic during log export. (#9148)
@@ -35,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9080)
 - Fix a data race in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is read concurrently with `Span.SetBaggageItem`. (#9049)
 - Pass the context containing the new span to the auto-instrumentation hook in `go.opentelemetry.io/otel/trace`. (#9029)
+- Encode an empty attribute value nested in a slice or map as `{}` in `go.opentelemetry.io/otel/trace`, so the auto-instrumentation span that carries it is no longer dropped. (#9182)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
