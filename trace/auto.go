@@ -61,13 +61,15 @@ func (t autoTracer) Start(ctx context.Context, name string, opts ...SpanStartOpt
 	sampled := true
 	span := new(autoSpan)
 
+	ctx = ContextWithSpan(ctx, span)
+	// eBPF may use this context's pointer for correlation,
+	// keep it in the span to avoid it being garbage collected.
+	span.hookCtx = ctx
 	// Ask eBPF for sampling decision and span context info.
 	t.start(ctx, span, &psc, &sampled, &sc)
 
 	span.sampled.Store(sampled)
 	span.spanContext = sc
-
-	ctx = ContextWithSpan(ctx, span)
 
 	if sampled {
 		// Only build traces if sampled.
@@ -171,6 +173,8 @@ type autoSpan struct {
 	mu     sync.Mutex
 	traces *telemetry.Traces
 	span   *telemetry.Span
+
+	hookCtx context.Context
 }
 
 func (s *autoSpan) SpanContext() SpanContext {

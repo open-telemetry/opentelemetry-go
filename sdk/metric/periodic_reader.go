@@ -199,13 +199,10 @@ type PeriodicReader struct {
 // Compile time check the periodicReader implements Reader and is comparable.
 var _ = map[Reader]struct{}{&PeriodicReader{}: {}}
 
-// newTicker allows testing override.
-var newTicker = time.NewTicker
-
 // run continuously collects and exports metric data at the specified
 // interval. This will run until ctx is canceled or times out.
 func (r *PeriodicReader) run(ctx context.Context, interval time.Duration) {
-	ticker := newTicker(interval)
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
