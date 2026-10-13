@@ -8,9 +8,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add experimental `WithFinish` support for `Int64Counter` Sum aggregation,
+  including cancellable provider shutdown and parked waits for in-flight measurements,
+  in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
+
 ### Fixed
 
 - Decompress gzip OTLP/HTTP log responses when the request sets `Accept-Encoding` explicitly in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9181)
+- Ignore nil writers passed to `WithWriter` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` and
+  `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`, preserving the default or previously configured writer or encoder. (#9164)
+- Ignore nil writers passed to `WithWriter` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`, retaining the default or previously configured writer to prevent a panic during log export. (#9148)
+- Ignore nil span processors passed to `WithSpanProcessor` and `TracerProvider.RegisterSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace`. (#9168)
+- Ignore nil processors passed to `WithProcessor` in `go.opentelemetry.io/otel/sdk/log` to prevent panics during log emission and provider lifecycle operations. (#9170)
+- Ignore nil views passed to `WithView` in `go.opentelemetry.io/otel/sdk/metric`, preserving valid views and their order. (#9167)
+- Ignore nil samplers passed to `ParentBased` sampler options in `go.opentelemetry.io/otel/sdk/trace`. (#9169)
+- Ignore nil temporality, aggregation, cardinality limit selector, and producer options in `go.opentelemetry.io/otel/sdk/metric`, including aggregation selector and producer options used by `go.opentelemetry.io/otel/exporters/prometheus`. (#9166)
+- Ignore nil loggers passed to `WithLogger` in `go.opentelemetry.io/otel/exporters/zipkin`, preserving the default or previously configured logger. (#9165)
+- Ignore nil callbacks passed to `WithInt64Callback` and `WithFloat64Callback` in `go.opentelemetry.io/otel/metric`, and to `RegisterCallback` in `go.opentelemetry.io/otel/sdk/metric`, including delegation through global meters in   `go.opentelemetry.io/otel`, to prevent panics during metric collection. (#9171)
 - Preserve input span event timestamps when using `WithoutTimestamps` in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9092)
 - Bound export retries by `WithTimeout` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, and
