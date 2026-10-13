@@ -14,6 +14,11 @@ import (
 )
 
 func TestDefaultExperimental(t *testing.T) {
+	t.Cleanup(func() {
+		defaultResource = nil
+		defaultResourceOnce = sync.Once{}
+	})
+
 	// Experimental attributes aren't present by default
 	res := Default()
 

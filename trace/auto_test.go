@@ -618,6 +618,31 @@ func TestSpanEnd(t *testing.T) {
 	}
 }
 
+func TestSpanEndEmptyNestedAttr(t *testing.T) {
+	orig := ended
+	t.Cleanup(func() { ended = orig })
+
+	var buf []byte
+	ended = func(b []byte) { buf = b }
+
+	s := spanBuilder{
+		Options: []SpanStartOption{WithAttributes(
+			attribute.Slice("slice", attribute.Value{}),
+			attribute.Map("map", attribute.KeyValue{Key: "empty"}),
+		)},
+	}.Build()
+	s.End()
+	require.NotEmpty(t, buf, "no span data emitted")
+
+	var traces telemetry.Traces
+	require.NoError(t, json.Unmarshal(buf, &traces))
+	require.Len(t, traces.ResourceSpans, 1)
+	require.Len(t, traces.ResourceSpans[0].ScopeSpans, 1)
+	spans := traces.ResourceSpans[0].ScopeSpans[0].Spans
+	require.Len(t, spans, 1)
+	assert.Len(t, spans[0].Attrs, 2)
+}
+
 func TestSpanNilUnsampledGuards(t *testing.T) {
 	run := func(fn func(s *autoSpan)) func(*testing.T) {
 		return func(t *testing.T) {
