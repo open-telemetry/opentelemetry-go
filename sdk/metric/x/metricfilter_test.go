@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metricfilter
+package x
 
 import (
 	"testing"
@@ -32,19 +32,21 @@ type stableMetricFilter interface {
 type testFilter struct {
 	metricResult     Result
 	attributesResult AttributesFilterResult
+	metricParams     *TestMetricParameters
+	attributesParams *TestAttributesParameters
 }
 
-func (f testFilter) TestMetric(instrumentation.Scope, string, metricdata.Aggregation, string) Result {
+func (f testFilter) TestMetric(params TestMetricParameters) Result {
+	if f.metricParams != nil {
+		*f.metricParams = params
+	}
 	return f.metricResult
 }
 
-func (f testFilter) TestAttributes(
-	instrumentation.Scope,
-	string,
-	metricdata.Aggregation,
-	string,
-	attribute.Set,
-) AttributesFilterResult {
+func (f testFilter) TestAttributes(params TestAttributesParameters) AttributesFilterResult {
+	if f.attributesParams != nil {
+		*f.attributesParams = params
+	}
 	return f.attributesResult
 }
 
@@ -67,11 +69,11 @@ func TestWithMetricFilterNil(t *testing.T) {
 	require.True(t, ok)
 
 	scope := instrumentation.Scope{Name: "test"}
-	data := metricdata.Sum[int64]{}
+	kind := metricdata.Sum[int64]{}
 	attrs := attribute.NewSet(attribute.String("k", "v"))
 	assert.NotPanics(t, func() {
-		assert.Equal(t, int(Accept), mf.TestMetric(scope, "name", data, "1"))
-		assert.Equal(t, int(AttrAccept), mf.TestAttributes(scope, "name", data, "1", attrs))
+		assert.Equal(t, int(Accept), mf.TestMetric(scope, "name", kind, "1"))
+		assert.Equal(t, int(AttrAccept), mf.TestAttributes(scope, "name", kind, "1", attrs))
 	})
 }
 
@@ -108,11 +110,11 @@ func TestWithMetricFilterEnumMapping(t *testing.T) {
 			mf := opt.(stableMetricFilter)
 
 			scope := instrumentation.Scope{Name: "test"}
-			data := metricdata.Sum[int64]{}
+			kind := metricdata.Sum[int64]{}
 			attrs := attribute.NewSet(attribute.String("k", "v"))
 
-			assert.Equal(t, tt.wantM, mf.TestMetric(scope, "name", data, "1"))
-			assert.Equal(t, tt.wantAttr, mf.TestAttributes(scope, "name", data, "1", attrs))
+			assert.Equal(t, tt.wantM, mf.TestMetric(scope, "name", kind, "1"))
+			assert.Equal(t, tt.wantAttr, mf.TestAttributes(scope, "name", kind, "1", attrs))
 		})
 	}
 }

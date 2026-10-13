@@ -110,11 +110,6 @@ func (mr *ManualReader) cardinalityLimit(kind InstrumentKind) (int, bool) {
 	return mr.cardinalityLimitSelector(kind)
 }
 
-// metricFilter returns the MetricFilter configured for this reader.
-func (mr *ManualReader) getMetricFilter() metricFilter {
-	return mr.metricFilter
-}
-
 // Shutdown closes any connections and frees any resources used by the reader.
 //
 // This method is safe to call concurrently.

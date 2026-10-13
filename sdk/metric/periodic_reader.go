@@ -270,11 +270,6 @@ func (r *PeriodicReader) cardinalityLimit(kind InstrumentKind) (int, bool) {
 	return r.cardinalityLimitSelector(kind)
 }
 
-// metricFilter returns the MetricFilter configured for this reader.
-func (r *PeriodicReader) getMetricFilter() metricFilter {
-	return r.metricFilter
-}
-
 // collectAndExport gather all metric data related to the periodicReader r from
 // the SDK and exports it with r's exporter.
 func (r *PeriodicReader) collectAndExport(ctx context.Context) error {

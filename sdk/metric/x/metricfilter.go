@@ -1,9 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package metricfilter provides the experimental MetricFilter API for
-// filtering aggregated metric data points during collection.
-package metricfilter
+// Package x provides experimental Metric SDK features.
+package x
 
 import (
 	"go.opentelemetry.io/otel/attribute"
@@ -19,23 +18,31 @@ import (
 type MetricFilter interface {
 	// TestMetric is called once for every metric stream, in each
 	// MetricProducer Produce operation.
-	TestMetric(
-		instrumentationScope instrumentation.Scope,
-		name string,
-		kind metricdata.Aggregation,
-		unit string,
-	) Result
+	TestMetric(params TestMetricParameters) Result
 	// TestAttributes determines for a given metric stream and attribute set
 	// if it should be allowed or filtered out.
 	// This operation should only be called if TestMetric operation returned
 	// AcceptPartial for the given metric stream arguments.
-	TestAttributes(
-		instrumentationScope instrumentation.Scope,
-		name string,
-		kind metricdata.Aggregation,
-		unit string,
-		attributes attribute.Set,
-	) AttributesFilterResult
+	TestAttributes(params TestAttributesParameters) AttributesFilterResult
+}
+
+// TestMetricParameters contains the metadata for MetricFilter.TestMetric.
+// Callers should use keyed literals to allow future fields to be added.
+type TestMetricParameters struct {
+	Scope instrumentation.Scope
+	Name  string
+	Kind  metricdata.Aggregation
+	Unit  string
+}
+
+// TestAttributesParameters contains the metadata for MetricFilter.TestAttributes.
+// Callers should use keyed literals to allow future fields to be added.
+type TestAttributesParameters struct {
+	Scope      instrumentation.Scope
+	Name       string
+	Kind       metricdata.Aggregation
+	Unit       string
+	Attributes attribute.Set
 }
 
 // Result is an enumeration used to decide whether to accept,
@@ -83,7 +90,9 @@ func (o metricFilterOption) TestMetric(
 	if o.filter == nil {
 		return int(Accept)
 	}
-	return int(o.filter.TestMetric(scope, name, kind, unit))
+	return int(
+		o.filter.TestMetric(TestMetricParameters{Scope: scope, Name: name, Kind: kind, Unit: unit}),
+	)
 }
 
 // TestAttributes delegates the attribute set filtering decision to the underlying MetricFilter,
@@ -96,9 +105,11 @@ func (o metricFilterOption) TestAttributes(
 	attrs attribute.Set,
 ) int {
 	if o.filter == nil {
-		return int(Accept)
+		return int(AttrAccept)
 	}
-	return int(o.filter.TestAttributes(scope, name, kind, unit, attrs))
+	return int(o.filter.TestAttributes(TestAttributesParameters{
+		Scope: scope, Name: name, Kind: kind, Unit: unit, Attributes: attrs,
+	}))
 }
 
 // WithMetricFilter creates a metric.ReaderOption that applies the provided MetricFilter.

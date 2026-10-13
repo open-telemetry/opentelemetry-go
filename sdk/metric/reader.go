@@ -128,11 +128,11 @@ func wrapProduce(
 ) func(context.Context, *metricdata.ResourceMetrics) error {
 	return func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 		err := produce(ctx, rm)
-		if err != nil || filter == nil {
+		if filter == nil {
 			return err
 		}
 		rm.ScopeMetrics = filterScopeMetrics(rm.ScopeMetrics, filter)
-		return nil
+		return err
 	}
 }
 
@@ -143,10 +143,10 @@ type filteringProducer struct {
 
 func (p *filteringProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
 	sm, err := p.inner.Produce(ctx)
-	if err != nil || p.filter == nil {
+	if p.filter == nil {
 		return sm, err
 	}
-	return filterScopeMetrics(sm, p.filter), nil
+	return filterScopeMetrics(sm, p.filter), err
 }
 
 // shutdownProducer produces an ErrReaderShutdown error always.

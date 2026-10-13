@@ -79,7 +79,6 @@ type pipeline struct {
 	multiCallbacks   list.List
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
-	metricFilter     metricFilter
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
@@ -642,9 +641,6 @@ func newPipelines(
 	pipes := make([]*pipeline, 0, len(readers))
 	for _, r := range readers {
 		p := newPipeline(res, r, views, exemplarFilter, cardinalityLimit)
-		if r, ok := r.(interface{ getMetricFilter() metricFilter }); ok {
-			p.metricFilter = r.getMetricFilter()
-		}
 		r.register(p)
 		pipes = append(pipes, p)
 	}
