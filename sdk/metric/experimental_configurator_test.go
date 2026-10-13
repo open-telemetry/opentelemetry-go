@@ -168,6 +168,24 @@ func TestConfiguratorObservableCallbacksGated(t *testing.T) {
 	}
 }
 
+func TestConfiguratorRegisterNilCallback(t *testing.T) {
+	mp, rdr, _ := newToggledConfiguratorProvider(t)
+	m := mp.Meter("scope")
+	inst, err := m.Int64ObservableCounter("inst")
+	require.NoError(t, err)
+
+	reg, err := m.RegisterCallback(nil, inst)
+	require.NoError(t, err)
+	require.NotNil(t, reg)
+
+	var rm metricdata.ResourceMetrics
+	assert.NotPanics(t, func() {
+		assert.NoError(t, rdr.Collect(t.Context(), &rm))
+	}, "collecting an enabled meter must not call a nil callback")
+	assert.NoError(t, reg.Unregister())
+	assert.NoError(t, reg.Unregister(), "repeated Unregister must be safe")
+}
+
 func TestConfiguratorMeterWrapUnexpectedType(t *testing.T) {
 	m := newConfiguratorMeter(newMeter(instrumentation.Scope{Name: "scope"}, nil))
 

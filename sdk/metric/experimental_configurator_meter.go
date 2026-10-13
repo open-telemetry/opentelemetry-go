@@ -287,11 +287,14 @@ func (m *configuratorMeter) Float64ObservableGauge(
 }
 
 // RegisterCallback registers f with the base meter, skipped while the meter is
-// disabled.
+// disabled. A nil f is passed through, so the base meter treats it as a no-op.
 func (m *configuratorMeter) RegisterCallback(
 	f metric.Callback,
 	insts ...metric.Observable,
 ) (metric.Registration, error) {
+	if f == nil {
+		return m.meter.RegisterCallback(nil, insts...)
+	}
 	return m.meter.RegisterCallback(func(ctx context.Context, o metric.Observer) error {
 		if !m.config.Load() {
 			return nil
