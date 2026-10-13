@@ -651,7 +651,106 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, make([]log.Record, 1))
-		assert.ErrorAs(t, err, new(retryableError))
+		require.Error(t, err)
+		timedOut := errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "exporter export timeout")
+		if !timedOut {
+			assert.ErrorAs(t, err, new(retryableError))
+		}
+	})
+
+	t.Run("WithTimeout bounds retry", func(t *testing.T) {
+		const queued = 1000
+		rCh := make(chan exportResult, queued)
+		for range queued {
+			rCh <- exportResult{Err: &httpResponseError{
+				Status: http.StatusServiceUnavailable,
+				Err:    errors.New("unavailable"),
+			}}
+		}
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(50*time.Millisecond),
+			WithRetry(RetryConfig{
+				Enabled:         true,
+				InitialInterval: time.Millisecond,
+				MaxInterval:     time.Millisecond,
+				MaxElapsedTime:  time.Minute,
+			}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		start := time.Now()
+		err := exp.Export(ctx, make([]log.Record, 1))
+		elapsed := time.Since(start)
+
+		require.Error(t, err)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			assert.ErrorContains(t, err, "exporter export timeout")
+		}
+		assert.Less(t, elapsed, 5*time.Second, "export retried until MaxElapsedTime")
+		assert.NotEqual(t, queued, len(rCh), "collector received no requests")
+
+		time.Sleep(50 * time.Millisecond)
+		remaining := len(rCh)
+		time.Sleep(50 * time.Millisecond)
+		assert.Len(t, rCh, remaining, "requests continued after the export timeout")
+	})
+
+	t.Run("WithHTTPClient ignores WithTimeout", func(t *testing.T) {
+		rCh := make(chan exportResult, 1)
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(time.Millisecond),
+			WithHTTPClient(&http.Client{}),
+			WithRetry(RetryConfig{Enabled: false}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		done := make(chan error, 1)
+		go func() {
+			done <- exp.Export(ctx, make([]log.Record, 1))
+		}()
+		select {
+		case err := <-done:
+			t.Fatalf("export finished before the collector responded: %v", err)
+		case <-time.After(50 * time.Millisecond):
+		}
+		rCh <- exportResult{}
+		select {
+		case err := <-done:
+			assert.NoError(t, err)
+		case <-time.After(2 * time.Second):
+			t.Fatal("export did not finish")
+		}
+	})
+
+	t.Run("WithTimeout zero", func(t *testing.T) {
+		rCh := make(chan exportResult, 2)
+		rCh <- exportResult{Err: &httpResponseError{
+			Status: http.StatusServiceUnavailable,
+			Err:    errors.New("unavailable"),
+		}}
+		rCh <- exportResult{}
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(0),
+			WithRetry(RetryConfig{
+				Enabled:         true,
+				InitialInterval: time.Millisecond,
+				MaxInterval:     time.Millisecond,
+				MaxElapsedTime:  time.Second,
+			}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		assert.Empty(t, rCh)
 	})
 
 	t.Run("WithCompressionGZip", func(t *testing.T) {
@@ -1356,6 +1455,326 @@ func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
 	got, ok := <-pathCh
 	require.True(t, ok, "request was not received")
 	assert.Equal(t, "/", got, "a pathless endpoint URL must target the root path, not the default logs path")
+}
+
+func TestEndpointPath(t *testing.T) {
+	const endpoint = "http" + "://collector:4318"
+	testCases := []struct {
+		name     string
+		env      map[string]string
+		options  []Option
+		wantPath string
+	}{
+		{
+			name:     "generic/no path",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint},
+			wantPath: "/v1/logs",
+		},
+		{
+			name:     "generic/root",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/"},
+			wantPath: "/v1/logs",
+		},
+		{
+			name:     "generic/ordinary base",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/prefix"},
+			wantPath: "/prefix/v1/logs",
+		},
+		{
+			name:     "generic/trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/prefix/"},
+			wantPath: "/prefix/v1/logs",
+		},
+		{
+			name:     "generic/escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%2Fb"},
+			wantPath: "/a%2Fb/v1/logs",
+		},
+		{
+			name:     "generic/double-escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%252Fb"},
+			wantPath: "/a%252Fb/v1/logs",
+		},
+		{
+			name:     "generic/lowercase escape",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%2fb/"},
+			wantPath: "/a%2fb/v1/logs",
+		},
+		{
+			name:     "generic/escaped trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%2F"},
+			wantPath: "/a%2F/v1/logs",
+		},
+		{
+			name:     "generic/escaped delimiters",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%3Fb%23c%25d"},
+			wantPath: "/a%3Fb%23c%25d/v1/logs",
+		},
+		{
+			name:     "generic/escaped dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a/%2e%2E/b"},
+			wantPath: "/a/%2e%2E/b/v1/logs",
+		},
+		{
+			name:     "generic/repeated slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a//b/"},
+			wantPath: "/a//b/v1/logs",
+		},
+		{
+			name:     "generic/repeated trailing slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a//"},
+			wantPath: "/a//v1/logs",
+		},
+		{
+			name:     "generic/dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a/../b/"},
+			wantPath: "/a/../b/v1/logs",
+		},
+		{
+			name:     "logs/no path",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint},
+			wantPath: "/",
+		},
+		{
+			name:     "logs/root",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/"},
+			wantPath: "/",
+		},
+		{
+			name:     "logs/ordinary base",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/prefix"},
+			wantPath: "/prefix",
+		},
+		{
+			name:     "logs/trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/prefix/"},
+			wantPath: "/prefix/",
+		},
+		{
+			name:     "logs/escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%2Fb"},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "logs/double-escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%252Fb"},
+			wantPath: "/a%252Fb",
+		},
+		{
+			name:     "logs/lowercase escape",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%2fb/"},
+			wantPath: "/a%2fb/",
+		},
+		{
+			name:     "logs/escaped trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%2F"},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "logs/escaped delimiters",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%3Fb%23c%25d"},
+			wantPath: "/a%3Fb%23c%25d",
+		},
+		{
+			name:     "logs/escaped dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a/%2e%2E/b"},
+			wantPath: "/a/%2e%2E/b",
+		},
+		{
+			name:     "logs/repeated slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a//b/"},
+			wantPath: "/a//b/",
+		},
+		{
+			name:     "logs/repeated trailing slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a//"},
+			wantPath: "/a//",
+		},
+		{
+			name:     "logs/dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a/../b/"},
+			wantPath: "/a/../b/",
+		},
+		{
+			name:     "option/no path",
+			options:  []Option{WithEndpointURL(endpoint)},
+			wantPath: "/",
+		},
+		{
+			name:     "option/root",
+			options:  []Option{WithEndpointURL(endpoint + "/")},
+			wantPath: "/",
+		},
+		{
+			name:     "option/ordinary base",
+			options:  []Option{WithEndpointURL(endpoint + "/prefix")},
+			wantPath: "/prefix",
+		},
+		{
+			name:     "option/trailing slash",
+			options:  []Option{WithEndpointURL(endpoint + "/prefix/")},
+			wantPath: "/prefix/",
+		},
+		{
+			name:     "option/escaped slash",
+			options:  []Option{WithEndpointURL(endpoint + "/a%2Fb")},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "option/double-escaped slash",
+			options:  []Option{WithEndpointURL(endpoint + "/a%252Fb")},
+			wantPath: "/a%252Fb",
+		},
+		{
+			name:     "option/lowercase escape",
+			options:  []Option{WithEndpointURL(endpoint + "/a%2fb/")},
+			wantPath: "/a%2fb/",
+		},
+		{
+			name:     "option/escaped trailing slash",
+			options:  []Option{WithEndpointURL(endpoint + "/a%2F")},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "option/escaped delimiters",
+			options:  []Option{WithEndpointURL(endpoint + "/a%3Fb%23c%25d")},
+			wantPath: "/a%3Fb%23c%25d",
+		},
+		{
+			name:     "option/escaped dot segments",
+			options:  []Option{WithEndpointURL(endpoint + "/a/%2e%2E/b")},
+			wantPath: "/a/%2e%2E/b",
+		},
+		{
+			name:     "option/repeated slashes",
+			options:  []Option{WithEndpointURL(endpoint + "/a//b/")},
+			wantPath: "/a//b/",
+		},
+		{
+			name:     "option/repeated trailing slashes",
+			options:  []Option{WithEndpointURL(endpoint + "/a//")},
+			wantPath: "/a//",
+		},
+		{
+			name:     "option/dot segments",
+			options:  []Option{WithEndpointURL(endpoint + "/a/../b/")},
+			wantPath: "/a/../b/",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+			t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "")
+			for key, value := range tt.env {
+				t.Setenv(key, value)
+			}
+
+			var requests int
+			options := append(tt.options, WithHTTPClient(&http.Client{
+				Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+					requests++
+					assert.Equal(t, "http", r.URL.Scheme)
+					assert.Equal(t, "collector:4318", r.URL.Host)
+					assert.Equal(t, tt.wantPath, r.URL.RequestURI())
+					return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
+				}),
+			}))
+			ctx := t.Context()
+			exp, err := New(ctx, options...)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.WithoutCancel(ctx))) })
+			require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+			assert.Equal(t, 1, requests)
+		})
+	}
+}
+
+func TestEndpointPathOptions(t *testing.T) {
+	const endpoint = "http" + "://collector:4318"
+	testCases := []struct {
+		name     string
+		options  []Option
+		wantPath string
+	}{
+		{
+			name:     "URL path is decoded",
+			options:  []Option{WithURLPath("/a%2Fb?# +é")},
+			wantPath: "/a%252Fb%3F%23%20+%C3%A9",
+		},
+		{
+			name:     "URL path literal percent",
+			options:  []Option{WithURLPath("/a%")},
+			wantPath: "/a%25",
+		},
+		{
+			name: "URL path overrides endpoint URL",
+			options: []Option{
+				WithEndpointURL(endpoint + "/original%2Fpath"),
+				WithURLPath("/a%2Fb"),
+			},
+			wantPath: "/a%252Fb",
+		},
+		{
+			name: "URL path clears endpoint URL escaping",
+			options: []Option{
+				WithEndpointURL(endpoint + "/a%2Fb"),
+				WithURLPath("/a/b"),
+			},
+			wantPath: "/a/b",
+		},
+		{
+			name: "endpoint URL overrides URL path",
+			options: []Option{
+				WithURLPath("/a%2Fb"),
+				WithEndpointURL(endpoint + "/original%2Fpath"),
+			},
+			wantPath: "/original%2Fpath",
+		},
+		{
+			name:     "endpoint URL overrides environment",
+			options:  []Option{WithEndpointURL(endpoint + "/option%2Fpath")},
+			wantPath: "/option%2Fpath",
+		},
+		{
+			name:     "URL path overrides environment",
+			options:  []Option{WithURLPath("/option%2Fpath")},
+			wantPath: "/option%252Fpath",
+		},
+		{
+			name: "endpoint changes host and retains path",
+			options: []Option{
+				WithEndpointURL("http" + "://other:9090/original%2Fpath"),
+				WithEndpoint("collector:4318"),
+			},
+			wantPath: "/original%2Fpath",
+		},
+		{
+			name:     "logs environment overrides generic environment",
+			wantPath: "/logs%2Fpath",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", endpoint+"/generic%2Fpath/")
+			t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", endpoint+"/logs%2Fpath")
+			var requests int
+			options := append(tt.options, WithHTTPClient(&http.Client{
+				Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+					requests++
+					assert.Equal(t, "http", r.URL.Scheme)
+					assert.Equal(t, "collector:4318", r.URL.Host)
+					assert.Equal(t, tt.wantPath, r.URL.RequestURI())
+					return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
+				}),
+			}))
+			ctx := t.Context()
+			exp, err := New(ctx, options...)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.WithoutCancel(ctx))) })
+			require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+			assert.Equal(t, 1, requests)
+		})
+	}
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)

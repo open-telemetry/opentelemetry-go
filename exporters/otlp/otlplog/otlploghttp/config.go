@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -91,9 +90,16 @@ type fnOpt func(config) config
 
 func (f fnOpt) applyHTTPOption(c config) config { return f(c) }
 
+// endpointPath keeps the decoded path and its original encoding under the same
+// configuration precedence.
+type endpointPath struct {
+	Path    string
+	RawPath string
+}
+
 type config struct {
 	endpoint        setting[string]
-	path            setting[string]
+	path            setting[endpointPath]
 	insecure        setting[bool]
 	tlsCfg          setting[*tls.Config]
 	headers         setting[map[string]string]
@@ -117,9 +123,9 @@ func newConfig(options []Option) config {
 		fallback[string](defaultEndpoint),
 	)
 	c.path = c.path.Resolve(
-		getenv[string](envPathSignal, convPathExact),
-		getenv[string](envPathOTLP, convPath),
-		fallback[string](defaultPath),
+		getenv[endpointPath](envPathSignal, convPathExact),
+		getenv[endpointPath](envPathOTLP, convPath),
+		fallback[endpointPath](endpointPath{Path: defaultPath}),
 	)
 	c.insecure = c.insecure.Resolve(
 		loadInsecureFromEnvEndpoint(envEndpoint),
@@ -199,7 +205,7 @@ func WithEndpointURL(rawURL string) Option {
 	}
 	return fnOpt(func(c config) config {
 		c.endpoint = newSetting(u.Host)
-		c.path = newSetting(u.Path)
+		c.path = newSetting(endpointPath{Path: u.Path, RawPath: u.RawPath})
 		c.insecure = insecureFromScheme(c.insecure, u.Scheme)
 		return c
 	})
@@ -244,7 +250,7 @@ func WithCompression(compression Compression) Option {
 // passed, "/v1/logs" will be used.
 func WithURLPath(urlPath string) Option {
 	return fnOpt(func(c config) config {
-		c.path = newSetting(urlPath)
+		c.path = newSetting(endpointPath{Path: urlPath})
 		return c
 	})
 }
@@ -558,29 +564,38 @@ func convEndpoint(s string) (string, error) {
 	return u.Host, nil
 }
 
-// convPathExact converts s from a URL string to the exact path if s is a valid
-// URL. Otherwise, "" and an error are returned.
+// convPathExact converts s from a URL string to its path and original encoding if
+// s is a valid URL. Otherwise, an empty path and an error are returned.
 //
 // If the path contained in s is empty, "/" is returned.
-func convPathExact(s string) (string, error) {
+func convPathExact(s string) (endpointPath, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return "", err
+		return endpointPath{}, err
 	}
 	if u.Path == "" {
-		return "/", nil
+		return endpointPath{Path: "/"}, nil
 	}
-	return u.Path, nil
+	return endpointPath{Path: u.Path, RawPath: u.RawPath}, nil
 }
 
-// convPath converts s from a URL string to an OTLP endpoint path if s is a
-// valid URL. Otherwise, "" and an error are returned.
-func convPath(s string) (string, error) {
+// convPath converts s from a URL string to an OTLP endpoint path and its original
+// encoding if s is a valid URL. Otherwise, an empty path and an error are returned.
+func convPath(s string) (endpointPath, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return "", err
+		return endpointPath{}, err
 	}
-	return path.Join(u.Path, defaultPath), nil
+	suffix := defaultPath
+	// Reuse a trailing slash without cleaning the configured base path.
+	if strings.HasSuffix(u.EscapedPath(), "/") {
+		suffix = strings.TrimPrefix(suffix, "/")
+	}
+	p := endpointPath{Path: u.Path + suffix, RawPath: u.RawPath}
+	if p.RawPath != "" {
+		p.RawPath += suffix
+	}
+	return p, nil
 }
 
 // convInsecure converts s from a string to a bool without case sensitivity.

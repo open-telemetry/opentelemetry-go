@@ -1202,11 +1202,13 @@ For more information about the maintainer role, see the [community repository](h
 
 ### Approvers
 
-- [Flc](https://github.com/flc1125), Independent
+- [Puneet Singh](https://github.com/ps-mir), Independent
 
 For more information about the approver role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#approver).
 
 ### Triagers
+
+- [Marc Schäfer](https://github.com/marcschaeferger), T&A SYSTEME GmbH
 
 For more information about the triager role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#triager).
 
@@ -1218,6 +1220,7 @@ For more information about the triager role, see the [community repository](http
 - [Cheng-Zhen Yang](https://github.com/scorpionknifes)
 - [Chester Cheung](https://github.com/hanyuancheung)
 - [Evan Torrie](https://github.com/evantorrie)
+- [Flc゛](https://github.com/flc1125)
 - [Gustavo Silva Paiva](https://github.com/paivagustavo)
 - [Josh MacDonald](https://github.com/jmacd)
 - [Liz Fong-Jones](https://github.com/lizthegrey)
