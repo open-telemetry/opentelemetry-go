@@ -46,23 +46,43 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // Resource and no Readers. Readers cannot be added after a MeterProvider is
 // created. This means the returned MeterProvider, one created with no
 // Readers, will perform no operations.
+//
+// If options include conflicting experimental options, an error is logged and
+// the returned MeterProvider performs no operations; ForceFlush and Shutdown
+// still reach its Readers.
 func NewMeterProvider(options ...Option) *MeterProvider {
+	// conflicts lists pairs of experimental features that cannot be used
+	// together; it is empty until such a pair exists. A feature conflicting
+	// with several others gets one entry per pair, and conflicts are not
+	// transitive. For example, once #8743 adds MeterConfigurator:
+	//
+	//	{reflect.TypeFor[finishOption](), reflect.TypeFor[meterConfiguratorOption]()}
+	var conflicts []experimentalConflict
+	return newMeterProvider(conflicts, options...)
+}
+
+func newMeterProvider(conflicts []experimentalConflict, options ...Option) *MeterProvider {
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()
-	factory, experimentalShutdown := newExperimentalMeterFactory(conf.experimental)
-	if experimentalShutdown != nil {
-		readerShutdown := sdown
-		sdown = func(ctx context.Context) error {
-			return errors.Join(readerShutdown(ctx), experimentalShutdown(ctx))
+	mp := &MeterProvider{
+		pipes:      newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
+		forceFlush: flush,
+		shutdown:   sdown,
+	}
+
+	if err := validateExperimental(conf.experimental, conflicts); err != nil {
+		global.Error(err, "invalid experimental MeterProvider options, MeterProvider will perform no operations")
+		mp.stopped.Store(true)
+	} else {
+		factory, experimentalShutdown := newExperimentalMeterFactory(conf.experimental)
+		mp.meterFactory = factory
+		if experimentalShutdown != nil {
+			mp.shutdown = func(ctx context.Context) error {
+				return errors.Join(sdown(ctx), experimentalShutdown(ctx))
+			}
 		}
 	}
 
-	mp := &MeterProvider{
-		pipes:        newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
-		meterFactory: factory,
-		forceFlush:   flush,
-		shutdown:     sdown,
-	}
 	// Log after creation so all readers show correctly they are registered.
 	global.Info(
 		"MeterProvider created",
