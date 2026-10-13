@@ -1,4 +1,4 @@
-# Experimental SDK Metric Features
+# Experimental Metric SDK
 
 <!--
 Adding/uncommenting the following after initial PR merge:

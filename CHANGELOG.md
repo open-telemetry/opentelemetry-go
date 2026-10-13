@@ -10,6 +10,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add experimental `WithFinish` support for `Int64Counter` Sum aggregation,
+  including cancellable provider shutdown and parked waits for in-flight measurements,
+  in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 - Add experimental support for enabling/disabling `Meter`s per instrumentation scope via `MeterConfigurator`, `MeterConfig`, and `MeterConfiguratorHandle` in `go.opentelemetry.io/otel/sdk/metric/x`. Configuration is set at `MeterProvider` construction via `WithMeterConfigurator` and can be updated live through `MeterConfiguratorHandle.Set`. This gates recording (`Add`/`Record`/`Observe`) only. `MeterProvider`s without it are unaffected. (#8743)
 
 ### Fixed
