@@ -23,12 +23,13 @@ import (
 
 // Default values.
 var (
-	defaultEndpoint                              = "localhost:4318"
-	defaultPath                                  = "/v1/logs"
-	defaultTimeout                               = 10 * time.Second
-	defaultMaxRequestSize                        = 64 * 1024 * 1024
-	defaultProxy          HTTPTransportProxyFunc = http.ProxyFromEnvironment
-	defaultRetryCfg                              = retry.DefaultConfig
+	defaultEndpoint                               = "localhost:4318"
+	defaultPath                                   = "/v1/logs"
+	defaultTimeout                                = 10 * time.Second
+	defaultMaxRequestSize                         = 64 * 1024 * 1024
+	defaultMaxResponseSize                        = int64(4 * 1024 * 1024)
+	defaultProxy           HTTPTransportProxyFunc = http.ProxyFromEnvironment
+	defaultRetryCfg                               = retry.DefaultConfig
 )
 
 // Environment variable keys.
@@ -89,18 +90,26 @@ type fnOpt func(config) config
 
 func (f fnOpt) applyHTTPOption(c config) config { return f(c) }
 
+// endpointPath keeps the decoded path and its original encoding under the same
+// configuration precedence.
+type endpointPath struct {
+	Path    string
+	RawPath string
+}
+
 type config struct {
-	endpoint       setting[string]
-	path           setting[string]
-	insecure       setting[bool]
-	tlsCfg         setting[*tls.Config]
-	headers        setting[map[string]string]
-	compression    setting[Compression]
-	maxRequestSize setting[int]
-	timeout        setting[time.Duration]
-	proxy          setting[HTTPTransportProxyFunc]
-	retryCfg       setting[retry.Config]
-	httpClient     *http.Client
+	endpoint        setting[string]
+	path            setting[endpointPath]
+	insecure        setting[bool]
+	tlsCfg          setting[*tls.Config]
+	headers         setting[map[string]string]
+	compression     setting[Compression]
+	maxRequestSize  setting[int]
+	maxResponseSize setting[int64]
+	timeout         setting[time.Duration]
+	proxy           setting[HTTPTransportProxyFunc]
+	retryCfg        setting[retry.Config]
+	httpClient      *http.Client
 }
 
 func newConfig(options []Option) config {
@@ -114,9 +123,9 @@ func newConfig(options []Option) config {
 		fallback[string](defaultEndpoint),
 	)
 	c.path = c.path.Resolve(
-		getenv[string](envPathSignal, convPathExact),
-		getenv[string](envPathOTLP, convPath),
-		fallback[string](defaultPath),
+		getenv[endpointPath](envPathSignal, convPathExact),
+		getenv[endpointPath](envPathOTLP, convPath),
+		fallback[endpointPath](endpointPath{Path: defaultPath}),
 	)
 	c.insecure = c.insecure.Resolve(
 		loadInsecureFromEnvEndpoint(envEndpoint),
@@ -137,6 +146,9 @@ func newConfig(options []Option) config {
 	)
 	c.maxRequestSize = c.maxRequestSize.Resolve(
 		fallback[int](defaultMaxRequestSize),
+	)
+	c.maxResponseSize = c.maxResponseSize.Resolve(
+		fallback[int64](defaultMaxResponseSize),
 	)
 	c.proxy = c.proxy.Resolve(
 		fallback[HTTPTransportProxyFunc](defaultProxy),
@@ -193,7 +205,7 @@ func WithEndpointURL(rawURL string) Option {
 	}
 	return fnOpt(func(c config) config {
 		c.endpoint = newSetting(u.Host)
-		c.path = newSetting(u.Path)
+		c.path = newSetting(endpointPath{Path: u.Path, RawPath: u.RawPath})
 		c.insecure = insecureFromScheme(c.insecure, u.Scheme)
 		return c
 	})
@@ -238,7 +250,7 @@ func WithCompression(compression Compression) Option {
 // passed, "/v1/logs" will be used.
 func WithURLPath(urlPath string) Option {
 	return fnOpt(func(c config) config {
-		c.path = newSetting(urlPath)
+		c.path = newSetting(endpointPath{Path: urlPath})
 		return c
 	})
 }
@@ -328,6 +340,20 @@ func WithTimeout(duration time.Duration) Option {
 func WithMaxRequestSize(size int) Option {
 	return fnOpt(func(c config) config {
 		c.maxRequestSize = newSetting(size)
+		return c
+	})
+}
+
+// WithMaxResponseSize sets the maximum size, in bytes, of an OTLP/HTTP
+// response body, after decompression, that the exporter will read.
+//
+// By default, a limit of 4 MiB is used. Values less than or equal to zero are
+// ignored. The response-size limit cannot be disabled.
+func WithMaxResponseSize(size int64) Option {
+	return fnOpt(func(c config) config {
+		if size > 0 {
+			c.maxResponseSize = newSetting(size)
+		}
 		return c
 	})
 }
@@ -467,8 +493,8 @@ var readFile = os.ReadFile
 
 // loadCertPool loads and returns the *x509.CertPool found at path if it exists
 // and is valid. Otherwise, nil and an error are returned.
-func loadCertPool(path string) (*x509.CertPool, error) {
-	b, err := readFile(path)
+func loadCertPool(filePath string) (*x509.CertPool, error) {
+	b, err := readFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -538,29 +564,38 @@ func convEndpoint(s string) (string, error) {
 	return u.Host, nil
 }
 
-// convPathExact converts s from a URL string to the exact path if s is a valid
-// URL. Otherwise, "" and an error are returned.
+// convPathExact converts s from a URL string to its path and original encoding if
+// s is a valid URL. Otherwise, an empty path and an error are returned.
 //
 // If the path contained in s is empty, "/" is returned.
-func convPathExact(s string) (string, error) {
+func convPathExact(s string) (endpointPath, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return "", err
+		return endpointPath{}, err
 	}
 	if u.Path == "" {
-		return "/", nil
+		return endpointPath{Path: "/"}, nil
 	}
-	return u.Path, nil
+	return endpointPath{Path: u.Path, RawPath: u.RawPath}, nil
 }
 
-// convPath converts s from a URL string to an OTLP endpoint path if s is a
-// valid URL. Otherwise, "" and an error are returned.
-func convPath(s string) (string, error) {
+// convPath converts s from a URL string to an OTLP endpoint path and its original
+// encoding if s is a valid URL. Otherwise, an empty path and an error are returned.
+func convPath(s string) (endpointPath, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return "", err
+		return endpointPath{}, err
 	}
-	return u.Path + "/v1/logs", nil
+	suffix := defaultPath
+	// Reuse a trailing slash without cleaning the configured base path.
+	if strings.HasSuffix(u.EscapedPath(), "/") {
+		suffix = strings.TrimPrefix(suffix, "/")
+	}
+	p := endpointPath{Path: u.Path + suffix, RawPath: u.RawPath}
+	if p.RawPath != "" {
+		p.RawPath += suffix
+	}
+	return p, nil
 }
 
 // convInsecure converts s from a string to a bool without case sensitivity.

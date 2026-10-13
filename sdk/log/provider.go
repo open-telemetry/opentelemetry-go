@@ -21,19 +21,21 @@ import (
 )
 
 const (
-	defaultAttrCntLim    = 128
-	defaultAttrValLenLim = -1
+	defaultAttrCntLim      = 128
+	defaultAttrValLenLim   = -1
+	defaultAttrValDepthLim = 64
 
 	envarAttrCntLim    = "OTEL_LOGRECORD_ATTRIBUTE_COUNT_LIMIT"
 	envarAttrValLenLim = "OTEL_LOGRECORD_ATTRIBUTE_VALUE_LENGTH_LIMIT"
 )
 
 type providerConfig struct {
-	resource      *resource.Resource
-	processors    []Processor
-	attrCntLim    setting[int]
-	attrValLenLim setting[int]
-	allowDupKeys  setting[bool]
+	resource        *resource.Resource
+	processors      []Processor
+	attrCntLim      setting[int]
+	attrValLenLim   setting[int]
+	attrValDepthLim setting[int]
+	allowDupKeys    setting[bool]
 }
 
 type experimentalOption interface {
@@ -63,6 +65,10 @@ func newProviderConfig(opts []LoggerProviderOption) providerConfig {
 		fallback[int](defaultAttrValLenLim),
 	)
 
+	c.attrValDepthLim = c.attrValDepthLim.Resolve(
+		fallback[int](defaultAttrValDepthLim),
+	)
+
 	return c
 }
 
@@ -79,6 +85,7 @@ type LoggerProvider struct {
 	processors                []Processor
 	attributeCountLimit       int
 	attributeValueLengthLimit int
+	attributeValueDepthLimit  int
 	allowDupKeys              bool
 
 	loggersMu sync.Mutex
@@ -109,6 +116,7 @@ func NewLoggerProvider(opts ...LoggerProviderOption) *LoggerProvider {
 		processors:                cfg.processors,
 		attributeCountLimit:       cfg.attrCntLim.Value,
 		attributeValueLengthLimit: cfg.attrValLenLim.Value,
+		attributeValueDepthLimit:  cfg.attrValDepthLim.Value,
 		allowDupKeys:              cfg.allowDupKeys.Value,
 	}
 }
@@ -136,7 +144,9 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 		logInvalidAttribute()
 	}
 	if !p.allowDupKeys {
-		attrs, _ = attrnorm.Set(attrs)
+		attrs, _, _ = attrnorm.SetDedupLimitDepth(attrs, p.attrValueDepthLimit())
+	} else {
+		attrs, _ = attrnorm.SetLimitDepth(attrs, p.attrValueDepthLimit())
 	}
 	scope := instrumentation.Scope{
 		Name:       name,
@@ -161,6 +171,13 @@ func (p *LoggerProvider) Logger(name string, opts ...log.LoggerOption) log.Logge
 	}
 
 	return l
+}
+
+func (p *LoggerProvider) attrValueDepthLimit() int {
+	if p.attributeValueDepthLimit == 0 {
+		return defaultAttrValDepthLim
+	}
+	return p.attributeValueDepthLimit
 }
 
 // Shutdown shuts down the provider and all processors in the order they were
@@ -293,6 +310,7 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 }
 
 // WithProcessor associates a Processor with a LoggerProvider.
+// If processor is nil, this option has no effect.
 //
 // By default, if this option is not used, the LoggerProvider will perform no
 // operations; no data will be exported without a processor.
@@ -305,7 +323,9 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 // synchronously export log records.
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		cfg.processors = append(cfg.processors, processor)
+		if processor != nil {
+			cfg.processors = append(cfg.processors, processor)
+		}
 		return cfg
 	})
 }
@@ -344,6 +364,29 @@ func WithAttributeCountLimit(limit int) LoggerProviderOption {
 func WithAttributeValueLengthLimit(limit int) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
 		cfg.attrValLenLim = newSetting(limit)
+		return cfg
+	})
+}
+
+// WithAttributeValueDepthLimit sets the maximum allowed depth for attribute
+// values. Depth starts at one for the top-level value and increments when
+// descending into an array element or map value. An array or map beyond this
+// depth is replaced by an empty value.
+//
+// This limit applies to log record and instrumentation scope attributes
+// processed by this LoggerProvider. It does not apply to Resource attributes
+// or log record bodies.
+//
+// Setting this to zero means the default limit of 64 is used. Setting this to
+// a negative value means no limit is applied.
+//
+// There is no environment variable for this limit.
+func WithAttributeValueDepthLimit(limit int) LoggerProviderOption {
+	if limit == 0 {
+		limit = defaultAttrValDepthLim
+	}
+	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
+		cfg.attrValDepthLim = newSetting(limit)
 		return cfg
 	})
 }

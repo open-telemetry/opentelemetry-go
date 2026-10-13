@@ -59,6 +59,17 @@ func (m members) Baggage(t *testing.T) baggage.Baggage {
 	return bag
 }
 
+func assertBaggageEqual(t *testing.T, expected, actual baggage.Baggage) {
+	t.Helper()
+	assert.Equal(t, expected.Len(), actual.Len())
+	for _, want := range expected.Members() {
+		got := actual.Member(want.Key())
+		assert.Equal(t, want.Key(), got.Key())
+		assert.Equal(t, want.Value(), got.Value())
+		assert.Equal(t, want.Properties(), got.Properties())
+	}
+}
+
 func TestExtractValidBaggage(t *testing.T) {
 	prop := propagation.TextMapPropagator(propagation.Baggage{})
 	tests := []struct {
@@ -136,12 +147,12 @@ func TestExtractValidBaggage(t *testing.T) {
 			// test with http header carrier (which implements ValuesGetter)
 			ctx := prop.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
 			expected := tt.want.Baggage(t)
-			assert.Equal(t, expected, baggage.FromContext(ctx), "should extract baggage for HeaderCarrier")
+			assertBaggageEqual(t, expected, baggage.FromContext(ctx))
 
 			// test with map carrier (which does not implement ValuesGetter)
 			ctx = prop.Extract(t.Context(), mapCarr)
 			expected = tt.want.Baggage(t)
-			assert.Equal(t, expected, baggage.FromContext(ctx), "should extract baggage for MapCarrier")
+			assertBaggageEqual(t, expected, baggage.FromContext(ctx))
 		})
 	}
 }
@@ -352,7 +363,7 @@ func TestExtractValidMultipleBaggageHeaders(t *testing.T) {
 			// If want is specified, check exact match
 			if tt.want != nil {
 				expected := tt.want.Baggage(t)
-				assert.Equal(t, expected, got)
+				assertBaggageEqual(t, expected, got)
 			} else {
 				assert.Equal(t, tt.wantCount, got.Len(), "expected member count")
 				assert.Len(t, got.String(), tt.wantBytes, "expected baggage size")
@@ -412,7 +423,7 @@ func TestExtractInvalidDistributedContextFromHTTPReq(t *testing.T) {
 			expected := tt.has.Baggage(t)
 			ctx := baggage.ContextWithBaggage(t.Context(), expected)
 			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
-			assert.Equal(t, expected, baggage.FromContext(ctx))
+			assertBaggageEqual(t, expected, baggage.FromContext(ctx))
 		})
 	}
 }
@@ -513,7 +524,7 @@ func TestBaggageInjectExtractRoundtrip(t *testing.T) {
 			ctx = propagator.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
 			got := baggage.FromContext(ctx)
 
-			assert.Equal(t, b, got)
+			assertBaggageEqual(t, b, got)
 		})
 	}
 }
@@ -649,7 +660,7 @@ func TestExtractManyBaggageHeader(t *testing.T) {
 			ctx := prop.Extract(t.Context(), propagation.HeaderCarrier(req.Header))
 			got := baggage.FromContext(ctx)
 
-			assert.Equal(t, tt.want().Baggage(t), got)
+			assertBaggageEqual(t, tt.want().Baggage(t), got)
 			if assert.Error(t, eh.err) {
 				for _, s := range tt.wantErrStr {
 					assert.Contains(t, eh.err.Error(), s)
@@ -710,6 +721,36 @@ func TestExtractInvalidBaggageReportsErrorOnce(t *testing.T) {
 			assert.Equal(t, 1, eh.count, "invalid baggage extraction should report only once")
 			if assert.Error(t, eh.err) {
 				assert.Contains(t, eh.err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func BenchmarkBaggageExtractPropertyDensity(b *testing.B) {
+	tests := []struct {
+		name, value   string
+		propertyCount int
+	}{
+		{name: "ValueOnly", value: "k=" + strings.Repeat("v", maxBytesPerBaggageString-2)},
+		{name: "DenseProperties", value: "k=" + strings.Repeat(";a", 4095), propertyCount: 4095},
+		{name: "DenseValueProperties", value: "k=" + strings.Repeat(";a=", 2730), propertyCount: 2730},
+		{name: "DenseEncodedProperties", value: "k=" + strings.Repeat(";a=%ff", 1170), propertyCount: 1170},
+	}
+	for _, test := range tests {
+		b.Run(test.name, func(b *testing.B) {
+			header := http.Header{"Baggage": {test.value}}
+			carrier := propagation.HeaderCarrier(header)
+			propagator := propagation.Baggage{}
+			ctx := b.Context()
+			extracted := propagator.Extract(ctx, carrier)
+			member := baggage.FromContext(extracted).Member("k")
+			assert.Equal(b, "k", member.Key())
+			assert.Len(b, member.Properties(), test.propertyCount)
+			b.SetBytes(int64(len(test.value)))
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				propagator.Extract(ctx, carrier)
 			}
 		})
 	}

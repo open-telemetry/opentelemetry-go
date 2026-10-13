@@ -18,24 +18,31 @@ import (
 func TestSettingSpanLimits(t *testing.T) {
 	envLimits := func(val string) map[string]string {
 		return map[string]string{
-			env.SpanAttributeValueLengthKey: val,
-			env.SpanEventCountKey:           val,
-			env.SpanAttributeCountKey:       val,
-			env.SpanLinkCountKey:            val,
-			env.SpanEventAttributeCountKey:  val,
-			env.SpanLinkAttributeCountKey:   val,
+			env.SpanAttributeValueLengthKey:         val,
+			"OTEL_SPAN_ATTRIBUTE_VALUE_DEPTH_LIMIT": val,
+			env.SpanEventCountKey:                   val,
+			env.SpanAttributeCountKey:               val,
+			env.SpanLinkCountKey:                    val,
+			env.SpanEventAttributeCountKey:          val,
+			env.SpanLinkAttributeCountKey:           val,
 		}
 	}
 
 	limits := func(n int) *SpanLimits {
 		lims := NewSpanLimits()
 		lims.AttributeValueLengthLimit = n
+		lims.AttributeValueDepthLimit = n
 		lims.AttributeCountLimit = n
 		lims.EventCountLimit = n
 		lims.LinkCountLimit = n
 		lims.AttributePerEventCountLimit = n
 		lims.AttributePerLinkCountLimit = n
 		return &lims
+	}
+	envWant := func(n int) SpanLimits {
+		lims := *limits(n)
+		lims.AttributeValueDepthLimit = DefaultAttributeValueDepthLimit
+		return lims
 	}
 
 	tests := []struct {
@@ -52,7 +59,7 @@ func TestSettingSpanLimits(t *testing.T) {
 		{
 			name: "env",
 			env:  envLimits("42"),
-			want: *limits(42),
+			want: envWant(42),
 		},
 		{
 			name: "opt",
@@ -63,6 +70,13 @@ func TestSettingSpanLimits(t *testing.T) {
 			name:   "raw-opt",
 			rawOpt: limits(42),
 			want:   *limits(42),
+		},
+		{
+			name:   "raw-opt-zero-depth",
+			rawOpt: limits(0),
+			want: SpanLimits{
+				AttributeValueDepthLimit: DefaultAttributeValueDepthLimit,
+			},
 		},
 		{
 			name: "opt-override",
@@ -91,7 +105,7 @@ func TestSettingSpanLimits(t *testing.T) {
 			// negative values to signal this than this value is expected to
 			// pass through.
 			env:  envLimits("-1"),
-			want: *limits(-1),
+			want: envWant(-1),
 		},
 		{
 			name: "opt(unlimited)",
@@ -127,6 +141,30 @@ func TestSettingSpanLimits(t *testing.T) {
 	}
 }
 
+func TestAttributeValueDepthLimitOptionPrecedence(t *testing.T) {
+	limits := NewSpanLimits()
+	limits.AttributeValueDepthLimit = 7
+
+	assert.Equal(t, 3, NewTracerProvider(
+		WithRawSpanLimits(limits),
+		WithAttributeValueDepthLimit(3),
+	).spanLimits.AttributeValueDepthLimit)
+
+	assert.Equal(t, 7, NewTracerProvider(
+		WithAttributeValueDepthLimit(3),
+		WithRawSpanLimits(limits),
+	).spanLimits.AttributeValueDepthLimit)
+
+	assert.Equal(t, DefaultAttributeValueDepthLimit, NewTracerProvider(
+		WithAttributeValueDepthLimit(0),
+	).spanLimits.AttributeValueDepthLimit)
+
+	limits.AttributeValueDepthLimit = 0
+	assert.Equal(t, DefaultAttributeValueDepthLimit, NewTracerProvider(
+		WithRawSpanLimits(limits),
+	).spanLimits.AttributeValueDepthLimit)
+}
+
 type recorder []ReadOnlySpan
 
 func (*recorder) OnStart(context.Context, ReadWriteSpan) {}
@@ -150,7 +188,7 @@ func testSpanLimits(t *testing.T, limits SpanLimits) ReadOnlySpan {
 	}
 	_, span := tracer.Start(ctx, "span-name", trace.WithLinks(l, l))
 	span.SetAttributes(
-		attribute.String("string", "abc"),
+		attribute.String("string", "a\uFFFDb"),
 		attribute.StringSlice("stringSlice", []string{"abc", "def"}),
 		attribute.String("euro", "€"), // this is a 3-byte rune
 	)
@@ -169,14 +207,14 @@ func TestSpanLimits(t *testing.T) {
 		// Unlimited.
 		limits.AttributeValueLengthLimit = -1
 		attrs := testSpanLimits(t, limits).Attributes()
-		assert.Contains(t, attrs, attribute.String("string", "abc"))
+		assert.Contains(t, attrs, attribute.String("string", "a\uFFFDb"))
 		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"abc", "def"}))
 		assert.Contains(t, attrs, attribute.String("euro", "€"))
 
 		limits.AttributeValueLengthLimit = 2
 		attrs = testSpanLimits(t, limits).Attributes()
 		// Ensure string and string slice attributes are truncated.
-		assert.Contains(t, attrs, attribute.String("string", "ab"))
+		assert.Contains(t, attrs, attribute.String("string", "a\uFFFD"))
 		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"ab", "de"}))
 		assert.Contains(t, attrs, attribute.String("euro", "€"))
 

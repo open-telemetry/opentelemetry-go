@@ -150,7 +150,10 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 		return noop.NewTracerProvider().Tracer(name, opts...)
 	}
 	c := trace.NewTracerConfig(opts...)
-	attrs, _ := attrnorm.Set(c.InstrumentationAttributes())
+	attrs, _, _ := attrnorm.SetDedupLimitDepth(
+		c.InstrumentationAttributes(),
+		p.spanLimits.AttributeValueDepthLimit,
+	)
 	if name == "" {
 		name = defaultTracerName
 	}
@@ -208,7 +211,11 @@ func (p *TracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.T
 }
 
 // RegisterSpanProcessor adds the given SpanProcessor to the list of SpanProcessors.
+// If sp is nil, this method has no effect.
 func (p *TracerProvider) RegisterSpanProcessor(sp SpanProcessor) {
+	if sp == nil {
+		return
+	}
 	// This check prevents calls during a shutdown.
 	if p.isShutdown.Load() {
 		return
@@ -360,9 +367,12 @@ func WithBatcher(e SpanExporter, opts ...BatchSpanProcessorOption) TracerProvide
 }
 
 // WithSpanProcessor registers the SpanProcessor with a TracerProvider.
+// If sp is nil, this option has no effect.
 func WithSpanProcessor(sp SpanProcessor) TracerProviderOption {
 	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
-		cfg.processors = append(cfg.processors, sp)
+		if sp != nil {
+			cfg.processors = append(cfg.processors, sp)
+		}
 		return cfg
 	})
 }
@@ -430,6 +440,29 @@ func WithSampler(s Sampler) TracerProviderOption {
 	})
 }
 
+// WithAttributeValueDepthLimit sets the maximum allowed depth for attribute
+// values. Depth starts at one for the top-level value and increments when
+// descending into an array element or map value. An array or map beyond this
+// depth is replaced by an empty value.
+//
+// This limit applies to span, event, link, and instrumentation scope
+// attributes processed by this TracerProvider. It does not apply to Resource
+// attributes.
+//
+// Setting this to zero means the default limit of 64 is used. Setting this to
+// a negative value means no limit is applied.
+//
+// There is no environment variable for this limit.
+func WithAttributeValueDepthLimit(limit int) TracerProviderOption {
+	if limit == 0 {
+		limit = DefaultAttributeValueDepthLimit
+	}
+	return traceProviderOptionFunc(func(cfg tracerProviderConfig) tracerProviderConfig {
+		cfg.spanLimits.AttributeValueDepthLimit = limit
+		return cfg
+	})
+}
+
 // WithSpanLimits returns a TracerProviderOption that configures a
 // TracerProvider to use the SpanLimits sl. These SpanLimits bound any Span
 // created by a Tracer from the TracerProvider.
@@ -448,6 +481,9 @@ func WithSampler(s Sampler) TracerProviderOption {
 func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 	if sl.AttributeValueLengthLimit <= 0 {
 		sl.AttributeValueLengthLimit = DefaultAttributeValueLengthLimit
+	}
+	if sl.AttributeValueDepthLimit <= 0 {
+		sl.AttributeValueDepthLimit = DefaultAttributeValueDepthLimit
 	}
 	if sl.AttributeCountLimit <= 0 {
 		sl.AttributeCountLimit = DefaultAttributeCountLimit
@@ -474,13 +510,14 @@ func WithSpanLimits(sl SpanLimits) TracerProviderOption {
 // TracerProvider to use these limits. These limits bound any Span created by
 // a Tracer from the TracerProvider.
 //
-// The limits will be used as-is. Zero or negative values will not be changed
-// to the default value like WithSpanLimits does. Setting a limit to zero will
-// effectively disable the related resource it limits and setting to a
-// negative value will mean that resource is unlimited. Consequentially, this
-// means that the zero-value SpanLimits will disable all span resources.
-// Because of this, limits should be constructed using NewSpanLimits and
-// updated accordingly.
+// The limits will be used as-is, except that an AttributeValueDepthLimit of
+// zero means the default limit is used. Other zero or negative values will not
+// be changed to the default value like WithSpanLimits does. Setting a limit to
+// zero will effectively disable the related resource it limits and setting to
+// a negative value will mean that resource is unlimited. Consequentially, the
+// zero-value SpanLimits will disable all span resources except the attribute
+// value depth limit. Because of this, limits should be constructed using
+// NewSpanLimits and updated accordingly.
 //
 // If this or WithSpanLimits are not provided, the TracerProvider will use the
 // limits defined by environment variables, or the defaults if unset. Refer to
@@ -525,6 +562,9 @@ func ensureValidTracerProviderConfig(cfg tracerProviderConfig) tracerProviderCon
 	}
 	if cfg.resource == nil {
 		cfg.resource = resource.Default()
+	}
+	if cfg.spanLimits.AttributeValueDepthLimit == 0 {
+		cfg.spanLimits.AttributeValueDepthLimit = DefaultAttributeValueDepthLimit
 	}
 	return cfg
 }
