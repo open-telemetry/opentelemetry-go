@@ -54,12 +54,23 @@ type client struct {
 	inst   *observ.Instrumentation
 }
 
-// Compile time check *client implements otlptrace.Client.
-var _ otlptrace.Client = (*client)(nil)
-var _ otlptrace.SyncClient = (*client)(nil)
+// Compile time checks *client implements otlptrace.Client and SyncClient.
+var (
+	_ otlptrace.Client     = (*client)(nil)
+	_ otlptrace.SyncClient = (*client)(nil)
+)
 
 // NewClient creates a new gRPC trace client.
 func NewClient(opts ...Option) otlptrace.Client {
+	return newClient(opts...)
+}
+
+// NewSyncClient creates a new gRPC trace client that satisfies
+// otlptrace.SyncClient. Use it with otlptrace.NewSync without a type
+// assertion. The returned client fully consumes uploads before returning
+// and retains nothing afterwards, satisfying the synchronous ownership
+// contract required for arena reuse.
+func NewSyncClient(opts ...Option) otlptrace.SyncClient {
 	return newClient(opts...)
 }
 

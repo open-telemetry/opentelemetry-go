@@ -1002,3 +1002,17 @@ type roundTripperFunc func(*http.Request) (*http.Response, error)
 func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 	return f(r)
 }
+
+func TestNewSyncClientSatisfiesSyncClient(t *testing.T) {
+	client := otlptracehttp.NewSyncClient(
+		otlptracehttp.WithEndpoint("localhost:4318"),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+	)
+
+	ctx := t.Context()
+	exp := otlptrace.NewSyncUnstarted(client)
+	require.NotNil(t, exp)
+	require.NoError(t, exp.Start(ctx))
+	require.NoError(t, exp.Shutdown(ctx))
+}

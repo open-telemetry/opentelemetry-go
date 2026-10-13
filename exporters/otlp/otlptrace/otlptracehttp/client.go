@@ -82,11 +82,26 @@ type client struct {
 	inst   *observ.Instrumentation
 }
 
-var _ otlptrace.Client = (*client)(nil)
-var _ otlptrace.SyncClient = (*client)(nil)
+var (
+	_ otlptrace.Client     = (*client)(nil)
+	_ otlptrace.SyncClient = (*client)(nil)
+)
 
 // NewClient creates a new HTTP trace client.
 func NewClient(opts ...Option) otlptrace.Client {
+	return newSyncClient(opts...)
+}
+
+// NewSyncClient creates a new HTTP trace client that satisfies
+// otlptrace.SyncClient. Use it with otlptrace.NewSync without a type
+// assertion. The returned client fully consumes uploads before returning
+// and retains nothing afterwards, satisfying the synchronous ownership
+// contract required for arena reuse.
+func NewSyncClient(opts ...Option) otlptrace.SyncClient {
+	return newSyncClient(opts...)
+}
+
+func newSyncClient(opts ...Option) *client {
 	cfg := otlpconfig.NewHTTPConfig(asHTTPOptions(opts)...)
 
 	httpClient := cfg.Traces.HTTPClient

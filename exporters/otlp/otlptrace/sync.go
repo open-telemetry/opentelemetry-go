@@ -16,6 +16,23 @@ import (
 // synchronous ownership contract. It reuses arena-backed allocations across
 // exports safely because SyncClient.UploadTracesSync guarantees the data is
 // fully consumed before returning.
+//
+// A separate exporter type is used because the existing Exporter must remain
+// safe with any Client, including ones that retain uploads asynchronously.
+// Reusing arena memory under that contract would corrupt in-flight exports.
+// SyncExporter makes the synchronous boundary explicit at the type level: it
+// only accepts a SyncClient, so misuse fails to compile instead of corrupting
+// data at runtime. The Start and Shutdown methods mirror Exporter so the
+// lifecycle is familiar; they are duplicated to keep SyncExporter independent
+// (own pool and retention config, no shared mutable state).
+//
+// Construct clients without a type assertion using the transport constructors:
+//
+//	httpClient := otlptracehttp.NewSyncClient(otlptracehttp.WithEndpointURL(...))
+//	exp, err := otlptrace.NewSync(ctx, httpClient)
+//
+//	grpcClient := otlptracegrpc.NewSyncClient(otlptracegrpc.WithEndpoint(...))
+//	exp, err := otlptrace.NewSync(ctx, grpcClient)
 type SyncExporter struct {
 	client SyncClient
 

@@ -11,5 +11,13 @@ The SyncExporter and SyncClient provide a synchronous export path with an
 explicit ownership contract. SyncClient.UploadTracesSync guarantees the
 supplied trace data is fully consumed before returning and is not retained
 afterwards, allowing SyncExporter to safely reuse arena-backed allocations.
+
+Use the transport sync constructors to avoid a type assertion:
+
+	httpClient := otlptracehttp.NewSyncClient(otlptracehttp.WithEndpointURL(...))
+	exp, err := NewSync(ctx, httpClient)
+
+	grpcClient := otlptracegrpc.NewSyncClient(otlptracegrpc.WithEndpoint(...))
+	exp, err := NewSync(ctx, grpcClient)
 */
 package otlptrace
