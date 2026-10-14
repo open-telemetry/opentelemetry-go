@@ -219,21 +219,20 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		}
 
 		statusCode = resp.StatusCode
+		respData, err := c.readResponse(resp)
+		if err != nil {
+			return err
+		}
 		if sc := resp.StatusCode; sc >= 200 && sc <= 299 {
 			// Success, do not retry.
 
-			// Read the partial success message, if any.
-			var respData bytes.Buffer
-			if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
-				return err
-			}
-			if respData.Len() == 0 {
+			if len(respData) == 0 {
 				return nil
 			}
 
 			if isProtobufContentType(resp.Header.Get("Content-Type")) {
 				var respProto collogpb.ExportLogsServiceResponse
-				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
+				if err := proto.Unmarshal(respData, &respProto); err != nil {
 					return err
 				}
 
@@ -254,11 +253,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		// body, so we read it to include in the error
 		// message to be returned. It will help in
 		// debugging the actual issue.
-		var respData bytes.Buffer
-		if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
-			return err
-		}
-		respStr := strings.TrimSpace(respData.String())
+		respStr := strings.TrimSpace(string(respData))
 		if respStr == "" {
 			respStr = "(empty)"
 		}
@@ -276,6 +271,33 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 			return fmt.Errorf("failed to send logs to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
 	}))
+}
+
+// readResponse returns the response body. A gzip Content-Encoding is
+// decompressed here. Go's Transport removes that header after it
+// decompresses a response itself, so a body it already decoded is left
+// alone. The size limit applies to the bytes returned.
+func (c *httpClient) readResponse(resp *http.Response) ([]byte, error) {
+	src := io.Reader(resp.Body)
+	var gz *gzip.Reader
+	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+		var err error
+		gz, err = gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		src = gz
+	}
+
+	var respData bytes.Buffer
+	err := internal.CopyResponseBody(&respData, src, c.maxResponseSize)
+	if gz != nil {
+		err = errors.Join(err, gz.Close())
+	}
+	if err != nil {
+		return nil, err
+	}
+	return respData.Bytes(), nil
 }
 
 var gzPool = sync.Pool{

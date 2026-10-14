@@ -1340,6 +1340,114 @@ func TestResponseBodySizeLimitAfterDecompression(t *testing.T) {
 	assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 }
 
+func TestExplicitGzipResponseDecoding(t *testing.T) {
+	body, err := proto.Marshal(&collogpb.ExportLogsServiceResponse{
+		PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+			RejectedLogRecords: 1,
+			ErrorMessage:       "bad",
+		},
+	})
+	require.NoError(t, err)
+
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.Header().Set("Content-Encoding", "gzip")
+		zw := gzip.NewWriter(w)
+		_, _ = zw.Write(body)
+		_ = zw.Close()
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithHeaders(map[string]string{"Accept-Encoding": "gzip"}),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	}
+	c, err := newHTTPClient(t.Context(), newConfig(opts))
+	require.NoError(t, err)
+
+	err = c.UploadLogs(t.Context(), []*lpb.ResourceLogs{{ScopeLogs: []*lpb.ScopeLogs{{
+		LogRecords: []*lpb.LogRecord{{}},
+	}}}})
+	assert.ErrorIs(t, err, internal.PartialSuccess{})
+	assert.Equal(t, 1, calls, "partial success must not be retried")
+}
+
+func TestExplicitGzipResponseTooLarge(t *testing.T) {
+	const limit = 64
+	payload := bytes.Repeat([]byte("x"), 1024)
+
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.Header().Set("Content-Encoding", "gzip")
+		zw := gzip.NewWriter(w)
+		_, _ = zw.Write(payload)
+		_ = zw.Close()
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithHeaders(map[string]string{"Accept-Encoding": "gzip"}),
+		WithMaxResponseSize(limit),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	}
+	c, err := newHTTPClient(t.Context(), newConfig(opts))
+	require.NoError(t, err)
+
+	err = c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
+	assert.ErrorContains(t, err, "response body too large: exceeded 64 bytes")
+	assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
+}
+
+func TestMalformedGzipResponse(t *testing.T) {
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.Header().Set("Content-Encoding", "gzip")
+		_, _ = w.Write([]byte("not gzip"))
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithHeaders(map[string]string{"Accept-Encoding": "gzip"}),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	}
+	c, err := newHTTPClient(t.Context(), newConfig(opts))
+	require.NoError(t, err)
+
+	err = c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
+	assert.Error(t, err)
+	assert.NotErrorIs(t, err, internal.PartialSuccess{})
+	var retryErr retryableError
+	assert.NotErrorAs(t, err, &retryErr)
+	assert.Equal(t, 1, calls, "malformed gzip must not be retried")
+}
+
 func TestRequestBodySizeLimit(t *testing.T) {
 	var calls int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
