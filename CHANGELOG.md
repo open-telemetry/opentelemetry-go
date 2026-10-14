@@ -39,6 +39,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Encode an empty attribute value nested in a slice or map as `{}` in `go.opentelemetry.io/otel/trace`, so the auto-instrumentation span that carries it is no longer dropped. (#9182)
 - Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP protobuf partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9188)
 
+### Removed
+
+- Remove support for the deprecated `OTEL_GO_X_CARDINALITY_LIMIT` environment variable in `go.opentelemetry.io/otel/sdk/metric`.
+  Use `WithCardinalityLimit` instead, including `WithCardinalityLimit(0)` to disable the default limit of 2000.
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
