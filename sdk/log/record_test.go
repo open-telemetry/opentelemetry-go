@@ -1616,6 +1616,12 @@ func TestApplyAttrLimitsTruncation(t *testing.T) {
 			want:  attribute.StringValue("This "),
 		},
 		{
+			name:  "ReplacementRuneTruncated",
+			limit: 5,
+			input: attribute.StringValue(strings.Repeat("\uFFFD", 1000)),
+			want:  attribute.StringValue(strings.Repeat("\uFFFD", 5)),
+		},
+		{
 			name:  "LongBytesTruncated",
 			limit: 5,
 			input: attribute.ByteSliceValue([]byte("This is a very long byte array")),

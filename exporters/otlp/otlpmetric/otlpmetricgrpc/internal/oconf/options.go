@@ -61,6 +61,7 @@ type (
 		MaxRequestSize int
 		Timeout        time.Duration
 		URLPath        string
+		URLRawPath     string
 
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
@@ -108,7 +109,6 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 	for _, opt := range opts {
 		cfg = opt.ApplyHTTPOption(cfg)
 	}
-	cfg.Metrics.URLPath = cleanPath(cfg.Metrics.URLPath, DefaultMetricsPath)
 	return cfg
 }
 
@@ -310,9 +310,10 @@ func WithEndpointURL(v string) GenericOption {
 
 		cfg.Metrics.Endpoint = u.Host
 		cfg.Metrics.URLPath = u.Path
+		cfg.Metrics.URLRawPath = u.RawPath
 		if cfg.Metrics.URLPath == "" {
-			// For HTTP exporters, a URL without a path targets the root path. Set it explicitly so the default signal
-			// path is not appended by cleanPath. (URLPath is ignored by gRPC exporters.)
+			// For HTTP exporters, a URL without a path targets the root path.
+			// URLPath is ignored by gRPC exporters.
 			cfg.Metrics.URLPath = "/"
 		}
 		cfg.Metrics.Insecure = u.Scheme != "https"
@@ -331,7 +332,11 @@ func WithCompression(compression Compression) GenericOption {
 
 // WithURLPath configures the URL path the exporter sends requests to.
 func WithURLPath(urlPath string) GenericOption {
-	return newGenericOption(func(cfg Config) Config {
+	return newSplitOption(func(cfg Config) Config {
+		cfg.Metrics.URLPath = cleanPath(urlPath, DefaultMetricsPath)
+		cfg.Metrics.URLRawPath = ""
+		return cfg
+	}, func(cfg Config) Config {
 		cfg.Metrics.URLPath = urlPath
 		return cfg
 	})
