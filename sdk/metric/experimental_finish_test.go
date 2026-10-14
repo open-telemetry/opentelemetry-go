@@ -149,3 +149,25 @@ func TestExperimentalFinishShutdownContext(t *testing.T) {
 
 	assert.ErrorIs(t, provider.Shutdown(ctx), context.Canceled)
 }
+
+func TestExperimentalFloat64CounterFinishAggregationError(t *testing.T) {
+	reader := NewManualReader()
+	provider := NewMeterProvider(
+		WithReader(reader),
+		WithView(NewView(
+			Instrument{Name: "requests"},
+			Stream{Aggregation: testUnknownAggregation{}},
+		)),
+		testFinishOption(true),
+	)
+	t.Cleanup(func() { _ = provider.Shutdown(context.WithoutCancel(t.Context())) })
+
+	counter, err := provider.Meter("test").Float64Counter("requests")
+	assert.ErrorIs(t, err, errUnknownAggregation)
+	finisher, ok := counter.(metricx.Finisher)
+	require.True(t, ok)
+	assert.NotPanics(t, func() {
+		counter.Add(t.Context(), 1.25)
+		finisher.Finish(t.Context())
+	})
+}
