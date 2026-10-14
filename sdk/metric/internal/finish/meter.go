@@ -8,6 +8,7 @@ import "go.opentelemetry.io/otel/metric"
 // Factory constructs Finish-aware synchronous instruments.
 type Factory interface {
 	Int64Counter(string, ...metric.Int64CounterOption) (metric.Int64Counter, error)
+	Float64Counter(string, ...metric.Float64CounterOption) (metric.Float64Counter, error)
 }
 
 type meter struct {
@@ -22,4 +23,8 @@ func NewMeter(base metric.Meter, factory Factory) metric.Meter {
 
 func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error) {
 	return m.factory.Int64Counter(name, options...)
+}
+
+func (m *meter) Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error) {
+	return m.factory.Float64Counter(name, options...)
 }
