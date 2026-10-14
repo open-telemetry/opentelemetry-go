@@ -772,6 +772,68 @@ func TestPrometheusExporter(t *testing.T) {
 	}
 }
 
+func TestNilReaderOptions(t *testing.T) {
+	exporter, err := New(
+		WithRegisterer(prometheus.NewRegistry()),
+		WithAggregationSelector(nil),
+		WithProducer(nil),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+	counter, err := provider.Meter("test").Int64Counter("counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, exporter.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	assert.Equal(t, "counter", rm.ScopeMetrics[0].Metrics[0].Name)
+	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 1)
+	assert.Equal(t, int64(1), sum.DataPoints[0].Value)
+}
+
+func TestNilReaderOptionsPreservePrevious(t *testing.T) {
+	selectorCalled := false
+	external := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{Name: "external"},
+		Metrics: []metricdata.Metrics{{
+			Name: "external",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints:  []metricdata.DataPoint[int64]{{Value: 2}},
+			},
+		}},
+	}
+	exporter, err := New(
+		WithRegisterer(prometheus.NewRegistry()),
+		WithAggregationSelector(func(kind metric.InstrumentKind) metric.Aggregation {
+			selectorCalled = true
+			return metric.DefaultAggregationSelector(kind)
+		}),
+		WithAggregationSelector(nil),
+		WithProducer(producerFunc(func(context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{external}, nil
+		})),
+		WithProducer(nil),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+	counter, err := provider.Meter("test").Int64Counter("counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, exporter.Collect(t.Context(), &rm))
+	assert.True(t, selectorCalled)
+	require.Len(t, rm.ScopeMetrics, 2)
+	assert.Equal(t, external, rm.ScopeMetrics[1])
+}
+
 func TestMultiScopes(t *testing.T) {
 	ctx := t.Context()
 	registry := prometheus.NewRegistry()
@@ -1603,6 +1665,68 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 		// The exporter reports via invalid metric, not the global otel error handler.
 		assert.NoError(t, capturedError)
 	})
+}
+
+func TestInvalidExponentialHistogramScaleReportsObservabilityError(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	originalMP := otel.GetMeterProvider()
+	defer otel.SetMeterProvider(originalMP)
+
+	reader := metric.NewManualReader()
+	otel.SetMeterProvider(metric.NewMeterProvider(metric.WithReader(reader)))
+	inst, err := observ.NewInstrumentation(0)
+	require.NoError(t, err)
+
+	now := time.Now()
+	histogram := metricdata.ExponentialHistogram[float64]{
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+			{
+				Attributes: attribute.NewSet(),
+				StartTime:  now,
+				Time:       now,
+				Count:      1,
+				Scale:      -5,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}
+
+	ch := make(chan prometheus.Metric, 1)
+	addExponentialHistogramMetric(
+		t.Context(),
+		ch,
+		histogram,
+		metricdata.Metrics{Name: "test_histogram"},
+		"test_histogram",
+		keyVals{},
+		otlptranslator.LabelNamer{},
+		inst,
+	)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	var values []int64
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name != observ.ScopeName {
+			continue
+		}
+		for _, m := range sm.Metrics {
+			if m.Name != "otel.sdk.exporter.metric_data_point.exported" {
+				continue
+			}
+			sum, ok := m.Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+			for _, dp := range sum.DataPoints {
+				values = append(values, dp.Value)
+			}
+		}
+	}
+
+	require.ElementsMatch(t, []int64{0, 1}, values)
 }
 
 func TestDownscaleExponentialBucket(t *testing.T) {

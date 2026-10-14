@@ -162,6 +162,8 @@ var (
 	}
 )
 
+// Client is the interface an otlpmetric exporter's client must implement to
+// be tested by RunClientTests.
 type Client interface {
 	UploadMetrics(context.Context, *mpb.ResourceMetrics) error
 	ForceFlush(context.Context) error

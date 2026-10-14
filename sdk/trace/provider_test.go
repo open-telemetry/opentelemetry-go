@@ -130,6 +130,78 @@ func TestForceFlushAndShutdownTraceProviderWithoutProcessor(t *testing.T) {
 	assert.True(t, stp.isShutdown.Load())
 }
 
+func TestWithNilSpanProcessor(t *testing.T) {
+	stp := NewTracerProvider(WithSpanProcessor(nil))
+	_, span := stp.Tracer("test").Start(t.Context(), "test")
+	span.End()
+	assert.NoError(t, stp.ForceFlush(t.Context()))
+	assert.NoError(t, stp.Shutdown(t.Context()))
+	assert.True(t, stp.isShutdown.Load())
+}
+
+func TestWithNilSpanProcessorPreservesProcessors(t *testing.T) {
+	sp := &basicSpanProcessor{}
+	recorder := NewTestSpanProcessor("test")
+	stp := NewTracerProvider(
+		WithSpanProcessor(sp),
+		WithSpanProcessor(nil),
+		WithSpanProcessor(recorder),
+	)
+
+	sps := stp.getSpanProcessors()
+	require.Len(t, sps, 2)
+	assert.Same(t, sp, sps[0].sp)
+	assert.Same(t, recorder, sps[1].sp)
+
+	_, span := stp.Tracer("test").Start(t.Context(), "test")
+	span.End()
+	assert.NoError(t, stp.ForceFlush(t.Context()))
+	assert.True(t, sp.flushed)
+	assert.NoError(t, stp.Shutdown(t.Context()))
+	assert.True(t, sp.closed)
+	assert.True(t, stp.isShutdown.Load())
+	assert.Len(t, recorder.spansStarted, 1)
+	assert.Len(t, recorder.spansEnded, 1)
+	assert.Equal(t, 1, recorder.shutdownCount)
+}
+
+func TestRegisterNilSpanProcessor(t *testing.T) {
+	stp := NewTracerProvider()
+	stp.RegisterSpanProcessor(nil)
+	_, span := stp.Tracer("test").Start(t.Context(), "test")
+	span.End()
+	assert.NoError(t, stp.ForceFlush(t.Context()))
+	assert.NoError(t, stp.Shutdown(t.Context()))
+	assert.True(t, stp.isShutdown.Load())
+}
+
+func TestRegisterNilSpanProcessorPreservesProcessors(t *testing.T) {
+	sp := &basicSpanProcessor{}
+	recorder := NewTestSpanProcessor("test")
+	stp := NewTracerProvider()
+	stp.RegisterSpanProcessor(nil)
+	stp.RegisterSpanProcessor(sp)
+	stp.RegisterSpanProcessor(nil)
+	stp.RegisterSpanProcessor(recorder)
+	stp.RegisterSpanProcessor(nil)
+
+	sps := stp.getSpanProcessors()
+	require.Len(t, sps, 2)
+	assert.Same(t, sp, sps[0].sp)
+	assert.Same(t, recorder, sps[1].sp)
+
+	_, span := stp.Tracer("test").Start(t.Context(), "test")
+	span.End()
+	assert.NoError(t, stp.ForceFlush(t.Context()))
+	assert.True(t, sp.flushed)
+	assert.NoError(t, stp.Shutdown(t.Context()))
+	assert.True(t, sp.closed)
+	assert.True(t, stp.isShutdown.Load())
+	assert.Len(t, recorder.spansStarted, 1)
+	assert.Len(t, recorder.spansEnded, 1)
+	assert.Equal(t, 1, recorder.shutdownCount)
+}
+
 func TestUnregisterFirst(t *testing.T) {
 	stp := NewTracerProvider()
 	sp1 := &basicSpanProcessor{}
@@ -174,6 +246,21 @@ func TestUnregisterLast(t *testing.T) {
 	stp.RegisterSpanProcessor(sp3)
 
 	stp.UnregisterSpanProcessor(sp3)
+
+	sps := stp.getSpanProcessors()
+	require.Len(t, sps, 2)
+	assert.Same(t, sp1, sps[0].sp)
+	assert.Same(t, sp2, sps[1].sp)
+}
+
+func TestUnregisterUnknownSpanProcessor(t *testing.T) {
+	stp := NewTracerProvider()
+	sp1 := &basicSpanProcessor{}
+	sp2 := &basicSpanProcessor{}
+	stp.RegisterSpanProcessor(sp1)
+	stp.RegisterSpanProcessor(sp2)
+
+	stp.UnregisterSpanProcessor(&basicSpanProcessor{})
 
 	sps := stp.getSpanProcessors()
 	require.Len(t, sps, 2)
@@ -460,6 +547,57 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 					}
 				})
 			}
+		})
+	}
+}
+
+func TestTracerProviderSamplerConfigFromEnvEmptyValues(t *testing.T) {
+	tests := []struct {
+		name          string
+		sampler       string
+		samplerArg    string
+		setSamplerArg bool
+		description   string
+	}{
+		{
+			name:        "empty sampler",
+			sampler:     "",
+			description: ParentBased(AlwaysSample()).Description(),
+		},
+		{
+			name:          "empty traceidratio sampler arg",
+			sampler:       "traceidratio",
+			samplerArg:    "",
+			setSamplerArg: true,
+			description:   TraceIDRatioBased(1.0).Description(),
+		},
+		{
+			name:          "empty parentbased traceidratio sampler arg",
+			sampler:       "parentbased_traceidratio",
+			samplerArg:    "",
+			setSamplerArg: true,
+			description:   ParentBased(TraceIDRatioBased(1.0)).Description(),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			handler.Reset()
+			t.Cleanup(handler.Reset)
+
+			t.Setenv(envTracesSampler, test.sampler)
+			if test.setSamplerArg {
+				t.Setenv(envTracesSamplerArg, test.samplerArg)
+			}
+
+			stp := NewTracerProvider(WithSyncer(NewTestExporter()))
+			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				require.NoError(t, stp.Shutdown(context.Background()))
+			})
+
+			assert.Equal(t, test.description, stp.sampler.Description())
+			assert.Empty(t, handler.errs)
 		})
 	}
 }

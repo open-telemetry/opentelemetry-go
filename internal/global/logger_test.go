@@ -41,7 +41,7 @@ func TestLoggerProviderConcurrentSafe(*testing.T) {
 	<-done
 }
 
-func TestLoggerConcurrentSafe(t *testing.T) {
+func TestLogLoggerConcurrentSafe(t *testing.T) {
 	l := &logger{}
 
 	done := make(chan struct{})
@@ -119,7 +119,7 @@ func emitRecord(l log.Logger) {
 	l.Emit(ctx, r)
 }
 
-func TestDelegation(t *testing.T) {
+func TestLoggerDelegation(t *testing.T) {
 	provider := &loggerProvider{}
 
 	const preName = "pre"

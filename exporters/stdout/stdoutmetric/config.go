@@ -73,7 +73,11 @@ func WithEncoder(encoder Encoder) Option {
 
 // WithWriter sets the export stream destination.
 // Using this option overrides any previously set encoder.
+// If w is nil, this option has no effect.
 func WithWriter(w io.Writer) Option {
+	if w == nil {
+		return WithEncoder(nil)
+	}
 	return WithEncoder(json.NewEncoder(w))
 }
 

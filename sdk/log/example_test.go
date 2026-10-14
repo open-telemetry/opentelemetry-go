@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
@@ -40,11 +40,11 @@ func Example() {
 	}()
 
 	// Register it as the global logger provider so that it can be used via
-	// global.Logger and accessed using global.GetLoggerProvider.
+	// otel.Logger and accessed using otel.GetLoggerProvider.
 	// Most log bridges use the global logger provider by default.
 	// If the global logger provider is not set, then a no-op implementation
 	// is used, which fails to generate data.
-	global.SetLoggerProvider(provider)
+	otel.SetLoggerProvider(provider)
 
 	// Use a bridge so that you can emit logs using your preferred Go logging
 	// library. For example, use go.opentelemetry.io/contrib/bridges/otelslog so
