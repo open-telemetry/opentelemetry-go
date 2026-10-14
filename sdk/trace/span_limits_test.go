@@ -188,7 +188,7 @@ func testSpanLimits(t *testing.T, limits SpanLimits) ReadOnlySpan {
 	}
 	_, span := tracer.Start(ctx, "span-name", trace.WithLinks(l, l))
 	span.SetAttributes(
-		attribute.String("string", "abc"),
+		attribute.String("string", "a\uFFFDb"),
 		attribute.StringSlice("stringSlice", []string{"abc", "def"}),
 		attribute.String("euro", "€"), // this is a 3-byte rune
 	)
@@ -207,14 +207,14 @@ func TestSpanLimits(t *testing.T) {
 		// Unlimited.
 		limits.AttributeValueLengthLimit = -1
 		attrs := testSpanLimits(t, limits).Attributes()
-		assert.Contains(t, attrs, attribute.String("string", "abc"))
+		assert.Contains(t, attrs, attribute.String("string", "a\uFFFDb"))
 		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"abc", "def"}))
 		assert.Contains(t, attrs, attribute.String("euro", "€"))
 
 		limits.AttributeValueLengthLimit = 2
 		attrs = testSpanLimits(t, limits).Attributes()
 		// Ensure string and string slice attributes are truncated.
-		assert.Contains(t, attrs, attribute.String("string", "ab"))
+		assert.Contains(t, attrs, attribute.String("string", "a\uFFFD"))
 		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"ab", "de"}))
 		assert.Contains(t, attrs, attribute.String("euro", "€"))
 
