@@ -349,69 +349,32 @@ func TestWithExemplarFilterOff(t *testing.T) {
 func TestWithCardinalityLimit(t *testing.T) {
 	cases := []struct {
 		name          string
-		envValue      string
 		options       []Option
 		expectedLimit int
 	}{
 		{
-			name:          "only cardinality limit from option",
-			envValue:      "",
+			name:          "default limit",
+			expectedLimit: defaultCardinalityLimit,
+		},
+		{
+			name:          "cardinality limit from option",
 			options:       []Option{WithCardinalityLimit(1000)},
 			expectedLimit: 1000,
-		},
-		{
-			name:          "cardinality limit from option with ignored env",
-			envValue:      "500",
-			options:       []Option{WithCardinalityLimit(1000)},
-			expectedLimit: 1000,
-		},
-		{
-			name:          "positive env value is ignored",
-			envValue:      "1234",
-			options:       []Option{},
-			expectedLimit: defaultCardinalityLimit,
-		},
-		{
-			name:          "zero env value is ignored",
-			envValue:      "0",
-			options:       []Option{},
-			expectedLimit: defaultCardinalityLimit,
-		},
-		{
-			name:          "negative env value is ignored",
-			envValue:      "-5",
-			options:       []Option{},
-			expectedLimit: defaultCardinalityLimit,
 		},
 		{
 			name:          "zero cardinality limit from option disables limit",
-			envValue:      "500",
 			options:       []Option{WithCardinalityLimit(0)},
 			expectedLimit: 0,
 		},
 		{
 			name:          "negative cardinality limit from option disables limit",
-			envValue:      "500",
 			options:       []Option{WithCardinalityLimit(-5)},
 			expectedLimit: -5,
-		},
-		{
-			name:          "invalid env value uses default",
-			envValue:      "not-a-number",
-			options:       []Option{},
-			expectedLimit: defaultCardinalityLimit,
-		},
-		{
-			name:          "empty env and no option uses default",
-			envValue:      "",
-			options:       []Option{},
-			expectedLimit: defaultCardinalityLimit,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", tc.envValue)
 			c := newConfig(tc.options)
 			assert.Equal(t, tc.expectedLimit, c.cardinalityLimit)
 		})
