@@ -85,9 +85,10 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	}
 
 	u := &url.URL{
-		Scheme: "https",
-		Host:   cfg.endpoint.Value,
-		Path:   cfg.path.Value,
+		Scheme:  "https",
+		Host:    cfg.endpoint.Value,
+		Path:    cfg.path.Value.Path,
+		RawPath: cfg.path.Value.RawPath,
 	}
 	if cfg.insecure.Value {
 		u.Scheme = "http"
