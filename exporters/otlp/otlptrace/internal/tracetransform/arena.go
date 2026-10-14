@@ -75,9 +75,13 @@ func (a *Arena) Exceeds(maxSpans int) bool {
 		return true
 	}
 	// Slices grow with Go append overshoot (up to ~25%) plus the same
-	// chunk rounding. Each span can hold up to 8 scalars of one type,
-	// so compare against maxCap rather than maxSpans.
-	slack := a.kvs.chunkSize + maxCap/4
+	// chunk rounding. Size-class rounding differs across architectures
+	// (e.g. 32-bit platforms round the same element count up to a larger
+	// capacity), so allow headroom for a full growth step: without it a
+	// default-size batch is retained on 64-bit but discarded on 32-bit.
+	// Each span can hold up to 8 scalars of one type, so compare against
+	// maxCap rather than maxSpans.
+	slack := a.kvs.chunkSize + maxCap/2
 	if cap(a.avStrValues) > maxCap+slack {
 		return true
 	}

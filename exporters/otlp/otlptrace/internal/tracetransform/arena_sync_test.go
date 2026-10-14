@@ -147,4 +147,23 @@ func TestArenaExceedsDefaultBatch(t *testing.T) {
 	}
 	_ = SpansWithArena(spans, arena)
 	assert.False(t, arena.Exceeds(512))
+
+	// A batch twice as dense must be discarded on every architecture:
+	// capacity always holds at least the appended elements, so usage
+	// alone (8193 string slots) exceeds any retention slack.
+	dense := NewArena(32)
+	wide := make([]tracesdk.ReadOnlySpan, 512)
+	for i := range wide {
+		attrs := make([]attribute.KeyValue, 16)
+		for j := range attrs {
+			attrs[j] = attribute.String("k", "v")
+		}
+		wide[i] = tracetest.SpanStub{
+			Name:       "s",
+			Attributes: attrs,
+			Resource:   res,
+		}.Snapshot()
+	}
+	_ = SpansWithArena(wide, dense)
+	assert.True(t, dense.Exceeds(512))
 }
