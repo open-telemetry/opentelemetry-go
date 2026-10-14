@@ -15,12 +15,16 @@ on:
       - "internal/global/**"
       - "baggage/**"
       - "go.mod"
+      - "verify_internal_boundary_compat.sh"
+      - ".github/workflows/internal-boundary-compat.yml"
   pull_request:
     paths:
       - "internal/baggage/**"
       - "internal/global/**"
       - "baggage/**"
       - "go.mod"
+      - "verify_internal_boundary_compat.sh"
+      - ".github/workflows/internal-boundary-compat.yml"
 
 # Declare default permissions as read only.
 permissions: read-all
