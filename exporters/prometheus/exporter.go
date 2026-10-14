@@ -882,6 +882,11 @@ func exemplarLabelRunes(labels prometheus.Labels, traceID, spanID string) int {
 	runes := utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey) + utf8.RuneCountInString(traceID)
 	runes += utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey) + utf8.RuneCountInString(spanID)
 	for k, v := range labels {
+		if k == otlptranslator.ExemplarTraceIDKey || k == otlptranslator.ExemplarSpanIDKey {
+			// Already counted above; addExemplars overwrites these keys so
+			// counting them again would double-count a collision.
+			continue
+		}
 		runes += utf8.RuneCountInString(k) + utf8.RuneCountInString(v)
 	}
 	return runes
