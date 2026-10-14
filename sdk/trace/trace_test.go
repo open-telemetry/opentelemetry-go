@@ -1603,6 +1603,125 @@ func TestMapDeduplication(t *testing.T) {
 	assert.Equal(t, attribute.NewSet(dedup), got.InstrumentationScope().Attributes)
 }
 
+type attributeSampler []attribute.KeyValue
+
+func (s attributeSampler) ShouldSample(SamplingParameters) SamplingResult {
+	return SamplingResult{Decision: RecordAndSample, Attributes: s}
+}
+
+func (attributeSampler) Description() string { return "attributeSampler" }
+
+func depthLimitInputAttr(key string) attribute.KeyValue {
+	return attribute.Map(
+		key,
+		attribute.Map(
+			"level1",
+			attribute.Map("over", attribute.String("leaf", "value")),
+		),
+	)
+}
+
+func depthLimitWantAttr(key string) attribute.KeyValue {
+	return attribute.Map(
+		key,
+		attribute.Map(
+			"level1",
+			attribute.KeyValue{Key: "over"},
+		),
+	)
+}
+
+func TestAttributeValueDepthLimit(t *testing.T) {
+	linkSC := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{1},
+		SpanID:  trace.SpanID{1},
+	})
+	initialLink := trace.Link{
+		SpanContext: linkSC,
+		Attributes:  []attribute.KeyValue{depthLimitInputAttr("initial-link")},
+	}
+
+	te := NewTestExporter()
+	limits := NewSpanLimits()
+	limits.AttributeValueDepthLimit = 2
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithSampler(attributeSampler{depthLimitInputAttr("sampler")}),
+		WithRawSpanLimits(limits),
+		WithResource(resource.NewSchemaless(depthLimitInputAttr("resource"))),
+	)
+
+	_, span := tp.Tracer(
+		"scope",
+		trace.WithInstrumentationAttributes(depthLimitInputAttr("scope")),
+	).Start(
+		t.Context(),
+		"span0",
+		trace.WithAttributes(depthLimitInputAttr("start")),
+		trace.WithLinks(initialLink),
+	)
+	span.SetAttributes(depthLimitInputAttr("span"))
+	span.AddEvent("event", trace.WithAttributes(depthLimitInputAttr("event")))
+	span.AddLink(trace.Link{
+		SpanContext: linkSC,
+		Attributes:  []attribute.KeyValue{depthLimitInputAttr("link")},
+	})
+
+	got, err := endSpan(te, span)
+	require.NoError(t, err)
+
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		depthLimitWantAttr("sampler"),
+		depthLimitWantAttr("start"),
+		depthLimitWantAttr("span"),
+	}, got.Attributes())
+	assert.Zero(t, got.DroppedAttributes())
+	require.Len(t, got.Events(), 1)
+	assert.Equal(t, []attribute.KeyValue{depthLimitWantAttr("event")}, got.Events()[0].Attributes)
+	assert.Zero(t, got.Events()[0].DroppedAttributeCount)
+	require.Len(t, got.Links(), 2)
+	assert.Equal(t, []attribute.KeyValue{depthLimitWantAttr("initial-link")}, got.Links()[0].Attributes)
+	assert.Equal(t, []attribute.KeyValue{depthLimitWantAttr("link")}, got.Links()[1].Attributes)
+	assert.Zero(t, got.Links()[0].DroppedAttributeCount)
+	assert.Zero(t, got.Links()[1].DroppedAttributeCount)
+	assert.Equal(t, []attribute.KeyValue{depthLimitInputAttr("resource")}, got.Resource().Attributes())
+	assert.Equal(t, attribute.NewSet(depthLimitWantAttr("scope")), got.InstrumentationScope().Attributes)
+}
+
+func TestAttributeValueDepthLimitOverCapacityUpdate(t *testing.T) {
+	te := NewTestExporter()
+	limits := NewSpanLimits()
+	limits.AttributeCountLimit = 1
+	limits.AttributeValueDepthLimit = 1
+	tp := NewTracerProvider(WithSyncer(te), WithRawSpanLimits(limits), WithResource(resource.Empty()))
+
+	_, span := tp.Tracer("scope").Start(t.Context(), "span0")
+	span.SetAttributes(attribute.String("existing", "first"))
+	span.SetAttributes(depthLimitInputAttr("existing"), attribute.String("dropped", "value"))
+	got, err := endSpan(te, span)
+	require.NoError(t, err)
+
+	assert.Equal(t, []attribute.KeyValue{
+		attribute.Map("existing", attribute.KeyValue{Key: "level1"}),
+	}, got.Attributes())
+	assert.Equal(t, 1, got.DroppedAttributes())
+}
+
+func TestAttributeValueDepthLimitNegativeUnlimited(t *testing.T) {
+	te := NewTestExporter()
+	tp := NewTracerProvider(
+		WithSyncer(te),
+		WithAttributeValueDepthLimit(-1),
+		WithResource(resource.Empty()),
+	)
+
+	_, span := tp.Tracer("scope").Start(t.Context(), "span0")
+	span.SetAttributes(depthLimitInputAttr("span"))
+	got, err := endSpan(te, span)
+	require.NoError(t, err)
+	assert.Equal(t, []attribute.KeyValue{depthLimitInputAttr("span")}, got.Attributes())
+}
+
 func TestWithInstrumentationVersionAndSchema(t *testing.T) {
 	te := NewTestExporter()
 	tp := NewTracerProvider(WithSyncer(te), WithResource(resource.Empty()))

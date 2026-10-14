@@ -5,9 +5,13 @@ package metric
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -147,6 +151,26 @@ func TestIntervalEnvAndOption(t *testing.T) {
 	assert.Equal(t, want, got, "option should have precedence over env var")
 }
 
+func TestWithMaxExportBatchSize(t *testing.T) {
+	test := func(size int) int {
+		opts := []PeriodicReaderOption{WithMaxExportBatchSize(size)}
+		return newPeriodicReaderConfig(opts).maxExportBatchSize
+	}
+
+	assert.Equal(t, 10, test(10))
+	assert.Equal(t, 0, newPeriodicReaderConfig(nil).maxExportBatchSize)
+	assert.Equal(t, 0, test(0), "invalid max export batch size should use default")
+	assert.Equal(t, 0, test(-1), "invalid max export batch size should use default")
+
+	opts := []PeriodicReaderOption{WithMaxExportBatchSize(10), WithMaxExportBatchSize(-1)}
+	assert.Equal(
+		t,
+		10,
+		newPeriodicReaderConfig(opts).maxExportBatchSize,
+		"non-positive value should preserve previous value",
+	)
+}
+
 func TestEnvDurationRejectsOverflow(t *testing.T) {
 	const value = "9223372036855"
 	for _, tc := range []struct {
@@ -267,55 +291,35 @@ func (eh chErrorHandler) Handle(err error) {
 	eh.Err <- err
 }
 
-func triggerTicker(t *testing.T) chan time.Time {
-	t.Helper()
-
-	// Override the ticker C chan so tests are not flaky and rely on timing.
-	orig := newTicker
-	t.Cleanup(func() { newTicker = orig })
-
-	// Keep this at size zero so when triggered with a send it will hang until
-	// the select case is selected and the collection loop is started.
-	trigger := make(chan time.Time)
-	newTicker = func(d time.Duration) *time.Ticker {
-		ticker := time.NewTicker(d)
-		ticker.C = trigger
-		return ticker
-	}
-	return trigger
-}
-
 func TestPeriodicReaderRun(t *testing.T) {
-	trigger := triggerTicker(t)
+	synctest.Test(t, func(t *testing.T) {
+		// Register an error handler to validate export errors are passed to
+		// otel.Handle.
+		defer func(orig otel.ErrorHandler) {
+			otel.SetErrorHandler(orig)
+		}(otel.GetErrorHandler())
+		eh := newChErrorHandler()
+		otel.SetErrorHandler(eh)
 
-	// Register an error handler to validate export errors are passed to
-	// otel.Handle.
-	defer func(orig otel.ErrorHandler) {
-		otel.SetErrorHandler(orig)
-	}(otel.GetErrorHandler())
-	eh := newChErrorHandler()
-	otel.SetErrorHandler(eh)
+		exp := &fnExporter{
+			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+				// The testSDKProducer produces testResourceMetricsAB.
+				assert.Equal(t, testResourceMetricsAB, *m)
+				return assert.AnError
+			},
+		}
 
-	exp := &fnExporter{
-		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
-			// The testSDKProducer produces testResourceMetricsAB.
-			assert.Equal(t, testResourceMetricsAB, *m)
-			return assert.AnError
-		},
-	}
+		r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
+		r.register(testSDKProducer{})
+		// Blocking here lets synctest advance the virtual clock, firing the ticker.
+		assert.Equal(t, assert.AnError, <-eh.Err)
 
-	r := NewPeriodicReader(exp, WithProducer(testExternalProducer{}))
-	r.register(testSDKProducer{})
-	trigger <- time.Now()
-	assert.Equal(t, assert.AnError, <-eh.Err)
-
-	// Ensure Reader is allowed clean up attempt.
-	_ = r.Shutdown(t.Context())
+		// Stop the run goroutine so the synctest bubble can exit cleanly.
+		_ = r.Shutdown(t.Context())
+	})
 }
 
 func TestPeriodicReaderBatching(t *testing.T) {
-	t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "2")
-
 	var exported []metricdata.ResourceMetrics
 	exp := &fnExporter{
 		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
@@ -358,6 +362,7 @@ func TestPeriodicReaderBatching(t *testing.T) {
 
 	r := NewPeriodicReader(
 		exp,
+		WithMaxExportBatchSize(2),
 		WithProducer(testExternalProducer{
 			produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
 				return testMetrics, nil
@@ -392,65 +397,128 @@ func TestPeriodicReaderBatching(t *testing.T) {
 	_ = r.Shutdown(t.Context())
 }
 
-func TestPeriodicReaderBatching_WithoutCancel(t *testing.T) {
-	t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "1") // Force small batches
-
-	trigger := triggerTicker(t)
-
-	timeout := 200 * time.Millisecond
-
-	var exportCount int
-	done := make(chan struct{})
-	exp := &fnExporter{
-		exportFunc: func(ctx context.Context, _ *metricdata.ResourceMetrics) error {
-			exportCount++
-			// Simulate export taking some time
-			select {
-			case <-time.After(100 * time.Millisecond):
-				if exportCount == 2 {
-					close(done)
-				}
+func TestPeriodicReaderBatching_Disabled(t *testing.T) {
+	for _, opt := range [][]PeriodicReaderOption{
+		nil,
+		{WithMaxExportBatchSize(0)},
+		{WithMaxExportBatchSize(-1)},
+	} {
+		var exported []metricdata.ResourceMetrics
+		exp := &fnExporter{
+			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+				exported = append(exported, *m)
 				return nil
-			case <-ctx.Done():
-				return ctx.Err()
+			},
+		}
+
+		ts1, ts2, ts3 := time.Now(), time.Now(), time.Now()
+		testMetrics := []metricdata.ScopeMetrics{{
+			Scope: instrumentation.Scope{Name: "sdk/metric/test/reader/internal"},
+			Metrics: []metricdata.Metrics{{
+				Name: "metric1",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{{
+						Attributes: attribute.NewSet(attribute.String("user", "david")),
+						StartTime:  ts1, Time: ts1.Add(time.Second), Value: 1,
+					}},
+				},
+			}, {
+				Name: "metric2",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("user", "tyler")),
+							StartTime:  ts2,
+							Time:       ts2.Add(time.Second),
+							Value:      10,
+						},
+						{
+							Attributes: attribute.NewSet(attribute.String("user", "robert")),
+							StartTime:  ts3,
+							Time:       ts3.Add(time.Second),
+							Value:      100,
+						},
+					},
+				},
+			}},
+		}}
+
+		opts := append([]PeriodicReaderOption{
+			WithProducer(testExternalProducer{
+				produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+					return testMetrics, nil
+				},
+			}),
+		}, opt...)
+
+		r := NewPeriodicReader(exp, opts...)
+		r.register(testSDKProducer{})
+
+		assert.NoError(t, r.ForceFlush(t.Context()))
+		assert.Len(t, exported, 1)
+
+		dpCount := 0
+		for _, sm := range exported[0].ScopeMetrics {
+			for _, m := range sm.Metrics {
+				dpCount += metricDPC(m)
 			}
-		},
+		}
+		assert.Equal(t, 4, dpCount)
+
+		_ = r.Shutdown(t.Context())
 	}
+}
 
-	r := NewPeriodicReader(exp, WithTimeout(timeout))
+func TestPeriodicReaderBatching_WithoutCancel(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		timeout := 200 * time.Millisecond
 
-	r.register(testSDKProducer{
-		produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
-			// Simulate Collect taking time (150ms)
-			// So when we enter the loop, only 50ms are left of the top-level 200ms timeout!
-			select {
-			case <-time.After(150 * time.Millisecond):
-			case <-ctx.Done():
-				return ctx.Err()
-			}
+		var exportCount int
+		done := make(chan struct{})
+		exp := &fnExporter{
+			exportFunc: func(ctx context.Context, _ *metricdata.ResourceMetrics) error {
+				exportCount++
+				// Simulate export taking some time
+				select {
+				case <-time.After(100 * time.Millisecond):
+					if exportCount == 2 {
+						close(done)
+					}
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			},
+		}
 
-			*rm = testResourceMetricsAB // Has 2 data points
-			return nil
-		},
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithMaxExportBatchSize(1))
+
+		r.register(testSDKProducer{
+			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+				// Simulate Collect taking time (150ms)
+				// So when we enter the loop, only 50ms are left of the top-level 200ms timeout!
+				select {
+				case <-time.After(150 * time.Millisecond):
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+
+				*rm = testResourceMetricsAB // Has 2 data points
+				return nil
+			},
+		})
+
+		// Blocking here lets synctest advance the virtual clock, firing the ticker.
+		<-done
+
+		assert.Equal(t, 2, exportCount)
+
+		// Stop the run goroutine so the synctest bubble can exit cleanly.
+		_ = r.Shutdown(t.Context())
 	})
-
-	trigger <- time.Now()
-
-	select {
-	case <-done:
-		// Success
-	case <-time.After(time.Second):
-		t.Fatal("timeout waiting for exports")
-	}
-
-	assert.Equal(t, 2, exportCount)
 }
 
 func TestPeriodicReaderFlushesPending(t *testing.T) {
-	// Override the ticker so tests are not flaky and rely on timing.
-	trigger := triggerTicker(t)
-	t.Cleanup(func() { close(trigger) })
-
 	expFunc := func(t *testing.T) (exp Exporter, called *bool) {
 		called = new(bool)
 		return &fnExporter{
@@ -520,8 +588,6 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 	})
 
 	t.Run("ForceFlush timeout on export with batching", func(t *testing.T) {
-		t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "1") // Force small batches
-
 		timeout := 200 * time.Millisecond
 
 		var exportCount int
@@ -538,7 +604,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		}
 
 		ts1 := time.Now()
-		r := NewPeriodicReader(exp, WithTimeout(timeout), WithProducer(testExternalProducer{
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithMaxExportBatchSize(1), WithProducer(testExternalProducer{
 			produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
 				return []metricdata.ScopeMetrics{{
 					Scope: instrumentation.Scope{Name: "test"},
@@ -617,8 +683,6 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 	})
 
 	t.Run("Shutdown timeout on export with batching", func(t *testing.T) {
-		t.Setenv("OTEL_GO_X_METRIC_EXPORT_BATCH_SIZE", "1") // Force small batches
-
 		timeout := 200 * time.Millisecond
 
 		var exportCount int
@@ -635,7 +699,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		}
 
 		ts1 := time.Now()
-		r := NewPeriodicReader(exp, WithTimeout(timeout), WithProducer(testExternalProducer{
+		r := NewPeriodicReader(exp, WithTimeout(timeout), WithMaxExportBatchSize(1), WithProducer(testExternalProducer{
 			produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
 				return []metricdata.ScopeMetrics{{
 					Scope: instrumentation.Scope{Name: "test"},
@@ -1110,4 +1174,62 @@ func BenchmarkPeriodicReaderInstrumentation(b *testing.B) {
 		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 		run(b, true)
 	})
+}
+
+func TestNewPeriodicReaderInstRace(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Sentinel error we use to see if setup failed
+	errInit := errors.New("instrumentation setup failed")
+
+	var collects atomic.Int64
+	var initHandled atomic.Bool
+	firstCollect := make(chan struct{})
+	var once sync.Once
+	origErrorHandler := otel.GetErrorHandler()
+
+	// Collect has been set up to return a registration error when it runs. We intentionally
+	// trigger an initialization error, however. We expect that all registration errors (i.e.
+	// all runs of collect) to appear after initialization was attempted.
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		switch {
+		case errors.Is(err, ErrReaderNotRegistered):
+			// Count number of collects and signal to our dummy meter provider to allow
+			// initialization of the reader to continue
+			collects.Add(1)
+			once.Do(func() { close(firstCollect) })
+		case errors.Is(err, errInit):
+			initHandled.Store(true)
+			// We expect initialization to occur before any collects
+			if collects.Load() > 0 {
+				t.Error("reader collected before instrumentation setup finished")
+			}
+		}
+	}))
+	t.Cleanup(func() { otel.SetErrorHandler(origErrorHandler) })
+
+	origMP := otel.GetMeterProvider()
+	otel.SetMeterProvider(&blockingErrMeterProvider{err: errInit, wait: func() {
+		// Doing this pauses initialization for a while so we can let some collect iterations run
+		select {
+		case <-firstCollect:
+		case <-time.After(20 * time.Millisecond):
+		}
+	}})
+	t.Cleanup(func() { otel.SetMeterProvider(origMP) })
+
+	r := NewPeriodicReader(new(fnExporter), WithInterval(time.Millisecond))
+	require.NoError(t, r.Shutdown(t.Context()))
+	assert.True(t, initHandled.Load(), "instrumentation setup error was not handled")
+}
+
+type blockingErrMeterProvider struct {
+	metric.MeterProvider
+	err  error
+	wait func()
+}
+
+func (m *blockingErrMeterProvider) Meter(string, ...metric.MeterOption) metric.Meter {
+	m.wait()
+	return &errMeter{err: m.err}
 }

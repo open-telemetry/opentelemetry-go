@@ -191,6 +191,96 @@ func TestCallbackUnregisterConcurrency(t *testing.T) {
 	wg.Wait()
 }
 
+func TestMeterNilCallbackOptions(t *testing.T) {
+	reader := NewManualReader()
+	provider := NewMeterProvider(WithReader(reader), WithResource(resource.Empty()))
+	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(t.Context())) })
+	m := provider.Meter("nil-callback")
+
+	_, err := m.Int64ObservableCounter("int64.counter",
+		metric.WithInt64Callback(func(_ context.Context, observer metric.Int64Observer) error {
+			observer.Observe(1)
+			return nil
+		}),
+		metric.WithInt64Callback(nil),
+	)
+	require.NoError(t, err)
+	_, err = m.Float64ObservableCounter("float64.counter",
+		metric.WithFloat64Callback(func(_ context.Context, observer metric.Float64Observer) error {
+			observer.Observe(2)
+			return nil
+		}),
+		metric.WithFloat64Callback(nil),
+	)
+	require.NoError(t, err)
+
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &got))
+	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
+		Resource: resource.Empty(),
+		ScopeMetrics: []metricdata.ScopeMetrics{{
+			Scope: instrumentation.Scope{Name: "nil-callback"},
+			Metrics: []metricdata.Metrics{
+				{
+					Name: "int64.counter",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints:  []metricdata.DataPoint[int64]{{Value: 1}},
+					},
+				},
+				{
+					Name: "float64.counter",
+					Data: metricdata.Sum[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints:  []metricdata.DataPoint[float64]{{Value: 2}},
+					},
+				},
+			},
+		}},
+	}, got, metricdatatest.IgnoreTimestamp())
+}
+
+func TestRegisterNilCallback(t *testing.T) {
+	reader := NewManualReader()
+	provider := NewMeterProvider(WithReader(reader), WithResource(resource.Empty()))
+	t.Cleanup(func() { assert.NoError(t, provider.Shutdown(t.Context())) })
+	m := provider.Meter("nil-callback")
+	counter, err := m.Int64ObservableCounter("counter")
+	require.NoError(t, err)
+
+	valid, err := m.RegisterCallback(func(_ context.Context, observer metric.Observer) error {
+		observer.ObserveInt64(counter, 7)
+		return nil
+	}, counter)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, valid.Unregister()) })
+
+	registration, err := m.RegisterCallback(nil, counter)
+	require.NoError(t, err)
+	require.NotNil(t, registration)
+
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &got))
+	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
+		Resource: resource.Empty(),
+		ScopeMetrics: []metricdata.ScopeMetrics{{
+			Scope: instrumentation.Scope{Name: "nil-callback"},
+			Metrics: []metricdata.Metrics{{
+				Name: "counter",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Value: 7}},
+				},
+			}},
+		}},
+	}, got, metricdatatest.IgnoreTimestamp())
+	require.NoError(t, registration.Unregister())
+	assert.NoError(t, registration.Unregister())
+}
+
 // Instruments should produce correct ResourceMetrics.
 func TestMeterCreatesInstruments(t *testing.T) {
 	// The synchronous measurement methods must ignore the context cancellation.
@@ -3000,9 +3090,37 @@ func TestMeterDefaultAttributes(t *testing.T) {
 			metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 
-		t.Run(tt.name+"_ViewOverride", func(t *testing.T) {
+		t.Run(tt.name+"_ViewWithoutFilter", func(t *testing.T) {
 			rdr := NewManualReader()
-			view := NewView(Instrument{Name: "*"}, Stream{}) // Match all instruments, override filter
+			view := NewView(
+				Instrument{Name: "*"},
+				Stream{Description: "updated"},
+			) // Match all instruments, no attribute filter
+			m := NewMeterProvider(WithReader(rdr), WithView(view)).Meter("test")
+			tt.record(t, m)
+
+			rm := metricdata.ResourceMetrics{}
+			err := rdr.Collect(t.Context(), &rm)
+			require.NoError(t, err)
+
+			require.Len(t, rm.ScopeMetrics, 1)
+			sm := rm.ScopeMetrics[0]
+			require.Len(t, sm.Metrics, 1)
+			got := sm.Metrics[0]
+
+			want := metricdata.Metrics{
+				Name:        tt.instName,
+				Description: "updated",
+				Data:        tt.wantData(alice),
+			}
+			metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+		})
+
+		t.Run(tt.name+"_ViewWithFilterOverride", func(t *testing.T) {
+			rdr := NewManualReader()
+			view := NewView(Instrument{Name: "*"}, Stream{
+				AttributeFilter: attribute.NewAllowKeysFilter(k1, k2),
+			}) // Match all instruments, override filter
 			m := NewMeterProvider(WithReader(rdr), WithView(view)).Meter("test")
 			tt.record(t, m)
 
@@ -3028,29 +3146,94 @@ func TestMeterDefaultAttributes_FilterAll(t *testing.T) {
 	k1 := attribute.Key("k1")
 	k2 := attribute.Key("k2")
 
-	rdr := NewManualReader()
-	m := NewMeterProvider(WithReader(rdr)).Meter("test")
+	t.Run("DefaultBehavior", func(t *testing.T) {
+		rdr := NewManualReader()
+		m := NewMeterProvider(WithReader(rdr)).Meter("test")
 
-	ctr, err := m.Int64Counter("sint", x.WithDefaultAttributes())
-	require.NoError(t, err)
-	ctr.Add(t.Context(), 3, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
+		ctr, err := m.Int64Counter("sint", x.WithDefaultAttributes())
+		require.NoError(t, err)
+		ctr.Add(t.Context(), 3, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
 
-	rm := metricdata.ResourceMetrics{}
-	err = rdr.Collect(t.Context(), &rm)
-	require.NoError(t, err)
+		rm := metricdata.ResourceMetrics{}
+		err = rdr.Collect(t.Context(), &rm)
+		require.NoError(t, err)
 
-	require.Len(t, rm.ScopeMetrics, 1)
-	sm := rm.ScopeMetrics[0]
-	require.Len(t, sm.Metrics, 1)
-	got := sm.Metrics[0]
+		require.Len(t, rm.ScopeMetrics, 1)
+		sm := rm.ScopeMetrics[0]
+		require.Len(t, sm.Metrics, 1)
+		got := sm.Metrics[0]
 
-	want := metricdata.Metrics{
-		Name: "sint",
-		Data: metricdata.Sum[int64]{
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
-			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attribute.NewSet(), Value: 3}},
-		},
-	}
-	metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+		want := metricdata.Metrics{
+			Name: "sint",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: true,
+				DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attribute.NewSet(), Value: 3}},
+			},
+		}
+		metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+	})
+
+	t.Run("ViewWithoutFilter", func(t *testing.T) {
+		rdr := NewManualReader()
+		view := NewView(Instrument{Name: "*"}, Stream{Description: "updated"})
+		m := NewMeterProvider(WithReader(rdr), WithView(view)).Meter("test")
+
+		ctr, err := m.Int64Counter("sint", x.WithDefaultAttributes())
+		require.NoError(t, err)
+		ctr.Add(t.Context(), 3, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
+
+		rm := metricdata.ResourceMetrics{}
+		err = rdr.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		sm := rm.ScopeMetrics[0]
+		require.Len(t, sm.Metrics, 1)
+		got := sm.Metrics[0]
+
+		want := metricdata.Metrics{
+			Name:        "sint",
+			Description: "updated",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: true,
+				DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attribute.NewSet(), Value: 3}},
+			},
+		}
+		metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+	})
+
+	t.Run("ViewWithFilterOverride", func(t *testing.T) {
+		rdr := NewManualReader()
+		view := NewView(Instrument{Name: "*"}, Stream{
+			AttributeFilter: attribute.NewAllowKeysFilter(k1),
+		})
+		m := NewMeterProvider(WithReader(rdr), WithView(view)).Meter("test")
+
+		ctr, err := m.Int64Counter("sint", x.WithDefaultAttributes())
+		require.NoError(t, err)
+		ctr.Add(t.Context(), 3, metric.WithAttributes(k1.String("alice"), k2.String("bob")))
+
+		rm := metricdata.ResourceMetrics{}
+		err = rdr.Collect(t.Context(), &rm)
+		require.NoError(t, err)
+
+		require.Len(t, rm.ScopeMetrics, 1)
+		sm := rm.ScopeMetrics[0]
+		require.Len(t, sm.Metrics, 1)
+		got := sm.Metrics[0]
+
+		want := metricdata.Metrics{
+			Name: "sint",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: true,
+				DataPoints: []metricdata.DataPoint[int64]{
+					{Attributes: attribute.NewSet(k1.String("alice")), Value: 3},
+				},
+			},
+		}
+		metricdatatest.AssertEqual(t, want, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+	})
 }
