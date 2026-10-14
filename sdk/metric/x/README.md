@@ -1,8 +1,12 @@
-# Experimental Features
+# Experimental Metric SDK
 
+<!--
+Adding/uncommenting the following after initial PR merge:
 [![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/otel/sdk/metric/x)](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric/x)
+-->
 
-This module contains experimental Metric SDK features.
+This module contains experimental extensions to the OpenTelemetry Go Metric SDK.
+Its APIs may change incompatibly between releases.
 
 ## MetricFilter
 
@@ -17,12 +21,3 @@ The aggregation is passed as `metricdata.Aggregation`, matching the collected da
 
 Experimental features are outside the OpenTelemetry Go [versioning and stability policy](../../../VERSIONING.md).
 These features may be removed or modified in successive releases, including patch releases.
-# Experimental Metric SDK
-
-<!--
-Adding/uncommenting the following after initial PR merge:
-[![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/otel/sdk/metric/x)](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric/x)
--->
-
-This module contains experimental extensions to the OpenTelemetry Go Metric SDK.
-Its APIs may change incompatibly between releases.
