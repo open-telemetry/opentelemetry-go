@@ -39,6 +39,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Encode an empty attribute value nested in a slice or map as `{}` in `go.opentelemetry.io/otel/trace`, so the auto-instrumentation span that carries it is no longer dropped. (#9182)
 - Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP protobuf partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9188)
 
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable -->
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -4035,6 +4038,8 @@ It contains api and sdk for trace and meter.
 [0.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.0
 
 <!-- Released section ended -->
+
+<!-- markdownlint-restore -->
 
 [Go 1.27]: https://go.dev/doc/go1.27
 [Go 1.26]: https://go.dev/doc/go1.26
