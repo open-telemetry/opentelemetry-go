@@ -46,6 +46,16 @@ func TestWait(t *testing.T) {
 			delay:    1 * time.Hour,
 			expected: context.Canceled,
 		},
+		{
+			ctx: func() context.Context {
+				ctx, cancel := context.WithCancelCause(t.Context())
+				cancel(assert.AnError)
+				return ctx
+			}(),
+			// Ensure the timer and context do not end simultaneously.
+			delay:    1 * time.Hour,
+			expected: assert.AnError,
+		},
 	}
 
 	for _, test := range tests {
@@ -157,17 +167,46 @@ func TestBackoffRetryCanceledContext(t *testing.T) {
 		MaxElapsedTime: 10 * time.Millisecond,
 	}.RequestFunc(ev)
 
-	ctx, cancel := context.WithCancel(t.Context())
-	count := 0
-	cancel()
-	err := reqFunc(ctx, func(context.Context) error {
-		count++
-		return assert.AnError
-	})
+	customCause := errors.New("custom cancellation cause")
+	tests := []struct {
+		name     string
+		ctx      func(context.Context) context.Context
+		expected error
+	}{
+		{
+			name: "DefaultCause",
+			ctx: func(parent context.Context) context.Context {
+				ctx, cancel := context.WithCancel(parent)
+				cancel()
+				return ctx
+			},
+			expected: context.Canceled,
+		},
+		{
+			name: "CustomCause",
+			ctx: func(parent context.Context) context.Context {
+				ctx, cancel := context.WithCancelCause(parent)
+				cancel(customCause)
+				return ctx
+			},
+			expected: customCause,
+		},
+	}
 
-	assert.ErrorIs(t, err, context.Canceled)
-	assert.Contains(t, err.Error(), assert.AnError.Error())
-	assert.Equal(t, 1, count)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			requestErr := errors.New("request failed")
+			count := 0
+			err := reqFunc(test.ctx(t.Context()), func(context.Context) error {
+				count++
+				return requestErr
+			})
+
+			assert.ErrorIs(t, err, test.expected)
+			assert.ErrorIs(t, err, requestErr)
+			assert.Equal(t, 1, count)
+		})
+	}
 }
 
 func TestThrottledRetryGreaterThanMaxElapsedTime(t *testing.T) {

@@ -59,7 +59,15 @@ func getOptionsFromEnv() []GenericOption {
 					// For OTLP/HTTP endpoint URLs without a per-signal
 					// configuration, the passed endpoint is used as a base URL
 					// and the signals are sent to these paths relative to that.
-					cfg.Metrics.URLPath = path.Join(u.Path, DefaultMetricsPath)
+					suffix := DefaultMetricsPath
+					if strings.HasSuffix(u.EscapedPath(), "/") {
+						suffix = strings.TrimPrefix(suffix, "/")
+					}
+					cfg.Metrics.URLPath = u.Path + suffix
+					cfg.Metrics.URLRawPath = u.RawPath
+					if cfg.Metrics.URLRawPath != "" {
+						cfg.Metrics.URLRawPath += suffix
+					}
 					return cfg
 				}, withEndpointForGRPC(u)),
 			)
@@ -79,6 +87,7 @@ func getOptionsFromEnv() []GenericOption {
 						path = "/"
 					}
 					cfg.Metrics.URLPath = path
+					cfg.Metrics.URLRawPath = u.RawPath
 					return cfg
 				}, withEndpointForGRPC(u)),
 			)
@@ -121,8 +130,19 @@ func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
 	return func(cfg Config) Config {
 		// For OTLP/gRPC endpoints, this is the target to which the
 		// exporter is going to send telemetry.
-		cfg.Metrics.Endpoint = path.Join(u.Host, u.Path)
+		cfg.Metrics.Endpoint = grpcEndpoint(u)
 		return cfg
+	}
+}
+
+func grpcEndpoint(u *url.URL) string {
+	switch strings.ToLower(u.Scheme) {
+	case "http", "https":
+		return u.Host
+	case "":
+		return path.Join(u.Host, u.Path)
+	default:
+		return u.String()
 	}
 }
 
@@ -142,7 +162,7 @@ func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOpt
 
 func withEndpointScheme(u *url.URL) GenericOption {
 	switch strings.ToLower(u.Scheme) {
-	case "http", "unix":
+	case "http", "unix", "unix-abstract":
 		return WithInsecure()
 	default:
 		return WithSecure()

@@ -78,6 +78,11 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, NoCompression, c.Traces.Compression)
 				assert.Equal(t, map[string]string(nil), c.Traces.Headers)
 				assert.Equal(t, 64*1024*1024, c.Traces.MaxRequestSize)
+				if grpcOption {
+					assert.Zero(t, c.Traces.MaxResponseSize)
+				} else {
+					assert.Equal(t, DefaultMaxResponseSize, c.Traces.MaxResponseSize)
+				}
 				assert.Equal(t, 10*time.Second, c.Traces.Timeout)
 			},
 		},
@@ -178,11 +183,38 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.False(t, c.Traces.Insecure)
-				if grpcOption {
-					assert.Equal(t, "env.endpoint/prefix", c.Traces.Endpoint)
-				} else {
-					assert.Equal(t, "env.endpoint", c.Traces.Endpoint)
+				assert.Equal(t, "env.endpoint", c.Traces.Endpoint)
+				if !grpcOption {
 					assert.Equal(t, "/prefix/v1/traces", c.Traces.URLPath)
+				}
+			},
+		},
+		{
+			name: "Test Environment Endpoint Without Scheme With Path",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "//env.endpoint:4317/prefix",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.False(t, c.Traces.Insecure)
+				if grpcOption {
+					assert.Equal(t, "env.endpoint:4317/prefix", c.Traces.Endpoint)
+				} else {
+					assert.Equal(t, "env.endpoint:4317", c.Traces.Endpoint)
+					assert.Equal(t, "/prefix/v1/traces", c.Traces.URLPath)
+				}
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Endpoint With Path",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":        "https://overrode.by.signal.specific/env/var",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://env.traces.endpoint/prefix",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Traces.Insecure)
+				assert.Equal(t, "env.traces.endpoint", c.Traces.Endpoint)
+				if !grpcOption {
+					assert.Equal(t, "/prefix", c.Traces.URLPath)
 				}
 			},
 		},
@@ -197,6 +229,18 @@ func TestConfigs(t *testing.T) {
 				assert.Equal(t, "env.traces.endpoint", c.Traces.Endpoint)
 				if !grpcOption {
 					assert.Equal(t, "/", c.Traces.URLPath)
+				}
+			},
+		},
+		{
+			name: "Test Environment Unix Endpoint",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "unix:///tmp/otel.sock",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Traces.Insecure)
+				if grpcOption {
+					assert.Equal(t, "unix:///tmp/otel.sock", c.Traces.Endpoint)
 				}
 			},
 		},
@@ -428,6 +472,112 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 
+		// Protocol Tests
+		{
+			name: "Test Default Protocol",
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test With http/protobuf Protocol",
+			opts: []GenericOption{
+				WithProtocol(ProtocolHTTPProtobuf),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test With http/json Protocol",
+			opts: []GenericOption{
+				WithProtocol(ProtocolHTTPJSON),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPJSON, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test With grpc Protocol",
+			opts: []GenericOption{
+				WithProtocol(ProtocolGRPC),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test Environment Protocol with http/protobuf",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test Environment Protocol with grpc",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Protocol",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": "http/protobuf",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+		{
+			name: "Test Mixed Environment and With Protocol",
+			opts: []GenericOption{
+				WithProtocol(ProtocolHTTPProtobuf),
+			},
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": "http/json",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, ProtocolGRPC, c.Traces.Protocol)
+				} else {
+					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
+				}
+			},
+		},
+
 		// Timeout Tests
 		{
 			name: "Test With Timeout",
@@ -534,6 +684,47 @@ func TestConfigs(t *testing.T) {
 	}
 }
 
+func TestHTTPURLPath(t *testing.T) {
+	testCases := []struct {
+		name        string
+		opts        []GenericOption
+		env         env
+		wantPath    string
+		wantRawPath string
+	}{
+		{
+			name: "generic endpoint escaped slash with trailing slash",
+			env: env{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://someendpoint/a%2Fb/",
+			},
+			wantPath:    "/a/b/v1/traces",
+			wantRawPath: "/a%2Fb/v1/traces",
+		},
+		{
+			name: "URL path overrides escaped endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL("https://someendpoint/a%2Fb"),
+				WithURLPath(" /a/b "),
+			},
+			wantPath: "/a/b",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			origEOR := DefaultEnvOptionsReader
+			DefaultEnvOptionsReader = envconfig.EnvOptionsReader{
+				GetEnv:    testCase.env.getEnv,
+				Namespace: "OTEL_EXPORTER_OTLP",
+			}
+			t.Cleanup(func() { DefaultEnvOptionsReader = origEOR })
+
+			cfg := NewHTTPConfig(asHTTPOptions(testCase.opts)...)
+			assert.Equal(t, testCase.wantPath, cfg.Traces.URLPath)
+			assert.Equal(t, testCase.wantRawPath, cfg.Traces.URLRawPath)
+		})
+	}
+}
+
 func asHTTPOptions(opts []GenericOption) []HTTPOption {
 	converted := make([]HTTPOption, len(opts))
 	for i, o := range opts {
@@ -548,6 +739,27 @@ func asGRPCOptions(opts []GenericOption) []GRPCOption {
 		converted[i] = NewGRPCOption(o.ApplyGRPCOption)
 	}
 	return converted
+}
+
+func TestMaxResponseSize(t *testing.T) {
+	tests := []struct {
+		name string
+		size int64
+		want int64
+	}{
+		{name: "Positive", size: 2, want: 2},
+		{name: "Zero", size: 0, want: DefaultMaxResponseSize},
+		{name: "Negative", size: -1, want: DefaultMaxResponseSize},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cfg := NewHTTPConfig(WithMaxResponseSize(test.size))
+			assert.Equal(t, test.want, cfg.Traces.MaxResponseSize)
+		})
+	}
+
+	cfg := NewHTTPConfig(WithMaxResponseSize(2), WithMaxResponseSize(0))
+	assert.Equal(t, int64(2), cfg.Traces.MaxResponseSize)
 }
 
 func TestCleanPath(t *testing.T) {

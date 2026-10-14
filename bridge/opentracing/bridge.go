@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,7 +36,8 @@ var (
 )
 
 type bridgeSpanContext struct {
-	bag baggage.Baggage
+	bagMu sync.RWMutex
+	bag   baggage.Baggage
 	trace.SpanContext
 }
 
@@ -56,7 +58,7 @@ func newBridgeSpanContext(otelSpanContext trace.SpanContext, parentOtSpanContext
 }
 
 func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
-	for _, m := range c.bag.Members() {
+	for _, m := range c.getBaggage().Members() {
 		if !handler(m.Key(), m.Value()) {
 			return
 		}
@@ -68,11 +70,19 @@ func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
 	if err != nil {
 		return
 	}
+	c.bagMu.Lock()
+	defer c.bagMu.Unlock()
 	c.bag, _ = c.bag.SetMember(m)
 }
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) baggage.Member {
-	return c.bag.Member(restrictedKey)
+	return c.getBaggage().Member(restrictedKey)
+}
+
+func (c *bridgeSpanContext) getBaggage() baggage.Baggage {
+	c.bagMu.RLock()
+	defer c.bagMu.RUnlock()
+	return c.bag
 }
 
 type bridgeSpan struct {
@@ -116,10 +126,11 @@ func (s *bridgeSpan) FinishWithOptions(opts ot.FinishOptions) {
 }
 
 func (s *bridgeSpan) logRecord(record ot.LogRecord) {
+	attrs := otLogFieldsToOTelAttrs(record.Fields)
 	s.otelSpan.AddEvent(
-		"",
+		otelEventName(attrs),
 		trace.WithTimestamp(record.Timestamp),
-		trace.WithAttributes(otLogFieldsToOTelAttrs(record.Fields)...),
+		trace.WithAttributes(attrs...),
 	)
 }
 
@@ -156,9 +167,10 @@ func (s *bridgeSpan) SetTag(key string, value any) ot.Span {
 }
 
 func (s *bridgeSpan) LogFields(fields ...otlog.Field) {
+	attrs := otLogFieldsToOTelAttrs(fields)
 	s.otelSpan.AddEvent(
-		"",
-		trace.WithAttributes(otLogFieldsToOTelAttrs(fields)...),
+		otelEventName(attrs),
+		trace.WithAttributes(attrs...),
 	)
 }
 
@@ -222,6 +234,31 @@ func otLogFieldsToOTelAttrs(fields []otlog.Field) []attribute.KeyValue {
 		field.Marshal(encoder)
 	}
 	return encoder.pairs
+}
+
+// eventNameKey is the OpenTracing log field conventionally carrying the name
+// of the logged event.
+const eventNameKey = attribute.Key("event")
+
+// defaultEventName is used when a log field set carries no usable
+// eventNameKey field.
+const defaultEventName = "log"
+
+// otelEventName returns the OTel event name for a set of converted OpenTracing
+// log fields: the value of the last eventNameKey attribute, falling back to
+// defaultEventName. An event name is semantically required to be non-empty, so
+// an empty value is treated as absent.
+func otelEventName(attrs []attribute.KeyValue) string {
+	for _, attr := range slices.Backward(attrs) {
+		if attr.Key != eventNameKey {
+			continue
+		}
+		if name := attr.Value.String(); name != "" {
+			return name
+		}
+		return defaultEventName
+	}
+	return defaultEventName
 }
 
 func (s *bridgeSpan) LogKV(alternatingKeyValues ...any) {
@@ -375,7 +412,7 @@ func (t *BridgeTracer) baggageSetHook(ctx context.Context, list iBaggage.List) c
 		return ctx
 	}
 	for k, v := range list {
-		bSpan.setBaggageItemOnly(k, v.Value)
+		bSpan.setBaggageItemOnly(k, v.Value())
 	}
 	return ctx
 }
@@ -412,7 +449,7 @@ func (t *BridgeTracer) baggageGetHook(ctx context.Context, list iBaggage.List) i
 
 	for k, v := range items {
 		// Overwrite according to OpenTelemetry specification.
-		merged[k] = iBaggage.Item{Value: v}
+		merged[k] = iBaggage.NewItemWithProperties(v, nil)
 	}
 
 	return merged
@@ -694,7 +731,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format, carrier any) error {
 		sc:   bridgeSC.SpanContext,
 	}
 	ctx := trace.ContextWithSpan(context.Background(), fs)
-	ctx = baggage.ContextWithBaggage(ctx, bridgeSC.bag)
+	ctx = baggage.ContextWithBaggage(ctx, bridgeSC.getBaggage())
 	t.getPropagator().Inject(ctx, textCarrier)
 	return nil
 }

@@ -35,7 +35,7 @@ func ExampleRecordFactory() {
 	// scope=myapp msg=bar
 }
 
-// Compile time check exporter implements log.Exporter.
+// This is a compile-time check that exporter implements log.Exporter.
 var _ log.Exporter = exporter{}
 
 type exporter struct{ io.Writer }
@@ -58,7 +58,7 @@ func (exporter) Shutdown(context.Context) error {
 	return nil
 }
 
-// appropriate error should be returned in these situations.
+// ForceFlush returns nil.
 func (exporter) ForceFlush(context.Context) error {
 	return nil
 }

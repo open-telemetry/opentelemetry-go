@@ -100,7 +100,7 @@ func TestExporter(t *testing.T) {
 
 			// Export a record after shutdown, this should not be written
 			err = exporter.Export(t.Context(), []sdklog.Record{record})
-			assert.NoError(t, err)
+			assert.ErrorIs(t, err, sdklog.ErrExporterShutdown)
 
 			// Check the writer
 			assert.Equal(t, tc.want, buf.String())
@@ -181,6 +181,27 @@ func TestExporterExport(t *testing.T) {
 			err = exporter.Export(tc.ctx, tc.records)
 			assert.Equal(t, tc.wantError, err)
 			assert.Equal(t, tc.wantResult, buf.String())
+		})
+	}
+}
+
+func TestExporterWriterError(t *testing.T) {
+	writeErr := errors.New("write failed")
+	writer := &failingWriter{err: writeErr}
+	for _, tc := range []struct {
+		name    string
+		options []Option
+	}{
+		{name: "WithWriter", options: []Option{WithWriter(writer)}},
+		{name: "WithNilWriterThenWriter", options: []Option{WithWriter(nil), WithWriter(writer)}},
+		{name: "WithWriterThenNilWriter", options: []Option{WithWriter(writer), WithWriter(nil)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			exporter, err := New(tc.options...)
+			require.NoError(t, err)
+			t.Cleanup(func() { assert.NoError(t, exporter.Shutdown(context.WithoutCancel(t.Context()))) })
+			err = exporter.Export(t.Context(), []sdklog.Record{getRecord(time.Now())})
+			assert.ErrorIs(t, err, writeErr)
 		})
 	}
 }
@@ -373,7 +394,9 @@ func TestExporterConcurrentSafe(t *testing.T) {
 				go func() {
 					defer wg.Done()
 					err := exporter.Export(t.Context(), []sdklog.Record{{}})
-					assert.NoError(t, err)
+					if err != nil {
+						assert.ErrorIs(t, err, sdklog.ErrExporterShutdown)
+					}
 					err = exporter.ForceFlush(t.Context())
 					assert.NoError(t, err)
 					err = exporter.Shutdown(t.Context())

@@ -403,6 +403,15 @@ func TestMarshalJSON(t *testing.T) {
 		string(data))
 }
 
+func TestMarshalLogNilResource(t *testing.T) {
+	var r *resource.Resource
+	var got any
+	require.NotPanics(t, func() {
+		got = r.MarshalLog()
+	})
+	assert.Equal(t, resource.Empty().MarshalLog(), got)
+}
+
 func TestNew(t *testing.T) {
 	tc := []struct {
 		name      string
@@ -663,6 +672,8 @@ func TestWithOS(t *testing.T) {
 
 func TestWithProcessPID(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
+	t.Cleanup(restoreAttributesProviders)
+
 	ctx := t.Context()
 
 	res, err := resource.New(
@@ -678,6 +689,8 @@ func TestWithProcessPID(t *testing.T) {
 
 func TestWithProcessExecutableName(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
+	t.Cleanup(restoreAttributesProviders)
+
 	ctx := t.Context()
 
 	res, err := resource.New(
@@ -693,6 +706,8 @@ func TestWithProcessExecutableName(t *testing.T) {
 
 func TestWithProcessExecutablePath(t *testing.T) {
 	mockProcessAttributesProviders()
+	t.Cleanup(restoreAttributesProviders)
+
 	ctx := t.Context()
 
 	res, err := resource.New(
@@ -708,6 +723,8 @@ func TestWithProcessExecutablePath(t *testing.T) {
 
 func TestWithProcessCommandArgs(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
+	t.Cleanup(restoreAttributesProviders)
+
 	ctx := t.Context()
 
 	res, err := resource.New(
@@ -724,6 +741,8 @@ func TestWithProcessCommandArgs(t *testing.T) {
 
 func TestWithProcessOwner(t *testing.T) {
 	mockProcessAttributesProviders()
+	t.Cleanup(restoreAttributesProviders)
+
 	ctx := t.Context()
 
 	res, err := resource.New(
@@ -739,6 +758,8 @@ func TestWithProcessOwner(t *testing.T) {
 
 func TestWithProcessRuntimeName(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
+	t.Cleanup(restoreAttributesProviders)
+
 	ctx := t.Context()
 
 	res, err := resource.New(
@@ -754,6 +775,8 @@ func TestWithProcessRuntimeName(t *testing.T) {
 
 func TestWithProcessRuntimeVersion(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
+	t.Cleanup(restoreAttributesProviders)
+
 	ctx := t.Context()
 
 	res, err := resource.New(
@@ -769,6 +792,8 @@ func TestWithProcessRuntimeVersion(t *testing.T) {
 
 func TestWithProcessRuntimeDescription(t *testing.T) {
 	mockProcessAttributesProvidersWithErrors()
+	t.Cleanup(restoreAttributesProviders)
+
 	ctx := t.Context()
 
 	res, err := resource.New(
@@ -784,6 +809,8 @@ func TestWithProcessRuntimeDescription(t *testing.T) {
 
 func TestWithProcess(t *testing.T) {
 	mockProcessAttributesProviders()
+	t.Cleanup(restoreAttributesProviders)
+
 	ctx := t.Context()
 
 	res, err := resource.New(

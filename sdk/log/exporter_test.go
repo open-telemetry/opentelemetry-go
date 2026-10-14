@@ -20,8 +20,7 @@ type testExporter struct {
 	Err error
 	// Method-specific errors take precedence over Err when set.
 	ExportErr, ShutdownErr, ForceFlushErr error
-	// ExportTrigger is read from prior to returning from the Export method if
-	// non-nil.
+	// ExportTrigger is read before the Export method returns if it is non-nil.
 	ExportTrigger  chan struct{}
 	ExportFunc     func(context.Context, []Record) error
 	ShutdownFunc   func(context.Context) error

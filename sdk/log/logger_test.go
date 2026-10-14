@@ -126,6 +126,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         r.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 3,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -159,9 +160,10 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         rWithErr.ObservedTimestamp(),
 					resource:                  attrLimitResource,
 					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       0,
 					scope:                     &attrLimitScope,
-					dropped:                   2,
+					dropped:                   4,
 				},
 			},
 		},
@@ -188,9 +190,10 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         rWithErr.ObservedTimestamp(),
 					resource:                  attrLimitResource,
 					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       0,
 					scope:                     &attrLimitScope,
-					dropped:                   2,
+					dropped:                   4,
 				},
 			},
 		},
@@ -217,6 +220,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         rWithErr.ObservedTimestamp(),
 					resource:                  attrLimitResource,
 					attributeValueLengthLimit: defaultAttrValLenLim,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       -1,
 					scope:                     &attrLimitScope,
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -264,6 +268,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         r.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 3,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -300,6 +305,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         r.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 3,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -333,6 +339,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         nowDate,
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 3,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       2,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -367,6 +374,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         rWithAllowKeyDuplication.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 5,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       5,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -405,6 +413,7 @@ func TestLoggerEmit(t *testing.T) {
 					observedTimestamp:         rWithDuplicatesInBody.ObservedTimestamp(),
 					resource:                  resource.NewSchemaless(attribute.String("key", "value")),
 					attributeValueLengthLimit: 5,
+					attributeValueDepthLimit:  defaultAttrValDepthLim,
 					attributeCountLimit:       5,
 					scope:                     &instrumentation.Scope{Name: "scope"},
 					front: [attributesInlineCount]attribute.KeyValue{
@@ -429,6 +438,30 @@ func TestLoggerEmit(t *testing.T) {
 			assert.Equal(t, tc.expectedRecords, p1.records)
 		})
 	}
+}
+
+func TestLoggerEmitInvalidAttributes(t *testing.T) {
+	want := []attribute.KeyValue{
+		attribute.String("Key", "upper"),
+		attribute.String("key", "lower"),
+	}
+
+	var record log.Record
+	record.AddAttributes(want[0], attribute.String("", "invalid"), want[1])
+	require.Equal(t, 3, record.AttributesLen())
+
+	processor := newProcessor("processor")
+	provider := NewLoggerProvider(WithProcessor(processor))
+	provider.Logger("logger").Emit(t.Context(), record)
+
+	require.Len(t, processor.records, 1)
+	var got []attribute.KeyValue
+	processor.records[0].WalkAttributes(func(kv attribute.KeyValue) bool {
+		got = append(got, kv)
+		return true
+	})
+	assert.Equal(t, want, got)
+	assert.Zero(t, processor.records[0].DroppedAttributes())
 }
 
 func TestLoggerEmitErrorHandlerShutdown(t *testing.T) {
@@ -502,7 +535,7 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 		assert.Contains(t, gotAttrs, attribute.String(string(semconv.ExceptionMessageKey), "boom"))
 	})
 
-	t.Run("ShortCircuitsAtAttributeLimit", func(t *testing.T) {
+	t.Run("OneSlotLeft", func(t *testing.T) {
 		var in log.Record
 		in.SetBody(attribute.StringValue("boom"))
 		in.SetSeverity(log.SeverityError)
@@ -525,6 +558,7 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 
 		assert.Empty(t, gotType)
 		assert.Equal(t, "boom", gotMessage)
+		assert.Equal(t, 1, got.DroppedAttributes())
 	})
 
 	t.Run("NoSlotsLeft", func(t *testing.T) {
@@ -549,18 +583,61 @@ func TestNewRecordAddsExceptionAttrs(t *testing.T) {
 
 		assert.Empty(t, gotType)
 		assert.Empty(t, gotMessage)
+		assert.Equal(t, 2, got.DroppedAttributes())
+	})
+
+	t.Run("EmptyMessageWithNoSlotsLeft", func(t *testing.T) {
+		err := &errWithType{typ: "custom.type"}
+		var in log.Record
+		in.SetErr(err)
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(0)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
+
+		assert.Zero(t, got.AttributesLen())
+		assert.Equal(t, 1, got.DroppedAttributes())
+		assert.False(t, err.typeCalled)
+	})
+
+	t.Run("CallerProvidedAttributesWithNoSlotsLeft", func(t *testing.T) {
+		var in log.Record
+		in.SetErr(errors.New("boom"))
+		in.AddAttributes(
+			exceptionMessageKey.String("message"),
+			exceptionTypeKey.String("type"),
+		)
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(0)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
+
+		assert.Zero(t, got.AttributesLen())
+		assert.Equal(t, 2, got.DroppedAttributes())
+	})
+
+	t.Run("CallerProvidedTypeFillsCapacity", func(t *testing.T) {
+		var in log.Record
+		in.SetErr(errors.New("boom"))
+		in.AddAttributes(exceptionTypeKey.String("type"))
+		lLimited := newLogger(NewLoggerProvider(WithAttributeCountLimit(1)), instrumentation.Scope{})
+		got := lLimited.newRecord(t.Context(), in)
+
+		assert.Equal(t, 1, got.AttributesLen())
+		assert.Equal(t, 1, got.DroppedAttributes())
+		got.WalkAttributes(func(kv attribute.KeyValue) bool {
+			assert.Equal(t, exceptionTypeKey, kv.Key)
+			assert.Equal(t, "type", kv.Value.AsString())
+			return true
+		})
 	})
 }
 
 func TestErrorType(t *testing.T) {
 	t.Run("UsesErrorTypeMethod", func(t *testing.T) {
-		err := errWithType{msg: "boom", typ: "custom.type"}
+		err := &errWithType{msg: "boom", typ: "custom.type"}
 		assert.Equal(t, "custom.type", errorType(err))
 	})
 
 	t.Run("FallsBackWhenErrorTypeEmpty", func(t *testing.T) {
-		err := errWithType{msg: "boom", typ: ""}
-		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.errWithType", errorType(err))
+		err := &errWithType{msg: "boom", typ: ""}
+		assert.Equal(t, "*log.errWithType", errorType(err))
 	})
 
 	t.Run("NilError", func(t *testing.T) {
@@ -573,12 +650,12 @@ func TestErrorType(t *testing.T) {
 	})
 
 	t.Run("FmtWrappedFallsBackToWrappedType", func(t *testing.T) {
-		err := fmt.Errorf("wrapped: %w", errWithType{msg: "boom", typ: ""})
-		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.errWithType", errorType(err))
+		err := fmt.Errorf("wrapped: %w", &errWithType{msg: "boom", typ: ""})
+		assert.Equal(t, "*log.errWithType", errorType(err))
 	})
 
 	t.Run("CustomWrapperStaysTopLevel", func(t *testing.T) {
-		err := wrappedErr{err: errWithType{msg: "boom", typ: ""}}
+		err := wrappedErr{err: &errWithType{msg: "boom", typ: ""}}
 		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.wrappedErr", errorType(err))
 	})
 
@@ -589,13 +666,17 @@ func TestErrorType(t *testing.T) {
 }
 
 type errWithType struct {
-	msg string
-	typ string
+	msg        string
+	typ        string
+	typeCalled bool
 }
 
 func (e errWithType) Error() string { return e.msg }
 
-func (e errWithType) ErrorType() string { return e.typ }
+func (e *errWithType) ErrorType() string {
+	e.typeCalled = true
+	return e.typ
+}
 
 type baseErr struct{}
 
