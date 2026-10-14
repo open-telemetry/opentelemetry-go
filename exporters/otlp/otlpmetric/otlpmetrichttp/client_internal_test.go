@@ -4,6 +4,7 @@
 package otlpmetrichttp
 
 import (
+	"math"
 	"net/http"
 	"testing"
 	"time"
@@ -22,5 +23,5 @@ func TestRetryAfterUsesHTTPDate(t *testing.T) {
 func TestRetryAfterSecondsOverflow(t *testing.T) {
 	err := newResponseError(http.Header{"Retry-After": {"9223372036854775807"}}, nil)
 	_, throttle := evaluate(err)
-	assert.Equal(t, time.Duration(1<<63-1), throttle)
+	assert.Equal(t, time.Duration(math.MaxInt64), throttle)
 }

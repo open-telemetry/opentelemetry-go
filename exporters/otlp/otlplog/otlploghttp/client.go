@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -60,10 +62,14 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	}
 
 	hc := cfg.httpClient
+	var exportTimeout time.Duration
 	if hc == nil {
+		// WithHTTPClient takes precedence over WithTimeout, so the exporter
+		// timeout is applied only for the client constructed here.
+		exportTimeout = cfg.timeout.Value
 		hc = &http.Client{
 			Transport: ourTransport,
-			Timeout:   cfg.timeout.Value,
+			Timeout:   exportTimeout,
 		}
 
 		if cfg.tlsCfg.Value != nil || cfg.proxy.Value != nil {
@@ -80,9 +86,10 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	}
 
 	u := &url.URL{
-		Scheme: "https",
-		Host:   cfg.endpoint.Value,
-		Path:   cfg.path.Value,
+		Scheme:  "https",
+		Host:    cfg.endpoint.Value,
+		Path:    cfg.path.Value.Path,
+		RawPath: cfg.path.Value.RawPath,
 	}
 	if cfg.insecure.Value {
 		u.Scheme = "http"
@@ -110,6 +117,7 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 		req:             req,
 		requestFunc:     cfg.retryCfg.Value.RequestFunc(evaluate),
 		client:          hc,
+		exportTimeout:   exportTimeout,
 	}
 
 	id := nextExporterID()
@@ -126,6 +134,7 @@ type httpClient struct {
 	maxResponseSize int64
 	requestFunc     retry.RequestFunc
 	client          *http.Client
+	exportTimeout   time.Duration
 
 	inst *observ.Instrumentation
 }
@@ -177,6 +186,12 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		return err
 	}
 
+	if c.exportTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, c.exportTimeout, errors.New("exporter export timeout"))
+		defer cancel()
+	}
+
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
 		select {
 		case <-iCtx.Done():
@@ -216,7 +231,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 				return nil
 			}
 
-			if resp.Header.Get("Content-Type") == "application/x-protobuf" {
+			if isProtobufContentType(resp.Header.Get("Content-Type")) {
 				var respProto collogpb.ExportLogsServiceResponse
 				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
 					return err
@@ -355,11 +370,22 @@ func newResponseError(header http.Header, wrapped error) error {
 	return rErr
 }
 
+// isProtobufContentType reports whether the Content-Type value denotes a
+// protobuf-encoded OTLP payload. Media type tokens are case-insensitive and
+// parameters are ignored, as required by RFC 9110 section 8.3.
+func isProtobufContentType(contentType string) bool {
+	mediatype, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(mediatype, "application/x-protobuf")
+}
+
 func retryAfterDuration(v string) time.Duration {
 	if t, err := strconv.ParseInt(v, 10, 64); err == nil && t >= 0 {
-		const maxRetryAfterSeconds = int64(1<<63-1) / int64(time.Second)
+		const maxRetryAfterSeconds = math.MaxInt64 / int64(time.Second)
 		if t > maxRetryAfterSeconds {
-			return time.Duration(1<<63 - 1)
+			return time.Duration(math.MaxInt64)
 		}
 		return time.Duration(t) * time.Second
 	}

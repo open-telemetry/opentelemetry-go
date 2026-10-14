@@ -4,10 +4,12 @@
 package aggregate
 
 import (
+	"context"
 	"math"
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -339,6 +341,37 @@ func (m *limitedSyncMap[V]) Clear() {
 	defer m.lenMux.Unlock()
 	m.len = 0
 	m.Map.Clear()
+}
+
+// ClearContext clears the map unless ctx is canceled before acquiring the lock.
+func (m *limitedSyncMap[V]) ClearContext(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if !m.lenMux.TryLock() {
+		// Reservoir construction holds lenMux. Sleep between attempts so a
+		// blocked constructor cannot make shutdown spin, without changing the
+		// measurement locking path.
+		ticker := time.NewTicker(time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-ticker.C:
+			}
+			if m.lenMux.TryLock() {
+				break
+			}
+		}
+	}
+	defer m.lenMux.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	m.len = 0
+	m.Map.Clear()
+	return nil
 }
 
 // CompareAndDelete deletes the entry for key if its value is equal to old.

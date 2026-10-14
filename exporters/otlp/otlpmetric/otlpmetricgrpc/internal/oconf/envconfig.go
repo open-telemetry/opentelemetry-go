@@ -59,7 +59,15 @@ func getOptionsFromEnv() []GenericOption {
 					// For OTLP/HTTP endpoint URLs without a per-signal
 					// configuration, the passed endpoint is used as a base URL
 					// and the signals are sent to these paths relative to that.
-					cfg.Metrics.URLPath = path.Join(u.Path, DefaultMetricsPath)
+					suffix := DefaultMetricsPath
+					if strings.HasSuffix(u.EscapedPath(), "/") {
+						suffix = strings.TrimPrefix(suffix, "/")
+					}
+					cfg.Metrics.URLPath = u.Path + suffix
+					cfg.Metrics.URLRawPath = u.RawPath
+					if cfg.Metrics.URLRawPath != "" {
+						cfg.Metrics.URLRawPath += suffix
+					}
 					return cfg
 				}, withEndpointForGRPC(u)),
 			)
@@ -79,6 +87,7 @@ func getOptionsFromEnv() []GenericOption {
 						path = "/"
 					}
 					cfg.Metrics.URLPath = path
+					cfg.Metrics.URLRawPath = u.RawPath
 					return cfg
 				}, withEndpointForGRPC(u)),
 			)
