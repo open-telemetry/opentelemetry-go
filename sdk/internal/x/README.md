@@ -72,8 +72,11 @@ unset OTEL_GO_X_OBSERVABILITY
 that reflects when each individual attribute set was first observed, rather
 than a single start time shared by every data point of an instrument.
 
-To have the metric SDK report per-series start timestamps, set the
+To have the metric SDK report per-series start timestamps for cumulative
+aggregation of synchronous instruments, set the
 `OTEL_GO_X_PER_SERIES_START_TIMESTAMPS` environment variable.
+Delta aggregation and the default aggregations of observable instruments
+do not use this flag.
 The value set must be the case-insensitive string value of `"true"` to enable
 the feature. All other values are ignored.
 
