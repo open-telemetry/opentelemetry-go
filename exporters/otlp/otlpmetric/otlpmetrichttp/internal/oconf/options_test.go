@@ -652,6 +652,47 @@ func TestConfigs(t *testing.T) {
 	}
 }
 
+func TestHTTPURLPath(t *testing.T) {
+	testCases := []struct {
+		name        string
+		env         env
+		opts        []GenericOption
+		wantPath    string
+		wantRawPath string
+	}{
+		{
+			name: "Environment/EscapedTrailingSlash",
+			env: env{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://someendpoint/a%2Fb/",
+			},
+			wantPath:    "/a/b/v1/metrics",
+			wantRawPath: "/a%2Fb/v1/metrics",
+		},
+		{
+			name: "URLPath/OverridesEscapedEndpoint",
+			opts: []GenericOption{
+				WithEndpointURL("https://someendpoint/a%2Fb"),
+				WithURLPath(" /a/b "),
+			},
+			wantPath: "/a/b",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			origEOR := DefaultEnvOptionsReader
+			DefaultEnvOptionsReader = envconfig.EnvOptionsReader{
+				GetEnv:    tc.env.getEnv,
+				Namespace: "OTEL_EXPORTER_OTLP",
+			}
+			t.Cleanup(func() { DefaultEnvOptionsReader = origEOR })
+
+			cfg := NewHTTPConfig(asHTTPOptions(tc.opts)...)
+			assert.Equal(t, tc.wantPath, cfg.Metrics.URLPath)
+			assert.Equal(t, tc.wantRawPath, cfg.Metrics.URLRawPath)
+		})
+	}
+}
+
 func dropSelector(metric.InstrumentKind) metric.Aggregation {
 	return metric.AggregationDrop{}
 }

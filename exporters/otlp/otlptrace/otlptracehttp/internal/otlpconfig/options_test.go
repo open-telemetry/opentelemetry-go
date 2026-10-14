@@ -684,6 +684,47 @@ func TestConfigs(t *testing.T) {
 	}
 }
 
+func TestHTTPURLPath(t *testing.T) {
+	testCases := []struct {
+		name        string
+		opts        []GenericOption
+		env         env
+		wantPath    string
+		wantRawPath string
+	}{
+		{
+			name: "generic endpoint escaped slash with trailing slash",
+			env: env{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://someendpoint/a%2Fb/",
+			},
+			wantPath:    "/a/b/v1/traces",
+			wantRawPath: "/a%2Fb/v1/traces",
+		},
+		{
+			name: "URL path overrides escaped endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL("https://someendpoint/a%2Fb"),
+				WithURLPath(" /a/b "),
+			},
+			wantPath: "/a/b",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			origEOR := DefaultEnvOptionsReader
+			DefaultEnvOptionsReader = envconfig.EnvOptionsReader{
+				GetEnv:    testCase.env.getEnv,
+				Namespace: "OTEL_EXPORTER_OTLP",
+			}
+			t.Cleanup(func() { DefaultEnvOptionsReader = origEOR })
+
+			cfg := NewHTTPConfig(asHTTPOptions(testCase.opts)...)
+			assert.Equal(t, testCase.wantPath, cfg.Traces.URLPath)
+			assert.Equal(t, testCase.wantRawPath, cfg.Traces.URLRawPath)
+		})
+	}
+}
+
 func asHTTPOptions(opts []GenericOption) []HTTPOption {
 	converted := make([]HTTPOption, len(opts))
 	for i, o := range opts {
