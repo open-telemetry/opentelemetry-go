@@ -26,6 +26,20 @@ func main() {
 }
 ```
 
+## Version compatibility
+
+The bridge depends on baggage internals in `go.opentelemetry.io/otel`.
+Upgrade `go.opentelemetry.io/otel/bridge/opentracing` together with `go.opentelemetry.io/otel`, using matching versions.
+
+`go.opentelemetry.io/otel` v1.47.0 is incompatible with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
+This combination fails to compile because the internal baggage representation changed, including replacing the `Item.Value` field with a `Value()` method.
+The v1.47.0 bridge supports the updated representation.
+When upgrading `go.opentelemetry.io/otel` to v1.47.0, also upgrade the bridge to at least v1.47.0:
+
+```sh
+go get go.opentelemetry.io/otel@v1.47.0 go.opentelemetry.io/otel/bridge/opentracing@v1.47.0
+```
+
 ## Interop from trace context from OpenTracing to OpenTelemetry
 
 In order to get OpenTracing spans properly into the OpenTelemetry context, so they can be propagated (both internally, and externally), you will need to explicitly use the `BridgeTracer` for creating your OpenTracing spans, rather than a bare OpenTracing `Tracer` instance.
