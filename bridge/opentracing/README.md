@@ -28,13 +28,14 @@ func main() {
 
 ## Version compatibility
 
-The bridge depends on baggage internals in `go.opentelemetry.io/otel`.
-Upgrade `go.opentelemetry.io/otel/bridge/opentracing` together with `go.opentelemetry.io/otel`, using matching versions.
+We introduced a compatibility regression in `go.opentelemetry.io/otel` v1.47.0.
+Applications using this release with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 or earlier fail to compile.
 
-`go.opentelemetry.io/otel` v1.47.0 is incompatible with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
-This combination fails to compile because the internal baggage representation changed, including replacing the `Item.Value` field with a `Value()` method.
-The v1.47.0 bridge supports the updated representation.
-When upgrading `go.opentelemetry.io/otel` to v1.47.0, also upgrade the bridge to at least v1.47.0:
+We changed the internal baggage representation without preserving compatibility with previously released bridge versions.
+The v1.47.0 bridge includes the corresponding changes.
+
+To restore compilation, upgrade the bridge to v1.47.0.
+The following command selects matching versions of both modules:
 
 ```sh
 go get go.opentelemetry.io/otel@v1.47.0 go.opentelemetry.io/otel/bridge/opentracing@v1.47.0
