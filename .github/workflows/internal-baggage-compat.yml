@@ -1,0 +1,36 @@
+# This action builds the latest released go.opentelemetry.io/otel/bridge/opentracing
+# against the local root module source, to catch a break in that cross-module
+# dependency on internal/baggage before it ships. See
+# https://github.com/open-telemetry/opentelemetry-go/issues/9199.
+
+name: Internal baggage compatibility
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "internal/baggage/**"
+      - "baggage/**"
+  pull_request:
+    paths:
+      - "internal/baggage/**"
+      - "baggage/**"
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  internal-baggage-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # Needed for `git tag --list`.
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Check compatibility with the latest released bridge/opentracing
+        run: ./verify_internal_baggage_compat.sh
