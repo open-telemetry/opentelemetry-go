@@ -1,6 +1,3 @@
-// Deprecated: Use native OpenTelemetry APIs and SDKs instead.
-// This test module is planned for removal along with the OpenCensus bridge in v1.49.0.
-// See https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path.
 module go.opentelemetry.io/otel/bridge/opencensus/test
 
 go 1.26.0
