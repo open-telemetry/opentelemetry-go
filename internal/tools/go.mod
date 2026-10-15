@@ -11,7 +11,7 @@ require (
 	go.opentelemetry.io/build-tools/crosslink v0.30.0
 	go.opentelemetry.io/build-tools/gotmpl v0.30.0
 	go.opentelemetry.io/build-tools/multimod v0.30.0
-	golang.org/x/exp v0.0.0-20261013213113-2ab7f3cbc5fb
+	golang.org/x/exp v0.0.0-20261014143641-f0251eb4aa3e
 	golang.org/x/tools v0.52.0
 	golang.org/x/vuln v1.9.0
 )
@@ -201,13 +201,13 @@ require (
 	github.com/spf13/viper v1.21.0 // indirect
 	github.com/ssgreg/nlreturn/v2 v2.2.1 // indirect
 	github.com/stbenjam/no-sprintf-host-port v0.3.1 // indirect
-	github.com/stretchr/objx v0.7.0 // indirect
+	github.com/stretchr/objx v0.8.0 // indirect
 	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tetafro/godot v1.5.6 // indirect
 	github.com/timakin/bodyclose v0.0.0-20260923065923-98ded9ab4ef2 // indirect
 	github.com/timonwong/loggercheck v0.13.0 // indirect
-	github.com/tomarrell/wrapcheck/v2 v2.12.0 // indirect
+	github.com/tomarrell/wrapcheck/v2 v2.13.0 // indirect
 	github.com/tommy-muehle/go-mnd/v2 v2.5.1 // indirect
 	github.com/ultraware/funlen v0.2.0 // indirect
 	github.com/ultraware/whitespace v0.2.0 // indirect
@@ -229,7 +229,7 @@ require (
 	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
-	golang.org/x/exp/typeparams v0.0.0-20261013213113-2ab7f3cbc5fb // indirect
+	golang.org/x/exp/typeparams v0.0.0-20261014143641-f0251eb4aa3e // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/net v0.61.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
