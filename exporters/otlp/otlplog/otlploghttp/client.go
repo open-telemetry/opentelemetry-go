@@ -203,11 +203,10 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		request.reset(iCtx)
 		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
 		resp, err := c.client.Do(request.Request)
-		var urlErr *url.Error
-		if errors.As(err, &urlErr) && urlErr.Temporary() {
-			return newResponseError(http.Header{}, err)
-		}
 		if err != nil {
+			if retryableNetworkError(err) {
+				return newResponseError(http.Header{}, err)
+			}
 			return err
 		}
 		if resp != nil && resp.Body != nil {
@@ -461,4 +460,40 @@ func evaluate(err error) (bool, time.Duration) {
 	}
 
 	return true, rErr.throttle
+}
+
+// retryableNetworkError reports whether err is a transient network failure
+// that should be retried for OTLP/HTTP export.
+//
+// Go's url.Error.Temporary returns false for ordinary disconnects such as
+// EOF, connection reset, and connection refused. Those failures are still
+// transient for exporters and must be retried.
+func retryableNetworkError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		if netErr.Timeout() {
+			return true
+		}
+		// Temporary is deprecated but remains the only signal for some
+		// transient network conditions.
+		//nolint:staticcheck // SA1019: Temporary is deprecated.
+		if netErr.Temporary() {
+			return true
+		}
+	}
+
+	// Dial/read/write failures (connection refused, reset, unreachable)
+	// are wrapped as *net.OpError and are transient for OTLP export.
+	var opErr *net.OpError
+	return errors.As(err, &opErr)
 }
