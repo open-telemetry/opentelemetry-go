@@ -1,5 +1,5 @@
 // Deprecated: Use native OpenTelemetry APIs and SDKs instead.
-// This module is planned for removal in v1.49.0.
+// v1.48.0 is the final planned release of this module.
 // See https://opentelemetry.io/docs/compatibility/migration/opentracing/.
 module go.opentelemetry.io/otel/bridge/opentracing
 
