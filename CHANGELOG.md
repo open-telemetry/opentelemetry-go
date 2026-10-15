@@ -15,6 +15,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   including cancellable provider shutdown and parked waits for in-flight measurements,
   in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 
+### Deprecated
+
+- The `go.opentelemetry.io/otel/bridge/opentracing` module and its `opentracing` and `migration` packages are deprecated and planned for removal in v1.49.0.
+  Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenTracing](https://opentelemetry.io/docs/compatibility/migration/opentracing/).
+
 ### Fixed
 
 - Decompress gzip OTLP/HTTP log responses when the request sets `Accept-Encoding` explicitly in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9181)

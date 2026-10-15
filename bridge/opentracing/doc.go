@@ -91,4 +91,10 @@
 // LogFields() function, so when the call to the function gets
 // translated to OpenTelemetry AddEvent() function, an empty context
 // is passed.
+//
+// Deprecated: Use native OpenTelemetry APIs and SDKs instead.
+// This package is planned for removal in v1.49.0.
+// See [Migrating from OpenTracing].
+//
+// [Migrating from OpenTracing]: https://opentelemetry.io/docs/compatibility/migration/opentracing/
 package opentracing
