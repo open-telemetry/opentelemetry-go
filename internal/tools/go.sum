@@ -478,8 +478,8 @@ github.com/timakin/bodyclose v0.0.0-20260923065923-98ded9ab4ef2 h1:HECVafB2AKntW
 github.com/timakin/bodyclose v0.0.0-20260923065923-98ded9ab4ef2/go.mod h1:JLoPVtROtNgJ99yXTIxuGNttvmJa85tkJAO6lr05qBA=
 github.com/timonwong/loggercheck v0.13.0 h1:6amIOmLLPFYt24rXUbNWzcJeNGuJc+3c31tZtO85VHs=
 github.com/timonwong/loggercheck v0.13.0/go.mod h1:thn3allpox0fI5JeUWTCwiwp45peQxCZZHkHuA1Oc6I=
-github.com/tomarrell/wrapcheck/v2 v2.12.0 h1:H/qQ1aNWz/eeIhxKAFvkfIA+N7YDvq6TWVFL27Of9is=
-github.com/tomarrell/wrapcheck/v2 v2.12.0/go.mod h1:AQhQuZd0p7b6rfW+vUwHm5OMCGgp63moQ9Qr/0BpIWo=
+github.com/tomarrell/wrapcheck/v2 v2.13.0 h1:jYbLNs8PDkzGCY6d5LUzJdY7Bq//CTlb2HxZGV5z0JY=
+github.com/tomarrell/wrapcheck/v2 v2.13.0/go.mod h1:AQhQuZd0p7b6rfW+vUwHm5OMCGgp63moQ9Qr/0BpIWo=
 github.com/tommy-muehle/go-mnd/v2 v2.5.1 h1:NowYhSdyE/1zwK9QCLeRb6USWdoif80Ie+v+yU8u1Zw=
 github.com/tommy-muehle/go-mnd/v2 v2.5.1/go.mod h1:WsUAkMJMYww6l/ufffCD3m+P7LEvr8TnZn9lwVDlgzw=
 github.com/ultraware/funlen v0.2.0 h1:gCHmCn+d2/1SemTdYMiKLAHFYxTYz7z9VIDRaTGyLkI=
