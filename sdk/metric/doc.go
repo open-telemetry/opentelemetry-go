@@ -110,6 +110,6 @@
 // default is used instead.
 // The configuration can be overridden by the [WithExemplarFilter] option.
 //
-// See [go.opentelemetry.io/otel/sdk/metric/internal/x] for the experimental
-// OTEL_GO_X_CARDINALITY_LIMIT environment variable.
+// OTEL_GO_X_CARDINALITY_LIMIT is deprecated and remains supported for
+// backward compatibility. Use [WithCardinalityLimit] instead.
 package metric
