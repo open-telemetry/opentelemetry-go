@@ -7,7 +7,7 @@
 // metrics and traces from OpenTelemetry instrumentation.
 //
 // Deprecated: Use native OpenTelemetry APIs and SDKs instead.
-// This package is planned for removal in v1.49.0.
+// v1.48.0 is the final planned release of this module.
 // See [Migrating from OpenCensus].
 //
 // # Migration Guide
