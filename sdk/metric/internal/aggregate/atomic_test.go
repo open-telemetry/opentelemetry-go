@@ -16,6 +16,242 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+func TestAtomicCounterLoadConcurrentSnapshot(t *testing.T) {
+	if runtime.GOMAXPROCS(0) < 2 {
+		t.Skip("requires concurrent execution")
+	}
+
+	var counter atomicCounter[float64]
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range 10_000_000 {
+			counter.add(0.5)
+			counter.add(1)
+		}
+	}()
+
+	for {
+		select {
+		case <-done:
+			return
+		default:
+			got := int64(counter.load() * 2)
+			// Valid prefixes of the .5, 1 sequence are congruent to 0 or 1
+			// modulo 3. A remainder of 2 is a mixed snapshot.
+			if got%3 == 2 {
+				t.Fatalf("observed impossible cumulative sum: %v", float64(got)/2)
+			}
+		}
+	}
+}
+
+// TestAtomicCounterFloat64MultipleWriters tests that multiple concurrent writers
+// correctly accumulate without lost updates.
+func TestAtomicCounterFloat64MultipleWriters(t *testing.T) {
+	if runtime.GOMAXPROCS(0) < 2 {
+		t.Skip("requires concurrent execution")
+	}
+
+	var counter atomicCounter[float64]
+	var wg sync.WaitGroup
+	const numWriters = 10
+	const iterations = 100_000
+
+	for range numWriters {
+		wg.Go(func() {
+			for range iterations {
+				counter.add(0.25)
+				counter.add(0.5)
+				counter.add(1)
+			}
+		})
+	}
+	wg.Wait()
+
+	// Each writer does 100000 * (0.25 + 0.5 + 1) = 100000 * 1.75 = 175000
+	// Total: 10 * 175000 = 1,750,000
+	expected := float64(numWriters*iterations) * 1.75
+	got := counter.load()
+	if math.Abs(got-expected) > 1e-9 {
+		t.Fatalf("expected %v, got %v", expected, got)
+	}
+}
+
+// TestAtomicCounterFloat64ConcurrentReadersWriters tests concurrent readers and writers.
+func TestAtomicCounterFloat64ConcurrentReadersWriters(t *testing.T) {
+	if runtime.GOMAXPROCS(0) < 2 {
+		t.Skip("requires concurrent execution")
+	}
+
+	var counter atomicCounter[float64]
+	var wg sync.WaitGroup
+	const numWriters = 5
+	const numReaders = 5
+	const iterations = 50_000
+
+	// Use a counter to track total expected additions
+	var totalAdded atomic.Int64
+
+	// Writers
+	for range numWriters {
+		wg.Go(func() {
+			for range iterations {
+				counter.add(0.5)
+				totalAdded.Add(1)
+				counter.add(1)
+				totalAdded.Add(1)
+			}
+		})
+	}
+
+	// Readers - verify no impossible snapshots by checking that the value
+	// is always a multiple of 0.5 (since all additions are 0.5 or 1.0)
+	var readerDone sync.WaitGroup
+	done := make(chan struct{})
+	for range numReaders {
+		readerDone.Go(func() {
+			for {
+				select {
+				case <-done:
+					return
+				default:
+					val := counter.load()
+					// All additions are multiples of 0.5, so the sum must be a multiple of 0.5
+					if math.Abs(val*2-math.Round(val*2)) > 1e-9 {
+						t.Errorf("observed non-multiple-of-0.5 value: %v", val)
+						return
+					}
+				}
+			}
+		})
+	}
+
+	wg.Wait()
+	close(done)
+	readerDone.Wait()
+
+	// Verify final sum matches expected total
+	expected := float64(totalAdded.Load()) * 0.75 // Each pair of adds (0.5 + 1) = 1.5, but we count each add
+	// Actually, each iteration does 0.5 + 1 = 1.5, and there are numWriters * iterations iterations
+	expected = float64(numWriters*iterations) * 1.5
+	got := counter.load()
+	if math.Abs(got-expected) > 1e-6 {
+		t.Errorf("final sum mismatch: expected %v, got %v", expected, got)
+	}
+}
+
+// TestAtomicCounterFloat64SequentialCompatibility tests sequential behavior.
+func TestAtomicCounterFloat64SequentialCompatibility(t *testing.T) {
+	tests := []struct {
+		name   string
+		values []float64
+		want   float64
+	}{
+		{
+			name:   "zero",
+			values: []float64{},
+			want:   0,
+		},
+		{
+			name:   "positive integers",
+			values: []float64{1, 2, 3},
+			want:   6,
+		},
+		{
+			name:   "fractional values",
+			values: []float64{0.5, 0.25, 0.125},
+			want:   0.875,
+		},
+		{
+			name:   "mixed integer and fractional",
+			values: []float64{1, 0.5, 2, 0.25},
+			want:   3.75,
+		},
+		{
+			name:   "negative values",
+			values: []float64{1, -0.5, -1, 0.5},
+			want:   0,
+		},
+		{
+			name:   "large values",
+			values: []float64{1e10, 1e10, 1e10},
+			want:   3e10,
+		},
+		{
+			name:   "small fractional values",
+			values: []float64{1e-10, 1e-10, 1e-10},
+			want:   3e-10,
+		},
+		{
+			name:   "zero additions",
+			values: []float64{1, 0, 0, 1},
+			want:   2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var c atomicCounter[float64]
+			for _, v := range tt.values {
+				c.add(v)
+			}
+			got := c.load()
+			if math.Abs(got-tt.want) > 1e-9 {
+				t.Fatalf("expected %v, got %v", tt.want, got)
+			}
+		})
+	}
+}
+
+// TestAtomicCounterInt64SequentialCompatibility tests sequential behavior for int64.
+func TestAtomicCounterInt64SequentialCompatibility(t *testing.T) {
+	tests := []struct {
+		name   string
+		values []int64
+		want   int64
+	}{
+		{
+			name:   "zero",
+			values: []int64{},
+			want:   0,
+		},
+		{
+			name:   "positive values",
+			values: []int64{1, 2, 3},
+			want:   6,
+		},
+		{
+			name:   "negative values",
+			values: []int64{10, -5, -3},
+			want:   2,
+		},
+		{
+			name:   "large values",
+			values: []int64{math.MaxInt64 / 3, math.MaxInt64 / 3, math.MaxInt64 / 3},
+			want:   (math.MaxInt64 / 3) * 3,
+		},
+		{
+			name:   "mixed positive and negative",
+			values: []int64{100, -50, 25, -10},
+			want:   65,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var c atomicCounter[int64]
+			for _, v := range tt.values {
+				c.add(v)
+			}
+			got := c.load()
+			if got != tt.want {
+				t.Fatalf("expected %v, got %v", tt.want, got)
+			}
+		})
+	}
+}
+
 func TestAtomicSumAddFloatConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	var aSum atomicCounter[float64]

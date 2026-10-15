@@ -21,22 +21,21 @@ import (
 // Inspired by the Prometheus counter implementation:
 // https://github.com/prometheus/client_golang/blob/14ccb93091c00f86b85af7753100aa372d63602b/prometheus/counter.go#L108
 type atomicCounter[N int64 | float64] struct {
-	// nFloatBits contains only the non-integer portion of the counter.
+	// nFloatBits contains the entire float64 value as raw bits for float64.
+	// For int64, this field is unused.
 	nFloatBits atomic.Uint64
-	// nInt contains only the integer portion of the counter.
+	// nInt contains the integer value for int64.
+	// For float64, this field is unused.
 	nInt atomic.Int64
 }
 
-// load returns the current value. The caller must ensure all calls to add have
-// returned prior to calling load.
+// load returns the current value.
 func (n *atomicCounter[N]) load() (value N) {
 	switch any(value).(type) {
 	case int64:
 		value = N(n.nInt.Load())
 	case float64:
-		fval := math.Float64frombits(n.nFloatBits.Load())
-		ival := n.nInt.Load()
-		value = N(fval + float64(ival))
+		value = N(math.Float64frombits(n.nFloatBits.Load()))
 	default:
 		panic("unsupported type")
 	}
@@ -44,20 +43,20 @@ func (n *atomicCounter[N]) load() (value N) {
 }
 
 func (n *atomicCounter[N]) add(value N) {
-	ival := int64(value)
-	// This case is where the value is an int, or if it is a whole-numbered float.
-	if float64(ival) == float64(value) {
-		n.nInt.Add(ival)
-		return
-	}
-
-	// Value must be a float below.
-	for {
-		oldBits := n.nFloatBits.Load()
-		newBits := math.Float64bits(math.Float64frombits(oldBits) + float64(value))
-		if n.nFloatBits.CompareAndSwap(oldBits, newBits) {
-			return
+	switch any(value).(type) {
+	case int64:
+		n.nInt.Add(int64(value))
+	case float64:
+		fval := float64(value)
+		for {
+			oldBits := n.nFloatBits.Load()
+			newBits := math.Float64bits(math.Float64frombits(oldBits) + fval)
+			if n.nFloatBits.CompareAndSwap(oldBits, newBits) {
+				return
+			}
 		}
+	default:
+		panic("unsupported type")
 	}
 }
 
