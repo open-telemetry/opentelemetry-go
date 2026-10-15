@@ -167,3 +167,81 @@ func TestArenaExceedsDefaultBatch(t *testing.T) {
 	_ = SpansWithArena(wide, dense)
 	assert.True(t, dense.Exceeds(512))
 }
+
+func TestSpansWithArenaNestedAttributes(t *testing.T) {
+	res := resource.NewSchemaless(attribute.String("service.name", "test"))
+	span := tracetest.SpanStub{
+		Name: "nested-span",
+		SpanContext: trace.NewSpanContext(
+			trace.SpanContextConfig{TraceID: trace.TraceID{1, 2, 3}, SpanID: trace.SpanID{4, 5, 6}},
+		),
+		Attributes: []attribute.KeyValue{
+			attribute.Slice(
+				"slice",
+				attribute.BoolValue(true),
+				attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),
+				attribute.MapValue(attribute.String("inner", "value")),
+			),
+			attribute.Map(
+				"map",
+				attribute.String("s", "x"),
+				attribute.Slice(
+					"s2",
+					attribute.BoolValue(true),
+					attribute.MapValue(attribute.String("inner", "value")),
+				),
+				attribute.Map("inner-map", attribute.Bool("ok", true)),
+			),
+		},
+		Resource:             res,
+		InstrumentationScope: instrumentation.Scope{Name: "test"},
+	}.Snapshot()
+
+	heapSpans := Spans([]tracesdk.ReadOnlySpan{span})
+	arena := NewArena(4)
+	arenaSpans := SpansWithArena([]tracesdk.ReadOnlySpan{span}, arena)
+
+	require.Len(t, heapSpans, 1)
+	require.Len(t, arenaSpans, 1)
+	hs := heapSpans[0].ScopeSpans[0].Spans[0]
+	as := arenaSpans[0].ScopeSpans[0].Spans[0]
+	assert.ElementsMatch(t, hs.Attributes, as.Attributes)
+}
+
+func TestArenaExceedsNestedSlices(t *testing.T) {
+	res := resource.NewSchemaless()
+	const nested = 6000
+	vals := make([]attribute.Value, nested)
+	for i := range vals {
+		vals[i] = attribute.SliceValue()
+	}
+	span := tracetest.SpanStub{
+		Name:       "s",
+		Attributes: []attribute.KeyValue{attribute.Slice("nested", vals...)},
+		Resource:   res,
+	}.Snapshot()
+
+	arena := NewArena(32)
+	out := SpansWithArena([]tracesdk.ReadOnlySpan{span}, arena)
+	require.Len(t, out, 1)
+	require.Len(t, out[0].ScopeSpans, 1)
+	arena.Reset()
+	// 6001 avs slots (1 parent + 6000 nested) with chunkSize 32*8=256 need
+	// 24 chunks (6144 slots), well above the 512-span retention threshold
+	// (maxCap 512*8=4096 plus one 256-slot chunk for rounding). The arena
+	// must be discarded.
+	assert.True(t, arena.Exceeds(512))
+
+	small := NewArena(32)
+	smallSpan := tracetest.SpanStub{
+		Name: "s",
+		Attributes: []attribute.KeyValue{
+			attribute.Slice("nested", attribute.SliceValue(), attribute.SliceValue()),
+		},
+		Resource: res,
+	}.Snapshot()
+	smallOut := SpansWithArena([]tracesdk.ReadOnlySpan{smallSpan}, small)
+	require.Len(t, smallOut, 1)
+	small.Reset()
+	assert.False(t, small.Exceeds(512))
+}
