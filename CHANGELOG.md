@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - The `go.opentelemetry.io/otel/bridge/opencensus` module and package, along with the companion `go.opentelemetry.io/otel/bridge/opencensus/test` module, are deprecated and planned for removal in v1.49.0.
-  Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path).
+  Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#9221)
 
 ### Fixed
 
