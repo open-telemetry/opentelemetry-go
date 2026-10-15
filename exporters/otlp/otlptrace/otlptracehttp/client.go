@@ -77,26 +77,10 @@ type client struct {
 	inst   *observ.Instrumentation
 }
 
-var (
-	_ otlptrace.Client     = (*client)(nil)
-	_ otlptrace.SyncClient = (*client)(nil)
-)
+var _ otlptrace.Client = (*client)(nil)
 
 // NewClient creates a new HTTP trace client.
 func NewClient(opts ...Option) otlptrace.Client {
-	return newSyncClient(opts...)
-}
-
-// NewSyncClient creates a new HTTP trace client that satisfies
-// otlptrace.SyncClient. Use it with otlptrace.NewSync without a type
-// assertion. The returned client fully consumes uploads before returning
-// and retains nothing afterwards, satisfying the synchronous ownership
-// contract required for arena reuse.
-func NewSyncClient(opts ...Option) otlptrace.SyncClient {
-	return newSyncClient(opts...)
-}
-
-func newSyncClient(opts ...Option) *client {
 	cfg := otlpconfig.NewHTTPConfig(asHTTPOptions(opts)...)
 
 	httpClient := cfg.Traces.HTTPClient
@@ -176,16 +160,6 @@ func (c *client) Stop(ctx context.Context) error {
 
 // UploadTraces sends a batch of spans to the collector.
 func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
-	return c.uploadTraces(ctx, protoSpans)
-}
-
-// UploadTracesSync synchronously sends a batch of spans to the collector.
-// It fully consumes protoSpans before returning and does not retain it.
-func (c *client) UploadTracesSync(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
-	return c.uploadTraces(ctx, protoSpans)
-}
-
-func (c *client) uploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
 	pbRequest := &coltracepb.ExportTraceServiceRequest{
 		ResourceSpans: protoSpans,
 	}

@@ -708,12 +708,3 @@ func BenchmarkExporterExportSpans(b *testing.B) {
 		run(b)
 	})
 }
-
-func TestNewSyncClientSatisfiesSyncClient(t *testing.T) {
-	client := otlptracegrpc.NewSyncClient(
-		otlptracegrpc.WithEndpoint("localhost:4317"),
-		otlptracegrpc.WithInsecure(),
-		otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}),
-	)
-	require.NotNil(t, otlptrace.NewSyncUnstarted(client))
-}

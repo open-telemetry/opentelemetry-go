@@ -54,23 +54,11 @@ type client struct {
 	inst   *observ.Instrumentation
 }
 
-// Compile time checks *client implements otlptrace.Client and SyncClient.
-var (
-	_ otlptrace.Client     = (*client)(nil)
-	_ otlptrace.SyncClient = (*client)(nil)
-)
+// Compile time check *client implements otlptrace.Client.
+var _ otlptrace.Client = (*client)(nil)
 
 // NewClient creates a new gRPC trace client.
 func NewClient(opts ...Option) otlptrace.Client {
-	return newClient(opts...)
-}
-
-// NewSyncClient creates a new gRPC trace client that satisfies
-// otlptrace.SyncClient. Use it with otlptrace.NewSync without a type
-// assertion. The returned client fully consumes uploads before returning
-// and retains nothing afterwards, satisfying the synchronous ownership
-// contract required for arena reuse.
-func NewSyncClient(opts ...Option) otlptrace.SyncClient {
 	return newClient(opts...)
 }
 
@@ -207,16 +195,6 @@ var errShutdown = errors.New("the client is shutdown")
 // Retryable errors from the server will be handled according to any
 // RetryConfig the client was created with.
 func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
-	return c.uploadTraces(ctx, protoSpans)
-}
-
-// UploadTracesSync synchronously sends a batch of spans.
-// It fully consumes protoSpans before returning and does not retain it.
-func (c *client) UploadTracesSync(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
-	return c.uploadTraces(ctx, protoSpans)
-}
-
-func (c *client) uploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
 	// Hold a read lock to ensure a shut down initiated after this starts does
 	// not abandon the export. This read lock acquire has less priority than a
 	// write lock acquire (i.e. Stop), meaning if the client is shutting down

@@ -16,11 +16,3 @@ func Resource(r *resource.Resource) *resourcepb.Resource {
 	}
 	return &resourcepb.Resource{Attributes: ResourceAttributes(r)}
 }
-
-// ResourceWithArena transforms a Resource into an OTLP Resource using arena.
-func ResourceWithArena(r *resource.Resource, arena *Arena) *resourcepb.Resource {
-	if r == nil {
-		return nil
-	}
-	return &resourcepb.Resource{Attributes: ResourceAttributesWithArena(r, arena)}
-}
