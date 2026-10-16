@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/client9/misspell v0.3.4
 	github.com/gogo/protobuf v1.3.2
-	github.com/golangci/golangci-lint/v2 v2.14.0
+	github.com/golangci/golangci-lint/v2 v2.15.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
 	go.opentelemetry.io/build-tools/crosslink v0.30.0
 	go.opentelemetry.io/build-tools/gotmpl v0.30.0
@@ -138,7 +138,7 @@ require (
 	github.com/kisielk/errcheck v1.30.0 // indirect
 	github.com/kkHAIKE/contextcheck v1.1.6 // indirect
 	github.com/kulti/thelper v0.7.1 // indirect
-	github.com/kunwardeep/paralleltest v1.0.15 // indirect
+	github.com/kunwardeep/paralleltest v1.0.16 // indirect
 	github.com/ldez/exptostd v0.4.5 // indirect
 	github.com/ldez/gomoddirectives v0.10.0 // indirect
 	github.com/ldez/grignotin v0.10.1 // indirect
@@ -162,8 +162,8 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nakabonne/nestif v0.3.1 // indirect
-	github.com/nishanths/exhaustive v0.13.0 // indirect
-	github.com/nishanths/predeclared v0.2.2 // indirect
+	github.com/nishanths/exhaustive v0.15.0 // indirect
+	github.com/nishanths/predeclared v0.3.0 // indirect
 	github.com/nunnatsa/ginkgolinter v0.24.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/pjbgf/sha1cd v0.7.0 // indirect
