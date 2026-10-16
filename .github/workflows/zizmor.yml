@@ -15,4 +15,4 @@ jobs:
     permissions:
       contents: read # for actions/checkout
       security-events: write # for zizmor to upload SARIF results
-    uses: open-telemetry/shared-workflows/.github/workflows/zizmor.yml@cb9f45f0b1ec545091caca504fc3e9b073284325 # v0.20.0
+    uses: open-telemetry/shared-workflows/.github/workflows/zizmor.yml@30362d425ab746bb2ec4647538ea9154591cce91 # v0.22.0
