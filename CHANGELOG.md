@@ -32,6 +32,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Interpret OTLP log exporter compression environment variables case-insensitively in
+  `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
+  `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9141, #9133)
+
 - Decompress gzip OTLP/HTTP log responses when the request sets `Accept-Encoding` explicitly in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9181)
 - Preserve escaped endpoint paths and generic endpoint base segments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9149)
 - Reject overflowing log export interval and timeout environment variables in `go.opentelemetry.io/otel/sdk/log`. (#9081)
