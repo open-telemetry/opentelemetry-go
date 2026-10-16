@@ -277,13 +277,15 @@ func DefaultWithContext(ctx context.Context) *Resource {
 }
 
 // Environment returns an instance of Resource with attributes
-// extracted from the OTEL_RESOURCE_ATTRIBUTES environment variable.
+// extracted from the OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME
+// environment variables.
 func Environment() *Resource {
 	return EnvironmentWithContext(context.Background())
 }
 
 // EnvironmentWithContext returns an instance of Resource with attributes
-// extracted from the OTEL_RESOURCE_ATTRIBUTES environment variable.
+// extracted from the OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME
+// environment variables.
 func EnvironmentWithContext(ctx context.Context) *Resource {
 	detector := &fromEnv{}
 	resource, err := detector.Detect(ctx)
