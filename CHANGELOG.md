@@ -32,7 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Interpret invalid nonempty insecure environment variable values as false in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, preserving Logs-specific precedence over the generic setting and reporting the invalid value. (#PLACEHOLDER)
+- Interpret invalid nonempty insecure environment variable values as false in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, preserving Logs-specific precedence over the generic setting and reporting the invalid value. (#9231)
 
 - Interpret OTLP log exporter compression environment variables case-insensitively in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
