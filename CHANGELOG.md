@@ -15,6 +15,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   including cancellable provider shutdown and parked waits for in-flight measurements,
   in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 
+### Changed
+
+- Reduce allocations in `go.opentelemetry.io/otel/exporters/otlp/otlptrace` by allocating protobuf backing storage per attribute list sized from actual contents, with independent ID copies. Each export owns its storage with no reuse, safe for retaining clients. (#8892)
+
 ### Fixed
 
 - Decompress gzip OTLP/HTTP log responses when the request sets `Accept-Encoding` explicitly in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9181)
