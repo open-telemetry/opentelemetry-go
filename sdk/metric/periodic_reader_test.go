@@ -1347,7 +1347,7 @@ func TestCleanResourceMetrics(t *testing.T) {
 	}{
 		{
 			name:   "unmodified slice",
-			mutate: func(m *metricdata.ResourceMetrics) {},
+			mutate: func(_ *metricdata.ResourceMetrics) {},
 		},
 		{
 			name: "nil slice",
