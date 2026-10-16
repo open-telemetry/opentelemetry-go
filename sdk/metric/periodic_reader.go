@@ -252,9 +252,9 @@ func cleanResourceMetrics(rm *metricdata.ResourceMetrics, collected []metricdata
 	// pipeline.produce() overwrites ScopeMetrics entries via ReuseSlice,
 	// so clearing is not needed and would break data reuse inside produce.
 
-	// Keep producer-owned entries out of the pooled portion by limiting
-	// capacity to sdkLen, avoiding ownership boundary leaks.
-	rm.ScopeMetrics = collected[:0:sdkLen]
+	// Clear producer-owned entries before reusing the backing array.
+	clear(collected[sdkLen:])
+	rm.ScopeMetrics = collected[:0]
 	rm.Resource = nil
 }
 
