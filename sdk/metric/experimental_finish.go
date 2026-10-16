@@ -15,9 +15,10 @@ import (
 
 // factory adapts the SDK pipeline resolver to Finish instrument construction.
 type factory struct {
-	meter         *meter
-	registry      *finish.Registry
-	int64Counters cacheWithErr[instID, metric.Int64Counter]
+	meter           *meter
+	registry        *finish.Registry
+	int64Counters   cacheWithErr[instID, metric.Int64Counter]
+	float64Counters cacheWithErr[instID, metric.Float64Counter]
 }
 
 var _ finish.Factory = (*factory)(nil)
@@ -37,7 +38,7 @@ func (f *factory) Int64Counter(name string, options ...metric.Int64CounterOption
 			Kind:        InstrumentKindCounter,
 			Scope:       f.meter.scope,
 		}
-		measures, finishers, err := finishInt64CounterAggregators(
+		measures, finishers, err := finishCounterAggregators(
 			f.meter.int64Resolver,
 			inst,
 			defaultAttributes(options),
@@ -54,30 +55,62 @@ func (f *factory) Int64Counter(name string, options ...metric.Int64CounterOption
 	return counter, validateInstrumentName(name)
 }
 
-// finishInt64CounterAggregators adapts the SDK pipeline resolver to the
+func (f *factory) Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error) {
+	cfg := metric.NewFloat64CounterConfig(options...)
+	counter, err := f.float64Counters.Lookup(instID{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindCounter,
+	}, func() (metric.Float64Counter, error) {
+		inst := Instrument{
+			Name:        name,
+			Description: cfg.Description(),
+			Unit:        cfg.Unit(),
+			Kind:        InstrumentKindCounter,
+			Scope:       f.meter.scope,
+		}
+		measures, finishers, err := finishCounterAggregators(
+			f.meter.float64Resolver,
+			inst,
+			defaultAttributes(options),
+			f.registry.Register,
+		)
+		return finish.NewFloat64Counter(
+			&float64Inst{measures: measures},
+			finishers,
+		), err
+	})
+	if err != nil {
+		return counter, err
+	}
+	return counter, validateInstrumentName(name)
+}
+
+// finishCounterAggregators adapts the SDK pipeline resolver to the
 // internal Finish implementation.
-func finishInt64CounterAggregators(
-	r resolver[int64],
+func finishCounterAggregators[N int64 | float64](
+	r resolver[N],
 	id Instrument,
 	allowedKeys []attribute.Key,
 	registerShutdown func(func(), func(context.Context) error),
-) ([]aggregate.Measure[int64], []finish.Func, error) {
+) ([]aggregate.Measure[N], []finish.Func, error) {
 	var (
-		measures  []aggregate.Measure[int64]
+		measures  []aggregate.Measure[N]
 		finishers []finish.Func
 		err       error
 	)
 	for _, i := range r.inserters {
 		newAggregation := func(
-			b aggregate.Builder[int64],
+			b aggregate.Builder[N],
 			agg Aggregation,
 			kind InstrumentKind,
-		) (streamAggregation[int64], error) {
+		) (streamAggregation[N], error) {
 			if kind == InstrumentKindCounter {
 				if _, ok := agg.(AggregationSum); ok {
 					sum := b.FinishSum(true)
 					registerShutdown(sum.Stop, sum.Wait)
-					return streamAggregation[int64]{
+					return streamAggregation[N]{
 						measure: sum.Measure,
 						compute: sum.ComputeAggregation,
 						finish:  sum.Finish,
@@ -91,7 +124,7 @@ func finishInt64CounterAggregators(
 			allowedKeys,
 			i.readerDefaultAggregation(id.Kind),
 			newAggregation,
-			func(agg aggVal[int64]) {
+			func(agg aggVal[N]) {
 				measures = append(measures, agg.Measure)
 				if agg.Finish != nil {
 					finishers = append(finishers, agg.Finish)
