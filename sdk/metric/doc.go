@@ -109,7 +109,4 @@
 // "always_off", and "trace_based". Any other value is ignored, and the
 // default is used instead.
 // The configuration can be overridden by the [WithExemplarFilter] option.
-//
-// OTEL_GO_X_CARDINALITY_LIMIT is deprecated and remains supported for
-// backward compatibility. Use [WithCardinalityLimit] instead.
 package metric
