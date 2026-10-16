@@ -34,7 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Interpret OTLP log exporter compression environment variables case-insensitively in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
-  `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9141, #9133)
+  `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9230)
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
 - Report dropped event and link counts in the span snapshot when the event or link limit is `0` in `go.opentelemetry.io/otel/sdk/trace`.
   Previously, an ended span reported `0` dropped events and links even though the recording span had counted them. (#9238)
