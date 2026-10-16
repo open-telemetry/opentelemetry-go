@@ -42,6 +42,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   case-insensitively as well, where a differently-cased value previously reported an unknown
   compressor and fell back to no compression. (#9230)
 - Prevent underflowed measurements from updating sum, min, or max in exponential histograms in `go.opentelemetry.io/otel/sdk/metric`. (#8077)
+- Report the module's registered version from `Version()` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, which also corrects the exporter version sent in the default User-Agent. (#9232)
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
 - Report dropped event and link counts in the span snapshot when the event or link limit is `0` in `go.opentelemetry.io/otel/sdk/trace`.
   Previously, an ended span reported `0` dropped events and links even though the recording span had counted them. (#9238)
