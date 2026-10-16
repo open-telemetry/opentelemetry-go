@@ -4,6 +4,12 @@
 // Package migration provides interfaces and functions that are useful for
 // providing a cooperation of the OpenTelemetry tracers with the
 // OpenTracing API.
+//
+// Deprecated: Use native OpenTelemetry APIs and SDKs instead.
+// v1.48.0 is the final planned release of this module.
+// See [Migrating from OpenTracing].
+//
+// [Migrating from OpenTracing]: https://opentelemetry.io/docs/compatibility/migration/opentracing/
 package migration
 
 import (

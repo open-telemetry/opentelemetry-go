@@ -17,6 +17,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
+- The `go.opentelemetry.io/otel/bridge/opentracing` module and its `opentracing` and `migration` packages are deprecated.
+  v1.48.0 is the final planned release of this module.
+  Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenTracing](https://opentelemetry.io/docs/compatibility/migration/opentracing/). (#9218)
 - The `go.opentelemetry.io/otel/bridge/opencensus` module and package are deprecated.
   v1.48.0 is the final planned release of this module.
   Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#9221)
