@@ -6,6 +6,7 @@ package trace
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 )
 
 // SpanProcessor is a processing pipeline for spans in the trace signal.
@@ -49,21 +50,26 @@ type SpanProcessor interface {
 	// must never be done outside of a new major release.
 }
 
+// stoppedBit marks admission as closed in spanProcessorState.inflight. The
+// remaining bits count the operations currently in flight.
+const stoppedBit = int64(1) << 62
+
 type spanProcessorState struct {
 	sp    SpanProcessor
 	state sync.Once
 
-	// admissionMu protects the fields below. They track the operations
-	// (OnStart, OnEnd, ForceFlush) currently in flight on sp so that sp's
-	// Shutdown is not invoked until they complete and no new ones start.
-	admissionMu sync.Mutex
-	active      int
-	stopped     bool
-	drained     chan struct{}
+	// inflight tracks the operations (OnStart, OnEnd, ForceFlush) currently
+	// in flight on sp, so that sp's Shutdown is not invoked until they
+	// complete and no new ones start. It is an atomic counter rather than a
+	// mutex to keep the dispatch hot path cheap under concurrent spans.
+	inflight  atomic.Int64
+	stopOnce  sync.Once
+	drainOnce sync.Once
+	drained   chan struct{}
 }
 
 func newSpanProcessorState(sp SpanProcessor) *spanProcessorState {
-	return &spanProcessorState{sp: sp}
+	return &spanProcessorState{sp: sp, drained: make(chan struct{})}
 }
 
 type spanProcessorStates []*spanProcessorState
@@ -71,37 +77,27 @@ type spanProcessorStates []*spanProcessorState
 // begin reports whether a new operation on sp is admitted. If it returns true,
 // the caller must call end when the operation completes.
 func (s *spanProcessorState) begin() bool {
-	s.admissionMu.Lock()
-	defer s.admissionMu.Unlock()
-	if s.stopped {
+	if s.inflight.Add(1)&stoppedBit != 0 {
+		s.end()
 		return false
 	}
-	s.active++
 	return true
 }
 
 func (s *spanProcessorState) end() {
-	s.admissionMu.Lock()
-	defer s.admissionMu.Unlock()
-	s.active--
-	if s.active == 0 && s.stopped {
-		close(s.drained)
+	if s.inflight.Add(-1) == stoppedBit {
+		s.drainOnce.Do(func() { close(s.drained) })
 	}
 }
 
 // stop closes admission of new operations. It does not wait for admitted
 // operations to complete; use wait for that. It is safe to call repeatedly.
 func (s *spanProcessorState) stop() {
-	s.admissionMu.Lock()
-	defer s.admissionMu.Unlock()
-	if s.stopped {
-		return
-	}
-	s.stopped = true
-	s.drained = make(chan struct{})
-	if s.active == 0 {
-		close(s.drained)
-	}
+	s.stopOnce.Do(func() {
+		if s.inflight.Add(stoppedBit) == stoppedBit {
+			s.drainOnce.Do(func() { close(s.drained) })
+		}
+	})
 }
 
 // wait blocks until all operations admitted before stop have completed,
