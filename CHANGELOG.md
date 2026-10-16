@@ -15,6 +15,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   including cancellable provider shutdown and parked waits for in-flight measurements,
   in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 
+### Changed
+
+- Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
+  Include instructions for upgrading the bridge to v1.47.0.
+  See the [bridge version compatibility documentation](bridge/opentracing/README.md#version-compatibility). (#9209)
+
 ### Deprecated
 
 - The `go.opentelemetry.io/otel/bridge/opentracing` module and its `opentracing` and `migration` packages are deprecated.

@@ -33,6 +33,21 @@ func main() {
 }
 ```
 
+## Version compatibility
+
+We introduced a compatibility regression in `go.opentelemetry.io/otel` v1.47.0.
+Applications using this release with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 or earlier fail to compile.
+
+We changed the internal baggage representation without preserving compatibility with previously released bridge versions.
+The v1.47.0 bridge includes the corresponding changes.
+
+To restore compilation, upgrade the bridge to v1.47.0.
+The following command selects matching versions of both modules:
+
+```sh
+go get go.opentelemetry.io/otel@v1.47.0 go.opentelemetry.io/otel/bridge/opentracing@v1.47.0
+```
+
 ## Interop from trace context from OpenTracing to OpenTelemetry
 
 In order to get OpenTracing spans properly into the OpenTelemetry context, so they can be propagated (both internally, and externally), you will need to explicitly use the `BridgeTracer` for creating your OpenTracing spans, rather than a bare OpenTracing `Tracer` instance.
