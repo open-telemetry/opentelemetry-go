@@ -482,9 +482,10 @@ func warnRepeatedObservableCallbacks(id Instrument) {
 // longer relevant by omitting the observation during the callback.
 //
 // The returned Registration can be used to unregister f.
+// If f is nil, no callback is registered.
 func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) (metric.Registration, error) {
-	if len(insts) == 0 {
-		// Don't allocate a observer if not needed.
+	if f == nil || len(insts) == 0 {
+		// Don't allocate an observer if there is no callback or instrument.
 		return noopRegister{}, nil
 	}
 
