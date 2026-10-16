@@ -47,21 +47,12 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // created. This means the returned MeterProvider, one created with no
 // Readers, will perform no operations.
 //
-// If options include conflicting experimental options, an error is logged and
-// the returned MeterProvider performs no operations; ForceFlush and Shutdown
-// still reach its Readers.
+// Combining distinct experimental options is not supported. If options
+// include more than one distinct experimental option type, an error is logged
+// and the returned MeterProvider performs no operations; ForceFlush and
+// Shutdown still reach its Readers. Repeating the same experimental option is
+// allowed.
 func NewMeterProvider(options ...Option) *MeterProvider {
-	// conflicts lists pairs of experimental features that cannot be used
-	// together; it is empty until such a pair exists. A feature conflicting
-	// with several others gets one entry per pair, and conflicts are not
-	// transitive. For example, once #8743 adds MeterConfigurator:
-	//
-	//	{reflect.TypeFor[finishOption](), reflect.TypeFor[meterConfiguratorOption]()}
-	var conflicts []experimentalConflict
-	return newMeterProvider(conflicts, options...)
-}
-
-func newMeterProvider(conflicts []experimentalConflict, options ...Option) *MeterProvider {
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()
 	mp := &MeterProvider{
@@ -70,7 +61,7 @@ func newMeterProvider(conflicts []experimentalConflict, options ...Option) *Mete
 		shutdown:   sdown,
 	}
 
-	if err := validateExperimental(conf.experimental, conflicts); err != nil {
+	if err := validateExperimental(conf.experimental); err != nil {
 		global.Error(err, "invalid experimental MeterProvider options, MeterProvider will perform no operations")
 		mp.stopped.Store(true)
 	} else {

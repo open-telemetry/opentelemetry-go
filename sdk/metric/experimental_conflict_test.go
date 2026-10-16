@@ -4,7 +4,6 @@
 package metric
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -14,90 +13,71 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric/noop"
+	metricx "go.opentelemetry.io/otel/metric/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// featureAOption, featureBOption and featureCOption identify stub experimental
-// features, as finishOption identifies the Finish feature.
+// expOptionA, expOptionB and expOptionC are stub experimental options that
+// enable no feature. Only their distinct types matter.
 type (
-	featureAOption interface{ featureA() }
-	featureBOption interface{ featureB() }
-	featureCOption interface{ featureC() }
+	expOptionA struct{}
+	expOptionB struct{}
+	expOptionC struct{}
 )
 
-type expMeterOptionA struct{}
-
-func (expMeterOptionA) apply(config) config {
+func (expOptionA) apply(config) config {
 	panic("experimental options must not be applied as stable options")
 }
-func (expMeterOptionA) Experimental() {}
-func (expMeterOptionA) featureA()     {}
+func (expOptionA) Experimental() {}
 
-type expMeterOptionB struct{}
-
-func (expMeterOptionB) apply(config) config {
+func (expOptionB) apply(config) config {
 	panic("experimental options must not be applied as stable options")
 }
-func (expMeterOptionB) Experimental() {}
-func (expMeterOptionB) featureB()     {}
+func (expOptionB) Experimental() {}
 
-type expMeterOptionC struct{}
-
-func (expMeterOptionC) apply(config) config {
+func (expOptionC) apply(config) config {
 	panic("experimental options must not be applied as stable options")
 }
-func (expMeterOptionC) Experimental() {}
-func (expMeterOptionC) featureC()     {}
-
-var (
-	conflictAB = experimentalConflict{reflect.TypeFor[featureAOption](), reflect.TypeFor[featureBOption]()}
-	conflictAC = experimentalConflict{reflect.TypeFor[featureAOption](), reflect.TypeFor[featureCOption]()}
-)
+func (expOptionC) Experimental() {}
 
 func TestValidateExperimental(t *testing.T) {
-	a, b, c := expMeterOptionA{}, expMeterOptionB{}, expMeterOptionC{}
+	a, b, c := expOptionA{}, expOptionB{}, expOptionC{}
 	tests := []struct {
-		name      string
-		opts      []experimentalOption
-		conflicts []experimentalConflict
-		wantErrs  int
+		name    string
+		opts    []experimentalOption
+		wantErr bool
 	}{
-		{"NoOptions", nil, []experimentalConflict{conflictAB}, 0},
-		{"OnlyA", []experimentalOption{a}, []experimentalConflict{conflictAB}, 0},
-		{"OnlyB", []experimentalOption{b}, []experimentalConflict{conflictAB}, 0},
-		{"NoRules", []experimentalOption{a, b}, nil, 0},
-		{"AB", []experimentalOption{a, b}, []experimentalConflict{conflictAB}, 1},
-		{"BA", []experimentalOption{b, a}, []experimentalConflict{conflictAB}, 1},
-		{"DuplicateA", []experimentalOption{a, a, b}, []experimentalConflict{conflictAB}, 1},
-		{"BCNotTransitive", []experimentalOption{b, c}, []experimentalConflict{conflictAB, conflictAC}, 0},
-		{"TwoPairs", []experimentalOption{a, b, c}, []experimentalConflict{conflictAB, conflictAC}, 2},
+		{"None", nil, false},
+		{"Single", []experimentalOption{a}, false},
+		{"Repeated", []experimentalOption{a, a}, false},
+		{"TwoDistinct", []experimentalOption{a, b}, true},
+		{"TwoDistinctReversed", []experimentalOption{b, a}, true},
+		{"ThreeDistinct", []experimentalOption{a, b, c}, true},
+		{"RepeatedAndDistinct", []experimentalOption{a, a, b}, true},
+		{"FinishAndOther", []experimentalOption{testFinishOption(true), a}, true},
+		{"DisabledFinishAndOther", []experimentalOption{testFinishOption(false), a}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateExperimental(tt.opts, tt.conflicts)
-			if tt.wantErrs == 0 {
+			err := validateExperimental(tt.opts)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
 				assert.NoError(t, err)
-				return
 			}
-			require.Error(t, err)
-			joined, ok := err.(interface{ Unwrap() []error })
-			require.True(t, ok, "conflicts must be returned joined")
-			assert.Len(t, joined.Unwrap(), tt.wantErrs)
 		})
 	}
 }
 
 func TestValidateExperimentalErrorNamesOptions(t *testing.T) {
-	err := validateExperimental(
-		[]experimentalOption{expMeterOptionA{}, expMeterOptionB{}},
-		[]experimentalConflict{conflictAB},
-	)
+	err := validateExperimental([]experimentalOption{expOptionA{}, expOptionA{}, expOptionB{}, expOptionC{}})
 	require.Error(t, err)
-	assert.ErrorContains(t, err, "metric.expMeterOptionA")
-	assert.ErrorContains(t, err, "metric.expMeterOptionB")
+	assert.ErrorContains(t, err, "metric.expOptionA")
+	assert.ErrorContains(t, err, "metric.expOptionB")
+	assert.ErrorContains(t, err, "metric.expOptionC")
 }
 
-func TestNewMeterProviderConflictingExperimentalIsNoop(t *testing.T) {
+func TestNewMeterProviderDistinctExperimentalIsNoop(t *testing.T) {
 	var logged string
 	t.Cleanup(func(orig logr.Logger) func() {
 		otel.SetLogger(funcr.New(func(_, args string) { logged += args }, funcr.Options{}))
@@ -105,15 +85,12 @@ func TestNewMeterProviderConflictingExperimentalIsNoop(t *testing.T) {
 	}(logr.Discard()))
 
 	rdr := NewManualReader()
-	mp := newMeterProvider(
-		[]experimentalConflict{{reflect.TypeFor[finishOption](), reflect.TypeFor[featureAOption]()}},
-		WithReader(rdr), testFinishOption(true), expMeterOptionA{},
-	)
+	mp := NewMeterProvider(WithReader(rdr), testFinishOption(true), expOptionA{})
 
-	assert.Equal(t, noop.Meter{}, mp.Meter("scope"), "a provider with conflicting options must return no-op meters")
+	assert.Equal(t, noop.Meter{}, mp.Meter("scope"), "distinct experimental options must disable the provider")
 	assert.Nil(t, mp.meterFactory, "no experimental meter factory must be built")
 	assert.Contains(t, logged, "metric.testFinishOption")
-	assert.Contains(t, logged, "metric.expMeterOptionA")
+	assert.Contains(t, logged, "metric.expOptionA")
 
 	// Readers keep their normal lifecycle.
 	var rm metricdata.ResourceMetrics
@@ -123,13 +100,12 @@ func TestNewMeterProviderConflictingExperimentalIsNoop(t *testing.T) {
 	assert.ErrorIs(t, rdr.Collect(t.Context(), &rm), ErrReaderShutdown)
 }
 
-func TestNewMeterProviderNonConflictingExperimental(t *testing.T) {
-	mp := newMeterProvider([]experimentalConflict{conflictAB}, expMeterOptionA{})
-	assert.NotEqual(t, noop.Meter{}, mp.Meter("scope"), "options without a conflict must not disable the provider")
-}
+func TestNewMeterProviderRepeatedExperimental(t *testing.T) {
+	mp := NewMeterProvider(testFinishOption(true), testFinishOption(true))
+	t.Cleanup(func() { assert.NoError(t, mp.Shutdown(t.Context())) })
 
-func TestNewMeterProviderDefaultConflicts(t *testing.T) {
-	// The stub features are not production conflicts.
-	mp := NewMeterProvider(expMeterOptionA{}, expMeterOptionB{})
-	assert.NotEqual(t, noop.Meter{}, mp.Meter("scope"))
+	counter, err := mp.Meter("scope").Int64Counter("requests")
+	require.NoError(t, err)
+	_, ok := counter.(metricx.Finisher)
+	assert.True(t, ok, "repeating the same experimental option must keep its feature enabled")
 }
