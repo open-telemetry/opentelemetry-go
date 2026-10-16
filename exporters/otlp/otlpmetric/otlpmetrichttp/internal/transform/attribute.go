@@ -7,10 +7,71 @@
 package transform
 
 import (
+	"fmt"
+	"os"
+	"strconv"
+	"sync"
+
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
+
+// defaultMaxCachedAttributeSets is the default limit on attrCache's size, overridable via
+// OTEL_GO_X_OTLP_ATTRIBUTE_CACHE_SIZE. When the limit is reached, the cache is cleared so
+// it can adapt to changing attribute sets.
+const defaultMaxCachedAttributeSets = 2000
+
+var maxCachedAttributeSets = maxCachedAttributeSetsFromEnv()
+
+func maxCachedAttributeSetsFromEnv() int {
+	const envKey = "OTEL_GO_X_OTLP_ATTRIBUTE_CACHE_SIZE"
+	v := os.Getenv(envKey)
+	if v == "" {
+		return defaultMaxCachedAttributeSets
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		otel.Handle(fmt.Errorf("invalid %s value %q, using default: %w", envKey, v, err))
+		return defaultMaxCachedAttributeSets
+	}
+	if n <= 0 {
+		otel.Handle(fmt.Errorf("invalid %s value %q: must be positive, using default", envKey, v))
+		return defaultMaxCachedAttributeSets
+	}
+	return n
+}
+
+// attrCache stores converted OTLP attributes keyed by equivalent attribute sets.
+var (
+	attrCacheMu sync.Mutex
+	attrCache   = map[attribute.Distinct][]*cpb.KeyValue{}
+)
+
+// cachedAttrs converts set to OTLP key-values and reuses a cached result when available.
+func cachedAttrs(set attribute.Set) []*cpb.KeyValue {
+	if set.Len() == 0 {
+		return nil
+	}
+
+	key := set.Equivalent()
+
+	attrCacheMu.Lock()
+	defer attrCacheMu.Unlock()
+
+	if out, ok := attrCache[key]; ok {
+		return out
+	}
+
+	if len(attrCache) >= maxCachedAttributeSets {
+		clear(attrCache)
+	}
+
+	out := AttrIter(set.Iter())
+	attrCache[key] = out
+	return out
+}
 
 // AttrIter transforms an attribute iterator into OTLP key-values.
 func AttrIter(iter attribute.Iterator) []*cpb.KeyValue {

@@ -138,7 +138,7 @@ func DataPoints[N int64 | float64](dPts []metricdata.DataPoint[N]) []*mpb.Number
 	out := make([]*mpb.NumberDataPoint, 0, len(dPts))
 	for _, dPt := range dPts {
 		ndp := &mpb.NumberDataPoint{
-			Attributes:        AttrIter(dPt.Attributes.Iter()),
+			Attributes:        cachedAttrs(dPt.Attributes),
 			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
 			TimeUnixNano:      timeUnixNano(dPt.Time),
 			Exemplars:         Exemplars(dPt.Exemplars),
@@ -180,7 +180,7 @@ func HistogramDataPoints[N int64 | float64](dPts []metricdata.HistogramDataPoint
 	for _, dPt := range dPts {
 		sum := float64(dPt.Sum)
 		hdp := &mpb.HistogramDataPoint{
-			Attributes:        AttrIter(dPt.Attributes.Iter()),
+			Attributes:        cachedAttrs(dPt.Attributes),
 			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
 			TimeUnixNano:      timeUnixNano(dPt.Time),
 			Count:             dPt.Count,
@@ -228,7 +228,7 @@ func ExponentialHistogramDataPoints[N int64 | float64](
 	for _, dPt := range dPts {
 		sum := float64(dPt.Sum)
 		ehdp := &mpb.ExponentialHistogramDataPoint{
-			Attributes:        AttrIter(dPt.Attributes.Iter()),
+			Attributes:        cachedAttrs(dPt.Attributes),
 			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
 			TimeUnixNano:      timeUnixNano(dPt.Time),
 			Count:             dPt.Count,
@@ -331,7 +331,7 @@ func SummaryDataPoints(dPts []metricdata.SummaryDataPoint) []*mpb.SummaryDataPoi
 	out := make([]*mpb.SummaryDataPoint, 0, len(dPts))
 	for _, dPt := range dPts {
 		sdp := &mpb.SummaryDataPoint{
-			Attributes:        AttrIter(dPt.Attributes.Iter()),
+			Attributes:        cachedAttrs(dPt.Attributes),
 			StartTimeUnixNano: timeUnixNano(dPt.StartTime),
 			TimeUnixNano:      timeUnixNano(dPt.Time),
 			Count:             dPt.Count,
