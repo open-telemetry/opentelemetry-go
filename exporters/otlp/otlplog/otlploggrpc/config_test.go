@@ -660,3 +660,56 @@ func TestConvCompressionIsCaseInsensitive(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadInsecureFromEnv(t *testing.T) {
+	const (
+		logsKey    = "OTEL_EXPORTER_OTLP_LOGS_INSECURE"
+		genericKey = "OTEL_EXPORTER_OTLP_INSECURE"
+	)
+
+	tests := []struct {
+		name string
+		logs string
+		gen  string
+		want bool
+		set  bool
+	}{
+		{name: "logs true", logs: "true", want: true, set: true},
+		{name: "logs case-insensitive true", logs: "TRUE", want: true, set: true},
+		{name: "logs false suppresses generic true", logs: "false", gen: "true", set: true},
+		{
+			// The defect: an invalid signal-specific value used to fall through
+			// to the generic variable, turning a value the specification says
+			// must resolve to false into true.
+			name: "invalid logs resolves false and does not fall through",
+			logs: "invalid", gen: "true", want: false, set: true,
+		},
+		{name: "invalid logs with numeric value", logs: "1", gen: "true", want: false, set: true},
+		{name: "invalid generic resolves false", gen: "invalid", want: false, set: true},
+		{name: "generic is used when logs is empty", gen: "true", want: true, set: true},
+		{name: "nothing set leaves the setting unset"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(logsKey, tc.logs)
+			t.Setenv(genericKey, tc.gen)
+
+			got := loadInsecureFromEnv(envInsecure)(setting[bool]{})
+			if got.Set != tc.set {
+				t.Errorf("Set = %v, want %v", got.Set, tc.set)
+			}
+			if got.Value != tc.want {
+				t.Errorf("Value = %v, want %v", got.Value, tc.want)
+			}
+		})
+	}
+
+	t.Run("an explicit option has precedence", func(t *testing.T) {
+		t.Setenv(logsKey, "invalid")
+		got := loadInsecureFromEnv(envInsecure)(newSetting(false))
+		if !got.Set || got.Value {
+			t.Errorf("got set=%v value=%v, want the passed setting untouched", got.Set, got.Value)
+		}
+	})
+}
