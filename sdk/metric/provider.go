@@ -61,7 +61,7 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 		shutdown:   sdown,
 	}
 
-	if err := validateExperimental(conf.experimental); err != nil {
+	if err := rejectDistinctExperimental(conf.experimental); err != nil {
 		global.Error(err, "invalid experimental MeterProvider options, MeterProvider will perform no operations")
 		mp.stopped.Store(true)
 	} else {

@@ -19,12 +19,12 @@ type finishOption interface {
 	FinishEnabled() bool
 }
 
-// validateExperimental returns an error if options contain more than one
+// rejectDistinctExperimental returns an error if options contain more than one
 // distinct experimental option type, or nil otherwise. Combinations of
 // experimental features are unsupported until a user requests one, so any
 // two distinct types are rejected. Repeating the same type is allowed, and an
 // option counts whether or not it enables its feature.
-func validateExperimental(options []experimentalOption) error {
+func rejectDistinctExperimental(options []experimentalOption) error {
 	var types []reflect.Type
 	for _, o := range options {
 		if t := reflect.TypeOf(o); !slices.Contains(types, t) {

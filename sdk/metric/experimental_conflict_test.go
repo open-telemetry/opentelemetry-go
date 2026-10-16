@@ -40,7 +40,7 @@ func (expOptionC) apply(config) config {
 }
 func (expOptionC) Experimental() {}
 
-func TestValidateExperimental(t *testing.T) {
+func TestRejectDistinctExperimental(t *testing.T) {
 	a, b, c := expOptionA{}, expOptionB{}, expOptionC{}
 	tests := []struct {
 		name    string
@@ -59,7 +59,7 @@ func TestValidateExperimental(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateExperimental(tt.opts)
+			err := rejectDistinctExperimental(tt.opts)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -69,8 +69,8 @@ func TestValidateExperimental(t *testing.T) {
 	}
 }
 
-func TestValidateExperimentalErrorNamesOptions(t *testing.T) {
-	err := validateExperimental([]experimentalOption{expOptionA{}, expOptionA{}, expOptionB{}, expOptionC{}})
+func TestRejectDistinctExperimentalErrorNamesOptions(t *testing.T) {
+	err := rejectDistinctExperimental([]experimentalOption{expOptionA{}, expOptionA{}, expOptionB{}, expOptionC{}})
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "metric.expOptionA")
 	assert.ErrorContains(t, err, "metric.expOptionB")
