@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1338,6 +1339,56 @@ func TestResponseBodySizeLimitAfterDecompression(t *testing.T) {
 	err = c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
 	assert.ErrorContains(t, err, "response body too large: exceeded 64 bytes")
 	assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
+}
+
+func TestTransientDisconnectRetries(t *testing.T) {
+	for _, reset := range []bool{false, true} {
+		name := "EOF"
+		if reset {
+			name = "Reset"
+		}
+		t.Run(name, func(t *testing.T) {
+			var attempts atomic.Int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = io.Copy(io.Discard, r.Body)
+				if attempts.Add(1) == 1 {
+					conn, _, err := w.(http.Hijacker).Hijack()
+					if err != nil {
+						t.Error(err)
+						return
+					}
+					if reset {
+						if tcp, ok := conn.(*net.TCPConn); ok {
+							_ = tcp.SetLinger(0)
+						}
+					}
+					_ = conn.Close()
+					return
+				}
+				w.Header().Set("Content-Type", "application/x-protobuf")
+				w.WriteHeader(http.StatusOK)
+			}))
+			t.Cleanup(srv.Close)
+
+			cfg := newConfig([]Option{
+				WithEndpointURL(srv.URL),
+				WithRetry(RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Millisecond,
+					MaxInterval:     time.Millisecond,
+					MaxElapsedTime:  100 * time.Millisecond,
+				}),
+			})
+			c, err := newHTTPClient(t.Context(), cfg)
+			require.NoError(t, err)
+
+			err = c.UploadLogs(t.Context(), []*lpb.ResourceLogs{{ScopeLogs: []*lpb.ScopeLogs{
+				{LogRecords: []*lpb.LogRecord{{}}},
+			}}})
+			require.NoError(t, err)
+			assert.Equal(t, int32(2), attempts.Load())
+		})
+	}
 }
 
 func TestExplicitGzipResponseDecoding(t *testing.T) {
