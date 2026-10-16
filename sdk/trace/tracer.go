@@ -64,10 +64,9 @@ func (tr *tracer) Start(
 	}
 
 	if rw, ok := s.(ReadWriteSpan); ok && s.IsRecording() {
-		sps := tr.provider.getSpanProcessors()
-		for _, sp := range sps {
+		for _, sp := range tr.provider.getSpanProcessors() {
 			// Use original context.
-			sp.sp.OnStart(ctx, rw)
+			sp.onStart(ctx, rw)
 		}
 	}
 	if rtt, ok := s.(runtimeTracer); ok {

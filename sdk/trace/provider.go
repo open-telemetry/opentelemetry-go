@@ -234,59 +234,74 @@ func (p *TracerProvider) RegisterSpanProcessor(sp SpanProcessor) {
 	p.spanProcessors.Store(&newSPS)
 }
 
-// UnregisterSpanProcessor removes the given SpanProcessor from the list of SpanProcessors.
+// UnregisterSpanProcessor removes the given SpanProcessor from the list of
+// SpanProcessors.
+//
+// Before invoking sp's Shutdown method, this stops admitting new operations
+// that invoke an OnStart, OnEnd, or ForceFlush method on sp and waits for
+// already-admitted operations to complete, so that none of those methods are
+// called on sp once it has been shut down. Other processors remain available
+// while this waits.
+//
+// UnregisterSpanProcessor must not be called directly or indirectly from a
+// SpanProcessor method.
 func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 	// This check prevents calls during a shutdown.
 	if p.isShutdown.Load() {
 		return
 	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	// This check prevents calls after a shutdown.
-	if p.isShutdown.Load() {
-		return
-	}
-	old := p.getSpanProcessors()
-	if len(old) == 0 {
-		return
-	}
-	spss := make(spanProcessorStates, len(old))
-	copy(spss, old)
-
-	// stop the span processor if it is started and remove it from the list
-	var stopOnce *spanProcessorState
-	var idx int
-	for i, sps := range spss {
-		if sps.sp == sp {
-			stopOnce = sps
-			idx = i
-		}
-	}
+	stopOnce := p.removeSpanProcessor(sp)
 	if stopOnce == nil {
 		return
 	}
+
+	// p.mu is not held here so that admitted operations, and the processor's
+	// own Shutdown, can still use the provider (e.g. to create tracers).
+	_ = stopOnce.wait(context.Background())
 	stopOnce.state.Do(func() {
 		if err := sp.Shutdown(context.Background()); err != nil {
 			otel.Handle(err)
 		}
 	})
-	if len(spss) > 1 {
-		copy(spss[idx:], spss[idx+1:])
-	}
-	spss[len(spss)-1] = nil
-	spss = spss[:len(spss)-1]
+}
 
+// removeSpanProcessor removes sp from the list of processors and stops
+// admitting new operations for it. It returns nil if sp is not registered.
+func (p *TracerProvider) removeSpanProcessor(sp SpanProcessor) *spanProcessorState {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	// This check prevents calls after a shutdown.
+	if p.isShutdown.Load() {
+		return nil
+	}
+	old := p.getSpanProcessors()
+	idx := -1
+	for i, sps := range old {
+		if sps.sp == sp {
+			idx = i
+		}
+	}
+	if idx < 0 {
+		return nil
+	}
+	stopOnce := old[idx]
+	stopOnce.stop()
+
+	spss := make(spanProcessorStates, 0, len(old)-1)
+	spss = append(spss, old[:idx]...)
+	spss = append(spss, old[idx+1:]...)
 	p.spanProcessors.Store(&spss)
+	return stopOnce
 }
 
 // ForceFlush immediately exports all spans that have not yet been exported for
 // all the registered span processors.
+//
+// Once Shutdown starts, ForceFlush performs no operation and returns nil.
+//
+// This method can be called concurrently.
 func (p *TracerProvider) ForceFlush(ctx context.Context) error {
 	spss := p.getSpanProcessors()
-	if len(spss) == 0 {
-		return nil
-	}
-
 	var err error
 	for _, sps := range spss {
 		select {
@@ -295,7 +310,7 @@ func (p *TracerProvider) ForceFlush(ctx context.Context) error {
 		default:
 		}
 
-		err = errors.Join(err, sps.sp.ForceFlush(ctx))
+		err = errors.Join(err, sps.forceFlush(ctx))
 	}
 	return err
 }
@@ -303,20 +318,40 @@ func (p *TracerProvider) ForceFlush(ctx context.Context) error {
 // Shutdown shuts down TracerProvider. All registered span processors are shut down
 // in the order they were registered and any held computational resources are released.
 // After Shutdown is called, all methods are no-ops.
+//
+// The first call stops admitting new operations that invoke a processor's
+// OnStart, OnEnd, or ForceFlush method. It waits for operations already
+// admitted to complete before synchronously invoking each processor's
+// Shutdown method. If ctx is canceled before the admitted operations
+// complete, Shutdown returns ctx.Err() without invoking any processor's
+// Shutdown method.
+//
+// Concurrent or subsequent Shutdown calls return nil without invoking any
+// processor's Shutdown method.
+//
+// Shutdown must not be called directly or indirectly from a SpanProcessor
+// method.
+//
+// This method can be called concurrently.
 func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	// This check prevents deadlocks in case of recursive shutdown.
 	if p.isShutdown.Load() {
 		return nil
 	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	// This check prevents calls after a shutdown has already been done concurrently.
-	if !p.isShutdown.CompareAndSwap(false, true) { // did toggle?
+	spss, ok := p.beginShutdown()
+	if !ok {
 		return nil
 	}
 
 	var retErr error
-	for _, sps := range p.getSpanProcessors() {
+	for _, sps := range spss {
+		// Admission is already closed for every processor, so spans created
+		// by an exporter during its Shutdown never reach a stopped processor.
+		if err := sps.wait(ctx); err != nil {
+			return err
+		}
+	}
+	for _, sps := range spss {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -331,6 +366,23 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	}
 	p.spanProcessors.Store(&spanProcessorStates{})
 	return retErr
+}
+
+// beginShutdown marks p as shut down and stops admitting new processor
+// operations. It returns false if a shutdown was already started. p.mu is
+// released before returning so that admitted operations can still use p.
+func (p *TracerProvider) beginShutdown() (spanProcessorStates, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	// This check prevents calls after a shutdown has already been done concurrently.
+	if !p.isShutdown.CompareAndSwap(false, true) { // did toggle?
+		return nil, false
+	}
+	spss := p.getSpanProcessors()
+	for _, sps := range spss {
+		sps.stop()
+	}
+	return spss, true
 }
 
 func (p *TracerProvider) getSpanProcessors() spanProcessorStates {
