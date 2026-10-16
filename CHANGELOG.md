@@ -32,8 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Interpret invalid nonempty insecure environment variable values as false in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, preserving Logs-specific precedence over the generic setting and reporting the invalid value. (#PLACEHOLDER)
-
+- Interpret invalid nonempty insecure environment variable values as false in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, preserving Logs-specific precedence over the generic setting and reporting the invalid value. (#9231)
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
 - Report dropped event and link counts in the span snapshot when the event or link limit is `0` in `go.opentelemetry.io/otel/sdk/trace`.
   Previously, an ended span reported `0` dropped events and links even though the recording span had counted them. (#9238)
