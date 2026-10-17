@@ -4,6 +4,7 @@
 package metric
 
 import (
+	"context"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -85,7 +86,13 @@ func TestNewMeterProviderDistinctExperimentalIsNoop(t *testing.T) {
 	}(logr.Discard()))
 
 	rdr := NewManualReader()
-	mp := NewMeterProvider(WithReader(rdr), testFinishOption(true), expOptionA{})
+	// ManualReader has no ForceFlush, so flushRdr verifies flushes still
+	// reach the Readers.
+	flushRdr := &reader{
+		forceFlushFunc: func(context.Context) error { return assert.AnError },
+		shutdownFunc:   func(context.Context) error { return nil },
+	}
+	mp := NewMeterProvider(WithReader(rdr), WithReader(flushRdr), testFinishOption(true), expOptionA{})
 
 	assert.Equal(t, noop.Meter{}, mp.Meter("scope"), "distinct experimental options must disable the provider")
 	assert.Nil(t, mp.meterFactory, "no experimental meter factory must be built")
@@ -95,7 +102,7 @@ func TestNewMeterProviderDistinctExperimentalIsNoop(t *testing.T) {
 	// Readers keep their normal lifecycle.
 	var rm metricdata.ResourceMetrics
 	assert.NoError(t, rdr.Collect(t.Context(), &rm))
-	assert.NoError(t, mp.ForceFlush(t.Context()))
+	assert.ErrorIs(t, mp.ForceFlush(t.Context()), assert.AnError)
 	assert.NoError(t, mp.Shutdown(t.Context()))
 	assert.ErrorIs(t, rdr.Collect(t.Context(), &rm), ErrReaderShutdown)
 }
