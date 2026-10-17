@@ -5,6 +5,10 @@ package metric
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"slices"
+	"strings"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -13,6 +17,29 @@ import (
 
 type finishOption interface {
 	FinishEnabled() bool
+}
+
+// rejectDistinctExperimental returns an error if options contain more than one
+// distinct experimental option type, or nil otherwise. Combinations of
+// experimental features are unsupported until a user requests one, so any
+// two distinct types are rejected. Repeating the same type is allowed, and an
+// option counts whether or not it enables its feature.
+func rejectDistinctExperimental(options []experimentalOption) error {
+	var types []reflect.Type
+	for _, o := range options {
+		if t := reflect.TypeOf(o); !slices.Contains(types, t) {
+			types = append(types, t)
+		}
+	}
+	if len(types) <= 1 {
+		return nil
+	}
+
+	names := make([]string, len(types))
+	for i, t := range types {
+		names[i] = t.String()
+	}
+	return fmt.Errorf("experimental options cannot be used together: %s", strings.Join(names, ", "))
 }
 
 type experimentalMeterConfig struct {

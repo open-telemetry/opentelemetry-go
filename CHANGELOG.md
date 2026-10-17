@@ -20,6 +20,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
   Include instructions for upgrading the bridge to v1.47.0.
   See the [bridge version compatibility documentation](bridge/opentracing/README.md#version-compatibility). (#9209)
+- `NewMeterProvider` in `go.opentelemetry.io/otel/sdk/metric` rejects options that combine more than one distinct experimental option.
+  It logs an error, and the returned `MeterProvider` performs no operations while its Readers still receive `ForceFlush` and `Shutdown`.
+  Repeating the same experimental option is still supported. (#9193)
 
 ### Deprecated
 

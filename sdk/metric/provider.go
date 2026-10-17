@@ -46,23 +46,34 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // Resource and no Readers. Readers cannot be added after a MeterProvider is
 // created. This means the returned MeterProvider, one created with no
 // Readers, will perform no operations.
+//
+// Combining distinct experimental options is not supported. If options
+// include more than one distinct experimental option type, an error is logged
+// and the returned MeterProvider performs no operations; ForceFlush and
+// Shutdown still reach its Readers. Repeating the same experimental option is
+// allowed.
 func NewMeterProvider(options ...Option) *MeterProvider {
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()
-	factory, experimentalShutdown := newExperimentalMeterFactory(conf.experimental)
-	if experimentalShutdown != nil {
-		readerShutdown := sdown
-		sdown = func(ctx context.Context) error {
-			return errors.Join(readerShutdown(ctx), experimentalShutdown(ctx))
+	mp := &MeterProvider{
+		pipes:      newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
+		forceFlush: flush,
+		shutdown:   sdown,
+	}
+
+	if err := rejectDistinctExperimental(conf.experimental); err != nil {
+		global.Error(err, "invalid experimental MeterProvider options, MeterProvider will perform no operations")
+		mp.stopped.Store(true)
+	} else {
+		factory, experimentalShutdown := newExperimentalMeterFactory(conf.experimental)
+		mp.meterFactory = factory
+		if experimentalShutdown != nil {
+			mp.shutdown = func(ctx context.Context) error {
+				return errors.Join(sdown(ctx), experimentalShutdown(ctx))
+			}
 		}
 	}
 
-	mp := &MeterProvider{
-		pipes:        newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
-		meterFactory: factory,
-		forceFlush:   flush,
-		shutdown:     sdown,
-	}
 	// Log after creation so all readers show correctly they are registered.
 	global.Info(
 		"MeterProvider created",
