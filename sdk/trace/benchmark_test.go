@@ -373,6 +373,76 @@ func BenchmarkSpanID_DotString(b *testing.B) {
 	}
 }
 
+// onEndingNoopProcessor is a SpanProcessor that also implements OnEnding
+// without doing any work, used to measure the overhead of the OnEnding hook.
+type onEndingNoopProcessor struct{}
+
+func (onEndingNoopProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {}
+func (onEndingNoopProcessor) OnEnd(sdktrace.ReadOnlySpan)                     {}
+func (onEndingNoopProcessor) OnEnding(sdktrace.ReadWriteSpan, trace.Span)     {}
+func (onEndingNoopProcessor) Shutdown(context.Context) error                  { return nil }
+func (onEndingNoopProcessor) ForceFlush(context.Context) error                { return nil }
+
+// noopProcessor is a baseline SpanProcessor that does nothing, used to
+// separate the overhead of the processor loop from the OnEnding hook.
+type noopProcessor struct{}
+
+func (noopProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {}
+func (noopProcessor) OnEnd(sdktrace.ReadOnlySpan)                     {}
+func (noopProcessor) Shutdown(context.Context) error                  { return nil }
+func (noopProcessor) ForceFlush(context.Context) error                { return nil }
+
+// BenchmarkSpanProcessorOnEnding measures the per-span cost of the OnEnding
+// dispatch path across different processor counts. Sub-benchmarks without
+// an OnEnding implementer show the fast-path overhead; those with one show
+// the full hook cost.
+func BenchmarkSpanProcessorOnEnding(b *testing.B) {
+	for _, n := range []int{1, 4, 8} {
+		b.Run(fmt.Sprintf("processors:%d/no_hook", n), func(b *testing.B) {
+			tp := sdktrace.NewTracerProvider(
+				sdktrace.WithSyncer(tracetest.NewNoopExporter()),
+			)
+			for range n {
+				tp.RegisterSpanProcessor(noopProcessor{})
+			}
+			b.Cleanup(func() {
+				//nolint:usetesting
+				_ = tp.Shutdown(context.Background())
+			})
+			tracer := tp.Tracer("bench")
+			ctx := b.Context()
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				_, span := tracer.Start(ctx, "bench")
+				span.End()
+			}
+		})
+
+		b.Run(fmt.Sprintf("processors:%d/with_hook", n), func(b *testing.B) {
+			tp := sdktrace.NewTracerProvider(
+				sdktrace.WithSyncer(tracetest.NewNoopExporter()),
+			)
+			for i := 0; i < n-1; i++ {
+				tp.RegisterSpanProcessor(noopProcessor{})
+			}
+			tp.RegisterSpanProcessor(onEndingNoopProcessor{})
+			b.Cleanup(func() {
+				//nolint:usetesting
+				_ = tp.Shutdown(context.Background())
+			})
+			tracer := tp.Tracer("bench")
+			ctx := b.Context()
+			b.ResetTimer()
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				_, span := tracer.Start(ctx, "bench")
+				span.End()
+			}
+		})
+	}
+}
+
 func traceBenchmark(b *testing.B, name string, fn func(*testing.B, trace.Tracer)) {
 	b.Run("AlwaysSample", func(b *testing.B) {
 		b.ReportAllocs()
