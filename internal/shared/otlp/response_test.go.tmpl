@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"math"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -36,7 +37,7 @@ func TestCopyResponseBody(t *testing.T) {
 			want:    "x",
 			wantErr: "response body too large: exceeded 1 bytes",
 		},
-		{name: "MaxInt64", src: strings.NewReader("ok"), limit: 1<<63 - 1, want: "ok"},
+		{name: "MaxInt64", src: strings.NewReader("ok"), limit: math.MaxInt64, want: "ok"},
 		{name: "CopyError", src: iotest.ErrReader(readErr), limit: 1, wantErr: readErr.Error()},
 		{
 			name:    "ProbeError",

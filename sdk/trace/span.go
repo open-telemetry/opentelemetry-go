@@ -592,7 +592,7 @@ func (s *recordingSpan) Name() string {
 	return s.name
 }
 
-// Name returns the SpanContext of this span's parent span.
+// Parent returns the SpanContext of this span's parent span.
 func (s *recordingSpan) Parent() trace.SpanContext {
 	s.mu.Lock()
 	defer s.mu.Unlock()
