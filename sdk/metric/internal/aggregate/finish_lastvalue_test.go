@@ -6,6 +6,7 @@ package aggregate
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -235,12 +236,14 @@ func testFinishLastValueCollectionTimestamp[N int64 | float64](t *testing.T) {
 
 	points = finishLastValuePoints[N](t, agg.ComputeAggregation)
 	require.Len(t, points, 2)
-	assert.Contains(t, points, metricdata.DataPoint[N]{
-		Attributes: bob,
-		StartTime:  y2kPlus(2),
-		Time:       y2kPlus(3),
-		Value:      N(2),
+	i := slices.IndexFunc(points, func(point metricdata.DataPoint[N]) bool {
+		return point.Attributes.Equals(&bob)
 	})
+	require.NotEqual(t, -1, i)
+	assert.Equal(t, y2kPlus(2), points[i].StartTime)
+	assert.Equal(t, y2kPlus(3), points[i].Time)
+	assert.Equal(t, N(2), points[i].Value)
+	assert.Empty(t, points[i].Exemplars)
 }
 
 func TestFinishLastValueCollectDefersNewSeries(t *testing.T) {
