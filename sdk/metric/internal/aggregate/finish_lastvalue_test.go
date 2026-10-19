@@ -205,6 +205,44 @@ func TestFinishLastValueInitialMeasurementAdmission(t *testing.T) {
 	assert.Equal(t, int64(7), (<-collected).Value)
 }
 
+func TestFinishLastValueCollectionTimestamp(t *testing.T) {
+	t.Run("Int64", testFinishLastValueCollectionTimestamp[int64])
+	t.Run("Float64", testFinishLastValueCollectionTimestamp[float64])
+}
+
+func testFinishLastValueCollectionTimestamp[N int64 | float64](t *testing.T) {
+	t.Helper()
+	var c clock
+	t.Cleanup(c.Register())
+	agg := Builder[N]{}.FinishLastValue()
+	agg.Measure(t.Context(), N(1), alice)
+
+	now = func() time.Time {
+		timestamp := c.Now()
+		now = c.Now
+		// Create a series after the collection timestamp has been sampled.
+		agg.Measure(t.Context(), N(2), bob)
+		return timestamp
+	}
+	points := finishLastValuePoints[N](t, agg.ComputeAggregation)
+	for _, point := range points {
+		assert.False(t, point.StartTime.After(point.Time), "collection emitted an inverted interval")
+	}
+	require.Len(t, points, 1, "series created after timestamp capture must wait for the next collection")
+	assert.Equal(t, alice, points[0].Attributes)
+	assert.Equal(t, y2k, points[0].StartTime)
+	assert.Equal(t, y2kPlus(1), points[0].Time)
+
+	points = finishLastValuePoints[N](t, agg.ComputeAggregation)
+	require.Len(t, points, 2)
+	assert.Contains(t, points, metricdata.DataPoint[N]{
+		Attributes: bob,
+		StartTime:  y2kPlus(2),
+		Time:       y2kPlus(3),
+		Value:      N(2),
+	})
+}
+
 func TestFinishLastValueCollectDefersNewSeries(t *testing.T) {
 	barrier := &lastValueCollectionBarrier{entered: make(chan struct{}), release: make(chan struct{})}
 	agg := Builder[int64]{

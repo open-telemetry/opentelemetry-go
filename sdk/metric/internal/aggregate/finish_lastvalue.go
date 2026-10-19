@@ -247,14 +247,15 @@ func (s *finishLastValue[N]) collect(
 		return 0
 	}
 
+	// Every included series must start at or before the collection timestamp.
+	snapshot := s.snapshot()
+	defer clear(snapshot)
 	t := now()
 	start := s.start
 	if s.temporality == metricdata.DeltaTemporality {
 		s.start = t
 	}
 	gData, _ := (*dest).(metricdata.Gauge[N])
-	snapshot := s.snapshot()
-	defer clear(snapshot)
 	points := reset(gData.DataPoints, 0, len(snapshot))
 
 	for _, point := range snapshot {
