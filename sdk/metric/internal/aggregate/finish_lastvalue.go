@@ -101,6 +101,10 @@ func (v *finishLastValuePoint[N]) collectDelta(
 	if !ok {
 		return metricdata.DataPoint[N]{}, false, false
 	}
+	// A deferred series can predate the previous collection's boundary.
+	if v.start.Before(start) {
+		start = v.start
+	}
 	dp, retire := v.collect(start, collection)
 	return dp, true, retire
 }

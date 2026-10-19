@@ -246,6 +246,59 @@ func testFinishLastValueCollectionTimestamp[N int64 | float64](t *testing.T) {
 	assert.Empty(t, points[i].Exemplars)
 }
 
+func TestFinishLastValueDeltaDeferredSeries(t *testing.T) {
+	t.Run("Int64", testFinishLastValueDeltaDeferredSeries[int64])
+	t.Run("Float64", testFinishLastValueDeltaDeferredSeries[float64])
+}
+
+func testFinishLastValueDeltaDeferredSeries[N int64 | float64](t *testing.T) {
+	t.Helper()
+	for _, finished := range []bool{false, true} {
+		t.Run(fmt.Sprint("finished=", finished), func(t *testing.T) {
+			var c clock
+			t.Cleanup(c.Register())
+			agg := Builder[N]{Temporality: metricdata.DeltaTemporality}.FinishLastValue()
+			agg.Measure(t.Context(), N(1), alice)
+
+			now = func() time.Time {
+				now = c.Now
+				// Record after snapshotting but before sampling collection time.
+				agg.Measure(t.Context(), N(2), bob)
+				finishTime := c.Now()
+				if finished {
+					agg.Finish(bob.Equivalent(), finishTime)
+				}
+				return c.Now()
+			}
+			points := finishLastValuePoints[N](t, agg.ComputeAggregation)
+			require.Len(t, points, 1)
+			assert.Equal(t, alice, points[0].Attributes)
+			assert.Equal(t, y2k, points[0].StartTime)
+			assert.Equal(t, y2kPlus(4), points[0].Time)
+
+			points = finishLastValuePoints[N](t, agg.ComputeAggregation)
+			require.Len(t, points, 1)
+			assert.Equal(t, bob, points[0].Attributes)
+			assert.Equal(t, N(2), points[0].Value)
+			assert.Equal(t, y2kPlus(2), points[0].StartTime)
+			end := y2kPlus(5)
+			if finished {
+				end = y2kPlus(3)
+			}
+			assert.Equal(t, end, points[0].Time)
+			assert.False(t, points[0].StartTime.After(points[0].Time))
+			assert.Empty(t, finishLastValuePoints[N](t, agg.ComputeAggregation))
+
+			agg.Measure(t.Context(), N(3), bob)
+			points = finishLastValuePoints[N](t, agg.ComputeAggregation)
+			require.Len(t, points, 1)
+			assert.Equal(t, N(3), points[0].Value)
+			assert.Equal(t, y2kPlus(6), points[0].StartTime)
+			assert.Equal(t, y2kPlus(8), points[0].Time)
+		})
+	}
+}
+
 func TestFinishLastValueCollectDefersNewSeries(t *testing.T) {
 	barrier := &lastValueCollectionBarrier{entered: make(chan struct{}), release: make(chan struct{})}
 	agg := Builder[int64]{
