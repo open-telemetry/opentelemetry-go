@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -31,11 +32,13 @@ import (
 
 type client struct {
 	// req is cloned for every upload the client makes.
-	req            *http.Request
-	compression    Compression
-	maxRequestSize int
-	requestFunc    retry.RequestFunc
-	httpClient     *http.Client
+	req             *http.Request
+	compression     Compression
+	maxRequestSize  int
+	maxResponseSize int64
+	requestFunc     retry.RequestFunc
+	httpClient      *http.Client
+	exportTimeout   time.Duration
 
 	inst *observ.Instrumentation
 }
@@ -59,13 +62,6 @@ var ourTransport = &http.Transport{
 
 var errInsecureEndpointWithTLS = errors.New("insecure HTTP endpoint cannot use TLS client configuration")
 
-// maxResponseBodySize is the maximum number of bytes to read from a response
-// body. It is set to 4 MiB per the OTLP specification recommendation to
-// mitigate excessive memory usage caused by a misconfigured or malicious
-// server. If exceeded, the response is treated as a not-retryable error.
-// This is a variable to allow tests to override it.
-var maxResponseBodySize int64 = 4 * 1024 * 1024
-
 // newClient creates a new HTTP metric client.
 func newClient(cfg oconf.Config) (*client, error) {
 	if cfg.Metrics.Insecure && cfg.Metrics.TLSCfg != nil {
@@ -73,10 +69,14 @@ func newClient(cfg oconf.Config) (*client, error) {
 	}
 
 	httpClient := cfg.Metrics.HTTPClient
+	var exportTimeout time.Duration
 	if httpClient == nil {
+		// WithHTTPClient takes precedence over WithTimeout, so the exporter
+		// timeout is applied only for the client constructed here.
+		exportTimeout = cfg.Metrics.Timeout
 		httpClient = &http.Client{
 			Transport: ourTransport,
-			Timeout:   cfg.Metrics.Timeout,
+			Timeout:   exportTimeout,
 		}
 
 		if cfg.Metrics.TLSCfg != nil || cfg.Metrics.Proxy != nil {
@@ -93,9 +93,10 @@ func newClient(cfg oconf.Config) (*client, error) {
 	}
 
 	u := &url.URL{
-		Scheme: "https",
-		Host:   cfg.Metrics.Endpoint,
-		Path:   cfg.Metrics.URLPath,
+		Scheme:  "https",
+		Host:    cfg.Metrics.Endpoint,
+		Path:    cfg.Metrics.URLPath,
+		RawPath: cfg.Metrics.URLRawPath,
 	}
 	if cfg.Metrics.Insecure {
 		u.Scheme = "http"
@@ -120,12 +121,14 @@ func newClient(cfg oconf.Config) (*client, error) {
 	inst, err := observ.NewInstrumentation(counter.NextExporterID(), cfg.Metrics.Endpoint)
 
 	return &client{
-		compression:    Compression(cfg.Metrics.Compression),
-		maxRequestSize: cfg.Metrics.MaxRequestSize,
-		req:            req,
-		requestFunc:    cfg.RetryConfig.RequestFunc(evaluate),
-		httpClient:     httpClient,
-		inst:           inst,
+		compression:     Compression(cfg.Metrics.Compression),
+		maxRequestSize:  cfg.Metrics.MaxRequestSize,
+		maxResponseSize: cfg.Metrics.MaxResponseSize,
+		req:             req,
+		requestFunc:     cfg.RetryConfig.RequestFunc(evaluate),
+		httpClient:      httpClient,
+		exportTimeout:   exportTimeout,
+		inst:            inst,
 	}, err
 }
 
@@ -170,6 +173,12 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		defer func() { op.End(uploadErr, statusCode) }()
 	}
 
+	if c.exportTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, c.exportTimeout, errors.New("exporter export timeout"))
+		defer cancel()
+	}
+
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
 		select {
 		case <-iCtx.Done():
@@ -204,11 +213,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-				var maxBytesErr *http.MaxBytesError
-				if errors.As(err, &maxBytesErr) {
-					return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-				}
+			if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
@@ -239,11 +244,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-			var maxBytesErr *http.MaxBytesError
-			if errors.As(err, &maxBytesErr) {
-				return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-			}
+		if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
@@ -360,9 +361,9 @@ func newResponseError(header http.Header, wrapped error) error {
 
 func retryAfterDuration(v string) time.Duration {
 	if t, err := strconv.ParseInt(v, 10, 64); err == nil && t >= 0 {
-		const maxRetryAfterSeconds = int64(1<<63-1) / int64(time.Second)
+		const maxRetryAfterSeconds = math.MaxInt64 / int64(time.Second)
 		if t > maxRetryAfterSeconds {
-			return time.Duration(1<<63 - 1)
+			return time.Duration(math.MaxInt64)
 		}
 		return time.Duration(t) * time.Second
 	}

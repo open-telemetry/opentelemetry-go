@@ -15,8 +15,10 @@ func ResetForTest(t testing.TB) {
 		globalTracer = defaultTracerValue()
 		globalPropagators = defaultPropagatorsValue()
 		globalMeterProvider = defaultMeterProvider()
+		globalLoggerProvider = defaultLoggerProvider()
 		delegateTraceOnce = sync.Once{}
 		delegateTextMapPropagatorOnce = sync.Once{}
 		delegateMeterOnce = sync.Once{}
+		delegateLoggerOnce = sync.Once{}
 	})
 }

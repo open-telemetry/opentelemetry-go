@@ -19,6 +19,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
+
+	//nolint:staticcheck // The deprecated bridge still depends on its migration helpers.
 	"go.opentelemetry.io/otel/bridge/opentracing/migration"
 	"go.opentelemetry.io/otel/codes"
 	iBaggage "go.opentelemetry.io/otel/internal/baggage"
@@ -36,7 +38,8 @@ var (
 )
 
 type bridgeSpanContext struct {
-	bag baggage.Baggage
+	bagMu sync.RWMutex
+	bag   baggage.Baggage
 	trace.SpanContext
 }
 
@@ -57,7 +60,7 @@ func newBridgeSpanContext(otelSpanContext trace.SpanContext, parentOtSpanContext
 }
 
 func (c *bridgeSpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
-	for _, m := range c.bag.Members() {
+	for _, m := range c.getBaggage().Members() {
 		if !handler(m.Key(), m.Value()) {
 			return
 		}
@@ -69,11 +72,19 @@ func (c *bridgeSpanContext) setBaggageItem(restrictedKey, value string) {
 	if err != nil {
 		return
 	}
+	c.bagMu.Lock()
+	defer c.bagMu.Unlock()
 	c.bag, _ = c.bag.SetMember(m)
 }
 
 func (c *bridgeSpanContext) baggageItem(restrictedKey string) baggage.Member {
-	return c.bag.Member(restrictedKey)
+	return c.getBaggage().Member(restrictedKey)
+}
+
+func (c *bridgeSpanContext) getBaggage() baggage.Baggage {
+	c.bagMu.RLock()
+	defer c.bagMu.RUnlock()
+	return c.bag
 }
 
 type bridgeSpan struct {
@@ -403,7 +414,7 @@ func (t *BridgeTracer) baggageSetHook(ctx context.Context, list iBaggage.List) c
 		return ctx
 	}
 	for k, v := range list {
-		bSpan.setBaggageItemOnly(k, v.Value)
+		bSpan.setBaggageItemOnly(k, v.Value())
 	}
 	return ctx
 }
@@ -440,7 +451,7 @@ func (t *BridgeTracer) baggageGetHook(ctx context.Context, list iBaggage.List) i
 
 	for k, v := range items {
 		// Overwrite according to OpenTelemetry specification.
-		merged[k] = iBaggage.Item{Value: v}
+		merged[k] = iBaggage.NewItemWithProperties(v, nil)
 	}
 
 	return merged
@@ -722,7 +733,7 @@ func (t *BridgeTracer) Inject(sm ot.SpanContext, format, carrier any) error {
 		sc:   bridgeSC.SpanContext,
 	}
 	ctx := trace.ContextWithSpan(context.Background(), fs)
-	ctx = baggage.ContextWithBaggage(ctx, bridgeSC.bag)
+	ctx = baggage.ContextWithBaggage(ctx, bridgeSC.getBaggage())
 	t.getPropagator().Inject(ctx, textCarrier)
 	return nil
 }

@@ -156,8 +156,13 @@ func WithHeaders(headers map[string]string) Option {
 	return wrappedOption{otlpconfig.WithHeaders(headers)}
 }
 
-// WithTimeout tells the driver the max waiting time for the backend to process
-// each spans batch.  If unset, the default will be 10 seconds.
+// WithTimeout sets the max amount of time an Exporter will attempt an export.
+//
+// This takes precedence over any retry settings defined by WithRetry. Once
+// this time limit has been reached the export is abandoned and the span data
+// is dropped.
+//
+// If unset, the default will be 10 seconds.
 func WithTimeout(duration time.Duration) Option {
 	return wrappedOption{otlpconfig.WithTimeout(duration)}
 }
@@ -170,6 +175,15 @@ func WithTimeout(duration time.Duration) Option {
 // resource consumption or abuse.
 func WithMaxRequestSize(size int) Option {
 	return wrappedOption{otlpconfig.WithMaxRequestSize(size)}
+}
+
+// WithMaxResponseSize sets the maximum size, in bytes, of an OTLP/HTTP
+// response body, after decompression, that the exporter will read.
+//
+// By default, a limit of 4 MiB is used. Values less than or equal to zero are
+// ignored. The response-size limit cannot be disabled.
+func WithMaxResponseSize(size int64) Option {
+	return wrappedOption{otlpconfig.WithMaxResponseSize(size)}
 }
 
 // WithRetry configures the retry policy for transient errors that may occurs

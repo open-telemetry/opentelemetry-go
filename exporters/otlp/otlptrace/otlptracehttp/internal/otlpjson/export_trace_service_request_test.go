@@ -391,6 +391,50 @@ func TestUnmarshalAcceptsIntAndUint64AsStringOrNumber(t *testing.T) {
 	}
 }
 
+func TestUnmarshalAcceptsFiniteDoubleAsStringOrNumber(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		value string
+		want  float64
+	}{
+		{"as_string", `"1.2"`, 1.2},
+		{"as_string_E_notation", `"5.678e4"`, 56780},
+		{"as_number", `1.2`, 1.2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := `{"resourceSpans":[{"resource":{"attributes":[{
+				"key":"finite-double",
+				"value":{"doubleValue":` + tc.value + `}
+			}]}}]}`
+
+			var req coltracepb.ExportTraceServiceRequest
+			require.NoError(t, UnmarshalExportTraceServiceRequest([]byte(input), &req))
+
+			got := req.ResourceSpans[0].Resource.Attributes[0].Value.GetDoubleValue()
+			assert.InDelta(t, tc.want, got, 0)
+		})
+	}
+}
+
+func TestUnmarshalRejectsInvalidDoubleStrings(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		value string
+	}{
+		{"not_a_number", `"not a number"`},
+		{"leading_space", `" 1.2"`},
+		{"hexadecimal", `"0x1p2"`},
+		{"noncanonical_infinity", `"Inf"`},
+		{"nested_string", `"\"1.2\""`},
+		{"out_of_range", `"1.79e309"`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var f Float64
+			require.Error(t, json.Unmarshal([]byte(tc.value), &f))
+		})
+	}
+}
+
 func TestAnyValueRoundTrip(t *testing.T) {
 	tests := []struct {
 		name  string

@@ -90,7 +90,7 @@ func NewSchemaless(attrs ...attribute.KeyValue) *Resource {
 		return &Resource{}
 	}
 
-	attrs, _ = attrnorm.KeyValues(attrs)
+	attrs, _ = attrnorm.KeyValuesDedup(attrs)
 
 	// Ensure attributes comply with the specification:
 	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.20.0/specification/common/README.md#attribute
@@ -277,13 +277,15 @@ func DefaultWithContext(ctx context.Context) *Resource {
 }
 
 // Environment returns an instance of Resource with attributes
-// extracted from the OTEL_RESOURCE_ATTRIBUTES environment variable.
+// extracted from the OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME
+// environment variables.
 func Environment() *Resource {
 	return EnvironmentWithContext(context.Background())
 }
 
 // EnvironmentWithContext returns an instance of Resource with attributes
-// extracted from the OTEL_RESOURCE_ATTRIBUTES environment variable.
+// extracted from the OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME
+// environment variables.
 func EnvironmentWithContext(ctx context.Context) *Resource {
 	detector := &fromEnv{}
 	resource, err := detector.Detect(ctx)

@@ -201,6 +201,20 @@ func TestWithoutTimestampsDoesNotMutateInput(t *testing.T) {
 	assert.Equal(t, end, got.Time)
 }
 
+func TestExporterNilWriterPreservesWriter(t *testing.T) {
+	var buf bytes.Buffer
+	exp, err := stdoutmetric.New(stdoutmetric.WithWriter(&buf), stdoutmetric.WithWriter(nil))
+	require.NoError(t, err)
+	require.NoError(t, exp.Export(t.Context(), new(metricdata.ResourceMetrics)))
+	assert.Equal(t, "{\"Resource\":null,\"ScopeMetrics\":null}\n", buf.String())
+}
+
+func TestExporterNilWriterPreservesEncoder(t *testing.T) {
+	exp, err := stdoutmetric.New(stdoutmetric.WithEncoder(failingEncoder{}), stdoutmetric.WithWriter(nil))
+	require.NoError(t, err)
+	assert.ErrorIs(t, exp.Export(t.Context(), new(metricdata.ResourceMetrics)), errEnc)
+}
+
 func TestTemporalitySelector(t *testing.T) {
 	exp, err := stdoutmetric.New(
 		testEncoderOption(),
