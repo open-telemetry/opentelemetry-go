@@ -131,6 +131,12 @@ func (v *finishLastValuePoint[N]) shutdown(ctx context.Context) error {
 
 // FinishLastValue contains the operations of a finish-aware LastValue aggregation.
 // Finish accepts a post-filter series identity and the timestamp for its final point.
+//
+// Stop disables subsequent Measure, Finish, and ComputeAggregation calls.
+// Wait calls Stop, retires series observed during cleanup, and clears the map.
+// A recording overlapping Stop may complete after Wait returns. If it publishes
+// a series missed by cleanup, it retires that series when recording completes.
+// Wait returns a context error if cleanup is interrupted by cancellation.
 type FinishLastValue[N int64 | float64] struct {
 	Measure            Measure[N]
 	ComputeAggregation ComputeAggregation
