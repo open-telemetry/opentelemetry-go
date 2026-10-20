@@ -69,6 +69,39 @@ func TestGetAttrs(t *testing.T) {
 	require.Equal(t, []string{"[true,false]", "Infinity", `["foo","bar"]`}, values)
 }
 
+func TestGetAttrsSanitizedCollisions(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.String("A_B", "first"),
+		attribute.String("C-D", "z"),
+		attribute.String("C.D", "b;c"),
+		attribute.String("C/D", "a"),
+	)
+
+	keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+	require.NoError(t, err)
+	require.Equal(t, []string{"A_B", "C_D"}, keys)
+	require.Equal(t, []string{"first", "a;b;c;z"}, values)
+}
+
+func TestAppendScopeAttrsSanitizedCollisions(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.String("name", "ignored"),
+		attribute.String("schema.url", "ignored"),
+		attribute.String("scope-key", "z"),
+		attribute.String("scope.key", "a"),
+		attribute.String("scope/key", "m"),
+	)
+
+	kv := keyVals{
+		keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
+		vals: []string{"my-scope", "v1.0.0", "https://example.com"},
+	}
+	kv, err := appendScopeAttrs(kv, attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+	require.NoError(t, err)
+	require.Equal(t, []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel, "otel_scope_scope_key"}, kv.keys)
+	require.Equal(t, []string{"my-scope", "v1.0.0", "https://example.com", "a;m;z"}, kv.vals)
+}
+
 func TestAttributesToLabels(t *testing.T) {
 	labels, err := attributesToLabels([]attribute.KeyValue{
 		attribute.Float64Slice("float_slice", []float64{math.NaN(), math.Inf(1)}),
