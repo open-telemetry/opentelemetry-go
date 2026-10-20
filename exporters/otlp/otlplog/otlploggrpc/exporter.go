@@ -22,10 +22,6 @@ type logClient interface {
 // Exporter is an OpenTelemetry log exporter. It transports log data encoded as
 // OTLP protobufs using gRPC.
 // All Exporter values must be created with [New].
-//
-// Export must not be called concurrently with itself on the same Exporter.
-// Shutdown and ForceFlush are safe to call concurrently with themselves,
-// each other, and Export.
 type Exporter struct {
 	// Ensure synchronous access to the client across all functionality.
 	clientMu sync.Mutex
@@ -63,8 +59,7 @@ var transformResourceLogs = transform.ResourceLogs
 // This method returns [log.ErrExporterShutdown] if called after Shutdown.
 // This method returns an error if the method is canceled by the passed context.
 //
-// Export must not be called concurrently with other Export calls.
-// It is safe to call concurrently with Shutdown and ForceFlush.
+// This method is safe to call concurrently.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if e.stopped.Load() {
 		return log.ErrExporterShutdown
@@ -90,7 +85,7 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 // Calling Shutdown more than once is safe: subsequent calls do nothing and
 // return nil.
 //
-// This method is safe to call concurrently with itself and with other methods.
+// This method is safe to call concurrently.
 func (e *Exporter) Shutdown(ctx context.Context) error {
 	if e.stopped.Swap(true) {
 		return nil
@@ -106,7 +101,7 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 
 // ForceFlush does nothing. The Exporter holds no state.
 //
-// This method is safe to call concurrently with itself and with other methods.
+// This method is safe to call concurrently.
 func (*Exporter) ForceFlush(context.Context) error {
 	return nil
 }

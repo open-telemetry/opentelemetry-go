@@ -46,6 +46,8 @@ var transformResourceLogs = transform.ResourceLogs
 
 // Export transforms and transmits log records to an OTLP receiver. It returns
 // [log.ErrExporterShutdown] if called after Shutdown.
+//
+// This method is safe to call concurrently.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if e.stopped.Load() {
 		return log.ErrExporterShutdown
@@ -64,6 +66,12 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 
 // Shutdown shuts down the Exporter. Calls to Export after Shutdown return
 // [log.ErrExporterShutdown]. Calls to ForceFlush perform no operation.
+//
+// Shutdown does not wait for or cancel in-flight Export calls.
+// Calling Shutdown more than once is safe: subsequent calls do nothing and
+// return nil.
+//
+// This method is safe to call concurrently.
 func (e *Exporter) Shutdown(context.Context) error {
 	if e.stopped.Swap(true) {
 		return nil
@@ -74,6 +82,8 @@ func (e *Exporter) Shutdown(context.Context) error {
 }
 
 // ForceFlush does nothing. The Exporter holds no state.
+//
+// This method is safe to call concurrently.
 func (*Exporter) ForceFlush(context.Context) error {
 	return nil
 }
