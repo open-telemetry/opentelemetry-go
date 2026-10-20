@@ -96,6 +96,276 @@ func TestNewWithInvalidEndpoint(t *testing.T) {
 	assert.Nil(t, exp)
 }
 
+func TestEndpointPath(t *testing.T) {
+	requestPaths := make(chan string, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestPaths <- r.RequestURI
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(server.Close)
+
+	const (
+		endpointEnv        = "OTEL_EXPORTER_OTLP_ENDPOINT"
+		metricsEndpointEnv = "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"
+	)
+	testCases := []struct {
+		name     string
+		env      map[string]string
+		options  []Option
+		wantPath string
+	}{
+		{
+			name:     "Default",
+			options:  []Option{WithEndpoint(strings.TrimPrefix(server.URL, "http://")), WithInsecure()},
+			wantPath: "/v1/metrics",
+		},
+		{name: "Generic/Empty", env: map[string]string{endpointEnv: server.URL}, wantPath: "/v1/metrics"},
+		{name: "Generic/Root", env: map[string]string{endpointEnv: server.URL + "/"}, wantPath: "/v1/metrics"},
+		{
+			name:     "Generic/Prefix",
+			env:      map[string]string{endpointEnv: server.URL + "/prefix"},
+			wantPath: "/prefix/v1/metrics",
+		},
+		{
+			name:     "Generic/TrailingSlash",
+			env:      map[string]string{endpointEnv: server.URL + "/prefix/"},
+			wantPath: "/prefix/v1/metrics",
+		},
+		{
+			name:     "Generic/RepeatedSlashes",
+			env:      map[string]string{endpointEnv: server.URL + "/a//b/"},
+			wantPath: "/a//b/v1/metrics",
+		},
+		{
+			name:     "Generic/RepeatedTrailingSlashes",
+			env:      map[string]string{endpointEnv: server.URL + "/a//"},
+			wantPath: "/a//v1/metrics",
+		},
+		{
+			name:     "Generic/DotSegments",
+			env:      map[string]string{endpointEnv: server.URL + "/a/../b/"},
+			wantPath: "/a/../b/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedSlash",
+			env:      map[string]string{endpointEnv: server.URL + "/a%2Fb/"},
+			wantPath: "/a%2Fb/v1/metrics",
+		},
+		{
+			name:     "Generic/LowercaseEscape",
+			env:      map[string]string{endpointEnv: server.URL + "/a%2fb/"},
+			wantPath: "/a%2fb/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedTrailingSlash",
+			env:      map[string]string{endpointEnv: server.URL + "/a%2F"},
+			wantPath: "/a%2F/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedQuestionMark",
+			env:      map[string]string{endpointEnv: server.URL + "/a%3Fb"},
+			wantPath: "/a%3Fb/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedFragment",
+			env:      map[string]string{endpointEnv: server.URL + "/a%23b"},
+			wantPath: "/a%23b/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedPercent",
+			env:      map[string]string{endpointEnv: server.URL + "/a%252Fb"},
+			wantPath: "/a%252Fb/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedSpace",
+			env:      map[string]string{endpointEnv: server.URL + "/a%20"},
+			wantPath: "/a%20/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedDot",
+			env:      map[string]string{endpointEnv: server.URL + "/a/%2e%2e/"},
+			wantPath: "/a/%2e%2e/v1/metrics",
+		},
+		{name: "Signal/Empty", env: map[string]string{metricsEndpointEnv: server.URL}, wantPath: "/"},
+		{name: "Signal/Root", env: map[string]string{metricsEndpointEnv: server.URL + "/"}, wantPath: "/"},
+		{
+			name:     "Signal/Prefix",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/prefix"},
+			wantPath: "/prefix",
+		},
+		{
+			name:     "Signal/TrailingSlash",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/prefix/"},
+			wantPath: "/prefix/",
+		},
+		{
+			name:     "Signal/RepeatedSlashes",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a//b/"},
+			wantPath: "/a//b/",
+		},
+		{
+			name:     "Signal/RepeatedTrailingSlashes",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a//"},
+			wantPath: "/a//",
+		},
+		{
+			name:     "Signal/DotSegments",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a/../b/"},
+			wantPath: "/a/../b/",
+		},
+		{
+			name:     "Signal/EscapedSlash",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2Fb"},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "Signal/LowercaseEscape",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2fb"},
+			wantPath: "/a%2fb",
+		},
+		{
+			name:     "Signal/EscapedTrailingSlash",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2F"},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "Signal/EscapedQuestionMark",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%3Fb"},
+			wantPath: "/a%3Fb",
+		},
+		{
+			name:     "Signal/EscapedFragment",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%23b"},
+			wantPath: "/a%23b",
+		},
+		{
+			name:     "Signal/EscapedSpace",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%20"},
+			wantPath: "/a%20",
+		},
+		{
+			name:     "Signal/EscapedPercent",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%252Fb"},
+			wantPath: "/a%252Fb",
+		},
+		{
+			name:     "Signal/EscapedDot",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a/%2E%2E/b"},
+			wantPath: "/a/%2E%2E/b",
+		},
+		{name: "Option/Empty", options: []Option{WithEndpointURL(server.URL)}, wantPath: "/"},
+		{name: "Option/Root", options: []Option{WithEndpointURL(server.URL + "/")}, wantPath: "/"},
+		{name: "Option/Prefix", options: []Option{WithEndpointURL(server.URL + "/prefix")}, wantPath: "/prefix"},
+		{
+			name:     "Option/TrailingSlash",
+			options:  []Option{WithEndpointURL(server.URL + "/prefix/")},
+			wantPath: "/prefix/",
+		},
+		{name: "Option/RepeatedSlashes", options: []Option{WithEndpointURL(server.URL + "/a//b/")}, wantPath: "/a//b/"},
+		{
+			name:     "Option/RepeatedTrailingSlashes",
+			options:  []Option{WithEndpointURL(server.URL + "/a//")},
+			wantPath: "/a//",
+		},
+		{name: "Option/DotSegments", options: []Option{WithEndpointURL(server.URL + "/a/../b/")}, wantPath: "/a/../b/"},
+		{name: "Option/EscapedSlash", options: []Option{WithEndpointURL(server.URL + "/a%2Fb")}, wantPath: "/a%2Fb"},
+		{name: "Option/LowercaseEscape", options: []Option{WithEndpointURL(server.URL + "/a%2fb")}, wantPath: "/a%2fb"},
+		{
+			name:     "Option/EscapedTrailingSlash",
+			options:  []Option{WithEndpointURL(server.URL + "/a%2F")},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "Option/EscapedQuestionMark",
+			options:  []Option{WithEndpointURL(server.URL + "/a%3Fb")},
+			wantPath: "/a%3Fb",
+		},
+		{name: "Option/EscapedFragment", options: []Option{WithEndpointURL(server.URL + "/a%23b")}, wantPath: "/a%23b"},
+		{
+			name:     "Option/EscapedPercent",
+			options:  []Option{WithEndpointURL(server.URL + "/a%252Fb")},
+			wantPath: "/a%252Fb",
+		},
+		{name: "Option/EscapedSpace", options: []Option{WithEndpointURL(server.URL + "/a%20")}, wantPath: "/a%20"},
+		{
+			name:     "Option/EscapedDot",
+			options:  []Option{WithEndpointURL(server.URL + "/a/%2e%2e/b")},
+			wantPath: "/a/%2e%2e/b",
+		},
+		{
+			name: "Precedence/SignalOverGeneric",
+			env: map[string]string{
+				endpointEnv:        server.URL + "/generic%2Fpath",
+				metricsEndpointEnv: server.URL + "/signal%2Fpath",
+			},
+			wantPath: "/signal%2Fpath",
+		},
+		{
+			name: "Precedence/OptionOverEnvironment",
+			env: map[string]string{
+				endpointEnv:        server.URL + "/generic%2Fpath",
+				metricsEndpointEnv: server.URL + "/signal%2Fpath",
+			},
+			options:  []Option{WithEndpointURL(server.URL + "/option%2Fpath")},
+			wantPath: "/option%2Fpath",
+		},
+		{
+			name:     "Precedence/URLPathOverEndpointURL",
+			options:  []Option{WithEndpointURL(server.URL + "/endpoint%2Fpath"), WithURLPath(" /a%2Fb ")},
+			wantPath: "/a%252Fb",
+		},
+		{
+			name:     "Precedence/EndpointURLOverURLPath",
+			options:  []Option{WithURLPath("/a%2Fb"), WithEndpointURL(server.URL + "/endpoint%2Fpath")},
+			wantPath: "/endpoint%2Fpath",
+		},
+		{
+			name:     "Precedence/URLPathOverEnvironment",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2Fb"},
+			options:  []Option{WithURLPath("/a/b")},
+			wantPath: "/a/b",
+		},
+		{
+			name:     "Precedence/PlainEndpointURLOverEscapedEnvironment",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2Fb"},
+			options:  []Option{WithEndpointURL(server.URL + "/a/b")},
+			wantPath: "/a/b",
+		},
+		{
+			name:     "Precedence/EndpointPreservesEnvironmentPath",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2Fb"},
+			options:  []Option{WithEndpoint(strings.TrimPrefix(server.URL, "http://"))},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "URLPath/EmptyUsesDefault",
+			options:  []Option{WithEndpointURL(server.URL + "/endpoint%2Fpath"), WithURLPath("")},
+			wantPath: "/v1/metrics",
+		},
+		{
+			name:     "URLPath/Relative",
+			options:  []Option{WithEndpointURL(server.URL), WithURLPath(" a/b ")},
+			wantPath: "/a/b",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(endpointEnv, "")
+			t.Setenv(metricsEndpointEnv, "")
+			for key, value := range tc.env {
+				t.Setenv(key, value)
+			}
+			exp, err := New(t.Context(), tc.options...)
+			require.NoError(t, err)
+			ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+			require.NoError(t, exp.Export(t.Context(), &metricdata.ResourceMetrics{}))
+			assert.Equal(t, tc.wantPath, <-requestPaths)
+		})
+	}
+}
+
 func TestConfig(t *testing.T) {
 	factoryFunc := func(ePt string, rCh <-chan otest.ExportResult, o ...Option) (metric.Exporter, *otest.HTTPCollector) {
 		coll, err := otest.NewHTTPCollector(ePt, rCh)
@@ -158,7 +428,106 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
-		assert.ErrorAs(t, err, new(retryableError))
+		require.Error(t, err)
+		timedOut := errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "exporter export timeout")
+		if !timedOut {
+			assert.ErrorAs(t, err, new(retryableError))
+		}
+	})
+
+	t.Run("WithTimeout bounds retry", func(t *testing.T) {
+		const queued = 1000
+		rCh := make(chan otest.ExportResult, queued)
+		for range queued {
+			rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+				Status: http.StatusServiceUnavailable,
+				Err:    errors.New("unavailable"),
+			}}
+		}
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(50*time.Millisecond),
+			WithRetry(RetryConfig{
+				Enabled:         true,
+				InitialInterval: time.Millisecond,
+				MaxInterval:     time.Millisecond,
+				MaxElapsedTime:  time.Minute,
+			}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		start := time.Now()
+		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
+		elapsed := time.Since(start)
+
+		require.Error(t, err)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			assert.ErrorContains(t, err, "exporter export timeout")
+		}
+		assert.Less(t, elapsed, 5*time.Second, "export retried until MaxElapsedTime")
+		assert.NotEqual(t, queued, len(rCh), "collector received no requests")
+
+		time.Sleep(50 * time.Millisecond)
+		remaining := len(rCh)
+		time.Sleep(50 * time.Millisecond)
+		assert.Len(t, rCh, remaining, "requests continued after the export timeout")
+	})
+
+	t.Run("WithHTTPClient ignores WithTimeout", func(t *testing.T) {
+		rCh := make(chan otest.ExportResult, 1)
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(time.Millisecond),
+			WithHTTPClient(&http.Client{}),
+			WithRetry(RetryConfig{Enabled: false}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		done := make(chan error, 1)
+		go func() {
+			done <- exp.Export(ctx, &metricdata.ResourceMetrics{})
+		}()
+		select {
+		case err := <-done:
+			t.Fatalf("export finished before the collector responded: %v", err)
+		case <-time.After(50 * time.Millisecond):
+		}
+		rCh <- otest.ExportResult{}
+		select {
+		case err := <-done:
+			assert.NoError(t, err)
+		case <-time.After(2 * time.Second):
+			t.Fatal("export did not finish")
+		}
+	})
+
+	t.Run("WithTimeout zero", func(t *testing.T) {
+		rCh := make(chan otest.ExportResult, 2)
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusServiceUnavailable,
+			Err:    errors.New("unavailable"),
+		}}
+		rCh <- otest.ExportResult{}
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(0),
+			WithRetry(RetryConfig{
+				Enabled:         true,
+				InitialInterval: time.Millisecond,
+				MaxInterval:     time.Millisecond,
+				MaxElapsedTime:  time.Second,
+			}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		assert.Empty(t, rCh)
 	})
 
 	t.Run("WithCompressionGZip", func(t *testing.T) {
@@ -280,7 +649,7 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, []string{headers[key]}, got[key])
 	})
 
-	t.Run("WithProxy", func(t *testing.T) {
+	t.Run("WithHTTPClient", func(t *testing.T) {
 		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
 		headerValueSetInProxy := "true"
 		exp, coll := factoryFunc("", nil, WithHTTPClient(&http.Client{
@@ -302,7 +671,7 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
 	})
 
-	t.Run("WithHTTPClient", func(t *testing.T) {
+	t.Run("WithProxy", func(t *testing.T) {
 		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
 		headerValueSetInProxy := "true"
 		exp, coll := factoryFunc("", nil, WithProxy(func(r *http.Request) (*url.URL, error) {
