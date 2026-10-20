@@ -67,7 +67,9 @@ jobs:
           SEMCONV_LATEST_TAG: ${{ steps.semconv-get-latest-tag.outputs.tag_name }}
         run: |
           export TAG="${SEMCONV_LATEST_TAG:-}"
-          make semconv-generate
+          if [ ! -d "semconv/${TAG}" ]; then
+            make semconv-generate
+          fi
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
