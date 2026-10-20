@@ -26,11 +26,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // ConnectionStateAttr is an attribute conforming to the http.connection.state
 // semantic conventions. It represents the state of the HTTP connection in the
@@ -109,7 +107,7 @@ func NewClientActiveRequests(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientActiveRequests{noop.Int64UpDownCounter{}}, err
+		return ClientActiveRequests{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientActiveRequests{i}, nil
 }
@@ -244,7 +242,7 @@ func NewClientConnectionDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientConnectionDuration{noop.Float64Histogram{}}, err
+		return ClientConnectionDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientConnectionDuration{i}, nil
 }
@@ -316,6 +314,7 @@ func (m ClientConnectionDuration) Record(
 func (m ClientConnectionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -377,7 +376,7 @@ func NewClientOpenConnections(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientOpenConnections{noop.Int64UpDownCounter{}}, err
+		return ClientOpenConnections{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientOpenConnections{i}, nil
 }
@@ -515,7 +514,7 @@ func NewClientRequestBodySize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientRequestBodySize{noop.Int64Histogram{}}, err
+		return ClientRequestBodySize{noop.Int64Histogram{}}, err
 	}
 	return ClientRequestBodySize{i}, nil
 }
@@ -552,15 +551,15 @@ func (ClientRequestBodySize) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
-// ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
-//
 // The size of the request payload body in bytes. This is the number of bytes
 // transferred excluding headers and is often, but not always, present as the
 // [Content-Length] header. For requests using transport encoding, this should be
 // the compressed size.
 //
+// ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
+//
+// ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 func (m ClientRequestBodySize) Record(
 	ctx context.Context,
 	val int64,
@@ -606,6 +605,7 @@ func (m ClientRequestBodySize) Record(
 func (m ClientRequestBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -693,7 +693,7 @@ func NewClientRequestDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientRequestDuration{noop.Float64Histogram{}}, err
+		return ClientRequestDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientRequestDuration{i}, nil
 }
@@ -731,6 +731,7 @@ func (ClientRequestDuration) Description() string {
 // All additional attrs passed are included in the recorded value.
 //
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
+//
 // ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 func (m ClientRequestDuration) Record(
 	ctx context.Context,
@@ -770,6 +771,7 @@ func (m ClientRequestDuration) Record(
 func (m ClientRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -857,7 +859,7 @@ func NewClientResponseBodySize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientResponseBodySize{noop.Int64Histogram{}}, err
+		return ClientResponseBodySize{noop.Int64Histogram{}}, err
 	}
 	return ClientResponseBodySize{i}, nil
 }
@@ -894,15 +896,15 @@ func (ClientResponseBodySize) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
-// ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
-//
 // The size of the response payload body in bytes. This is the number of bytes
 // transferred excluding headers and is often, but not always, present as the
 // [Content-Length] header. For requests using transport encoding, this should be
 // the compressed size.
 //
+// ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
+//
+// ["URI origin"]: https://www.rfc-editor.org/rfc/rfc9110.html#name-uri-origin
 func (m ClientResponseBodySize) Record(
 	ctx context.Context,
 	val int64,
@@ -948,6 +950,7 @@ func (m ClientResponseBodySize) Record(
 func (m ClientResponseBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1035,7 +1038,7 @@ func NewServerActiveRequests(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerActiveRequests{noop.Int64UpDownCounter{}}, err
+		return ServerActiveRequests{noop.Int64UpDownCounter{}}, err
 	}
 	return ServerActiveRequests{i}, nil
 }
@@ -1157,7 +1160,7 @@ func NewServerRequestBodySize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerRequestBodySize{noop.Int64Histogram{}}, err
+		return ServerRequestBodySize{noop.Int64Histogram{}}, err
 	}
 	return ServerRequestBodySize{i}, nil
 }
@@ -1190,13 +1193,12 @@ func (ServerRequestBodySize) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-//
 // The size of the request payload body in bytes. This is the number of bytes
 // transferred excluding headers and is often, but not always, present as the
 // [Content-Length] header. For requests using transport encoding, this should be
 // the compressed size.
 //
+// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
 func (m ServerRequestBodySize) Record(
 	ctx context.Context,
@@ -1241,6 +1243,7 @@ func (m ServerRequestBodySize) Record(
 func (m ServerRequestBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1338,7 +1341,7 @@ func NewServerRequestDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerRequestDuration{noop.Float64Histogram{}}, err
+		return ServerRequestDuration{noop.Float64Histogram{}}, err
 	}
 	return ServerRequestDuration{i}, nil
 }
@@ -1408,6 +1411,7 @@ func (m ServerRequestDuration) Record(
 func (m ServerRequestDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1505,7 +1509,7 @@ func NewServerResponseBodySize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerResponseBodySize{noop.Int64Histogram{}}, err
+		return ServerResponseBodySize{noop.Int64Histogram{}}, err
 	}
 	return ServerResponseBodySize{i}, nil
 }
@@ -1538,13 +1542,12 @@ func (ServerResponseBodySize) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-//
 // The size of the response payload body in bytes. This is the number of bytes
 // transferred excluding headers and is often, but not always, present as the
 // [Content-Length] header. For requests using transport encoding, this should be
 // the compressed size.
 //
+// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
 func (m ServerResponseBodySize) Record(
 	ctx context.Context,
@@ -1589,6 +1592,7 @@ func (m ServerResponseBodySize) Record(
 func (m ServerResponseBodySize) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

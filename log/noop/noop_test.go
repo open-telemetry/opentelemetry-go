@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package noop // import "go.opentelemetry.io/otel/log/noop"
+package noop
 
 import (
 	"reflect"
@@ -17,18 +17,17 @@ func TestImplementationNoPanics(t *testing.T) {
 	// methods added to it than the No-Op implementation implements them.
 	t.Run("LoggerProvider", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(LoggerProvider{}),
-		reflect.TypeOf((*log.LoggerProvider)(nil)).Elem(),
+		reflect.TypeFor[log.LoggerProvider](),
 	))
 	t.Run("Logger", assertAllExportedMethodNoPanic(
 		reflect.ValueOf(Logger{}),
-		reflect.TypeOf((*log.Logger)(nil)).Elem(),
+		reflect.TypeFor[log.Logger](),
 	))
 }
 
 func assertAllExportedMethodNoPanic(rVal reflect.Value, rType reflect.Type) func(*testing.T) {
 	return func(t *testing.T) {
-		for n := 0; n < rType.NumMethod(); n++ {
-			mType := rType.Method(n)
+		for mType := range rType.Methods() {
 			if !mType.IsExported() {
 				t.Logf("ignoring unexported %s", mType.Name)
 				continue

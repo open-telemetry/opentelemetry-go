@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package internal provides internal functionality for the opencensus package.
-package internal // import "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
+package internal
 
 import (
 	"cmp"
@@ -178,7 +178,7 @@ func convertBuckets(buckets []ocmetricdata.Bucket) ([]uint64, []metricdata.Exemp
 	var err error
 	for i, bucket := range buckets {
 		if bucket.Count < 0 {
-			err = errors.Join(err, fmt.Errorf("%w: %q", errNegativeBucketCount, bucket.Count))
+			err = errors.Join(err, fmt.Errorf("%w: %d", errNegativeBucketCount, bucket.Count))
 			continue
 		}
 		bucketCounts[i] = uint64(max(0, bucket.Count)) // nolint:gosec // A count should never be negative.
@@ -328,8 +328,7 @@ func uintSliceKV[N uint | uint8 | uint16 | uint32 | uint64 | uintptr](key string
 }
 
 func uint64KV(key string, val uint64) attribute.KeyValue {
-	const maxInt64 = ^uint64(0) >> 1
-	if val > maxInt64 {
+	if val > math.MaxInt64 {
 		return attribute.String(key, strconv.FormatUint(val, 10))
 	}
 	return attribute.Int64(key, int64(val)) // nolint: gosec  // Overflow checked above.
@@ -405,7 +404,7 @@ func convertQuantiles(snapshot ocmetricdata.Snapshot) []metricdata.QuantileValue
 func convertAttrs(keys []ocmetricdata.LabelKey, values []ocmetricdata.LabelValue) (attribute.Set, error) {
 	if len(keys) != len(values) {
 		return attribute.NewSet(), fmt.Errorf(
-			"%w: keys(%q) values(%q)",
+			"%w: keys(%d) values(%d)",
 			errMismatchedAttributeKeyValues,
 			len(keys),
 			len(values),

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package metric
 
 import (
 	"context"
@@ -58,6 +58,48 @@ func (ts *readerTestSuite) TestExternalProducer() {
 	err := ts.Reader.Collect(context.Background(), &m)
 	ts.NoError(err)
 	ts.Equal(testResourceMetricsAB, m)
+}
+
+func (ts *readerTestSuite) TestNilProducer() {
+	ts.Reader = ts.Factory(WithProducer(nil))
+	ts.Reader.register(testSDKProducer{})
+	var m metricdata.ResourceMetrics
+	ts.Require().NoError(ts.Reader.Collect(context.Background(), &m))
+	ts.Equal(testResourceMetricsA, m)
+}
+
+func (ts *readerTestSuite) TestNilProducerPreservesExternalProducerOrder() {
+	ts.Reader = ts.Factory(
+		WithProducer(testExternalProducer{}),
+		WithProducer(nil),
+		WithProducer(testExternalProducer{produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
+		}}),
+	)
+	ts.Reader.register(testSDKProducer{})
+	var m metricdata.ResourceMetrics
+	ts.Require().NoError(ts.Reader.Collect(context.Background(), &m))
+	ts.Equal(metricdata.ResourceMetrics{
+		Resource:     testResourceMetricsA.Resource,
+		ScopeMetrics: []metricdata.ScopeMetrics{testScopeMetricsA, testScopeMetricsB, testScopeMetricsA},
+	}, m)
+}
+
+func (ts *readerTestSuite) TestNilCardinalityLimitSelector() {
+	ts.Reader = ts.Factory(WithCardinalityLimitSelector(nil))
+	limit, fallback := ts.Reader.cardinalityLimit(InstrumentKindCounter)
+	ts.Zero(limit)
+	ts.True(fallback)
+}
+
+func (ts *readerTestSuite) TestNilCardinalityLimitSelectorPreservesPrevious() {
+	ts.Reader = ts.Factory(
+		WithCardinalityLimitSelector(func(InstrumentKind) (int, bool) { return 5, false }),
+		WithCardinalityLimitSelector(nil),
+	)
+	limit, fallback := ts.Reader.cardinalityLimit(InstrumentKindCounter)
+	ts.Equal(5, limit)
+	ts.False(fallback)
 }
 
 func (ts *readerTestSuite) TestCollectAfterShutdown() {
@@ -147,37 +189,27 @@ func (ts *readerTestSuite) TestMethodConcurrentSafe() {
 	var wg sync.WaitGroup
 	const threads = 2
 	for range threads {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = ts.Reader.temporality(InstrumentKindCounter)
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = ts.Reader.aggregation(InstrumentKindCounter)
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = ts.Reader.Collect(ctx, &metricdata.ResourceMetrics{})
-		}()
+		})
 
 		if f, ok := ts.Reader.(interface{ ForceFlush(context.Context) error }); ok {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				_ = f.ForceFlush(ctx)
-			}()
+			})
 		}
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_ = ts.Reader.Shutdown(ctx)
-		}()
+		})
 	}
 	wg.Wait()
 }

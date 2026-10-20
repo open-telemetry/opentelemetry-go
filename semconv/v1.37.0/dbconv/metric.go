@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package dbconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "db" namespace.
 package dbconv
 
@@ -210,11 +210,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // ClientConnectionCount is an instrument used to record metric values conforming
 // to the "db.client.connection.count" semantic conventions. It represents the
@@ -250,7 +248,7 @@ func NewClientConnectionCount(
 		opt...,
 	)
 	if err != nil {
-	    return ClientConnectionCount{noop.Int64UpDownCounter{}}, err
+		return ClientConnectionCount{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientConnectionCount{i}, nil
 }
@@ -369,7 +367,7 @@ func NewClientConnectionCreateTime(
 		opt...,
 	)
 	if err != nil {
-	    return ClientConnectionCreateTime{noop.Float64Histogram{}}, err
+		return ClientConnectionCreateTime{noop.Float64Histogram{}}, err
 	}
 	return ClientConnectionCreateTime{i}, nil
 }
@@ -437,6 +435,7 @@ func (m ClientConnectionCreateTime) Record(
 func (m ClientConnectionCreateTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -482,7 +481,7 @@ func NewClientConnectionIdleMax(
 		opt...,
 	)
 	if err != nil {
-	    return ClientConnectionIdleMax{noop.Int64UpDownCounter{}}, err
+		return ClientConnectionIdleMax{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientConnectionIdleMax{i}, nil
 }
@@ -596,7 +595,7 @@ func NewClientConnectionIdleMin(
 		opt...,
 	)
 	if err != nil {
-	    return ClientConnectionIdleMin{noop.Int64UpDownCounter{}}, err
+		return ClientConnectionIdleMin{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientConnectionIdleMin{i}, nil
 }
@@ -710,7 +709,7 @@ func NewClientConnectionMax(
 		opt...,
 	)
 	if err != nil {
-	    return ClientConnectionMax{noop.Int64UpDownCounter{}}, err
+		return ClientConnectionMax{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientConnectionMax{i}, nil
 }
@@ -826,7 +825,7 @@ func NewClientConnectionPendingRequests(
 		opt...,
 	)
 	if err != nil {
-	    return ClientConnectionPendingRequests{noop.Int64UpDownCounter{}}, err
+		return ClientConnectionPendingRequests{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientConnectionPendingRequests{i}, nil
 }
@@ -941,7 +940,7 @@ func NewClientConnectionTimeouts(
 		opt...,
 	)
 	if err != nil {
-	    return ClientConnectionTimeouts{noop.Int64Counter{}}, err
+		return ClientConnectionTimeouts{noop.Int64Counter{}}, err
 	}
 	return ClientConnectionTimeouts{i}, nil
 }
@@ -1056,7 +1055,7 @@ func NewClientConnectionUseTime(
 		opt...,
 	)
 	if err != nil {
-	    return ClientConnectionUseTime{noop.Float64Histogram{}}, err
+		return ClientConnectionUseTime{noop.Float64Histogram{}}, err
 	}
 	return ClientConnectionUseTime{i}, nil
 }
@@ -1124,6 +1123,7 @@ func (m ClientConnectionUseTime) Record(
 func (m ClientConnectionUseTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1169,7 +1169,7 @@ func NewClientConnectionWaitTime(
 		opt...,
 	)
 	if err != nil {
-	    return ClientConnectionWaitTime{noop.Float64Histogram{}}, err
+		return ClientConnectionWaitTime{noop.Float64Histogram{}}, err
 	}
 	return ClientConnectionWaitTime{i}, nil
 }
@@ -1237,6 +1237,7 @@ func (m ClientConnectionWaitTime) Record(
 func (m ClientConnectionWaitTime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1282,7 +1283,7 @@ func NewClientOperationDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ClientOperationDuration{noop.Float64Histogram{}}, err
+		return ClientOperationDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientOperationDuration{i}, nil
 }
@@ -1351,6 +1352,7 @@ func (m ClientOperationDuration) Record(
 func (m ClientOperationDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -1478,7 +1480,7 @@ func NewClientResponseReturnedRows(
 		opt...,
 	)
 	if err != nil {
-	    return ClientResponseReturnedRows{noop.Int64Histogram{}}, err
+		return ClientResponseReturnedRows{noop.Int64Histogram{}}, err
 	}
 	return ClientResponseReturnedRows{i}, nil
 }
@@ -1543,6 +1545,7 @@ func (m ClientResponseReturnedRows) Record(
 func (m ClientResponseReturnedRows) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

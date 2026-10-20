@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package processconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "process" namespace.
 package processconv
 
@@ -133,7 +133,7 @@ func NewContextSwitches(
 		opt...,
 	)
 	if err != nil {
-	    return ContextSwitches{noop.Int64Counter{}}, err
+		return ContextSwitches{noop.Int64Counter{}}, err
 	}
 	return ContextSwitches{i}, nil
 }
@@ -245,7 +245,7 @@ func NewCPUTime(
 		opt...,
 	)
 	if err != nil {
-	    return CPUTime{noop.Float64ObservableCounter{}}, err
+		return CPUTime{noop.Float64ObservableCounter{}}, err
 	}
 	return CPUTime{i}, nil
 }
@@ -311,7 +311,7 @@ func NewCPUUtilization(
 		opt...,
 	)
 	if err != nil {
-	    return CPUUtilization{noop.Int64Gauge{}}, err
+		return CPUUtilization{noop.Int64Gauge{}}, err
 	}
 	return CPUUtilization{i}, nil
 }
@@ -369,6 +369,7 @@ func (m CPUUtilization) Record(
 func (m CPUUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -421,7 +422,7 @@ func NewDiskIO(
 		opt...,
 	)
 	if err != nil {
-	    return DiskIO{noop.Int64Counter{}}, err
+		return DiskIO{noop.Int64Counter{}}, err
 	}
 	return DiskIO{i}, nil
 }
@@ -531,7 +532,7 @@ func NewMemoryUsage(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryUsage{noop.Int64UpDownCounter{}}, err
+		return MemoryUsage{noop.Int64UpDownCounter{}}, err
 	}
 	return MemoryUsage{i}, nil
 }
@@ -623,7 +624,7 @@ func NewMemoryVirtual(
 		opt...,
 	)
 	if err != nil {
-	    return MemoryVirtual{noop.Int64UpDownCounter{}}, err
+		return MemoryVirtual{noop.Int64UpDownCounter{}}, err
 	}
 	return MemoryVirtual{i}, nil
 }
@@ -715,7 +716,7 @@ func NewNetworkIO(
 		opt...,
 	)
 	if err != nil {
-	    return NetworkIO{noop.Int64Counter{}}, err
+		return NetworkIO{noop.Int64Counter{}}, err
 	}
 	return NetworkIO{i}, nil
 }
@@ -826,7 +827,7 @@ func NewOpenFileDescriptorCount(
 		opt...,
 	)
 	if err != nil {
-	    return OpenFileDescriptorCount{noop.Int64UpDownCounter{}}, err
+		return OpenFileDescriptorCount{noop.Int64UpDownCounter{}}, err
 	}
 	return OpenFileDescriptorCount{i}, nil
 }
@@ -918,7 +919,7 @@ func NewPagingFaults(
 		opt...,
 	)
 	if err != nil {
-	    return PagingFaults{noop.Int64Counter{}}, err
+		return PagingFaults{noop.Int64Counter{}}, err
 	}
 	return PagingFaults{i}, nil
 }
@@ -1030,7 +1031,7 @@ func NewThreadCount(
 		opt...,
 	)
 	if err != nil {
-	    return ThreadCount{noop.Int64UpDownCounter{}}, err
+		return ThreadCount{noop.Int64UpDownCounter{}}, err
 	}
 	return ThreadCount{i}, nil
 }
@@ -1122,7 +1123,7 @@ func NewUptime(
 		opt...,
 	)
 	if err != nil {
-	    return Uptime{noop.Float64Gauge{}}, err
+		return Uptime{noop.Float64Gauge{}}, err
 	}
 	return Uptime{i}, nil
 }
@@ -1176,6 +1177,7 @@ func (m Uptime) Record(ctx context.Context, val float64, attrs ...attribute.KeyV
 func (m Uptime) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Gauge.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

@@ -8,17 +8,21 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"reflect"
+	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+	"weak"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace/internal/telemetry"
 )
 
@@ -50,18 +54,21 @@ var (
 			telemetry.BoolValue(false),
 			telemetry.BoolValue(true),
 		),
-		telemetry.Slice("int slice",
+		telemetry.Slice(
+			"int slice",
 			telemetry.IntValue(-1),
 			telemetry.IntValue(-30),
 			telemetry.IntValue(328),
 		),
-		telemetry.Slice("int64 slice",
+		telemetry.Slice(
+			"int64 slice",
 			telemetry.Int64Value(1030),
 			telemetry.Int64Value(0),
 			telemetry.Int64Value(0),
 		),
 		telemetry.Slice("float64 slice", telemetry.Float64Value(1e9)),
-		telemetry.Slice("string slice",
+		telemetry.Slice(
+			"string slice",
 			telemetry.StringValue("one"),
 			telemetry.StringValue("two"),
 		),
@@ -164,6 +171,118 @@ func TestSpanKindTransform(t *testing.T) {
 	}
 }
 
+func TestConvAttrValueBytes(t *testing.T) {
+	v := []byte("bytes")
+	tests := []struct {
+		name  string
+		want  []byte
+		limit int
+	}{
+		{
+			name:  "Unlimited",
+			want:  []byte("bytes"),
+			limit: -1,
+		},
+		{
+			name:  "Zero",
+			want:  []byte(""),
+			limit: 0,
+		},
+		{
+			name:  "Truncate",
+			want:  []byte("by"),
+			limit: 2,
+		},
+		{
+			name:  "NoTruncation",
+			want:  []byte("bytes"),
+			limit: 10,
+		},
+	}
+	orig := maxSpan.AttrValueLen
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Cleanup(func() { maxSpan.AttrValueLen = orig })
+			maxSpan.AttrValueLen = test.limit
+
+			val := convAttrValue(attribute.ByteSliceValue(v))
+
+			assert.Equal(t, telemetry.ValueKindBytes, val.Kind())
+			assert.Equal(t, test.want, val.AsBytes())
+		})
+	}
+}
+
+func TestConvAttrValueSlice(t *testing.T) {
+	t.Parallel()
+
+	val := convAttrValue(attribute.SliceValue(
+		attribute.BoolValue(true),
+		attribute.IntValue(2),
+		attribute.SliceValue(
+			attribute.StringValue("nested"),
+			attribute.ByteSliceValue([]byte("bytes")),
+		),
+	))
+
+	assert.Equal(t, telemetry.ValueKindSlice, val.Kind())
+
+	slice := val.AsSlice()
+	if assert.Len(t, slice, 3) {
+		assert.Equal(t, telemetry.ValueKindBool, slice[0].Kind())
+		assert.True(t, slice[0].AsBool())
+
+		assert.Equal(t, telemetry.ValueKindInt64, slice[1].Kind())
+		assert.EqualValues(t, 2, slice[1].AsInt64())
+
+		assert.Equal(t, telemetry.ValueKindSlice, slice[2].Kind())
+		nested := slice[2].AsSlice()
+		if assert.Len(t, nested, 2) {
+			assert.Equal(t, telemetry.ValueKindString, nested[0].Kind())
+			assert.Equal(t, "nested", nested[0].AsString())
+
+			assert.Equal(t, telemetry.ValueKindBytes, nested[1].Kind())
+			assert.Equal(t, []byte("bytes"), nested[1].AsBytes())
+		}
+	}
+}
+
+func TestConvAttrValueMap(t *testing.T) {
+	t.Parallel()
+
+	val := convAttrValue(attribute.MapValue(
+		attribute.String("b", "two"),
+		attribute.Key("a").Map(attribute.Int("nested", 1)),
+		attribute.Key("slice").Slice(attribute.BoolValue(true)),
+	))
+
+	assert.Equal(t, telemetry.ValueKindMap, val.Kind())
+
+	kvs := val.AsMap()
+	if assert.Len(t, kvs, 3) {
+		assert.Equal(t, "a", kvs[0].Key)
+		assert.Equal(t, telemetry.ValueKindMap, kvs[0].Value.Kind())
+		nested := kvs[0].Value.AsMap()
+		if assert.Len(t, nested, 1) {
+			assert.Equal(t, "nested", nested[0].Key)
+			assert.Equal(t, telemetry.ValueKindInt64, nested[0].Value.Kind())
+			assert.EqualValues(t, 1, nested[0].Value.AsInt64())
+		}
+
+		assert.Equal(t, "b", kvs[1].Key)
+		assert.Equal(t, telemetry.ValueKindString, kvs[1].Value.Kind())
+		assert.Equal(t, "two", kvs[1].Value.AsString())
+
+		assert.Equal(t, "slice", kvs[2].Key)
+		assert.Equal(t, telemetry.ValueKindSlice, kvs[2].Value.Kind())
+		slice := kvs[2].Value.AsSlice()
+		if assert.Len(t, slice, 1) {
+			assert.Equal(t, telemetry.ValueKindBool, slice[0].Kind())
+			assert.True(t, slice[0].AsBool())
+		}
+	}
+}
+
 func TestTracerStartPropagatesOrigCtx(t *testing.T) {
 	t.Parallel()
 
@@ -192,6 +311,43 @@ func TestTracerStartAddsSpanToCtx(t *testing.T) {
 	ctx, s := tr.Start(t.Context(), "span.name")
 
 	assert.Same(t, s, SpanFromContext(ctx))
+}
+
+func TestTracerStartSiblingsHookCtx(t *testing.T) {
+	orig := start
+	t.Cleanup(func() { start = orig })
+
+	hookCtxs := map[Span]context.Context{}
+	start = func(ctx context.Context, s *autoSpan, _ *SpanContext, _ *bool, _ *SpanContext) {
+		hookCtxs[s] = ctx
+	}
+
+	tr := newAutoTracerProvider().Tracer(tName)
+	ctx, parent := tr.Start(t.Context(), "parent")
+	_, a := tr.Start(ctx, "a")
+	_, b := tr.Start(ctx, "b")
+
+	assert.Same(t, parent, SpanFromContext(hookCtxs[parent]))
+	assert.Same(t, a, SpanFromContext(hookCtxs[a]))
+	assert.Same(t, b, SpanFromContext(hookCtxs[b]))
+}
+
+func TestTracerStartSpanRetainsHookCtx(t *testing.T) {
+	orig := start
+	t.Cleanup(func() { start = orig })
+
+	var weakHookCtx weak.Pointer[byte]
+	start = func(ctx context.Context, _ *autoSpan, _ *SpanContext, _ *bool, _ *SpanContext) {
+		ctxAddr := (*byte)(reflect.ValueOf(ctx).UnsafePointer())
+		weakHookCtx = weak.Make(ctxAddr)
+	}
+
+	tr := newAutoTracerProvider().Tracer(tName)
+	_, span := tr.Start(t.Context(), "span")
+
+	runtime.GC()
+	assert.NotNil(t, weakHookCtx.Value(), "hook context collected while span is alive")
+	runtime.KeepAlive(span)
 }
 
 func TestTracerConcurrentSafe(t *testing.T) {
@@ -260,6 +416,7 @@ func TestSpanCreation(t *testing.T) {
 		}
 	}
 
+	var startCtx context.Context
 	testcases := []struct {
 		TestName string
 		SpanName string
@@ -324,6 +481,19 @@ func TestSpanCreation(t *testing.T) {
 			},
 			Eval: func(t *testing.T, _ context.Context, s *autoSpan) {
 				assert.False(t, s.sampled.Load(), "sampled")
+			},
+		},
+		{
+			TestName: "StartReceivesSpanCtx",
+			Setup: func(t *testing.T) {
+				orig := start
+				t.Cleanup(func() { start = orig })
+				start = func(ctx context.Context, _ *autoSpan, _ *SpanContext, _ *bool, _ *SpanContext) {
+					startCtx = ctx
+				}
+			},
+			Eval: func(t *testing.T, _ context.Context, s *autoSpan) {
+				assert.Same(t, s, SpanFromContext(startCtx))
 			},
 		},
 		{
@@ -446,6 +616,31 @@ func TestSpanEnd(t *testing.T) {
 			test.Eval(t, spans[0].EndTime)
 		})
 	}
+}
+
+func TestSpanEndEmptyNestedAttr(t *testing.T) {
+	orig := ended
+	t.Cleanup(func() { ended = orig })
+
+	var buf []byte
+	ended = func(b []byte) { buf = b }
+
+	s := spanBuilder{
+		Options: []SpanStartOption{WithAttributes(
+			attribute.Slice("slice", attribute.Value{}),
+			attribute.Map("map", attribute.KeyValue{Key: "empty"}),
+		)},
+	}.Build()
+	s.End()
+	require.NotEmpty(t, buf, "no span data emitted")
+
+	var traces telemetry.Traces
+	require.NoError(t, json.Unmarshal(buf, &traces))
+	require.Len(t, traces.ResourceSpans, 1)
+	require.Len(t, traces.ResourceSpans[0].ScopeSpans, 1)
+	spans := traces.ResourceSpans[0].ScopeSpans[0].Spans
+	require.Len(t, spans, 1)
+	assert.Len(t, spans[0].Attrs, 2)
 }
 
 func TestSpanNilUnsampledGuards(t *testing.T) {
@@ -770,9 +965,6 @@ func TestSpanAttributeLimits(t *testing.T) {
 func TestSpanAttributeValueLimits(t *testing.T) {
 	value := "hello world"
 
-	aStr := attribute.String("string", value)
-	aStrSlice := attribute.StringSlice("slice", []string{value, value})
-
 	eq := func(a, b []telemetry.Attr) bool {
 		if len(a) != len(b) {
 			return false
@@ -786,19 +978,23 @@ func TestSpanAttributeValueLimits(t *testing.T) {
 	}
 
 	tests := []struct {
-		limit int
-		want  string
+		limit       int
+		value, want string
 	}{
-		{0, ""},
-		{2, value[:2]},
-		{11, value},
-		{-1, value},
+		{0, value, ""},
+		{2, value, value[:2]},
+		{11, value, value},
+		{-1, value, value},
+		{1, "\uFFFD\uFFFD", "\uFFFD"},
 	}
 	for _, test := range tests {
 		t.Run("Limit/"+strconv.Itoa(test.limit), func(t *testing.T) {
 			orig := maxSpan.AttrValueLen
 			maxSpan.AttrValueLen = test.limit
 			t.Cleanup(func() { maxSpan.AttrValueLen = orig })
+
+			aStr := attribute.String("string", test.value)
+			aStrSlice := attribute.StringSlice("slice", []string{test.value, test.value})
 
 			builder := spanBuilder{}
 
@@ -934,6 +1130,16 @@ func TestTruncate(t *testing.T) {
 				{12, "こんにちは", "こんにちは"},
 			},
 		},
+		{
+			name: "ReplacementRune",
+			groups: []group{
+				{1, "\uFFFD", "\uFFFD"},
+				{1, "\uFFFD\uFFFD", "\uFFFD"},
+				{2, "a\uFFFDb", "a\uFFFD"},
+				{3, "a\uFFFD\x80b\uFFFD", "a\uFFFDb"},
+				{5, strings.Repeat("\uFFFD", 1000), strings.Repeat("\uFFFD", 5)},
+			},
+		},
 
 		// Truncation with invalid UTF-8 characters
 		{
@@ -982,6 +1188,8 @@ func TestTruncate(t *testing.T) {
 			groups: []group{
 				{0, "Some text", ""},
 				{0, "", ""},
+				{0, "\x80", ""},
+				{0, "\uFFFD", ""},
 			},
 		},
 	}
@@ -1022,6 +1230,7 @@ func BenchmarkTruncate(b *testing.B) {
 	b.Run("Short", run(10, "Short Text"))
 	b.Run("ASCII", run(5, "Hello, World!"))
 	b.Run("ValidUTF-8", run(10, "hello 😊 world 🌍🚀"))
+	b.Run("ReplacementRune", run(5, strings.Repeat("\uFFFD", 1000)))
 	b.Run("InvalidUTF-8", run(6, "€"[0:2]+"hello€€"))
 	b.Run("MixedUTF-8", run(14, "\x80😊\x80 Hello\x80World🌍\x80🚀\x80"))
 }

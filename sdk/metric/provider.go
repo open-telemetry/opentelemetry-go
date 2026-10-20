@@ -1,10 +1,11 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package metric
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/internal/global"
@@ -12,7 +13,14 @@ import (
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
 )
+
+type meterFactory func(instrumentation.Scope, pipelines) metric.Meter
+
+func defaultMeterFactory(s instrumentation.Scope, p pipelines) metric.Meter {
+	return newMeter(s, p)
+}
 
 // MeterProvider handles the creation and coordination of Meters. All Meters
 // created by a MeterProvider will be associated with the same Resource, have
@@ -21,8 +29,9 @@ import (
 type MeterProvider struct {
 	embedded.MeterProvider
 
-	pipes  pipelines
-	meters cache[instrumentation.Scope, *meter]
+	pipes        pipelines
+	meters       cache[instrumentation.Scope, metric.Meter]
+	meterFactory meterFactory
 
 	forceFlush, shutdown func(context.Context) error
 	stopped              atomic.Bool
@@ -40,14 +49,23 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 func NewMeterProvider(options ...Option) *MeterProvider {
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()
+	factory, experimentalShutdown := newExperimentalMeterFactory(conf.experimental)
+	if experimentalShutdown != nil {
+		readerShutdown := sdown
+		sdown = func(ctx context.Context) error {
+			return errors.Join(readerShutdown(ctx), experimentalShutdown(ctx))
+		}
+	}
 
 	mp := &MeterProvider{
-		pipes:      newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
-		forceFlush: flush,
-		shutdown:   sdown,
+		pipes:        newPipelines(conf.res, conf.readers, conf.views, conf.exemplarFilter, conf.cardinalityLimit),
+		meterFactory: factory,
+		forceFlush:   flush,
+		shutdown:     sdown,
 	}
 	// Log after creation so all readers show correctly they are registered.
-	global.Info("MeterProvider created",
+	global.Info(
+		"MeterProvider created",
 		"Resource", conf.res,
 		"Readers", conf.readers,
 		"Views", len(conf.views),
@@ -75,22 +93,28 @@ func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metri
 	}
 
 	c := metric.NewMeterConfig(options...)
+	attrs, _ := attrnorm.SetDedup(c.InstrumentationAttributes())
 	s := instrumentation.Scope{
 		Name:       name,
 		Version:    c.InstrumentationVersion(),
 		SchemaURL:  c.SchemaURL(),
-		Attributes: c.InstrumentationAttributes(),
+		Attributes: attrs,
 	}
 
-	global.Info("Meter created",
+	global.Info(
+		"Meter created",
 		"Name", s.Name,
 		"Version", s.Version,
 		"SchemaURL", s.SchemaURL,
 		"Attributes", s.Attributes,
 	)
 
-	return mp.meters.Lookup(s, func() *meter {
-		return newMeter(s, mp.pipes)
+	factory := mp.meterFactory
+	if factory == nil {
+		factory = defaultMeterFactory
+	}
+	return mp.meters.Lookup(s, func() metric.Meter {
+		return factory(s, mp.pipes)
 	})
 }
 

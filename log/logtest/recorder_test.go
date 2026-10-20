@@ -5,6 +5,7 @@ package logtest
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -102,20 +103,22 @@ func TestLoggerEnabledFnUnset(t *testing.T) {
 func TestRecorderLoggerEmitAndReset(t *testing.T) {
 	rec := NewRecorder()
 	ts := time.Now()
+	errBoom := errors.New("boom")
 
 	l := rec.Logger(t.Name())
 	ctx := t.Context()
 	r := log.Record{}
 	r.SetTimestamp(ts)
 	r.SetSeverity(log.SeverityInfo)
-	r.SetBody(log.StringValue("Hello there"))
-	r.AddAttributes(log.Int("n", 1))
-	r.AddAttributes(log.String("foo", "bar"))
+	r.SetBody(attribute.StringValue("Hello there"))
+	r.SetErr(errBoom)
+	r.AddAttributes(attribute.Int("n", 1))
+	r.AddAttributes(attribute.String("foo", "bar"))
 	l.Emit(ctx, r)
 
 	l2 := rec.Logger(t.Name())
 	r2 := log.Record{}
-	r2.SetBody(log.StringValue("Logger with the same scope"))
+	r2.SetBody(attribute.StringValue("Logger with the same scope"))
 	l2.Emit(ctx, r2)
 
 	want := Recording{
@@ -124,16 +127,17 @@ func TestRecorderLoggerEmitAndReset(t *testing.T) {
 				Context:   ctx,
 				Timestamp: ts,
 				Severity:  log.SeverityInfo,
-				Body:      log.StringValue("Hello there"),
-				Attributes: []log.KeyValue{
-					log.Int("n", 1),
-					log.String("foo", "bar"),
+				Body:      attribute.StringValue("Hello there"),
+				Error:     errBoom,
+				Attributes: []attribute.KeyValue{
+					attribute.Int("n", 1),
+					attribute.String("foo", "bar"),
 				},
 			},
 			{
 				Context:    ctx,
-				Body:       log.StringValue("Logger with the same scope"),
-				Attributes: []log.KeyValue{},
+				Body:       attribute.StringValue("Logger with the same scope"),
+				Attributes: []attribute.KeyValue{},
 			},
 		},
 	}

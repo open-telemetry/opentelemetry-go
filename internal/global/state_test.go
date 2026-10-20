@@ -4,22 +4,21 @@
 package global
 
 import (
+	"sync"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 )
-
-type nonComparableErrorHandler struct {
-	ErrorHandler
-
-	nonComparable func() //nolint:unused  // This is not called.
-}
 
 type nonComparableTracerProvider struct {
 	trace.TracerProvider
@@ -31,63 +30,6 @@ type nonComparableMeterProvider struct {
 	metric.MeterProvider
 
 	nonComparable func() //nolint:unused  // This is not called.
-}
-
-type fnErrHandler func(error)
-
-func (f fnErrHandler) Handle(err error) { f(err) }
-
-var noopEH = fnErrHandler(func(error) {})
-
-func TestSetErrorHandler(t *testing.T) {
-	t.Run("Set With default is a noop", func(t *testing.T) {
-		ResetForTest(t)
-		SetErrorHandler(GetErrorHandler())
-
-		eh, ok := GetErrorHandler().(*ErrDelegator)
-		if !ok {
-			t.Fatal("Global ErrorHandler should be the default ErrorHandler")
-		}
-
-		if eh.delegate.Load() != nil {
-			t.Fatal("ErrorHandler should not delegate when setting itself")
-		}
-	})
-
-	t.Run("First Set() should replace the delegate", func(t *testing.T) {
-		ResetForTest(t)
-
-		SetErrorHandler(noopEH)
-
-		_, ok := GetErrorHandler().(*ErrDelegator)
-		if ok {
-			t.Fatal("Global ErrorHandler was not changed")
-		}
-	})
-
-	t.Run("Set() should delegate existing ErrorHandlers", func(t *testing.T) {
-		ResetForTest(t)
-
-		eh := GetErrorHandler()
-		SetErrorHandler(noopEH)
-
-		errDel, ok := eh.(*ErrDelegator)
-		if !ok {
-			t.Fatal("Wrong ErrorHandler returned")
-		}
-
-		if errDel.delegate.Load() == nil {
-			t.Fatal("The ErrDelegator should have a delegate")
-		}
-	})
-
-	t.Run("non-comparable types should not panic", func(t *testing.T) {
-		ResetForTest(t)
-
-		eh := nonComparableErrorHandler{}
-		assert.NotPanics(t, func() { SetErrorHandler(eh) }, "delegate")
-		assert.NotPanics(t, func() { SetErrorHandler(eh) }, "replacement")
-	})
 }
 
 func TestSetTracerProvider(t *testing.T) {
@@ -234,5 +176,63 @@ func TestSetMeterProvider(t *testing.T) {
 		mp := nonComparableMeterProvider{}
 		SetMeterProvider(mp)
 		assert.NotPanics(t, func() { SetMeterProvider(mp) })
+	})
+}
+
+func TestSetLoggerProvider(t *testing.T) {
+	reset := func() {
+		globalLoggerProvider = defaultLoggerProvider()
+		delegateLoggerOnce = sync.Once{}
+	}
+
+	t.Run("Set With default is a noop", func(t *testing.T) {
+		t.Cleanup(reset)
+
+		t.Cleanup(func(orig logr.Logger) func() {
+			SetLogger(testr.New(t)) // Don't pollute output.
+			return func() { SetLogger(orig) }
+		}(GetLogger()))
+		SetLoggerProvider(LoggerProvider())
+
+		provider, ok := LoggerProvider().(*loggerProvider)
+		if !ok {
+			t.Fatal("Global LoggerProvider should be the default logger provider")
+		}
+		if provider.delegate != nil {
+			t.Fatal("logger provider should not delegate when setting itself")
+		}
+	})
+
+	t.Run("First Set() should replace the delegate", func(t *testing.T) {
+		t.Cleanup(reset)
+
+		SetLoggerProvider(noop.NewLoggerProvider())
+		if _, ok := LoggerProvider().(*loggerProvider); ok {
+			t.Fatal("Global LoggerProvider was not changed")
+		}
+	})
+
+	t.Run("Set() should delegate existing Logger Providers", func(t *testing.T) {
+		t.Cleanup(reset)
+
+		provider := LoggerProvider()
+		SetLoggerProvider(noop.NewLoggerProvider())
+
+		if del := provider.(*loggerProvider); del.delegate == nil {
+			t.Fatal("The delegated logger providers should have a delegate")
+		}
+	})
+
+	t.Run("non-comparable types should not panic", func(t *testing.T) {
+		t.Cleanup(reset)
+
+		type nonComparableLoggerProvider struct {
+			log.LoggerProvider
+			noCmp [0]func() //nolint:unused  // This is indeed used.
+		}
+
+		provider := nonComparableLoggerProvider{}
+		SetLoggerProvider(provider)
+		assert.NotPanics(t, func() { SetLoggerProvider(provider) })
 	})
 }

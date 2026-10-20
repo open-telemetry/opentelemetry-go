@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package azureconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "azure" namespace.
 package azureconv
 
@@ -51,11 +51,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // CosmosDBClientActiveInstanceCount is an instrument used to record metric
 // values conforming to the "azure.cosmosdb.client.active_instance.count"
@@ -83,7 +81,7 @@ func NewCosmosDBClientActiveInstanceCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CosmosDBClientActiveInstanceCount{noop.Int64UpDownCounter{}}, err
+		return CosmosDBClientActiveInstanceCount{noop.Int64UpDownCounter{}}, err
 	}
 	return CosmosDBClientActiveInstanceCount{i}, nil
 }
@@ -195,7 +193,7 @@ func NewCosmosDBClientOperationRequestCharge(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return CosmosDBClientOperationRequestCharge{noop.Int64Histogram{}}, err
+		return CosmosDBClientOperationRequestCharge{noop.Int64Histogram{}}, err
 	}
 	return CosmosDBClientOperationRequestCharge{i}, nil
 }
@@ -260,6 +258,7 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 func (m CosmosDBClientOperationRequestCharge) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

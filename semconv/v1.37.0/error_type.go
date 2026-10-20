@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package semconv // import "go.opentelemetry.io/otel/semconv/v1.37.0"
+package semconv
 
 import (
 	"reflect"
@@ -14,13 +14,9 @@ import (
 // If err is nil, the returned attribute has the default value
 // [ErrorTypeOther].
 //
-// If err implements the interface
+// If err's type has the method
 //
-//	// ErrorTyper is an error that provides a specific type definition for the
-//	// error it represents.
-//	type ErrorTyper interface {
-//	    ErrorType() string
-//	}
+//	ErrorType() string
 //
 // then the returned attribute has the value of err.ErrorType(). Otherwise, the
 // returned attribute has a value derived from the concrete type of err.

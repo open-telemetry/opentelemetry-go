@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package exemplar // import "go.opentelemetry.io/otel/sdk/metric/exemplar"
+package exemplar
 
 import (
 	"runtime"
@@ -23,7 +23,7 @@ func BenchmarkFixedSizeReservoirOffer(b *testing.B) {
 			// number of collect calls.
 			if i%100 == 99 {
 				reservoir.mu.Lock()
-				reservoir.reset()
+				reservoir.nt.reset()
 				reservoir.mu.Unlock()
 			}
 			i++

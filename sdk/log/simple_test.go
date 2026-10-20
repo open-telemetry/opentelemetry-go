@@ -5,7 +5,10 @@ package log_test
 
 import (
 	"context"
+	"errors"
 	"io"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -13,31 +16,73 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/log/internal/observ"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 type exporter struct {
 	records []log.Record
+	calls   []string
 
-	exportCalled     bool
-	shutdownCalled   bool
-	forceFlushCalled bool
+	exportCalled  bool
+	shutdownErr   error
+	forceFlushErr error
 }
 
 func (e *exporter) Export(_ context.Context, r []log.Record) error {
-	e.records = r
+	e.records = slices.Clone(r) // don't retain the original slice
 	e.exportCalled = true
 	return nil
 }
 
 func (e *exporter) Shutdown(context.Context) error {
-	e.shutdownCalled = true
-	return nil
+	e.calls = append(e.calls, "Shutdown")
+	return e.shutdownErr
 }
 
 func (e *exporter) ForceFlush(context.Context) error {
-	e.forceFlushCalled = true
-	return nil
+	e.calls = append(e.calls, "ForceFlush")
+	return e.forceFlushErr
+}
+
+var _ log.Exporter = (*failingTestExporter)(nil)
+
+type failingTestExporter struct {
+	exporter
+}
+
+func (f *failingTestExporter) Export(ctx context.Context, r []log.Record) error {
+	_ = f.exporter.Export(ctx, r)
+	return assert.AnError
+}
+
+// callbackExporter invokes onExport at the start of Export, allowing a test to
+// observe state at the moment a record is submitted to the exporter.
+type callbackExporter struct {
+	exporter
+	onExport func()
+}
+
+func (c *callbackExporter) Export(ctx context.Context, r []log.Record) error {
+	if c.onExport != nil {
+		c.onExport()
+	}
+	return c.exporter.Export(ctx, r)
+}
+
+func TestSimpleProcessorEnabled(t *testing.T) {
+	e := log.NewSimpleProcessor(nil)
+	enabled := e.Enabled(t.Context(), log.EnabledParameters{})
+	assert.True(t, enabled, "Enabled should return true")
 }
 
 func TestSimpleProcessorOnEmit(t *testing.T) {
@@ -53,17 +98,25 @@ func TestSimpleProcessorOnEmit(t *testing.T) {
 }
 
 func TestSimpleProcessorShutdown(t *testing.T) {
-	e := new(exporter)
+	forceFlushErr := errors.New("force flush")
+	shutdownErr := errors.New("shutdown")
+	e := &exporter{
+		forceFlushErr: forceFlushErr,
+		shutdownErr:   shutdownErr,
+	}
 	s := log.NewSimpleProcessor(e)
-	_ = s.Shutdown(t.Context())
-	require.True(t, e.shutdownCalled, "exporter Shutdown not called")
+
+	err := s.Shutdown(t.Context())
+	assert.ErrorIs(t, err, forceFlushErr)
+	assert.ErrorIs(t, err, shutdownErr)
+	assert.Equal(t, []string{"ForceFlush", "Shutdown"}, e.calls)
 }
 
 func TestSimpleProcessorForceFlush(t *testing.T) {
 	e := new(exporter)
 	s := log.NewSimpleProcessor(e)
 	_ = s.ForceFlush(t.Context())
-	require.True(t, e.forceFlushCalled, "exporter ForceFlush not called")
+	require.Equal(t, []string{"ForceFlush"}, e.calls, "exporter calls")
 }
 
 type writerExporter struct {
@@ -137,4 +190,222 @@ func BenchmarkSimpleProcessorOnEmit(b *testing.B) {
 
 		_ = out
 	})
+}
+
+func BenchmarkSimpleProcessorObservability(b *testing.B) {
+	run := func(b *testing.B) {
+		slp := log.NewSimpleProcessor(&failingTestExporter{exporter: exporter{}})
+		record := new(log.Record)
+		record.SetSeverityText("test")
+
+		ctx := b.Context()
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		var err error
+		for b.Loop() {
+			err = slp.OnEmit(ctx, record)
+		}
+		_ = err
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+	b.Run("NoObservability", run)
+}
+
+func TestSimpleLogProcessorObservability(t *testing.T) {
+	testcases := []struct {
+		name          string
+		enabled       bool
+		exporter      log.Exporter
+		wantErr       error
+		assertMetrics func(t *testing.T, rm metricdata.ResourceMetrics)
+	}{
+		{
+			name:     "disabled",
+			enabled:  false,
+			exporter: new(exporter),
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:     "enabled",
+			enabled:  true,
+			exporter: new(exporter),
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Len(t, rm.ScopeMetrics, 1)
+				sm := rm.ScopeMetrics[0]
+
+				p := otelconv.SDKProcessorLogProcessed{}
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      observ.ScopeName,
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        p.Name(),
+							Description: p.Description(),
+							Unit:        p.Unit(),
+							Data: metricdata.Sum[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value: 1,
+										Attributes: attribute.NewSet(
+											observ.GetSLPComponentName(0),
+											semconv.OTelComponentTypeKey.String(
+												string(otelconv.ComponentTypeSimpleLogProcessor),
+											),
+										),
+									},
+								},
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					sm,
+					metricdatatest.IgnoreExemplars(),
+					metricdatatest.IgnoreTimestamp(),
+				)
+			},
+		},
+		{
+			name:    "Enable Exporter error",
+			enabled: true,
+			wantErr: assert.AnError,
+			exporter: &failingTestExporter{
+				exporter: exporter{},
+			},
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Len(t, rm.ScopeMetrics, 1)
+				sm := rm.ScopeMetrics[0]
+				p := otelconv.SDKProcessorLogProcessed{}
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/otel/sdk/log/internal/observ",
+						Version:   sdk.Version(),
+						SchemaURL: semconv.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        p.Name(),
+							Description: p.Description(),
+							Unit:        p.Unit(),
+							Data: metricdata.Sum[int64]{
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Value: 1,
+										Attributes: attribute.NewSet(
+											observ.GetSLPComponentName(0),
+											semconv.OTelComponentTypeKey.String(
+												string(otelconv.ComponentTypeSimpleLogProcessor),
+											),
+										),
+									},
+								},
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					sm,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", strconv.FormatBool(tc.enabled))
+
+			original := otel.GetMeterProvider()
+			t.Cleanup(func() {
+				otel.SetMeterProvider(original)
+			})
+
+			r := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(r))
+			otel.SetMeterProvider(mp)
+
+			slp := log.NewSimpleProcessor(tc.exporter)
+			record := new(log.Record)
+			record.SetSeverityText("test")
+			err := slp.OnEmit(t.Context(), record)
+			require.ErrorIs(t, err, tc.wantErr)
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, r.Collect(t.Context(), &rm))
+			tc.assertMetrics(t, rm)
+			observ.SetSimpleProcessorID(0)
+		})
+	}
+}
+
+// processedLogCount returns the current total value of the
+// otel.sdk.processor.log.processed metric recorded by r.
+func processedLogCount(t *testing.T, r metric.Reader) int64 {
+	t.Helper()
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, r.Collect(t.Context(), &rm))
+	name := otelconv.SDKProcessorLogProcessed{}.Name()
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != name {
+				continue
+			}
+			var total int64
+			for _, dp := range m.Data.(metricdata.Sum[int64]).DataPoints {
+				total += dp.Value
+			}
+			return total
+		}
+	}
+	return 0
+}
+
+// TestSimpleProcessorProcessedBeforeExport asserts the record is counted as
+// processed at the point it is submitted to the exporter, not after the export
+// completes, as required by the semantic conventions.
+func TestSimpleProcessorProcessedBeforeExport(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	original := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(original) })
+	t.Cleanup(func() { observ.SetSimpleProcessorID(0) })
+
+	r := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+	otel.SetMeterProvider(mp)
+
+	var duringExport int64
+	exp := &callbackExporter{
+		onExport: func() { duringExport = processedLogCount(t, r) },
+	}
+
+	slp := log.NewSimpleProcessor(exp)
+	record := new(log.Record)
+	record.SetSeverityText("test")
+	require.NoError(t, slp.OnEmit(t.Context(), record))
+
+	assert.Equal(t, int64(1), duringExport,
+		"processed must be recorded before the record is submitted to the exporter")
 }

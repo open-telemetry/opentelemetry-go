@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otlploghttp // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+package otlploghttp
 
 import (
 	"bytes"
@@ -10,18 +10,23 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
 )
 
@@ -40,13 +45,31 @@ func newNoopClient() *client {
 	return &client{}
 }
 
+var exporterN atomic.Int64
+
+var errInsecureEndpointWithTLS = errors.New("insecure HTTP endpoint cannot use TLS client configuration")
+
+// nextExporterID returns the next unique ID for an exporter.
+func nextExporterID() int64 {
+	const inc = 1
+	return exporterN.Add(inc) - inc
+}
+
 // newHTTPClient creates a new HTTP log client.
-func newHTTPClient(cfg config) (*client, error) {
+func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
+	if cfg.insecure.Value && cfg.tlsCfg.Value != nil {
+		return nil, errInsecureEndpointWithTLS
+	}
+
 	hc := cfg.httpClient
+	var exportTimeout time.Duration
 	if hc == nil {
+		// WithHTTPClient takes precedence over WithTimeout, so the exporter
+		// timeout is applied only for the client constructed here.
+		exportTimeout = cfg.timeout.Value
 		hc = &http.Client{
 			Transport: ourTransport,
-			Timeout:   cfg.timeout.Value,
+			Timeout:   exportTimeout,
 		}
 
 		if cfg.tlsCfg.Value != nil || cfg.proxy.Value != nil {
@@ -63,15 +86,16 @@ func newHTTPClient(cfg config) (*client, error) {
 	}
 
 	u := &url.URL{
-		Scheme: "https",
-		Host:   cfg.endpoint.Value,
-		Path:   cfg.path.Value,
+		Scheme:  "https",
+		Host:    cfg.endpoint.Value,
+		Path:    cfg.path.Value.Path,
+		RawPath: cfg.path.Value.RawPath,
 	}
 	if cfg.insecure.Value {
 		u.Scheme = "http"
 	}
 	// Body is set when this is cloned during upload.
-	req, err := http.NewRequest(http.MethodPost, u.String(), http.NoBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -87,26 +111,38 @@ func newHTTPClient(cfg config) (*client, error) {
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
 	c := &httpClient{
-		compression: cfg.compression.Value,
-		req:         req,
-		requestFunc: cfg.retryCfg.Value.RequestFunc(evaluate),
-		client:      hc,
+		compression:     cfg.compression.Value,
+		maxRequestSize:  cfg.maxRequestSize.Value,
+		maxResponseSize: cfg.maxResponseSize.Value,
+		req:             req,
+		requestFunc:     cfg.retryCfg.Value.RequestFunc(evaluate),
+		client:          hc,
+		exportTimeout:   exportTimeout,
 	}
-	return &client{uploadLogs: c.uploadLogs}, nil
+
+	id := nextExporterID()
+	c.inst, err = observ.NewInstrumentation(id, cfg.endpoint.Value)
+
+	return &client{uploadLogs: c.uploadLogs}, err
 }
 
 type httpClient struct {
 	// req is cloned for every upload the client makes.
-	req         *http.Request
-	compression Compression
-	requestFunc retry.RequestFunc
-	client      *http.Client
+	req             *http.Request
+	compression     Compression
+	maxRequestSize  int
+	maxResponseSize int64
+	requestFunc     retry.RequestFunc
+	client          *http.Client
+	exportTimeout   time.Duration
+
+	inst *observ.Instrumentation
 }
 
-// Keep it in sync with golang's DefaultTransport from net/http! We
+// Keep it in sync with Go's DefaultTransport from net/http! We
 // have our own copy to avoid handling a situation where the
 // DefaultTransport is overwritten with some different implementation
-// of http.RoundTripper or it's modified by another package.
+// of http.RoundTripper or it is modified by another package.
 var ourTransport = &http.Transport{
 	Proxy: http.ProxyFromEnvironment,
 	DialContext: (&net.Dialer{
@@ -122,16 +158,38 @@ var ourTransport = &http.Transport{
 
 func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs) (uploadErr error) {
 	// The Exporter synchronizes access to client methods. This is not called
-	// after the Exporter is shutdown. Only thing to do here is send data.
+	// after the Exporter is shut down. The only thing to do here is send data.
 
 	pbRequest := &collogpb.ExportLogsServiceRequest{ResourceLogs: data}
 	body, err := proto.Marshal(pbRequest)
 	if err != nil {
 		return err
 	}
+
+	var statusCode int
+	if c.inst != nil {
+		var count int64
+		for _, resLogs := range data {
+			for _, scopeLogs := range resLogs.ScopeLogs {
+				count += int64(len(scopeLogs.LogRecords))
+			}
+		}
+		op := c.inst.ExportLogs(ctx, count)
+		defer func() { op.End(uploadErr, statusCode) }()
+	}
+
+	if maxSize := c.maxRequestSize; maxSize > 0 && len(body) > maxSize {
+		return fmt.Errorf("request body too large: exceeded %d bytes", maxSize)
+	}
 	request, err := c.newRequest(ctx, body)
 	if err != nil {
 		return err
+	}
+
+	if c.exportTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, c.exportTimeout, errors.New("exporter export timeout"))
+		defer cancel()
 	}
 
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
@@ -141,7 +199,9 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		default:
 		}
 
+		statusCode = 0
 		request.reset(iCtx)
+		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
 		resp, err := c.client.Do(request.Request)
 		var urlErr *url.Error
 		if errors.As(err, &urlErr) && urlErr.Temporary() {
@@ -158,21 +218,21 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 			}()
 		}
 
+		statusCode = resp.StatusCode
+		respData, err := c.readResponse(resp)
+		if err != nil {
+			return err
+		}
 		if sc := resp.StatusCode; sc >= 200 && sc <= 299 {
 			// Success, do not retry.
 
-			// Read the partial success message, if any.
-			var respData bytes.Buffer
-			if _, err := io.Copy(&respData, resp.Body); err != nil {
-				return err
-			}
-			if respData.Len() == 0 {
+			if len(respData) == 0 {
 				return nil
 			}
 
-			if resp.Header.Get("Content-Type") == "application/x-protobuf" {
+			if isProtobufContentType(resp.Header.Get("Content-Type")) {
 				var respProto collogpb.ExportLogsServiceResponse
-				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
+				if err := proto.Unmarshal(respData, &respProto); err != nil {
 					return err
 				}
 
@@ -180,7 +240,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 					msg := respProto.PartialSuccess.GetErrorMessage()
 					n := respProto.PartialSuccess.GetRejectedLogRecords()
 					if n != 0 || msg != "" {
-						err := errPartial{msg: msg, n: n}
+						err := internal.LogPartialSuccessError(n, msg)
 						uploadErr = errors.Join(uploadErr, err)
 					}
 				}
@@ -193,11 +253,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		// body, so we read it to include in the error
 		// message to be returned. It will help in
 		// debugging the actual issue.
-		var respData bytes.Buffer
-		if _, err := io.Copy(&respData, resp.Body); err != nil {
-			return err
-		}
-		respStr := strings.TrimSpace(respData.String())
+		respStr := strings.TrimSpace(string(respData))
 		if respStr == "" {
 			respStr = "(empty)"
 		}
@@ -217,21 +273,31 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 	}))
 }
 
-type errPartial struct {
-	msg string
-	n   int64
-}
+// readResponse returns the response body. A gzip Content-Encoding is
+// decompressed here. Go's Transport removes that header after it
+// decompresses a response itself, so a body it already decoded is left
+// alone. The size limit applies to the bytes returned.
+func (c *httpClient) readResponse(resp *http.Response) ([]byte, error) {
+	src := io.Reader(resp.Body)
+	var gz *gzip.Reader
+	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+		var err error
+		gz, err = gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		src = gz
+	}
 
-var _ error = errPartial{}
-
-func (e errPartial) Error() string {
-	const form = "OTLP partial success: %s (%d log records rejected)"
-	return fmt.Sprintf(form, e.msg, e.n)
-}
-
-func (errPartial) Is(target error) bool {
-	_, ok := target.(errPartial)
-	return ok
+	var respData bytes.Buffer
+	err := internal.CopyResponseBody(&respData, src, c.maxResponseSize)
+	if gz != nil {
+		err = errors.Join(err, gz.Close())
+	}
+	if err != nil {
+		return nil, err
+	}
+	return respData.Bytes(), nil
 }
 
 var gzPool = sync.Pool{
@@ -249,13 +315,17 @@ func (c *httpClient) newRequest(ctx context.Context, body []byte) (request, erro
 	case NoCompression:
 		r.ContentLength = int64(len(body))
 		req.bodyReader = bodyReader(body)
+		req.GetBody = bodyReaderErr(body)
 	case GzipCompression:
 		// Ensure the content length is not used.
 		r.ContentLength = -1
 		r.Header.Set("Content-Encoding", "gzip")
 
 		gz := gzPool.Get().(*gzip.Writer)
-		defer gzPool.Put(gz)
+		defer func() {
+			gz.Reset(io.Discard)
+			gzPool.Put(gz)
+		}()
 
 		var b bytes.Buffer
 		gz.Reset(&b)
@@ -269,6 +339,7 @@ func (c *httpClient) newRequest(ctx context.Context, body []byte) (request, erro
 		}
 
 		req.bodyReader = bodyReader(b.Bytes())
+		req.GetBody = bodyReaderErr(b.Bytes())
 	}
 
 	return req, nil
@@ -278,6 +349,13 @@ func (c *httpClient) newRequest(ctx context.Context, body []byte) (request, erro
 func bodyReader(buf []byte) func() io.ReadCloser {
 	return func() io.ReadCloser {
 		return io.NopCloser(bytes.NewReader(buf))
+	}
+}
+
+// bodyReaderErr returns a closure returning a new reader for buf.
+func bodyReaderErr(buf []byte) func() (io.ReadCloser, error) {
+	return func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(buf)), nil
 	}
 }
 
@@ -297,23 +375,48 @@ func (r *request) reset(ctx context.Context) {
 
 // retryableError represents a request failure that can be retried.
 type retryableError struct {
-	throttle int64
+	throttle time.Duration
 	err      error
 }
 
-// newResponseError returns a retryableError and will extract any explicit
-// throttle delay contained in headers. The returned error wraps wrapped
-// if it is not nil.
+// newResponseError returns a retryableError and extracts any explicit
+// throttle delay contained in headers. The returned error wraps the supplied
+// error when it is non-nil.
 func newResponseError(header http.Header, wrapped error) error {
 	var rErr retryableError
 	if v := header.Get("Retry-After"); v != "" {
-		if t, err := strconv.ParseInt(v, 10, 64); err == nil {
-			rErr.throttle = t
-		}
+		rErr.throttle = retryAfterDuration(v)
 	}
 
 	rErr.err = wrapped
 	return rErr
+}
+
+// isProtobufContentType reports whether the Content-Type value denotes a
+// protobuf-encoded OTLP payload. Media type tokens are case-insensitive and
+// parameters are ignored, as required by RFC 9110 section 8.3.
+func isProtobufContentType(contentType string) bool {
+	mediatype, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(mediatype, "application/x-protobuf")
+}
+
+func retryAfterDuration(v string) time.Duration {
+	if t, err := strconv.ParseInt(v, 10, 64); err == nil && t >= 0 {
+		const maxRetryAfterSeconds = math.MaxInt64 / int64(time.Second)
+		if t > maxRetryAfterSeconds {
+			return time.Duration(math.MaxInt64)
+		}
+		return time.Duration(t) * time.Second
+	}
+
+	if date, err := http.ParseTime(v); err == nil {
+		return max(time.Until(date), 0)
+	}
+
+	return 0
 }
 
 func (e retryableError) Error() string {
@@ -342,8 +445,8 @@ func (e retryableError) As(target any) bool {
 	}
 }
 
-// evaluate returns if err is retry-able. If it is and it includes an explicit
-// throttling delay, that delay is also returned.
+// evaluate reports whether err is retryable. If so, it also returns any
+// explicit throttling delay included in err.
 func evaluate(err error) (bool, time.Duration) {
 	if err == nil {
 		return false, 0
@@ -357,5 +460,5 @@ func evaluate(err error) (bool, time.Duration) {
 		return false, 0
 	}
 
-	return true, time.Duration(rErr.throttle)
+	return true, rErr.throttle
 }

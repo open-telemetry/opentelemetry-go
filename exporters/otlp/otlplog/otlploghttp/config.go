@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otlploghttp // import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+package otlploghttp
 
 import (
 	"crypto/tls"
@@ -23,11 +23,13 @@ import (
 
 // Default values.
 var (
-	defaultEndpoint                        = "localhost:4318"
-	defaultPath                            = "/v1/logs"
-	defaultTimeout                         = 10 * time.Second
-	defaultProxy    HTTPTransportProxyFunc = http.ProxyFromEnvironment
-	defaultRetryCfg                        = retry.DefaultConfig
+	defaultEndpoint                               = "localhost:4318"
+	defaultPath                                   = "/v1/logs"
+	defaultTimeout                                = 10 * time.Second
+	defaultMaxRequestSize                         = 64 * 1024 * 1024
+	defaultMaxResponseSize                        = int64(4 * 1024 * 1024)
+	defaultProxy           HTTPTransportProxyFunc = http.ProxyFromEnvironment
+	defaultRetryCfg                               = retry.DefaultConfig
 )
 
 // Environment variable keys.
@@ -36,7 +38,10 @@ var (
 		"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
 		"OTEL_EXPORTER_OTLP_ENDPOINT",
 	}
-	envInsecure = envEndpoint
+	envInsecure = []string{
+		"OTEL_EXPORTER_OTLP_LOGS_INSECURE",
+		"OTEL_EXPORTER_OTLP_INSECURE",
+	}
 
 	// Split because these are parsed differently.
 	envPathSignal = []string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT"}
@@ -85,17 +90,26 @@ type fnOpt func(config) config
 
 func (f fnOpt) applyHTTPOption(c config) config { return f(c) }
 
+// endpointPath keeps the decoded path and its original encoding under the same
+// configuration precedence.
+type endpointPath struct {
+	Path    string
+	RawPath string
+}
+
 type config struct {
-	endpoint    setting[string]
-	path        setting[string]
-	insecure    setting[bool]
-	tlsCfg      setting[*tls.Config]
-	headers     setting[map[string]string]
-	compression setting[Compression]
-	timeout     setting[time.Duration]
-	proxy       setting[HTTPTransportProxyFunc]
-	retryCfg    setting[retry.Config]
-	httpClient  *http.Client
+	endpoint        setting[string]
+	path            setting[endpointPath]
+	insecure        setting[bool]
+	tlsCfg          setting[*tls.Config]
+	headers         setting[map[string]string]
+	compression     setting[Compression]
+	maxRequestSize  setting[int]
+	maxResponseSize setting[int64]
+	timeout         setting[time.Duration]
+	proxy           setting[HTTPTransportProxyFunc]
+	retryCfg        setting[retry.Config]
+	httpClient      *http.Client
 }
 
 func newConfig(options []Option) config {
@@ -109,11 +123,12 @@ func newConfig(options []Option) config {
 		fallback[string](defaultEndpoint),
 	)
 	c.path = c.path.Resolve(
-		getenv[string](envPathSignal, convPathExact),
-		getenv[string](envPathOTLP, convPath),
-		fallback[string](defaultPath),
+		getenv[endpointPath](envPathSignal, convPathExact),
+		getenv[endpointPath](envPathOTLP, convPath),
+		fallback[endpointPath](endpointPath{Path: defaultPath}),
 	)
 	c.insecure = c.insecure.Resolve(
+		loadInsecureFromEnvEndpoint(envEndpoint),
 		getenv[bool](envInsecure, convInsecure),
 	)
 	c.tlsCfg = c.tlsCfg.Resolve(
@@ -129,6 +144,12 @@ func newConfig(options []Option) config {
 		getenv[time.Duration](envTimeout, convDuration),
 		fallback[time.Duration](defaultTimeout),
 	)
+	c.maxRequestSize = c.maxRequestSize.Resolve(
+		fallback[int](defaultMaxRequestSize),
+	)
+	c.maxResponseSize = c.maxResponseSize.Resolve(
+		fallback[int64](defaultMaxResponseSize),
+	)
 	c.proxy = c.proxy.Resolve(
 		fallback[HTTPTransportProxyFunc](defaultProxy),
 	)
@@ -140,7 +161,7 @@ func newConfig(options []Option) config {
 }
 
 // WithEndpoint sets the target endpoint the Exporter will connect to. This
-// endpoint is specified as a host and optional port, no path or scheme should
+// endpoint is specified as a host and optional port; no path or scheme should
 // be included (see WithInsecure and WithURLPath).
 //
 // If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
@@ -184,8 +205,8 @@ func WithEndpointURL(rawURL string) Option {
 	}
 	return fnOpt(func(c config) config {
 		c.endpoint = newSetting(u.Host)
-		c.path = newSetting(u.Path)
-		c.insecure = newSetting(u.Scheme != "https")
+		c.path = newSetting(endpointPath{Path: u.Path, RawPath: u.RawPath})
+		c.insecure = insecureFromScheme(c.insecure, u.Scheme)
 		return c
 	})
 }
@@ -194,9 +215,9 @@ func WithEndpointURL(rawURL string) Option {
 type Compression int
 
 const (
-	// NoCompression represents that no compression should be used.
+	// NoCompression indicates that no compression is used.
 	NoCompression Compression = iota
-	// GzipCompression represents that gzip compression should be used.
+	// GzipCompression indicates that gzip compression is used.
 	GzipCompression
 )
 
@@ -229,7 +250,7 @@ func WithCompression(compression Compression) Option {
 // passed, "/v1/logs" will be used.
 func WithURLPath(urlPath string) Option {
 	return fnOpt(func(c config) config {
-		c.path = newSetting(urlPath)
+		c.path = newSetting(endpointPath{Path: urlPath})
 		return c
 	})
 }
@@ -240,7 +261,7 @@ func WithURLPath(urlPath string) Option {
 // If the OTEL_EXPORTER_OTLP_CERTIFICATE or
 // OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE environment variable is set, and
 // this option is not passed, that variable value will be used. The value will
-// be parsed the filepath of the TLS certificate chain to use. If both are
+// be parsed as the filepath of the TLS certificate chain to use. If both are
 // set, OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
@@ -258,7 +279,7 @@ func WithTLSClientConfig(tlsCfg *tls.Config) Option {
 // If the OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
 // environment variable is set, and this option is not passed, that variable
 // value will be used to determine client security. If the endpoint has a
-// scheme of "http" or "unix" client security will be disabled. If both are
+// scheme of "http" or "unix", client security will be disabled. If both are
 // set, OTEL_EXPORTER_OTLP_LOGS_ENDPOINT will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
@@ -270,13 +291,13 @@ func WithInsecure() Option {
 	})
 }
 
-// WithHeaders will send the provided headers with each HTTP requests.
+// WithHeaders sends the provided headers with each HTTP request.
 //
 // If the OTEL_EXPORTER_OTLP_HEADERS or OTEL_EXPORTER_OTLP_LOGS_HEADERS
 // environment variable is set, and this option is not passed, that variable
-// value will be used. The value will be parsed as a list of key value pairs.
+// value will be used. The value will be parsed as a list of key-value pairs.
 // These pairs are expected to be in the W3C Correlation-Context format
-// without additional semi-colon delimited metadata (i.e. "k1=v1,k2=v2"). If
+// without additional semicolon-delimited metadata (i.e. "k1=v1,k2=v2"). If
 // both are set, OTEL_EXPORTER_OTLP_LOGS_HEADERS will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
@@ -288,10 +309,11 @@ func WithHeaders(headers map[string]string) Option {
 	})
 }
 
-// WithTimeout sets the max amount of time an Exporter will attempt an export.
+// WithTimeout sets the maximum amount of time an Exporter will attempt an
+// export.
 //
 // This takes precedence over any retry settings defined by WithRetry. Once
-// this time limit has been reached the export is abandoned and the log data is
+// this time limit has been reached, the export is abandoned and the log data is
 // dropped.
 //
 // If the OTEL_EXPORTER_OTLP_TIMEOUT or OTEL_EXPORTER_OTLP_LOGS_TIMEOUT
@@ -309,20 +331,46 @@ func WithTimeout(duration time.Duration) Option {
 	})
 }
 
-// RetryConfig defines configuration for retrying the export of log data that
-// failed.
+// WithMaxRequestSize sets the maximum size, in bytes, of a serialized export
+// request, before compression, that the exporter will send.
+//
+// If size is less than or equal to zero, no request-size limit is applied.
+// Disabling the limit is not recommended because it can lead to excessive
+// resource consumption or abuse.
+func WithMaxRequestSize(size int) Option {
+	return fnOpt(func(c config) config {
+		c.maxRequestSize = newSetting(size)
+		return c
+	})
+}
+
+// WithMaxResponseSize sets the maximum size, in bytes, of an OTLP/HTTP
+// response body, after decompression, that the exporter will read.
+//
+// By default, a limit of 4 MiB is used. Values less than or equal to zero are
+// ignored. The response-size limit cannot be disabled.
+func WithMaxResponseSize(size int64) Option {
+	return fnOpt(func(c config) config {
+		if size > 0 {
+			c.maxResponseSize = newSetting(size)
+		}
+		return c
+	})
+}
+
+// RetryConfig defines configuration for retrying failed exports of log data.
 type RetryConfig retry.Config
 
 // WithRetry sets the retry policy for transient retryable errors that are
 // returned by the target endpoint.
 //
-// If the target endpoint responds with not only a retryable error, but
-// explicitly returns a backoff time in the response, that time will take
+// If the target endpoint responds with a retryable error and explicitly
+// returns a backoff time in the response, that time will take
 // precedence over these settings.
 //
 // If unset, the default retry policy will be used. It will retry the export
-// 5 seconds after receiving a retryable error and increase exponentially
-// after each error for no more than a total time of 1 minute.
+// 5 seconds after receiving a retryable error, with the time between retries
+// increasing exponentially after each error, for no more than 1 minute total.
 func WithRetry(rc RetryConfig) Option {
 	return fnOpt(func(c config) config {
 		c.retryCfg = newSetting(retry.Config(rc))
@@ -330,7 +378,7 @@ func WithRetry(rc RetryConfig) Option {
 	})
 }
 
-// HTTPTransportProxyFunc is a function that resolves which URL to use as proxy
+// HTTPTransportProxyFunc is a function that resolves which URL to use as a proxy
 // for a given request. This type is compatible with http.Transport.Proxy and
 // can be used to set a custom proxy function to the OTLP HTTP client.
 type HTTPTransportProxyFunc func(*http.Request) (*url.URL, error)
@@ -345,16 +393,16 @@ func WithProxy(pf HTTPTransportProxyFunc) Option {
 	})
 }
 
-// WithHTTPClient sets the HTTP client to used by the exporter.
+// WithHTTPClient sets the HTTP client to be used by the exporter.
 //
-// This option will take precedence over [WithProxy], [WithTimeout],
-// [WithTLSClientConfig] options as well as OTEL_EXPORTER_OTLP_CERTIFICATE,
+// This option will take precedence over the [WithProxy], [WithTimeout], and
+// [WithTLSClientConfig] options, as well as the OTEL_EXPORTER_OTLP_CERTIFICATE,
 // OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE, OTEL_EXPORTER_OTLP_TIMEOUT,
 // OTEL_EXPORTER_OTLP_LOGS_TIMEOUT environment variables.
 //
 // Timeout and all other fields of the passed [http.Client] are left intact.
 //
-// Be aware that passing an HTTP client with transport like
+// Be aware that passing an HTTP client with a transport such as
 // [go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp.NewTransport] can
 // cause the client to be instrumented twice and cause infinite recursion.
 func WithHTTPClient(c *http.Client) Option {
@@ -375,18 +423,18 @@ func newSetting[T any](value T) setting[T] {
 	return setting[T]{Value: value, Set: true}
 }
 
-// resolver returns an updated setting after applying an resolution operation.
+// resolver returns an updated setting after applying a resolution operation.
 type resolver[T any] func(setting[T]) setting[T]
 
 // Resolve returns a resolved version of s.
 //
-// It will apply all the passed fn in the order provided, chaining together the
-// return setting to the next input. The setting s is used as the initial
-// argument to the first fn.
+// It applies all functions in fn in the order provided, passing each returned
+// setting to the next function. The setting s is used as the initial argument
+// to the first function.
 //
-// Each fn needs to validate if it should apply given the Set state of the
-// setting. This will not perform any checks on the set state when chaining
-// function.
+// Each function in fn needs to determine whether it should apply given the Set
+// state of the setting. This will not perform any checks on the set state when
+// chaining functions.
 func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
 	for _, f := range fn {
 		s = f(s)
@@ -395,10 +443,10 @@ func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
 }
 
 // loadEnvTLS returns a resolver that loads a *tls.Config from files defined by
-// the OTLP TLS environment variables. This will load both the rootCAs and
+// the OTLP TLS environment variables. This will load both the root CAs and
 // certificates used for mTLS.
 //
-// If the filepath defined is invalid or does not contain valid TLS files, an
+// If a configured filepath is invalid or does not point to a valid TLS file, an
 // error is passed to the OTel ErrorHandler and no TLS configuration is
 // provided.
 func loadEnvTLS[T *tls.Config]() resolver[T] {
@@ -444,9 +492,9 @@ func loadEnvTLS[T *tls.Config]() resolver[T] {
 var readFile = os.ReadFile
 
 // loadCertPool loads and returns the *x509.CertPool found at path if it exists
-// and is valid. Otherwise, nil and an error is returned.
-func loadCertPool(path string) (*x509.CertPool, error) {
-	b, err := readFile(path)
+// and is valid. Otherwise, nil and an error are returned.
+func loadCertPool(filePath string) (*x509.CertPool, error) {
+	b, err := readFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +506,7 @@ func loadCertPool(path string) (*x509.CertPool, error) {
 }
 
 // loadCertificates loads and returns the tls.Certificate found at path if it
-// exists and is valid. Otherwise, nil and an error is returned.
+// exists and is valid. Otherwise, nil and an error are returned.
 func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 	cert, err := readFile(certPath)
 	if err != nil {
@@ -516,49 +564,94 @@ func convEndpoint(s string) (string, error) {
 	return u.Host, nil
 }
 
-// convPathExact converts s from a URL string to the exact path if s is a valid
-// URL. Otherwise, "" and an error are returned.
+// convPathExact converts s from a URL string to its path and original encoding if
+// s is a valid URL. Otherwise, an empty path and an error are returned.
 //
 // If the path contained in s is empty, "/" is returned.
-func convPathExact(s string) (string, error) {
+func convPathExact(s string) (endpointPath, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return "", err
+		return endpointPath{}, err
 	}
 	if u.Path == "" {
-		return "/", nil
+		return endpointPath{Path: "/"}, nil
 	}
-	return u.Path, nil
+	return endpointPath{Path: u.Path, RawPath: u.RawPath}, nil
 }
 
-// convPath converts s from a URL string to an OTLP endpoint path if s is a
-// valid URL. Otherwise, "" and an error are returned.
-func convPath(s string) (string, error) {
+// convPath converts s from a URL string to an OTLP endpoint path and its original
+// encoding if s is a valid URL. Otherwise, an empty path and an error are returned.
+func convPath(s string) (endpointPath, error) {
 	u, err := url.Parse(s)
 	if err != nil {
-		return "", err
+		return endpointPath{}, err
 	}
-	return u.Path + "/v1/logs", nil
+	suffix := defaultPath
+	// Reuse a trailing slash without cleaning the configured base path.
+	if strings.HasSuffix(u.EscapedPath(), "/") {
+		suffix = strings.TrimPrefix(suffix, "/")
+	}
+	p := endpointPath{Path: u.Path + suffix, RawPath: u.RawPath}
+	if p.RawPath != "" {
+		p.RawPath += suffix
+	}
+	return p, nil
 }
 
-// convInsecure parses s as a URL string and returns if the connection should
-// use client transport security or not. If s is an invalid URL, false and an
-// error are returned.
+// convInsecure converts s from a string to a bool without case sensitivity.
+// If s is invalid, it returns an error.
 func convInsecure(s string) (bool, error) {
-	u, err := url.Parse(s)
-	if err != nil {
-		return false, err
+	s = strings.ToLower(s)
+	if s != "true" && s != "false" {
+		return false, fmt.Errorf("can't convert %q to bool", s)
 	}
-	return u.Scheme != "https", nil
+
+	return s == "true", nil
+}
+
+// loadInsecureFromEnvEndpoint returns a resolver that fetches the insecure
+// setting from envEndpoint, if possible.
+func loadInsecureFromEnvEndpoint(envEndpoint []string) resolver[bool] {
+	return func(s setting[bool]) setting[bool] {
+		if s.Set {
+			// Passed, valid, options have precedence.
+			return s
+		}
+
+		for _, key := range envEndpoint {
+			if vStr := os.Getenv(key); vStr != "" {
+				u, err := url.Parse(vStr)
+				if err != nil {
+					otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
+					continue
+				}
+
+				return insecureFromScheme(s, u.Scheme)
+			}
+		}
+		return s
+	}
+}
+
+// insecureFromScheme returns the insecure setting implied by scheme.
+// An empty scheme does not force an insecure setting.
+func insecureFromScheme(prev setting[bool], scheme string) setting[bool] {
+	if scheme == "https" {
+		return newSetting(false)
+	} else if scheme != "" {
+		return newSetting(true)
+	}
+
+	return prev
 }
 
 // convHeaders converts the OTel environment variable header value s into a
-// mapping of header key to value. If s is invalid a partial result and error
+// mapping of header keys to values. If s is invalid, a partial result and an error
 // are returned.
 func convHeaders(s string) (map[string]string, error) {
 	out := make(map[string]string)
 	var err error
-	for _, header := range strings.Split(s, ",") {
+	for header := range strings.SplitSeq(s, ",") {
 		rawKey, rawVal, found := strings.Cut(header, "=")
 		if !found {
 			err = errors.Join(err, fmt.Errorf("invalid header: %s", header))
@@ -587,7 +680,7 @@ func convHeaders(s string) (map[string]string, error) {
 }
 
 // convCompression returns the parsed compression encoded in s. NoCompression
-// and an errors are returned if s is unknown.
+// and an error are returned if s is unknown.
 func convCompression(s string) (Compression, error) {
 	switch s {
 	case "gzip":
@@ -598,8 +691,9 @@ func convCompression(s string) (Compression, error) {
 	return NoCompression, fmt.Errorf("unknown compression: %s", s)
 }
 
-// convDuration converts s into a duration of milliseconds. If s does not
-// contain an integer, 0 and an error are returned.
+// convDuration interprets s as a number of milliseconds and returns the
+// corresponding duration. If s does not contain an integer, 0 and an error are
+// returned.
 func convDuration(s string) (time.Duration, error) {
 	d, err := strconv.Atoi(s)
 	if err != nil {
@@ -609,7 +703,7 @@ func convDuration(s string) (time.Duration, error) {
 	return time.Duration(d) * time.Millisecond, nil
 }
 
-// fallback returns a resolve that will set a setting value to val if it is not
+// fallback returns a resolver that will set a setting value to val if it is not
 // already set.
 //
 // This is usually passed at the end of a resolver chain to ensure a default is

@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package cicdconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "cicd" namespace.
 package cicdconv
 
@@ -84,11 +84,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // PipelineRunActive is an instrument used to record metric values conforming to
 // the "cicd.pipeline.run.active" semantic conventions. It represents the number
@@ -115,7 +113,7 @@ func NewPipelineRunActive(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PipelineRunActive{noop.Int64UpDownCounter{}}, err
+		return PipelineRunActive{noop.Int64UpDownCounter{}}, err
 	}
 	return PipelineRunActive{i}, nil
 }
@@ -221,7 +219,7 @@ func NewPipelineRunDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PipelineRunDuration{noop.Float64Histogram{}}, err
+		return PipelineRunDuration{noop.Float64Histogram{}}, err
 	}
 	return PipelineRunDuration{i}, nil
 }
@@ -291,6 +289,7 @@ func (m PipelineRunDuration) Record(
 func (m PipelineRunDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -342,7 +341,7 @@ func NewPipelineRunErrors(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return PipelineRunErrors{noop.Int64Counter{}}, err
+		return PipelineRunErrors{noop.Int64Counter{}}, err
 	}
 	return PipelineRunErrors{i}, nil
 }
@@ -457,7 +456,7 @@ func NewSystemErrors(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return SystemErrors{noop.Int64Counter{}}, err
+		return SystemErrors{noop.Int64Counter{}}, err
 	}
 	return SystemErrors{i}, nil
 }
@@ -567,7 +566,7 @@ func NewWorkerCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return WorkerCount{noop.Int64UpDownCounter{}}, err
+		return WorkerCount{noop.Int64UpDownCounter{}}, err
 	}
 	return WorkerCount{i}, nil
 }

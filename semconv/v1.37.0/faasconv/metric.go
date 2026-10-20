@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package faasconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "faas" namespace.
 package faasconv
 
@@ -74,7 +74,7 @@ func NewColdstarts(
 		opt...,
 	)
 	if err != nil {
-	    return Coldstarts{noop.Int64Counter{}}, err
+		return Coldstarts{noop.Int64Counter{}}, err
 	}
 	return Coldstarts{i}, nil
 }
@@ -185,7 +185,7 @@ func NewCPUUsage(
 		opt...,
 	)
 	if err != nil {
-	    return CPUUsage{noop.Float64Histogram{}}, err
+		return CPUUsage{noop.Float64Histogram{}}, err
 	}
 	return CPUUsage{i}, nil
 }
@@ -243,6 +243,7 @@ func (m CPUUsage) Record(
 func (m CPUUsage) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -295,7 +296,7 @@ func NewErrors(
 		opt...,
 	)
 	if err != nil {
-	    return Errors{noop.Int64Counter{}}, err
+		return Errors{noop.Int64Counter{}}, err
 	}
 	return Errors{i}, nil
 }
@@ -406,7 +407,7 @@ func NewInitDuration(
 		opt...,
 	)
 	if err != nil {
-	    return InitDuration{noop.Float64Histogram{}}, err
+		return InitDuration{noop.Float64Histogram{}}, err
 	}
 	return InitDuration{i}, nil
 }
@@ -464,6 +465,7 @@ func (m InitDuration) Record(
 func (m InitDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -516,7 +518,7 @@ func NewInvocations(
 		opt...,
 	)
 	if err != nil {
-	    return Invocations{noop.Int64Counter{}}, err
+		return Invocations{noop.Int64Counter{}}, err
 	}
 	return Invocations{i}, nil
 }
@@ -627,7 +629,7 @@ func NewInvokeDuration(
 		opt...,
 	)
 	if err != nil {
-	    return InvokeDuration{noop.Float64Histogram{}}, err
+		return InvokeDuration{noop.Float64Histogram{}}, err
 	}
 	return InvokeDuration{i}, nil
 }
@@ -685,6 +687,7 @@ func (m InvokeDuration) Record(
 func (m InvokeDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -737,7 +740,7 @@ func NewMemUsage(
 		opt...,
 	)
 	if err != nil {
-	    return MemUsage{noop.Int64Histogram{}}, err
+		return MemUsage{noop.Int64Histogram{}}, err
 	}
 	return MemUsage{i}, nil
 }
@@ -795,6 +798,7 @@ func (m MemUsage) Record(
 func (m MemUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -847,7 +851,7 @@ func NewNetIO(
 		opt...,
 	)
 	if err != nil {
-	    return NetIO{noop.Int64Histogram{}}, err
+		return NetIO{noop.Int64Histogram{}}, err
 	}
 	return NetIO{i}, nil
 }
@@ -905,6 +909,7 @@ func (m NetIO) Record(
 func (m NetIO) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -957,7 +962,7 @@ func NewTimeouts(
 		opt...,
 	)
 	if err != nil {
-	    return Timeouts{noop.Int64Counter{}}, err
+		return Timeouts{noop.Int64Counter{}}, err
 	}
 	return Timeouts{i}, nil
 }

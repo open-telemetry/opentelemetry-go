@@ -3,7 +3,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Package signalrconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "signalr" namespace.
 package signalrconv
 
@@ -84,7 +84,7 @@ func NewServerActiveConnections(
 		opt...,
 	)
 	if err != nil {
-	    return ServerActiveConnections{noop.Int64UpDownCounter{}}, err
+		return ServerActiveConnections{noop.Int64UpDownCounter{}}, err
 	}
 	return ServerActiveConnections{i}, nil
 }
@@ -209,7 +209,7 @@ func NewServerConnectionDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ServerConnectionDuration{noop.Float64Histogram{}}, err
+		return ServerConnectionDuration{noop.Float64Histogram{}}, err
 	}
 	return ServerConnectionDuration{i}, nil
 }
@@ -273,6 +273,7 @@ func (m ServerConnectionDuration) Record(
 func (m ServerConnectionDuration) RecordSet(ctx context.Context, val float64, set attribute.Set) {
 	if set.Len() == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

@@ -1,6 +1,9 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package rpcconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "rpc" namespace.
 package rpcconv
 
@@ -43,7 +46,7 @@ func NewClientDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientDuration{noop.Float64Histogram{}}, err
+		return ClientDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientDuration{i}, nil
 }
@@ -77,6 +80,7 @@ func (ClientDuration) Description() string {
 func (m ClientDuration) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -114,7 +118,7 @@ func NewClientRequestSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientRequestSize{noop.Int64Histogram{}}, err
+		return ClientRequestSize{noop.Int64Histogram{}}, err
 	}
 	return ClientRequestSize{i}, nil
 }
@@ -145,6 +149,7 @@ func (ClientRequestSize) Description() string {
 func (m ClientRequestSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -182,7 +187,7 @@ func NewClientRequestsPerRPC(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientRequestsPerRPC{noop.Int64Histogram{}}, err
+		return ClientRequestsPerRPC{noop.Int64Histogram{}}, err
 	}
 	return ClientRequestsPerRPC{i}, nil
 }
@@ -215,6 +220,7 @@ func (ClientRequestsPerRPC) Description() string {
 func (m ClientRequestsPerRPC) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -252,7 +258,7 @@ func NewClientResponseSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientResponseSize{noop.Int64Histogram{}}, err
+		return ClientResponseSize{noop.Int64Histogram{}}, err
 	}
 	return ClientResponseSize{i}, nil
 }
@@ -283,6 +289,7 @@ func (ClientResponseSize) Description() string {
 func (m ClientResponseSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -320,7 +327,7 @@ func NewClientResponsesPerRPC(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ClientResponsesPerRPC{noop.Int64Histogram{}}, err
+		return ClientResponsesPerRPC{noop.Int64Histogram{}}, err
 	}
 	return ClientResponsesPerRPC{i}, nil
 }
@@ -353,6 +360,7 @@ func (ClientResponsesPerRPC) Description() string {
 func (m ClientResponsesPerRPC) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -390,7 +398,7 @@ func NewServerDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerDuration{noop.Float64Histogram{}}, err
+		return ServerDuration{noop.Float64Histogram{}}, err
 	}
 	return ServerDuration{i}, nil
 }
@@ -424,6 +432,7 @@ func (ServerDuration) Description() string {
 func (m ServerDuration) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Float64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -461,7 +470,7 @@ func NewServerRequestSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerRequestSize{noop.Int64Histogram{}}, err
+		return ServerRequestSize{noop.Int64Histogram{}}, err
 	}
 	return ServerRequestSize{i}, nil
 }
@@ -492,6 +501,7 @@ func (ServerRequestSize) Description() string {
 func (m ServerRequestSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -529,7 +539,7 @@ func NewServerRequestsPerRPC(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerRequestsPerRPC{noop.Int64Histogram{}}, err
+		return ServerRequestsPerRPC{noop.Int64Histogram{}}, err
 	}
 	return ServerRequestsPerRPC{i}, nil
 }
@@ -562,6 +572,7 @@ func (ServerRequestsPerRPC) Description() string {
 func (m ServerRequestsPerRPC) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -599,7 +610,7 @@ func NewServerResponseSize(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerResponseSize{noop.Int64Histogram{}}, err
+		return ServerResponseSize{noop.Int64Histogram{}}, err
 	}
 	return ServerResponseSize{i}, nil
 }
@@ -630,6 +641,7 @@ func (ServerResponseSize) Description() string {
 func (m ServerResponseSize) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)
@@ -667,7 +679,7 @@ func NewServerResponsesPerRPC(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ServerResponsesPerRPC{noop.Int64Histogram{}}, err
+		return ServerResponsesPerRPC{noop.Int64Histogram{}}, err
 	}
 	return ServerResponsesPerRPC{i}, nil
 }
@@ -700,6 +712,7 @@ func (ServerResponsesPerRPC) Description() string {
 func (m ServerResponsesPerRPC) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
 	if len(attrs) == 0 {
 		m.Int64Histogram.Record(ctx, val)
+		return
 	}
 
 	o := recOptPool.Get().(*[]metric.RecordOption)

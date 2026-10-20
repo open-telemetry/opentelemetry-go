@@ -28,8 +28,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -110,6 +110,53 @@ func TestExporterExportSpan(t *testing.T) {
 			assert.Equal(t, wantone+wantone, got)
 		}
 	}
+}
+
+func TestExporterNilWriterPreservesWriter(t *testing.T) {
+	var buf bytes.Buffer
+	exp, err := stdouttrace.New(stdouttrace.WithWriter(&buf), stdouttrace.WithWriter(nil))
+	require.NoError(t, err)
+	require.NoError(t, exp.ExportSpans(t.Context(), tracetest.SpanStubs{{Name: "test"}}.Snapshots()))
+	assert.Contains(t, buf.String(), `"Name":"test"`)
+}
+
+func TestWithoutTimestampsPreservesInput(t *testing.T) {
+	now := time.Now()
+	span := tracetest.SpanStub{
+		StartTime: now,
+		EndTime:   now.Add(time.Second),
+		Events: []tracesdk.Event{
+			{Name: "first", Time: now},
+			{Name: "second", Time: now.Add(time.Millisecond)},
+		},
+	}.Snapshot()
+	spans := []tracesdk.ReadOnlySpan{span}
+	var before, without, after bytes.Buffer
+	withTimestamps, err := stdouttrace.New(stdouttrace.WithWriter(&before))
+	require.NoError(t, err)
+	require.NoError(t, withTimestamps.ExportSpans(t.Context(), spans))
+
+	withoutTimestamps, err := stdouttrace.New(stdouttrace.WithWriter(&without), stdouttrace.WithoutTimestamps())
+	require.NoError(t, err)
+	require.NoError(t, withoutTimestamps.ExportSpans(t.Context(), spans))
+
+	var got struct {
+		StartTime time.Time
+		EndTime   time.Time
+		Events    []tracesdk.Event
+	}
+	require.NoError(t, json.Unmarshal(without.Bytes(), &got))
+	assert.Zero(t, got.StartTime)
+	assert.Zero(t, got.EndTime)
+	require.Len(t, got.Events, 2)
+	for _, event := range got.Events {
+		assert.Zero(t, event.Time)
+	}
+
+	withTimestamps, err = stdouttrace.New(stdouttrace.WithWriter(&after))
+	require.NoError(t, err)
+	require.NoError(t, withTimestamps.ExportSpans(t.Context(), spans))
+	assert.JSONEq(t, before.String(), after.String(), "exporting without timestamps must not modify the input span")
 }
 
 func expectedJSON(now time.Time) string {
@@ -352,7 +399,8 @@ func TestObservability(t *testing.T) {
 			otel.SetMeterProvider(mp)
 
 			exporter, err := stdouttrace.New(
-				stdouttrace.WithWriter(io.Discard))
+				stdouttrace.WithWriter(io.Discard),
+			)
 			require.NoError(t, err)
 
 			tt.callExportSpans(t, exporter)
@@ -362,6 +410,24 @@ func TestObservability(t *testing.T) {
 
 			tt.assertMetrics(t, rm)
 		})
+	}
+}
+
+func BenchmarkExporterWithoutTimestamps(b *testing.B) {
+	spans := tracetest.SpanStubs{{
+		Events: []tracesdk.Event{
+			{Name: "first", Time: time.Now()},
+			{Name: "second", Time: time.Now()},
+		},
+	}}.Snapshots()
+	ex, err := stdouttrace.New(stdouttrace.WithWriter(io.Discard), stdouttrace.WithoutTimestamps())
+	require.NoError(b, err)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err := ex.ExportSpans(b.Context(), spans); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 

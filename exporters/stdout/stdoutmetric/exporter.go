@@ -1,15 +1,18 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+package stdoutmetric
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/counter"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/observ"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -25,6 +28,8 @@ type exporter struct {
 	aggregationSelector metric.AggregationSelector
 
 	redactTimestamps bool
+
+	inst *observ.Instrumentation
 }
 
 // New returns a configured metric exporter.
@@ -39,7 +44,9 @@ func New(options ...Option) (metric.Exporter, error) {
 		redactTimestamps:    cfg.redactTimestamps,
 	}
 	exp.encVal.Store(*cfg.encoder)
-	return exp, nil
+	var err error
+	exp.inst, err = observ.NewInstrumentation(counter.NextExporterID())
+	return exp, err
 }
 
 func (e *exporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
@@ -50,17 +57,23 @@ func (e *exporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
 	return e.aggregationSelector(k)
 }
 
-func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) error {
-	if err := ctx.Err(); err != nil {
+func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics) (err error) {
+	if e.inst != nil {
+		op := e.inst.ExportMetrics(ctx, countDataPoints(data))
+		defer func() { op.End(err) }()
+	}
+	err = ctx.Err()
+	if err != nil {
 		return err
 	}
+	output := data
 	if e.redactTimestamps {
-		redactTimestamps(data)
+		output = redactTimestamps(data)
 	}
 
-	global.Debug("STDOUT exporter export", "Data", data)
+	global.Debug("STDOUT exporter export", "Data", output)
 
-	return e.encVal.Load().(encoderHolder).Encode(data)
+	return e.encVal.Load().(encoderHolder).Encode(output)
 }
 
 func (*exporter) ForceFlush(context.Context) error {
@@ -81,14 +94,16 @@ func (*exporter) MarshalLog() any {
 	return struct{ Type string }{Type: "STDOUT"}
 }
 
-func redactTimestamps(orig *metricdata.ResourceMetrics) {
+func redactTimestamps(orig *metricdata.ResourceMetrics) *metricdata.ResourceMetrics {
+	rm := *orig
+	rm.ScopeMetrics = slices.Clone(orig.ScopeMetrics)
 	for i, sm := range orig.ScopeMetrics {
-		metrics := sm.Metrics
-		for j, m := range metrics {
-			data := m.Data
-			orig.ScopeMetrics[i].Metrics[j].Data = redactAggregationTimestamps(data)
+		rm.ScopeMetrics[i].Metrics = slices.Clone(sm.Metrics)
+		for j, m := range sm.Metrics {
+			rm.ScopeMetrics[i].Metrics[j].Data = redactAggregationTimestamps(m.Data)
 		}
 	}
+	return &rm
 }
 
 var errUnknownAggType = errors.New("unknown aggregation type")
@@ -158,4 +173,38 @@ func redactDataPointTimestamps[T int64 | float64](sdp []metricdata.DataPoint[T])
 		}
 	}
 	return out
+}
+
+// countDataPoints counts the total number of data points in a ResourceMetrics.
+func countDataPoints(rm *metricdata.ResourceMetrics) int64 {
+	if rm == nil {
+		return 0
+	}
+
+	var total int64
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			switch data := m.Data.(type) {
+			case metricdata.Gauge[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Gauge[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Sum[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Sum[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Histogram[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Histogram[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.ExponentialHistogram[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.ExponentialHistogram[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Summary:
+				total += int64(len(data.DataPoints))
+			}
+		}
+	}
+	return total
 }

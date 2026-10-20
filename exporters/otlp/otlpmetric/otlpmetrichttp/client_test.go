@@ -4,24 +4,40 @@
 package otlpmetrichttp
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/counter"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/otest"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 type clientShim struct {
@@ -80,6 +96,276 @@ func TestNewWithInvalidEndpoint(t *testing.T) {
 	assert.Nil(t, exp)
 }
 
+func TestEndpointPath(t *testing.T) {
+	requestPaths := make(chan string, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestPaths <- r.RequestURI
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(server.Close)
+
+	const (
+		endpointEnv        = "OTEL_EXPORTER_OTLP_ENDPOINT"
+		metricsEndpointEnv = "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"
+	)
+	testCases := []struct {
+		name     string
+		env      map[string]string
+		options  []Option
+		wantPath string
+	}{
+		{
+			name:     "Default",
+			options:  []Option{WithEndpoint(strings.TrimPrefix(server.URL, "http://")), WithInsecure()},
+			wantPath: "/v1/metrics",
+		},
+		{name: "Generic/Empty", env: map[string]string{endpointEnv: server.URL}, wantPath: "/v1/metrics"},
+		{name: "Generic/Root", env: map[string]string{endpointEnv: server.URL + "/"}, wantPath: "/v1/metrics"},
+		{
+			name:     "Generic/Prefix",
+			env:      map[string]string{endpointEnv: server.URL + "/prefix"},
+			wantPath: "/prefix/v1/metrics",
+		},
+		{
+			name:     "Generic/TrailingSlash",
+			env:      map[string]string{endpointEnv: server.URL + "/prefix/"},
+			wantPath: "/prefix/v1/metrics",
+		},
+		{
+			name:     "Generic/RepeatedSlashes",
+			env:      map[string]string{endpointEnv: server.URL + "/a//b/"},
+			wantPath: "/a//b/v1/metrics",
+		},
+		{
+			name:     "Generic/RepeatedTrailingSlashes",
+			env:      map[string]string{endpointEnv: server.URL + "/a//"},
+			wantPath: "/a//v1/metrics",
+		},
+		{
+			name:     "Generic/DotSegments",
+			env:      map[string]string{endpointEnv: server.URL + "/a/../b/"},
+			wantPath: "/a/../b/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedSlash",
+			env:      map[string]string{endpointEnv: server.URL + "/a%2Fb/"},
+			wantPath: "/a%2Fb/v1/metrics",
+		},
+		{
+			name:     "Generic/LowercaseEscape",
+			env:      map[string]string{endpointEnv: server.URL + "/a%2fb/"},
+			wantPath: "/a%2fb/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedTrailingSlash",
+			env:      map[string]string{endpointEnv: server.URL + "/a%2F"},
+			wantPath: "/a%2F/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedQuestionMark",
+			env:      map[string]string{endpointEnv: server.URL + "/a%3Fb"},
+			wantPath: "/a%3Fb/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedFragment",
+			env:      map[string]string{endpointEnv: server.URL + "/a%23b"},
+			wantPath: "/a%23b/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedPercent",
+			env:      map[string]string{endpointEnv: server.URL + "/a%252Fb"},
+			wantPath: "/a%252Fb/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedSpace",
+			env:      map[string]string{endpointEnv: server.URL + "/a%20"},
+			wantPath: "/a%20/v1/metrics",
+		},
+		{
+			name:     "Generic/EscapedDot",
+			env:      map[string]string{endpointEnv: server.URL + "/a/%2e%2e/"},
+			wantPath: "/a/%2e%2e/v1/metrics",
+		},
+		{name: "Signal/Empty", env: map[string]string{metricsEndpointEnv: server.URL}, wantPath: "/"},
+		{name: "Signal/Root", env: map[string]string{metricsEndpointEnv: server.URL + "/"}, wantPath: "/"},
+		{
+			name:     "Signal/Prefix",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/prefix"},
+			wantPath: "/prefix",
+		},
+		{
+			name:     "Signal/TrailingSlash",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/prefix/"},
+			wantPath: "/prefix/",
+		},
+		{
+			name:     "Signal/RepeatedSlashes",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a//b/"},
+			wantPath: "/a//b/",
+		},
+		{
+			name:     "Signal/RepeatedTrailingSlashes",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a//"},
+			wantPath: "/a//",
+		},
+		{
+			name:     "Signal/DotSegments",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a/../b/"},
+			wantPath: "/a/../b/",
+		},
+		{
+			name:     "Signal/EscapedSlash",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2Fb"},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "Signal/LowercaseEscape",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2fb"},
+			wantPath: "/a%2fb",
+		},
+		{
+			name:     "Signal/EscapedTrailingSlash",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2F"},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "Signal/EscapedQuestionMark",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%3Fb"},
+			wantPath: "/a%3Fb",
+		},
+		{
+			name:     "Signal/EscapedFragment",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%23b"},
+			wantPath: "/a%23b",
+		},
+		{
+			name:     "Signal/EscapedSpace",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%20"},
+			wantPath: "/a%20",
+		},
+		{
+			name:     "Signal/EscapedPercent",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%252Fb"},
+			wantPath: "/a%252Fb",
+		},
+		{
+			name:     "Signal/EscapedDot",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a/%2E%2E/b"},
+			wantPath: "/a/%2E%2E/b",
+		},
+		{name: "Option/Empty", options: []Option{WithEndpointURL(server.URL)}, wantPath: "/"},
+		{name: "Option/Root", options: []Option{WithEndpointURL(server.URL + "/")}, wantPath: "/"},
+		{name: "Option/Prefix", options: []Option{WithEndpointURL(server.URL + "/prefix")}, wantPath: "/prefix"},
+		{
+			name:     "Option/TrailingSlash",
+			options:  []Option{WithEndpointURL(server.URL + "/prefix/")},
+			wantPath: "/prefix/",
+		},
+		{name: "Option/RepeatedSlashes", options: []Option{WithEndpointURL(server.URL + "/a//b/")}, wantPath: "/a//b/"},
+		{
+			name:     "Option/RepeatedTrailingSlashes",
+			options:  []Option{WithEndpointURL(server.URL + "/a//")},
+			wantPath: "/a//",
+		},
+		{name: "Option/DotSegments", options: []Option{WithEndpointURL(server.URL + "/a/../b/")}, wantPath: "/a/../b/"},
+		{name: "Option/EscapedSlash", options: []Option{WithEndpointURL(server.URL + "/a%2Fb")}, wantPath: "/a%2Fb"},
+		{name: "Option/LowercaseEscape", options: []Option{WithEndpointURL(server.URL + "/a%2fb")}, wantPath: "/a%2fb"},
+		{
+			name:     "Option/EscapedTrailingSlash",
+			options:  []Option{WithEndpointURL(server.URL + "/a%2F")},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "Option/EscapedQuestionMark",
+			options:  []Option{WithEndpointURL(server.URL + "/a%3Fb")},
+			wantPath: "/a%3Fb",
+		},
+		{name: "Option/EscapedFragment", options: []Option{WithEndpointURL(server.URL + "/a%23b")}, wantPath: "/a%23b"},
+		{
+			name:     "Option/EscapedPercent",
+			options:  []Option{WithEndpointURL(server.URL + "/a%252Fb")},
+			wantPath: "/a%252Fb",
+		},
+		{name: "Option/EscapedSpace", options: []Option{WithEndpointURL(server.URL + "/a%20")}, wantPath: "/a%20"},
+		{
+			name:     "Option/EscapedDot",
+			options:  []Option{WithEndpointURL(server.URL + "/a/%2e%2e/b")},
+			wantPath: "/a/%2e%2e/b",
+		},
+		{
+			name: "Precedence/SignalOverGeneric",
+			env: map[string]string{
+				endpointEnv:        server.URL + "/generic%2Fpath",
+				metricsEndpointEnv: server.URL + "/signal%2Fpath",
+			},
+			wantPath: "/signal%2Fpath",
+		},
+		{
+			name: "Precedence/OptionOverEnvironment",
+			env: map[string]string{
+				endpointEnv:        server.URL + "/generic%2Fpath",
+				metricsEndpointEnv: server.URL + "/signal%2Fpath",
+			},
+			options:  []Option{WithEndpointURL(server.URL + "/option%2Fpath")},
+			wantPath: "/option%2Fpath",
+		},
+		{
+			name:     "Precedence/URLPathOverEndpointURL",
+			options:  []Option{WithEndpointURL(server.URL + "/endpoint%2Fpath"), WithURLPath(" /a%2Fb ")},
+			wantPath: "/a%252Fb",
+		},
+		{
+			name:     "Precedence/EndpointURLOverURLPath",
+			options:  []Option{WithURLPath("/a%2Fb"), WithEndpointURL(server.URL + "/endpoint%2Fpath")},
+			wantPath: "/endpoint%2Fpath",
+		},
+		{
+			name:     "Precedence/URLPathOverEnvironment",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2Fb"},
+			options:  []Option{WithURLPath("/a/b")},
+			wantPath: "/a/b",
+		},
+		{
+			name:     "Precedence/PlainEndpointURLOverEscapedEnvironment",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2Fb"},
+			options:  []Option{WithEndpointURL(server.URL + "/a/b")},
+			wantPath: "/a/b",
+		},
+		{
+			name:     "Precedence/EndpointPreservesEnvironmentPath",
+			env:      map[string]string{metricsEndpointEnv: server.URL + "/a%2Fb"},
+			options:  []Option{WithEndpoint(strings.TrimPrefix(server.URL, "http://"))},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "URLPath/EmptyUsesDefault",
+			options:  []Option{WithEndpointURL(server.URL + "/endpoint%2Fpath"), WithURLPath("")},
+			wantPath: "/v1/metrics",
+		},
+		{
+			name:     "URLPath/Relative",
+			options:  []Option{WithEndpointURL(server.URL), WithURLPath(" a/b ")},
+			wantPath: "/a/b",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(endpointEnv, "")
+			t.Setenv(metricsEndpointEnv, "")
+			for key, value := range tc.env {
+				t.Setenv(key, value)
+			}
+			exp, err := New(t.Context(), tc.options...)
+			require.NoError(t, err)
+			ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+			require.NoError(t, exp.Export(t.Context(), &metricdata.ResourceMetrics{}))
+			assert.Equal(t, tc.wantPath, <-requestPaths)
+		})
+	}
+}
+
 func TestConfig(t *testing.T) {
 	factoryFunc := func(ePt string, rCh <-chan otest.ExportResult, o ...Option) (metric.Exporter, *otest.HTTPCollector) {
 		coll, err := otest.NewHTTPCollector(ePt, rCh)
@@ -102,7 +388,7 @@ func TestConfig(t *testing.T) {
 		require.NoError(t, err)
 		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 
-		exp, err := New(ctx, WithEndpointURL("http://"+coll.Addr().String()))
+		exp, err := New(ctx, WithEndpointURL("http://"+coll.Addr().String()+oconf.DefaultMetricsPath))
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
@@ -142,7 +428,106 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
-		assert.ErrorAs(t, err, new(retryableError))
+		require.Error(t, err)
+		timedOut := errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "exporter export timeout")
+		if !timedOut {
+			assert.ErrorAs(t, err, new(retryableError))
+		}
+	})
+
+	t.Run("WithTimeout bounds retry", func(t *testing.T) {
+		const queued = 1000
+		rCh := make(chan otest.ExportResult, queued)
+		for range queued {
+			rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+				Status: http.StatusServiceUnavailable,
+				Err:    errors.New("unavailable"),
+			}}
+		}
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(50*time.Millisecond),
+			WithRetry(RetryConfig{
+				Enabled:         true,
+				InitialInterval: time.Millisecond,
+				MaxInterval:     time.Millisecond,
+				MaxElapsedTime:  time.Minute,
+			}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		start := time.Now()
+		err := exp.Export(ctx, &metricdata.ResourceMetrics{})
+		elapsed := time.Since(start)
+
+		require.Error(t, err)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			assert.ErrorContains(t, err, "exporter export timeout")
+		}
+		assert.Less(t, elapsed, 5*time.Second, "export retried until MaxElapsedTime")
+		assert.NotEqual(t, queued, len(rCh), "collector received no requests")
+
+		time.Sleep(50 * time.Millisecond)
+		remaining := len(rCh)
+		time.Sleep(50 * time.Millisecond)
+		assert.Len(t, rCh, remaining, "requests continued after the export timeout")
+	})
+
+	t.Run("WithHTTPClient ignores WithTimeout", func(t *testing.T) {
+		rCh := make(chan otest.ExportResult, 1)
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(time.Millisecond),
+			WithHTTPClient(&http.Client{}),
+			WithRetry(RetryConfig{Enabled: false}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		done := make(chan error, 1)
+		go func() {
+			done <- exp.Export(ctx, &metricdata.ResourceMetrics{})
+		}()
+		select {
+		case err := <-done:
+			t.Fatalf("export finished before the collector responded: %v", err)
+		case <-time.After(50 * time.Millisecond):
+		}
+		rCh <- otest.ExportResult{}
+		select {
+		case err := <-done:
+			assert.NoError(t, err)
+		case <-time.After(2 * time.Second):
+			t.Fatal("export did not finish")
+		}
+	})
+
+	t.Run("WithTimeout zero", func(t *testing.T) {
+		rCh := make(chan otest.ExportResult, 2)
+		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+			Status: http.StatusServiceUnavailable,
+			Err:    errors.New("unavailable"),
+		}}
+		rCh <- otest.ExportResult{}
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(0),
+			WithRetry(RetryConfig{
+				Enabled:         true,
+				InitialInterval: time.Millisecond,
+				MaxInterval:     time.Millisecond,
+				MaxElapsedTime:  time.Second,
+			}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		assert.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+		assert.Empty(t, rCh)
 	})
 
 	t.Run("WithCompressionGZip", func(t *testing.T) {
@@ -157,7 +542,7 @@ func TestConfig(t *testing.T) {
 	t.Run("WithRetry", func(t *testing.T) {
 		emptyErr := errors.New("")
 		rCh := make(chan otest.ExportResult, 5)
-		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"10"}}
+		header := http.Header{http.CanonicalHeaderKey("Retry-After"): {"1"}}
 		// All retryable errors.
 		rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
 			Status: http.StatusServiceUnavailable,
@@ -238,6 +623,17 @@ func TestConfig(t *testing.T) {
 		assert.Len(t, coll.Collect().Dump(), 1)
 	})
 
+	t.Run("WithInsecureAndTLSClientConfig", func(t *testing.T) {
+		exp, err := New(
+			t.Context(),
+			WithEndpoint("localhost:4318"),
+			WithInsecure(),
+			WithTLSClientConfig(&tls.Config{}),
+		)
+		require.ErrorIs(t, err, errInsecureEndpointWithTLS)
+		assert.Nil(t, exp)
+	})
+
 	t.Run("WithCustomUserAgent", func(t *testing.T) {
 		key := http.CanonicalHeaderKey("user-agent")
 		headers := map[string]string{key: "custom-user-agent"}
@@ -253,7 +649,7 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, []string{headers[key]}, got[key])
 	})
 
-	t.Run("WithProxy", func(t *testing.T) {
+	t.Run("WithHTTPClient", func(t *testing.T) {
 		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
 		headerValueSetInProxy := "true"
 		exp, coll := factoryFunc("", nil, WithHTTPClient(&http.Client{
@@ -275,7 +671,7 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
 	})
 
-	t.Run("WithHTTPClient", func(t *testing.T) {
+	t.Run("WithProxy", func(t *testing.T) {
 		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
 		headerValueSetInProxy := "true"
 		exp, coll := factoryFunc("", nil, WithProxy(func(r *http.Request) (*url.URL, error) {
@@ -313,4 +709,560 @@ func TestConfig(t *testing.T) {
 
 		assert.NoError(t, exCtx.Err())
 	})
+}
+
+func TestGetBodyCalledOnRedirect(t *testing.T) {
+	// Test that req.GetBody is set correctly, allowing the HTTP transport
+	// to re-send the body on 307 redirects.
+	var mu sync.Mutex
+	var requestBodies [][]byte
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		mu.Lock()
+		requestBodies = append(requestBodies, body)
+		isFirstRequest := len(requestBodies) == 1
+		mu.Unlock()
+
+		if isFirstRequest {
+			w.Header().Set("Location", "/v1/metrics/final")
+			w.WriteHeader(http.StatusTemporaryRedirect)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	opts := []Option{WithEndpoint(server.Listener.Addr().String()), WithInsecure()}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+
+	exporter, err := newExporter(client, cfg)
+	require.NoError(t, err)
+	ctx := t.Context()
+	defer func() { _ = exporter.Shutdown(ctx) }()
+
+	err = exporter.Export(ctx, &metricdata.ResourceMetrics{})
+	require.NoError(t, err)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	require.Len(t, requestBodies, 2, "expected 2 requests (original + redirect)")
+	assert.NotEmpty(t, requestBodies[0], "original request body should not be empty")
+	assert.Equal(t, requestBodies[0], requestBodies[1], "redirect body should match original")
+}
+
+func TestGetBodyCalledOnRedirectWithGzip(t *testing.T) {
+	// Test that req.GetBody replays the gzipped request body on redirects.
+	var mu sync.Mutex
+	var requestBodies [][]byte
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+
+		mu.Lock()
+		requestBodies = append(requestBodies, body)
+		isFirstRequest := len(requestBodies) == 1
+		mu.Unlock()
+
+		if isFirstRequest {
+			w.Header().Set("Location", "/v1/metrics/final")
+			w.WriteHeader(http.StatusTemporaryRedirect)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	opts := []Option{
+		WithEndpoint(server.Listener.Addr().String()),
+		WithInsecure(),
+		WithCompression(GzipCompression),
+	}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	client, err := newClient(cfg)
+	require.NoError(t, err)
+
+	exporter, err := newExporter(client, cfg)
+	require.NoError(t, err)
+	ctx := t.Context()
+	defer func() { _ = exporter.Shutdown(ctx) }()
+
+	err = exporter.Export(ctx, &metricdata.ResourceMetrics{})
+	require.NoError(t, err)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	require.Len(t, requestBodies, 2, "expected 2 requests (original + redirect)")
+	assert.NotEmpty(t, requestBodies[0], "original request body should not be empty")
+	assert.Equal(t, requestBodies[0], requestBodies[1], "redirect body should match original")
+
+	for _, body := range requestBodies {
+		reader, err := gzip.NewReader(bytes.NewReader(body))
+		require.NoError(t, err)
+		func() {
+			defer func() { assert.NoError(t, reader.Close()) }()
+
+			decoded, err := io.ReadAll(reader)
+			require.NoError(t, err)
+			assert.NotEmpty(t, decoded)
+		}()
+	}
+}
+
+func TestResponseBodySizeLimit(t *testing.T) {
+	// largeBody is larger than the configured 1-byte limit.
+	largeBody := []byte("xx")
+
+	tests := []struct {
+		name        string
+		status      int
+		contentType string
+	}{
+		{
+			name:        "success response body too large",
+			status:      http.StatusOK,
+			contentType: "application/x-protobuf",
+		},
+		{
+			name:        "error response body too large",
+			status:      http.StatusServiceUnavailable,
+			contentType: "text/plain",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls int
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				calls++
+				w.Header().Set("Content-Type", tc.contentType)
+				w.WriteHeader(tc.status)
+				_, _ = w.Write(largeBody)
+			}))
+			t.Cleanup(srv.Close)
+
+			opts := []Option{
+				WithEndpoint(srv.Listener.Addr().String()),
+				WithInsecure(),
+				WithMaxResponseSize(1),
+				WithRetry(RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Millisecond,
+					MaxInterval:     time.Millisecond,
+					MaxElapsedTime:  time.Second,
+				}),
+			}
+			cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+			c, err := newClient(cfg)
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = c.Shutdown(t.Context()) })
+
+			err = c.UploadMetrics(t.Context(), &mpb.ResourceMetrics{})
+			assert.ErrorContains(t, err, "response body too large")
+			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
+		})
+	}
+}
+
+func TestResponseBodySizeLimitAfterDecompression(t *testing.T) {
+	const limit = 64
+	body := bytes.Repeat([]byte("x"), 1024)
+
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+		zw := gzip.NewWriter(w)
+		_, _ = zw.Write(body)
+		_ = zw.Close()
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithMaxResponseSize(limit),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	c, err := newClient(cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Shutdown(t.Context()) })
+
+	err = c.UploadMetrics(t.Context(), &mpb.ResourceMetrics{})
+	assert.ErrorContains(t, err, "response body too large: exceeded 64 bytes")
+	assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
+}
+
+func TestRequestBodySizeLimit(t *testing.T) {
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithMaxRequestSize(1),
+		WithRetry(RetryConfig{Enabled: false}),
+	}
+	cfg := oconf.NewHTTPConfig(asHTTPOptions(opts)...)
+	c, err := newClient(cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Shutdown(t.Context()) })
+
+	err = c.UploadMetrics(t.Context(), &mpb.ResourceMetrics{})
+	assert.ErrorContains(t, err, "request body too large")
+	assert.Equal(t, 0, calls, "oversized request must fail before sending")
+}
+
+func TestClientInstrumentation(t *testing.T) {
+	// Enable instrumentation for this test.
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Reset client ID to be deterministic.
+	const id = 0
+	origID := counter.SetExporterID(id)
+	t.Cleanup(func() { counter.SetExporterID(origID) })
+
+	// Save original meter provider and restore at end of test.
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	// Create a new meter provider to capture metrics.
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	const n, msg = 2, "partially successful"
+	rCh := make(chan otest.ExportResult, 1)
+	// Test partial success - return HTTP 200 with partial success info
+	rCh <- otest.ExportResult{
+		Response: &colmetricpb.ExportMetricsServiceResponse{
+			PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
+				RejectedDataPoints: n,
+				ErrorMessage:       msg,
+			},
+		},
+	}
+
+	coll, err := otest.NewHTTPCollector("", rCh)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		require.NoError(t, coll.Shutdown(context.Background()))
+	})
+	t.Cleanup(func() { close(rCh) })
+
+	addr := coll.Addr().String()
+	opts := []Option{WithEndpoint(addr), WithInsecure()}
+	ctx := t.Context()
+	exp, err := New(ctx, opts...)
+	require.NoError(t, err)
+
+	// Export some test data
+	err = exp.Export(ctx, &metricdata.ResourceMetrics{
+		Resource: resource.NewWithAttributes(semconv.SchemaURL, attribute.String("service.name", "test")),
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{
+				Scope: instrumentation.Scope{Name: "test"},
+				Metrics: []metricdata.Metrics{
+					{
+						Name: "test-metric",
+						Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{Value: 42}}},
+					},
+				},
+			},
+		},
+	})
+
+	// Should get partial success error
+	wantErr := internal.MetricPartialSuccessError(n, msg)
+	require.ErrorIs(t, err, wantErr, "Expected partial success error")
+
+	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	require.NoError(t, exp.Shutdown(context.Background()))
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &got))
+
+	attrs := observ.BaseAttrs(id, addr)
+
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      observ.ScopeName,
+			Version:   observ.Version,
+			SchemaURL: observ.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...)},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+				Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+				Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(append(
+							attrs,
+							semconv.ErrorType(err),
+						)...)},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{Attributes: attribute.NewSet(append(
+							attrs,
+							semconv.ErrorType(err),
+							otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(200),
+						)...)},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+				},
+			},
+		},
+	}
+	require.Len(t, got.ScopeMetrics, 1)
+	opt := []metricdatatest.Option{
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreExemplars(),
+		metricdatatest.IgnoreValue(),
+	}
+	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+}
+
+func BenchmarkExporterExportMetrics(b *testing.B) {
+	const n = 10
+
+	run := func(b *testing.B) {
+		coll, err := otest.NewHTTPCollector("", nil)
+		require.NoError(b, err)
+		b.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			require.NoError(b, coll.Shutdown(context.Background()))
+		})
+
+		opts := []Option{WithEndpoint(coll.Addr().String()), WithInsecure()}
+		ctx := b.Context()
+		exp, err := New(ctx, opts...)
+		require.NoError(b, err)
+		b.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(b, exp.Shutdown(context.Background()))
+		})
+
+		// Generate realistic test metric data with multiple metrics.
+		now := time.Now()
+		rm := &metricdata.ResourceMetrics{
+			ScopeMetrics: []metricdata.ScopeMetrics{
+				{
+					Scope: instrumentation.Scope{
+						Name:    "test",
+						Version: "v1.0.0",
+					},
+					Metrics: make([]metricdata.Metrics, n),
+				},
+			},
+		}
+
+		for i := range rm.ScopeMetrics[0].Metrics {
+			rm.ScopeMetrics[0].Metrics[i] = metricdata.Metrics{
+				Name:        fmt.Sprintf("test_counter_%d", i),
+				Description: fmt.Sprintf("A test counter %d", i),
+				Unit:        "1",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								attribute.String("test", "value"),
+								attribute.Int("counter", i),
+							),
+							StartTime: now,
+							Time:      now,
+							Value:     int64(i * 10),
+						},
+					},
+				},
+			}
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for b.Loop() {
+			err = exp.Export(b.Context(), rm)
+		}
+		_ = err
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+		run(b)
+	})
+}
+
+func TestClientInstrumentationStaleStatusCode(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	const id = 0
+	origID := counter.SetExporterID(id)
+	t.Cleanup(func() { counter.SetExporterID(origID) })
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	// Use a client that returns a 503 error once and then a network error.
+	var calls int
+	client := &http.Client{
+		Transport: roundTripperFunc(func(_ *http.Request) (*http.Response, error) {
+			calls++
+			if calls == 1 {
+				return &http.Response{
+					StatusCode: http.StatusServiceUnavailable,
+					Status: fmt.Sprintf("%d %s",
+						http.StatusServiceUnavailable,
+						http.StatusText(http.StatusServiceUnavailable)),
+					Header: make(http.Header),
+					Body:   io.NopCloser(strings.NewReader("")),
+				}, nil
+			}
+			return nil, errors.New("network error")
+		}),
+	}
+
+	ctx := t.Context()
+	exp, err := New(
+		ctx,
+		WithHTTPClient(client),
+		WithInsecure(),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Nanosecond,
+			MaxInterval:     time.Nanosecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	)
+	require.NoError(t, err)
+
+	err = exp.Export(ctx, &metricdata.ResourceMetrics{})
+	assert.Error(t, err)
+
+	require.NoError(t, exp.Shutdown(ctx))
+
+	// Validate that the status code is 0 and not the stale 503 on self-observability metrics.
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &got))
+
+	require.Len(t, got.ScopeMetrics, 1)
+	metrics := got.ScopeMetrics[0].Metrics
+	var found bool
+	for _, m := range metrics {
+		if m.Name != (otelconv.SDKExporterOperationDuration{}).Name() {
+			continue
+		}
+		found = true
+		data := m.Data.(metricdata.Histogram[float64])
+		require.NotEmpty(t, data.DataPoints)
+		dp := data.DataPoints[0]
+		_, ok := dp.Attributes.Value(otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(0).Key)
+		assert.False(t, ok, "should not report status code when the request fails before getting a response.")
+	}
+	assert.True(t, found, "expected to find operation duration metric")
+}
+
+func TestRetryAfterUsesSeconds(t *testing.T) {
+	err := newResponseError(http.Header{"Retry-After": {"10"}}, nil)
+	_, throttle := evaluate(err)
+	assert.Equal(t, 10*time.Second, throttle)
+}
+
+// TestWithEndpointURLNoPathUsesRootPath verifies that a pathless endpoint URL (scheme and host only, no path component)
+// passed to WithEndpointURL is normalized to the root path ("/") rather than falling back to the default OTLP metrics
+// path ("/v1/metrics").
+func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
+	pathCh := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pathCh <- r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+	require.Empty(t, u.Path)
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	// srv.URL has no path component, e.g. "http://127.0.0.1:port".
+	exp, err := New(ctx, WithEndpointURL(srv.URL), WithRetry(RetryConfig{Enabled: false}))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+	require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+
+	got, ok := <-pathCh
+	require.True(t, ok, "request was not received")
+	assert.Equal(t, "/", got, "a pathless endpoint URL must target the root path, not the default metrics path")
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
 }

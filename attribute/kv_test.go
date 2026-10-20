@@ -4,6 +4,7 @@
 package attribute_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -58,6 +59,33 @@ func TestKeyValueConstructors(t *testing.T) {
 				Value: attribute.IntValue(123),
 			},
 		},
+		{
+			name:   "ByteSlice",
+			actual: attribute.ByteSlice("k1", []byte{123}),
+			expected: attribute.KeyValue{
+				Key:   "k1",
+				Value: attribute.ByteSliceValue([]byte{123}),
+			},
+		},
+		{
+			name:   "Slice",
+			actual: attribute.Slice("k1", attribute.BoolValue(true), attribute.IntValue(42)),
+			expected: attribute.KeyValue{
+				Key:   "k1",
+				Value: attribute.SliceValue(attribute.BoolValue(true), attribute.IntValue(42)),
+			},
+		},
+		{
+			name:   "Map",
+			actual: attribute.Map("k1", attribute.String("b", "two"), attribute.Int("a", 1)),
+			expected: attribute.KeyValue{
+				Key: "k1",
+				Value: attribute.MapValue(
+					attribute.Int("a", 1),
+					attribute.String("b", "two"),
+				),
+			},
+		},
 	}
 
 	for _, test := range tt {
@@ -86,11 +114,11 @@ func TestKeyValueValid(t *testing.T) {
 			kv:    attribute.Key("").Bool(true),
 		},
 		{
-			desc:  "INVALID value type should be invalid",
-			valid: false,
+			desc:  "EMPTY value type should be valid",
+			valid: true,
 			kv: attribute.KeyValue{
 				Key: attribute.Key("valid key"),
-				// Default type is INVALID.
+				// Default type is EMPTY.
 				Value: attribute.Value{},
 			},
 		},
@@ -114,12 +142,173 @@ func TestKeyValueValid(t *testing.T) {
 			valid: true,
 			kv:    attribute.String("string", ""),
 		},
+		{
+			desc:  "non-empty key with BYTESLICE type Value should be valid",
+			valid: true,
+			kv:    attribute.ByteSlice("bytes", []byte{}),
+		},
+		{
+			desc:  "non-empty key with SLICE type Value should be valid",
+			valid: true,
+			kv:    attribute.Slice("slice", attribute.StringValue("value")),
+		},
+		{
+			desc:  "non-empty key with MAP type Value should be valid",
+			valid: true,
+			kv:    attribute.Map("map", attribute.String("key", "value")),
+		},
 	}
 
 	for _, test := range tests {
 		if got, want := test.kv.Valid(), test.valid; got != want {
 			t.Error(test.desc)
 		}
+	}
+}
+
+func TestKeyValueString(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		kv   attribute.KeyValue
+		want string
+	}{
+		{
+			name: "zero value",
+			kv:   attribute.KeyValue{},
+			want: `{"":null}`,
+		},
+		{
+			name: "bool true",
+			kv:   attribute.Bool("bool", true),
+			want: `{"bool":true}`,
+		},
+		{
+			name: "bool false",
+			kv:   attribute.Bool("bool", false),
+			want: `{"bool":false}`,
+		},
+		{
+			name: "bool slice",
+			kv:   attribute.BoolSlice("bools", []bool{true, false}),
+			want: `{"bools":[true,false]}`,
+		},
+		{
+			name: "empty bool slice",
+			kv:   attribute.BoolSlice("bools", []bool{}),
+			want: `{"bools":[]}`,
+		},
+		{
+			name: "int64",
+			kv:   attribute.Int64("count", -42),
+			want: `{"count":-42}`,
+		},
+		{
+			name: "int64 slice",
+			kv:   attribute.Int64Slice("counts", []int64{42, -3}),
+			want: `{"counts":[42,-3]}`,
+		},
+		{
+			name: "empty int64 slice",
+			kv:   attribute.Int64Slice("counts", []int64{}),
+			want: `{"counts":[]}`,
+		},
+		{
+			name: "float64",
+			kv:   attribute.Float64("float", 3.14),
+			want: `{"float":3.14}`,
+		},
+		{
+			name: "string",
+			kv:   attribute.String("greeting", `hello "world"`),
+			want: `{"greeting":"hello \"world\""}`,
+		},
+		{
+			name: "string slice",
+			kv:   attribute.StringSlice("strings", []string{"one", "two"}),
+			want: `{"strings":["one","two"]}`,
+		},
+		{
+			name: "empty string slice",
+			kv:   attribute.StringSlice("strings", []string{}),
+			want: `{"strings":[]}`,
+		},
+		{
+			name: "byte slice",
+			kv:   attribute.ByteSlice("bytes", []byte("one")),
+			want: `{"bytes":"b25l"}`,
+		},
+		{
+			name: "float64 slice",
+			kv: attribute.Float64Slice(
+				"floats",
+				[]float64{1.5, math.NaN(), math.Inf(1), math.Inf(-1)},
+			),
+			want: `{"floats":[1.5,"NaN","Infinity","-Infinity"]}`,
+		},
+		{
+			name: "empty float64 slice",
+			kv:   attribute.Float64Slice("floats", []float64{}),
+			want: `{"floats":[]}`,
+		},
+		{
+			name: "float64 NaN",
+			kv:   attribute.Float64("float", math.NaN()),
+			want: `{"float":"NaN"}`,
+		},
+		{
+			name: "float64 Infinity",
+			kv:   attribute.Float64("float", math.Inf(1)),
+			want: `{"float":"Infinity"}`,
+		},
+		{
+			name: "float64 negative Infinity",
+			kv:   attribute.Float64("float", math.Inf(-1)),
+			want: `{"float":"-Infinity"}`,
+		},
+		{
+			name: "value slice",
+			kv: attribute.Slice(
+				"slice",
+				attribute.StringValue("one"),
+				attribute.IntValue(2),
+				attribute.BoolValue(false),
+				attribute.Value{},
+			),
+			want: `{"slice":["one",2,false,null]}`,
+		},
+		{
+			name: "empty value slice",
+			kv:   attribute.Slice("slice"),
+			want: `{"slice":[]}`,
+		},
+		{
+			name: "map",
+			kv: attribute.Map(
+				"context",
+				attribute.String("name", "x"),
+				attribute.Map("nested", attribute.Bool("value", true)),
+			),
+			want: `{"context":{"name":"x","nested":{"value":true}}}`,
+		},
+		{
+			name: "key needs escaping",
+			kv:   attribute.String("line\n\"quoted\"\\key", "value"),
+			want: `{"line\n\"quoted\"\\key":"value"}`,
+		},
+		{
+			name: "key has invalid UTF-8",
+			kv:   attribute.String(string([]byte{'a', 0xff, 'b'}), "value"),
+			want: `{"a\ufffdb":"value"}`,
+		},
+		{
+			name: "empty value",
+			kv:   attribute.KeyValue{Key: "empty"},
+			want: `{"empty":null}`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, tc.kv.String())
+		})
 	}
 }
 
@@ -152,6 +341,22 @@ func TestIncorrectCast(t *testing.T) {
 			name: "StringSlice",
 			val:  attribute.BoolSliceValue([]bool{true}),
 		},
+		{
+			name: "ByteSlice",
+			val:  attribute.ByteSliceValue([]byte{123}),
+		},
+		{
+			name: "Empty",
+			val:  attribute.Value{},
+		},
+		{
+			name: "Slice",
+			val:  attribute.SliceValue(attribute.StringValue("value")),
+		},
+		{
+			name: "Map",
+			val:  attribute.MapValue(attribute.String("key", "value")),
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -163,8 +368,11 @@ func TestIncorrectCast(t *testing.T) {
 				tt.val.AsInt64()
 				tt.val.AsInt64Slice()
 				tt.val.AsInterface()
+				tt.val.AsMap()
+				tt.val.AsSlice()
 				tt.val.AsString()
 				tt.val.AsStringSlice()
+				tt.val.AsByteSlice()
 			})
 		})
 	}

@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 var meter = otel.Meter("my-service-meter")
@@ -24,7 +24,8 @@ func ExampleMeter_synchronous() {
 	// Create a histogram using the global MeterProvider.
 	workDuration, err := meter.Int64Histogram(
 		"workDuration",
-		metric.WithUnit("ms"))
+		metric.WithUnit("ms"),
+	)
 	if err != nil {
 		fmt.Println("Failed to register instrument")
 		panic(err)
@@ -132,15 +133,11 @@ func ExampleMeter_upDownCounter() {
 		panic(err)
 	}
 
-	_ = func() {
-		// code that adds an item to the collection
-		itemsCounter.Add(context.Background(), 1)
-	}
+	// Add an item to the collection.
+	itemsCounter.Add(context.Background(), 1)
 
-	_ = func() {
-		// code that removes an item from the collection
-		itemsCounter.Add(context.Background(), -1)
-	}
+	// Remove an item from the collection.
+	itemsCounter.Add(context.Background(), -1)
 }
 
 // Gauges can be used to record non-additive values when changes occur.
@@ -229,41 +226,37 @@ func ExampleMeter_observableCounter() {
 //
 // Here's how you might report some database metrics.
 func ExampleMeter_observableUpDownCounter() {
-	// The function registers asynchronous metrics for the provided db.
-	// Make sure to unregister metric.Registration before closing the provided db.
-	_ = func(db *sql.DB, meter metric.Meter, _ string) (metric.Registration, error) {
-		m, err := meter.Int64ObservableUpDownCounter(
-			"db.client.connections.max",
-			metric.WithDescription("The maximum number of open connections allowed."),
-			metric.WithUnit("{connection}"),
-		)
-		if err != nil {
-			return nil, err
-		}
+	m, err := meter.Int64ObservableUpDownCounter(
+		"db.client.connections.max",
+		metric.WithDescription("The maximum number of open connections allowed."),
+		metric.WithUnit("{connection}"),
+	)
+	if err != nil {
+		panic(err)
+	}
 
-		waitTime, err := meter.Int64ObservableUpDownCounter(
-			"db.client.connections.wait_time",
-			metric.WithDescription("The time it took to obtain an open connection from the pool."),
-			metric.WithUnit("ms"),
-		)
-		if err != nil {
-			return nil, err
-		}
+	waitTime, err := meter.Int64ObservableUpDownCounter(
+		"db.client.connections.wait_time",
+		metric.WithDescription("The time it took to obtain an open connection from the pool."),
+		metric.WithUnit("ms"),
+	)
+	if err != nil {
+		panic(err)
+	}
 
-		reg, err := meter.RegisterCallback(
-			func(_ context.Context, o metric.Observer) error {
-				stats := db.Stats()
-				o.ObserveInt64(m, int64(stats.MaxOpenConnections))
-				o.ObserveInt64(waitTime, int64(stats.WaitDuration))
-				return nil
-			},
-			m,
-			waitTime,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return reg, nil
+	var db *sql.DB // DB is initialized elsewhere.
+	_, err = meter.RegisterCallback(
+		func(_ context.Context, o metric.Observer) error {
+			stats := db.Stats()
+			o.ObserveInt64(m, int64(stats.MaxOpenConnections))
+			o.ObserveInt64(waitTime, int64(stats.WaitDuration))
+			return nil
+		},
+		m,
+		waitTime,
+	)
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -307,5 +300,32 @@ func ExampleMeter_attributes() {
 
 		apiCounter.Add(r.Context(), 1,
 			metric.WithAttributes(semconv.HTTPResponseStatusCode(statusCode)))
+	})
+}
+
+// Use [Int64Counter.Enabled] to avoid performing expensive operations when the
+// instrument is not being observed. Use [WithAttributeSet] to pre-build an
+// [attribute.Set] once and reuse it across many measurements.
+func ExampleMeter_performanceOptimization() {
+	apiCounter, err := meter.Int64Counter(
+		"api.counter",
+		metric.WithDescription("Number of API calls."),
+		metric.WithUnit("{call}"),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// Pre-build the attribute set once at init time.
+	attrs := metric.WithAttributeSet(attribute.NewSet(
+		attribute.String("api.name", "users"),
+	))
+
+	http.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
+		// Enabled returns false when no SDK is registered or when a view
+		// drops this instrument, avoiding all measurement overhead.
+		if apiCounter.Enabled(r.Context()) {
+			apiCounter.Add(r.Context(), 1, attrs)
+		}
 	})
 }

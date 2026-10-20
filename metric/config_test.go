@@ -197,3 +197,49 @@ func BenchmarkNewMeterConfig(b *testing.B) {
 		})
 	}
 }
+
+type testExperimentalOption struct {
+	metric.MeterOption
+	metric.Int64CounterOption
+	metric.Int64UpDownCounterOption
+	metric.Int64HistogramOption
+	metric.Int64GaugeOption
+	metric.Float64CounterOption
+	metric.Float64UpDownCounterOption
+	metric.Float64HistogramOption
+	metric.Float64GaugeOption
+	metric.Int64ObservableCounterOption
+	metric.Int64ObservableUpDownCounterOption
+	metric.Int64ObservableGaugeOption
+	metric.Float64ObservableCounterOption
+	metric.Float64ObservableUpDownCounterOption
+	metric.Float64ObservableGaugeOption
+	metric.AddOption
+	metric.RecordOption
+	metric.ObserveOption
+}
+
+func (testExperimentalOption) Experimental() {}
+
+func TestExperimentalOptionSafe(t *testing.T) {
+	var opt testExperimentalOption
+
+	assert.NotPanics(t, func() { _ = metric.NewMeterConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewInt64CounterConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewInt64UpDownCounterConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewInt64HistogramConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewInt64GaugeConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewFloat64CounterConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewFloat64UpDownCounterConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewFloat64HistogramConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewFloat64GaugeConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewInt64ObservableCounterConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewInt64ObservableUpDownCounterConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewInt64ObservableGaugeConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewFloat64ObservableCounterConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewFloat64ObservableUpDownCounterConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewFloat64ObservableGaugeConfig(opt) })
+	assert.NotPanics(t, func() { _ = metric.NewAddConfig([]metric.AddOption{opt}) })
+	assert.NotPanics(t, func() { _ = metric.NewRecordConfig([]metric.RecordOption{opt}) })
+	assert.NotPanics(t, func() { _ = metric.NewObserveConfig([]metric.ObserveOption{opt}) })
+}

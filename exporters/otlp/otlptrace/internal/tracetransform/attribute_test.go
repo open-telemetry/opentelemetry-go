@@ -26,7 +26,28 @@ func TestAttributes(t *testing.T) {
 				attribute.Int64("int64 to int64", 1234567),
 				attribute.Float64("float64 to double", 1.61),
 				attribute.String("string to string", "string"),
+				attribute.ByteSlice("bytes to bytes", []byte("bytes")),
+				attribute.Slice(
+					"slice to array",
+					attribute.BoolValue(true),
+					attribute.ByteSliceValue([]byte("bytes")),
+					attribute.SliceValue(attribute.IntValue(2), attribute.Value{}),
+				),
+				attribute.Map(
+					"map to kvlist",
+					attribute.String("string", "string"),
+					attribute.Int("number", 2),
+					attribute.ByteSlice("bytes", []byte("bytes")),
+					attribute.Slice(
+						"slice",
+						attribute.BoolValue(true),
+						attribute.MapValue(attribute.String("inner", "value")),
+					),
+					attribute.Map("nested", attribute.Bool("ok", true)),
+					attribute.KeyValue{Key: "empty"},
+				),
 				attribute.Bool("bool to bool", true),
+				{Key: "empty to empty"},
 			},
 			[]*commonpb.KeyValue{
 				{
@@ -62,12 +83,149 @@ func TestAttributes(t *testing.T) {
 					},
 				},
 				{
+					Key: "bytes to bytes",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_BytesValue{
+							BytesValue: []byte("bytes"),
+						},
+					},
+				},
+				{
+					Key: "slice to array",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_ArrayValue{
+							ArrayValue: &commonpb.ArrayValue{
+								Values: []*commonpb.AnyValue{
+									{
+										Value: &commonpb.AnyValue_BoolValue{
+											BoolValue: true,
+										},
+									},
+									{
+										Value: &commonpb.AnyValue_BytesValue{
+											BytesValue: []byte("bytes"),
+										},
+									},
+									{
+										Value: &commonpb.AnyValue_ArrayValue{
+											ArrayValue: &commonpb.ArrayValue{
+												Values: []*commonpb.AnyValue{
+													{
+														Value: &commonpb.AnyValue_IntValue{
+															IntValue: 2,
+														},
+													},
+													{},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Key: "map to kvlist",
+					Value: &commonpb.AnyValue{
+						Value: &commonpb.AnyValue_KvlistValue{
+							KvlistValue: &commonpb.KeyValueList{
+								Values: []*commonpb.KeyValue{
+									{
+										Key: "bytes",
+										Value: &commonpb.AnyValue{
+											Value: &commonpb.AnyValue_BytesValue{
+												BytesValue: []byte("bytes"),
+											},
+										},
+									},
+									{
+										Key:   "empty",
+										Value: &commonpb.AnyValue{},
+									},
+									{
+										Key: "nested",
+										Value: &commonpb.AnyValue{
+											Value: &commonpb.AnyValue_KvlistValue{
+												KvlistValue: &commonpb.KeyValueList{
+													Values: []*commonpb.KeyValue{
+														{
+															Key: "ok",
+															Value: &commonpb.AnyValue{
+																Value: &commonpb.AnyValue_BoolValue{
+																	BoolValue: true,
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+									{
+										Key: "number",
+										Value: &commonpb.AnyValue{
+											Value: &commonpb.AnyValue_IntValue{
+												IntValue: 2,
+											},
+										},
+									},
+									{
+										Key: "slice",
+										Value: &commonpb.AnyValue{
+											Value: &commonpb.AnyValue_ArrayValue{
+												ArrayValue: &commonpb.ArrayValue{
+													Values: []*commonpb.AnyValue{
+														{
+															Value: &commonpb.AnyValue_BoolValue{
+																BoolValue: true,
+															},
+														},
+														{
+															Value: &commonpb.AnyValue_KvlistValue{
+																KvlistValue: &commonpb.KeyValueList{
+																	Values: []*commonpb.KeyValue{
+																		{
+																			Key: "inner",
+																			Value: &commonpb.AnyValue{
+																				Value: &commonpb.AnyValue_StringValue{
+																					StringValue: "value",
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+									{
+										Key: "string",
+										Value: &commonpb.AnyValue{
+											Value: &commonpb.AnyValue_StringValue{
+												StringValue: "string",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				{
 					Key: "bool to bool",
 					Value: &commonpb.AnyValue{
 						Value: &commonpb.AnyValue_BoolValue{
 							BoolValue: true,
 						},
 					},
+				},
+				{
+					Key:   "empty to empty",
+					Value: &commonpb.AnyValue{},
 				},
 			},
 		},
@@ -102,18 +260,14 @@ func TestArrayAttributes(t *testing.T) {
 		{
 			[]attribute.KeyValue{
 				{
-					Key:   attribute.Key("invalid"),
+					Key:   attribute.Key("empty"),
 					Value: attribute.Value{},
 				},
 			},
 			[]*commonpb.KeyValue{
 				{
-					Key: "invalid",
-					Value: &commonpb.AnyValue{
-						Value: &commonpb.AnyValue_StringValue{
-							StringValue: "INVALID",
-						},
-					},
+					Key:   "empty",
+					Value: &commonpb.AnyValue{},
 				},
 			},
 		},

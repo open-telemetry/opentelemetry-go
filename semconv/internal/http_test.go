@@ -572,7 +572,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			if diff := cmp.Diff(
 				tc.expected,
 				got,
-				cmp.AllowUnexported(attribute.Value{})); diff != "" {
+				cmp.AllowUnexported(attribute.Value{}),
+			); diff != "" {
 				t.Fatalf("attributes differ: diff %+v,", diff)
 			}
 		})
@@ -1009,7 +1010,7 @@ func kvStr(kvs []attribute.KeyValue) string {
 		}
 		_, _ = sb.WriteString(string(attr.Key))
 		_, _ = sb.WriteString(": ")
-		_, _ = sb.WriteString(attr.Value.Emit())
+		_, _ = sb.WriteString(attr.Value.String())
 	}
 	_, _ = sb.WriteRune(']')
 	return sb.String()

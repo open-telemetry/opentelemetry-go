@@ -67,12 +67,46 @@ func TestExporterShutdown(t *testing.T) {
 	require.NoError(t, err, "New")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown Exporter")
 
-	// After Shutdown is called, calls to Export, Shutdown, or ForceFlush
-	// should perform no operation and return nil error.
 	r := make([]log.Record, 1)
-	assert.NoError(t, e.Export(ctx, r), "Export on Shutdown Exporter")
+	assert.ErrorIs(t, e.Export(ctx, r), log.ErrExporterShutdown, "Export on Shutdown Exporter")
 	assert.NoError(t, e.ForceFlush(ctx), "ForceFlush on Shutdown Exporter")
 	assert.NoError(t, e.Shutdown(ctx), "Shutdown on Shutdown Exporter")
+}
+
+func TestExporterExportConcurrentShutdown(t *testing.T) {
+	var uploads int
+	c := &client{
+		uploadLogs: func(context.Context, []*logpb.ResourceLogs) error {
+			uploads++
+			return nil
+		},
+	}
+
+	started := make(chan struct{})
+	resume := make(chan struct{})
+	orig := transformResourceLogs
+	transformResourceLogs = func([]log.Record) []*logpb.ResourceLogs {
+		close(started)
+		<-resume
+		return make([]*logpb.ResourceLogs, 1)
+	}
+	t.Cleanup(func() { transformResourceLogs = orig })
+
+	e, err := newExporter(c, config{})
+	require.NoError(t, err, "New")
+
+	ctx := t.Context()
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- e.Export(ctx, make([]log.Record, 1))
+	}()
+
+	<-started
+	assert.NoError(t, e.Shutdown(ctx), "Shutdown Exporter")
+	close(resume)
+
+	assert.ErrorIs(t, <-errCh, log.ErrExporterShutdown)
+	assert.Zero(t, uploads, "client UploadLogs calls")
 }
 
 func TestExporterForceFlush(t *testing.T) {
@@ -92,12 +126,9 @@ func TestExporterConcurrentSafe(t *testing.T) {
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(t.Context())
-	runs := new(uint64)
+	var runs atomic.Uint64
 	for range goroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			r := make([]log.Record, 1)
 			for {
 				select {
@@ -106,13 +137,13 @@ func TestExporterConcurrentSafe(t *testing.T) {
 				default:
 					_ = e.Export(ctx, r)
 					_ = e.ForceFlush(ctx)
-					atomic.AddUint64(runs, 1)
+					runs.Add(1)
 				}
 			}
-		}()
+		})
 	}
 
-	for atomic.LoadUint64(runs) == 0 {
+	for runs.Load() == 0 {
 		runtime.Gosched()
 	}
 

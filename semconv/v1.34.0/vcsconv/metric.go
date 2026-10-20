@@ -1,6 +1,9 @@
 // Code generated from semantic convention specification. DO NOT EDIT.
 
-// Package httpconv provides types and functionality for OpenTelemetry semantic
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package vcsconv provides types and functionality for OpenTelemetry semantic
 // conventions in the "vcs" namespace.
 package vcsconv
 
@@ -168,7 +171,7 @@ func NewChangeCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeCount{noop.Int64UpDownCounter{}}, err
+		return ChangeCount{noop.Int64UpDownCounter{}}, err
 	}
 	return ChangeCount{i}, nil
 }
@@ -278,7 +281,7 @@ func NewChangeDuration(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeDuration{noop.Float64Gauge{}}, err
+		return ChangeDuration{noop.Float64Gauge{}}, err
 	}
 	return ChangeDuration{i}, nil
 }
@@ -395,7 +398,7 @@ func NewChangeTimeToApproval(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeTimeToApproval{noop.Float64Gauge{}}, err
+		return ChangeTimeToApproval{noop.Float64Gauge{}}, err
 	}
 	return ChangeTimeToApproval{i}, nil
 }
@@ -536,7 +539,7 @@ func NewChangeTimeToMerge(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ChangeTimeToMerge{noop.Float64Gauge{}}, err
+		return ChangeTimeToMerge{noop.Float64Gauge{}}, err
 	}
 	return ChangeTimeToMerge{i}, nil
 }
@@ -676,7 +679,7 @@ func NewContributorCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return ContributorCount{noop.Int64Gauge{}}, err
+		return ContributorCount{noop.Int64Gauge{}}, err
 	}
 	return ContributorCount{i}, nil
 }
@@ -781,7 +784,7 @@ func NewRefCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefCount{noop.Int64UpDownCounter{}}, err
+		return RefCount{noop.Int64UpDownCounter{}}, err
 	}
 	return RefCount{i}, nil
 }
@@ -892,7 +895,7 @@ func NewRefLinesDelta(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefLinesDelta{noop.Int64Gauge{}}, err
+		return RefLinesDelta{noop.Int64Gauge{}}, err
 	}
 	return RefLinesDelta{i}, nil
 }
@@ -938,18 +941,19 @@ func (RefLinesDelta) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
-//
 // This metric should be reported for each `vcs.line_change.type` value. For
 // example if a ref added 3 lines and removed 2 lines,
 // instrumentation SHOULD report two measurements: 3 and 2 (both positive
 // numbers).
 // If number of lines added/removed should be calculated from the start of time,
 // then `vcs.ref.base.name` SHOULD be set to an empty string.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefLinesDelta) Record(
 	ctx context.Context,
 	val int64,
@@ -1040,7 +1044,7 @@ func NewRefRevisionsDelta(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefRevisionsDelta{noop.Int64Gauge{}}, err
+		return RefRevisionsDelta{noop.Int64Gauge{}}, err
 	}
 	return RefRevisionsDelta{i}, nil
 }
@@ -1085,16 +1089,17 @@ func (RefRevisionsDelta) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
-//
 // This metric should be reported for each `vcs.revision_delta.direction` value.
 // For example if branch `a` is 3 commits behind and 2 commits ahead of `trunk`,
 // instrumentation SHOULD report two measurements: 3 and 2 (both positive
 // numbers) and `vcs.ref.base.name` is set to `trunk`.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefRevisionsDelta) Record(
 	ctx context.Context,
 	val int64,
@@ -1185,7 +1190,7 @@ func NewRefTime(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RefTime{noop.Float64Gauge{}}, err
+		return RefTime{noop.Float64Gauge{}}, err
 	}
 	return RefTime{i}, nil
 }
@@ -1224,8 +1229,9 @@ func (RefTime) Description() string {
 // All additional attrs passed are included in the recorded value.
 //
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851?hl=en#:~:text=A%20canonical%20URL%20is%20the,Google%20chooses%20one%20as%20canonical.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefTime) Record(
 	ctx context.Context,
 	val float64,
@@ -1301,7 +1307,7 @@ func NewRepositoryCount(
 		}, opt...)...,
 	)
 	if err != nil {
-	    return RepositoryCount{noop.Int64UpDownCounter{}}, err
+		return RepositoryCount{noop.Int64UpDownCounter{}}, err
 	}
 	return RepositoryCount{i}, nil
 }

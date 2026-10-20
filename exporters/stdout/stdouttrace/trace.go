@@ -1,13 +1,14 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package stdouttrace // import "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+package stdouttrace
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -84,6 +85,8 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 		if !e.timestamps {
 			stub.StartTime = zeroTime
 			stub.EndTime = zeroTime
+			// Events may share backing storage with the read-only input span.
+			stub.Events = slices.Clone(stub.Events)
 			for j := range stub.Events {
 				ev := &stub.Events[j]
 				ev.Time = zeroTime

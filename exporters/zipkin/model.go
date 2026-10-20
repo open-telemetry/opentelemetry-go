@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package zipkin // import "go.opentelemetry.io/otel/exporters/zipkin"
+package zipkin
 
 import (
 	"encoding/binary"
@@ -20,7 +20,8 @@ import (
 	semconv120 "go.opentelemetry.io/otel/semconv/v1.20.0"
 	semconv121 "go.opentelemetry.io/otel/semconv/v1.21.0"
 	semconv125 "go.opentelemetry.io/otel/semconv/v1.25.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv138 "go.opentelemetry.io/otel/semconv/v1.38.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -173,8 +174,22 @@ func attributeToStringPair(kv attribute.KeyValue) (string, string) {
 	case attribute.STRINGSLICE:
 		data, _ := json.Marshal(kv.Value.AsStringSlice())
 		return string(kv.Key), string(data)
+	case attribute.BYTESLICE:
+		raw := kv.Value.AsByteSlice()
+		data := make([]int, len(raw))
+		for i, b := range raw {
+			data[i] = int(b)
+		}
+		encoded, _ := json.Marshal(data)
+		return string(kv.Key), string(encoded)
+	case attribute.SLICE, attribute.MAP:
+		// Note that this is a best effort support as this exporter is already deprecated.
+		// Yet, we want to preserve other existing behavior as much as possible.
+		// Emit the value using the non-OTLP AnyValue string representation.
+		// Some values will be emitted differently than the specific types above.
+		return string(kv.Key), kv.Value.String()
 	default:
-		return string(kv.Key), kv.Value.Emit()
+		return string(kv.Key), kv.Value.Emit() //nolint:staticcheck // Preserve existing Zipkin tag encoding.
 	}
 }
 
@@ -227,7 +242,7 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 // Rank determines selection order for remote endpoint. See the specification
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.28.0/specification/trace/sdk_exporters/zipkin.md#otlp---zipkin
 var remoteEndpointKeyRank = map[attribute.Key]int{
-	semconv.PeerServiceKey:            1,
+	semconv138.PeerServiceKey:         1,
 	semconv.ServerAddressKey:          2,
 	semconv120.NetPeerNameKey:         3,
 	semconv.NetworkPeerAddressKey:     4,
@@ -298,7 +313,8 @@ func remoteEndpointPeerIPWithPort(peerIP string, portKey attribute.Key, attrs []
 
 	for _, kv := range attrs {
 		if kv.Key == portKey {
-			port, _ := strconv.ParseUint(kv.Value.Emit(), 10, 16)
+			v := kv.Value.String()
+			port, _ := strconv.ParseUint(v, 10, 16)
 			endpoint.Port = uint16(port) // nolint: gosec  // Bit size of 16 checked above.
 			return endpoint
 		}
