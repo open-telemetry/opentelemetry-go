@@ -660,3 +660,91 @@ func TestConvCompressionIsCaseInsensitive(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadEnvTLSClientCertKeyResolvedIndependently(t *testing.T) {
+	orig := readFile
+	readFile = func(name string) ([]byte, error) {
+		index := map[string][]byte{
+			"cert_path":    []byte(weakCertificate),
+			"key_path":     []byte(weakPrivateKey),
+			"invalid_cert": []byte("invalid certificate file."),
+			"invalid_key":  []byte("invalid key file."),
+		}
+		if b, ok := index[name]; ok {
+			return b, nil
+		}
+		return nil, fmt.Errorf("file does not exist: %s", name)
+	}
+	t.Cleanup(func() { readFile = orig })
+
+	crt, err := tls.X509KeyPair([]byte(weakCertificate), []byte(weakPrivateKey))
+	require.NoError(t, err, "testing TLS key pair")
+	wantTLS := &tls.Config{Certificates: []tls.Certificate{crt}}
+
+	testCases := []struct {
+		name    string
+		envars  map[string]string
+		wantSet bool
+		errs    []string
+	}{
+		{
+			name: "GenericCertificateWithLogsKey",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE": "cert_path",
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":    "key_path",
+			},
+			wantSet: true,
+		},
+		{
+			name: "LogsCertificateWithGenericKey",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "cert_path",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":              "key_path",
+			},
+			wantSet: true,
+		},
+		{
+			name: "LogsCertificateOverridesGenericPair",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "invalid_cert",
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE":      "cert_path",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":              "key_path",
+			},
+			wantSet: false,
+			errs:    []string{"failed to load TLS"},
+		},
+		{
+			name: "LogsKeyOverridesGenericPair",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY":    "invalid_key",
+				"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE": "cert_path",
+				"OTEL_EXPORTER_OTLP_CLIENT_KEY":         "key_path",
+			},
+			wantSet: false,
+			errs:    []string{"failed to load TLS"},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for k, v := range tc.envars {
+				t.Setenv(k, v)
+			}
+
+			var got error
+			origHandler := otel.GetErrorHandler()
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+				got = errors.Join(got, e)
+			}))
+			t.Cleanup(func() { otel.SetErrorHandler(origHandler) })
+
+			c := newConfig(nil)
+			assert.Equal(t, tc.wantSet, c.tlsCfg.Set)
+			if tc.wantSet {
+				assert.Equal(t, wantTLS, c.tlsCfg.Value)
+			}
+			for _, e := range tc.errs {
+				assert.Contains(t, got.Error(), e)
+			}
+		})
+	}
+}
