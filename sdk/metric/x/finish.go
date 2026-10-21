@@ -18,7 +18,9 @@ func (finishingOption) FinishEnabled() bool { return true }
 // synchronous instruments created by a MeterProvider.
 //
 // This experimental implementation currently supports Int64Counter and
-// Float64Counter instruments using Sum aggregation.
+// Float64Counter instruments using Sum aggregation, and Int64Gauge and
+// Float64Gauge instruments using LastValue aggregation. Finish is a no-op for
+// other aggregations.
 func WithFinish() sdkmetric.Option {
 	return finishingOption{}
 }
