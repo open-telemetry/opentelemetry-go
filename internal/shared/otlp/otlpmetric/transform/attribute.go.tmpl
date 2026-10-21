@@ -54,6 +54,7 @@ var (
 )
 
 // cachedAttrs converts set to OTLP key-values and reuses a cached result when available.
+// The result is shared across exports and must not be modified.
 func cachedAttrs(set attribute.Set) []*cpb.KeyValue {
 	if set.Len() == 0 {
 		return nil

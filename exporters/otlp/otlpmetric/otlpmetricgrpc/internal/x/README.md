@@ -61,6 +61,9 @@ For the best results, set the value above the number of distinct attribute sets 
 A smaller cache still speeds up the attribute sets it holds.
 Memory use grows with the number of cached attribute sets and their size.
 
+Cached attributes are shared across exports.
+Code that sees the exported requests, such as a gRPC interceptor, must not modify them.
+
 #### Examples
 
 Cache up to 10000 attribute sets.

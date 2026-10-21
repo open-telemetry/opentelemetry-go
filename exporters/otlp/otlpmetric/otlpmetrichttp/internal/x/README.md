@@ -40,6 +40,8 @@ For the best results, set the value above the number of distinct attribute sets 
 A smaller cache still speeds up the attribute sets it holds.
 Memory use grows with the number of cached attribute sets and their size.
 
+Cached attributes are shared across exports, so code in the exporter must not modify them.
+
 ## Compatibility and Stability
 
 Experimental features do not fall within the scope of the OpenTelemetry Go versioning and stability [policy](../../../../../../VERSIONING.md).
