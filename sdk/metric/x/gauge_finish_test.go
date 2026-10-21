@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -148,62 +149,65 @@ func testGaugeFinish[N int64 | float64](t *testing.T, step N) {
 func testGaugeStaleFinish[N int64 | float64](t *testing.T) {
 	for _, recreate := range []bool{false, true} {
 		t.Run(fmt.Sprint("recreate=", recreate), func(t *testing.T) {
-			entered, release := make(chan struct{}), make(chan struct{})
-			var pause atomic.Bool
-			reader := sdkmetric.NewManualReader()
-			provider := sdkmetric.NewMeterProvider(
-				sdkmetric.WithReader(reader), sdkmetricx.WithFinish(),
-				sdkmetric.WithView(sdkmetric.NewView(
-					sdkmetric.Instrument{Name: "active"},
-					sdkmetric.Stream{AttributeFilter: func(attribute.KeyValue) bool {
-						if pause.CompareAndSwap(true, false) {
-							close(entered)
-							<-release
-						}
-						return true
-					}},
-				)),
-			)
-			t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.WithoutCancel(t.Context()))) })
-			gauge := newFinishGauge[N](t, provider.Meter("test"), "active")
-			finisher := gauge.(metricx.Finisher)
-			attrs := []attribute.KeyValue{attribute.String("entity", "one")}
-			option := metric.WithAttributes(attrs...)
-			if recreate {
-				gauge.Record(t.Context(), 1, option)
+			synctest.Test(t, func(t *testing.T) {
+				entered, release := make(chan struct{}), make(chan struct{})
+				var pause atomic.Bool
+				reader := sdkmetric.NewManualReader()
+				provider := sdkmetric.NewMeterProvider(
+					sdkmetric.WithReader(reader), sdkmetricx.WithFinish(),
+					sdkmetric.WithView(sdkmetric.NewView(
+						sdkmetric.Instrument{Name: "active"},
+						sdkmetric.Stream{AttributeFilter: func(attribute.KeyValue) bool {
+							if pause.CompareAndSwap(true, false) {
+								close(entered)
+								<-release
+							}
+							return true
+						}},
+					)),
+				)
+				t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.WithoutCancel(t.Context()))) })
+				gauge := newFinishGauge[N](t, provider.Meter("test"), "active")
+				finisher := gauge.(metricx.Finisher)
+				attrs := []attribute.KeyValue{attribute.String("entity", "one")}
+				option := metric.WithAttributes(attrs...)
+				if recreate {
+					gauge.Record(t.Context(), 1, option)
+					finisher.Finish(t.Context(), attrs...)
+					require.Len(t, collectGaugePoints[N](t, reader), 1)
+					require.Empty(t, collectGaugePoints[N](t, reader))
+				}
+
+				pause.Store(true)
+				done := make(chan struct{})
+				go func() {
+					defer close(done)
+					finisher.Finish(t.Context(), attrs...)
+				}()
+				var once sync.Once
+				resume := func() { once.Do(func() { close(release) }) }
+				defer func() { resume(); <-done }()
+				select {
+				case <-entered:
+				case <-time.After(time.Second):
+					t.Fatal("Finish did not reach the View filter")
+				}
+				// Advance the test clock so the new lifetime starts strictly after Finish.
+				time.Sleep(time.Nanosecond)
+				gauge.Record(t.Context(), -3, option)
+				resume()
+				<-done
+
+				for range 2 {
+					points := collectGaugePoints[N](t, reader)
+					require.Len(t, points, 1, "stale Finish must not retire the new lifetime")
+					assert.Equal(t, N(-3), points[0].Value)
+					assert.False(t, points[0].Time.Before(points[0].StartTime))
+				}
 				finisher.Finish(t.Context(), attrs...)
 				require.Len(t, collectGaugePoints[N](t, reader), 1)
-				require.Empty(t, collectGaugePoints[N](t, reader))
-			}
-
-			pause.Store(true)
-			done := make(chan struct{})
-			go func() {
-				defer close(done)
-				finisher.Finish(t.Context(), attrs...)
-			}()
-			var once sync.Once
-			resume := func() { once.Do(func() { close(release) }) }
-			defer func() { resume(); <-done }()
-			select {
-			case <-entered:
-			case <-time.After(time.Second):
-				t.Fatal("Finish did not reach the View filter")
-			}
-			// Finish has sampled its timestamp but has not looked up the series.
-			gauge.Record(t.Context(), -3, option)
-			resume()
-			<-done
-
-			for range 2 {
-				points := collectGaugePoints[N](t, reader)
-				require.Len(t, points, 1, "stale Finish must not retire the new lifetime")
-				assert.Equal(t, N(-3), points[0].Value)
-				assert.False(t, points[0].Time.Before(points[0].StartTime))
-			}
-			finisher.Finish(t.Context(), attrs...)
-			require.Len(t, collectGaugePoints[N](t, reader), 1)
-			assert.Empty(t, collectGaugePoints[N](t, reader))
+				assert.Empty(t, collectGaugePoints[N](t, reader))
+			})
 		})
 	}
 }
