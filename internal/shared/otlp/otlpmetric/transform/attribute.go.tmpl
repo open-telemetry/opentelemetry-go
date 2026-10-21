@@ -21,19 +21,34 @@ import (
 // Refreshed on every export rather than at init, so t.Setenv works and go test tracks it.
 var maxCachedAttributeSets atomic.Int64
 
+// loadAttrCacheSize applies the configured limit, replacing the map when it changes
+// so shrinking or disabling the cache releases the old entries.
 func loadAttrCacheSize() {
 	n, _ := x.AttributeCacheSize.Lookup()
+	attrCacheMu.Lock()
+	defer attrCacheMu.Unlock()
+	if int64(n) == maxCachedAttributeSets.Load() {
+		return
+	}
 	maxCachedAttributeSets.Store(int64(n))
+	attrCache = map[attribute.Distinct]attrCacheEntry{}
+	attrCacheLastClear = time.Time{}
 }
 
 // minAttrCacheClearInterval rate-limits clearing a full cache, so an undersized cache keeps
 // reusing the sets it holds instead of thrashing, while still adapting to changing sets.
 const minAttrCacheClearInterval = 10 * time.Minute
 
+// attrCacheEntry keeps the source set because Distinct is a hash and can collide.
+type attrCacheEntry struct {
+	set   attribute.Set
+	attrs []*cpb.KeyValue
+}
+
 // attrCache stores converted OTLP attributes keyed by equivalent attribute sets.
 var (
 	attrCacheMu        sync.Mutex
-	attrCache          = map[attribute.Distinct][]*cpb.KeyValue{}
+	attrCache          = map[attribute.Distinct]attrCacheEntry{}
 	attrCacheLastClear time.Time
 	attrCacheNow       = time.Now
 )
@@ -53,8 +68,17 @@ func cachedAttrs(set attribute.Set) []*cpb.KeyValue {
 	attrCacheMu.Lock()
 	defer attrCacheMu.Unlock()
 
-	if out, ok := attrCache[key]; ok {
-		return out
+	// Re-read under the lock so a concurrent limit change cannot admit an entry under the old limit.
+	size = int(maxCachedAttributeSets.Load())
+	if size == 0 {
+		return AttrIter(set.Iter())
+	}
+
+	if e, ok := attrCache[key]; ok {
+		if e.set.Equals(&set) {
+			return e.attrs
+		}
+		return AttrIter(set.Iter())
 	}
 
 	out := AttrIter(set.Iter())
@@ -69,7 +93,7 @@ func cachedAttrs(set attribute.Set) []*cpb.KeyValue {
 		clear(attrCache)
 		attrCacheLastClear = now
 	}
-	attrCache[key] = out
+	attrCache[key] = attrCacheEntry{set: set, attrs: out}
 	return out
 }
 

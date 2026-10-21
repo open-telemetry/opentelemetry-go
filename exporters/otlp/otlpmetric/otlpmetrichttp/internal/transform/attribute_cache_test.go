@@ -45,8 +45,8 @@ func fakeAttrCacheClock(t testing.TB) func(time.Duration) {
 	return func(d time.Duration) { now = now.Add(d) }
 }
 
-func fillAttrCache(from, to int) {
-	for i := from; i < to; i++ {
+func fillAttrCache(n int) {
+	for i := range n {
 		cachedAttrs(attribute.NewSet(attribute.Int("series", i)))
 	}
 }
@@ -84,7 +84,7 @@ func TestCachedAttrsFull(t *testing.T) {
 	enableAttrCache(t, size)
 	advance := fakeAttrCacheClock(t)
 
-	fillAttrCache(0, size)
+	fillAttrCache(size)
 	require.Len(t, attrCache, size)
 
 	// Within the interval, starting from the first overflow, a full cache keeps its
@@ -101,6 +101,115 @@ func TestCachedAttrsFull(t *testing.T) {
 	cachedAttrs(set)
 	assert.Len(t, attrCache, 1, "full cache should clear after the interval")
 	assert.Contains(t, attrCache, set.Equivalent())
+}
+
+func TestCachedAttrsHashCollision(t *testing.T) {
+	enableAttrCache(t, 10)
+	// String slice elements are hashed without delimiters, so these sets share a Distinct.
+	a := attribute.NewSet(attribute.StringSlice("labels", []string{"a", "bc"}))
+	b := attribute.NewSet(attribute.StringSlice("labels", []string{"ab", "c"}))
+	require.Equal(t, a.Equivalent(), b.Equivalent(), "test requires colliding sets")
+	require.False(t, a.Equals(&b))
+
+	assert.Equal(t, AttrIter(a.Iter()), cachedAttrs(a))
+	assert.Equal(t, AttrIter(b.Iter()), cachedAttrs(b), "colliding set must not reuse another set's attributes")
+	assert.Equal(t, AttrIter(a.Iter()), cachedAttrs(a), "first set must stay cached")
+}
+
+func TestResourceMetricsCollidingSetsAcrossMetrics(t *testing.T) {
+	a := attribute.NewSet(attribute.StringSlice("labels", []string{"a", "bc"}))
+	b := attribute.NewSet(attribute.StringSlice("labels", []string{"ab", "c"}))
+	gauge := func(name string, set attribute.Set) metricdata.Metrics {
+		dp := metricdata.DataPoint[int64]{Attributes: set}
+		return metricdata.Metrics{
+			Name: name,
+			Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{dp}},
+		}
+	}
+	rm := &metricdata.ResourceMetrics{
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{Metrics: []metricdata.Metrics{gauge("first", a), gauge("second", b)}},
+		},
+	}
+	enableAttrCache(t, 10)
+
+	got, err := ResourceMetrics(rm)
+	require.NoError(t, err)
+	metrics := got.ScopeMetrics[0].Metrics
+	require.Len(t, metrics, 2)
+	assert.Equal(t, AttrIter(a.Iter()), metrics[0].GetGauge().DataPoints[0].Attributes)
+	assert.Equal(t, AttrIter(b.Iter()), metrics[1].GetGauge().DataPoints[0].Attributes)
+}
+
+func setAttrCacheSize(t *testing.T, size int) {
+	t.Helper()
+	t.Setenv("OTEL_GO_X_OTLP_ATTRIBUTE_CACHE_SIZE", strconv.Itoa(size))
+	loadAttrCacheSize()
+}
+
+func TestCachedAttrsShrinkReleasesEntries(t *testing.T) {
+	enableAttrCache(t, 100)
+	fillAttrCache(100)
+	require.Len(t, attrCache, 100)
+
+	setAttrCacheSize(t, 10)
+	assert.Empty(t, attrCache, "shrinking the limit must release the old entries")
+
+	// Hits on the old sets must not bring the cache back above the new limit.
+	fillAttrCache(100)
+	assert.LessOrEqual(t, len(attrCache), 10)
+}
+
+func TestCachedAttrsDisableReleasesEntries(t *testing.T) {
+	enableAttrCache(t, 100)
+	fillAttrCache(50)
+	require.Len(t, attrCache, 50)
+
+	setAttrCacheSize(t, 0)
+	assert.Empty(t, attrCache, "disabling the cache must release the old entries")
+
+	fillAttrCache(50)
+	assert.Empty(t, attrCache, "a disabled cache must not store entries")
+}
+
+func TestCachedAttrsSameSizeKeepsEntries(t *testing.T) {
+	enableAttrCache(t, 100)
+	fillAttrCache(50)
+
+	setAttrCacheSize(t, 100)
+	assert.Len(t, attrCache, 50, "reloading an unchanged limit must keep the entries")
+}
+
+func TestCachedAttrsGrowKeepsCacheUsable(t *testing.T) {
+	enableAttrCache(t, 10)
+	fillAttrCache(10)
+
+	setAttrCacheSize(t, 100)
+	fillAttrCache(100)
+	assert.Len(t, attrCache, 100)
+}
+
+func TestCachedAttrsLimitChangeConcurrent(t *testing.T) {
+	enableAttrCache(t, 100)
+
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			for i := range 200 {
+				set := attribute.NewSet(attribute.Int("series", i))
+				assert.Equal(t, AttrIter(set.Iter()), cachedAttrs(set))
+			}
+		})
+	}
+	for i := range 20 {
+		setAttrCacheSize(t, 10+i%2)
+	}
+	setAttrCacheSize(t, 0)
+	wg.Wait()
+
+	attrCacheMu.Lock()
+	defer attrCacheMu.Unlock()
+	assert.Empty(t, attrCache, "no lookup may insert under a limit that was already disabled")
 }
 
 func TestResourceMetricsReadsCacheSize(t *testing.T) {
