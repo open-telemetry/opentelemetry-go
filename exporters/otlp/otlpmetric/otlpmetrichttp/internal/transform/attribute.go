@@ -21,12 +21,15 @@ import (
 // Refreshed on every export rather than at init, so t.Setenv works and go test tracks it.
 var maxCachedAttributeSets atomic.Int64
 
-// loadAttrCacheSize applies the configured limit, replacing the map when it changes
-// so shrinking or disabling the cache releases the old entries.
+// attrCacheLimit reads the configured limit; a variable so tests can interleave reloads.
+var attrCacheLimit = x.AttributeCacheSize.Lookup
+
+// loadAttrCacheSize applies the configured limit under the lock, so concurrent reloads cannot
+// apply a stale value, and replaces the map on change to release the old entries.
 func loadAttrCacheSize() {
-	n, _ := x.AttributeCacheSize.Lookup()
 	attrCacheMu.Lock()
 	defer attrCacheMu.Unlock()
+	n, _ := attrCacheLimit()
 	if int64(n) == maxCachedAttributeSets.Load() {
 		return
 	}

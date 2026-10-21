@@ -9,11 +9,13 @@ package transform
 import (
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -210,6 +212,117 @@ func TestCachedAttrsLimitChangeConcurrent(t *testing.T) {
 	attrCacheMu.Lock()
 	defer attrCacheMu.Unlock()
 	assert.Empty(t, attrCache, "no lookup may insert under a limit that was already disabled")
+}
+
+func TestCachedAttrsReloadConcurrentSafe(t *testing.T) {
+	const key = "OTEL_GO_X_OTLP_ATTRIBUTE_CACHE_SIZE"
+	enableAttrCache(t, 100)
+
+	var stop atomic.Bool
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			for !stop.Load() {
+				loadAttrCacheSize()
+				fillAttrCache(5)
+			}
+			loadAttrCacheSize()
+		})
+	}
+	for range 1000 {
+		t.Setenv(key, "100")
+		t.Setenv(key, "0")
+	}
+	stop.Store(true)
+	wg.Wait()
+
+	assert.Zero(t, maxCachedAttributeSets.Load(), "the last configured limit must win")
+	assert.Empty(t, attrCache, "a disabled cache must hold no entries")
+}
+
+func TestCachedAttrsReloadAppliesLatestRead(t *testing.T) {
+	enableAttrCache(t, 50)
+
+	first := make(chan struct{})
+	release := make(chan struct{})
+	var calls atomic.Int32
+	orig := attrCacheLimit
+	t.Cleanup(func() { attrCacheLimit = orig })
+	attrCacheLimit = func() (int, bool) {
+		if calls.Add(1) == 1 {
+			close(first)
+			<-release
+			return 100, true // read before the limit changed to 0
+		}
+		return 0, true
+	}
+
+	var wg sync.WaitGroup
+	wg.Go(loadAttrCacheSize)
+	<-first
+	secondDone := make(chan struct{})
+	wg.Go(func() {
+		loadAttrCacheSize()
+		close(secondDone)
+	})
+	// With the read under the lock the second reload waits here, otherwise it finishes first.
+	select {
+	case <-secondDone:
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(release)
+	wg.Wait()
+
+	assert.Zero(t, maxCachedAttributeSets.Load(), "an older read must not overwrite a newer one")
+}
+
+func TestCachedAttrsMarshalConcurrentSafe(t *testing.T) {
+	set := attribute.NewSet(
+		attribute.String("env", "prod"),
+		attribute.StringSlice("tags", []string{"a", "bc"}),
+		attribute.Int64Slice("ids", []int64{1, 2, 3}),
+		attribute.Float64Slice("ratios", []float64{0.5, 1.5}),
+		attribute.BoolSlice("flags", []bool{true, false}),
+	)
+	dp := metricdata.DataPoint[int64]{Attributes: set, Value: 1}
+	m := metricdata.Metrics{
+		Name: "m",
+		Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{dp, dp}},
+	}
+	sm := metricdata.ScopeMetrics{Metrics: []metricdata.Metrics{m}}
+	rm := &metricdata.ResourceMetrics{ScopeMetrics: []metricdata.ScopeMetrics{sm}}
+
+	enableAttrCache(t, 0)
+	uncached, err := ResourceMetrics(rm)
+	require.NoError(t, err)
+	want, err := proto.Marshal(uncached)
+	require.NoError(t, err)
+
+	enableAttrCache(t, 100)
+	_, err = ResourceMetrics(rm)
+	require.NoError(t, err)
+	require.Len(t, attrCache, 1, "the set must be cached before the concurrent exports")
+
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			for range 50 {
+				out, err := ResourceMetrics(rm)
+				if !assert.NoError(t, err) {
+					return
+				}
+				// Size then cached-size marshal is how the gRPC codec encodes requests.
+				size := proto.Size(out)
+				got, err := proto.MarshalOptions{UseCachedSize: true}.Marshal(out)
+				if !assert.NoError(t, err) {
+					return
+				}
+				assert.Len(t, got, size)
+				assert.Equal(t, want, got, "cached export must encode like an uncached one")
+			}
+		})
+	}
+	wg.Wait()
 }
 
 func TestResourceMetricsReadsCacheSize(t *testing.T) {

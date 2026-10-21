@@ -20,5 +20,5 @@ func TestAttributeCacheSize(t *testing.T) {
 	t.Run("zero", run(setenv(key, "0"), assertEnabled(AttributeCacheSize, 0)))
 	t.Run("negative", run(setenv(key, "-1"), assertDisabled(AttributeCacheSize)))
 	t.Run("not a number", run(setenv(key, "abc"), assertDisabled(AttributeCacheSize)))
-	t.Run("empty", run(assertDisabled(AttributeCacheSize)))
+	t.Run("empty", run(setenv(key, ""), assertDisabled(AttributeCacheSize)))
 }
