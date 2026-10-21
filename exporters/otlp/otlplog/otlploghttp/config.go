@@ -682,10 +682,7 @@ func convHeaders(s string) (map[string]string, error) {
 // convCompression returns the parsed compression encoded in s. NoCompression
 // and an error are returned if s is unknown.
 func convCompression(s string) (Compression, error) {
-	// Enum values are interpreted case-insensitively, per the specification's
-	// environment variable enum guidance and the common enum guidance that
-	// requires the no-op name "none". The original string is kept for the
-	// error so a diagnostic still quotes what the user actually wrote.
+	// Enum values are case-insensitive per the spec.
 	switch strings.ToLower(s) {
 	case "gzip":
 		return GzipCompression, nil
