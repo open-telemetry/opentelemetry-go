@@ -39,6 +39,11 @@ const (
 	// Registerer, rather than round-tripping them through the bridge and
 	// exporter.
 	bridgeScopeName = "go.opentelemetry.io/contrib/bridges/prometheus"
+
+	// maxLinearScanAttrs is the maximum attribute.Set size for which sanitized
+	// label collision detection uses a linear slice scan before falling back to
+	// a key-to-index map.
+	maxLinearScanAttrs = 64
 )
 
 var metricsPool = sync.Pool{
@@ -632,7 +637,13 @@ func getAttrsWithKV(attrs attribute.Set, kv keyVals, labelNamer otlptranslator.L
 	} else {
 		// It sanitizes invalid characters and handles duplicate keys
 		// (due to sanitization) by sorting and concatenating the values following the spec.
-		var dups map[int][]string
+		var (
+			dups   map[int][]string
+			keyIdx map[string]int
+		)
+		if attrs.Len() > maxLinearScanAttrs {
+			keyIdx = make(map[string]int, attrs.Len())
+		}
 		for itr.Next() {
 			attr := itr.Attribute()
 			key, err := labelNamer.Build(string(attr.Key))
@@ -640,7 +651,15 @@ func getAttrsWithKV(attrs attribute.Set, kv keyVals, labelNamer otlptranslator.L
 				return nil, nil, err
 			}
 			val := attr.Value.String()
-			if idx := slices.Index(keys, key); idx >= 0 {
+			idx := -1
+			if keyIdx != nil {
+				if i, ok := keyIdx[key]; ok {
+					idx = i
+				}
+			} else {
+				idx = slices.Index(keys, key)
+			}
+			if idx >= 0 {
 				if dups == nil {
 					dups = make(map[int][]string)
 				}
@@ -650,6 +669,9 @@ func getAttrsWithKV(attrs attribute.Set, kv keyVals, labelNamer otlptranslator.L
 					dups[idx] = []string{values[idx], val}
 				}
 				continue
+			}
+			if keyIdx != nil {
+				keyIdx[key] = len(keys)
 			}
 			keys = append(keys, key)
 			values = append(values, val)
@@ -684,7 +706,13 @@ func appendScopeAttrs(kv keyVals, attrs attribute.Set, labelNamer otlptranslator
 	}
 
 	startIdx := len(kv.keys)
-	var dups map[int][]string
+	var (
+		dups   map[int][]string
+		keyIdx map[string]int
+	)
+	if attrs.Len() > maxLinearScanAttrs {
+		keyIdx = make(map[string]int, attrs.Len())
+	}
 	for itr.Next() {
 		attr := itr.Attribute()
 		key, err := labelNamer.Build(string(attr.Key))
@@ -696,8 +724,15 @@ func appendScopeAttrs(kv keyVals, attrs attribute.Set, labelNamer otlptranslator
 		}
 		scopeKey := scopeLabelPrefix + key
 		val := attr.Value.String()
-		if relIdx := slices.Index(kv.keys[startIdx:], scopeKey); relIdx >= 0 {
-			idx := startIdx + relIdx
+		idx := -1
+		if keyIdx != nil {
+			if i, ok := keyIdx[scopeKey]; ok {
+				idx = i
+			}
+		} else if relIdx := slices.Index(kv.keys[startIdx:], scopeKey); relIdx >= 0 {
+			idx = startIdx + relIdx
+		}
+		if idx >= 0 {
 			if dups == nil {
 				dups = make(map[int][]string)
 			}
@@ -707,6 +742,9 @@ func appendScopeAttrs(kv keyVals, attrs attribute.Set, labelNamer otlptranslator
 				dups[idx] = []string{kv.vals[idx], val}
 			}
 			continue
+		}
+		if keyIdx != nil {
+			keyIdx[scopeKey] = len(kv.keys)
 		}
 		kv.keys = append(kv.keys, scopeKey)
 		kv.vals = append(kv.vals, val)
