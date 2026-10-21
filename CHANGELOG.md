@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#9221)
 
 ### Fixed
+- Negative and overflowing `OTEL_EXPORTER_OTLP_*_TIMEOUT` environment values and negative `WithTimeout` arguments are now rejected with a diagnostic, falling back to the default timeout, in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9254)
 
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
 - Report dropped event and link counts in the span snapshot when the event or link limit is `0` in `go.opentelemetry.io/otel/sdk/trace`.
