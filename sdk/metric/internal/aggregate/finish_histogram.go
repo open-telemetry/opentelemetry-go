@@ -180,8 +180,8 @@ func (s *finishHistogram[N]) finish(distinct attribute.Distinct, at time.Time) {
 }
 
 func (s *finishHistogram[N]) collect(
-	dest *metricdata.Aggregation,
-) int { //nolint:gocritic // Required by ComputeAggregation.
+	dest *metricdata.Aggregation, //nolint:gocritic // Required by ComputeAggregation.
+) int {
 	s.collectSem <- struct{}{}
 	defer func() { <-s.collectSem }()
 	if s.stopped.Load() {
