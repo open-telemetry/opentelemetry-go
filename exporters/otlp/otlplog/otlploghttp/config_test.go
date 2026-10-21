@@ -766,3 +766,44 @@ func TestConvCompressionIsCaseInsensitive(t *testing.T) {
 		}
 	}
 }
+
+func TestConvHeadersPreservesEncodedWhitespace(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  map[string]string
+	}{
+		{
+			name:  "encoded surrounding spaces",
+			value: "a=%20one%20",
+			want:  map[string]string{"a": " one "},
+		},
+		{
+			name:  "encoded tab and non-ascii whitespace",
+			value: "b=%09tab%09,c=%C2%A0nbsp%C2%A0",
+			want:  map[string]string{"b": "\ttab\t", "c": "\u00a0nbsp\u00a0"},
+		},
+		{
+			name:  "raw surrounding whitespace is trimmed",
+			value: " d = raw ",
+			want:  map[string]string{"d": "raw"},
+		},
+		{
+			name:  "plus signs are preserved",
+			value: "e=a+b",
+			want:  map[string]string{"e": "a+b"},
+		},
+		{
+			name:  "empty value",
+			value: "f=",
+			want:  map[string]string{"f": ""},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := convHeaders(tt.value)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
