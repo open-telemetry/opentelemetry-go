@@ -30,13 +30,14 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/observ"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 const (
@@ -185,6 +186,46 @@ func TestEndToEnd(t *testing.T) {
 				ExpectedHeaders: customProxyHeader,
 			},
 		},
+		{
+			name: "with protobuf request encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingProtobuf),
+			},
+		},
+		{
+			name: "with JSON request encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingJSON),
+			},
+		},
+		{
+			name: "with JSON collector response encoding",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingJSON),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "application/json",
+			},
+		},
+		{
+			name: "with JSON collector response encoding and partial success",
+			opts: []otlptracehttp.Option{
+				otlptracehttp.WithEncoding(otlptracehttp.EncodingJSON),
+			},
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "application/json",
+				Partial: &coltracepb.ExportTracePartialSuccess{
+					RejectedSpans: 1,
+					ErrorMessage:  "missing required attribute aaa",
+				},
+			},
+		},
+		{
+			name: "with the collector responding unsupported content type",
+			mcCfg: mockCollectorConfig{
+				InjectContentType: "text/plain",
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -194,7 +235,10 @@ func TestEndToEnd(t *testing.T) {
 			allOpts := []otlptracehttp.Option{}
 
 			if tc.withURLEndpoint {
-				allOpts = append(allOpts, otlptracehttp.WithEndpointURL("http://"+mc.Endpoint()))
+				allOpts = append(
+					allOpts,
+					otlptracehttp.WithEndpointURL("http://"+mc.Endpoint()+otlpconfig.DefaultTracesPath),
+				)
 			} else {
 				allOpts = append(allOpts, otlptracehttp.WithEndpoint(mc.Endpoint()))
 			}
@@ -254,7 +298,143 @@ func TestTimeout(t *testing.T) {
 		assert.NoError(t, exporter.Shutdown(ctx))
 	}()
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	assert.ErrorContains(t, err, "Client.Timeout exceeded while awaiting headers")
+	if !errors.Is(err, context.DeadlineExceeded) {
+		assert.ErrorContains(t, err, "exporter export timeout")
+	}
+}
+
+func TestTimeoutBoundsRetry(t *testing.T) {
+	var mu sync.Mutex
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		calls++
+		mu.Unlock()
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	t.Cleanup(srv.Close)
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpointURL(srv.URL),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithTimeout(50*time.Millisecond),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Minute,
+		}),
+	)
+	ctx := t.Context()
+	exporter, err := otlptrace.New(ctx, client)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = exporter.Shutdown(t.Context()) })
+
+	start := time.Now()
+	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+	elapsed := time.Since(start)
+
+	if !errors.Is(err, context.DeadlineExceeded) {
+		assert.ErrorContains(t, err, "exporter export timeout")
+	}
+	assert.Less(t, elapsed, 5*time.Second, "export retried until MaxElapsedTime")
+
+	mu.Lock()
+	got := calls
+	mu.Unlock()
+	assert.Positive(t, got)
+
+	// A request already sent before the export context expired can reach
+	// this handler after ExportSpans returns and bump calls by one. That
+	// in-flight attempt is not a new retry. The retry loop stops with the
+	// export timeout, so it must not keep issuing requests until
+	// MaxElapsedTime.
+	time.Sleep(50 * time.Millisecond)
+	mu.Lock()
+	defer mu.Unlock()
+	assert.LessOrEqual(t, calls, got+1, "requests continued after the export timeout")
+}
+
+func TestWithHTTPClientIgnoresExporterTimeout(t *testing.T) {
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-r.Context().Done():
+			return
+		}
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpointURL(srv.URL),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithTimeout(time.Millisecond),
+		otlptracehttp.WithHTTPClient(&http.Client{}),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+	)
+	ctx := t.Context()
+	exporter, err := otlptrace.New(ctx, client)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = exporter.Shutdown(t.Context()) })
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+	}()
+	select {
+	case err := <-errCh:
+		t.Fatalf("export finished before the collector responded: %v", err)
+	case <-time.After(50 * time.Millisecond):
+	}
+	close(release)
+	select {
+	case err := <-errCh:
+		assert.NoError(t, err)
+	case <-time.After(2 * time.Second):
+		t.Fatal("export did not finish")
+	}
+}
+
+func TestWithTimeoutZeroDoesNotSetDeadline(t *testing.T) {
+	var mu sync.Mutex
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		calls++
+		n := calls
+		mu.Unlock()
+		if n == 1 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpointURL(srv.URL),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithTimeout(0),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	)
+	ctx := t.Context()
+	exporter, err := otlptrace.New(ctx, client)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = exporter.Shutdown(t.Context()) })
+
+	assert.NoError(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, 2, calls)
 }
 
 func TestInsecureWithTLSClientConfig(t *testing.T) {
@@ -608,12 +788,7 @@ func TestClientInstrumentation(t *testing.T) {
 }
 
 func TestResponseBodySizeLimit(t *testing.T) {
-	// Override the limit to 1 byte so any non-empty response body exceeds it.
-	orig := *otlptracehttp.MaxResponseBodySize
-	*otlptracehttp.MaxResponseBodySize = 1
-	t.Cleanup(func() { *otlptracehttp.MaxResponseBodySize = orig })
-
-	// largeBody is larger than the 1-byte limit.
+	// largeBody is larger than the configured 1-byte limit.
 	largeBody := []byte("xx")
 
 	tests := []struct {
@@ -646,7 +821,13 @@ func TestResponseBodySizeLimit(t *testing.T) {
 			client := otlptracehttp.NewClient(
 				otlptracehttp.WithEndpointURL(srv.URL),
 				otlptracehttp.WithInsecure(),
-				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+				otlptracehttp.WithMaxResponseSize(1),
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Millisecond,
+					MaxInterval:     time.Millisecond,
+					MaxElapsedTime:  time.Second,
+				}),
 			)
 			exporter, err := otlptrace.New(t.Context(), client)
 			require.NoError(t, err)
@@ -657,6 +838,42 @@ func TestResponseBodySizeLimit(t *testing.T) {
 			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 		})
 	}
+}
+
+func TestResponseBodySizeLimitAfterDecompression(t *testing.T) {
+	const limit = 64
+	body := bytes.Repeat([]byte("x"), 1024)
+
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+		zw := gzip.NewWriter(w)
+		_, _ = zw.Write(body)
+		_ = zw.Close()
+	}))
+	t.Cleanup(srv.Close)
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpointURL(srv.URL),
+		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithMaxResponseSize(limit),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	)
+	exporter, err := otlptrace.New(t.Context(), client)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = exporter.Shutdown(t.Context()) })
+
+	err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
+	assert.ErrorContains(t, err, "response body too large: exceeded 64 bytes")
+	assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 }
 
 func TestRequestBodySizeLimit(t *testing.T) {
@@ -918,6 +1135,316 @@ func TestClientInstrumentationStaleStatusCode(t *testing.T) {
 		assert.False(t, ok, "should not report status code when the request fails before getting a response.")
 	}
 	assert.True(t, found, "expected to find operation duration metric")
+}
+
+func TestEndpointPath(t *testing.T) {
+	pathCh := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pathCh <- r.RequestURI
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+	testCases := []struct {
+		name     string
+		env      map[string]string
+		options  []otlptracehttp.Option
+		wantPath string
+	}{
+		{
+			name:     "default",
+			wantPath: "/v1/traces",
+		},
+		{
+			name:     "endpoint URL without path",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL)},
+			wantPath: "/",
+		},
+		{
+			name:     "endpoint URL root",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/")},
+			wantPath: "/",
+		},
+		{
+			name:     "endpoint URL ordinary path",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/a/b")},
+			wantPath: "/a/b",
+		},
+		{
+			name:     "endpoint URL trailing slash",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/a/b/")},
+			wantPath: "/a/b/",
+		},
+		{
+			name:     "endpoint URL escaped slash",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/a%2Fb")},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "endpoint URL lowercase escaped slash",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/a%2fb/")},
+			wantPath: "/a%2fb/",
+		},
+		{
+			name:     "endpoint URL repeated slashes",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/a//b/")},
+			wantPath: "/a//b/",
+		},
+		{
+			name:     "endpoint URL repeated trailing slashes",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/a//")},
+			wantPath: "/a//",
+		},
+		{
+			name:     "endpoint URL encoded trailing slash",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/a%2F")},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "endpoint URL dot segments",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/a/../b/")},
+			wantPath: "/a/../b/",
+		},
+		{
+			name:     "endpoint URL encoded dot segments",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/a/%2e%2e/b")},
+			wantPath: "/a/%2e%2e/b",
+		},
+		{
+			name:     "endpoint URL encoded punctuation",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/a%25b%3Fc%23d")},
+			wantPath: "/a%25b%3Fc%23d",
+		},
+		{
+			name:     "endpoint URL encoded space",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/%20a%20")},
+			wantPath: "/%20a%20",
+		},
+		{
+			name:     "endpoint URL unicode",
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/%e2%98%83")},
+			wantPath: "/%e2%98%83",
+		},
+		{
+			name:     "signal endpoint without path",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL},
+			wantPath: "/",
+		},
+		{
+			name:     "signal endpoint root",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/"},
+			wantPath: "/",
+		},
+		{
+			name:     "signal endpoint ordinary path",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/a/b"},
+			wantPath: "/a/b",
+		},
+		{
+			name:     "signal endpoint ordinary trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/a/b/"},
+			wantPath: "/a/b/",
+		},
+		{
+			name:     "signal endpoint escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/a%2Fb"},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "signal endpoint trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/a%2fb/"},
+			wantPath: "/a%2fb/",
+		},
+		{
+			name:     "signal endpoint repeated slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/a//b/"},
+			wantPath: "/a//b/",
+		},
+		{
+			name:     "signal endpoint repeated trailing slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/a//"},
+			wantPath: "/a//",
+		},
+		{
+			name:     "signal endpoint encoded trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/a%2F"},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "signal endpoint dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/a/../b/"},
+			wantPath: "/a/../b/",
+		},
+		{
+			name:     "signal endpoint encoded dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/a/%2e%2e/b"},
+			wantPath: "/a/%2e%2e/b",
+		},
+		{
+			name:     "signal endpoint encoded punctuation",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/a%25b%3Fc%23d"},
+			wantPath: "/a%25b%3Fc%23d",
+		},
+		{
+			name:     "signal endpoint encoded space",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/%20a%20"},
+			wantPath: "/%20a%20",
+		},
+		{
+			name:     "signal endpoint unicode",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/%e2%98%83"},
+			wantPath: "/%e2%98%83",
+		},
+		{
+			name:     "generic endpoint without path",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL},
+			wantPath: "/v1/traces",
+		},
+		{
+			name:     "generic endpoint root",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/"},
+			wantPath: "/v1/traces",
+		},
+		{
+			name:     "generic endpoint ordinary base",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/a/b"},
+			wantPath: "/a/b/v1/traces",
+		},
+		{
+			name:     "generic endpoint ordinary trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/a/b/"},
+			wantPath: "/a/b/v1/traces",
+		},
+		{
+			name:     "generic endpoint escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/a%2Fb"},
+			wantPath: "/a%2Fb/v1/traces",
+		},
+		{
+			name:     "generic endpoint trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/a%2fb/"},
+			wantPath: "/a%2fb/v1/traces",
+		},
+		{
+			name:     "generic endpoint encoded trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/a%2F"},
+			wantPath: "/a%2F/v1/traces",
+		},
+		{
+			name:     "generic endpoint repeated slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/a//b/"},
+			wantPath: "/a//b/v1/traces",
+		},
+		{
+			name:     "generic endpoint repeated trailing slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/a//"},
+			wantPath: "/a//v1/traces",
+		},
+		{
+			name:     "generic endpoint dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/a/../b/"},
+			wantPath: "/a/../b/v1/traces",
+		},
+		{
+			name:     "generic endpoint encoded dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/a/%2e%2e/b"},
+			wantPath: "/a/%2e%2e/b/v1/traces",
+		},
+		{
+			name:     "generic endpoint encoded punctuation",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/a%25b%3Fc%23d"},
+			wantPath: "/a%25b%3Fc%23d/v1/traces",
+		},
+		{
+			name:     "generic endpoint encoded space",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/%20a%20"},
+			wantPath: "/%20a%20/v1/traces",
+		},
+		{
+			name:     "generic endpoint unicode",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": srv.URL + "/%e2%98%83"},
+			wantPath: "/%e2%98%83/v1/traces",
+		},
+		{
+			name: "signal endpoint overrides generic endpoint",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":        srv.URL + "/generic%2Fpath",
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/signal%2Fpath",
+			},
+			wantPath: "/signal%2Fpath",
+		},
+		{
+			name:     "endpoint URL overrides environment",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/signal%2Fpath"},
+			options:  []otlptracehttp.Option{otlptracehttp.WithEndpointURL(srv.URL + "/option%2Fpath")},
+			wantPath: "/option%2Fpath",
+		},
+		{
+			name:     "URL path literal percent escape",
+			options:  []otlptracehttp.Option{otlptracehttp.WithURLPath("/a%2Fb")},
+			wantPath: "/a%252Fb",
+		},
+		{
+			name:     "URL path empty",
+			options:  []otlptracehttp.Option{otlptracehttp.WithURLPath("")},
+			wantPath: "/v1/traces",
+		},
+		{
+			name:     "URL path dot",
+			options:  []otlptracehttp.Option{otlptracehttp.WithURLPath(".")},
+			wantPath: "/v1/traces",
+		},
+		{
+			name:     "URL path trims spaces and adds leading slash",
+			options:  []otlptracehttp.Option{otlptracehttp.WithURLPath(" a//../b/ ")},
+			wantPath: "/a//../b/",
+		},
+		{
+			name: "URL path overrides endpoint URL",
+			options: []otlptracehttp.Option{
+				otlptracehttp.WithEndpointURL(srv.URL + "/a%2Fb"),
+				otlptracehttp.WithURLPath("/a/b"),
+			},
+			wantPath: "/a/b",
+		},
+		{
+			name:     "URL path overrides environment",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": srv.URL + "/a%2Fb"},
+			options:  []otlptracehttp.Option{otlptracehttp.WithURLPath("/a/b")},
+			wantPath: "/a/b",
+		},
+		{
+			name: "endpoint URL overrides URL path",
+			options: []otlptracehttp.Option{
+				otlptracehttp.WithURLPath("/literal%2Fpath"),
+				otlptracehttp.WithEndpointURL(srv.URL + "/a%2Fb"),
+			},
+			wantPath: "/a%2Fb",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+			t.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "")
+			for name, value := range testCase.env {
+				t.Setenv(name, value)
+			}
+			options := []otlptracehttp.Option{
+				otlptracehttp.WithEndpoint(u.Host),
+				otlptracehttp.WithInsecure(),
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{Enabled: false}),
+			}
+			options = append(options, testCase.options...)
+			ctx := t.Context()
+			exporter, err := otlptracehttp.New(ctx, options...)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, exporter.Shutdown(context.WithoutCancel(ctx))) })
+			require.NoError(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
+			assert.Equal(t, testCase.wantPath, <-pathCh)
+		})
+	}
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)

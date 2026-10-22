@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -36,6 +36,33 @@ func TestNewRawExporter(t *testing.T) {
 	)
 
 	assert.NoError(t, err)
+}
+
+func TestWithNilLogger(t *testing.T) {
+	exp, err := New(defaultCollectorURL, WithLogger(nil))
+	require.NoError(t, err)
+	assert.Equal(t, exp.logger, emptyLogger)
+	assert.NoError(t, exp.ExportSpans(t.Context(), nil))
+}
+
+func TestWithNilLoggerPreservesLogger(t *testing.T) {
+	var buf bytes.Buffer
+	logger := log.New(&buf, "", 0)
+	exp, err := New(defaultCollectorURL, WithLogger(logger), WithLogger(nil))
+	require.NoError(t, err)
+	require.NoError(t, exp.ExportSpans(t.Context(), nil))
+	assert.Contains(t, buf.String(), "no spans to export")
+}
+
+func TestWithNilLoggerPreservesLogr(t *testing.T) {
+	var buf bytes.Buffer
+	logger := funcr.New(func(_, args string) {
+		_, _ = buf.WriteString(args)
+	}, funcr.Options{})
+	exp, err := New(defaultCollectorURL, WithLogr(logger), WithLogger(nil))
+	require.NoError(t, err)
+	require.NoError(t, exp.ExportSpans(t.Context(), nil))
+	assert.Contains(t, buf.String(), "no spans to export")
 }
 
 func TestNewRawExporterShouldFailInvalidCollectorURL(t *testing.T) {
@@ -83,7 +110,8 @@ func TestNewRawExporterCollectorURLFromEnv(t *testing.T) {
 }
 
 func TestExporterMarshalLogDoesNotIncludeURL(t *testing.T) {
-	const sensitiveURL = "http://user:pass@zipkin.internal:9411/api/v2/spans?token=secret"
+	// Keep this private test fixture from being treated as a documentation link.
+	const sensitiveURL = "http" + "://user:pass@zipkin.internal:9411/api/v2/spans?token=secret"
 
 	exp, err := New(sensitiveURL)
 	require.NoError(t, err)

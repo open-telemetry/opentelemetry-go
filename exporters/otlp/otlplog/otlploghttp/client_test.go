@@ -47,8 +47,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 var (
@@ -164,18 +164,18 @@ type exportResult struct {
 	Err      error
 }
 
-// storage stores uploaded OTLP log data in their proto form.
+// storage stores uploaded OTLP log data in protobuf form.
 type storage struct {
 	dataMu sync.Mutex
 	data   []*lpb.ResourceLogs
 }
 
-// newStorage returns a configure storage ready to store received requests.
+// newStorage returns a configured storage instance ready to store received requests.
 func newStorage() *storage {
 	return &storage{}
 }
 
-// Add adds the request to the Storage.
+// Add adds the request to the storage.
 func (s *storage) Add(request *collogpb.ExportLogsServiceRequest) {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
@@ -226,19 +226,18 @@ type httpCollector struct {
 	srv      *http.Server
 }
 
-// newHTTPCollector returns a *HTTPCollector that is listening at the provided
+// newHTTPCollector returns a *httpCollector that is listening at the provided
 // endpoint.
 //
-// If endpoint is an empty string, the returned collector will be listening on
-// the localhost interface at an OS chosen port, not use TLS, and listen at the
-// default OTLP log endpoint path ("/v1/logs"). If the endpoint contains a
-// prefix of "https" the server will generate weak self-signed TLS certificates
-// and use them to server data. If the endpoint contains a path, that path will
-// be used instead of the default OTLP metric endpoint path.
+// If endpoint is an empty string, the returned collector will listen on the
+// localhost interface at an OS-chosen port without TLS and use the default OTLP
+// log endpoint path ("/v1/logs"). If the endpoint begins with "https", the
+// server will generate weak self-signed TLS certificates
+// and use them to serve data. If the endpoint contains a path, that path will
+// be used instead of the default OTLP log endpoint path.
 //
-// If errCh is not nil, the collector will respond to HTTP requests with errors
-// sent on that channel. This means that if errCh is not nil Export calls will
-// block until an error is received.
+// If resultCh is not nil, each request blocks until an exportResult is received
+// and the collector responds with that result.
 func newHTTPCollector(
 	endpoint string,
 	resultCh <-chan exportResult,
@@ -291,26 +290,26 @@ func newHTTPCollector(
 	return c, nil
 }
 
-// withHTTPCollectorRespondingPlainText makes the HTTPCollector return
-// a plaintext, instead of protobuf, response.
+// withHTTPCollectorRespondingPlainText makes the httpCollector return a
+// plaintext response instead of a protobuf response.
 func withHTTPCollectorRespondingPlainText() func(*httpCollector) {
 	return func(s *httpCollector) {
 		s.plainTextResponse = true
 	}
 }
 
-// Shutdown shuts down the HTTP server closing all open connections and
+// Shutdown shuts down the HTTP server, closing all open connections and
 // listeners.
 func (c *httpCollector) Shutdown(ctx context.Context) error {
 	return c.srv.Shutdown(ctx)
 }
 
-// Addr returns the net.Addr c is listening at.
+// Addr returns the net.Addr on which c is listening.
 func (c *httpCollector) Addr() net.Addr {
 	return c.listener.Addr()
 }
 
-// Collect returns the Storage holding all collected requests.
+// Collect returns the storage holding all collected requests.
 func (c *httpCollector) Collect() *storage {
 	return c.storage
 }
@@ -403,8 +402,7 @@ func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
 	if resp.Err != nil {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		var e *httpResponseError
-		if errors.As(resp.Err, &e) {
+		if e, ok := errors.AsType[*httpResponseError](resp.Err); ok {
 			for k, vals := range e.Header {
 				for _, v := range vals {
 					w.Header().Add(k, v)
@@ -439,8 +437,9 @@ func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
 	}
 }
 
-// Based on https://golang.org/src/crypto/tls/generate_cert.go,
-// simplified and weakened.
+// newWeakCertificate is based on
+// https://golang.org/src/crypto/tls/generate_cert.go, with simplifications and
+// weaker security.
 func newWeakCertificate() (tls.Certificate, error) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -566,6 +565,59 @@ func TestClient(t *testing.T) {
 	})
 }
 
+func TestClientContentType(t *testing.T) {
+	// A protobuf partial-success response is used so a correctly parsed body
+	// produces a distinguishable error.
+	partialSuccess := func() []byte {
+		resp := collogpb.ExportLogsServiceResponse{
+			PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+				RejectedLogRecords: 1,
+				ErrorMessage:       "case insensitive",
+			},
+		}
+		b, err := proto.Marshal(&resp)
+		require.NoError(t, err)
+		return b
+	}()
+
+	tests := []struct {
+		name        string
+		contentType string
+		parseable   bool
+	}{
+		{name: "canonical", contentType: "application/x-protobuf", parseable: true},
+		{name: "mixed case", contentType: "Application/X-Protobuf", parseable: true},
+		{name: "upper case", contentType: "APPLICATION/X-PROTOBUF", parseable: true},
+		{name: "parameters", contentType: "application/x-protobuf; charset=utf-8", parseable: true},
+		{name: "unsupported text", contentType: "text/plain; charset=utf-8", parseable: false},
+		{name: "malformed", contentType: "application/x-protobuf;charset", parseable: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls int
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				calls++
+				w.Header().Set("Content-Type", tc.contentType)
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write(partialSuccess)
+			}))
+			t.Cleanup(srv.Close)
+
+			opts := []Option{WithEndpoint(srv.Listener.Addr().String()), WithInsecure()}
+			c, err := newHTTPClient(t.Context(), newConfig(opts))
+			require.NoError(t, err)
+
+			err = c.UploadLogs(t.Context(), resourceLogs)
+			if tc.parseable {
+				assert.ErrorIs(t, err, internal.PartialSuccess{})
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, 1, calls, "request must not be retried")
+		})
+	}
+}
+
 func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 	ctx := t.Context()
 	coll, err := newHTTPCollector("", nil, withHTTPCollectorRespondingPlainText())
@@ -652,7 +704,106 @@ func TestConfig(t *testing.T) {
 		t.Cleanup(func() { close(rCh) })
 		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 		err := exp.Export(ctx, make([]log.Record, 1))
-		assert.ErrorAs(t, err, new(retryableError))
+		require.Error(t, err)
+		timedOut := errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "exporter export timeout")
+		if !timedOut {
+			assert.ErrorAs(t, err, new(retryableError))
+		}
+	})
+
+	t.Run("WithTimeout bounds retry", func(t *testing.T) {
+		const queued = 1000
+		rCh := make(chan exportResult, queued)
+		for range queued {
+			rCh <- exportResult{Err: &httpResponseError{
+				Status: http.StatusServiceUnavailable,
+				Err:    errors.New("unavailable"),
+			}}
+		}
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(50*time.Millisecond),
+			WithRetry(RetryConfig{
+				Enabled:         true,
+				InitialInterval: time.Millisecond,
+				MaxInterval:     time.Millisecond,
+				MaxElapsedTime:  time.Minute,
+			}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		start := time.Now()
+		err := exp.Export(ctx, make([]log.Record, 1))
+		elapsed := time.Since(start)
+
+		require.Error(t, err)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			assert.ErrorContains(t, err, "exporter export timeout")
+		}
+		assert.Less(t, elapsed, 5*time.Second, "export retried until MaxElapsedTime")
+		assert.NotEqual(t, queued, len(rCh), "collector received no requests")
+
+		time.Sleep(50 * time.Millisecond)
+		remaining := len(rCh)
+		time.Sleep(50 * time.Millisecond)
+		assert.Len(t, rCh, remaining, "requests continued after the export timeout")
+	})
+
+	t.Run("WithHTTPClient ignores WithTimeout", func(t *testing.T) {
+		rCh := make(chan exportResult, 1)
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(time.Millisecond),
+			WithHTTPClient(&http.Client{}),
+			WithRetry(RetryConfig{Enabled: false}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		done := make(chan error, 1)
+		go func() {
+			done <- exp.Export(ctx, make([]log.Record, 1))
+		}()
+		select {
+		case err := <-done:
+			t.Fatalf("export finished before the collector responded: %v", err)
+		case <-time.After(50 * time.Millisecond):
+		}
+		rCh <- exportResult{}
+		select {
+		case err := <-done:
+			assert.NoError(t, err)
+		case <-time.After(2 * time.Second):
+			t.Fatal("export did not finish")
+		}
+	})
+
+	t.Run("WithTimeout zero", func(t *testing.T) {
+		rCh := make(chan exportResult, 2)
+		rCh <- exportResult{Err: &httpResponseError{
+			Status: http.StatusServiceUnavailable,
+			Err:    errors.New("unavailable"),
+		}}
+		rCh <- exportResult{}
+		exp, coll := factoryFunc("", rCh,
+			WithTimeout(0),
+			WithRetry(RetryConfig{
+				Enabled:         true,
+				InitialInterval: time.Millisecond,
+				MaxInterval:     time.Millisecond,
+				MaxElapsedTime:  time.Second,
+			}),
+		)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { require.NoError(t, coll.Shutdown(ctx)) })
+		t.Cleanup(func() { close(rCh) })
+		t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+		assert.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+		assert.Empty(t, rCh)
 	})
 
 	t.Run("WithCompressionGZip", func(t *testing.T) {
@@ -1101,12 +1252,7 @@ func TestClientInstrumentation(t *testing.T) {
 }
 
 func TestResponseBodySizeLimit(t *testing.T) {
-	// Override the limit to 1 byte so any non-empty response body exceeds it.
-	orig := maxResponseBodySize
-	maxResponseBodySize = 1
-	t.Cleanup(func() { maxResponseBodySize = orig })
-
-	// largeBody is larger than the 1-byte limit.
+	// largeBody is larger than the configured 1-byte limit.
 	largeBody := []byte("xx")
 
 	tests := []struct {
@@ -1139,7 +1285,13 @@ func TestResponseBodySizeLimit(t *testing.T) {
 			opts := []Option{
 				WithEndpoint(srv.Listener.Addr().String()),
 				WithInsecure(),
-				WithRetry(RetryConfig{Enabled: false}),
+				WithMaxResponseSize(1),
+				WithRetry(RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Millisecond,
+					MaxInterval:     time.Millisecond,
+					MaxElapsedTime:  time.Second,
+				}),
 			}
 			cfg := newConfig(opts)
 			c, err := newHTTPClient(t.Context(), cfg)
@@ -1150,6 +1302,150 @@ func TestResponseBodySizeLimit(t *testing.T) {
 			assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
 		})
 	}
+}
+
+func TestResponseBodySizeLimitAfterDecompression(t *testing.T) {
+	const limit = 64
+	body := bytes.Repeat([]byte("x"), 1024)
+
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+		zw := gzip.NewWriter(w)
+		_, _ = zw.Write(body)
+		_ = zw.Close()
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithMaxResponseSize(limit),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	}
+	cfg := newConfig(opts)
+	c, err := newHTTPClient(t.Context(), cfg)
+	require.NoError(t, err)
+
+	err = c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
+	assert.ErrorContains(t, err, "response body too large: exceeded 64 bytes")
+	assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
+}
+
+func TestExplicitGzipResponseDecoding(t *testing.T) {
+	body, err := proto.Marshal(&collogpb.ExportLogsServiceResponse{
+		PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+			RejectedLogRecords: 1,
+			ErrorMessage:       "bad",
+		},
+	})
+	require.NoError(t, err)
+
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.Header().Set("Content-Encoding", "gzip")
+		zw := gzip.NewWriter(w)
+		_, _ = zw.Write(body)
+		_ = zw.Close()
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithHeaders(map[string]string{"Accept-Encoding": "gzip"}),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	}
+	c, err := newHTTPClient(t.Context(), newConfig(opts))
+	require.NoError(t, err)
+
+	err = c.UploadLogs(t.Context(), []*lpb.ResourceLogs{{ScopeLogs: []*lpb.ScopeLogs{{
+		LogRecords: []*lpb.LogRecord{{}},
+	}}}})
+	assert.ErrorIs(t, err, internal.PartialSuccess{})
+	assert.Equal(t, 1, calls, "partial success must not be retried")
+}
+
+func TestExplicitGzipResponseTooLarge(t *testing.T) {
+	const limit = 64
+	payload := bytes.Repeat([]byte("x"), 1024)
+
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.Header().Set("Content-Encoding", "gzip")
+		zw := gzip.NewWriter(w)
+		_, _ = zw.Write(payload)
+		_ = zw.Close()
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithHeaders(map[string]string{"Accept-Encoding": "gzip"}),
+		WithMaxResponseSize(limit),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	}
+	c, err := newHTTPClient(t.Context(), newConfig(opts))
+	require.NoError(t, err)
+
+	err = c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
+	assert.ErrorContains(t, err, "response body too large: exceeded 64 bytes")
+	assert.Equal(t, 1, calls, "request must not be retried after body-too-large error")
+}
+
+func TestMalformedGzipResponse(t *testing.T) {
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.Header().Set("Content-Encoding", "gzip")
+		_, _ = w.Write([]byte("not gzip"))
+	}))
+	t.Cleanup(srv.Close)
+
+	opts := []Option{
+		WithEndpoint(srv.Listener.Addr().String()),
+		WithInsecure(),
+		WithHeaders(map[string]string{"Accept-Encoding": "gzip"}),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	}
+	c, err := newHTTPClient(t.Context(), newConfig(opts))
+	require.NoError(t, err)
+
+	err = c.UploadLogs(t.Context(), make([]*lpb.ResourceLogs, 1))
+	assert.Error(t, err)
+	assert.NotErrorIs(t, err, internal.PartialSuccess{})
+	var retryErr retryableError
+	assert.NotErrorAs(t, err, &retryErr)
+	assert.Equal(t, 1, calls, "malformed gzip must not be retried")
 }
 
 func TestRequestBodySizeLimit(t *testing.T) {
@@ -1292,6 +1588,354 @@ func TestRetryAfterUsesSeconds(t *testing.T) {
 	err := newResponseError(http.Header{"Retry-After": {"10"}}, nil)
 	_, throttle := evaluate(err)
 	assert.Equal(t, 10*time.Second, throttle)
+}
+
+// TestWithEndpointURLNoPathUsesRootPath verifies that a pathless endpoint URL (scheme and host only, no path component)
+// passed to WithEndpointURL is normalized to the root path ("/") rather than falling back to the default OTLP logs path
+// ("/v1/logs").
+func TestWithEndpointURLNoPathUsesRootPath(t *testing.T) {
+	pathCh := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pathCh <- r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+	require.Empty(t, u.Path)
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	// srv.URL has no path component, e.g. "http://127.0.0.1:port".
+	exp, err := New(ctx, WithEndpointURL(srv.URL), WithRetry(RetryConfig{Enabled: false}))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+	require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+
+	got, ok := <-pathCh
+	require.True(t, ok, "request was not received")
+	assert.Equal(t, "/", got, "a pathless endpoint URL must target the root path, not the default logs path")
+}
+
+func TestEndpointPath(t *testing.T) {
+	const endpoint = "http" + "://collector:4318"
+	testCases := []struct {
+		name     string
+		env      map[string]string
+		options  []Option
+		wantPath string
+	}{
+		{
+			name:     "generic/no path",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint},
+			wantPath: "/v1/logs",
+		},
+		{
+			name:     "generic/root",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/"},
+			wantPath: "/v1/logs",
+		},
+		{
+			name:     "generic/ordinary base",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/prefix"},
+			wantPath: "/prefix/v1/logs",
+		},
+		{
+			name:     "generic/trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/prefix/"},
+			wantPath: "/prefix/v1/logs",
+		},
+		{
+			name:     "generic/escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%2Fb"},
+			wantPath: "/a%2Fb/v1/logs",
+		},
+		{
+			name:     "generic/double-escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%252Fb"},
+			wantPath: "/a%252Fb/v1/logs",
+		},
+		{
+			name:     "generic/lowercase escape",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%2fb/"},
+			wantPath: "/a%2fb/v1/logs",
+		},
+		{
+			name:     "generic/escaped trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%2F"},
+			wantPath: "/a%2F/v1/logs",
+		},
+		{
+			name:     "generic/escaped delimiters",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a%3Fb%23c%25d"},
+			wantPath: "/a%3Fb%23c%25d/v1/logs",
+		},
+		{
+			name:     "generic/escaped dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a/%2e%2E/b"},
+			wantPath: "/a/%2e%2E/b/v1/logs",
+		},
+		{
+			name:     "generic/repeated slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a//b/"},
+			wantPath: "/a//b/v1/logs",
+		},
+		{
+			name:     "generic/repeated trailing slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a//"},
+			wantPath: "/a//v1/logs",
+		},
+		{
+			name:     "generic/dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": endpoint + "/a/../b/"},
+			wantPath: "/a/../b/v1/logs",
+		},
+		{
+			name:     "logs/no path",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint},
+			wantPath: "/",
+		},
+		{
+			name:     "logs/root",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/"},
+			wantPath: "/",
+		},
+		{
+			name:     "logs/ordinary base",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/prefix"},
+			wantPath: "/prefix",
+		},
+		{
+			name:     "logs/trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/prefix/"},
+			wantPath: "/prefix/",
+		},
+		{
+			name:     "logs/escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%2Fb"},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "logs/double-escaped slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%252Fb"},
+			wantPath: "/a%252Fb",
+		},
+		{
+			name:     "logs/lowercase escape",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%2fb/"},
+			wantPath: "/a%2fb/",
+		},
+		{
+			name:     "logs/escaped trailing slash",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%2F"},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "logs/escaped delimiters",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a%3Fb%23c%25d"},
+			wantPath: "/a%3Fb%23c%25d",
+		},
+		{
+			name:     "logs/escaped dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a/%2e%2E/b"},
+			wantPath: "/a/%2e%2E/b",
+		},
+		{
+			name:     "logs/repeated slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a//b/"},
+			wantPath: "/a//b/",
+		},
+		{
+			name:     "logs/repeated trailing slashes",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a//"},
+			wantPath: "/a//",
+		},
+		{
+			name:     "logs/dot segments",
+			env:      map[string]string{"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": endpoint + "/a/../b/"},
+			wantPath: "/a/../b/",
+		},
+		{
+			name:     "option/no path",
+			options:  []Option{WithEndpointURL(endpoint)},
+			wantPath: "/",
+		},
+		{
+			name:     "option/root",
+			options:  []Option{WithEndpointURL(endpoint + "/")},
+			wantPath: "/",
+		},
+		{
+			name:     "option/ordinary base",
+			options:  []Option{WithEndpointURL(endpoint + "/prefix")},
+			wantPath: "/prefix",
+		},
+		{
+			name:     "option/trailing slash",
+			options:  []Option{WithEndpointURL(endpoint + "/prefix/")},
+			wantPath: "/prefix/",
+		},
+		{
+			name:     "option/escaped slash",
+			options:  []Option{WithEndpointURL(endpoint + "/a%2Fb")},
+			wantPath: "/a%2Fb",
+		},
+		{
+			name:     "option/double-escaped slash",
+			options:  []Option{WithEndpointURL(endpoint + "/a%252Fb")},
+			wantPath: "/a%252Fb",
+		},
+		{
+			name:     "option/lowercase escape",
+			options:  []Option{WithEndpointURL(endpoint + "/a%2fb/")},
+			wantPath: "/a%2fb/",
+		},
+		{
+			name:     "option/escaped trailing slash",
+			options:  []Option{WithEndpointURL(endpoint + "/a%2F")},
+			wantPath: "/a%2F",
+		},
+		{
+			name:     "option/escaped delimiters",
+			options:  []Option{WithEndpointURL(endpoint + "/a%3Fb%23c%25d")},
+			wantPath: "/a%3Fb%23c%25d",
+		},
+		{
+			name:     "option/escaped dot segments",
+			options:  []Option{WithEndpointURL(endpoint + "/a/%2e%2E/b")},
+			wantPath: "/a/%2e%2E/b",
+		},
+		{
+			name:     "option/repeated slashes",
+			options:  []Option{WithEndpointURL(endpoint + "/a//b/")},
+			wantPath: "/a//b/",
+		},
+		{
+			name:     "option/repeated trailing slashes",
+			options:  []Option{WithEndpointURL(endpoint + "/a//")},
+			wantPath: "/a//",
+		},
+		{
+			name:     "option/dot segments",
+			options:  []Option{WithEndpointURL(endpoint + "/a/../b/")},
+			wantPath: "/a/../b/",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+			t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "")
+			for key, value := range tt.env {
+				t.Setenv(key, value)
+			}
+
+			var requests int
+			options := append(tt.options, WithHTTPClient(&http.Client{
+				Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+					requests++
+					assert.Equal(t, "http", r.URL.Scheme)
+					assert.Equal(t, "collector:4318", r.URL.Host)
+					assert.Equal(t, tt.wantPath, r.URL.RequestURI())
+					return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
+				}),
+			}))
+			ctx := t.Context()
+			exp, err := New(ctx, options...)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.WithoutCancel(ctx))) })
+			require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+			assert.Equal(t, 1, requests)
+		})
+	}
+}
+
+func TestEndpointPathOptions(t *testing.T) {
+	const endpoint = "http" + "://collector:4318"
+	testCases := []struct {
+		name     string
+		options  []Option
+		wantPath string
+	}{
+		{
+			name:     "URL path is decoded",
+			options:  []Option{WithURLPath("/a%2Fb?# +é")},
+			wantPath: "/a%252Fb%3F%23%20+%C3%A9",
+		},
+		{
+			name:     "URL path literal percent",
+			options:  []Option{WithURLPath("/a%")},
+			wantPath: "/a%25",
+		},
+		{
+			name: "URL path overrides endpoint URL",
+			options: []Option{
+				WithEndpointURL(endpoint + "/original%2Fpath"),
+				WithURLPath("/a%2Fb"),
+			},
+			wantPath: "/a%252Fb",
+		},
+		{
+			name: "URL path clears endpoint URL escaping",
+			options: []Option{
+				WithEndpointURL(endpoint + "/a%2Fb"),
+				WithURLPath("/a/b"),
+			},
+			wantPath: "/a/b",
+		},
+		{
+			name: "endpoint URL overrides URL path",
+			options: []Option{
+				WithURLPath("/a%2Fb"),
+				WithEndpointURL(endpoint + "/original%2Fpath"),
+			},
+			wantPath: "/original%2Fpath",
+		},
+		{
+			name:     "endpoint URL overrides environment",
+			options:  []Option{WithEndpointURL(endpoint + "/option%2Fpath")},
+			wantPath: "/option%2Fpath",
+		},
+		{
+			name:     "URL path overrides environment",
+			options:  []Option{WithURLPath("/option%2Fpath")},
+			wantPath: "/option%252Fpath",
+		},
+		{
+			name: "endpoint changes host and retains path",
+			options: []Option{
+				WithEndpointURL("http" + "://other:9090/original%2Fpath"),
+				WithEndpoint("collector:4318"),
+			},
+			wantPath: "/original%2Fpath",
+		},
+		{
+			name:     "logs environment overrides generic environment",
+			wantPath: "/logs%2Fpath",
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", endpoint+"/generic%2Fpath/")
+			t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", endpoint+"/logs%2Fpath")
+			var requests int
+			options := append(tt.options, WithHTTPClient(&http.Client{
+				Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+					requests++
+					assert.Equal(t, "http", r.URL.Scheme)
+					assert.Equal(t, "collector:4318", r.URL.Host)
+					assert.Equal(t, tt.wantPath, r.URL.RequestURI())
+					return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
+				}),
+			}))
+			ctx := t.Context()
+			exp, err := New(ctx, options...)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.WithoutCancel(ctx))) })
+			require.NoError(t, exp.Export(ctx, make([]log.Record, 1)))
+			assert.Equal(t, 1, requests)
+		})
+	}
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)

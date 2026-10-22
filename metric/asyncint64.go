@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric // import "go.opentelemetry.io/otel/metric"
+package metric
 
 import (
 	"context"
@@ -256,23 +256,30 @@ type int64CallbackOpt struct {
 }
 
 func (o int64CallbackOpt) applyInt64ObservableCounter(cfg Int64ObservableCounterConfig) Int64ObservableCounterConfig {
-	cfg.callbacks = append(cfg.callbacks, o.cback)
+	if o.cback != nil {
+		cfg.callbacks = append(cfg.callbacks, o.cback)
+	}
 	return cfg
 }
 
 func (o int64CallbackOpt) applyInt64ObservableUpDownCounter(
 	cfg Int64ObservableUpDownCounterConfig,
 ) Int64ObservableUpDownCounterConfig {
-	cfg.callbacks = append(cfg.callbacks, o.cback)
+	if o.cback != nil {
+		cfg.callbacks = append(cfg.callbacks, o.cback)
+	}
 	return cfg
 }
 
 func (o int64CallbackOpt) applyInt64ObservableGauge(cfg Int64ObservableGaugeConfig) Int64ObservableGaugeConfig {
-	cfg.callbacks = append(cfg.callbacks, o.cback)
+	if o.cback != nil {
+		cfg.callbacks = append(cfg.callbacks, o.cback)
+	}
 	return cfg
 }
 
 // WithInt64Callback adds callback to be called for an instrument.
+// If callback is nil, this option has no effect.
 func WithInt64Callback(callback Int64Callback) Int64ObservableOption {
 	return int64CallbackOpt{callback}
 }

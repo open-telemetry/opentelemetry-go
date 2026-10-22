@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric // import "go.opentelemetry.io/otel/metric"
+package metric
 
 import (
 	"context"
@@ -260,23 +260,30 @@ type float64CallbackOpt struct {
 func (o float64CallbackOpt) applyFloat64ObservableCounter(
 	cfg Float64ObservableCounterConfig,
 ) Float64ObservableCounterConfig {
-	cfg.callbacks = append(cfg.callbacks, o.cback)
+	if o.cback != nil {
+		cfg.callbacks = append(cfg.callbacks, o.cback)
+	}
 	return cfg
 }
 
 func (o float64CallbackOpt) applyFloat64ObservableUpDownCounter(
 	cfg Float64ObservableUpDownCounterConfig,
 ) Float64ObservableUpDownCounterConfig {
-	cfg.callbacks = append(cfg.callbacks, o.cback)
+	if o.cback != nil {
+		cfg.callbacks = append(cfg.callbacks, o.cback)
+	}
 	return cfg
 }
 
 func (o float64CallbackOpt) applyFloat64ObservableGauge(cfg Float64ObservableGaugeConfig) Float64ObservableGaugeConfig {
-	cfg.callbacks = append(cfg.callbacks, o.cback)
+	if o.cback != nil {
+		cfg.callbacks = append(cfg.callbacks, o.cback)
+	}
 	return cfg
 }
 
 // WithFloat64Callback adds callback to be called for an instrument.
+// If callback is nil, this option has no effect.
 func WithFloat64Callback(callback Float64Callback) Float64ObservableOption {
 	return float64CallbackOpt{callback}
 }

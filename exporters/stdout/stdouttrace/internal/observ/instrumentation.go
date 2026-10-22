@@ -3,7 +3,7 @@
 
 // Package observ provides experimental observability instrumentation
 // for the stdout trace exporter.
-package observ // import "go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/observ"
+package observ
 
 import (
 	"context"
@@ -17,8 +17,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 const (
@@ -80,6 +80,8 @@ func put[T any](p *sync.Pool, s *[]T) {
 	p.Put(s)
 }
 
+// ComponentName returns the component name for the exporter with the
+// provided ID.
 func ComponentName(id int64) string {
 	return fmt.Sprintf("%s/%d", ComponentType, id)
 }

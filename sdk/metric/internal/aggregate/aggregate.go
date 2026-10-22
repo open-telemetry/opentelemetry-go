@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package aggregate // import "go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+package aggregate
 
 import (
 	"context"
@@ -57,18 +57,17 @@ func (b Builder[N]) resFunc() func(attribute.Set) FilteredExemplarReservoir[N] {
 	return DropReservoir
 }
 
-type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, fltrAttr attribute.Set, droppedAttr []attribute.KeyValue)
+type fltrMeasure[N int64 | float64] func(ctx context.Context, value N, lazy lazyFilteredAttributes)
 
 func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 	if b.Filter != nil {
 		fltr := b.Filter // Copy to make it immutable after assignment.
 		return func(ctx context.Context, n N, a attribute.Set) {
-			fAttr, dropped := a.Filter(fltr)
-			f(ctx, n, fAttr, dropped)
+			f(ctx, n, newLazyFilteredAttributes(a, fltr))
 		}
 	}
 	return func(ctx context.Context, n N, a attribute.Set) {
-		f(ctx, n, a, nil)
+		f(ctx, n, newLazyFilteredAttributes(a, nil))
 	}
 }
 
@@ -143,12 +142,20 @@ func (b Builder[N]) ExponentialBucketHistogram(
 	maxSize, maxScale int32,
 	noMinMax, noSum bool,
 ) (Measure[N], ComputeAggregation) {
-	h := newExponentialHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
 	switch b.Temporality {
 	case metricdata.DeltaTemporality:
-		return b.filter(h.measure), h.delta
+		h := newDeltaExpoHistogram[N](maxSize, maxScale, noMinMax, noSum, b.AggregationLimit, b.resFunc())
+		return b.filter(h.measure), h.collect
 	default:
-		return b.filter(h.measure), h.cumulative
+		measure, collect := newCumulativeExpoHistogram[N](
+			maxSize,
+			maxScale,
+			noMinMax,
+			noSum,
+			b.AggregationLimit,
+			b.resFunc(),
+		)
+		return b.filter(measure), collect
 	}
 }
 

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package internal provides internal functionality for the opencensus package.
-package internal // import "go.opentelemetry.io/otel/bridge/opencensus/internal/ocmetric"
+package internal
 
 import (
 	"cmp"
@@ -328,8 +328,7 @@ func uintSliceKV[N uint | uint8 | uint16 | uint32 | uint64 | uintptr](key string
 }
 
 func uint64KV(key string, val uint64) attribute.KeyValue {
-	const maxInt64 = ^uint64(0) >> 1
-	if val > maxInt64 {
+	if val > math.MaxInt64 {
 		return attribute.String(key, strconv.FormatUint(val, 10))
 	}
 	return attribute.Int64(key, int64(val)) // nolint: gosec  // Overflow checked above.

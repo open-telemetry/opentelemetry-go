@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
+package prometheus
 
 import (
 	"context"
@@ -16,7 +16,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/otlptranslator"
-	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -304,21 +303,21 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			switch v := m.Data.(type) {
 			case metricdata.Histogram[int64]:
-				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addHistogramMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.Histogram[float64]:
-				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addHistogramMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.ExponentialHistogram[int64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addExponentialHistogramMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.ExponentialHistogram[float64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addExponentialHistogramMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.Sum[int64]:
-				addSumMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addSumMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.Sum[float64]:
-				addSumMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addSumMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.Gauge[int64]:
-				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addGaugeMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.Gauge[float64]:
-				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addGaugeMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			}
 		}
 	}
@@ -378,6 +377,7 @@ func downscaleExponentialBucket(bucket metricdata.ExponentialBucket, scaleDelta 
 }
 
 func addExponentialHistogramMetric[N int64 | float64](
+	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	histogram metricdata.ExponentialHistogram[N],
 	m metricdata.Metrics,
@@ -385,7 +385,6 @@ func addExponentialHistogramMetric[N int64 | float64](
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
 	inst *observ.Instrumentation,
-	ctx context.Context,
 ) {
 	var err error
 	var success int64
@@ -410,12 +409,13 @@ func addExponentialHistogramMetric[N int64 | float64](
 		scale := dp.Scale
 		if scale < -4 {
 			// Reject scales below -4 as they cannot be represented in Prometheus
+			scaleErr := fmt.Errorf("%w: %d (min -4)", errEHScaleBelowMin, scale)
 			reportError(
 				ch,
 				desc,
-				fmt.Errorf("%w: %d (min -4)", errEHScaleBelowMin, scale),
+				scaleErr,
 			)
-			err = errors.Join(err, e)
+			err = errors.Join(err, scaleErr)
 			continue
 		}
 
@@ -480,6 +480,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 }
 
 func addHistogramMetric[N int64 | float64](
+	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	histogram metricdata.Histogram[N],
 	m metricdata.Metrics,
@@ -487,7 +488,6 @@ func addHistogramMetric[N int64 | float64](
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
 	inst *observ.Instrumentation,
-	ctx context.Context,
 ) {
 	var err error
 	var success int64
@@ -528,6 +528,7 @@ func addHistogramMetric[N int64 | float64](
 }
 
 func addSumMetric[N int64 | float64](
+	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	sum metricdata.Sum[N],
 	m metricdata.Metrics,
@@ -535,7 +536,6 @@ func addSumMetric[N int64 | float64](
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
 	inst *observ.Instrumentation,
-	ctx context.Context,
 ) {
 	var err error
 	var success int64
@@ -578,6 +578,7 @@ func addSumMetric[N int64 | float64](
 }
 
 func addGaugeMetric[N int64 | float64](
+	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	gauge metricdata.Gauge[N],
 	m metricdata.Metrics,
@@ -585,7 +586,6 @@ func addGaugeMetric[N int64 | float64](
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
 	inst *observ.Instrumentation,
-	ctx context.Context,
 ) {
 	var err error
 	var success int64
@@ -639,7 +639,6 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 			kv := itr.Attribute()
 			key, err := labelNamer.Build(string(kv.Key))
 			if err != nil {
-				// TODO(#7066) Handle this error better.
 				return nil, nil, err
 			}
 			if _, ok := keysMap[key]; !ok {
@@ -681,7 +680,6 @@ func getScopeAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([
 		kv := itr.Attribute()
 		key, err := labelNamer.Build(string(kv.Key))
 		if err != nil {
-			// TODO(#7066) Handle this error better.
 			return nil, nil, err
 		}
 		if isReservedScopeLabel(key) {
@@ -799,8 +797,8 @@ func (c *collector) validateMetrics(name, description string, metricType *dto.Me
 
 	if !exist {
 		c.metricFamilies[name] = &dto.MetricFamily{
-			Name: proto.String(name),
-			Help: proto.String(description),
+			Name: new(name),
+			Help: new(description),
 			Type: metricType,
 		}
 		return false, ""

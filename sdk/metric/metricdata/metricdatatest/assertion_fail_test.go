@@ -3,7 +3,7 @@
 
 //go:build tests_fail
 
-package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+package metricdatatest
 
 import (
 	"testing"

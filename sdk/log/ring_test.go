@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 func verifyRing(t *testing.T, r *ring, num, sum int) {
@@ -24,7 +24,7 @@ func verifyRing(t *testing.T, r *ring, num, sum int) {
 	r.Do(func(v Record) {
 		n++
 		body := v.Body()
-		if body.Kind() != log.KindEmpty {
+		if body.Type() != attribute.EMPTY {
 			s += int(body.AsInt64())
 		}
 	})
@@ -65,7 +65,7 @@ func TestNewRing(t *testing.T) {
 		r := newRing(n)
 		for i := 1; i <= n; i++ {
 			var rec Record
-			rec.SetBody(log.IntValue(i))
+			rec.SetBody(attribute.IntValue(i))
 			r.Value = rec
 			r = r.Next()
 		}

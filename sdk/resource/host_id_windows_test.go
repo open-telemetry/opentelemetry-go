@@ -3,7 +3,7 @@
 
 //go:build windows
 
-package resource // import "go.opentelemetry.io/otel/sdk/resource"
+package resource
 
 import (
 	"testing"

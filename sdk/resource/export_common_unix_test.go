@@ -3,11 +3,12 @@
 
 //go:build aix || darwin || dragonfly || freebsd || linux || netbsd || openbsd || solaris || zos
 
-package resource // import "go.opentelemetry.io/otel/sdk/resource"
+package resource
 
 var (
 	Uname                 = uname
 	GetFirstAvailableFile = getFirstAvailableFile
+	PlatformOSDescription = platformOSDescription
 )
 
 var (
