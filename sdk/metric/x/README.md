@@ -7,3 +7,17 @@ Adding/uncommenting the following after initial PR merge:
 
 This module contains experimental extensions to the OpenTelemetry Go Metric SDK.
 Its APIs may change incompatibly between releases.
+
+## MetricFilter
+
+`WithMetricFilter` configures a reader to filter aggregated metric streams during collection.
+`MetricFilter.TestMetric` receives `TestMetricParameters` and returns `Accept`, `Drop`, or `AcceptPartial`.
+For `AcceptPartial`, `MetricFilter.TestAttributes` receives `TestAttributesParameters` for each data point and returns `AttrAccept` or `AttrDrop`.
+Parameters contain the instrumentation scope, metric name, aggregation kind, and unit.
+Attribute parameters also contain the data point's attributes.
+The aggregation is passed as `metricdata.Aggregation`, matching the collected data, including View-selected aggregations.
+
+## Compatibility and Stability
+
+Experimental features are outside the OpenTelemetry Go [versioning and stability policy](../../../VERSIONING.md).
+These features may be removed or modified in successive releases, including patch releases.

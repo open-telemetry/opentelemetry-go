@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add experimental `MetricFilter` support in `go.opentelemetry.io/otel/sdk/metric/x` for filtering data collected by readers in `go.opentelemetry.io/otel/sdk/metric`. (#8461)
 - Add experimental `WithFinish` support for `Float64Counter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9186)
 - Add experimental `WithFinish` support for `Int64Counter` Sum aggregation,
   including cancellable provider shutdown and parked waits for in-flight measurements,
