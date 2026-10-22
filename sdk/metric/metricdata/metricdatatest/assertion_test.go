@@ -724,6 +724,106 @@ func TestAssertEqual(t *testing.T) {
 	t.Run("QuantileValues", testDatatype(quantileValueA, quantileValueB, equalQuantileValue))
 }
 
+func TestAttributeSetStringFormatting(t *testing.T) {
+	expectedAttrs := attribute.NewSet(
+		attribute.String("z", `quoted "value"`),
+		attribute.Int("a", 1),
+	)
+	actualAttrs := attribute.NewSet()
+
+	expected := metricdata.DataPoint[int64]{Attributes: expectedAttrs}
+	actual := metricdata.DataPoint[int64]{Attributes: actualAttrs}
+
+	const (
+		expectedAttrsStr = `{"a":1,"z":"quoted \"value\""}`
+		actualAttrsStr   = `{}`
+	)
+	assert.Equal(t, []string{
+		"Attributes not equal:\nexpected: " + expectedAttrsStr + "\nactual: " + actualAttrsStr,
+	}, equalDataPoints(expected, actual, config{}))
+
+	tests := []struct {
+		name    string
+		context string
+		compare func() []string
+	}{
+		{
+			name:    "Gauge",
+			context: "DataPoint",
+			compare: func() []string {
+				return equalGauges(
+					metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{expected}},
+					metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{actual}},
+					config{},
+				)
+			},
+		},
+		{
+			name:    "Sum",
+			context: "DataPoint",
+			compare: func() []string {
+				return equalSums(
+					metricdata.Sum[int64]{DataPoints: []metricdata.DataPoint[int64]{expected}},
+					metricdata.Sum[int64]{DataPoints: []metricdata.DataPoint[int64]{actual}},
+					config{},
+				)
+			},
+		},
+		{
+			name:    "Histogram",
+			context: "HistogramDataPoint",
+			compare: func() []string {
+				return equalHistograms(
+					metricdata.Histogram[int64]{
+						DataPoints: []metricdata.HistogramDataPoint[int64]{{Attributes: expectedAttrs}},
+					},
+					metricdata.Histogram[int64]{
+						DataPoints: []metricdata.HistogramDataPoint[int64]{{Attributes: actualAttrs}},
+					},
+					config{},
+				)
+			},
+		},
+		{
+			name:    "ExponentialHistogram",
+			context: "ExponentialHistogramDataPoint",
+			compare: func() []string {
+				return equalExponentialHistograms(
+					metricdata.ExponentialHistogram[int64]{
+						DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{{Attributes: expectedAttrs}},
+					},
+					metricdata.ExponentialHistogram[int64]{
+						DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{{Attributes: actualAttrs}},
+					},
+					config{},
+				)
+			},
+		},
+		{
+			name:    "Summary",
+			context: "SummaryDataPoint",
+			compare: func() []string {
+				return equalSummary(
+					metricdata.Summary{DataPoints: []metricdata.SummaryDataPoint{{Attributes: expectedAttrs}}},
+					metricdata.Summary{DataPoints: []metricdata.SummaryDataPoint{{Attributes: actualAttrs}}},
+					config{},
+				)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reasons := tt.compare()
+			if assert.Len(t, reasons, 1) {
+				assert.Contains(t, reasons[0], "\n"+tt.context+" "+expectedAttrsStr+":\n")
+				assert.Contains(t, reasons[0], "\texpected: "+expectedAttrsStr+"\n")
+				assert.Contains(t, reasons[0], "\tactual: "+actualAttrsStr+"\n")
+			}
+		})
+	}
+}
+
 func TestEqualKeyValue(t *testing.T) {
 	for _, tt := range []struct {
 		name string

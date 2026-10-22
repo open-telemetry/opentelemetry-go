@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -47,13 +49,6 @@ var exporterN atomic.Int64
 
 var errInsecureEndpointWithTLS = errors.New("insecure HTTP endpoint cannot use TLS client configuration")
 
-// maxResponseBodySize is the maximum number of bytes to read from a response
-// body. It is set to 4 MiB per the OTLP specification recommendation to
-// mitigate excessive memory usage caused by a misconfigured or malicious
-// server. If this limit is exceeded, the response is treated as a non-retryable
-// error. This is a variable to allow tests to override it.
-var maxResponseBodySize int64 = 4 * 1024 * 1024
-
 // nextExporterID returns the next unique ID for an exporter.
 func nextExporterID() int64 {
 	const inc = 1
@@ -67,10 +62,14 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	}
 
 	hc := cfg.httpClient
+	var exportTimeout time.Duration
 	if hc == nil {
+		// WithHTTPClient takes precedence over WithTimeout, so the exporter
+		// timeout is applied only for the client constructed here.
+		exportTimeout = cfg.timeout.Value
 		hc = &http.Client{
 			Transport: ourTransport,
-			Timeout:   cfg.timeout.Value,
+			Timeout:   exportTimeout,
 		}
 
 		if cfg.tlsCfg.Value != nil || cfg.proxy.Value != nil {
@@ -87,9 +86,10 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	}
 
 	u := &url.URL{
-		Scheme: "https",
-		Host:   cfg.endpoint.Value,
-		Path:   cfg.path.Value,
+		Scheme:  "https",
+		Host:    cfg.endpoint.Value,
+		Path:    cfg.path.Value.Path,
+		RawPath: cfg.path.Value.RawPath,
 	}
 	if cfg.insecure.Value {
 		u.Scheme = "http"
@@ -111,11 +111,13 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
 	c := &httpClient{
-		compression:    cfg.compression.Value,
-		maxRequestSize: cfg.maxRequestSize.Value,
-		req:            req,
-		requestFunc:    cfg.retryCfg.Value.RequestFunc(evaluate),
-		client:         hc,
+		compression:     cfg.compression.Value,
+		maxRequestSize:  cfg.maxRequestSize.Value,
+		maxResponseSize: cfg.maxResponseSize.Value,
+		req:             req,
+		requestFunc:     cfg.retryCfg.Value.RequestFunc(evaluate),
+		client:          hc,
+		exportTimeout:   exportTimeout,
 	}
 
 	id := nextExporterID()
@@ -126,11 +128,13 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 
 type httpClient struct {
 	// req is cloned for every upload the client makes.
-	req            *http.Request
-	compression    Compression
-	maxRequestSize int
-	requestFunc    retry.RequestFunc
-	client         *http.Client
+	req             *http.Request
+	compression     Compression
+	maxRequestSize  int
+	maxResponseSize int64
+	requestFunc     retry.RequestFunc
+	client          *http.Client
+	exportTimeout   time.Duration
 
 	inst *observ.Instrumentation
 }
@@ -182,6 +186,12 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		return err
 	}
 
+	if c.exportTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, c.exportTimeout, errors.New("exporter export timeout"))
+		defer cancel()
+	}
+
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
 		select {
 		case <-iCtx.Done():
@@ -209,24 +219,20 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		}
 
 		statusCode = resp.StatusCode
+		respData, err := c.readResponse(resp)
+		if err != nil {
+			return err
+		}
 		if sc := resp.StatusCode; sc >= 200 && sc <= 299 {
 			// Success, do not retry.
 
-			// Read the partial success message, if any.
-			var respData bytes.Buffer
-			if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-				if maxBytesErr, ok := errors.AsType[*http.MaxBytesError](err); ok {
-					return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-				}
-				return err
-			}
-			if respData.Len() == 0 {
+			if len(respData) == 0 {
 				return nil
 			}
 
-			if resp.Header.Get("Content-Type") == "application/x-protobuf" {
+			if isProtobufContentType(resp.Header.Get("Content-Type")) {
 				var respProto collogpb.ExportLogsServiceResponse
-				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
+				if err := proto.Unmarshal(respData, &respProto); err != nil {
 					return err
 				}
 
@@ -247,14 +253,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		// body, so we read it to include in the error
 		// message to be returned. It will help in
 		// debugging the actual issue.
-		var respData bytes.Buffer
-		if _, err := io.Copy(&respData, http.MaxBytesReader(nil, resp.Body, maxResponseBodySize)); err != nil {
-			if maxBytesErr, ok := errors.AsType[*http.MaxBytesError](err); ok {
-				return fmt.Errorf("response body too large: exceeded %d bytes", maxBytesErr.Limit)
-			}
-			return err
-		}
-		respStr := strings.TrimSpace(respData.String())
+		respStr := strings.TrimSpace(string(respData))
 		if respStr == "" {
 			respStr = "(empty)"
 		}
@@ -272,6 +271,33 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 			return fmt.Errorf("failed to send logs to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
 	}))
+}
+
+// readResponse returns the response body. A gzip Content-Encoding is
+// decompressed here. Go's Transport removes that header after it
+// decompresses a response itself, so a body it already decoded is left
+// alone. The size limit applies to the bytes returned.
+func (c *httpClient) readResponse(resp *http.Response) ([]byte, error) {
+	src := io.Reader(resp.Body)
+	var gz *gzip.Reader
+	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+		var err error
+		gz, err = gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		src = gz
+	}
+
+	var respData bytes.Buffer
+	err := internal.CopyResponseBody(&respData, src, c.maxResponseSize)
+	if gz != nil {
+		err = errors.Join(err, gz.Close())
+	}
+	if err != nil {
+		return nil, err
+	}
+	return respData.Bytes(), nil
 }
 
 var gzPool = sync.Pool{
@@ -366,11 +392,22 @@ func newResponseError(header http.Header, wrapped error) error {
 	return rErr
 }
 
+// isProtobufContentType reports whether the Content-Type value denotes a
+// protobuf-encoded OTLP payload. Media type tokens are case-insensitive and
+// parameters are ignored, as required by RFC 9110 section 8.3.
+func isProtobufContentType(contentType string) bool {
+	mediatype, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(mediatype, "application/x-protobuf")
+}
+
 func retryAfterDuration(v string) time.Duration {
 	if t, err := strconv.ParseInt(v, 10, 64); err == nil && t >= 0 {
-		const maxRetryAfterSeconds = int64(1<<63-1) / int64(time.Second)
+		const maxRetryAfterSeconds = math.MaxInt64 / int64(time.Second)
 		if t > maxRetryAfterSeconds {
-			return time.Duration(1<<63 - 1)
+			return time.Duration(math.MaxInt64)
 		}
 		return time.Duration(t) * time.Second
 	}

@@ -492,9 +492,11 @@ func warnRepeatedObservableCallbacks(id Instrument) {
 // Reader's collection may then still be running when Unregister returns. A
 // goroutine started by a callback is not within the callback: its call to
 // Unregister waits, so the callback must not wait for that goroutine.
+//
+// If f is nil, no callback is registered.
 func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) (metric.Registration, error) {
-	if len(insts) == 0 {
-		// Don't allocate a observer if not needed.
+	if f == nil || len(insts) == 0 {
+		// Don't allocate an observer if there is no callback or instrument.
 		return noopRegister{}, nil
 	}
 
