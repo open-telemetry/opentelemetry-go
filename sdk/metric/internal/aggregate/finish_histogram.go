@@ -129,7 +129,7 @@ func (s *finishHistogram[N]) measure(ctx context.Context, value N, lazy lazyFilt
 				measurement, ok = point.lifecycle.AcquireMeasurement()
 			}
 			if !ok {
-				s.values.CompareAndDelete(lazy.Distinct(), point)
+				s.values.CompareAndDelete(point.attrs.Equivalent(), point)
 				continue
 			}
 		}

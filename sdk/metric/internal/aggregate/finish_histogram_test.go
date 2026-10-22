@@ -392,6 +392,50 @@ func testFinishHistogramCardinality[N int64 | float64](t *testing.T) {
 	})
 }
 
+func TestFinishHistogramMeasureDeletesRetiredOverflow(t *testing.T) {
+	t.Run("Int64", testFinishHistogramMeasureDeletesRetiredOverflow[int64])
+	t.Run("Float64", testFinishHistogramMeasureDeletesRetiredOverflow[float64])
+}
+
+func testFinishHistogramMeasureDeletesRetiredOverflow[N int64 | float64](t *testing.T) {
+	t.Helper()
+	store := newFinishHistogram(finishHistogramBounds, false, false, metricdata.DeltaTemporality, 1, dropExemplars[N])
+	store.measure(t.Context(), N(1), newLazyFilteredAttributes(alice, nil))
+	raw, ok := store.values.Load(overflowSet.Equivalent())
+	require.True(t, ok)
+	retired := raw.(*finishHistogramPoint[N])
+	// Pause delta collection after retirement, before its map deletion.
+	var first metricdata.HistogramDataPoint[N]
+	emit, retire := store.collectPoint(retired, &first, store.start, now(), finishHistogramBounds)
+	require.True(t, emit)
+	require.True(t, retire)
+	assert.Equal(t, uint64(1), first.Count)
+	assert.Equal(t, N(1), first.Sum)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		store.measure(t.Context(), N(7), newLazyFilteredAttributes(bob, nil))
+	}()
+	t.Cleanup(func() { store.stop(); <-done })
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("measurement did not replace the retired overflow entry")
+	}
+
+	// The original collector cannot remove the replacement lifetime.
+	assert.False(t, store.values.CompareAndDelete(retired.attrs.Equivalent(), retired))
+	assert.Equal(t, 1, store.values.Len())
+	points := finishHistogramPoints[N](t, store.collect)
+	require.Len(t, points, 1)
+	assert.Equal(t, overflowSet, points[0].Attributes)
+	assert.Equal(t, uint64(1), points[0].Count)
+	assert.Equal(t, N(7), points[0].Sum)
+	assert.Equal(t, []uint64{0, 0, 1, 0}, points[0].BucketCounts)
+	assert.Empty(t, finishHistogramPoints[N](t, store.collect))
+}
+
 func TestFinishHistogramConcurrentSafe(t *testing.T) {
 	t.Run("Int64", testFinishHistogramConcurrentSafe[int64])
 	t.Run("Float64", testFinishHistogramConcurrentSafe[float64])
