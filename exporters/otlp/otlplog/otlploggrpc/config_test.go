@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -711,4 +712,73 @@ func TestLoadInsecureFromEnv(t *testing.T) {
 			t.Errorf("got set=%v value=%v, want the passed setting untouched", got.Set, got.Value)
 		}
 	})
+}
+
+func TestLoadInsecureFromEnvReportsInvalidValue(t *testing.T) {
+	const (
+		logsKey    = "OTEL_EXPORTER_OTLP_LOGS_INSECURE"
+		genericKey = "OTEL_EXPORTER_OTLP_INSECURE"
+	)
+
+	var (
+		mu      sync.Mutex
+		handled []error
+	)
+	t.Cleanup(func(orig otel.ErrorHandler) func() {
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			mu.Lock()
+			defer mu.Unlock()
+			handled = append(handled, err)
+		}))
+		return func() { otel.SetErrorHandler(orig) }
+	}(otel.GetErrorHandler()))
+
+	tests := []struct {
+		name    string
+		logs    string
+		gen     string
+		wantErr string
+	}{
+		{
+			name:    "invalid logs value is reported and does not fall through",
+			logs:    "invalid",
+			gen:     "true",
+			wantErr: `invalid OTEL_EXPORTER_OTLP_LOGS_INSECURE value "invalid": expected "true" or "false", using false`,
+		},
+		{
+			name:    "invalid generic value is reported",
+			gen:     "invalid",
+			wantErr: `invalid OTEL_EXPORTER_OTLP_INSECURE value "invalid": expected "true" or "false", using false`,
+		},
+		{name: "valid values are not reported", logs: "true", gen: "false"},
+		{name: "unset values are not reported"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mu.Lock()
+			handled = nil
+			mu.Unlock()
+
+			t.Setenv(logsKey, tc.logs)
+			t.Setenv(genericKey, tc.gen)
+			loadInsecureFromEnv(envInsecure)(setting[bool]{})
+
+			mu.Lock()
+			defer mu.Unlock()
+
+			if tc.wantErr == "" {
+				if len(handled) != 0 {
+					t.Fatalf("expected no reported errors, got %d: %v", len(handled), handled)
+				}
+				return
+			}
+			if len(handled) != 1 {
+				t.Fatalf("expected exactly one reported error, got %d: %v", len(handled), handled)
+			}
+			if got := handled[0].Error(); got != tc.wantErr {
+				t.Fatalf("reported error = %q, want %q", got, tc.wantErr)
+			}
+		})
+	}
 }
