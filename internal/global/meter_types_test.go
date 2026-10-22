@@ -5,6 +5,8 @@ package global
 
 import (
 	"context"
+	"runtime"
+	"sync"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
@@ -13,12 +15,72 @@ import (
 type testMeterProvider struct {
 	embedded.MeterProvider
 
-	count int
+	count    int
+	newMeter func() metric.Meter
 }
 
 func (p *testMeterProvider) Meter(string, ...metric.MeterOption) metric.Meter {
 	p.count++
+	if p.newMeter != nil {
+		return p.newMeter()
+	}
 	return &testMeter{}
+}
+
+type testWaitingMeter struct {
+	testMeter
+	reg testWaitingRegistration
+}
+
+func (m *testWaitingMeter) RegisterCallback(f metric.Callback, _ ...metric.Observable) (metric.Registration, error) {
+	m.reg.callback = f
+	return &m.reg, nil
+}
+
+// testWaitingRegistration models the SDK's retirement and in-flight waiting,
+// including its exception for calls made from a callback.
+type testWaitingRegistration struct {
+	embedded.Registration
+	callback metric.Callback
+	waiting  chan struct{}
+	mu       sync.Mutex
+	retired  bool
+	inFlight sync.WaitGroup
+}
+
+//go:noinline
+func (r *testWaitingRegistration) collect() error {
+	r.mu.Lock()
+	if r.retired {
+		r.mu.Unlock()
+		return nil
+	}
+	r.inFlight.Add(1)
+	r.mu.Unlock()
+	defer r.inFlight.Done()
+	return r.callback(context.Background(), observationRecorder{})
+}
+
+func (r *testWaitingRegistration) Unregister() error {
+	r.mu.Lock()
+	r.retired = true
+	r.mu.Unlock()
+
+	var pcs [64]uintptr
+	n := runtime.Callers(2, pcs[:])
+	frames := runtime.CallersFrames(pcs[:n])
+	for {
+		frame, more := frames.Next()
+		if frame.Function == "go.opentelemetry.io/otel/internal/global.(*testWaitingRegistration).collect" {
+			return nil
+		}
+		if !more {
+			break
+		}
+	}
+	r.waiting <- struct{}{}
+	r.inFlight.Wait()
+	return nil
 }
 
 type testMeter struct {

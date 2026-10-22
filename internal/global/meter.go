@@ -535,8 +535,9 @@ type registration struct {
 	instruments []metric.Observable
 	function    metric.Callback
 
-	unreg   func() error
-	unregMu sync.Mutex
+	unreg    func() error
+	unregMu  sync.Mutex
+	delegate metric.Registration
 }
 
 type unwrapObs struct {
@@ -611,18 +612,25 @@ func (c *registration) setDelegate(m metric.Meter) {
 		return
 	}
 
-	c.unreg = reg.Unregister
+	c.delegate = reg
+	c.unreg = nil
 }
 
 func (c *registration) Unregister() error {
 	c.unregMu.Lock()
-	defer c.unregMu.Unlock()
-	if c.unreg == nil {
-		// Unregister already called.
-		return nil
-	}
+	unreg, delegate := c.unreg, c.delegate
+	c.unreg = nil
+	c.unregMu.Unlock()
 
-	var err error
-	err, c.unreg = c.unreg(), nil
-	return err
+	// A delegate may wait for a callback that is itself unregistering. Keep
+	// forwarding repeated calls so each caller gets the delegate's guarantees.
+	if delegate != nil {
+		return delegate.Unregister()
+	}
+	// Removing a pre-delegation registration takes meter.mtx; do not hold
+	// unregMu, which setDelegate takes while holding meter.mtx.
+	if unreg != nil {
+		return unreg()
+	}
+	return nil
 }
