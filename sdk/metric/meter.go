@@ -533,7 +533,7 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 		return noopRegister{}, err
 	}
 
-	unregs := make([]func(), len(m.pipes))
+	entries := make([]*multiCallbackEntry, len(m.pipes))
 	for ix, pipe := range m.pipes {
 		reg := newObserver(pipe)
 		for _, inst := range validInstruments {
@@ -547,10 +547,10 @@ func (m *meter) RegisterCallback(f metric.Callback, insts ...metric.Observable) 
 
 		// Some or all instruments were valid.
 		cBack := func(ctx context.Context) error { return f(ctx, reg) }
-		unregs[ix] = pipe.addMultiCallback(cBack)
+		entries[ix] = pipe.addMultiCallback(cBack)
 	}
 
-	return unregisterFuncs{f: unregs}, err
+	return multiCallbackRegistration{entries: entries}, err
 }
 
 type observer struct {

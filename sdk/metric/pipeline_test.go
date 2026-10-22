@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -807,9 +808,10 @@ func TestUnregisterWaitsForInFlightCallback(t *testing.T) {
 		{name: "OneReader", readers: 1, callers: 1},
 		{name: "TwoReaders", readers: 2, callers: 1},
 		{name: "ConcurrentCallers", readers: 1, callers: 4},
+		{name: "ConcurrentCallersTwoReaders", readers: 2, callers: 4},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		run := func(t *testing.T) {
 			readers := make([]*ManualReader, tt.readers)
 			opts := make([]Option, tt.readers)
 			for i := range readers {
@@ -822,13 +824,13 @@ func TestUnregisterWaitsForInFlightCallback(t *testing.T) {
 			counter, err := m.Int64ObservableCounter("int64-observable-counter")
 			require.NoError(t, err)
 
-			started := make(chan struct{}, tt.readers)
-			release := make(chan struct{})
-			releaseOnce := sync.OnceFunc(func() { close(release) })
-			defer releaseOnce()
+			// Each call of f blocks on its own release channel, so the readers
+			// can be released one at a time.
+			started := make(chan chan struct{})
 			var returned atomic.Int64
 			reg, err := m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
-				started <- struct{}{}
+				release := make(chan struct{})
+				started <- release
 				<-release
 				o.ObserveInt64(counter, 1)
 				returned.Add(1)
@@ -838,14 +840,19 @@ func TestUnregisterWaitsForInFlightCallback(t *testing.T) {
 
 			// Block every reader's collection inside f.
 			collectDone := make(chan error, tt.readers)
+			releases := make([]func(), 0, tt.readers)
+			defer func() {
+				for _, release := range releases {
+					release()
+				}
+			}()
 			for _, r := range readers {
 				go func() {
 					var rm metricdata.ResourceMetrics
 					collectDone <- r.Collect(t.Context(), &rm)
 				}()
-			}
-			for range tt.readers {
-				<-started
+				release := <-started
+				releases = append(releases, sync.OnceFunc(func() { close(release) }))
 			}
 
 			// Unregister from outside f while f is in flight.
@@ -861,13 +868,18 @@ func TestUnregisterWaitsForInFlightCallback(t *testing.T) {
 				}()
 			}
 
-			select {
-			case <-results:
-				t.Fatal("Unregister returned while f was in flight")
-			case <-time.After(100 * time.Millisecond):
+			// Release the readers one at a time. Every caller keeps waiting
+			// while f is still in flight on any reader.
+			for _, release := range releases {
+				synctest.Wait()
+				select {
+				case <-results:
+					t.Fatal("Unregister returned while f was in flight")
+				default:
+				}
+				release()
 			}
 
-			releaseOnce()
 			for range tt.callers {
 				select {
 				case res := <-results:
@@ -888,63 +900,120 @@ func TestUnregisterWaitsForInFlightCallback(t *testing.T) {
 				assert.Empty(t, rm.ScopeMetrics)
 			}
 			assert.Equal(t, int64(tt.readers), returned.Load(), "f ran after Unregister returned")
+		}
+		t.Run(tt.name, func(t *testing.T) {
+			synctest.Test(t, run)
 		})
 	}
+}
+
+// TestUnregisterRemovesCallbackFromAllReadersBeforeWaiting checks that
+// Unregister removes f from every reader before it waits for a call of f in
+// progress on one of them, so that no other reader starts a new call of f
+// while Unregister waits.
+func TestUnregisterRemovesCallbackFromAllReadersBeforeWaiting(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		readerA, readerB := NewManualReader(), NewManualReader()
+		mp := NewMeterProvider(WithReader(readerA), WithReader(readerB))
+		m := mp.Meter("test")
+
+		counter, err := m.Int64ObservableCounter("int64-observable-counter")
+		require.NoError(t, err)
+
+		var calls atomic.Int64
+		started := make(chan struct{})
+		release := make(chan struct{})
+		releaseOnce := sync.OnceFunc(func() { close(release) })
+		defer releaseOnce()
+		reg, err := m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+			if calls.Add(1) == 1 {
+				close(started)
+				<-release
+			}
+			o.ObserveInt64(counter, 1)
+			return nil
+		}, counter)
+		require.NoError(t, err)
+
+		// Block reader A's collection inside f.
+		collectA := make(chan error, 1)
+		go func() {
+			var rm metricdata.ResourceMetrics
+			collectA <- readerA.Collect(t.Context(), &rm)
+		}()
+		<-started
+
+		unregDone := make(chan error, 1)
+		go func() { unregDone <- reg.Unregister() }()
+
+		// Wait until Unregister blocks on the call of f in flight on reader A.
+		synctest.Wait()
+		select {
+		case err := <-unregDone:
+			t.Fatalf("Unregister returned (%v) while f was in flight on reader A", err)
+		default:
+		}
+
+		var rm metricdata.ResourceMetrics
+		require.NoError(t, readerB.Collect(t.Context(), &rm))
+		assert.Equal(t, int64(1), calls.Load(), "reader B called f while Unregister waited")
+
+		releaseOnce()
+		require.NoError(t, <-unregDone)
+		require.NoError(t, <-collectA)
+	})
 }
 
 // TestUnregisterFromGoroutineSpawnedByCallbackWaits checks that a goroutine
 // started by f is treated as being outside f: its call to Unregister waits
 // for f to return.
 func TestUnregisterFromGoroutineSpawnedByCallbackWaits(t *testing.T) {
-	reader := NewManualReader()
-	mp := NewMeterProvider(WithReader(reader))
-	m := mp.Meter("test")
+	synctest.Test(t, func(t *testing.T) {
+		reader := NewManualReader()
+		mp := NewMeterProvider(WithReader(reader))
+		m := mp.Meter("test")
 
-	counter, err := m.Int64ObservableCounter("int64-observable-counter")
-	require.NoError(t, err)
+		counter, err := m.Int64ObservableCounter("int64-observable-counter")
+		require.NoError(t, err)
 
-	release := make(chan struct{})
-	releaseOnce := sync.OnceFunc(func() { close(release) })
-	defer releaseOnce()
-	var returned atomic.Bool
-	// unregDone receives whether f had returned when Unregister returned.
-	unregDone := make(chan bool, 1)
-	var reg metric.Registration
-	reg, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+		release := make(chan struct{})
+		releaseOnce := sync.OnceFunc(func() { close(release) })
+		defer releaseOnce()
+		var returned atomic.Bool
+		// unregDone receives whether f had returned when Unregister returned.
+		unregDone := make(chan bool, 1)
+		var reg metric.Registration
+		reg, err = m.RegisterCallback(func(_ context.Context, o metric.Observer) error {
+			go func() {
+				_ = reg.Unregister()
+				unregDone <- returned.Load()
+			}()
+			<-release
+			o.ObserveInt64(counter, 1)
+			returned.Store(true)
+			return nil
+		}, counter)
+		require.NoError(t, err)
+
+		collectDone := make(chan error, 1)
 		go func() {
-			_ = reg.Unregister()
-			unregDone <- returned.Load()
+			var rm metricdata.ResourceMetrics
+			collectDone <- reader.Collect(t.Context(), &rm)
 		}()
-		<-release
-		o.ObserveInt64(counter, 1)
-		returned.Store(true)
-		return nil
-	}, counter)
-	require.NoError(t, err)
 
-	collectDone := make(chan error, 1)
-	go func() {
-		var rm metricdata.ResourceMetrics
-		collectDone <- reader.Collect(t.Context(), &rm)
-	}()
+		// Wait until the spawned goroutine blocks in Unregister: it is outside
+		// f, so it has to wait for f to return.
+		synctest.Wait()
+		select {
+		case <-unregDone:
+			t.Fatal("Unregister returned while f was in flight")
+		default:
+		}
 
-	// Wait until the spawned goroutine has removed the callback from the
-	// pipeline; it then has to wait for f to return.
-	pipe := mp.pipes[0]
-	require.Eventually(t, func() bool {
-		pipe.Lock()
-		defer pipe.Unlock()
-		return len(pipe.multiCallbacks) == 0
-	}, 5*time.Second, time.Millisecond)
-	select {
-	case <-unregDone:
-		t.Fatal("Unregister returned while f was in flight")
-	case <-time.After(100 * time.Millisecond):
-	}
-
-	releaseOnce()
-	assert.True(t, <-unregDone, "Unregister returned before f returned")
-	require.NoError(t, <-collectDone)
+		releaseOnce()
+		assert.True(t, <-unregDone, "Unregister returned before f returned")
+		require.NoError(t, <-collectDone)
+	})
 }
 
 // TestUnregisterFromCallbackDoesNotWaitForInFlightPeer checks that a callback

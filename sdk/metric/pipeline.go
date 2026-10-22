@@ -118,6 +118,7 @@ type multiCallback func(context.Context) error
 
 // multiCallbackEntry is the registration of a multiCallback with a pipeline.
 type multiCallbackEntry struct {
+	pipe     *pipeline
 	callback multiCallback
 
 	// retired reports whether the callback has been unregistered. It is
@@ -140,51 +141,39 @@ func (e *multiCallbackEntry) call(ctx context.Context) error {
 }
 
 // addMultiCallback registers a multi-instrument callback to be run when
-// `produce()` is called.
-//
-// The returned unregister function removes the callback from the pipeline so
-// that no later collection calls it, and then waits for any call of the
-// callback that is in progress to return. Consequently, once unregister
-// returns the callback is not running and will not be called again.
-//
-// The wait is skipped when unregister is called from within a callback run
-// by produce: the in-progress call may be the caller itself, and waiting
-// inside a callback for one in progress on another reader could deadlock.
-// This allows a callback to unregister itself or a peer. A goroutine started
-// by a callback is not within the callback, so if it calls unregister it
-// waits for the callback to return; the callback must not wait for that
-// goroutine.
-//
-// unregister is idempotent and safe to call concurrently.
-func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
-	e := &multiCallbackEntry{callback: c}
+// `produce()` is called, until the returned entry is retired.
+func (p *pipeline) addMultiCallback(c multiCallback) *multiCallbackEntry {
+	e := &multiCallbackEntry{pipe: p, callback: c}
 	p.Lock()
 	p.multiCallbacks = append(p.multiCallbacks, e)
 	p.Unlock()
-	return func() {
-		p.Lock()
-		if !e.retired {
-			e.retired = true
-			// produce ranges over a snapshot of p.multiCallbacks without
-			// holding the lock. Rebuild the slice instead of deleting in
-			// place: elements below a live snapshot's length are never
-			// overwritten, and appends only ever write past a snapshot's
-			// length, so a snapshot never observes a mutation.
-			cbs := make([]*multiCallbackEntry, 0, len(p.multiCallbacks))
-			for _, o := range p.multiCallbacks {
-				if o != e {
-					cbs = append(cbs, o)
-				}
-			}
-			p.multiCallbacks = cbs
-		}
-		p.Unlock()
+	return e
+}
 
-		if inCallback() {
-			return
-		}
-		e.inFlight.Wait()
+// retire removes e from its pipeline so that no later collection calls the
+// callback. It does not wait for a call of the callback in progress to return.
+//
+// retire is idempotent and safe to call concurrently.
+func (e *multiCallbackEntry) retire() {
+	p := e.pipe
+	p.Lock()
+	defer p.Unlock()
+	if e.retired {
+		return
 	}
+	e.retired = true
+	// produce ranges over a snapshot of p.multiCallbacks without
+	// holding the lock. Rebuild the slice instead of deleting in
+	// place: elements below a live snapshot's length are never
+	// overwritten, and appends only ever write past a snapshot's
+	// length, so a snapshot never observes a mutation.
+	cbs := make([]*multiCallbackEntry, 0, len(p.multiCallbacks))
+	for _, o := range p.multiCallbacks {
+		if o != e {
+			cbs = append(cbs, o)
+		}
+	}
+	p.multiCallbacks = cbs
 }
 
 // runCallback calls c. produce calls every callback through runCallback,
@@ -260,7 +249,7 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		// Check retirement and mark the call in flight in one critical
 		// section, so an unregister either happens before this and the
 		// callback is skipped, or after it and unregister waits for the
-		// call (see addMultiCallback).
+		// call (see multiCallbackRegistration.Unregister).
 		p.Lock()
 		retired := e.retired
 		if !retired {
@@ -821,14 +810,37 @@ func newPipelines(
 	return pipes
 }
 
-type unregisterFuncs struct {
+// multiCallbackRegistration is the Registration of a multiCallback with each
+// pipeline of a meter.
+type multiCallbackRegistration struct {
 	embedded.Registration
-	f []func()
+	entries []*multiCallbackEntry
 }
 
-func (u unregisterFuncs) Unregister() error {
-	for _, f := range u.f {
-		f()
+// Unregister removes the callback from every pipeline so that no later
+// collection calls it, and only then waits for any call of the callback that
+// is in progress to return, so that no pipeline starts a new call while
+// Unregister waits. Consequently, once Unregister returns the callback is not
+// running and will not be called again.
+//
+// The wait is skipped when Unregister is called from within a callback run
+// by produce: the in-progress call may be the caller itself, and waiting
+// inside a callback for one in progress on another reader could deadlock.
+// This allows a callback to unregister itself or a peer. A goroutine started
+// by a callback is not within the callback, so if it calls Unregister it
+// waits for the callback to return; the callback must not wait for that
+// goroutine.
+//
+// Unregister is idempotent and safe to call concurrently.
+func (r multiCallbackRegistration) Unregister() error {
+	for _, e := range r.entries {
+		e.retire()
+	}
+	if inCallback() {
+		return nil
+	}
+	for _, e := range r.entries {
+		e.inFlight.Wait()
 	}
 	return nil
 }
