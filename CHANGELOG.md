@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add experimental `WithFinish` support for `Int64Counter` Sum aggregation,
   including cancellable provider shutdown and parked waits for in-flight measurements,
   in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
+- Add experimental support for running observable-instrument callbacks in parallel via a reused worker pool, enabled with the `OTEL_GO_X_PARALLEL_CALLBACKS=true` environment variable, in `go.opentelemetry.io/otel/sdk/metric`. (#8581)
 
 ### Changed
 
