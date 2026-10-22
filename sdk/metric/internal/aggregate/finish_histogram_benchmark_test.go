@@ -67,6 +67,7 @@ func benchmarkFinishHistogramLifecycle[N int64 | float64](b *testing.B) {
 		b.Run(name, func(b *testing.B) {
 			agg := Builder[N]{}.FinishExplicitBucketHistogram(finishHistogramBounds, false, false)
 			agg.Measure(b.Context(), N(7), alice)
+			finishTime := now()
 			distinct := alice.Equivalent()
 			if name == "UnknownFinish" {
 				distinct = bob.Equivalent()
@@ -76,7 +77,7 @@ func benchmarkFinishHistogramLifecycle[N int64 | float64](b *testing.B) {
 				if name == "MeasureAndFinish" {
 					agg.Measure(b.Context(), N(7), alice)
 				}
-				agg.Finish(distinct, y2k)
+				agg.Finish(distinct, finishTime)
 			}
 		})
 	}
@@ -101,7 +102,7 @@ func benchmarkFinishHistogramCycle[N int64 | float64](b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
 				agg.Measure(b.Context(), N(7), alice)
-				agg.Finish(alice.Equivalent(), y2k)
+				agg.Finish(alice.Equivalent(), now())
 				agg.ComputeAggregation(&data)
 			}
 		})

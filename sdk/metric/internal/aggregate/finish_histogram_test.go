@@ -163,6 +163,56 @@ func testFinishHistogramLifecycle[N int64 | float64](t *testing.T, first, last N
 	}
 }
 
+func TestFinishHistogramFinishTimestamp(t *testing.T) {
+	t.Run("Int64", func(t *testing.T) { testFinishHistogramFinishTimestamp(t, int64(7)) })
+	t.Run("Float64", func(t *testing.T) { testFinishHistogramFinishTimestamp(t, 1.25) })
+}
+
+func testFinishHistogramFinishTimestamp[N int64 | float64](t *testing.T, value N) {
+	t.Helper()
+	var c clock
+	t.Cleanup(c.Register())
+	for _, temporality := range []metricdata.Temporality{metricdata.CumulativeTemporality, metricdata.DeltaTemporality} {
+		for _, recreate := range []bool{false, true} {
+			for _, offset := range []int64{-1, 0, 1} {
+				t.Run(fmt.Sprintf("%s/recreate=%t/offset=%d", temporality, recreate, offset), func(t *testing.T) {
+					c.Reset()
+					store := newFinishHistogram(finishHistogramBounds, false, false, temporality, 0, dropExemplars[N])
+					lazy := newLazyFilteredAttributes(alice, nil)
+					if recreate {
+						store.measure(t.Context(), value, lazy)
+						store.finish(alice.Equivalent(), now())
+						require.Len(t, finishHistogramPoints[N](t, store.collect), 1)
+						require.Empty(t, finishHistogramPoints[N](t, store.collect))
+					}
+					store.measure(t.Context(), value, lazy)
+					raw, ok := store.values.Load(alice.Equivalent())
+					require.True(t, ok)
+					start := raw.(*finishHistogramPoint[N]).start
+					finishTime := start.Add(time.Duration(offset) * time.Nanosecond)
+					store.finish(alice.Equivalent(), finishTime)
+					points := finishHistogramPoints[N](t, store.collect)
+					require.Len(t, points, 1)
+					assert.Equal(t, uint64(1), points[0].Count)
+					assert.Equal(t, value, points[0].Sum)
+					if offset < 0 {
+						assert.False(t, points[0].Time.Before(start))
+						if temporality == metricdata.CumulativeTemporality {
+							require.Len(t, finishHistogramPoints[N](t, store.collect), 1,
+								"stale Finish must not retire the new lifetime")
+							store.finish(alice.Equivalent(), now())
+							require.Len(t, finishHistogramPoints[N](t, store.collect), 1)
+						}
+					} else {
+						assert.Equal(t, finishTime, points[0].Time)
+					}
+					assert.Empty(t, finishHistogramPoints[N](t, store.collect))
+				})
+			}
+		}
+	}
+}
+
 func TestFinishHistogramPayload(t *testing.T) {
 	t.Run("Int64", testFinishHistogramPayload[int64])
 	t.Run("Float64", testFinishHistogramPayload[float64])
@@ -187,7 +237,7 @@ func testFinishHistogramPayload[N int64 | float64](t *testing.T) {
 						for _, value := range []N{-1, 0, 1, 5, 10, 11} {
 							agg.Measure(t.Context(), value, alice)
 						}
-						agg.Finish(alice.Equivalent(), y2k)
+						agg.Finish(alice.Equivalent(), now())
 						data := metricdata.Aggregation(
 							metricdata.Histogram[N]{
 								DataPoints: []metricdata.HistogramDataPoint[N]{
@@ -237,7 +287,7 @@ func testFinishHistogramPayload[N int64 | float64](t *testing.T) {
 		agg := Builder[N]{}.FinishExplicitBucketHistogram(nil, false, false)
 		attrs := attribute.NewSet()
 		agg.Measure(t.Context(), 0, attrs)
-		agg.Finish(attrs.Equivalent(), y2k)
+		agg.Finish(attrs.Equivalent(), now())
 		points := finishHistogramPoints[N](t, agg.ComputeAggregation)
 		require.Len(t, points, 1)
 		assert.Equal(t, attrs, points[0].Attributes)
@@ -253,7 +303,7 @@ func testFinishHistogramPayload[N int64 | float64](t *testing.T) {
 			return NewFilteredExemplarReservoir[N](exemplar.AlwaysOnFilter, mockRes)
 		}}.FinishExplicitBucketHistogram(finishHistogramBounds, false, false)
 		agg.Measure(t.Context(), 7, alice)
-		agg.Finish(fltrAlice.Equivalent(), y2k)
+		agg.Finish(fltrAlice.Equivalent(), now())
 		points := finishHistogramPoints[N](t, agg.ComputeAggregation)
 		require.Len(t, points, 1)
 		assert.Equal(t, fltrAlice, points[0].Attributes)
@@ -308,15 +358,15 @@ func testFinishHistogramCardinality[N int64 | float64](t *testing.T) {
 	agg.Measure(t.Context(), 2, bob)
 	agg.Measure(t.Context(), 3, carol)
 	agg.Measure(t.Context(), 4, carol)
-	agg.Finish(carol.Equivalent(), y2k)
-	agg.Finish(alice.Equivalent(), y2k)
+	agg.Finish(carol.Equivalent(), now())
+	agg.Finish(alice.Equivalent(), now())
 	points := finishHistogramPoints[N](t, agg.ComputeAggregation)
 	require.Len(t, points, 3)
 	overflow := histogramPointWithAttrs(t, points, overflowSet)
 	assert.Equal(t, uint64(2), overflow.Count)
 	assert.Equal(t, N(7), overflow.Sum)
 	agg.Measure(t.Context(), 5, dave)
-	agg.Finish(overflowSet.Equivalent(), y2k)
+	agg.Finish(overflowSet.Equivalent(), now())
 	points = finishHistogramPoints[N](t, agg.ComputeAggregation)
 	require.Len(t, points, 3)
 	assert.Equal(t, N(5), histogramPointWithAttrs(t, points, dave).Sum)
@@ -324,7 +374,7 @@ func testFinishHistogramCardinality[N int64 | float64](t *testing.T) {
 	t.Run("UnlimitedMarkerSeries", func(t *testing.T) {
 		agg := Builder[N]{}.FinishExplicitBucketHistogram(finishHistogramBounds, false, false)
 		agg.Measure(t.Context(), 1, overflowSet)
-		agg.Finish(overflowSet.Equivalent(), y2k)
+		agg.Finish(overflowSet.Equivalent(), now())
 		require.Len(t, finishHistogramPoints[N](t, agg.ComputeAggregation), 1)
 		assert.Empty(t, finishHistogramPoints[N](t, agg.ComputeAggregation))
 	})
@@ -333,7 +383,7 @@ func testFinishHistogramCardinality[N int64 | float64](t *testing.T) {
 		agg.Measure(t.Context(), 1, overflowSet)
 		agg.Measure(t.Context(), 2, alice)
 		agg.Measure(t.Context(), 3, bob)
-		agg.Finish(overflowSet.Equivalent(), y2k)
+		agg.Finish(overflowSet.Equivalent(), now())
 		agg.Measure(t.Context(), 4, carol)
 		points := finishHistogramPoints[N](t, agg.ComputeAggregation)
 		require.Len(t, points, 3)
@@ -718,13 +768,14 @@ func TestFinishHistogramIndependentAggregations(t *testing.T) {
 	second := Builder[int64]{}.FinishExplicitBucketHistogram(finishHistogramBounds, false, false)
 	first.Measure(t.Context(), 7, alice)
 	second.Measure(t.Context(), 7, alice)
-	first.Finish(alice.Equivalent(), y2k)
-	second.Finish(alice.Equivalent(), y2k)
+	finishTime := now()
+	first.Finish(alice.Equivalent(), finishTime)
+	second.Finish(alice.Equivalent(), finishTime)
 	require.Len(t, finishHistogramPoints[int64](t, first.ComputeAggregation), 1)
 	assert.Empty(t, finishHistogramPoints[int64](t, first.ComputeAggregation))
 	points := finishHistogramPoints[int64](t, second.ComputeAggregation)
 	require.Len(t, points, 1)
-	assert.Equal(t, y2k, points[0].Time)
+	assert.Equal(t, finishTime, points[0].Time)
 	assert.Equal(t, int64(7), points[0].Sum)
 	assert.Empty(t, finishHistogramPoints[int64](t, second.ComputeAggregation))
 }

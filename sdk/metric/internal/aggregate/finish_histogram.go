@@ -175,7 +175,12 @@ func (s *finishHistogram[N]) finish(distinct attribute.Distinct, at time.Time) {
 	}
 	raw, ok := s.values.Load(distinct)
 	if ok {
-		raw.(*finishHistogramPoint[N]).lifecycle.Finish(at)
+		point := raw.(*finishHistogramPoint[N])
+		// A delayed Finish must not retire a lifetime created after it began.
+		if at.Before(point.start) {
+			return
+		}
+		point.lifecycle.Finish(at)
 	}
 }
 
