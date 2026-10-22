@@ -120,7 +120,7 @@ func getOptionsFromEnv() []GenericOption {
 
 func withEndpointScheme(u *url.URL) GenericOption {
 	switch strings.ToLower(u.Scheme) {
-	case "http", "unix":
+	case "http", "unix", "unix-abstract":
 		return WithInsecure()
 	default:
 		return WithSecure()
