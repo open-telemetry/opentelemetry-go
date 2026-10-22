@@ -3176,3 +3176,60 @@ func (m *errMeter) Int64Counter(string, ...otelmetric.Int64CounterOption) (otelm
 func (m *errMeter) Float64Histogram(string, ...otelmetric.Float64HistogramOption) (otelmetric.Float64Histogram, error) {
 	return nil, m.err
 }
+
+// TestCollect_ExternalProducerOwnership verifies that the metricsPool cleanup
+// clears external-producer ScopeMetrics entries before returning the object to
+// the pool. Without the clear, a subsequent collection whose SDK pipeline
+// produces more scopes than before can reuse the old external-producer slot
+// through ReuseSlice and overwrite the producer's Metrics slice.
+func TestCollect_ExternalProducerOwnership(t *testing.T) {
+	registry := prometheus.NewRegistry()
+
+	externalData := []metricdata.ScopeMetrics{
+		{
+			Scope: instrumentation.Scope{Name: "external-scope"},
+			Metrics: []metricdata.Metrics{{
+				Name: "external_metric",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Value: 42},
+					},
+				},
+			}},
+		},
+	}
+	producer := producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+		return externalData, nil
+	})
+
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithProducer(producer),
+		WithoutTargetInfo(),
+		WithoutScopeInfo(),
+	)
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter("test")
+
+	counter, err := meter.Int64Counter("test_counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+
+	// First scrape: pool object gets [SDK, External] in ScopeMetrics.
+	_, err = registry.Gather()
+	require.NoError(t, err)
+
+	// Second scrape: pipeline.produce reuses the pooled object. If the
+	// external producer entry was not cleared, ReuseSlice may hand the
+	// producer's inner Metrics slice to the SDK.
+	_, err = registry.Gather()
+	require.NoError(t, err)
+
+	// The external producer's data must remain intact.
+	assert.Equal(t, "external_metric", externalData[0].Metrics[0].Name,
+		"external producer data was corrupted by pool reuse")
+}
