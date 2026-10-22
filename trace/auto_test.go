@@ -1327,6 +1327,28 @@ func TestTruncate(t *testing.T) {
 	}
 }
 
+func BenchmarkConvCappedAttrs(b *testing.B) {
+	attrs := func(n, distinct int) []attribute.KeyValue {
+		out := make([]attribute.KeyValue, n)
+		for i := range out {
+			out[i] = attribute.Int("k"+strconv.Itoa(i%distinct), i)
+		}
+		return out
+	}
+	run := func(limit int, in []attribute.KeyValue) func(b *testing.B) {
+		return func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				_, _ = convCappedAttrs(limit, in)
+			}
+		}
+	}
+	b.Run("Unique8", run(128, attrs(8, 8)))
+	b.Run("Unique128", run(128, attrs(128, 128)))
+	b.Run("OneKey100k/Limit1", run(1, attrs(100_000, 1)))
+	b.Run("TenKeys1k/Limit128", run(128, attrs(1_000, 10)))
+}
+
 func BenchmarkTruncate(b *testing.B) {
 	run := func(limit int, input string) func(b *testing.B) {
 		return func(b *testing.B) {

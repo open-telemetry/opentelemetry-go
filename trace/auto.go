@@ -296,7 +296,7 @@ func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, u
 			valid = append(valid, a)
 		}
 	}
-	valid = dedupAttrs(valid)
+	valid = dedupAttrs(valid, limit)
 	if limit > 0 && len(valid) > limit {
 		dropped += len(valid) - limit
 		valid = valid[:limit]
@@ -307,14 +307,19 @@ func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, u
 // dedupAttrs removes duplicate top-level keys from attrs: the last value for
 // a key wins and the position of the first occurrence is kept. The input
 // slice is not modified; it is returned unchanged when there is nothing to
-// deduplicate.
-func dedupAttrs(attrs []attribute.KeyValue) []attribute.KeyValue {
+// deduplicate. A positive limit bounds the initial size of the key index, so
+// many occurrences of a few keys do not reserve one slot per occurrence.
+func dedupAttrs(attrs []attribute.KeyValue, limit int) []attribute.KeyValue {
 	if len(attrs) < 2 {
 		return attrs
 	}
 
+	hint := len(attrs)
+	if limit > 0 {
+		hint = min(hint, limit)
+	}
 	var out []attribute.KeyValue
-	idx := make(map[attribute.Key]int, len(attrs))
+	idx := make(map[attribute.Key]int, hint)
 	for i, a := range attrs {
 		if j, ok := idx[a.Key]; ok {
 			if out == nil {
