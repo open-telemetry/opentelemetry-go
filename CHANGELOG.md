@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#9221)
 
 ### Fixed
+
 - Resolve the mTLS client certificate and key environment variables (`OTEL_EXPORTER_OTLP_[LOGS_]CLIENT_CERTIFICATE` and `OTEL_EXPORTER_OTLP_[LOGS_]CLIENT_KEY`) independently in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, so a signal-specific override can be paired with the generic value instead of requiring both files from the same scope. (#9255)
 
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
