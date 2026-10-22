@@ -32,6 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Resolve the mTLS client certificate and key environment variables (`OTEL_EXPORTER_OTLP_[LOGS_]CLIENT_CERTIFICATE` and `OTEL_EXPORTER_OTLP_[LOGS_]CLIENT_KEY`) independently in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, so a signal-specific override can be paired with the generic value instead of requiring both files from the same scope. (#9255)
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
 - Report dropped event and link counts in the span snapshot when the event or link limit is `0` in `go.opentelemetry.io/otel/sdk/trace`.
   Previously, an ended span reported `0` dropped events and links even though the recording span had counted them. (#9238)
