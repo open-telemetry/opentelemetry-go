@@ -197,6 +197,34 @@ func BenchmarkCollectCallbacks(b *testing.B) {
 	}
 }
 
+func BenchmarkUnregisterCallbacks(b *testing.B) {
+	for _, n := range []int{10, 1000} {
+		b.Run(fmt.Sprintf("%d", n), func(b *testing.B) {
+			mp := NewMeterProvider(WithReader(NewManualReader()))
+			m := mp.Meter("benchUnregisterCallbacks")
+
+			oc, err := m.Int64ObservableCounter("int64-observable-counter")
+			assert.NoError(b, err)
+			f := func(context.Context, metric.Observer) error { return nil }
+
+			regs := make([]metric.Registration, n)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				b.StopTimer()
+				for j := range regs {
+					regs[j], err = m.RegisterCallback(f, oc)
+					assert.NoError(b, err)
+				}
+				b.StartTimer()
+				for _, reg := range regs {
+					_ = reg.Unregister()
+				}
+			}
+		})
+	}
+}
+
 func benchCollectViews(views ...View) func(*testing.B) {
 	setup := func(name string) (metric.Meter, Reader) {
 		r := NewManualReader()

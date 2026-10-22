@@ -701,7 +701,7 @@ func TestUnregisterRemovesCallbackWithoutCollect(t *testing.T) {
 	pipe := mp.pipes[0]
 	pipe.Lock()
 	defer pipe.Unlock()
-	assert.Empty(t, pipe.multiCallbacks)
+	assert.Zero(t, pipe.multiCallbacks.Len())
 }
 
 func TestUnregisterDuringCollectRemovesCallback(t *testing.T) {
@@ -741,7 +741,7 @@ func TestUnregisterDuringCollectRemovesCallback(t *testing.T) {
 	assert.Eventually(t, func() bool {
 		pipe.Lock()
 		defer pipe.Unlock()
-		return len(pipe.multiCallbacks) == 0
+		return pipe.multiCallbacks.Len() == 0
 	}, 5*time.Second, time.Millisecond, "pipeline retained the callback while Unregister waited")
 
 	close(release)
@@ -752,6 +752,13 @@ func TestUnregisterDuringCollectRemovesCallback(t *testing.T) {
 		t.Fatal("Unregister did not return after the callback returned")
 	}
 	require.NoError(t, <-collectDone)
+
+	// Nor does the buffer the collection copied the callbacks into.
+	e := reg.(multiCallbackRegistration).entries[0]
+	pipe.produceMu.Lock()
+	snapshot := pipe.multiCallbackSnapshot[:cap(pipe.multiCallbackSnapshot)]
+	pipe.produceMu.Unlock()
+	assert.NotContains(t, snapshot, e, "collection retained the callback")
 
 	var rm metricdata.ResourceMetrics
 	require.NoError(t, reader.Collect(t.Context(), &rm))

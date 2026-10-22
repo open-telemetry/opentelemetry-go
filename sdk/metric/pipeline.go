@@ -4,6 +4,7 @@
 package metric
 
 import (
+	"container/list"
 	"context"
 	"errors"
 	"fmt"
@@ -81,9 +82,14 @@ type pipeline struct {
 	float64Measures  map[observableID[float64]][]aggregate.Measure[float64]
 	aggregations     map[instrumentation.Scope][]instrumentSync
 	callbacks        []func(context.Context) error
-	multiCallbacks   []*multiCallbackEntry
+	multiCallbacks   list.List
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+
+	// multiCallbackSnapshot is the buffer produce copies multiCallbacks into,
+	// so it can run them without holding the Mutex. It is reused across
+	// collections and guarded by produceMu.
+	multiCallbackSnapshot []*multiCallbackEntry
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
@@ -122,8 +128,10 @@ type multiCallbackEntry struct {
 	pipe     *pipeline
 	callback multiCallback
 
-	// retired reports whether the callback has been unregistered. It is
+	// elem is the element of the entry in the pipeline's multiCallbacks, and
+	// retired reports whether the callback has been unregistered. They are
 	// guarded by the pipeline's Mutex.
+	elem    *list.Element
 	retired bool
 	// inFlight tracks calls of callback that have started and not yet
 	// returned. produce increments it in the same critical section of the
@@ -146,7 +154,7 @@ func (e *multiCallbackEntry) call(ctx context.Context) error {
 func (p *pipeline) addMultiCallback(c multiCallback) *multiCallbackEntry {
 	e := &multiCallbackEntry{pipe: p, callback: c}
 	p.Lock()
-	p.multiCallbacks = append(p.multiCallbacks, e)
+	e.elem = p.multiCallbacks.PushBack(e)
 	p.Unlock()
 	return e
 }
@@ -163,18 +171,7 @@ func (e *multiCallbackEntry) retire() {
 		return
 	}
 	e.retired = true
-	// produce ranges over a snapshot of p.multiCallbacks without
-	// holding the lock. Rebuild the slice instead of deleting in
-	// place: elements below a live snapshot's length are never
-	// overwritten, and appends only ever write past a snapshot's
-	// length, so a snapshot never observes a mutation.
-	cbs := make([]*multiCallbackEntry, 0, len(p.multiCallbacks))
-	for _, o := range p.multiCallbacks {
-		if o != e {
-			cbs = append(cbs, o)
-		}
-	}
-	p.multiCallbacks = cbs
+	p.multiCallbacks.Remove(e.elem)
 }
 
 // runCallback calls c. produce calls every callback through runCallback,
@@ -238,8 +235,17 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 	// Snapshot callbacks so they can call Meter methods that acquire p.Mutex.
 	p.Lock()
 	callbacks := p.callbacks
-	multiCallbacks := p.multiCallbacks
+	multiCallbacks := p.multiCallbackSnapshot[:0]
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+		multiCallbacks = append(multiCallbacks, e.Value.(*multiCallbackEntry))
+	}
 	p.Unlock()
+	defer func() {
+		// Keep the buffer for the next collection, without its references to
+		// callbacks that may be unregistered before then.
+		clear(multiCallbacks)
+		p.multiCallbackSnapshot = multiCallbacks[:0]
+	}()
 
 	var err error
 	for _, c := range callbacks {
