@@ -1292,11 +1292,16 @@ func TestInCallback(t *testing.T) {
 	assert.False(t, inCallback(), "outside any callback")
 
 	var inside bool
+	var frame runtime.Frame
 	require.NoError(t, runCallback(t.Context(), func(context.Context) error {
 		inside = inCallback()
+		// Skip the frames of runtime.Callers and this function.
+		pcs := make([]uintptr, 1)
+		frame, _ = runtime.CallersFrames(pcs[:runtime.Callers(2, pcs)]).Next()
 		return nil
 	}))
 	assert.True(t, inside, "within a callback run by runCallback")
+	assert.Equal(t, frame.Function, runCallbackName, "name of the runCallback frame")
 
 	reader := NewManualReader()
 	mp := NewMeterProvider(WithReader(reader))

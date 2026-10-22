@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -186,8 +187,11 @@ func runCallback(ctx context.Context, c func(context.Context) error) error {
 }
 
 // runCallbackName is the package path-qualified name of runCallback, which
-// runtime.Frame.Function reports for its frames.
-const runCallbackName = "go.opentelemetry.io/otel/sdk/metric.runCallback"
+// runtime.Frame.Function reports for its frames. It is looked up instead of
+// spelled out because the package path is the one this package is built
+// with, which differs from go.opentelemetry.io/otel/sdk/metric when the
+// package is vendored in GOPATH mode or built with a Bazel importmap.
+var runCallbackName = runtime.FuncForPC(reflect.ValueOf(runCallback).Pointer()).Name()
 
 // inCallback reports whether the calling goroutine is executing a callback
 // called by produce, by looking for the runCallback frame on the goroutine's

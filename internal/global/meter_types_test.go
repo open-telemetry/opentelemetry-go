@@ -5,6 +5,7 @@ package global
 
 import (
 	"context"
+	"reflect"
 	"runtime"
 	"sync"
 
@@ -61,6 +62,10 @@ func (r *testWaitingRegistration) collect() error {
 	return r.callback(context.Background(), observationRecorder{})
 }
 
+// testWaitingCollectName is the name the runtime reports for frames of
+// testWaitingRegistration.collect, looked up like runCallbackName in the SDK.
+var testWaitingCollectName = runtime.FuncForPC(reflect.ValueOf((*testWaitingRegistration).collect).Pointer()).Name()
+
 func (r *testWaitingRegistration) Unregister() error {
 	r.mu.Lock()
 	r.retired = true
@@ -71,7 +76,7 @@ func (r *testWaitingRegistration) Unregister() error {
 	frames := runtime.CallersFrames(pcs[:n])
 	for {
 		frame, more := frames.Next()
-		if frame.Function == "go.opentelemetry.io/otel/internal/global.(*testWaitingRegistration).collect" {
+		if frame.Function == testWaitingCollectName {
 			return nil
 		}
 		if !more {
