@@ -621,6 +621,7 @@ func TestConvHeaders(t *testing.T) {
 		})
 	}
 }
+
 func TestLoadInsecureFromEnv(t *testing.T) {
 	const (
 		logsKey    = "OTEL_EXPORTER_OTLP_LOGS_INSECURE"
