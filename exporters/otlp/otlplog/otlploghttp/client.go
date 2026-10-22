@@ -27,7 +27,13 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/observ"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/otlpjson"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/retry"
+)
+
+const (
+	contentTypeProto = "application/x-protobuf"
+	contentTypeJSON  = "application/json"
 )
 
 type client struct {
@@ -100,7 +106,14 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 		return nil, err
 	}
 
-	userAgent := "OTel Go OTLP over HTTP/protobuf logs exporter/" + Version()
+	contentType := contentTypeProto
+	agentEncoding := "protobuf"
+	if cfg.encoding.Value == JSONEncoding {
+		contentType = contentTypeJSON
+		agentEncoding = "JSON"
+	}
+
+	userAgent := "OTel Go OTLP over HTTP/" + agentEncoding + " logs exporter/" + Version()
 	req.Header.Set("User-Agent", userAgent)
 
 	if n := len(cfg.headers.Value); n > 0 {
@@ -108,10 +121,11 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 			req.Header.Set(k, v)
 		}
 	}
-	req.Header.Set("Content-Type", "application/x-protobuf")
+	req.Header.Set("Content-Type", contentType)
 
 	c := &httpClient{
 		compression:     cfg.compression.Value,
+		encoding:        cfg.encoding.Value,
 		maxRequestSize:  cfg.maxRequestSize.Value,
 		maxResponseSize: cfg.maxResponseSize.Value,
 		req:             req,
@@ -130,6 +144,7 @@ type httpClient struct {
 	// req is cloned for every upload the client makes.
 	req             *http.Request
 	compression     Compression
+	encoding        Encoding
 	maxRequestSize  int
 	maxResponseSize int64
 	requestFunc     retry.RequestFunc
@@ -161,7 +176,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 	// after the Exporter is shut down. The only thing to do here is send data.
 
 	pbRequest := &collogpb.ExportLogsServiceRequest{ResourceLogs: data}
-	body, err := proto.Marshal(pbRequest)
+	body, err := c.marshalRequest(pbRequest)
 	if err != nil {
 		return err
 	}
@@ -230,19 +245,32 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 				return nil
 			}
 
-			if isProtobufContentType(resp.Header.Get("Content-Type")) {
-				var respProto collogpb.ExportLogsServiceResponse
+			// Parse media type so parameters (e.g. charset=utf-8) do not prevent
+			// partial-success response handling. Tokens are case-insensitive per RFC 9110.
+			mediaType, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+			if err != nil {
+				return nil
+			}
+			var respProto collogpb.ExportLogsServiceResponse
+			switch {
+			case strings.EqualFold(mediaType, contentTypeProto):
 				if err := proto.Unmarshal(respData, &respProto); err != nil {
 					return err
 				}
+			case strings.EqualFold(mediaType, contentTypeJSON):
+				if err := otlpjson.UnmarshalExportLogsServiceResponse(respData, &respProto); err != nil {
+					return err
+				}
+			default:
+				return nil
+			}
 
-				if respProto.PartialSuccess != nil {
-					msg := respProto.PartialSuccess.GetErrorMessage()
-					n := respProto.PartialSuccess.GetRejectedLogRecords()
-					if n != 0 || msg != "" {
-						err := internal.LogPartialSuccessError(n, msg)
-						uploadErr = errors.Join(uploadErr, err)
-					}
+			if respProto.PartialSuccess != nil {
+				msg := respProto.PartialSuccess.GetErrorMessage()
+				n := respProto.PartialSuccess.GetRejectedLogRecords()
+				if n != 0 || msg != "" {
+					err := internal.LogPartialSuccessError(n, msg)
+					uploadErr = errors.Join(uploadErr, err)
 				}
 			}
 			return nil
@@ -305,6 +333,21 @@ var gzPool = sync.Pool{
 		w := gzip.NewWriter(io.Discard)
 		return w
 	},
+}
+
+func (c *httpClient) marshalRequest(pbRequest *collogpb.ExportLogsServiceRequest) ([]byte, error) {
+	if c.encoding == JSONEncoding {
+		rawRequest, err := otlpjson.MarshalExportLogsServiceRequest(pbRequest)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal request body in json: %w", err)
+		}
+		return rawRequest, nil
+	}
+	rawRequest, err := proto.Marshal(pbRequest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request body in protobuf: %w", err)
+	}
+	return rawRequest, nil
 }
 
 func (c *httpClient) newRequest(ctx context.Context, body []byte) (request, error) {
@@ -390,17 +433,6 @@ func newResponseError(header http.Header, wrapped error) error {
 
 	rErr.err = wrapped
 	return rErr
-}
-
-// isProtobufContentType reports whether the Content-Type value denotes a
-// protobuf-encoded OTLP payload. Media type tokens are case-insensitive and
-// parameters are ignored, as required by RFC 9110 section 8.3.
-func isProtobufContentType(contentType string) bool {
-	mediatype, _, err := mime.ParseMediaType(contentType)
-	if err != nil {
-		return false
-	}
-	return strings.EqualFold(mediatype, "application/x-protobuf")
 }
 
 func retryAfterDuration(v string) time.Duration {
