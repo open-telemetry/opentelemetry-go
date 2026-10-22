@@ -108,7 +108,7 @@ func (meterConfiguratorProviderOption) Experimental() {}
 // Each Handle must be passed to at most one MeterProvider; see
 // [MeterConfiguratorHandle]'s doc comment.
 //
-// A nil h is a no-op, equivalent to omitting this option entirely.
+// A nil h configures no MeterConfigurator.
 //
 // Only MeterProviders built with this option check the configurator when
 // recording; others are unaffected.
