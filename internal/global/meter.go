@@ -609,9 +609,14 @@ func (c *registration) setDelegate(m metric.Meter) {
 	reg, err := m.RegisterCallback(unwrapCallback(c.function), unwrapInstruments(c.instruments)...)
 	if err != nil {
 		GetErrorHandler().Handle(err)
+	}
+	if reg == nil {
 		return
 	}
 
+	// The delegate may return a Registration with an error, e.g. when only
+	// some of the instruments could be registered. Keep it so Unregister
+	// still unregisters the callback.
 	c.delegate = reg
 	c.unreg = nil
 }

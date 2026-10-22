@@ -626,3 +626,30 @@ func TestRegistrationDelegateFailingCallback(t *testing.T) {
 		assert.NoError(t, r.Unregister())
 	})
 }
+
+type partialRegisterCallbackMeter struct {
+	noop.Meter
+
+	reg metric.Registration
+}
+
+func (m *partialRegisterCallbackMeter) RegisterCallback(
+	metric.Callback,
+	...metric.Observable,
+) (metric.Registration, error) {
+	return m.reg, errors.New("an error occurred")
+}
+
+func TestRegistrationDelegatePartialFailure(t *testing.T) {
+	provider := &meterProvider{}
+	m := provider.Meter(t.Name())
+	reg, err := m.RegisterCallback(zeroCallback)
+	require.NoError(t, err)
+
+	var unregistered int
+	delegate := &partialRegisterCallbackMeter{reg: testReg{f: func() { unregistered++ }}}
+	provider.setDelegate(&testMeterProvider{newMeter: func() metric.Meter { return delegate }})
+
+	require.NoError(t, reg.Unregister())
+	assert.Equal(t, 1, unregistered, "delegate Registration returned with an error not unregistered")
+}

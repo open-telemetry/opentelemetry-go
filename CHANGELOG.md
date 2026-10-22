@@ -59,7 +59,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP protobuf partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9188)
 - Do not report an error through the global error handler when `WithCompressor("none")` is passed to `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` or `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#9056)
 - Prevent deadlocks in `go.opentelemetry.io/otel/sdk/metric` when a callback calls methods of `go.opentelemetry.io/otel/metric` during collection, including `Registration.Unregister` on its own registration. (#8074)
-- Prevent a deadlock in `go.opentelemetry.io/otel` when a callback registered with a global `Meter` before `SetMeterProvider` unregisters itself while another goroutine unregisters it, and keep later `Registration.Unregister` calls on that registration waiting for calls of the callback still in progress. (#8074)
+- Fix `Registration.Unregister` in `go.opentelemetry.io/otel` for callbacks registered with a global `Meter` before `SetMeterProvider`.
+  It no longer deadlocks when the callback unregisters itself while another goroutine unregisters it, later calls keep waiting for calls of the callback still in progress, and it unregisters the callback when `RegisterCallback` of the delegate `Meter` returned an error along with the registration. (#8074)
 
 ### Removed
 
