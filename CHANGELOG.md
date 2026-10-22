@@ -10,6 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add experimental `WithFinish` support for `Int64Gauge` and `Float64Gauge` LastValue aggregation in `go.opentelemetry.io/otel/sdk/metric/x`.
+  Ignore delayed Finish calls that predate the resolved series lifetime. (#9252)
 - Add experimental `WithFinish` support for `Float64Counter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9186)
 - Add experimental `WithFinish` support for `Int64Counter` Sum aggregation,
   including cancellable provider shutdown and parked waits for in-flight measurements,
