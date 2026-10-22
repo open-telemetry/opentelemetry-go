@@ -660,6 +660,7 @@ func TestConvCompressionIsCaseInsensitive(t *testing.T) {
 			t.Errorf("convCompression(%q) = %v, want %v", tc.in, got, tc.want)
 		}
 	}
+}
 
 func TestLoadInsecureFromEnv(t *testing.T) {
 	const (
@@ -678,9 +679,7 @@ func TestLoadInsecureFromEnv(t *testing.T) {
 		{name: "logs case-insensitive true", logs: "TRUE", want: true, set: true},
 		{name: "logs false suppresses generic true", logs: "false", gen: "true", set: true},
 		{
-			// The defect: an invalid signal-specific value used to fall through
-			// to the generic variable, turning a value the specification says
-			// must resolve to false into true.
+			// An invalid signal-specific value must not fall through to the generic one.
 			name: "invalid logs resolves false and does not fall through",
 			logs: "invalid", gen: "true", want: false, set: true,
 		},
