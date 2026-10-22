@@ -28,16 +28,16 @@ func ExampleWithFinish_gauge() {
 	}()
 	// Create instruments directly from the opted-in provider. Global proxy
 	// instruments created before provider registration cannot acquire Finisher.
-	counter, err := provider.Meter("example").Int64Gauge("queue.depth")
+	gauge, err := provider.Meter("example").Int64Gauge("queue.depth")
 	if err != nil {
 		log.Print(err)
 		return
 	}
 	attrs := []attribute.KeyValue{attribute.String("server", "one")}
 	option := metric.WithAttributes(attrs...)
-	counter.Record(ctx, 3, option)
-	counter.Record(ctx, 1, option)
-	if finisher, ok := counter.(metricx.Finisher); ok {
+	gauge.Record(ctx, 3, option)
+	gauge.Record(ctx, 1, option)
+	if finisher, ok := gauge.(metricx.Finisher); ok {
 		finisher.Finish(ctx, attrs...)
 	}
 
@@ -46,8 +46,8 @@ func ExampleWithFinish_gauge() {
 		log.Print(err)
 		return
 	}
-	sum := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Gauge[int64])
-	fmt.Println("Final value:", sum.DataPoints[0].Value)
+	data := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Gauge[int64])
+	fmt.Println("Final value:", data.DataPoints[0].Value)
 	if err := reader.Collect(ctx, &rm); err != nil {
 		log.Print(err)
 		return
