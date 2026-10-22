@@ -360,8 +360,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/nakabonne/nestif v0.3.1 h1:wm28nZjhQY5HyYPx+weN3Q65k6ilSBxDb8v5S81B81U=
 github.com/nakabonne/nestif v0.3.1/go.mod h1:9EtoZochLn5iUprVDmDjqGKPofoUEBL8U4Ngq6aY7OE=
-github.com/nishanths/exhaustive v0.16.0 h1:6pGfKabnedOGfRhbZNgpqcTcU8gqsnvpnBA6UbokcyU=
-github.com/nishanths/exhaustive v0.16.0/go.mod h1:/nBwAMRn2QmCjWQ3PiJ939yRSwvWLKSa21L2C6Tp84E=
+github.com/nishanths/exhaustive v0.16.1 h1:5la0VKPN6CY8WYJq+JfyP970R3IBbJHZiTUY+Fl0yuA=
+github.com/nishanths/exhaustive v0.16.1/go.mod h1:/nBwAMRn2QmCjWQ3PiJ939yRSwvWLKSa21L2C6Tp84E=
 github.com/nishanths/predeclared v0.3.1 h1:qb/HpkPb0bF0drRBFkTyKY1ZRWcilc6gtxaBZGgn8H8=
 github.com/nishanths/predeclared v0.3.1/go.mod h1:Tsd/DNUrOSU4nGhDSYOXexypmCMpi2nXII8oiDVEzmU=
 github.com/nunnatsa/ginkgolinter v0.24.0 h1:Mp0EagluLFP98JatP6nqp/gGEoljNG97uf9AcxcBVy8=
@@ -600,8 +600,8 @@ golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.5.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.49.0 h1:XbzkgYJHdqh/8m2Uu0W/dQv8nktxx4BFHp1M0gROTXA=
 golang.org/x/sys v0.49.0/go.mod h1:hNLxWAXmnKAxqDtdwIYC4bM9oQPEecfsnNMuSxOs3og=
-golang.org/x/telemetry v0.0.0-20261020154912-7bf0a11256d5 h1:aNfg4YJRCyrWiyp/OwYkkDeK0cKgH7Wt2bdgTTKK0Kg=
-golang.org/x/telemetry v0.0.0-20261020154912-7bf0a11256d5/go.mod h1:GNu+nb+E5axfGmP+Uu3ZVQu5lE/Xk42MjZOHWUD94/o=
+golang.org/x/telemetry v0.0.0-20261021172232-6cd571d43fbb h1:3JqD1K/cQRw0htg2IwLka0f0Yn5mIPcYieNzDzalGB4=
+golang.org/x/telemetry v0.0.0-20261021172232-6cd571d43fbb/go.mod h1:GNu+nb+E5axfGmP+Uu3ZVQu5lE/Xk42MjZOHWUD94/o=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 golang.org/x/term v0.5.0/go.mod h1:jMB1sMXY+tzblOD4FWmEbocvup2/aLOaQEp7JmGp78k=

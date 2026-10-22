@@ -162,7 +162,7 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nakabonne/nestif v0.3.1 // indirect
-	github.com/nishanths/exhaustive v0.16.0 // indirect
+	github.com/nishanths/exhaustive v0.16.1 // indirect
 	github.com/nishanths/predeclared v0.3.1 // indirect
 	github.com/nunnatsa/ginkgolinter v0.24.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
@@ -234,7 +234,7 @@ require (
 	golang.org/x/net v0.61.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/telemetry v0.0.0-20261020154912-7bf0a11256d5 // indirect
+	golang.org/x/telemetry v0.0.0-20261021172232-6cd571d43fbb // indirect
 	golang.org/x/text v0.43.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
