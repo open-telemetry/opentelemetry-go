@@ -6,7 +6,7 @@ go 1.26.0
 retract v0.12.0
 
 require (
-	github.com/cenkalti/backoff/v5 v5.0.3
+	github.com/cenkalti/backoff/v7 v7.0.1
 	github.com/go-logr/logr v1.4.4
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.12.1
