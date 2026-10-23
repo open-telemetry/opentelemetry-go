@@ -69,6 +69,87 @@ func TestGetAttrs(t *testing.T) {
 	require.Equal(t, []string{"[true,false]", "Infinity", `["foo","bar"]`}, values)
 }
 
+func TestGetAttrsSanitizedCollisions(t *testing.T) {
+	t.Run("linear_scan_fast_path", func(t *testing.T) {
+		attrs := attribute.NewSet(
+			attribute.String("A_B", "first"),
+			attribute.String("C-D", "z"),
+			attribute.String("C.D", "b;c"),
+			attribute.String("C/D", "a"),
+		)
+
+		keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Equal(t, []string{"A_B", "C_D"}, keys)
+		require.Equal(t, []string{"first", "a;b;c;z"}, values)
+	})
+
+	t.Run("map_fallback_above_threshold", func(t *testing.T) {
+		kvs := make([]attribute.KeyValue, 0, maxLinearScanAttrs+4)
+		for i := range maxLinearScanAttrs {
+			kvs = append(kvs, attribute.String(fmt.Sprintf("attr_%03d", i), fmt.Sprintf("v%d", i)))
+		}
+		kvs = append(kvs,
+			attribute.String("z-dup", "z"),
+			attribute.String("z.dup", "b;c"),
+			attribute.String("z/dup", "a"),
+		)
+
+		keys, values, err := getAttrs(attribute.NewSet(kvs...), otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Len(t, keys, maxLinearScanAttrs+1)
+		require.Equal(t, "z_dup", keys[len(keys)-1])
+		require.Equal(t, "a;b;c;z", values[len(values)-1])
+	})
+}
+
+func TestAppendScopeAttrsSanitizedCollisions(t *testing.T) {
+	t.Run("linear_scan_fast_path", func(t *testing.T) {
+		attrs := attribute.NewSet(
+			attribute.String("name", "ignored"),
+			attribute.String("schema.url", "ignored"),
+			attribute.String("scope-key", "z"),
+			attribute.String("scope.key", "a"),
+			attribute.String("scope/key", "m"),
+		)
+
+		kv := keyVals{
+			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
+			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
+		}
+		kv, err := appendScopeAttrs(kv, attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Equal(t, []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel, "otel_scope_scope_key"}, kv.keys)
+		require.Equal(t, []string{"my-scope", "v1.0.0", "https://example.com", "a;m;z"}, kv.vals)
+	})
+
+	t.Run("map_fallback_above_threshold", func(t *testing.T) {
+		kvs := make([]attribute.KeyValue, 0, maxLinearScanAttrs+5)
+		kvs = append(kvs,
+			attribute.String("name", "ignored"),
+			attribute.String("schema.url", "ignored"),
+		)
+		for i := range maxLinearScanAttrs {
+			kvs = append(kvs, attribute.String(fmt.Sprintf("scope_attr_%03d", i), fmt.Sprintf("v%d", i)))
+		}
+		kvs = append(kvs,
+			attribute.String("z-scope-dup", "z"),
+			attribute.String("z.scope.dup", "a"),
+			attribute.String("z/scope/dup", "m"),
+		)
+
+		kv := keyVals{
+			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
+			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
+		}
+		kv, err := appendScopeAttrs(kv, attribute.NewSet(kvs...), otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Len(t, kv.keys, 3+maxLinearScanAttrs+1)
+		require.Equal(t, "otel_scope_z_scope_dup", kv.keys[len(kv.keys)-1])
+		require.Equal(t, "a;m;z", kv.vals[len(kv.vals)-1])
+	})
+}
+
 func TestAttributesToLabels(t *testing.T) {
 	labels, err := attributesToLabels([]attribute.KeyValue{
 		attribute.Float64Slice("float_slice", []float64{math.NaN(), math.Inf(1)}),
