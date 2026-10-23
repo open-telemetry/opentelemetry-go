@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -59,6 +60,71 @@ func collectUpDownSum[N int64 | float64](t *testing.T, reader *sdkmetric.ManualR
 func TestUpDownCounterFinish(t *testing.T) {
 	t.Run("Int64", func(t *testing.T) { testUpDownCounterFinish[int64](t, 1) })
 	t.Run("Float64", func(t *testing.T) { testUpDownCounterFinish[float64](t, 0.25) })
+}
+
+func TestUpDownCounterFinishConcurrentSafeLifetime(t *testing.T) {
+	t.Run("Int64", func(t *testing.T) { testUpDownCounterFinishLifetime(t, int64(-3)) })
+	t.Run("Float64", func(t *testing.T) { testUpDownCounterFinishLifetime(t, -0.75) })
+}
+
+func testUpDownCounterFinishLifetime[N int64 | float64](t *testing.T, value N) {
+	t.Helper()
+	for _, recreate := range []bool{false, true} {
+		t.Run(fmt.Sprintf("recreate=%t", recreate), func(t *testing.T) {
+			var pause atomic.Bool
+			entered := make(chan struct{})
+			resume := make(chan struct{})
+			filter := func(attribute.KeyValue) bool {
+				if pause.CompareAndSwap(true, false) {
+					close(entered)
+					select {
+					case <-resume:
+					case <-t.Context().Done():
+					}
+				}
+				return true
+			}
+			reader := sdkmetric.NewManualReader()
+			provider := sdkmetric.NewMeterProvider(
+				sdkmetric.WithReader(reader), sdkmetricx.WithFinish(),
+				sdkmetric.WithView(sdkmetric.NewView(
+					sdkmetric.Instrument{Name: "active"}, sdkmetric.Stream{AttributeFilter: filter},
+				)),
+			)
+			t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.WithoutCancel(t.Context()))) })
+			counter := newFinishUpDownCounter[N](t, provider.Meter("test"), "active")
+			finisher := counter.(metricx.Finisher)
+			attrs := []attribute.KeyValue{attribute.String("entity", "one")}
+			option := metric.WithAttributes(attrs...)
+			if recreate {
+				counter.Add(t.Context(), value, option)
+				finisher.Finish(t.Context(), attrs...)
+				require.Len(t, collectUpDownSum[N](t, reader), 1)
+				require.Empty(t, collectUpDownSum[N](t, reader))
+			}
+			pause.Store(true)
+			done := make(chan struct{})
+			go func() {
+				finisher.Finish(t.Context(), attrs...)
+				close(done)
+			}()
+			t.Cleanup(func() { <-done })
+			<-entered // Finish captures its timestamp before the View filter.
+			counter.Add(t.Context(), value, option)
+			close(resume)
+			<-done
+
+			points := collectUpDownSum[N](t, reader)
+			require.Len(t, points, 1)
+			assert.Equal(t, value, points[0].Value)
+			assert.False(t, points[0].Time.Before(points[0].StartTime))
+			start := points[0].StartTime
+			points = collectUpDownSum[N](t, reader)
+			require.Len(t, points, 1, "stale Finish must not retire the new lifetime")
+			assert.Equal(t, start, points[0].StartTime)
+			assert.Equal(t, value, points[0].Value)
+		})
+	}
 }
 
 func testUpDownCounterFinish[N int64 | float64](t *testing.T, step N) {
