@@ -115,11 +115,57 @@ func newCumulativeSum[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *cumulativeSum[N] {
-	return &cumulativeSum[N]{
+	s := &cumulativeSum[N]{
 		monotonic: monotonic,
 		start:     now(),
-		values:    limitedSyncMap[*sumValue[N]]{aggLimit: limit},
-		newRes:    r,
+	}
+	var zero N
+	if _, isFloat64 := any(zero).(float64); isFloat64 {
+		// Only float64 needs separate buffers; int64 snapshots are atomic.
+		s.float64Values = &float64CumulativeSum[N]{
+			newRes: r,
+			values: limitedSyncMap[*cumulativeSumValue[N]]{aggLimit: limit},
+		}
+	} else {
+		s.values = limitedSyncMap[*sumValue[N]]{aggLimit: limit}
+		s.newRes = r
+	}
+	return s
+}
+
+type cumulativeSumValue[N int64 | float64] struct {
+	hcwg          hotColdWaitGroup
+	counters      [2]atomicCounter[N]
+	res           FilteredExemplarReservoir[N]
+	attrs         attribute.Set
+	startTime     time.Time
+	dropExemplars bool
+}
+
+// float64CumulativeSum uses a hot and a cold counter for each series so
+// collection can read a stable snapshot while measurements continue.
+type float64CumulativeSum[N int64 | float64] struct {
+	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+	values limitedSyncMap[*cumulativeSumValue[N]]
+}
+
+func (s *float64CumulativeSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAttributes) {
+	sum := s.values.LoadOrStoreAttr(lazy, func(attr attribute.Set) *cumulativeSumValue[N] {
+		r := s.newRes(attr)
+		_, isDrop := r.(*dropRes[N])
+		return &cumulativeSumValue[N]{
+			res:           r,
+			attrs:         attr,
+			startTime:     now(),
+			dropExemplars: isDrop,
+		}
+	})
+
+	hotIdx := sum.hcwg.start()
+	sum.counters[hotIdx].add(value)
+	sum.hcwg.done(hotIdx)
+	if !sum.dropExemplars {
+		sum.res.Offer(ctx, value, lazy)
 	}
 }
 
@@ -128,11 +174,16 @@ type cumulativeSum[N int64 | float64] struct {
 	monotonic bool
 	start     time.Time
 
-	values limitedSyncMap[*sumValue[N]]
-	newRes func(attribute.Set) FilteredExemplarReservoir[N]
+	values        limitedSyncMap[*sumValue[N]]
+	newRes        func(attribute.Set) FilteredExemplarReservoir[N]
+	float64Values *float64CumulativeSum[N]
 }
 
 func (s *cumulativeSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAttributes) {
+	if s.float64Values != nil {
+		s.float64Values.measure(ctx, value, lazy)
+		return
+	}
 	sv := s.values.LoadOrStoreAttr(lazy, func(attr attribute.Set) *sumValue[N] {
 		r := s.newRes(attr)
 		_, isDrop := r.(*dropRes[N])
@@ -163,27 +214,55 @@ func (s *cumulativeSum[N]) collect(
 	sData.Temporality = metricdata.CumulativeTemporality
 	sData.IsMonotonic = s.monotonic
 
-	// Values are being concurrently written while we iterate, so only use the
-	// current length for capacity.
-	dPts := reset(sData.DataPoints, 0, s.values.Len())
+	values := &s.values.Map
+	n := s.values.Len()
+	if s.float64Values != nil {
+		values = &s.float64Values.values.Map
+		n = s.float64Values.values.Len()
+	}
+	// Values may be added while we iterate, so only use the current length for
+	// capacity.
+	dPts := reset(sData.DataPoints, 0, n)
 
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
 
 	var i int
-	s.values.Range(func(_, value any) bool {
-		val := value.(*sumValue[N])
+	values.Range(func(_, value any) bool {
+		var (
+			attrs       attribute.Set
+			seriesStart time.Time
+			res         FilteredExemplarReservoir[N]
+			total       N
+		)
+		if s.float64Values != nil {
+			val := value.(*cumulativeSumValue[N])
+			readIdx := val.hcwg.swapHotAndWait()
+			total = val.counters[readIdx].load()
+			hotIdx := (readIdx + 1) % 2
+			val.counters[hotIdx].add(total)
+			val.counters[readIdx].reset()
+			attrs = val.attrs
+			seriesStart = val.startTime
+			res = val.res
+		} else {
+			val := value.(*sumValue[N])
+			total = val.n.load()
+			attrs = val.attrs
+			seriesStart = val.startTime
+			res = val.res
+		}
 
 		startTime := s.start
 		if perSeriesStartTimeEnabled {
-			startTime = val.startTime
+			startTime = seriesStart
 		}
 		newPt := metricdata.DataPoint[N]{
-			Attributes: val.attrs,
+			Attributes: attrs,
 			StartTime:  startTime,
 			Time:       t,
-			Value:      val.n.load(),
+			Value:      total,
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
+		collectExemplars(&newPt.Exemplars, res.Collect)
 		dPts = append(dPts, newPt)
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
