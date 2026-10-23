@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add experimental `WithFinish` support for `Int64UpDownCounter` and `Float64UpDownCounter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9251)
 - Add experimental `WithFinish` support for `Float64Counter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9186)
 - Add experimental `WithFinish` support for `Int64Counter` Sum aggregation,
   including cancellable provider shutdown and parked waits for in-flight measurements,
@@ -33,6 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Ignore delayed Finish calls that predate a Sum series lifetime in `go.opentelemetry.io/otel/sdk/metric`. (#9251)
 - Prevent underflowed measurements from updating sum, min, or max in exponential histograms in `go.opentelemetry.io/otel/sdk/metric`. (#8077)
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
 - Report dropped event and link counts in the span snapshot when the event or link limit is `0` in `go.opentelemetry.io/otel/sdk/trace`.
