@@ -26,5 +26,12 @@ https?://overrode\.by\.signal\.specific.*
 https?://overrode_by_signal_specific.*
 https?://proxy\.com.*
 
-# Placeholder URLs used in generated Semantic Conventions examples
-^https://www\.foo\.bar
+
+# Placeholder URL used in generated Semantic Conventions examples.
+https?:\/\/www\.foo\.bar.*
+
+# Historical or illustrative URLs in generated Semantic Conventions.
+https?:\/\/github\.com\/open-telemetry\/semantic-conventions\/actions\/runs\/9753949763.*
+https?:\/\/github\.com\/opentelemetry\/open-telemetry-collector-contrib
+https?:\/\/sqs\.us-east-1\.amazonaws\.com\/123456789012\/MyQueue
+https?:\/\/opentelemetry\.io\/schemas\/$

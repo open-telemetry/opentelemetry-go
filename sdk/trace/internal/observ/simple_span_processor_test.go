@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
 )
 
 const sspComponentID = 0
