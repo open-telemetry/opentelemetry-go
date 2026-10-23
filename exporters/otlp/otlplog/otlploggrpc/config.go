@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"strconv"
@@ -350,9 +351,20 @@ func WithGRPCConn(conn *grpc.ClientConn) Option {
 // OTEL_EXPORTER_OTLP_LOGS_TIMEOUT will take precedence.
 //
 // By default, if an environment variable is not set, and this option is not
+
 // passed, a timeout of 10 seconds will be used.
+//
+// If duration is negative, the option is ignored and a diagnostic is
+// recorded via the global error handler.
+//
+// If duration is negative, the option is ignored and a diagnostic is
+// recorded via the global error handler.
 func WithTimeout(duration time.Duration) Option {
 	return fnOpt(func(c config) config {
+		if duration < 0 {
+			otel.Handle(fmt.Errorf("invalid timeout %s: must not be negative; ignoring, using fallback", duration))
+			return c
+		}
 		c.timeout = newSetting(duration)
 		return c
 	})
@@ -484,13 +496,20 @@ func convHeaders(s string) (map[string]string, error) {
 }
 
 // convDuration interprets s as a number of milliseconds and returns the
-// corresponding duration. If s does not contain an integer, 0 and an error are
-// returned.
+// corresponding duration. If s does not contain a non-negative integer that is
+// representable as a time.Duration, 0 and an error are returned.
 func convDuration(s string) (time.Duration, error) {
 	d, err := strconv.Atoi(s)
 	if err != nil {
 		return 0, err
 	}
+	if d < 0 {
+		return 0, fmt.Errorf("timeout must not be negative: %s", s)
+	}
+	if int64(d) > math.MaxInt64/int64(time.Millisecond) {
+		return 0, fmt.Errorf("timeout overflows a time.Duration: %s", s)
+	}
+
 	// OTel durations are defined in milliseconds.
 	return time.Duration(d) * time.Millisecond, nil
 }

@@ -620,3 +620,30 @@ func TestConvHeaders(t *testing.T) {
 		})
 	}
 }
+
+func TestConvDurationRejectsInvalidTimeouts(t *testing.T) {
+	for _, s := range []string{"-1", "-1000", "9223372036855"} {
+		_, err := convDuration(s)
+		assert.Error(t, err, s)
+	}
+
+	d, err := convDuration("0")
+	require.NoError(t, err)
+	assert.Equal(t, time.Duration(0), d)
+
+	d, err = convDuration("1500")
+	require.NoError(t, err)
+	assert.Equal(t, 1500*time.Millisecond, d)
+
+	d, err = convDuration("9223372036854")
+	require.NoError(t, err)
+	assert.Equal(t, time.Duration(9223372036854)*time.Millisecond, d)
+}
+
+func TestWithTimeoutNegativeIgnored(t *testing.T) {
+	c := newConfig([]Option{WithTimeout(-time.Second)})
+	assert.Equal(t, defaultTimeout, c.timeout.Value)
+
+	c = newConfig([]Option{WithTimeout(5 * time.Second)})
+	assert.Equal(t, 5*time.Second, c.timeout.Value)
+}
