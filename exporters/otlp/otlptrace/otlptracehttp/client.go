@@ -198,13 +198,14 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		var err error
 		statusCode, err, partialErr = c.doHTTPAttempt(ctx, &request)
 		uploadErr = errors.Join(uploadErr, partialErr)
-		if (statusCode == http.StatusUnsupportedMediaType || statusCode == http.StatusBadRequest) &&
+		if statusCode == http.StatusUnsupportedMediaType &&
 			Compression(c.cfg.Compression) == ZstdCompression {
-			// A 415/400 for a zstd-compressed export is non-retryable (see
-			// the zstd OTEP), so without this the batch would be dropped
+			// A 415 for a zstd-compressed export is non-retryable (see the
+			// zstd OTEP), so without this the batch would be dropped
 			// outright on any receiver that doesn't support zstd. Retry
 			// this same batch once with gzip, which every conformant OTLP
-			// receiver is required to support.
+			// receiver is required to support. A 400 means permanently
+			// invalid data and is never resent.
 			otel.Handle(fmt.Errorf(
 				"otlptracehttp: receiver does not support zstd compression (status %d), retrying with gzip: %w",
 				statusCode, err,

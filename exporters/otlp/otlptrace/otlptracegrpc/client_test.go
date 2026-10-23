@@ -151,25 +151,68 @@ func TestWithZstdCompressorAppliesOnTheWire(t *testing.T) {
 // TestWithZstdCompressorFallsBackToGzipOnRejection checks that a receiver
 // rejecting zstd with UNIMPLEMENTED does not drop the batch: per the zstd
 // OTEP, UNIMPLEMENTED is non-retryable, so without an explicit fallback the
-// export would fail outright instead of retrying with gzip.
+// export would fail outright instead of retrying with gzip. The fallback
+// must not fire when the receiver advertises zstd in grpc-accept-encoding
+// (the UNIMPLEMENTED is unrelated to compression) or for a non-zstd export.
+// Only the first request is rejected, so an unwanted retry would succeed.
 func TestWithZstdCompressorFallsBackToGzipOnRejection(t *testing.T) {
-	mc := runMockCollectorWithConfig(t, &mockConfig{
-		errors: []error{status.Error(codes.Unimplemented, "zstd not supported")},
-	})
-	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+	tests := []struct {
+		name            string
+		compressor      string
+		trailer         metadata.MD
+		wantFallback    bool
+		wantCompression string
+	}{
+		{
+			name:            "NoAcceptEncoding",
+			compressor:      "zstd",
+			wantFallback:    true,
+			wantCompression: "gzip",
+		},
+		{
+			name:            "AcceptEncodingOmitsZstd",
+			compressor:      "zstd",
+			trailer:         metadata.Pairs("grpc-accept-encoding", "identity,gzip"),
+			wantFallback:    true,
+			wantCompression: "gzip",
+		},
+		{
+			name:            "AcceptEncodingListsZstd",
+			compressor:      "zstd",
+			trailer:         metadata.Pairs("grpc-accept-encoding", "gzip, ZSTD"),
+			wantCompression: "zstd",
+		},
+		{
+			name:            "GzipExport",
+			compressor:      "gzip",
+			wantCompression: "gzip",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mc := runMockCollectorWithConfig(t, &mockConfig{
+				errors:  []error{status.Error(codes.Unimplemented, "unimplemented")},
+				trailer: tt.trailer,
+			})
+			t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(ctx, t, mc.endpoint, otlptracegrpc.WithCompressor("zstd"))
-	t.Cleanup(func() {
-		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
-		defer cancel()
-		require.NoError(t, exp.Shutdown(ctx))
-	})
+			ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			exp := newGRPCExporter(ctx, t, mc.endpoint, otlptracegrpc.WithCompressor(tt.compressor))
+			t.Cleanup(func() {
+				ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
+				defer cancel()
+				require.NoError(t, exp.Shutdown(ctx))
+			})
 
-	require.NoError(t, exp.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
-	assert.Eventually(t, func() bool {
-		return mc.getCompression() == "gzip"
-	}, 10*time.Second, 10*time.Millisecond, "export must retry with gzip, not drop the batch")
+			err := exp.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+			if tt.wantFallback {
+				require.NoError(t, err, "export must retry with gzip, not drop the batch")
+			} else {
+				require.Error(t, err, "export must not be retried with gzip")
+			}
+			assert.Equal(t, tt.wantCompression, mc.getCompression())
+		})
+	}
 }
 
 func TestWithEndpointURL(t *testing.T) {

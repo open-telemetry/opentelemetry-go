@@ -307,29 +307,63 @@ func TestWithZstdCompressionAppliesOnTheWire(t *testing.T) {
 // TestWithZstdCompressionFallsBackToGzipOnRejection checks that a receiver
 // rejecting zstd with a 415 does not drop the batch: per the zstd OTEP,
 // that status is non-retryable, so without an explicit fallback the export
-// would fail outright instead of retrying with gzip.
+// would fail outright instead of retrying with gzip. A 400 means
+// permanently invalid data and must not be resent, and a 415 for a non-zstd
+// export is not a zstd mismatch. Only the first request is rejected, so an
+// unwanted retry would succeed.
 func TestWithZstdCompressionFallsBackToGzipOnRejection(t *testing.T) {
-	mc := runMockCollector(t, mockCollectorConfig{
-		InjectHTTPStatus: []int{http.StatusUnsupportedMediaType},
-	})
-	defer mc.MustStop(t)
+	tests := []struct {
+		name         string
+		compression  otlptracehttp.Compression
+		status       int
+		wantFallback bool
+	}{
+		{
+			name:         "Zstd415",
+			compression:  otlptracehttp.ZstdCompression,
+			status:       http.StatusUnsupportedMediaType,
+			wantFallback: true,
+		},
+		{
+			name:        "Zstd400",
+			compression: otlptracehttp.ZstdCompression,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Gzip415",
+			compression: otlptracehttp.GzipCompression,
+			status:      http.StatusUnsupportedMediaType,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mc := runMockCollector(t, mockCollectorConfig{
+				InjectHTTPStatus: []int{tt.status},
+			})
+			defer mc.MustStop(t)
 
-	client := otlptracehttp.NewClient(
-		otlptracehttp.WithEndpoint(mc.Endpoint()),
-		otlptracehttp.WithInsecure(),
-		otlptracehttp.WithCompression(otlptracehttp.ZstdCompression),
-	)
-	ctx := t.Context()
-	exporter, err := otlptrace.New(ctx, client)
-	require.NoError(t, err)
-	defer func() {
-		assert.NoError(t, exporter.Shutdown(ctx))
-	}()
+			client := otlptracehttp.NewClient(
+				otlptracehttp.WithEndpoint(mc.Endpoint()),
+				otlptracehttp.WithInsecure(),
+				otlptracehttp.WithCompression(tt.compression),
+			)
+			ctx := t.Context()
+			exporter, err := otlptrace.New(ctx, client)
+			require.NoError(t, err)
+			defer func() {
+				assert.NoError(t, exporter.Shutdown(ctx))
+			}()
 
-	require.NoError(t, exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan()))
-	assert.Eventually(t, func() bool {
-		return len(mc.GetSpans()) == 1
-	}, 10*time.Second, 10*time.Millisecond, "export must retry with gzip, not drop the batch")
+			err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+			if tt.wantFallback {
+				require.NoError(t, err, "export must retry with gzip, not drop the batch")
+				assert.Len(t, mc.GetSpans(), 1)
+			} else {
+				require.Error(t, err, "export must not be retried with gzip")
+				assert.Empty(t, mc.GetSpans())
+			}
+		})
+	}
 }
 
 func TestTimeout(t *testing.T) {

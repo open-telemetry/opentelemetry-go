@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -242,14 +243,18 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	}
 
 	return c.requestFunc(ctx, func(iCtx context.Context) error {
-		resp, err := c.tsc.Export(iCtx, pbRequest)
+		var header, trailer metadata.MD
+		resp, err := c.tsc.Export(iCtx, pbRequest, grpc.Header(&header), grpc.Trailer(&trailer))
 		code = status.Code(err)
-		if code == codes.Unimplemented && c.compression == otlpconfig.ZstdCompression {
+		if code == codes.Unimplemented && c.compression == otlpconfig.ZstdCompression &&
+			!acceptsZstd(header, trailer) {
 			// UNIMPLEMENTED for a zstd-compressed export is non-retryable
 			// (see the zstd OTEP), so without this the batch would be
 			// dropped outright on any receiver that doesn't support zstd.
 			// Retry this same batch once with gzip, which every conformant
-			// OTLP receiver is required to support.
+			// OTLP receiver is required to support. If the receiver
+			// advertises zstd in grpc-accept-encoding, the UNIMPLEMENTED is
+			// unrelated to compression and is not retried.
 			otel.Handle(fmt.Errorf(
 				"otlptracegrpc: receiver does not support zstd compression, retrying with gzip: %w",
 				err,
@@ -359,4 +364,22 @@ func (*client) MarshalLog() any {
 	}{
 		Type: "otlptracegrpc",
 	}
+}
+
+// acceptsZstd reports whether any of mds advertises zstd in
+// grpc-accept-encoding. Per the gRPC compression spec, an UNIMPLEMENTED
+// response that lists the request's encoding is unrelated to compression.
+// An absent header is treated as not accepting zstd: grpc-go servers do
+// not send it when rejecting an unsupported encoding.
+func acceptsZstd(mds ...metadata.MD) bool {
+	for _, md := range mds {
+		for _, v := range md.Get("grpc-accept-encoding") {
+			for enc := range strings.SplitSeq(v, ",") {
+				if strings.EqualFold(strings.TrimSpace(enc), "zstd") {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

@@ -49,6 +49,8 @@ type Collector interface {
 type ExportResult struct {
 	Response *collpb.ExportMetricsServiceResponse
 	Err      error
+	// Trailer is gRPC response trailer metadata sent with the result.
+	Trailer metadata.MD
 }
 
 // Storage stores uploaded OTLP metric data in their proto form.
@@ -202,6 +204,9 @@ func (c *GRPCCollector) Export(
 
 	if c.resultCh != nil {
 		r := <-c.resultCh
+		if r.Trailer != nil {
+			_ = grpc.SetTrailer(ctx, r.Trailer)
+		}
 		if r.Response == nil {
 			return &collpb.ExportMetricsServiceResponse{}, r.Err
 		}

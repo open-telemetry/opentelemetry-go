@@ -27,6 +27,7 @@ func makeMockCollector(t testing.TB, mockConfig *mockConfig) *mockCollector {
 			storage:     otlptracetest.NewSpansStorage(),
 			errors:      mockConfig.errors,
 			partial:     mockConfig.partial,
+			trailer:     mockConfig.trailer,
 			compression: &compressionStatsHandler{},
 		},
 		stopped: make(chan struct{}),
@@ -38,6 +39,7 @@ type mockTraceService struct {
 
 	errors      []error
 	partial     *collectortracepb.ExportTracePartialSuccess
+	trailer     metadata.MD
 	requests    int
 	mu          sync.RWMutex
 	storage     otlptracetest.SpansStorage
@@ -89,6 +91,9 @@ func (mts *mockTraceService) Export(
 	}
 	if mts.requests < len(mts.errors) {
 		idx := mts.requests
+		if mts.trailer != nil {
+			_ = grpc.SetTrailer(ctx, mts.trailer)
+		}
 		return reply, mts.errors[idx]
 	}
 
@@ -112,6 +117,8 @@ type mockConfig struct {
 	errors   []error
 	endpoint string
 	partial  *collectortracepb.ExportTracePartialSuccess
+	// trailer is sent as response trailer metadata with each injected error.
+	trailer metadata.MD
 }
 
 var _ collectortracepb.TraceServiceServer = (*mockTraceService)(nil)

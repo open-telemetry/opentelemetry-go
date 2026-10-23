@@ -361,33 +361,65 @@ func TestWithZstdCompressionAppliesOnTheWire(t *testing.T) {
 // TestWithZstdCompressionFallsBackToGzipOnRejection checks that a receiver
 // rejecting zstd with a 415 does not drop the batch: per the zstd OTEP,
 // that status is non-retryable, so without an explicit fallback the export
-// would fail outright instead of retrying with gzip.
+// would fail outright instead of retrying with gzip. A 400 means
+// permanently invalid data and must not be resent, and a 415 for a non-zstd
+// export is not a zstd mismatch. Only the first request is rejected, so an
+// unwanted retry would succeed.
 func TestWithZstdCompressionFallsBackToGzipOnRejection(t *testing.T) {
-	rCh := make(chan otest.ExportResult, 2)
-	rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
-		Status: http.StatusUnsupportedMediaType,
-		Err:    errors.New("zstd not supported"),
-	}}
-	rCh <- otest.ExportResult{}
+	tests := []struct {
+		name         string
+		compression  Compression
+		status       int
+		wantFallback bool
+	}{
+		{
+			name:         "Zstd415",
+			compression:  ZstdCompression,
+			status:       http.StatusUnsupportedMediaType,
+			wantFallback: true,
+		},
+		{
+			name:        "Zstd400",
+			compression: ZstdCompression,
+			status:      http.StatusBadRequest,
+		},
+		{
+			name:        "Gzip415",
+			compression: GzipCompression,
+			status:      http.StatusUnsupportedMediaType,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rCh := make(chan otest.ExportResult, 2)
+			rCh <- otest.ExportResult{Err: &otest.HTTPResponseError{
+				Status: tt.status,
+				Err:    errors.New("rejected"),
+			}}
+			rCh <- otest.ExportResult{}
 
-	coll, err := otest.NewHTTPCollector("", rCh)
-	require.NoError(t, err)
+			coll, err := otest.NewHTTPCollector("", rCh)
+			require.NoError(t, err)
 
-	ctx := t.Context()
-	exp, err := New(ctx, WithEndpoint(coll.Addr().String()), WithInsecure(), WithCompression(ZstdCompression))
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, coll.Shutdown(context.Background())) })
-	t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.Background())) })
+			ctx := t.Context()
+			exp, err := New(ctx, WithEndpoint(coll.Addr().String()), WithInsecure(), WithCompression(tt.compression))
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, coll.Shutdown(context.Background())) })
+			t.Cleanup(func() { require.NoError(t, exp.Shutdown(context.Background())) })
 
-	require.NoError(
-		t, exp.Export(ctx, &metricdata.ResourceMetrics{}),
-		"export must retry with gzip, not drop the batch",
-	)
-	// The mock collector decodes and stores the body before consulting the
-	// injected result, so both the rejected zstd attempt and the
-	// successful gzip retry land here; the export not erroring is what
-	// proves the batch wasn't dropped.
-	assert.Len(t, coll.Collect().Dump(), 2)
+			err = exp.Export(ctx, &metricdata.ResourceMetrics{})
+			// The mock collector decodes and stores the body before
+			// consulting the injected result, so a rejected attempt is
+			// stored too: two requests with the gzip retry, one without.
+			if tt.wantFallback {
+				require.NoError(t, err, "export must retry with gzip, not drop the batch")
+				assert.Len(t, coll.Collect().Dump(), 2)
+			} else {
+				require.Error(t, err, "export must not be retried with gzip")
+				assert.Len(t, coll.Collect().Dump(), 1)
+			}
+		})
+	}
 }
 
 func TestGetBodyCalledOnRedirect(t *testing.T) {
