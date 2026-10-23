@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
   Include instructions for upgrading the bridge to v1.47.0.
   See the [bridge version compatibility documentation](bridge/opentracing/README.md#version-compatibility). (#9209)
+- Clarify in `go.opentelemetry.io/otel/metric` that `Registration.Unregister` called from within a callback may return while a call of the callback is still in progress on another goroutine. (#8074)
 
 ### Deprecated
 
@@ -59,6 +60,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Encode an empty attribute value nested in a slice or map as `{}` in `go.opentelemetry.io/otel/trace`, so the auto-instrumentation span that carries it is no longer dropped. (#9182)
 - Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP protobuf partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9188)
 - Do not report an error through the global error handler when `WithCompressor("none")` is passed to `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` or `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#9056)
+- Prevent deadlocks in `go.opentelemetry.io/otel/sdk/metric` when a callback calls methods of `go.opentelemetry.io/otel/metric` during collection, including `Registration.Unregister` on its own registration. (#8074)
+- Fix `Registration.Unregister` in `go.opentelemetry.io/otel` for callbacks registered with a global `Meter` before `SetMeterProvider`.
+  It no longer deadlocks when the callback unregisters itself while another goroutine unregisters it, later calls keep waiting for calls of the callback still in progress, and it unregisters the callback when `RegisterCallback` of the delegate `Meter` returned an error along with the registration. (#8074)
 
 ### Removed
 
