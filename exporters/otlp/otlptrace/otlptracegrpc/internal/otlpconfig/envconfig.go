@@ -47,8 +47,12 @@ func getOptionsFromEnv() []GenericOption {
 	opts := []GenericOption{}
 
 	tlsConf := &tls.Config{}
+	// An http or https endpoint scheme takes precedence over the insecure
+	// settings, so those are only applied when the scheme does not decide.
+	var schemeDecidesInsecure bool
 	DefaultEnvOptionsReader.Apply(
 		envconfig.WithURL("ENDPOINT", func(u *url.URL) {
+			schemeDecidesInsecure = isHTTPScheme(u)
 			opts = append(
 				opts,
 				withEndpointScheme(u),
@@ -71,6 +75,7 @@ func getOptionsFromEnv() []GenericOption {
 			)
 		}),
 		envconfig.WithURL("TRACES_ENDPOINT", func(u *url.URL) {
+			schemeDecidesInsecure = isHTTPScheme(u)
 			opts = append(
 				opts,
 				withEndpointScheme(u),
@@ -103,8 +108,16 @@ func getOptionsFromEnv() []GenericOption {
 			func(c tls.Certificate) { tlsConf.Certificates = []tls.Certificate{c} },
 		),
 		withTLSConfig(tlsConf, func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
-		envconfig.WithBool("INSECURE", func(b bool) { opts = append(opts, withInsecure(b)) }),
-		envconfig.WithBool("TRACES_INSECURE", func(b bool) { opts = append(opts, withInsecure(b)) }),
+		envconfig.WithBool("INSECURE", func(b bool) {
+			if !schemeDecidesInsecure {
+				opts = append(opts, withInsecure(b))
+			}
+		}),
+		envconfig.WithBool("TRACES_INSECURE", func(b bool) {
+			if !schemeDecidesInsecure {
+				opts = append(opts, withInsecure(b))
+			}
+		}),
 		envconfig.WithHeaders("HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
 		envconfig.WithHeaders("TRACES_HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
 		WithEnvCompression("COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
@@ -116,6 +129,15 @@ func getOptionsFromEnv() []GenericOption {
 	)
 
 	return opts
+}
+
+func isHTTPScheme(u *url.URL) bool {
+	switch strings.ToLower(u.Scheme) {
+	case "http", "https":
+		return true
+	default:
+		return false
+	}
 }
 
 func withEndpointScheme(u *url.URL) GenericOption {
