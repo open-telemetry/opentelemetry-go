@@ -31,6 +31,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   v1.48.0 is the final planned release of this module.
   Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#9221)
 
+### Changed
+
+- Reduce allocations in `go.opentelemetry.io/otel/exporters/otlp/otlptrace` by allocating protobuf backing storage per attribute list sized from actual contents, with independent ID copies. Each export owns its storage with no reuse, safe for retaining clients. (#8892)
+
 ### Fixed
 
 - Prevent underflowed measurements from updating sum, min, or max in exponential histograms in `go.opentelemetry.io/otel/sdk/metric`. (#8077)
