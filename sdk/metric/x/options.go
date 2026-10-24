@@ -108,7 +108,7 @@ func (meterConfiguratorProviderOption) Experimental() {}
 // Each Handle must be passed to at most one MeterProvider; see
 // [MeterConfiguratorHandle]'s doc comment.
 //
-// A nil h is a no-op, equivalent to omitting this option entirely.
+// A nil h configures no MeterConfigurator.
 //
 // Only MeterProviders built with this option check the configurator when
 // recording; others are unaffected.
@@ -116,23 +116,15 @@ func (meterConfiguratorProviderOption) Experimental() {}
 // Combining this option with other experimental MeterProvider options is not
 // yet supported.
 func WithMeterConfigurator(h *MeterConfiguratorHandle) sdkmetric.Option {
-	if h == nil {
-		return noopProviderOption{}
-	}
 	return meterConfiguratorProviderOption{handle: h}
 }
 
-// noopProviderOption is returned for a nil handle. It does not implement the
-// configurator methods, so the MeterProvider never selects it and it cannot
-// replace an earlier handle.
-type noopProviderOption struct {
-	// nil embed; skip guard in newConfig prevents apply from being called.
-	sdkmetric.Option
+// MeterConfiguratorEnabled reports whether the option has a handle. The
+// MeterProvider selects the last option that reports true, so an option built
+// from a nil handle never replaces an earlier one.
+func (o meterConfiguratorProviderOption) MeterConfiguratorEnabled() bool {
+	return o.handle != nil
 }
-
-// Experimental marks this as an experimental option so the skip guard in
-// newConfig skips calling the nil embedded apply.
-func (noopProviderOption) Experimental() {}
 
 // MeterConfiguratorSnapshot returns a closure over the handle so sdk/metric
 // can call it via duck-type without importing this package. Calling the

@@ -32,9 +32,14 @@ type testConfiguratorOpt struct {
 	// normally, matching every pre-existing test.
 	rejectRegistration bool
 	unregister         func()
+	// disabled simulates an option that does not activate a configurator,
+	// such as one built from a nil handle.
+	disabled bool
 }
 
 func (testConfiguratorOpt) Experimental() {}
+
+func (o testConfiguratorOpt) MeterConfiguratorEnabled() bool { return !o.disabled }
 
 func (o testConfiguratorOpt) MeterConfiguratorSnapshot() func() (func(instrumentation.Scope) any, uint64) {
 	return func() (func(instrumentation.Scope) any, uint64) {
@@ -73,6 +78,25 @@ func cachedConfiguratorMeter(t *testing.T, mp *MeterProvider, name string) *conf
 	gm, ok := mp.Meter(name).(*configuratorMeter)
 	require.True(t, ok, "a provider with a configurator must return a *configuratorMeter")
 	return gm
+}
+
+func TestConfiguratorSelectsLastEnabledOption(t *testing.T) {
+	enabled := testConfiguratorOpt{fn: disablingConfiguratorFn}
+	disabled := testConfiguratorOpt{disabled: true}
+
+	t.Run("DisabledAfterEnabled", func(t *testing.T) {
+		mp := NewMeterProvider(enabled, disabled)
+		assert.False(t, cachedConfiguratorMeter(t, mp, "disabled").config.Load(),
+			"a disabled option must not replace an earlier enabled one")
+	})
+	t.Run("DisabledBeforeEnabled", func(t *testing.T) {
+		mp := NewMeterProvider(disabled, enabled)
+		assert.False(t, cachedConfiguratorMeter(t, mp, "disabled").config.Load())
+	})
+	t.Run("OnlyDisabled", func(t *testing.T) {
+		mp := NewMeterProvider(disabled)
+		assert.IsType(t, &meter{}, mp.Meter("scope"), "a disabled option alone must not wire a configurator")
+	})
 }
 
 func TestConfiguratorMeterType(t *testing.T) {
