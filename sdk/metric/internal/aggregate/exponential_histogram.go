@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	expoMaxScale = 20
-	expoMinScale = -10
+	expoMaxScale   = 20
+	expoMinScale   = -10
+	defaultMaxSize = 160
 
 	smallestNonZeroNormalFloat64 = 0x1p-1022
 )
@@ -112,7 +113,7 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 
 	// If the new bin would make the counts larger than maxScale, we need to
 	// downscale current measurements.
-	if scaleDelta := p.scaleChange(bin, bucket.startBin, len(bucket.counts)); scaleDelta > 0 {
+	if scaleDelta := p.scaleChange(bin, bucket.startBin, int(bucket.length)); scaleDelta > 0 {
 		currentScale := p.scale.Load()
 		if currentScale-scaleDelta < expoMinScale {
 			// With a scale of -10 there is only two buckets for the whole range of float64 values.
@@ -213,18 +214,60 @@ func (p *expoHistogramDataPoint[N]) count() uint64 {
 	return p.posBuckets.count() + p.negBuckets.count() + p.zeroCount.Load()
 }
 
-// expoBuckets is a set of buckets in an exponential histogram.
+const minBucketCapacity = 1
+
+// expoBuckets is a circular buffer of bucket counts in an exponential histogram.
+//
+// The logical range is [startBin, startBin + length - 1].
+// Physical storage is counts []atomic.Uint64 with len(counts) always a power of 2 (or nil when unallocated).
+// Indexing into counts uses bitwise AND mask: int(bin) & (len(counts)-1).
+// Invariant: every slot in counts outside the logical range holds zero.
 type expoBuckets struct {
 	startBin int32
+	length   int32
 	counts   []atomic.Uint64
 }
 
-func (b *expoBuckets) clear() {
-	for i := range b.counts {
-		b.counts[i].Store(0)
+// index returns the slot in counts for bin. It requires len(b.counts) > 0.
+func (b *expoBuckets) index(bin int32) int {
+	return int(bin) & (len(b.counts) - 1)
+}
+
+// at returns a pointer to the i-th bucket count (0 <= i < b.length),
+// corresponding to logical bin (b.startBin + i).
+func (b *expoBuckets) at(i int32) *atomic.Uint64 {
+	return &b.counts[b.index(b.startBin+i)]
+}
+
+// bin returns a pointer to the bucket count for the given logical bin.
+func (b *expoBuckets) bin(bin int32) *atomic.Uint64 {
+	return &b.counts[b.index(bin)]
+}
+
+// endBin returns the last logical bin in the bucket range.
+func (b *expoBuckets) endBin() int32 {
+	return b.startBin + b.length - 1
+}
+
+func nextPowerOf2(n int32) int {
+	if n <= minBucketCapacity {
+		return minBucketCapacity
 	}
-	b.counts = b.counts[:0]
+	v := uint32(n - 1)
+	v |= v >> 1
+	v |= v >> 2
+	v |= v >> 4
+	v |= v >> 8
+	v |= v >> 16
+	return int(v + 1)
+}
+
+func (b *expoBuckets) clear() {
+	for i := range b.length {
+		b.at(i).Store(0)
+	}
 	b.startBin = 0
+	b.length = 0
 }
 
 // record increments the count for the given bin, and expands the buckets if needed.
@@ -234,74 +277,60 @@ func (b *expoBuckets) record(bin int32) {
 }
 
 func (b *expoBuckets) recordCount(bin int32, count uint64) {
-	if len(b.counts) == 0 {
-		if cap(b.counts) > 0 {
-			b.counts = b.counts[:1]
-		} else {
-			b.counts = make([]atomic.Uint64, 1)
+	if count == 0 {
+		return
+	}
+	if b.length == 0 {
+		if len(b.counts) == 0 {
+			b.counts = make([]atomic.Uint64, minBucketCapacity)
 		}
-		b.counts[0].Store(count)
 		b.startBin = bin
+		b.length = 1
+		b.bin(bin).Store(count)
 		return
 	}
 
-	endBin := int(b.startBin) + len(b.counts) - 1
-
-	// if the new bin is inside the current range
-	if bin >= b.startBin && int(bin) <= endBin {
-		b.counts[bin-b.startBin].Add(count)
+	endBin := b.endBin()
+	if bin >= b.startBin && bin <= endBin {
+		b.bin(bin).Add(count)
 		return
 	}
-	// if the new bin is before the current start add spaces to the counts
+
+	var newStartBin, newEndBin int32
 	if bin < b.startBin {
-		origLen := len(b.counts)
-		newLength := endBin - int(bin) + 1
-		shift := b.startBin - bin
-
-		if newLength > cap(b.counts) {
-			b.counts = append(b.counts, make([]atomic.Uint64, newLength-len(b.counts))...)
-		}
-
-		b.counts = b.counts[:newLength]
-
-		// Shift existing elements to the right. Go's copy() doesn't work for
-		// structs like atomic.Uint64.
-		for i := origLen - 1; i >= 0; i-- {
-			b.counts[i+int(shift)].Store(b.counts[i].Load())
-		}
-
-		for i := 1; i < int(shift); i++ {
-			b.counts[i].Store(0)
-		}
-		b.startBin = bin
-		b.counts[0].Store(count)
-		return
+		newStartBin = bin
+		newEndBin = endBin
+	} else {
+		newStartBin = b.startBin
+		newEndBin = bin
 	}
-	// if the new is after the end add spaces to the end
-	if int(bin) > endBin {
-		if int(bin-b.startBin) < cap(b.counts) {
-			b.counts = b.counts[:bin-b.startBin+1]
-			for i := endBin + 1 - int(b.startBin); i < len(b.counts); i++ {
-				b.counts[i].Store(0)
+	newLength := newEndBin - newStartBin + 1
+
+	if int(newLength) > len(b.counts) {
+		newCap := nextPowerOf2(newLength)
+		newCounts := make([]atomic.Uint64, newCap)
+		mask := newCap - 1
+		for i := range b.length {
+			if val := b.at(i).Load(); val > 0 {
+				oldBin := b.startBin + i
+				newCounts[int(oldBin)&mask].Store(val)
 			}
-			b.counts[bin-b.startBin].Store(count)
-			return
 		}
-
-		end := make([]atomic.Uint64, int(bin-b.startBin)-len(b.counts)+1)
-		b.counts = append(b.counts, end...)
-		b.counts[bin-b.startBin].Store(count)
+		b.counts = newCounts
 	}
+
+	b.startBin = newStartBin
+	b.length = newLength
+	b.bin(bin).Add(count)
 }
 
 func (b *expoBuckets) merge(other *expoBuckets) {
-	if len(other.counts) == 0 {
+	if other.length == 0 {
 		return
 	}
-	for i := range other.counts {
-		c := other.counts[i].Load()
-		if c > 0 {
-			b.recordCount(other.startBin+int32(i), c)
+	for i := range other.length {
+		if c := other.at(i).Load(); c > 0 {
+			b.recordCount(other.startBin+i, c)
 		}
 	}
 }
@@ -321,11 +350,11 @@ func (p *expoHistogramDataPoint[N]) merge(other *expoHistogramDataPoint[N]) {
 	oAlignShift := oStartScale - targetScale
 
 	var d int32
-	if len(p.posBuckets.counts) > 0 && len(other.posBuckets.counts) > 0 {
+	if p.posBuckets.length > 0 && other.posBuckets.length > 0 {
 		pMinBin := p.posBuckets.startBin >> pAlignShift
 		oMinBin := other.posBuckets.startBin >> oAlignShift
-		pMaxBin := (p.posBuckets.startBin + int32(len(p.posBuckets.counts)) - 1) >> pAlignShift         // nolint: gosec // length fits in int32
-		oMaxBin := (other.posBuckets.startBin + int32(len(other.posBuckets.counts)) - 1) >> oAlignShift // nolint: gosec // length fits in int32
+		pMaxBin := p.posBuckets.endBin() >> pAlignShift
+		oMaxBin := other.posBuckets.endBin() >> oAlignShift
 
 		minBin := min(pMinBin, oMinBin)
 		maxBin := max(pMaxBin, oMaxBin)
@@ -334,11 +363,11 @@ func (p *expoHistogramDataPoint[N]) merge(other *expoHistogramDataPoint[N]) {
 			d = delta
 		}
 	}
-	if len(p.negBuckets.counts) > 0 && len(other.negBuckets.counts) > 0 {
+	if p.negBuckets.length > 0 && other.negBuckets.length > 0 {
 		pMinBin := p.negBuckets.startBin >> pAlignShift
 		oMinBin := other.negBuckets.startBin >> oAlignShift
-		pMaxBin := (p.negBuckets.startBin + int32(len(p.negBuckets.counts)) - 1) >> pAlignShift         // nolint: gosec // length fits in int32
-		oMaxBin := (other.negBuckets.startBin + int32(len(other.negBuckets.counts)) - 1) >> oAlignShift // nolint: gosec // length fits in int32
+		pMaxBin := p.negBuckets.endBin() >> pAlignShift
+		oMaxBin := other.negBuckets.endBin() >> oAlignShift
 
 		minBin := min(pMinBin, oMinBin)
 		maxBin := max(pMaxBin, oMaxBin)
@@ -395,21 +424,21 @@ func (p *expoHistogramDataPoint[N]) uploadTo(
 	dest.PositiveBucket.Offset = p.posBuckets.startBin
 	dest.PositiveBucket.Counts = reset(
 		dest.PositiveBucket.Counts,
-		len(p.posBuckets.counts),
-		len(p.posBuckets.counts),
+		int(p.posBuckets.length),
+		int(p.posBuckets.length),
 	)
-	for j := range p.posBuckets.counts {
-		dest.PositiveBucket.Counts[j] = p.posBuckets.counts[j].Load()
+	for j := range p.posBuckets.length {
+		dest.PositiveBucket.Counts[j] = p.posBuckets.at(j).Load()
 	}
 
 	dest.NegativeBucket.Offset = p.negBuckets.startBin
 	dest.NegativeBucket.Counts = reset(
 		dest.NegativeBucket.Counts,
-		len(p.negBuckets.counts),
-		len(p.negBuckets.counts),
+		int(p.negBuckets.length),
+		int(p.negBuckets.length),
 	)
-	for j := range p.negBuckets.counts {
-		dest.NegativeBucket.Counts[j] = p.negBuckets.counts[j].Load()
+	for j := range p.negBuckets.length {
+		dest.NegativeBucket.Counts[j] = p.negBuckets.at(j).Load()
 	}
 
 	if !p.noSum {
@@ -427,44 +456,50 @@ func (p *expoHistogramDataPoint[N]) uploadTo(
 	}
 }
 
-// downscale shrinks a bucket by a factor of 2*s. It will sum counts into the
+// downscale shrinks a bucket by a factor of 2^delta. It will sum counts into the
 // correct lower resolution bucket.
 func (b *expoBuckets) downscale(delta int32) {
-	// Example
-	// delta = 2
-	// Original offset: -6
-	// Counts: [ 3,  1,  2,  3,  4,  5, 6, 7, 8, 9, 10]
-	// bins:    -6  -5, -4, -3, -2, -1, 0, 1, 2, 3, 4
-	// new bins:-2, -2, -1, -1, -1, -1, 0, 0, 0, 0, 1
-	// new Offset: -2
-	// new Counts: [4, 14, 30, 10]
-
-	if len(b.counts) <= 1 || delta < 1 {
-		b.startBin >>= delta
+	if b.length == 0 || delta < 1 {
 		return
 	}
 
-	steps := int32(1) << delta
-	offset := b.startBin % steps
-	offset = (offset + steps) % steps // to make offset positive
-	for i := 1; i < len(b.counts); i++ {
-		idx := i + int(offset)
-		if idx%int(steps) == 0 {
-			b.counts[idx/int(steps)].Store(b.counts[i].Load())
-			continue
-		}
-		b.counts[idx/int(steps)].Add(b.counts[i].Load())
+	newStartBin := b.startBin >> delta
+	newEndBin := b.endBin() >> delta
+	newLength := newEndBin - newStartBin + 1
+
+	// stackScratch is sized to defaultMaxSize/2 + 1 (81), the maximum possible
+	// downscaled span for defaultMaxSize (160) when delta >= 1, avoiding heap
+	// allocations under the default configuration.
+	var stackScratch [defaultMaxSize/2 + 1]uint64
+	var scratch []uint64
+	if int(newLength) <= len(stackScratch) {
+		scratch = stackScratch[:newLength]
+	} else {
+		scratch = make([]uint64, newLength)
 	}
 
-	lastIdx := (len(b.counts) - 1 + int(offset)) / int(steps)
-	b.counts = b.counts[:lastIdx+1]
-	b.startBin >>= delta
+	for i := range b.length {
+		slot := b.at(i)
+		if val := slot.Load(); val > 0 {
+			newBin := (b.startBin + i) >> delta
+			scratch[newBin-newStartBin] += val
+			slot.Store(0)
+		}
+	}
+
+	b.startBin = newStartBin
+	b.length = newLength
+	for i := range newLength {
+		if val := scratch[i]; val > 0 {
+			b.at(i).Store(val)
+		}
+	}
 }
 
 func (b *expoBuckets) count() uint64 {
 	var total uint64
-	for i := range b.counts {
-		total += b.counts[i].Load()
+	for i := range b.length {
+		total += b.at(i).Load()
 	}
 	return total
 }
