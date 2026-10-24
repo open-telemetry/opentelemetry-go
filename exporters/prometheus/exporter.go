@@ -85,8 +85,6 @@ type keyVals struct {
 type collector struct {
 	reader metric.Reader
 
-	withoutUnits             bool
-	withoutCounterSuffixes   bool
 	disableScopeInfo         bool
 	namespace                string
 	resourceAttributesFilter attribute.Filter
@@ -133,8 +131,6 @@ func New(opts ...Option) (*Exporter, error) {
 	collector := &collector{
 		reader:                   reader,
 		disableTargetInfo:        cfg.disableTargetInfo,
-		withoutUnits:             cfg.withoutUnits,
-		withoutCounterSuffixes:   cfg.withoutCounterSuffixes,
 		disableScopeInfo:         cfg.disableScopeInfo,
 		metricFamilies:           make(map[string]*dto.MetricFamily),
 		namespace:                escapedNamespace,
@@ -720,10 +716,8 @@ func (c *collector) createInfoMetric(name, description string, res *resource.Res
 func (c *collector) getName(m metricdata.Metrics) (string, error) {
 	translatorMetric := otlptranslator.Metric{
 		Name: m.Name,
+		Unit: m.Unit,
 		Type: c.namingMetricType(m),
-	}
-	if !c.withoutUnits {
-		translatorMetric.Unit = m.Unit
 	}
 	return c.metricNamer.Build(translatorMetric)
 }
@@ -751,23 +745,19 @@ func (*collector) metricType(m metricdata.Metrics) *dto.MetricType {
 }
 
 // namingMetricType provides the metric type for naming purposes.
-func (c *collector) namingMetricType(m metricdata.Metrics) otlptranslator.MetricType {
+func (*collector) namingMetricType(m metricdata.Metrics) otlptranslator.MetricType {
 	switch v := m.Data.(type) {
 	case metricdata.ExponentialHistogram[int64], metricdata.ExponentialHistogram[float64]:
 		return otlptranslator.MetricTypeHistogram
 	case metricdata.Histogram[int64], metricdata.Histogram[float64]:
 		return otlptranslator.MetricTypeHistogram
 	case metricdata.Sum[float64]:
-		// If counter suffixes are disabled, treat them like non-monotonic
-		// suffixes for the purposes of naming.
-		if v.IsMonotonic && !c.withoutCounterSuffixes {
+		if v.IsMonotonic {
 			return otlptranslator.MetricTypeMonotonicCounter
 		}
 		return otlptranslator.MetricTypeNonMonotonicCounter
 	case metricdata.Sum[int64]:
-		// If counter suffixes are disabled, treat them like non-monotonic
-		// suffixes for the purposes of naming.
-		if v.IsMonotonic && !c.withoutCounterSuffixes {
+		if v.IsMonotonic {
 			return otlptranslator.MetricTypeMonotonicCounter
 		}
 		return otlptranslator.MetricTypeNonMonotonicCounter
