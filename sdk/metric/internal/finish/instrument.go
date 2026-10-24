@@ -33,3 +33,20 @@ func (i *int64Counter) Finish(_ context.Context, attrs ...attribute.KeyValue) {
 		f(attrs, t)
 	}
 }
+
+type float64Counter struct {
+	metric.Float64Counter
+	finishers []Func
+}
+
+// NewFloat64Counter decorates counter with Finish support.
+func NewFloat64Counter(counter metric.Float64Counter, finishers []Func) metric.Float64Counter {
+	return &float64Counter{Float64Counter: counter, finishers: finishers}
+}
+
+func (i *float64Counter) Finish(_ context.Context, attrs ...attribute.KeyValue) {
+	t := time.Now()
+	for _, f := range i.finishers {
+		f(attrs, t)
+	}
+}
