@@ -65,6 +65,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove support for the deprecated `OTEL_GO_X_CARDINALITY_LIMIT` environment variable in `go.opentelemetry.io/otel/sdk/metric`.
   Use `WithCardinalityLimit` instead, including `WithCardinalityLimit(0)` to disable the default limit of 2000. (#9210)
 
+<!-- markdownlint-capture -->
+<!-- markdownlint-disable -->
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -4061,6 +4064,8 @@ It contains api and sdk for trace and meter.
 [0.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.1.0
 
 <!-- Released section ended -->
+
+<!-- markdownlint-restore -->
 
 [Go 1.27]: https://go.dev/doc/go1.27
 [Go 1.26]: https://go.dev/doc/go1.26
