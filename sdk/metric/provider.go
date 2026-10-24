@@ -26,6 +26,9 @@ type meterConfigReader interface{ Enabled() bool }
 
 type meterConfiguratorOption interface {
 	Experimental()
+	// MeterConfiguratorEnabled reports whether the option activates a
+	// configurator, as finishOption.FinishEnabled does for Finish.
+	MeterConfiguratorEnabled() bool
 	MeterConfiguratorSnapshot() func() (func(instrumentation.Scope) any, uint64)
 	RegisterOnUpdate(func()) bool
 	Unregister()
@@ -100,7 +103,7 @@ func NewMeterProvider(options ...Option) *MeterProvider {
 
 		var mco meterConfiguratorOption
 		for _, o := range options {
-			if m, ok := o.(meterConfiguratorOption); ok {
+			if m, ok := o.(meterConfiguratorOption); ok && m.MeterConfiguratorEnabled() {
 				mco = m
 			}
 		}
