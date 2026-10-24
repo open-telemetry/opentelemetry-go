@@ -1016,10 +1016,10 @@ func (MemoryUsageObservable) Description() string {
 // the "process.memory.utilization" semantic conventions. It represents the
 // percentage of total physical memory that is used by the process.
 type MemoryUtilization struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newMemoryUtilizationOpts = []metric.Int64GaugeOption{
+var newMemoryUtilizationOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Percentage of total physical memory that is used by the process."),
 	metric.WithUnit("1"),
 }
@@ -1027,11 +1027,11 @@ var newMemoryUtilizationOpts = []metric.Int64GaugeOption{
 // NewMemoryUtilization returns a new MemoryUtilization instrument.
 func NewMemoryUtilization(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (MemoryUtilization, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return MemoryUtilization{noop.Int64Gauge{}}, nil
+		return MemoryUtilization{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -1040,19 +1040,19 @@ func NewMemoryUtilization(
 		opt = append(opt, newMemoryUtilizationOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"process.memory.utilization",
 		opt...,
 	)
 	if err != nil {
-		return MemoryUtilization{noop.Int64Gauge{}}, err
+		return MemoryUtilization{noop.Float64Gauge{}}, err
 	}
 	return MemoryUtilization{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m MemoryUtilization) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m MemoryUtilization) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1071,12 +1071,12 @@ func (MemoryUtilization) Description() string {
 }
 
 // Record records val to the current distribution for attrs.
-func (m MemoryUtilization) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m MemoryUtilization) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -1084,16 +1084,16 @@ func (m MemoryUtilization) Record(ctx context.Context, val int64, attrs ...attri
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m MemoryUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m MemoryUtilization) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -1101,7 +1101,7 @@ func (m MemoryUtilization) RecordSet(ctx context.Context, val int64, set attribu
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // MemoryUtilizationObservable is an instrument used to record metric values
@@ -1109,10 +1109,10 @@ func (m MemoryUtilization) RecordSet(ctx context.Context, val int64, set attribu
 // represents the percentage of total physical memory that is used by the
 // process.
 type MemoryUtilizationObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newMemoryUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+var newMemoryUtilizationObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Percentage of total physical memory that is used by the process."),
 	metric.WithUnit("1"),
 }
@@ -1121,11 +1121,11 @@ var newMemoryUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
 // instrument.
 func NewMemoryUtilizationObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (MemoryUtilizationObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return MemoryUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+		return MemoryUtilizationObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
@@ -1134,19 +1134,19 @@ func NewMemoryUtilizationObservable(
 		opt = append(opt, newMemoryUtilizationObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"process.memory.utilization",
 		opt...,
 	)
 	if err != nil {
-		return MemoryUtilizationObservable{noop.Int64ObservableGauge{}}, err
+		return MemoryUtilizationObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return MemoryUtilizationObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m MemoryUtilizationObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m MemoryUtilizationObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
