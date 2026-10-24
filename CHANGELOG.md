@@ -15,6 +15,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   including cancellable provider shutdown and parked waits for in-flight measurements,
   in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 - Add experimental support for enabling/disabling `Meter`s per instrumentation scope via `MeterConfigurator`, `MeterConfig`, and `MeterConfiguratorHandle` in `go.opentelemetry.io/otel/sdk/metric/x`. Configuration is set at `MeterProvider` construction via `WithMeterConfigurator` and can be updated live through `MeterConfiguratorHandle.Set`. This gates recording (`Add`/`Record`/`Observe`) only. `MeterProvider`s without it are unaffected. (#8743)
+- Add experimental caching of converted data point attribute sets across exports in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, reducing allocations and CPU time when attribute sets repeat between exports.
+  Set `OTEL_GO_X_OTLP_ATTRIBUTE_CACHE_SIZE=<max_size>` to enable it.
+  See `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/x` for feature documentation. (#9090)
 
 ### Changed
 

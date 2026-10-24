@@ -7,10 +7,99 @@
 package transform
 
 import (
+	"sync"
+	"sync/atomic"
+	"time"
+
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/x"
 )
+
+// maxCachedAttributeSets limits attrCache's size; 0 (the default) disables the cache.
+// Refreshed on every export rather than at init, so t.Setenv works and go test tracks it.
+var maxCachedAttributeSets atomic.Int64
+
+// attrCacheLimit reads the configured limit; a variable so tests can interleave reloads.
+var attrCacheLimit = x.AttributeCacheSize.Lookup
+
+// loadAttrCacheSize applies the configured limit under the lock, so concurrent reloads cannot
+// apply a stale value, and replaces the map on change to release the old entries.
+func loadAttrCacheSize() {
+	attrCacheMu.Lock()
+	defer attrCacheMu.Unlock()
+	n, _ := attrCacheLimit()
+	if int64(n) == maxCachedAttributeSets.Load() {
+		return
+	}
+	maxCachedAttributeSets.Store(int64(n))
+	attrCache = map[attribute.Distinct]attrCacheEntry{}
+	attrCacheLastClear = time.Time{}
+}
+
+// minAttrCacheClearInterval rate-limits clearing a full cache, so an undersized cache keeps
+// reusing the sets it holds instead of thrashing, while still adapting to changing sets.
+const minAttrCacheClearInterval = 10 * time.Minute
+
+// attrCacheEntry keeps the source set because Distinct is a hash and can collide.
+type attrCacheEntry struct {
+	set   attribute.Set
+	attrs []*cpb.KeyValue
+}
+
+// attrCache stores converted OTLP attributes keyed by equivalent attribute sets.
+var (
+	attrCacheMu        sync.Mutex
+	attrCache          = map[attribute.Distinct]attrCacheEntry{}
+	attrCacheLastClear time.Time
+	attrCacheNow       = time.Now
+)
+
+// cachedAttrs converts set to OTLP key-values and reuses a cached result when available.
+// The result is shared across exports and must not be modified.
+func cachedAttrs(set attribute.Set) []*cpb.KeyValue {
+	if set.Len() == 0 {
+		return nil
+	}
+	size := int(maxCachedAttributeSets.Load())
+	if size == 0 {
+		return AttrIter(set.Iter())
+	}
+
+	key := set.Equivalent()
+
+	attrCacheMu.Lock()
+	defer attrCacheMu.Unlock()
+
+	// Re-read under the lock so a concurrent limit change cannot admit an entry under the old limit.
+	size = int(maxCachedAttributeSets.Load())
+	if size == 0 {
+		return AttrIter(set.Iter())
+	}
+
+	if e, ok := attrCache[key]; ok {
+		if e.set.Equals(&set) {
+			return e.attrs
+		}
+		return AttrIter(set.Iter())
+	}
+
+	out := AttrIter(set.Iter())
+	if len(attrCache) >= size {
+		now := attrCacheNow()
+		if attrCacheLastClear.IsZero() {
+			attrCacheLastClear = now
+		}
+		if now.Sub(attrCacheLastClear) < minAttrCacheClearInterval {
+			return out
+		}
+		clear(attrCache)
+		attrCacheLastClear = now
+	}
+	attrCache[key] = attrCacheEntry{set: set, attrs: out}
+	return out
+}
 
 // AttrIter transforms an attribute iterator into OTLP key-values.
 func AttrIter(iter attribute.Iterator) []*cpb.KeyValue {
