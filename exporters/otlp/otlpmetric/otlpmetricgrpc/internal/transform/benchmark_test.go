@@ -22,12 +22,12 @@ func benchResourceMetrics(series int) *metricdata.ResourceMetrics {
 	dps := make([]metricdata.DataPoint[float64], 0, series)
 	for i := range series {
 		attrs := attribute.NewSet(
-			attribute.String("csfversion", "1.183.0"),
-			attribute.String("env", "intl-shared-prod"),
-			attribute.String("projectname", "intl/central-resolution-hub"),
-			attribute.String("host", "i-0bdf11c292977661a"),
+			attribute.String("version", "1.183.0"),
+			attribute.String("env", "example-shared-prod"),
+			attribute.String("projectname", "example/query-service"),
+			attribute.String("host", "i-0123456789abcdef0"),
 			attribute.String("configname", "production"),
-			attribute.String("datadog.metric.type", "gauge"),
+			attribute.String("metric.type", "gauge"),
 			attribute.Int("series", i),
 		)
 		dps = append(dps, metricdata.DataPoint[float64]{
@@ -43,7 +43,7 @@ func benchResourceMetrics(series int) *metricdata.ResourceMetrics {
 			{
 				Metrics: []metricdata.Metrics{
 					{
-						Name: "central_resolution_hub.query.result_count.max",
+						Name: "query_service.query.result_count.max",
 						Data: metricdata.Gauge[float64]{DataPoints: dps},
 					},
 				},
