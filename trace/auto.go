@@ -272,7 +272,9 @@ func (s *autoSpan) SetAttributes(attrs ...attribute.KeyValue) {
 // is kept. The number of dropped attributes is also returned.
 //
 // Only kept keys are indexed and stored, so the output and the key index stay
-// within the limit however many entries repeat or are rejected.
+// within the limit however many entries repeat or are rejected. Each kept
+// value is converted once, from its last occurrence, so a repeated key does
+// not convert, or for a slice allocate, the values it replaces.
 func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, uint32) {
 	if limit == 0 {
 		var out uint32
@@ -293,13 +295,15 @@ func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, u
 	var out []telemetry.Attr
 	idx := make(map[attribute.Key]int, hint)
 	dropped := 0
-	for _, a := range attrs {
+	for i, a := range attrs {
 		if !a.Valid() {
 			dropped++
 			continue
 		}
+		// Until the loop ends, a kept Value holds the index in attrs of the
+		// entry that wins for its key.
 		if j, ok := idx[a.Key]; ok {
-			out[j].Value = convAttrValue(a.Value)
+			out[j].Value = telemetry.Int64Value(int64(i))
 			continue
 		}
 		if limit > 0 && len(out) >= limit {
@@ -310,7 +314,10 @@ func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, u
 			out = make([]telemetry.Attr, 0, hint)
 		}
 		idx[a.Key] = len(out)
-		out = append(out, telemetry.Attr{Key: string(a.Key), Value: convAttrValue(a.Value)})
+		out = append(out, telemetry.Attr{Key: string(a.Key), Value: telemetry.Int64Value(int64(i))})
+	}
+	for j := range out {
+		out[j].Value = convAttrValue(attrs[out[j].Value.AsInt64()].Value)
 	}
 	return out, uint32(min(int64(dropped), math.MaxUint32)) // nolint: gosec  // Bounds checked.
 }

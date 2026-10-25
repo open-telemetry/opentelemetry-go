@@ -1021,6 +1021,31 @@ func TestConvCappedAttrsDedupAndEmpty(t *testing.T) {
 	assert.Equal(t, uint32(1), dropped, "invalid key-value counted")
 }
 
+func TestConvCappedAttrsConvertsKeptValueOnce(t *testing.T) {
+	// A repeated key keeps its last value, and the earlier values are never
+	// converted, so the allocations do not grow with the number of repeats.
+	input := func(n int) []attribute.KeyValue {
+		out := make([]attribute.KeyValue, n)
+		for i := range out {
+			out[i] = attribute.StringSlice("a", []string{strconv.Itoa(i)})
+		}
+		return out
+	}
+	got, dropped := convCappedAttrs(1, input(3))
+	want := []telemetry.Attr{{
+		Key:   "a",
+		Value: telemetry.SliceValue(telemetry.StringValue("2")),
+	}}
+	assert.Equal(t, want, got, "last value wins")
+	assert.Zero(t, dropped, "repeats dropped")
+
+	few, many := input(10), input(1_000)
+	allocs := func(in []attribute.KeyValue) float64 {
+		return testing.AllocsPerRun(10, func() { _, _ = convCappedAttrs(1, in) })
+	}
+	assert.Equal(t, allocs(few), allocs(many), "allocations per repeat")
+}
+
 func TestSpanAttributeDedupAndEmpty(t *testing.T) {
 	orig := maxSpan
 	t.Cleanup(func() { maxSpan = orig })
@@ -1370,6 +1395,12 @@ func BenchmarkConvCappedAttrs(b *testing.B) {
 	b.Run("OneKey100k/Limit1", run(1, attrs(100_000, 1)))
 	b.Run("TenKeys1k/Limit128", run(128, attrs(1_000, 10)))
 	b.Run("OneKey100kInvalid/Limit1", run(1, append(attrs(100_000, 1), attribute.KeyValue{})))
+
+	ss := make([]attribute.KeyValue, 1_000)
+	for i := range ss {
+		ss[i] = attribute.StringSlice("k"+strconv.Itoa(i%10), []string{"a", "b"})
+	}
+	b.Run("TenKeys1kStringSlice/Limit128", run(128, ss))
 }
 
 func BenchmarkTruncate(b *testing.B) {
