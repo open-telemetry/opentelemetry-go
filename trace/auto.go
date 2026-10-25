@@ -11,7 +11,6 @@ import (
 	"os"
 	"reflect"
 	"runtime"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -266,11 +265,14 @@ func (s *autoSpan) SetAttributes(attrs ...attribute.KeyValue) {
 }
 
 // convCappedAttrs converts attrs into a []telemetry.Attr applying the
-// attribute count limit. Invalid key-values are dropped, top-level keys are
-// deduplicated with the last value winning in first-occurrence order, and
-// only then is the limit applied to the distinct keys, so a duplicate never
-// consumes a limit slot. A valid top-level empty value is kept. The number of
-// dropped attributes is also returned.
+// attribute count limit the way sdk/trace does: invalid key-values are
+// dropped, a repeated top-level key replaces the value of its first
+// occurrence in place and never consumes a limit slot, and once the limit is
+// reached every entry for a new key is dropped. A valid top-level empty value
+// is kept. The number of dropped attributes is also returned.
+//
+// Only kept keys are indexed and stored, so the output and the key index stay
+// within the limit however many entries repeat or are rejected.
 func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, uint32) {
 	if limit == 0 {
 		var out uint32
@@ -279,81 +281,38 @@ func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, u
 		}
 		return nil, out
 	}
-
-	dropped := 0
-	valid := attrs
-	filtered := false
-	for i, a := range attrs {
-		if !a.Valid() {
-			if !filtered {
-				valid = slices.Clone(attrs[:i])
-				filtered = true
-			}
-			dropped++
-			continue
-		}
-		if filtered {
-			valid = append(valid, a)
-		}
-	}
-	valid = dedupAttrs(valid, limit)
-	if limit > 0 && len(valid) > limit {
-		dropped += len(valid) - limit
-		valid = valid[:limit]
-	}
-	return convAttrs(valid), uint32(dropped) // nolint: gosec  // Bounds checked.
-}
-
-// dedupAttrs removes duplicate top-level keys from attrs: the last value for
-// a key wins and the position of the first occurrence is kept. The input
-// slice is not modified; it is returned unchanged when there is nothing to
-// deduplicate. A positive limit bounds the initial size of the key index, so
-// many occurrences of a few keys do not reserve one slot per occurrence.
-func dedupAttrs(attrs []attribute.KeyValue, limit int) []attribute.KeyValue {
-	if len(attrs) < 2 {
-		return attrs
+	if len(attrs) == 0 {
+		// Avoid allocations if not necessary.
+		return nil, 0
 	}
 
 	hint := len(attrs)
 	if limit > 0 {
 		hint = min(hint, limit)
 	}
-	var out []attribute.KeyValue
+	var out []telemetry.Attr
 	idx := make(map[attribute.Key]int, hint)
-	for i, a := range attrs {
-		if j, ok := idx[a.Key]; ok {
-			if out == nil {
-				out = slices.Clone(attrs[:i])
-			}
-			out[j] = a
+	dropped := 0
+	for _, a := range attrs {
+		if !a.Valid() {
+			dropped++
 			continue
 		}
-		idx[a.Key] = i
-		if out != nil {
-			idx[a.Key] = len(out)
-			out = append(out, a)
+		if j, ok := idx[a.Key]; ok {
+			out[j].Value = convAttrValue(a.Value)
+			continue
 		}
+		if limit > 0 && len(out) >= limit {
+			dropped++
+			continue
+		}
+		if out == nil {
+			out = make([]telemetry.Attr, 0, hint)
+		}
+		idx[a.Key] = len(out)
+		out = append(out, telemetry.Attr{Key: string(a.Key), Value: convAttrValue(a.Value)})
 	}
-	if out == nil {
-		return attrs
-	}
-	return out
-}
-
-func convAttrs(attrs []attribute.KeyValue) []telemetry.Attr {
-	if len(attrs) == 0 {
-		// Avoid allocations if not necessary.
-		return nil
-	}
-
-	out := make([]telemetry.Attr, 0, len(attrs))
-	for _, attr := range attrs {
-		out = append(out, telemetry.Attr{
-			Key:   string(attr.Key),
-			Value: convAttrValue(attr.Value),
-		})
-	}
-	return out
+	return out, uint32(min(int64(dropped), math.MaxUint32)) // nolint: gosec  // Bounds checked.
 }
 
 func convAttrValue(value attribute.Value) telemetry.Value {

@@ -962,6 +962,28 @@ func TestSpanAttributeLimits(t *testing.T) {
 	}
 }
 
+func TestConvCappedAttrsRejectedDuplicatesMatchSetAttributes(t *testing.T) {
+	// Once the limit is reached, sdk/trace and SetAttributes count every
+	// entry for a rejected key, so span creation counts the same way.
+	input := []attribute.KeyValue{
+		attribute.Int("a", 1),
+		attribute.Int("b", 2),
+		attribute.Int("b", 3),
+	}
+	got, dropped := convCappedAttrs(1, input)
+	assert.Equal(t, []telemetry.Attr{telemetry.Int("a", 1)}, got, "kept")
+	assert.Equal(t, uint32(2), dropped, "creation dropped")
+
+	orig := maxSpan
+	t.Cleanup(func() { maxSpan = orig })
+	maxSpan.Attrs = 1
+	s := &autoSpan{span: &telemetry.Span{}}
+	s.sampled.Store(true)
+	s.SetAttributes(input...)
+	assert.Equal(t, got, s.span.Attrs, "SetAttributes kept")
+	assert.Equal(t, dropped, s.span.DroppedAttrs, "SetAttributes dropped")
+}
+
 func TestConvCappedAttrsDedupAndEmpty(t *testing.T) {
 	// Top-level keys are deduplicated before the count limit applies, so
 	// the last value wins and duplicates do not consume limit slots.
@@ -1347,6 +1369,7 @@ func BenchmarkConvCappedAttrs(b *testing.B) {
 	b.Run("Unique128", run(128, attrs(128, 128)))
 	b.Run("OneKey100k/Limit1", run(1, attrs(100_000, 1)))
 	b.Run("TenKeys1k/Limit128", run(128, attrs(1_000, 10)))
+	b.Run("OneKey100kInvalid/Limit1", run(1, append(attrs(100_000, 1), attribute.KeyValue{})))
 }
 
 func BenchmarkTruncate(b *testing.B) {
