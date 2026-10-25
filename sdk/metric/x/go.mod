@@ -9,6 +9,7 @@ require (
 	go.opentelemetry.io/otel/metric/x v0.69.0
 	go.opentelemetry.io/otel/sdk v1.47.0
 	go.opentelemetry.io/otel/sdk/metric v1.47.0
+	go.opentelemetry.io/otel/trace v1.47.0
 )
 
 require (
@@ -23,16 +24,16 @@ require (
 	golang.org/x/sys v0.49.0 // indirect
 )
 
-replace go.opentelemetry.io/otel => ../../..
+replace go.opentelemetry.io/otel/trace => ../../../trace
 
 replace go.opentelemetry.io/otel/metric => ../../../metric
+
+replace go.opentelemetry.io/otel/log => ../../../log
+
+replace go.opentelemetry.io/otel => ../../..
 
 replace go.opentelemetry.io/otel/metric/x => ../../../metric/x
 
 replace go.opentelemetry.io/otel/sdk => ../..
 
 replace go.opentelemetry.io/otel/sdk/metric => ..
-
-replace go.opentelemetry.io/otel/trace => ../../../trace
-
-replace go.opentelemetry.io/otel/log => ../../../log
