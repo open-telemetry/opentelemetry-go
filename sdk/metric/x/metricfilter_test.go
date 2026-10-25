@@ -65,16 +65,13 @@ func TestWithMetricFilterOptionSatisfiesStableInterface(t *testing.T) {
 }
 
 func TestWithMetricFilterNil(t *testing.T) {
-	mf, ok := WithMetricFilter(nil).(stableMetricFilter)
-	require.True(t, ok)
+	opt := WithMetricFilter(nil)
 
-	scope := instrumentation.Scope{Name: "test"}
-	kind := metricdata.Sum[int64]{}
-	attrs := attribute.NewSet(attribute.String("k", "v"))
-	assert.NotPanics(t, func() {
-		assert.Equal(t, int(Accept), mf.TestMetric(scope, "name", kind, "1"))
-		assert.Equal(t, int(AttrAccept), mf.TestAttributes(scope, "name", kind, "1", attrs))
-	})
+	_, ok := opt.(stableMetricFilter)
+	assert.False(t, ok)
+
+	_, experimental := opt.(interface{ Experimental() })
+	assert.True(t, experimental)
 }
 
 func TestWithMetricFilterEnumMapping(t *testing.T) {

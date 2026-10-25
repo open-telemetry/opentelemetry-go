@@ -76,6 +76,12 @@ type metricFilterOption struct {
 	filter MetricFilter
 }
 
+type noopMetricFilterOption struct {
+	metric.ReaderOption
+}
+
+func (noopMetricFilterOption) Experimental() {}
+
 // Experimental indicates that this configuration option is part of an experimental API.
 func (metricFilterOption) Experimental() {}
 
@@ -117,7 +123,7 @@ func (o metricFilterOption) TestAttributes(
 // their specific attribute sets at the reader level.
 func WithMetricFilter(f MetricFilter) metric.ReaderOption {
 	if f == nil {
-		return metricFilterOption{}
+		return noopMetricFilterOption{}
 	}
 	return metricFilterOption{filter: f}
 }

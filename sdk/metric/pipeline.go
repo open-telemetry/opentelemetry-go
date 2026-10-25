@@ -443,6 +443,7 @@ func (i *inserter[N]) cachedAggregator(
 		b := aggregate.Builder[N]{
 			Temporality: i.pipeline.reader.temporality(kind),
 			ReservoirFunc: reservoirFunc[N](
+				kind,
 				stream.ExemplarReservoirProviderSelector(stream.Aggregation),
 				i.pipeline.exemplarFilter,
 			),
@@ -458,7 +459,6 @@ func (i *inserter[N]) cachedAggregator(
 		if funcs.measure == nil { // Drop aggregator.
 			return aggVal[N]{}
 		}
-
 		i.pipeline.addSync(scope, instrumentSync{
 			// Use the first-seen name casing for this and all subsequent
 			// requests of this instrument.
