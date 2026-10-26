@@ -370,6 +370,17 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 			return err
 		}
 	}
+	// Each of these processors is shut down by the UnregisterSpanProcessor
+	// call that owns it, so only wait for those calls to finish. This happens
+	// before any processor is shut down to keep the drain-before-shutdown
+	// guarantee.
+	for _, done := range unregistering {
+		select {
+		case <-done:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 	for _, sps := range spss {
 		select {
 		case <-ctx.Done():
@@ -384,15 +395,6 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 		retErr = errors.Join(retErr, err)
 	}
 
-	// Each of these processors is shut down by the UnregisterSpanProcessor
-	// call that owns it, so only wait for those calls to finish.
-	for _, done := range unregistering {
-		select {
-		case <-done:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
 	return retErr
 }
 

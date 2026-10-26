@@ -1276,3 +1276,46 @@ func TestShutdownHonorsContextWhileUnregisterShutsDownProcessor(t *testing.T) {
 	<-unregisterDone
 	assert.Equal(t, int32(1), sp.shutdowns.Load())
 }
+
+// TestShutdownContextCanceledWaitingForUnregister verifies that no processor
+// is shut down when ctx expires while waiting for a concurrent unregistration
+// to finish draining.
+func TestShutdownContextCanceledWaitingForUnregister(t *testing.T) {
+	tp := NewTracerProvider()
+	other := &hookSpanProcessor{}
+	busy := &hookSpanProcessor{
+		blockOn: "OnEnd",
+		started: make(chan struct{}),
+		release: make(chan struct{}),
+	}
+	tp.RegisterSpanProcessor(other)
+	tp.RegisterSpanProcessor(busy)
+
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	endDone := make(chan struct{})
+	go func() {
+		defer close(endDone)
+		span.End()
+	}()
+	<-busy.started
+
+	unregisterDone := make(chan struct{})
+	go func() {
+		defer close(unregisterDone)
+		tp.UnregisterSpanProcessor(busy)
+	}()
+	require.Eventually(t, func() bool {
+		tp.mu.Lock()
+		defer tp.mu.Unlock()
+		return len(tp.unregistering) == 1
+	}, 5*time.Second, time.Millisecond)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	assert.ErrorIs(t, tp.Shutdown(ctx), context.DeadlineExceeded)
+	assert.Zero(t, other.shutdowns.Load(), "processor shut down while a callback was still running")
+
+	close(busy.release)
+	<-endDone
+	<-unregisterDone
+}
