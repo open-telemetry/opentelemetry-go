@@ -85,18 +85,33 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 // Calling Shutdown more than once is safe: subsequent calls do nothing and
 // return nil.
 //
+// Shutdown waits for any in-flight Export to finish. If ctx expires first,
+// Shutdown returns the context error and cleanup continues in the background.
+// The in-flight Export is not canceled and retains its own context and timeout.
+//
 // This method is safe to call concurrently.
 func (e *Exporter) Shutdown(ctx context.Context) error {
 	if e.stopped.Swap(true) {
 		return nil
 	}
 
-	e.clientMu.Lock()
-	defer e.clientMu.Unlock()
+	// Buffer the result so cleanup can finish after the caller's context expires.
+	done := make(chan error, 1)
+	go func() {
+		e.clientMu.Lock()
+		defer e.clientMu.Unlock()
 
-	err := e.client.Shutdown(ctx)
-	e.client = newNoopClient()
-	return err
+		err := e.client.Shutdown(ctx)
+		e.client = newNoopClient()
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // ForceFlush does nothing. The Exporter holds no state.
