@@ -364,7 +364,6 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 		})
 		retErr = errors.Join(retErr, err)
 	}
-	p.spanProcessors.Store(&spanProcessorStates{})
 	return retErr
 }
 
@@ -382,6 +381,7 @@ func (p *TracerProvider) beginShutdown() (spanProcessorStates, bool) {
 	for _, sps := range spss {
 		sps.stop()
 	}
+	p.spanProcessors.Store(&spanProcessorStates{})
 	return spss, true
 }
 

@@ -578,6 +578,31 @@ func TestShutdownContextCanceledBeforeDrain(t *testing.T) {
 	assert.False(t, sp.closed, "processor Shutdown must not run when ctx is already canceled")
 }
 
+func TestForceFlushNoopAfterShutdownContextCanceled(t *testing.T) {
+	tp := NewTracerProvider()
+	sp := &blockingSpanProcessor{started: make(chan struct{}), release: make(chan struct{})}
+	tp.RegisterSpanProcessor(sp)
+
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	endDone := make(chan struct{})
+	go func() {
+		span.End()
+		close(endDone)
+	}()
+	<-sp.started
+
+	shutdownCtx, cancelShutdown := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancelShutdown()
+	require.ErrorIs(t, tp.Shutdown(shutdownCtx), context.DeadlineExceeded)
+
+	flushCtx, cancelFlush := context.WithCancel(t.Context())
+	cancelFlush()
+	assert.NoError(t, tp.ForceFlush(flushCtx))
+
+	close(sp.release)
+	<-endDone
+}
+
 // panicOnStartSpanProcessor panics from OnStart to simulate a misbehaving
 // SpanProcessor.
 type panicOnStartSpanProcessor struct {
