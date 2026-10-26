@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand/v2"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -1028,4 +1029,107 @@ func TestExperimentalOptionSafe(t *testing.T) {
 	var opt testExperimentalOption
 
 	assert.NotPanics(t, func() { _ = NewTracerProvider(opt) })
+}
+
+// hookSpanProcessor blocks in the selected method until release is closed,
+// after signaling via started, and counts the calls it receives.
+type hookSpanProcessor struct {
+	blockOn string
+	started chan struct{}
+	release chan struct{}
+
+	startOnce sync.Once
+	onStarts  atomic.Int32
+	onEnds    atomic.Int32
+	flushes   atomic.Int32
+}
+
+func (p *hookSpanProcessor) maybeBlock(method string) {
+	if p.blockOn != method {
+		return
+	}
+	p.startOnce.Do(func() { close(p.started) })
+	<-p.release
+}
+
+func (p *hookSpanProcessor) OnStart(context.Context, ReadWriteSpan) {
+	p.onStarts.Add(1)
+	p.maybeBlock("OnStart")
+}
+
+func (p *hookSpanProcessor) OnEnd(ReadOnlySpan) {
+	p.onEnds.Add(1)
+	p.maybeBlock("OnEnd")
+}
+
+func (p *hookSpanProcessor) ForceFlush(context.Context) error {
+	p.flushes.Add(1)
+	p.maybeBlock("ForceFlush")
+	return nil
+}
+
+func (*hookSpanProcessor) Shutdown(context.Context) error { return nil }
+
+// TestStaleProcessorListSkipsUnregisteredProcessor verifies that a dispatch
+// holding a processor list captured before a processor was unregistered does
+// not invoke the removed processor once its admission is closed.
+func TestStaleProcessorListSkipsUnregisteredProcessor(t *testing.T) {
+	tests := []struct {
+		name    string
+		trigger func(tp *TracerProvider)
+		calls   func(sp *hookSpanProcessor) int32
+	}{
+		{
+			name: "OnStart",
+			trigger: func(tp *TracerProvider) {
+				_, span := tp.Tracer("t").Start(context.Background(), "s")
+				span.End()
+			},
+			calls: func(sp *hookSpanProcessor) int32 { return sp.onStarts.Load() },
+		},
+		{
+			name: "OnEnd",
+			trigger: func(tp *TracerProvider) {
+				_, span := tp.Tracer("t").Start(context.Background(), "s")
+				span.End()
+			},
+			calls: func(sp *hookSpanProcessor) int32 { return sp.onEnds.Load() },
+		},
+		{
+			name: "ForceFlush",
+			trigger: func(tp *TracerProvider) {
+				assert.NoError(t, tp.ForceFlush(context.Background()))
+			},
+			calls: func(sp *hookSpanProcessor) int32 { return sp.flushes.Load() },
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tp := NewTracerProvider()
+			a := &hookSpanProcessor{
+				blockOn: tc.name,
+				started: make(chan struct{}),
+				release: make(chan struct{}),
+			}
+			b := &hookSpanProcessor{}
+			tp.RegisterSpanProcessor(a)
+			tp.RegisterSpanProcessor(b)
+
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				tc.trigger(tp)
+			}()
+			<-a.started
+
+			// The dispatch above is parked in a with a list that still
+			// contains b.
+			tp.UnregisterSpanProcessor(b)
+			close(a.release)
+			<-done
+
+			assert.Zero(t, tc.calls(b), "removed processor must not receive %s from a captured list", tc.name)
+		})
+	}
 }
