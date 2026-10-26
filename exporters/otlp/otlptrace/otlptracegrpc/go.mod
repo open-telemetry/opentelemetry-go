@@ -3,7 +3,7 @@ module go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
 go 1.26.0
 
 require (
-	github.com/cenkalti/backoff/v5 v5.0.3
+	github.com/cenkalti/backoff/v7 v7.0.1
 	github.com/go-logr/logr v1.4.4
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.47.0
