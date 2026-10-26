@@ -522,7 +522,7 @@ func TestProcessorShutdownCreatesSpans(t *testing.T) {
 	}
 }
 
-func TestForceFlushHonorsContextWhileProcessorUnregisters(t *testing.T) {
+func TestForceFlushHonorsContextWhileProcessorUnregistersConcurrentSafe(t *testing.T) {
 	tp := NewTracerProvider()
 	sp := &blockingSpanProcessor{started: make(chan struct{}), release: make(chan struct{})}
 	tp.RegisterSpanProcessor(sp)
@@ -1092,10 +1092,10 @@ func (p *hookSpanProcessor) Shutdown(context.Context) error {
 	return nil
 }
 
-// TestStaleProcessorListSkipsUnregisteredProcessor verifies that a dispatch
+// TestStaleProcessorListSkipsUnregisteredProcessorConcurrentSafe verifies that a dispatch
 // holding a processor list captured before a processor was unregistered does
 // not invoke the removed processor once its admission is closed.
-func TestStaleProcessorListSkipsUnregisteredProcessor(t *testing.T) {
+func TestStaleProcessorListSkipsUnregisteredProcessorConcurrentSafe(t *testing.T) {
 	tests := []struct {
 		name    string
 		trigger func(t *testing.T, tp *TracerProvider)
@@ -1156,10 +1156,10 @@ func TestStaleProcessorListSkipsUnregisteredProcessor(t *testing.T) {
 	}
 }
 
-// TestShutdownWaitsForAdmittedOperations verifies that a successful provider
+// TestShutdownWaitsForAdmittedOperationsConcurrentSafe verifies that a successful provider
 // Shutdown invokes no processor's Shutdown until every admitted operation
 // has completed, and then shuts down all processors.
-func TestShutdownWaitsForAdmittedOperations(t *testing.T) {
+func TestShutdownWaitsForAdmittedOperationsConcurrentSafe(t *testing.T) {
 	const inflight = 3
 	triggers := map[string]func(t *testing.T, tp *TracerProvider){
 		"OnStart": func(t *testing.T, tp *TracerProvider) {
@@ -1216,10 +1216,10 @@ func TestShutdownWaitsForAdmittedOperations(t *testing.T) {
 	}
 }
 
-// TestShutdownWaitsForConcurrentUnregister verifies that Shutdown does not
+// TestShutdownWaitsForConcurrentUnregisterConcurrentSafe verifies that Shutdown does not
 // return while a processor removed by UnregisterSpanProcessor is still
 // draining an in-flight operation.
-func TestShutdownWaitsForConcurrentUnregister(t *testing.T) {
+func TestShutdownWaitsForConcurrentUnregisterConcurrentSafe(t *testing.T) {
 	tp := NewTracerProvider()
 	sp := &hookSpanProcessor{
 		blockOn: "OnEnd",
@@ -1263,11 +1263,11 @@ func TestShutdownWaitsForConcurrentUnregister(t *testing.T) {
 	assert.Equal(t, int32(1), sp.shutdowns.Load())
 }
 
-// TestShutdownHonorsContextWhileUnregisterShutsDownProcessor verifies that
+// TestShutdownHonorsContextWhileUnregisterShutsDownProcessorConcurrentSafe verifies that
 // Shutdown stops waiting on a concurrent UnregisterSpanProcessor when its
 // context is done, even though that call is blocked in the processor's
 // Shutdown.
-func TestShutdownHonorsContextWhileUnregisterShutsDownProcessor(t *testing.T) {
+func TestShutdownHonorsContextWhileUnregisterShutsDownProcessorConcurrentSafe(t *testing.T) {
 	tp := NewTracerProvider()
 	sp := &hookSpanProcessor{
 		blockOn: "Shutdown",
@@ -1292,10 +1292,10 @@ func TestShutdownHonorsContextWhileUnregisterShutsDownProcessor(t *testing.T) {
 	assert.Equal(t, int32(1), sp.shutdowns.Load())
 }
 
-// TestShutdownContextCanceledWaitingForUnregister verifies that no processor
+// TestShutdownContextCanceledWaitingForUnregisterConcurrentSafe verifies that no processor
 // is shut down when ctx expires while waiting for a concurrent unregistration
 // to finish draining.
-func TestShutdownContextCanceledWaitingForUnregister(t *testing.T) {
+func TestShutdownContextCanceledWaitingForUnregisterConcurrentSafe(t *testing.T) {
 	tp := NewTracerProvider()
 	other := &hookSpanProcessor{}
 	busy := &hookSpanProcessor{
