@@ -453,9 +453,27 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test Environment Compression Case Insensitive",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION": "GZIP",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, GzipCompression, c.Traces.Compression)
+			},
+		},
+		{
 			name: "Test Environment Signal Specific Compression",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION": "gzip",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, GzipCompression, c.Traces.Compression)
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Compression Case Insensitive",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION": "GZip",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.Equal(t, GzipCompression, c.Traces.Compression)
