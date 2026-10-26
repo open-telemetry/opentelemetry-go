@@ -159,9 +159,9 @@ func filterDataPoints[N int64 | float64](
 	keep func(attribute.Set) bool,
 ) []metricdata.DataPoint[N] {
 	j := 0
-	for _, p := range pts {
-		if keep(p.Attributes) {
-			pts[j] = p
+	for i := range pts {
+		if keep(pts[i].Attributes) {
+			pts[j], pts[i] = pts[i], pts[j]
 			j++
 		}
 	}
@@ -173,9 +173,9 @@ func filterHistogramDataPoints[N int64 | float64](
 	keep func(attribute.Set) bool,
 ) []metricdata.HistogramDataPoint[N] {
 	j := 0
-	for _, p := range pts {
-		if keep(p.Attributes) {
-			pts[j] = p
+	for i := range pts {
+		if keep(pts[i].Attributes) {
+			pts[j], pts[i] = pts[i], pts[j]
 			j++
 		}
 	}
@@ -187,9 +187,9 @@ func filterExponentialHistogramDataPoints[N int64 | float64](
 	keep func(attribute.Set) bool,
 ) []metricdata.ExponentialHistogramDataPoint[N] {
 	j := 0
-	for _, p := range pts {
-		if keep(p.Attributes) {
-			pts[j] = p
+	for i := range pts {
+		if keep(pts[i].Attributes) {
+			pts[j], pts[i] = pts[i], pts[j]
 			j++
 		}
 	}
@@ -201,9 +201,9 @@ func filterSummaryDataPoints(
 	keep func(attribute.Set) bool,
 ) []metricdata.SummaryDataPoint {
 	j := 0
-	for _, p := range pts {
-		if keep(p.Attributes) {
-			pts[j] = p
+	for i := range pts {
+		if keep(pts[i].Attributes) {
+			pts[j], pts[i] = pts[i], pts[j]
 			j++
 		}
 	}

@@ -245,6 +245,36 @@ func TestFilterScopeMetricsAcceptPartialAggregations(t *testing.T) {
 	}
 }
 
+func TestFilterHistogramDataPointsPreservesStorage(t *testing.T) {
+	drop := attribute.NewSet(attribute.String("id", "drop"))
+	keep1 := attribute.NewSet(attribute.String("id", "keep1"))
+	keep2 := attribute.NewSet(attribute.String("id", "keep2"))
+
+	points := []metricdata.HistogramDataPoint[int64]{
+		{Attributes: drop, BucketCounts: []uint64{1, 0}},
+		{Attributes: keep1, BucketCounts: []uint64{2, 0}},
+		{Attributes: keep2, BucketCounts: []uint64{0, 3}},
+	}
+
+	filtered := filterHistogramDataPoints(points, func(attrs attribute.Set) bool {
+		return !attrs.Equals(&drop)
+	})
+
+	require.Len(t, filtered, 2)
+	assert.Equal(t, keep1, filtered[0].Attributes)
+	assert.Equal(t, keep2, filtered[1].Attributes)
+	assert.Equal(t, []uint64{2, 0}, filtered[0].BucketCounts)
+	assert.Equal(t, []uint64{0, 3}, filtered[1].BucketCounts)
+
+	// Simulate collection reusing storage beyond the filtered slice.
+	reused := filtered[:len(points)]
+	reused[2].BucketCounts[0] = 99
+	reused[2].BucketCounts[1] = 99
+
+	assert.Equal(t, []uint64{2, 0}, filtered[0].BucketCounts)
+	assert.Equal(t, []uint64{0, 3}, filtered[1].BucketCounts)
+}
+
 // testMetricFilterOption is a fake ReaderOption that also satisfies the
 // internal metricFilter interface. It lets stable-package tests exercise the
 // MetricFilter plumbing without importing the experimental x package.
