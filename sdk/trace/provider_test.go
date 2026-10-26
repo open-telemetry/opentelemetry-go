@@ -1039,15 +1039,18 @@ type hookSpanProcessor struct {
 	release chan struct{}
 
 	startOnce sync.Once
+	blocked   atomic.Int32
 	onStarts  atomic.Int32
 	onEnds    atomic.Int32
 	flushes   atomic.Int32
+	shutdowns atomic.Int32
 }
 
 func (p *hookSpanProcessor) maybeBlock(method string) {
 	if p.blockOn != method {
 		return
 	}
+	p.blocked.Add(1)
 	p.startOnce.Do(func() { close(p.started) })
 	<-p.release
 }
@@ -1068,7 +1071,10 @@ func (p *hookSpanProcessor) ForceFlush(context.Context) error {
 	return nil
 }
 
-func (*hookSpanProcessor) Shutdown(context.Context) error { return nil }
+func (p *hookSpanProcessor) Shutdown(context.Context) error {
+	p.shutdowns.Add(1)
+	return nil
+}
 
 // TestStaleProcessorListSkipsUnregisteredProcessor verifies that a dispatch
 // holding a processor list captured before a processor was unregistered does
@@ -1132,4 +1138,111 @@ func TestStaleProcessorListSkipsUnregisteredProcessor(t *testing.T) {
 			assert.Zero(t, tc.calls(b), "removed processor must not receive %s from a captured list", tc.name)
 		})
 	}
+}
+
+// TestShutdownWaitsForAdmittedOperations verifies that a successful provider
+// Shutdown invokes no processor's Shutdown until every admitted operation
+// has completed, and then shuts down all processors.
+func TestShutdownWaitsForAdmittedOperations(t *testing.T) {
+	const inflight = 3
+	triggers := map[string]func(t *testing.T, tp *TracerProvider){
+		"OnStart": func(t *testing.T, tp *TracerProvider) {
+			_, span := tp.Tracer("t").Start(t.Context(), "s")
+			span.End()
+		},
+		"OnEnd": func(t *testing.T, tp *TracerProvider) {
+			_, span := tp.Tracer("t").Start(t.Context(), "s")
+			span.End()
+		},
+		"ForceFlush": func(t *testing.T, tp *TracerProvider) {
+			assert.NoError(t, tp.ForceFlush(t.Context()))
+		},
+	}
+
+	for name, trigger := range triggers {
+		t.Run(name, func(t *testing.T) {
+			tp := NewTracerProvider()
+			idle := &hookSpanProcessor{}
+			busy := &hookSpanProcessor{
+				blockOn: name,
+				started: make(chan struct{}),
+				release: make(chan struct{}),
+			}
+			tp.RegisterSpanProcessor(idle)
+			tp.RegisterSpanProcessor(busy)
+
+			var wg sync.WaitGroup
+			for range inflight {
+				wg.Go(func() { trigger(t, tp) })
+			}
+			require.Eventually(t, func() bool {
+				return busy.blocked.Load() == inflight
+			}, 5*time.Second, time.Millisecond)
+
+			shutdownErr := make(chan error, 1)
+			go func() { shutdownErr <- tp.Shutdown(t.Context()) }()
+			require.Eventually(t, tp.isShutdown.Load, 5*time.Second, time.Millisecond)
+
+			select {
+			case err := <-shutdownErr:
+				t.Fatalf("Shutdown returned with operations in flight: %v", err)
+			case <-time.After(50 * time.Millisecond):
+			}
+			assert.Zero(t, idle.shutdowns.Load(), "idle processor shut down before drain completed")
+			assert.Zero(t, busy.shutdowns.Load(), "busy processor shut down before drain completed")
+
+			close(busy.release)
+			require.NoError(t, <-shutdownErr)
+			wg.Wait()
+			assert.Equal(t, int32(1), idle.shutdowns.Load())
+			assert.Equal(t, int32(1), busy.shutdowns.Load())
+		})
+	}
+}
+
+// TestShutdownWaitsForConcurrentUnregister verifies that Shutdown does not
+// return while a processor removed by UnregisterSpanProcessor is still
+// draining an in-flight operation.
+func TestShutdownWaitsForConcurrentUnregister(t *testing.T) {
+	tp := NewTracerProvider()
+	sp := &hookSpanProcessor{
+		blockOn: "OnEnd",
+		started: make(chan struct{}),
+		release: make(chan struct{}),
+	}
+	tp.RegisterSpanProcessor(sp)
+
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	endDone := make(chan struct{})
+	go func() {
+		defer close(endDone)
+		span.End()
+	}()
+	<-sp.started
+
+	unregisterDone := make(chan struct{})
+	go func() {
+		defer close(unregisterDone)
+		tp.UnregisterSpanProcessor(sp)
+	}()
+	require.Eventually(t, func() bool {
+		tp.mu.Lock()
+		defer tp.mu.Unlock()
+		return len(tp.unregistering) == 1
+	}, 5*time.Second, time.Millisecond)
+
+	shutdownErr := make(chan error, 1)
+	go func() { shutdownErr <- tp.Shutdown(t.Context()) }()
+
+	select {
+	case err := <-shutdownErr:
+		t.Fatalf("Shutdown returned while an unregistering processor was draining: %v", err)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	close(sp.release)
+	require.NoError(t, <-shutdownErr)
+	<-endDone
+	<-unregisterDone
+	assert.Equal(t, int32(1), sp.shutdowns.Load())
 }

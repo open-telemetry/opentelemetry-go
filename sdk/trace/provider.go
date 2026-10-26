@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -75,6 +76,11 @@ type TracerProvider struct {
 	mu             sync.Mutex
 	namedTracer    map[instrumentation.Scope]*tracer
 	spanProcessors atomic.Pointer[spanProcessorStates]
+	// unregistering holds processors removed from spanProcessors whose
+	// UnregisterSpanProcessor call has not finished cleaning them up yet.
+	// Shutdown also drains and shuts these down so it cannot return while
+	// one is still running callbacks. It is protected by mu.
+	unregistering map[*spanProcessorState]struct{}
 
 	isShutdown atomic.Bool
 
@@ -255,6 +261,12 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 		return
 	}
 
+	defer func() {
+		p.mu.Lock()
+		delete(p.unregistering, stopOnce)
+		p.mu.Unlock()
+	}()
+
 	// p.mu is not held here so that admitted operations, and the processor's
 	// own Shutdown, can still use the provider (e.g. to create tracers).
 	_ = stopOnce.wait(context.Background())
@@ -291,6 +303,10 @@ func (p *TracerProvider) removeSpanProcessor(sp SpanProcessor) *spanProcessorSta
 	spss = append(spss, old[:idx]...)
 	spss = append(spss, old[idx+1:]...)
 	p.spanProcessors.Store(&spss)
+	if p.unregistering == nil {
+		p.unregistering = make(map[*spanProcessorState]struct{})
+	}
+	p.unregistering[stopOnce] = struct{}{}
 	return stopOnce
 }
 
@@ -377,7 +393,12 @@ func (p *TracerProvider) beginShutdown() (spanProcessorStates, bool) {
 	if !p.isShutdown.CompareAndSwap(false, true) { // did toggle?
 		return nil, false
 	}
-	spss := p.getSpanProcessors()
+	// Processors still being unregistered are shut down here too, after the
+	// registered ones, so Shutdown does not return before they are cleaned up.
+	spss := slices.Clone(p.getSpanProcessors())
+	for sps := range p.unregistering {
+		spss = append(spss, sps)
+	}
 	for _, sps := range spss {
 		sps.stop()
 	}
