@@ -52,12 +52,18 @@ func getOptionsFromEnv() []GenericOption {
 	// An http or https endpoint scheme takes precedence over the insecure
 	// settings, so those are only applied when the scheme does not decide.
 	var schemeDecidesInsecure bool
+	withInsecureEnv := func(b bool) {
+		if !schemeDecidesInsecure {
+			opts = append(opts, withInsecure(b))
+		}
+	}
 	DefaultEnvOptionsReader.Apply(
 		envconfig.WithURL("ENDPOINT", func(u *url.URL) {
-			schemeDecidesInsecure = isHTTPScheme(u)
+			insecure, decides := endpointScheme(u)
+			schemeDecidesInsecure = decides
 			opts = append(
 				opts,
-				withEndpointScheme(u),
+				withInsecure(insecure),
 				newSplitOption(func(cfg Config) Config {
 					cfg.Metrics.Endpoint = u.Host
 					// For OTLP/HTTP endpoint URLs without a per-signal
@@ -77,10 +83,11 @@ func getOptionsFromEnv() []GenericOption {
 			)
 		}),
 		envconfig.WithURL("METRICS_ENDPOINT", func(u *url.URL) {
-			schemeDecidesInsecure = isHTTPScheme(u)
+			insecure, decides := endpointScheme(u)
+			schemeDecidesInsecure = decides
 			opts = append(
 				opts,
-				withEndpointScheme(u),
+				withInsecure(insecure),
 				newSplitOption(func(cfg Config) Config {
 					cfg.Metrics.Endpoint = u.Host
 					// For endpoint URLs for OTLP/HTTP per-signal variables, the
@@ -109,16 +116,8 @@ func getOptionsFromEnv() []GenericOption {
 			"METRICS_CLIENT_KEY",
 			func(c tls.Certificate) { tlsConf.Certificates = []tls.Certificate{c} },
 		),
-		envconfig.WithBool("INSECURE", func(b bool) {
-			if !schemeDecidesInsecure {
-				opts = append(opts, withInsecure(b))
-			}
-		}),
-		envconfig.WithBool("METRICS_INSECURE", func(b bool) {
-			if !schemeDecidesInsecure {
-				opts = append(opts, withInsecure(b))
-			}
-		}),
+		envconfig.WithBool("INSECURE", withInsecureEnv),
+		envconfig.WithBool("METRICS_INSECURE", withInsecureEnv),
 		withTLSConfig(tlsConf, func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
 		envconfig.WithHeaders("HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
 		envconfig.WithHeaders("METRICS_HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
@@ -173,21 +172,20 @@ func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOpt
 	}
 }
 
-func isHTTPScheme(u *url.URL) bool {
+// endpointScheme classifies the scheme of an endpoint URL. The returned
+// insecure value is the transport security implied by the scheme, and
+// decides reports whether the scheme is http or https, in which case it
+// takes precedence over the insecure environment variables.
+func endpointScheme(u *url.URL) (insecure, decides bool) {
 	switch strings.ToLower(u.Scheme) {
-	case "http", "https":
-		return true
+	case "http":
+		return true, true
+	case "https":
+		return false, true
+	case "unix", "unix-abstract":
+		return true, false
 	default:
-		return false
-	}
-}
-
-func withEndpointScheme(u *url.URL) GenericOption {
-	switch strings.ToLower(u.Scheme) {
-	case "http", "unix", "unix-abstract":
-		return WithInsecure()
-	default:
-		return WithSecure()
+		return false, false
 	}
 }
 

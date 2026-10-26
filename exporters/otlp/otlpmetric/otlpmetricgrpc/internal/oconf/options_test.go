@@ -369,6 +369,50 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 
+		{
+			name: "Test Environment Signal Specific Endpoint Without Scheme resets precedence",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":         "https://env_endpoint",
+				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "//env_metrics_endpoint:4317",
+				"OTEL_EXPORTER_OTLP_INSECURE":         "true",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, "env_metrics_endpoint:4317", c.Metrics.Endpoint)
+				assert.True(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Endpoint with uppercase HTTPS scheme takes precedence over insecure",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "HTTPS://env_endpoint",
+				"OTEL_EXPORTER_OTLP_INSECURE": "true",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
+				assert.False(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Endpoint with unix scheme does not take precedence over insecure",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "unix:///tmp/otel.sock",
+				"OTEL_EXPORTER_OTLP_INSECURE":         "false",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.False(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Endpoint with unix-abstract scheme does not take precedence over insecure",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "unix-abstract:///otel.sock",
+				"OTEL_EXPORTER_OTLP_INSECURE":         "false",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.False(t, c.Metrics.Insecure)
+			},
+		},
+
 		// Certificate tests
 		{
 			name: "Test Default Certificate",
