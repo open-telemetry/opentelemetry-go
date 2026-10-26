@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -1566,6 +1567,129 @@ func TestExemplars(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExemplarsExceedingLabelLimit(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(resource.Default()),
+		metric.WithView(
+			metric.NewView(
+				metric.Instrument{Name: "foo"},
+				metric.Stream{
+					// Filter out the attribute so it is added as a filtered
+					// attribute to the exemplar instead.
+					AttributeFilter: attribute.NewAllowKeysFilter(),
+				},
+			),
+		),
+	)
+	meter := provider.Meter("meter")
+
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		SpanID:     trace.SpanID{0o1},
+		TraceID:    trace.TraceID{0o1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx = trace.ContextWithSpanContext(ctx, sc)
+
+	counter, err := meter.Float64Counter("foo")
+	require.NoError(t, err)
+	// A single filtered attribute value long enough that, combined with the
+	// trace and span IDs, it exceeds prometheus.ExemplarMaxRunes.
+	counter.Add(ctx, 9, otelmetric.WithAttributes(
+		attribute.String("long", strings.Repeat("a", prometheus.ExemplarMaxRunes)),
+	))
+
+	got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+	defer done()
+	require.NoError(t, err)
+
+	require.Len(t, got, 1)
+	family := got[0]
+	require.Len(t, family.GetMetric(), 1)
+	exemplar := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, exemplar, "exemplar should still be present with only trace/span ID labels")
+
+	labels := make(map[string]string, len(exemplar.GetLabel()))
+	for _, label := range exemplar.GetLabel() {
+		labels[label.GetName()] = label.GetValue()
+	}
+	assert.Equal(t, map[string]string{
+		otlptranslator.ExemplarTraceIDKey: "01000000000000000000000000000000",
+		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
+	}, labels, "filtered attributes should be dropped, trace/span ID preserved")
+}
+
+// TestExemplarsLabelLimitKeyCollision verifies that a filtered attribute
+// whose key happens to collide with the trace_id or span_id label is not
+// double-counted against prometheus.ExemplarMaxRunes, which would otherwise
+// cause valid, non-colliding filtered attributes to be dropped unnecessarily.
+func TestExemplarsLabelLimitKeyCollision(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(resource.Default()),
+		metric.WithView(
+			metric.NewView(
+				metric.Instrument{Name: "foo"},
+				metric.Stream{
+					// Filter out the attributes so they are added as filtered
+					// attributes to the exemplar instead.
+					AttributeFilter: attribute.NewAllowKeysFilter(),
+				},
+			),
+		),
+	)
+	meter := provider.Meter("meter")
+
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		SpanID:     trace.SpanID{0o1},
+		TraceID:    trace.TraceID{0o1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx = trace.ContextWithSpanContext(ctx, sc)
+
+	counter, err := meter.Float64Counter("foo")
+	require.NoError(t, err)
+	// Filtered attributes that collide with the trace_id and span_id label
+	// names. Counting these alongside the dedicated trace/span ID labels
+	// would overcount the combined length (135 runes) well past the actual
+	// total (72 runes), and wrongly drop the non-colliding "method" label.
+	counter.Add(ctx, 9, otelmetric.WithAttributes(
+		attribute.String("trace_id", strings.Repeat("a", 32)),
+		attribute.String("span_id", strings.Repeat("b", 16)),
+		attribute.String("method", "GET"),
+	))
+
+	got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+	defer done()
+	require.NoError(t, err)
+
+	require.Len(t, got, 1)
+	family := got[0]
+	require.Len(t, family.GetMetric(), 1)
+	exemplar := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, exemplar)
+
+	labels := make(map[string]string, len(exemplar.GetLabel()))
+	for _, label := range exemplar.GetLabel() {
+		labels[label.GetName()] = label.GetValue()
+	}
+	assert.Equal(t, map[string]string{
+		otlptranslator.ExemplarTraceIDKey: "01000000000000000000000000000000",
+		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
+		"method":                          "GET",
+	}, labels, "non-colliding filtered attribute should be preserved, trace/span ID overwritten")
 }
 
 func TestExponentialHistogramScaleValidation(t *testing.T) {
