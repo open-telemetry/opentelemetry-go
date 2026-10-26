@@ -15,6 +15,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   including cancellable provider shutdown and parked waits for in-flight measurements,
   in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 
+### Changed
+
+- `TracerProvider.Shutdown` and `TracerProvider.UnregisterSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` now wait for in-flight `OnStart`, `OnEnd`, and `ForceFlush` calls to complete before invoking the processor's `Shutdown`.
+  As a result, they must no longer be called directly or indirectly from a `SpanProcessor` method, and `Shutdown` returns `ctx.Err()` without shutting down any processor if `ctx` is done while waiting. (#9070)
+
 ### Fixed
 
 - Decompress gzip OTLP/HTTP log responses when the request sets `Accept-Encoding` explicitly in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9181)
