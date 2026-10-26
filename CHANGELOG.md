@@ -36,7 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Honor the `Shutdown` context while an export is in flight in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`.
-  If the context expires, cleanup continues after the active export finishes.
+  If the context expires, cleanup continues after the active export finishes. (#9282)
 - Prevent underflowed measurements from updating sum, min, or max in exponential histograms in `go.opentelemetry.io/otel/sdk/metric`. (#8077)
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
 - Report dropped event and link counts in the span snapshot when the event or link limit is `0` in `go.opentelemetry.io/otel/sdk/trace`.
