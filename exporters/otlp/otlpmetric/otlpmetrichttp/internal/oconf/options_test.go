@@ -389,11 +389,11 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test Environment Endpoint with uppercase HTTPS scheme takes precedence over insecure",
 			env: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT": "HTTPS://env_endpoint",
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "HTTPS://env.endpoint",
 				"OTEL_EXPORTER_OTLP_INSECURE": "true",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
-				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
+				assert.Equal(t, "env.endpoint", c.Metrics.Endpoint)
 				assert.False(t, c.Metrics.Insecure)
 			},
 		},
