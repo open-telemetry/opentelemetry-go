@@ -67,7 +67,6 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 // Shutdown shuts down the Exporter. Calls to Export after Shutdown return
 // [log.ErrExporterShutdown]. Calls to ForceFlush perform no operation.
 //
-// Shutdown does not wait for or cancel in-flight Export calls.
 // Calling Shutdown more than once is safe: subsequent calls do nothing and
 // return nil.
 //
