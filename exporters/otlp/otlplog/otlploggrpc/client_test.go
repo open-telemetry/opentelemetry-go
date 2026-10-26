@@ -8,10 +8,13 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -1380,4 +1384,80 @@ func TestNextExporterIDConcurrentSafe(t *testing.T) {
 	if id := nextExporterID(); id != expected {
 		t.Errorf("nextExporterID() = %d; want %d", id, expected)
 	}
+}
+
+func TestRecoveredRetryDiagnostics(t *testing.T) {
+	var (
+		logMu  sync.Mutex
+		logged []string
+	)
+	logger := funcr.New(func(prefix, args string) {
+		logMu.Lock()
+		defer logMu.Unlock()
+		logged = append(logged, prefix+" "+args)
+	}, funcr.Options{Verbosity: 10})
+
+	origLogger := global.GetLogger()
+	global.SetLogger(logger)
+	t.Cleanup(func() { global.SetLogger(origLogger) })
+
+	var ehCalls atomic.Int64
+	origHandler := otel.GetErrorHandler()
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(error) {
+		ehCalls.Add(1)
+	}))
+	t.Cleanup(func() { otel.SetErrorHandler(origHandler) })
+
+	t.Run("RecoveredRetryableErrorLogsDiagnosticsAndBypassesErrorHandler", func(t *testing.T) {
+		logMu.Lock()
+		logged = nil
+		logMu.Unlock()
+		ehCalls.Store(0)
+
+		rCh := make(chan exportResult, 2)
+		rCh <- exportResult{
+			Err: status.Error(codes.Unavailable, "transient-recovered-failure"),
+		}
+		rCh <- exportResult{
+			Response: &collogpb.ExportLogsServiceResponse{},
+		}
+
+		client, _ := clientFactory(t, rCh)
+		err := client.UploadLogs(t.Context(), resourceLogs)
+		assert.NoError(t, err)
+
+		assert.Equal(t, int64(0), ehCalls.Load(), "otel.ErrorHandler must not be called on recovered retryable error")
+
+		logMu.Lock()
+		logs := strings.Join(logged, "\n")
+		logMu.Unlock()
+
+		assert.Contains(t, logs, "retryable error")
+		assert.Contains(t, logs, "transient-recovered-failure")
+	})
+
+	t.Run("UnrecoveredErrorReturnsErrorWithoutCallingErrorHandler", func(t *testing.T) {
+		logMu.Lock()
+		logged = nil
+		logMu.Unlock()
+		ehCalls.Store(0)
+
+		rCh := make(chan exportResult, 1)
+		rCh <- exportResult{
+			Err: status.Error(codes.InvalidArgument, "irremediable-bad-request"),
+		}
+
+		client, _ := clientFactory(t, rCh)
+		err := client.UploadLogs(t.Context(), resourceLogs)
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "irremediable-bad-request")
+
+		assert.Equal(t, int64(0), ehCalls.Load(), "UploadLogs returns unrecovered errors directly, not via otel.Handle")
+
+		logMu.Lock()
+		logs := strings.Join(logged, "\n")
+		logMu.Unlock()
+
+		assert.NotContains(t, logs, "retryable error")
+	})
 }
