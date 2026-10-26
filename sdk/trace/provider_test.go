@@ -1073,6 +1073,7 @@ func (p *hookSpanProcessor) ForceFlush(context.Context) error {
 
 func (p *hookSpanProcessor) Shutdown(context.Context) error {
 	p.shutdowns.Add(1)
+	p.maybeBlock("Shutdown")
 	return nil
 }
 
@@ -1243,6 +1244,35 @@ func TestShutdownWaitsForConcurrentUnregister(t *testing.T) {
 	close(sp.release)
 	require.NoError(t, <-shutdownErr)
 	<-endDone
+	<-unregisterDone
+	assert.Equal(t, int32(1), sp.shutdowns.Load())
+}
+
+// TestShutdownHonorsContextWhileUnregisterShutsDownProcessor verifies that
+// Shutdown stops waiting on a concurrent UnregisterSpanProcessor when its
+// context is done, even though that call is blocked in the processor's
+// Shutdown.
+func TestShutdownHonorsContextWhileUnregisterShutsDownProcessor(t *testing.T) {
+	tp := NewTracerProvider()
+	sp := &hookSpanProcessor{
+		blockOn: "Shutdown",
+		started: make(chan struct{}),
+		release: make(chan struct{}),
+	}
+	tp.RegisterSpanProcessor(sp)
+
+	unregisterDone := make(chan struct{})
+	go func() {
+		defer close(unregisterDone)
+		tp.UnregisterSpanProcessor(sp)
+	}()
+	<-sp.started
+
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	assert.ErrorIs(t, tp.Shutdown(ctx), context.DeadlineExceeded)
+
+	close(sp.release)
 	<-unregisterDone
 	assert.Equal(t, int32(1), sp.shutdowns.Load())
 }

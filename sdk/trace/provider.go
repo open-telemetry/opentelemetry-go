@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -76,11 +75,12 @@ type TracerProvider struct {
 	mu             sync.Mutex
 	namedTracer    map[instrumentation.Scope]*tracer
 	spanProcessors atomic.Pointer[spanProcessorStates]
-	// unregistering holds processors removed from spanProcessors whose
-	// UnregisterSpanProcessor call has not finished cleaning them up yet.
-	// Shutdown also drains and shuts these down so it cannot return while
-	// one is still running callbacks. It is protected by mu.
-	unregistering map[*spanProcessorState]struct{}
+	// unregistering maps processors removed from spanProcessors, whose
+	// UnregisterSpanProcessor call has not finished cleaning them up yet, to
+	// a channel closed when it does. Shutdown waits on these channels so it
+	// cannot return while one is still running callbacks. It is protected by
+	// mu.
+	unregistering map[*spanProcessorState]chan struct{}
 
 	isShutdown atomic.Bool
 
@@ -256,7 +256,7 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 	if p.isShutdown.Load() {
 		return
 	}
-	stopOnce := p.removeSpanProcessor(sp)
+	stopOnce, done := p.removeSpanProcessor(sp)
 	if stopOnce == nil {
 		return
 	}
@@ -265,6 +265,7 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 		p.mu.Lock()
 		delete(p.unregistering, stopOnce)
 		p.mu.Unlock()
+		close(done)
 	}()
 
 	// p.mu is not held here so that admitted operations, and the processor's
@@ -279,12 +280,13 @@ func (p *TracerProvider) UnregisterSpanProcessor(sp SpanProcessor) {
 
 // removeSpanProcessor removes sp from the list of processors and stops
 // admitting new operations for it. It returns nil if sp is not registered.
-func (p *TracerProvider) removeSpanProcessor(sp SpanProcessor) *spanProcessorState {
+// The returned channel must be closed once sp has been cleaned up.
+func (p *TracerProvider) removeSpanProcessor(sp SpanProcessor) (*spanProcessorState, chan struct{}) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	// This check prevents calls after a shutdown.
 	if p.isShutdown.Load() {
-		return nil
+		return nil, nil
 	}
 	old := p.getSpanProcessors()
 	idx := -1
@@ -294,7 +296,7 @@ func (p *TracerProvider) removeSpanProcessor(sp SpanProcessor) *spanProcessorSta
 		}
 	}
 	if idx < 0 {
-		return nil
+		return nil, nil
 	}
 	stopOnce := old[idx]
 	stopOnce.stop()
@@ -304,10 +306,11 @@ func (p *TracerProvider) removeSpanProcessor(sp SpanProcessor) *spanProcessorSta
 	spss = append(spss, old[idx+1:]...)
 	p.spanProcessors.Store(&spss)
 	if p.unregistering == nil {
-		p.unregistering = make(map[*spanProcessorState]struct{})
+		p.unregistering = make(map[*spanProcessorState]chan struct{})
 	}
-	p.unregistering[stopOnce] = struct{}{}
-	return stopOnce
+	done := make(chan struct{})
+	p.unregistering[stopOnce] = done
+	return stopOnce, done
 }
 
 // ForceFlush immediately exports all spans that have not yet been exported for
@@ -354,7 +357,7 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 	if p.isShutdown.Load() {
 		return nil
 	}
-	spss, ok := p.beginShutdown()
+	spss, unregistering, ok := p.beginShutdown()
 	if !ok {
 		return nil
 	}
@@ -380,30 +383,40 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 		})
 		retErr = errors.Join(retErr, err)
 	}
+
+	// Each of these processors is shut down by the UnregisterSpanProcessor
+	// call that owns it, so only wait for those calls to finish.
+	for _, done := range unregistering {
+		select {
+		case <-done:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 	return retErr
 }
 
 // beginShutdown marks p as shut down and stops admitting new processor
 // operations. It returns false if a shutdown was already started. p.mu is
 // released before returning so that admitted operations can still use p.
-func (p *TracerProvider) beginShutdown() (spanProcessorStates, bool) {
+func (p *TracerProvider) beginShutdown() (spanProcessorStates, []<-chan struct{}, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	// This check prevents calls after a shutdown has already been done concurrently.
 	if !p.isShutdown.CompareAndSwap(false, true) { // did toggle?
-		return nil, false
+		return nil, nil, false
 	}
-	// Processors still being unregistered are shut down here too, after the
-	// registered ones, so Shutdown does not return before they are cleaned up.
-	spss := slices.Clone(p.getSpanProcessors())
-	for sps := range p.unregistering {
-		spss = append(spss, sps)
-	}
+	spss := p.getSpanProcessors()
 	for _, sps := range spss {
 		sps.stop()
 	}
 	p.spanProcessors.Store(&spanProcessorStates{})
-	return spss, true
+
+	unregistering := make([]<-chan struct{}, 0, len(p.unregistering))
+	for _, done := range p.unregistering {
+		unregistering = append(unregistering, done)
+	}
+	return spss, unregistering, true
 }
 
 func (p *TracerProvider) getSpanProcessors() spanProcessorStates {
