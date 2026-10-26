@@ -528,14 +528,29 @@ func TestForceFlushHonorsContextWhileProcessorUnregisters(t *testing.T) {
 	tp.RegisterSpanProcessor(sp)
 	tp.RegisterSpanProcessor(&basicSpanProcessor{})
 	_, span := tp.Tracer("t").Start(t.Context(), "s")
-	go span.End()
+	endDone := make(chan struct{})
+	go func() {
+		defer close(endDone)
+		span.End()
+	}()
 	<-sp.started
-	go tp.UnregisterSpanProcessor(sp)
+	unregisterDone := make(chan struct{})
+	go func() {
+		defer close(unregisterDone)
+		tp.UnregisterSpanProcessor(sp)
+	}()
+	require.Eventually(t, func() bool {
+		tp.mu.Lock()
+		defer tp.mu.Unlock()
+		return len(tp.unregistering) == 1
+	}, 5*time.Second, time.Millisecond)
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	assert.ErrorIs(t, tp.ForceFlush(ctx), context.Canceled)
 	close(sp.release)
+	<-endDone
+	<-unregisterDone
 }
 
 func TestShutdownContextCanceledDuringDrain(t *testing.T) {
