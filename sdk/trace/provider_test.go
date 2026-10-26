@@ -1076,29 +1076,29 @@ func (*hookSpanProcessor) Shutdown(context.Context) error { return nil }
 func TestStaleProcessorListSkipsUnregisteredProcessor(t *testing.T) {
 	tests := []struct {
 		name    string
-		trigger func(tp *TracerProvider)
+		trigger func(t *testing.T, tp *TracerProvider)
 		calls   func(sp *hookSpanProcessor) int32
 	}{
 		{
 			name: "OnStart",
-			trigger: func(tp *TracerProvider) {
-				_, span := tp.Tracer("t").Start(context.Background(), "s")
+			trigger: func(t *testing.T, tp *TracerProvider) {
+				_, span := tp.Tracer("t").Start(t.Context(), "s")
 				span.End()
 			},
 			calls: func(sp *hookSpanProcessor) int32 { return sp.onStarts.Load() },
 		},
 		{
 			name: "OnEnd",
-			trigger: func(tp *TracerProvider) {
-				_, span := tp.Tracer("t").Start(context.Background(), "s")
+			trigger: func(t *testing.T, tp *TracerProvider) {
+				_, span := tp.Tracer("t").Start(t.Context(), "s")
 				span.End()
 			},
 			calls: func(sp *hookSpanProcessor) int32 { return sp.onEnds.Load() },
 		},
 		{
 			name: "ForceFlush",
-			trigger: func(tp *TracerProvider) {
-				assert.NoError(t, tp.ForceFlush(context.Background()))
+			trigger: func(t *testing.T, tp *TracerProvider) {
+				assert.NoError(t, tp.ForceFlush(t.Context()))
 			},
 			calls: func(sp *hookSpanProcessor) int32 { return sp.flushes.Load() },
 		},
@@ -1119,7 +1119,7 @@ func TestStaleProcessorListSkipsUnregisteredProcessor(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				tc.trigger(tp)
+				tc.trigger(t, tp)
 			}()
 			<-a.started
 
