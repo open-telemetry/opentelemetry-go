@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -400,6 +402,145 @@ func TestRegistrationDelegation(t *testing.T) {
 	})
 }
 
+func TestRegistrationUnregisterDuringCallback(t *testing.T) {
+	provider := &meterProvider{}
+	m := provider.Meter(t.Name())
+	inst, err := m.Int64ObservableCounter("counter")
+	require.NoError(t, err)
+
+	started := make(chan struct{})
+	unregister := make(chan struct{})
+	var reg metric.Registration
+	reg, err = m.RegisterCallback(func(context.Context, metric.Observer) error {
+		close(started)
+		<-unregister
+		return reg.Unregister()
+	}, inst)
+	require.NoError(t, err)
+
+	delegate := &testWaitingMeter{reg: testWaitingRegistration{waiting: make(chan struct{})}}
+	provider.setDelegate(&testMeterProvider{newMeter: func() metric.Meter { return delegate }})
+	collected := make(chan error, 1)
+	go func() { collected <- delegate.reg.collect() }()
+	<-started
+
+	unregistered := make(chan error, 1)
+	go func() { unregistered <- reg.Unregister() }()
+	requireRegistrationWaiting(t, delegate.reg.waiting, unregistered)
+	close(unregister)
+	requireRegistrationResult(t, collected)
+	requireRegistrationResult(t, unregistered)
+}
+
+func TestRegistrationUnregisterAfterCallback(t *testing.T) {
+	provider := &meterProvider{}
+	m := provider.Meter(t.Name())
+	inst, err := m.Int64ObservableCounter("counter")
+	require.NoError(t, err)
+
+	started := make(chan struct{})
+	release := make(chan struct{})
+	defer close(release)
+	var calls atomic.Int32
+	var reg metric.Registration
+	reg, err = m.RegisterCallback(func(context.Context, metric.Observer) error {
+		if calls.Add(1) == 1 {
+			close(started)
+			<-release
+			return nil
+		}
+		return reg.Unregister()
+	}, inst)
+	require.NoError(t, err)
+
+	delegate := &testWaitingMeter{reg: testWaitingRegistration{waiting: make(chan struct{})}}
+	provider.setDelegate(&testMeterProvider{newMeter: func() metric.Meter { return delegate }})
+	collected := make(chan error, 1)
+	go func() { collected <- delegate.reg.collect() }()
+	<-started
+	selfCollected := make(chan error, 1)
+	go func() { selfCollected <- delegate.reg.collect() }()
+	requireRegistrationResult(t, selfCollected)
+
+	// Each concurrent external call must reach the delegate and wait for the
+	// callback still running on the first reader.
+	unregistered := make(chan error, 2)
+	for range 2 {
+		go func() { unregistered <- reg.Unregister() }()
+		requireRegistrationWaiting(t, delegate.reg.waiting, unregistered)
+	}
+
+	// Release the callback before waiting for both external calls.
+	release <- struct{}{}
+	requireRegistrationResult(t, collected)
+	for range 2 {
+		requireRegistrationResult(t, unregistered)
+	}
+
+	go func() { unregistered <- reg.Unregister() }()
+	requireRegistrationWaiting(t, delegate.reg.waiting, unregistered)
+	requireRegistrationResult(t, unregistered)
+	require.NoError(t, delegate.reg.collect())
+	assert.Equal(t, int32(2), calls.Load(), "retired callbacks must not run again")
+}
+
+func TestRegistrationUnregisterRacingDelegation(t *testing.T) {
+	m := &meter{}
+	reg, err := m.RegisterCallback(zeroCallback)
+	require.NoError(t, err)
+	r := reg.(*registration)
+	unregisterStarted := make(chan struct{})
+	remove := make(chan struct{})
+	unreg := r.unreg
+	r.unreg = func() error {
+		close(unregisterStarted)
+		<-remove
+		return unreg()
+	}
+
+	unregistered := make(chan error, 1)
+	go func() { unregistered <- reg.Unregister() }()
+	<-unregisterStarted
+	delegate := &testMeter{}
+	delegating := make(chan struct{})
+	delegated := make(chan error, 1)
+	go func() {
+		m.setDelegate(&testMeterProvider{newMeter: func() metric.Meter {
+			close(delegating)
+			return delegate
+		}})
+		delegated <- nil
+	}()
+	<-delegating // setDelegate holds m.mtx before taking r.unregMu.
+	close(remove)
+	requireRegistrationResult(t, delegated)
+	requireRegistrationResult(t, unregistered)
+	assert.Empty(t, delegate.callbacks, "unregistered callbacks must not be delegated")
+	assert.Zero(t, m.registry.Len())
+	assert.NoError(t, reg.Unregister())
+}
+
+func requireRegistrationWaiting(t *testing.T, waiting <-chan struct{}, done <-chan error) {
+	t.Helper()
+	select {
+	case <-waiting:
+	case err := <-done:
+		t.Fatalf("Unregister returned without reaching the delegate: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Unregister did not reach the delegate")
+	}
+}
+
+func requireRegistrationResult(t *testing.T, done <-chan error) {
+	t.Helper()
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("registration operation did not complete")
+	}
+}
+
 func TestNilCallbackDelegation(t *testing.T) {
 	provider := &meterProvider{}
 	m := provider.Meter("nil-callback")
@@ -481,5 +622,34 @@ func TestRegistrationDelegateFailingCallback(t *testing.T) {
 
 	assert.NotPanics(t, func() {
 		r.setDelegate(m)
+		assert.NoError(t, r.Unregister())
+		assert.NoError(t, r.Unregister())
 	})
+}
+
+type partialRegisterCallbackMeter struct {
+	noop.Meter
+
+	reg metric.Registration
+}
+
+func (m *partialRegisterCallbackMeter) RegisterCallback(
+	metric.Callback,
+	...metric.Observable,
+) (metric.Registration, error) {
+	return m.reg, errors.New("an error occurred")
+}
+
+func TestRegistrationDelegatePartialFailure(t *testing.T) {
+	provider := &meterProvider{}
+	m := provider.Meter(t.Name())
+	reg, err := m.RegisterCallback(zeroCallback)
+	require.NoError(t, err)
+
+	var unregistered int
+	delegate := &partialRegisterCallbackMeter{reg: testReg{f: func() { unregistered++ }}}
+	provider.setDelegate(&testMeterProvider{newMeter: func() metric.Meter { return delegate }})
+
+	require.NoError(t, reg.Unregister())
+	assert.Equal(t, 1, unregistered, "delegate Registration returned with an error not unregistered")
 }

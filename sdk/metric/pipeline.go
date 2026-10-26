@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -75,6 +77,7 @@ type pipeline struct {
 	views  []View
 
 	sync.Mutex
+	produceMu        sync.Mutex
 	int64Measures    map[observableID[int64]][]aggregate.Measure[int64]
 	float64Measures  map[observableID[float64]][]aggregate.Measure[float64]
 	aggregations     map[instrumentation.Scope][]instrumentSync
@@ -82,6 +85,11 @@ type pipeline struct {
 	multiCallbacks   list.List
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+
+	// multiCallbackSnapshot is the buffer produce copies multiCallbacks into,
+	// so it can run them without holding the Mutex. It is reused across
+	// collections and guarded by produceMu.
+	multiCallbackSnapshot []*multiCallbackEntry
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
@@ -115,16 +123,97 @@ func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
 
 type multiCallback func(context.Context) error
 
+// multiCallbackEntry is the registration of a multiCallback with a pipeline.
+type multiCallbackEntry struct {
+	pipe     *pipeline
+	callback multiCallback
+
+	// elem is the element of the entry in the pipeline's multiCallbacks, and
+	// retired reports whether the callback has been unregistered. They are
+	// guarded by the pipeline's Mutex.
+	elem    *list.Element
+	retired bool
+	// inFlight tracks calls of callback that have started and not yet
+	// returned. produce increments it in the same critical section of the
+	// pipeline's Mutex in which it checks retired, so an unregister that
+	// sets retired is ordered with every call that will ever start: either
+	// the call started first and unregister waits for it, or unregister
+	// came first and the call is skipped.
+	inFlight sync.WaitGroup
+}
+
+// call runs the callback of e, tracking it as in flight. The caller must
+// have incremented e.inFlight.
+func (e *multiCallbackEntry) call(ctx context.Context) error {
+	defer e.inFlight.Done()
+	return runCallback(ctx, e.callback)
+}
+
 // addMultiCallback registers a multi-instrument callback to be run when
-// `produce()` is called.
-func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
+// `produce()` is called, until the returned entry is retired.
+func (p *pipeline) addMultiCallback(c multiCallback) *multiCallbackEntry {
+	e := &multiCallbackEntry{pipe: p, callback: c}
+	p.Lock()
+	e.elem = p.multiCallbacks.PushBack(e)
+	p.Unlock()
+	return e
+}
+
+// retire removes e from its pipeline so that no later collection calls the
+// callback. It does not wait for a call of the callback in progress to return.
+//
+// retire is idempotent and safe to call concurrently.
+func (e *multiCallbackEntry) retire() {
+	p := e.pipe
 	p.Lock()
 	defer p.Unlock()
-	e := p.multiCallbacks.PushBack(c)
-	return func() {
-		p.Lock()
-		p.multiCallbacks.Remove(e)
-		p.Unlock()
+	if e.retired {
+		return
+	}
+	e.retired = true
+	p.multiCallbacks.Remove(e.elem)
+}
+
+// runCallback calls c. produce calls every callback through runCallback,
+// which is kept out of line so that it is a frame on the stack of any
+// goroutine that is executing a callback; inCallback relies on that frame.
+//
+//go:noinline
+func runCallback(ctx context.Context, c func(context.Context) error) error {
+	return c(ctx)
+}
+
+// runCallbackName is the package path-qualified name of runCallback, which
+// runtime.Frame.Function reports for its frames. It is looked up instead of
+// spelled out because the package path is the one this package is built
+// with, which differs from go.opentelemetry.io/otel/sdk/metric when the
+// package is vendored in GOPATH mode or built with a Bazel importmap.
+var runCallbackName = runtime.FuncForPC(reflect.ValueOf(runCallback).Pointer()).Name()
+
+// inCallback reports whether the calling goroutine is executing a callback
+// called by produce, by looking for the runCallback frame on the goroutine's
+// call stack.
+func inCallback() bool {
+	pcs := make([]uintptr, 64)
+	for {
+		// Skip the frames of runtime.Callers and inCallback.
+		n := runtime.Callers(2, pcs)
+		if n < len(pcs) {
+			pcs = pcs[:n]
+			break
+		}
+		// The stack may be deeper than pcs; retry with more room.
+		pcs = make([]uintptr, 2*len(pcs))
+	}
+	frames := runtime.CallersFrames(pcs)
+	for {
+		frame, more := frames.Next()
+		if frame.Function == runCallbackName {
+			return true
+		}
+		if !more {
+			return false
+		}
 	}
 }
 
@@ -140,23 +229,53 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 		return err
 	}
 
+	p.produceMu.Lock()
+	defer p.produceMu.Unlock()
+
+	// Snapshot callbacks so they can call Meter methods that acquire p.Mutex.
 	p.Lock()
-	defer p.Unlock()
+	callbacks := p.callbacks
+	multiCallbacks := p.multiCallbackSnapshot[:0]
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+		multiCallbacks = append(multiCallbacks, e.Value.(*multiCallbackEntry))
+	}
+	p.Unlock()
+	defer func() {
+		// Keep the buffer for the next collection, without its references to
+		// callbacks that may be unregistered before then.
+		clear(multiCallbacks)
+		p.multiCallbackSnapshot = multiCallbacks[:0]
+	}()
 
 	var err error
-	for _, c := range p.callbacks {
+	for _, c := range callbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		if e := c(ctx); e != nil {
+		if e := runCallback(ctx, c); e != nil {
 			err = errors.Join(err, e)
 		}
 	}
-	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+	for _, e := range multiCallbacks {
 		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(multiCallback)
-		if e := f(ctx); e != nil {
-			err = errors.Join(err, e)
+		// Check retirement and mark the call in flight in one critical
+		// section, so an unregister either happens before this and the
+		// callback is skipped, or after it and unregister waits for the
+		// call (see multiCallbackRegistration.Unregister).
+		p.Lock()
+		retired := e.retired
+		if !retired {
+			e.inFlight.Add(1)
+		}
+		p.Unlock()
+		if retired {
+			continue
+		}
+		if cErr := e.call(ctx); cErr != nil {
+			err = errors.Join(err, cErr)
 		}
 	}
+
+	p.Lock()
+	defer p.Unlock()
 
 	rm.Resource = p.resource
 	rm.ScopeMetrics = internal.ReuseSlice(rm.ScopeMetrics, len(p.aggregations))
@@ -701,14 +820,37 @@ func newPipelines(
 	return pipes
 }
 
-type unregisterFuncs struct {
+// multiCallbackRegistration is the Registration of a multiCallback with each
+// pipeline of a meter.
+type multiCallbackRegistration struct {
 	embedded.Registration
-	f []func()
+	entries []*multiCallbackEntry
 }
 
-func (u unregisterFuncs) Unregister() error {
-	for _, f := range u.f {
-		f()
+// Unregister removes the callback from every pipeline so that no later
+// collection calls it, and only then waits for any call of the callback that
+// is in progress to return, so that no pipeline starts a new call while
+// Unregister waits. Consequently, once Unregister returns the callback is not
+// running and will not be called again.
+//
+// The wait is skipped when Unregister is called from within a callback run
+// by produce: the in-progress call may be the caller itself, and waiting
+// inside a callback for one in progress on another reader could deadlock.
+// This allows a callback to unregister itself or a peer. A goroutine started
+// by a callback is not within the callback, so if it calls Unregister it
+// waits for the callback to return; the callback must not wait for that
+// goroutine.
+//
+// Unregister is idempotent and safe to call concurrently.
+func (r multiCallbackRegistration) Unregister() error {
+	for _, e := range r.entries {
+		e.retire()
+	}
+	if inCallback() {
+		return nil
+	}
+	for _, e := range r.entries {
+		e.inFlight.Wait()
 	}
 	return nil
 }
