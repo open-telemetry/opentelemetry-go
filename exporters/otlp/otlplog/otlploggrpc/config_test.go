@@ -568,7 +568,8 @@ func TestNewConfigUnixEndpoint(t *testing.T) {
 				},
 				{
 					name:     "OptionHTTPSOverridesEnvironmentUnix",
-					endpoint: target, logs: target,
+					endpoint: target,
+					logs:     target,
 					options:  []Option{WithEndpointURL("https://option:4317")},
 					want:     "option:4317",
 					insecure: false,
