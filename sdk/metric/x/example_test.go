@@ -44,12 +44,11 @@ func ExampleMeterConfiguratorHandle_Set() {
 // ExampleWithView demonstrates how to enable an opt-in instrument using
 // x.WithView and x.NewView.
 func ExampleWithView() {
-	enabled := true
 	mp := sdkmetric.NewMeterProvider(
 		x.WithView(
 			x.NewView(
 				sdkmetric.Instrument{Name: "http.server.active_requests"},
-				x.Stream{Enabled: &enabled},
+				x.Stream{Enabled: new(true)},
 			),
 		),
 	)

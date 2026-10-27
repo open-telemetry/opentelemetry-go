@@ -21,10 +21,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/x"
 )
 
-func boolPtr(b bool) *bool {
-	return &b
-}
-
 func TestNewView(t *testing.T) {
 	inst := sdkmetric.Instrument{
 		Name:        "requests",
@@ -72,7 +68,7 @@ func TestNewView(t *testing.T) {
 	t.Run("NoMatch", func(t *testing.T) {
 		v := x.NewView(
 			sdkmetric.Instrument{Name: "other"},
-			x.Stream{Enabled: boolPtr(true)},
+			x.Stream{Enabled: new(true)},
 		)
 		got, match := v(inst)
 		assert.False(t, match)
@@ -80,7 +76,7 @@ func TestNewView(t *testing.T) {
 	})
 
 	t.Run("EmptyCriteriaDropped", func(t *testing.T) {
-		v := x.NewView(sdkmetric.Instrument{}, x.Stream{Enabled: boolPtr(true)})
+		v := x.NewView(sdkmetric.Instrument{}, x.Stream{Enabled: new(true)})
 		_, match := v(inst)
 		assert.False(t, match)
 	})
@@ -88,11 +84,11 @@ func TestNewView(t *testing.T) {
 
 func TestOptInAllInstrumentKinds(t *testing.T) {
 	type instrumentCase struct {
-		name      string
-		instName  string
-		isSync    bool
-		record    func(t *testing.T, m metric.Meter, opts ...metric.InstrumentOption) (enabled bool, callbackCalled *atomic.Bool)
-		wantData  metricdata.Aggregation
+		name     string
+		instName string
+		isSync   bool
+		record   func(t *testing.T, m metric.Meter, opts ...metric.InstrumentOption) (enabled bool, callbackCalled *atomic.Bool)
+		wantData metricdata.Aggregation
 	}
 
 	cases := []instrumentCase{
@@ -230,8 +226,24 @@ func TestOptInAllInstrumentKinds(t *testing.T) {
 				Temporality: metricdata.CumulativeTemporality,
 				DataPoints: []metricdata.HistogramDataPoint[int64]{
 					{
-						Count:        1,
-						Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+						Count: 1,
+						Bounds: []float64{
+							0,
+							5,
+							10,
+							25,
+							50,
+							75,
+							100,
+							250,
+							500,
+							750,
+							1000,
+							2500,
+							5000,
+							7500,
+							10000,
+						},
 						BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 						Min:          metricdata.NewExtrema[int64](7),
 						Max:          metricdata.NewExtrema[int64](7),
@@ -258,8 +270,24 @@ func TestOptInAllInstrumentKinds(t *testing.T) {
 				Temporality: metricdata.CumulativeTemporality,
 				DataPoints: []metricdata.HistogramDataPoint[float64]{
 					{
-						Count:        1,
-						Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+						Count: 1,
+						Bounds: []float64{
+							0,
+							5,
+							10,
+							25,
+							50,
+							75,
+							100,
+							250,
+							500,
+							750,
+							1000,
+							2500,
+							5000,
+							7500,
+							10000,
+						},
 						BucketCounts: []uint64{0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 						Min:          metricdata.NewExtrema[float64](7.0),
 						Max:          metricdata.NewExtrema[float64](7.0),
@@ -473,7 +501,7 @@ func TestOptInAllInstrumentKinds(t *testing.T) {
 				rdr := sdkmetric.NewManualReader()
 				view := x.NewView(
 					sdkmetric.Instrument{Name: tc.instName},
-					x.Stream{Enabled: boolPtr(true)},
+					x.Stream{Enabled: new(true)},
 				)
 				mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(rdr), x.WithView(view))
 				m := mp.Meter("test")
@@ -509,7 +537,7 @@ func TestOptInAllInstrumentKinds(t *testing.T) {
 					sdkmetric.Instrument{Name: tc.instName},
 					x.Stream{
 						Aggregation: sdkmetric.AggregationDefault{},
-						Enabled:     boolPtr(false),
+						Enabled:     new(false),
 					},
 				)
 				mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(rdr), x.WithView(view))
@@ -536,7 +564,7 @@ func TestOptInPreservesOtherAdvisories(t *testing.T) {
 		rdr := sdkmetric.NewManualReader()
 		view := x.NewView(
 			sdkmetric.Instrument{Name: "optin.hist"},
-			x.Stream{Enabled: boolPtr(true)},
+			x.Stream{Enabled: new(true)},
 		)
 		mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(rdr), x.WithView(view))
 		m := mp.Meter("test")
@@ -567,7 +595,7 @@ func TestOptInPreservesOtherAdvisories(t *testing.T) {
 		rdr := sdkmetric.NewManualReader()
 		view := x.NewView(
 			sdkmetric.Instrument{Name: "optin.counter"},
-			x.Stream{Enabled: boolPtr(true)},
+			x.Stream{Enabled: new(true)},
 		)
 		mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(rdr), x.WithView(view))
 		m := mp.Meter("test")
@@ -610,7 +638,7 @@ func TestMultipleViewsWithOptInAndEnabled(t *testing.T) {
 				sdkmetric.Instrument{Name: "optin.counter"},
 				x.Stream{
 					Description: "shared",
-					Enabled:     boolPtr(true),
+					Enabled:     new(true),
 				},
 			),
 		),
@@ -692,7 +720,7 @@ func TestOptInWithFinishAndMeterConfigurator(t *testing.T) {
 			x.WithView(
 				x.NewView(
 					sdkmetric.Instrument{Name: "enabled.optin"},
-					x.Stream{Enabled: boolPtr(true)},
+					x.Stream{Enabled: new(true)},
 				),
 			),
 		)

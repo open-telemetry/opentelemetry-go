@@ -397,7 +397,7 @@ func (i *inserter[N]) readerDefaultAggregation(kind InstrumentKind) Aggregation 
 //
 // If the instrument defines an unknown or incompatible aggregation, an error
 // is returned.
-func (i *inserter[N]) cachedAggregator(
+func (i *inserter[N]) cachedAggregator( // nolint:revive // optIn is not a control flag.
 	scope instrumentation.Scope,
 	kind InstrumentKind,
 	stream Stream,
@@ -743,7 +743,11 @@ func newResolver[N int64 | float64](p pipelines, vc *cache[string, instID]) reso
 
 // Aggregators returns the Aggregators that must be updated by the instrument
 // defined by key.
-func (r resolver[N]) Aggregators(id Instrument, allowedKeys []attribute.Key, optIn bool) ([]aggregate.Measure[N], error) {
+func (r resolver[N]) Aggregators(
+	id Instrument,
+	allowedKeys []attribute.Key,
+	optIn bool,
+) ([]aggregate.Measure[N], error) {
 	var measures []aggregate.Measure[N]
 
 	var err error
