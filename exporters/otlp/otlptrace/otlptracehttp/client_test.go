@@ -1505,3 +1505,40 @@ func TestTransientDisconnectRetries(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTPClientTimeoutRetries(t *testing.T) {
+	var attempts atomic.Int32
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		if attempts.Add(1) == 1 {
+			// Outlive the client timeout so the first attempt fails with an
+			// http.Client.Timeout error while the export context is live.
+			<-release
+			return
+		}
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+	t.Cleanup(func() { close(release) })
+
+	client := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpointURL(srv.URL),
+		otlptracehttp.WithHTTPClient(&http.Client{Timeout: 50 * time.Millisecond}),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	)
+	require.NoError(t, client.Start(t.Context()))
+
+	err := client.UploadTraces(t.Context(), []*tracepb.ResourceSpans{{ScopeSpans: []*tracepb.ScopeSpans{
+		{Spans: []*tracepb.Span{{}}},
+	}}})
+	require.NoError(t, err)
+	assert.Equal(t, int32(2), attempts.Load())
+	require.NoError(t, client.Stop(t.Context()))
+}
