@@ -28,8 +28,9 @@ type (
 	// instead of a Set directly. Set has relatively poor performance when used
 	// as a map key compared to Distinct.
 	Set struct {
-		hash uint64
-		data any
+		hash      uint64
+		data      any
+		composite bool
 	}
 
 	// Distinct is an identifier of a Set which is very likely to be unique.
@@ -150,6 +151,11 @@ func (l *Set) HasValue(k Key) bool {
 	}
 	_, ok := l.Value(k)
 	return ok
+}
+
+// HasComposite reports whether any value in this set is a [SLICE] or [MAP].
+func (l *Set) HasComposite() bool {
+	return l != nil && l.composite
 }
 
 // Iter returns an iterator for visiting the attributes in this set.
@@ -361,13 +367,23 @@ func (l *Set) Filter(re Filter) (Set, []KeyValue) {
 // newSet returns a new set based on the sorted and uniqued kvs.
 func newSet(kvs []KeyValue) Set {
 	s := Set{
-		hash: hashKVs(kvs),
-		data: computeDataFixed(kvs),
+		hash:      hashKVs(kvs),
+		data:      computeDataFixed(kvs),
+		composite: hasComposite(kvs),
 	}
 	if s.data == nil {
 		s.data = computeDataReflect(kvs)
 	}
 	return s
+}
+
+func hasComposite(kvs []KeyValue) bool {
+	for _, kv := range kvs {
+		if t := kv.Value.Type(); t == SLICE || t == MAP {
+			return true
+		}
+	}
+	return false
 }
 
 // computeDataFixed computes a Set data for small slices. It returns nil if the
