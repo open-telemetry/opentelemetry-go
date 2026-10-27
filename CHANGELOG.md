@@ -31,9 +31,11 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 - Add experimental support for enabling/disabling `Meter`s per instrumentation scope via `MeterConfigurator`, `MeterConfig`, and `MeterConfiguratorHandle` in `go.opentelemetry.io/otel/sdk/metric/x`. Configuration is set at `MeterProvider` construction via `WithMeterConfigurator` and can be updated live through `MeterConfiguratorHandle.Set`. This gates recording (`Add`/`Record`/`Observe`) only. `MeterProvider`s without it are unaffected. (#8743)
 - Add `WithViewMatchingMode` and `ViewMatchingMode` in `go.opentelemetry.io/otel/sdk/metric/x` to support composable view matching. (#8510)
+- Add `Set.HasComposite` in `go.opentelemetry.io/otel/attribute` to report whether a `Set` contains a `SLICE` or `MAP` value. (#9289)
 
 ### Changed
 
+- Skip map deduplication on each measurement when the attribute set has no `SLICE` or `MAP` value in `go.opentelemetry.io/otel/sdk/metric`. (#9289)
 - Rename `rpc.response.status_code` to `rpc.status_code` in experimental self-observability metrics emitted by
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and
