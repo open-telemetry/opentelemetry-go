@@ -212,6 +212,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		defer c.mu.Unlock()
 
 		if c.targetInfo == nil && !c.disableTargetInfo {
+			if metrics.Resource.Len() == 0 {
+				c.disableTargetInfo = true
+				return
+			}
 			targetInfo, e := c.createInfoMetric(
 				otlptranslator.TargetInfoMetricName,
 				targetInfoDescription,
