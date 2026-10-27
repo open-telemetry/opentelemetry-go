@@ -70,6 +70,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Decode gzip responses with explicitly configured `Accept-Encoding` headers in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, enforcing response limits after decompression. (#9203)
 - Preserve exemplar trace and span IDs in `go.opentelemetry.io/otel/exporters/prometheus` by dropping filtered attribute labels instead of the whole exemplar when the combined exemplar labels would exceed the prometheus client-go limit. (#9031)
 - Do not emit the `target_info` metric in `go.opentelemetry.io/otel/exporters/prometheus` when the OpenTelemetry `Resource` is empty. (#9296)
+- Order concatenated values of colliding sanitized attribute keys in `go.opentelemetry.io/otel/exporters/prometheus` by the lexicographical order of the original keys instead of sorting by attribute value. (#9294)
 - Treat `unix-abstract://` endpoints from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` as insecure in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, matching `unix://` endpoints and the metric exporters. (#9261)
 - Preserve `ScopeMetrics` slice capacity in `PeriodicReader`'s `sync.Pool` by resetting slice length instead of overwriting the struct, avoiding per-cycle heap allocations in `go.opentelemetry.io/otel/sdk/metric`. (#8535)
 

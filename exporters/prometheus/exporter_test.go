@@ -82,7 +82,7 @@ func TestGetAttrsSanitizedCollisions(t *testing.T) {
 		keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
 		require.NoError(t, err)
 		require.Equal(t, []string{"A_B", "C_D"}, keys)
-		require.Equal(t, []string{"first", "a;b;c;z"}, values)
+		require.Equal(t, []string{"first", "z;b;c;a"}, values)
 	})
 
 	t.Run("map_fallback_above_threshold", func(t *testing.T) {
@@ -100,7 +100,7 @@ func TestGetAttrsSanitizedCollisions(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, keys, maxLinearScanAttrs+1)
 		require.Equal(t, "z_dup", keys[len(keys)-1])
-		require.Equal(t, "a;b;c;z", values[len(values)-1])
+		require.Equal(t, "z;b;c;a", values[len(values)-1])
 	})
 }
 
@@ -121,7 +121,7 @@ func TestAppendScopeAttrsSanitizedCollisions(t *testing.T) {
 		kv, err := appendScopeAttrs(kv, attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
 		require.NoError(t, err)
 		require.Equal(t, []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel, "otel_scope_scope_key"}, kv.keys)
-		require.Equal(t, []string{"my-scope", "v1.0.0", "https://example.com", "a;m;z"}, kv.vals)
+		require.Equal(t, []string{"my-scope", "v1.0.0", "https://example.com", "z;a;m"}, kv.vals)
 	})
 
 	t.Run("map_fallback_above_threshold", func(t *testing.T) {
@@ -147,8 +147,27 @@ func TestAppendScopeAttrsSanitizedCollisions(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, kv.keys, 3+maxLinearScanAttrs+1)
 		require.Equal(t, "otel_scope_z_scope_dup", kv.keys[len(kv.keys)-1])
-		require.Equal(t, "a;m;z", kv.vals[len(kv.vals)-1])
+		require.Equal(t, "z;a;m", kv.vals[len(kv.vals)-1])
 	})
+}
+
+func TestSanitizedCollisionKeyOrder(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.String("C/D", "A"),
+		attribute.String("C.D", "Z"),
+		attribute.String("C-D", "M"),
+	)
+
+	keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+	require.NoError(t, err)
+	require.Equal(t, []string{"C_D"}, keys)
+	// Original keys in lexicographical order are "C-D", "C.D", "C/D".
+	require.Equal(t, []string{"M;Z;A"}, values)
+
+	kv, err := appendScopeAttrs(keyVals{}, attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+	require.NoError(t, err)
+	require.Equal(t, []string{"otel_scope_C_D"}, kv.keys)
+	require.Equal(t, []string{"M;Z;A"}, kv.vals)
 }
 
 func TestAttributesToLabels(t *testing.T) {
@@ -454,8 +473,9 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A.B").String("Q"),
 
 					// unintended match due to sanitization, values should be concatenated
-					attribute.Key("C.D").String("Y"),
-					attribute.Key("C/D").String("Z"),
+					// in the lexicographical order of the original keys ("C.D" < "C/D")
+					attribute.Key("C.D").String("Z"),
+					attribute.Key("C/D").String("Y"),
 				)
 				counter, err := meter.Float64Counter(
 					"foo",
