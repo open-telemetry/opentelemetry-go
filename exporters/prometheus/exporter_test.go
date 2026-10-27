@@ -30,6 +30,7 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
@@ -1687,11 +1688,11 @@ func TestExemplarsExceedingLabelLimit(t *testing.T) {
 	require.Len(t, got, 1)
 	family := got[0]
 	require.Len(t, family.GetMetric(), 1)
-	exemplar := family.GetMetric()[0].GetCounter().GetExemplar()
-	require.NotNil(t, exemplar, "exemplar should still be present with only trace/span ID labels")
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex, "exemplar should still be present with only trace/span ID labels")
 
-	labels := make(map[string]string, len(exemplar.GetLabel()))
-	for _, label := range exemplar.GetLabel() {
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
 		labels[label.GetName()] = label.GetValue()
 	}
 	assert.Equal(t, map[string]string{
@@ -1752,11 +1753,11 @@ func TestExemplarsLabelLimitKeyCollision(t *testing.T) {
 	require.Len(t, got, 1)
 	family := got[0]
 	require.Len(t, family.GetMetric(), 1)
-	exemplar := family.GetMetric()[0].GetCounter().GetExemplar()
-	require.NotNil(t, exemplar)
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex)
 
-	labels := make(map[string]string, len(exemplar.GetLabel()))
-	for _, label := range exemplar.GetLabel() {
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
 		labels[label.GetName()] = label.GetValue()
 	}
 	assert.Equal(t, map[string]string{
@@ -1764,6 +1765,55 @@ func TestExemplarsLabelLimitKeyCollision(t *testing.T) {
 		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
 		"method":                          "GET",
 	}, labels, "non-colliding filtered attribute should be preserved, trace/span ID overwritten")
+}
+
+func TestExemplarsWithoutSpanContext(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(resource.Default()),
+		metric.WithExemplarFilter(exemplar.AlwaysOnFilter),
+		metric.WithView(
+			metric.NewView(
+				metric.Instrument{Name: "foo"},
+				metric.Stream{
+					AttributeFilter: attribute.NewAllowKeysFilter(),
+				},
+			),
+		),
+	)
+	meter := provider.Meter("meter")
+
+	counter, err := meter.Float64Counter("foo")
+	require.NoError(t, err)
+	// Record without an active span context; filtered attributes up to
+	// ExemplarMaxRunes should fit because empty trace_id/span_id keys are not added.
+	val := strings.Repeat("a", prometheus.ExemplarMaxRunes-len("filtered"))
+	counter.Add(ctx, 9, otelmetric.WithAttributes(
+		attribute.String("filtered", val),
+	))
+
+	got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+	defer done()
+	require.NoError(t, err)
+
+	require.Len(t, got, 1)
+	family := got[0]
+	require.Len(t, family.GetMetric(), 1)
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex)
+
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
+		labels[label.GetName()] = label.GetValue()
+	}
+	assert.Equal(t, map[string]string{
+		"filtered": val,
+	}, labels, "empty trace_id and span_id labels should not be added")
 }
 
 func TestExponentialHistogramScaleValidation(t *testing.T) {
