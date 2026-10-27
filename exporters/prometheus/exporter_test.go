@@ -73,9 +73,39 @@ func TestGetAttrs(t *testing.T) {
 func TestAttributesToLabels(t *testing.T) {
 	labels, err := attributesToLabels([]attribute.KeyValue{
 		attribute.Float64Slice("float_slice", []float64{math.NaN(), math.Inf(1)}),
-	}, otlptranslator.LabelNamer{})
+	}, otlptranslator.LabelNamer{}, prometheus.ExemplarMaxRunes)
 	require.NoError(t, err)
 	require.Equal(t, prometheus.Labels{"float_slice": `["NaN","Infinity"]`}, labels)
+
+	for _, tc := range []struct {
+		name           string
+		remainingSpace int
+		want           prometheus.Labels
+	}{
+		{
+			name:           "exact fit",
+			remainingSpace: 9,
+			want:           prometheus.Labels{"method": "GET"},
+		},
+		{
+			name:           "one rune over budget",
+			remainingSpace: 8,
+			want:           prometheus.Labels{},
+		},
+		{
+			name:           "zero budget",
+			remainingSpace: 0,
+			want:           prometheus.Labels{},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			labels, err := attributesToLabels([]attribute.KeyValue{
+				attribute.String("method", "GET"),
+			}, otlptranslator.LabelNamer{}, tc.remainingSpace)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, labels)
+		})
+	}
 }
 
 func TestPrometheusExporter(t *testing.T) {
@@ -743,14 +773,6 @@ func TestPrometheusExporter(t *testing.T) {
 						metric.Stream{Aggregation: metric.AggregationBase2ExponentialHistogram{
 							MaxSize: 10,
 						}},
-					),
-					metric.NewView(
-						metric.Instrument{Name: "test_dropped_attrs_limit"},
-						metric.Stream{
-							AttributeFilter: func(kv attribute.KeyValue) bool {
-								return kv.Key != "long_attribute"
-							},
-						},
 					),
 				),
 			)
@@ -1481,13 +1503,7 @@ func TestExemplars(t *testing.T) {
 				hist, err := meter.Float64Histogram("exponential_histogram")
 				require.NoError(t, err)
 
-				// Create attributes that exceed 128-rune limit after accounting for trace_id/span_id
-				// trace_id (32) + span_id (16) + "=" (1) = 49 characters
-				// Remaining space: 128 - 49 = 79 characters
-				// longVal (80 chars) + "=" = 81 chars ✓
-				//  81 chars > 79, so long_value should be truncated
-
-				longVal := strings.Repeat("B", 80) // 80 chars
+				longVal := strings.Repeat("B", prometheus.ExemplarMaxRunes)
 
 				hist.Record(ctx, 0, otelmetric.WithAttributes(
 					attribute.String("long_value", longVal),

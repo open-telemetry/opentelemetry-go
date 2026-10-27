@@ -40,8 +40,6 @@ const (
 	// Registerer, rather than round-tripping them through the bridge and
 	// exporter.
 	bridgeScopeName = "go.opentelemetry.io/contrib/bridges/prometheus"
-
-	exemplarRuneLimit = 128
 )
 
 var (
@@ -845,13 +843,13 @@ func addExemplars[N int64 | float64](
 	promExemplars := make([]prometheus.Exemplar, len(exemplars))
 
 	for i, exemplar := range exemplars {
-		traceId := hex.EncodeToString(exemplar.TraceID)
-		spanId := hex.EncodeToString(exemplar.SpanID)
+		traceID := hex.EncodeToString(exemplar.TraceID)
+		spanID := hex.EncodeToString(exemplar.SpanID)
 
-		remaingSpace := exemplarRuneLimit - traceKeyLen - utf8.RuneCountInString(
-			traceId,
+		remaingSpace := prometheus.ExemplarMaxRunes - traceKeyLen - utf8.RuneCountInString(
+			traceID,
 		) - spanKeyLen - utf8.RuneCountInString(
-			spanId,
+			spanID,
 		)
 
 		labels, err := attributesToLabels(exemplar.FilteredAttributes, labelNamer, remaingSpace)
@@ -859,8 +857,6 @@ func addExemplars[N int64 | float64](
 			otel.Handle(err)
 			return m
 		}
-		traceID := hex.EncodeToString(exemplar.TraceID)
-		spanID := hex.EncodeToString(exemplar.SpanID)
 		if exemplarLabelRunes(labels, traceID, spanID) > prometheus.ExemplarMaxRunes {
 			// The filtered attributes alone, or combined with the trace and
 			// span IDs, exceed the limit prometheus client-go enforces on
@@ -892,16 +888,6 @@ func addExemplars[N int64 | float64](
 	return metricWithExemplar
 }
 
-func attributesToLabels(
-	attrs []attribute.KeyValue,
-	labelNamer otlptranslator.LabelNamer,
-	remainingSpace int,
-) (prometheus.Labels, error) {
-	labels := make(map[string]string, len(attrs)+2)
-	if remainingSpace <= 0 {
-		return labels, nil
-	}
-}
 // exemplarLabelRunes returns the total number of runes in labels plus the
 // trace and span ID labels that would be added to it, mirroring the count
 // prometheus client-go uses to enforce [prometheus.ExemplarMaxRunes].
@@ -919,20 +905,26 @@ func exemplarLabelRunes(labels prometheus.Labels, traceID, spanID string) int {
 	return runes
 }
 
-func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.LabelNamer) (prometheus.Labels, error) {
+func attributesToLabels(
+	attrs []attribute.KeyValue,
+	labelNamer otlptranslator.LabelNamer,
+	remainingSpace int,
+) (prometheus.Labels, error) {
 	labels := make(map[string]string)
 	for _, attr := range attrs {
 		name, err := labelNamer.Build(string(attr.Key))
 		if err != nil {
 			return nil, err
 		}
-		val := attr.Value.Emit()
+		if name == otlptranslator.ExemplarSpanIDKey || name == otlptranslator.ExemplarTraceIDKey {
+			continue
+		}
+		val := attr.Value.String()
 		attrLength := utf8.RuneCountInString(val) + utf8.RuneCountInString(name)
 		if attrLength <= remainingSpace {
 			labels[name] = val
 			remainingSpace -= attrLength
 		}
-		labels[name] = attr.Value.String()
 	}
 	return labels, nil
 }
