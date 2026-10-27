@@ -212,10 +212,20 @@ func WithEndpointURL(rawURL string) Option {
 		return fnOpt(func(c config) config { return c })
 	}
 	return fnOpt(func(c config) config {
-		c.endpoint = newSetting(u.Host)
+		c.endpoint = newSetting(endpointFromURL(u))
 		c.insecure = insecureFromScheme(c.insecure, u.Scheme)
 		return c
 	})
+}
+
+// endpointFromURL preserves Unix resolver targets and returns the host for other URLs.
+func endpointFromURL(u *url.URL) string {
+	switch strings.ToLower(u.Scheme) {
+	case "unix", "unix-abstract":
+		return u.String()
+	default:
+		return u.Host
+	}
 }
 
 // WithReconnectionPeriod sets the minimum amount of time between connection
@@ -411,7 +421,7 @@ func convEndpoint(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return u.Host, nil
+	return endpointFromURL(u), nil
 }
 
 // convInsecure converts s from a string to a bool without case sensitivity.
