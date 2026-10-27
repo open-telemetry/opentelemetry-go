@@ -373,7 +373,6 @@ func TestConfigs(t *testing.T) {
 				assert.True(t, c.Metrics.Insecure)
 			},
 		},
-
 		{
 			name: "Test Environment Signal Specific Endpoint Without Scheme resets precedence",
 			env: map[string]string{
