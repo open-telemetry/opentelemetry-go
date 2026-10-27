@@ -296,7 +296,7 @@ func TestBaseAttrs(t *testing.T) {
 		},
 		{
 			name:   "Port",
-			target: "dns://:4317",
+			target: "dns://" + ":4317",
 			want: []attribute.KeyValue{
 				semconv.OTelComponentName(observ.ComponentName(ID)),
 				semconv.OTelComponentTypeOtlpGRPCSpanExporter,
