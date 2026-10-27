@@ -16,8 +16,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
-go.opentelemetry.io/collector/featuregate v1.69.0 h1:RapEMYjBfvt9IUP3ypQ9Y7/g21nwRzvtKO3dSOCCL6E=
-go.opentelemetry.io/collector/featuregate v1.69.0/go.mod h1:dRYifiJa2vQ6LWpPwHny4mL82mnGWsWEVeVWw+DhYJw=
+go.opentelemetry.io/collector/featuregate v1.70.0 h1:yXJP5pi2xq+bVRG+8d4/ue13/GSoCmozp2Cb5ExE+Zs=
+go.opentelemetry.io/collector/featuregate v1.70.0/go.mod h1:dRYifiJa2vQ6LWpPwHny4mL82mnGWsWEVeVWw+DhYJw=
 go.opentelemetry.io/collector/internal/testutil v0.163.0 h1:JR65ZHtuOP1E5cJZKl4ub/UFHQ7xo3KN/Iryhtc0P5E=
 go.opentelemetry.io/collector/internal/testutil v0.163.0/go.mod h1:RUvWdMZGEBicc0C3teDcnTrifUX8HB4AJ4l8pMONURU=
 go.opentelemetry.io/collector/pdata v1.69.0 h1:u0a2n1kOS/OGwIEQMOKCnl+bbmFG5wGO/OfFXajICpA=
