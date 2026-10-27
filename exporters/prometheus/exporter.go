@@ -183,7 +183,9 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 	metrics := metricsPool.Get().(*metricdata.ResourceMetrics)
 	defer func() {
-		*metrics = metricdata.ResourceMetrics{} // erase fields to allow GC to collect them.
+		clear(metrics.ScopeMetrics) // Zero entries so external producer data is not retained.
+		metrics.ScopeMetrics = metrics.ScopeMetrics[:0]
+		metrics.Resource = nil
 		metricsPool.Put(metrics)
 	}()
 
