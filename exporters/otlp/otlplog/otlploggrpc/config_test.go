@@ -514,6 +514,82 @@ func TestNewConfig(t *testing.T) {
 	}
 }
 
+func TestNewConfigUnixEndpoint(t *testing.T) {
+	for _, scheme := range []string{"unix", "unix-abstract"} {
+		t.Run(scheme, func(t *testing.T) {
+			target := scheme + ":///otel.sock"
+			testcases := []struct {
+				name     string
+				endpoint string
+				logs     string
+				options  []Option
+				want     string
+				insecure bool
+			}{
+				{
+					name:     "GeneralEnvironment",
+					endpoint: target,
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "LogsEnvironment",
+					logs:     target,
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "WithEndpointURL",
+					options:  []Option{WithEndpointURL(target)},
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "LogsUnixOverridesGeneralHTTPS",
+					endpoint: "https://general:4317",
+					logs:     target,
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "LogsHTTPSOverridesGeneralUnix",
+					endpoint: target,
+					logs:     "https://logs:4317",
+					want:     "logs:4317",
+					insecure: false,
+				},
+				{
+					name:     "OptionUnixOverridesEnvironmentHTTPS",
+					endpoint: "https://general:4317",
+					logs:     "https://logs:4317",
+					options:  []Option{WithEndpointURL(target)},
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "OptionHTTPSOverridesEnvironmentUnix",
+					endpoint: target, logs: target,
+					options:  []Option{WithEndpointURL("https://option:4317")},
+					want:     "option:4317",
+					insecure: false,
+				},
+			}
+			for _, tc := range testcases {
+				t.Run(tc.name, func(t *testing.T) {
+					t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", tc.endpoint)
+					t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", tc.logs)
+					t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "")
+					t.Setenv("OTEL_EXPORTER_OTLP_LOGS_INSECURE", "")
+
+					cfg := newConfig(tc.options)
+					assert.Equal(t, newSetting(tc.want), cfg.endpoint, "endpoint")
+					assert.Equal(t, newSetting(tc.insecure), cfg.insecure, "insecure")
+				})
+			}
+		})
+	}
+}
+
 func assertTLSConfig(t *testing.T, want, got setting[*tls.Config]) {
 	t.Helper()
 
