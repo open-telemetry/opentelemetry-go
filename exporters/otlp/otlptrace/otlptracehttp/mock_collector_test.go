@@ -23,6 +23,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpjson"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
 )
 
@@ -87,7 +88,13 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 	response := collectortracepb.ExportTraceServiceResponse{
 		PartialSuccess: c.partial,
 	}
-	rawResponse, err := proto.Marshal(&response)
+	var rawResponse []byte
+	var err error
+	if c.injectContentType == "application/json" {
+		rawResponse, err = otlpjson.MarshalExportTraceServiceResponse(&response)
+	} else {
+		rawResponse, err = proto.Marshal(&response)
+	}
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -116,11 +123,19 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 
 func unmarshalTraceRequest(rawRequest []byte, contentType string) (*collectortracepb.ExportTraceServiceRequest, error) {
 	request := &collectortracepb.ExportTraceServiceRequest{}
-	if contentType != "application/x-protobuf" {
-		return request, fmt.Errorf("invalid content-type: %s, only application/x-protobuf is supported", contentType)
+	switch contentType {
+	case "application/x-protobuf":
+		err := proto.Unmarshal(rawRequest, request)
+		return request, err
+	case "application/json":
+		err := otlpjson.UnmarshalExportTraceServiceRequest(rawRequest, request)
+		return request, err
+	default:
+		return request, fmt.Errorf(
+			"invalid content-type: %s, only application/x-protobuf or application/json is supported",
+			contentType,
+		)
 	}
-	err := proto.Unmarshal(rawRequest, request)
-	return request, err
 }
 
 func (c *mockCollector) checkHeaders(r *http.Request) bool {
@@ -215,7 +230,7 @@ func (c *mockCollectorConfig) fillInDefaults() {
 
 func runMockCollector(tb testing.TB, cfg mockCollectorConfig) *mockCollector {
 	cfg.fillInDefaults()
-	ln, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", cfg.Port))
+	ln, err := (&net.ListenConfig{}).Listen(tb.Context(), "tcp", fmt.Sprintf("localhost:%d", cfg.Port))
 	require.NoError(tb, err)
 	_, portStr, err := net.SplitHostPort(ln.Addr().String())
 	require.NoError(tb, err)

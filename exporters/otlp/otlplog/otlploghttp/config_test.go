@@ -81,6 +81,12 @@ func TestNewConfig(t *testing.T) {
 
 	headers := map[string]string{"a": "A"}
 	rc := retry.Config{}
+	const (
+		httpEndpointURL    = "http" + "://test:8080/path"
+		httpsEndpointURL   = "https" + "://test:8080/path"
+		httpsEndpointURL2  = "https" + "://test2/path2"
+		ignoredEndpointURL = "http" + "://ignored:9090/alt"
+	)
 
 	testcases := []struct {
 		name    string
@@ -93,7 +99,7 @@ func TestNewConfig(t *testing.T) {
 			name: "Defaults",
 			want: config{
 				endpoint: newSetting(defaultEndpoint),
-				path:     newSetting(defaultPath),
+				path:     newSetting(endpointPath{Path: defaultPath}),
 				timeout:  newSetting(defaultTimeout),
 				retryCfg: newSetting(defaultRetryCfg),
 			},
@@ -107,29 +113,61 @@ func TestNewConfig(t *testing.T) {
 				WithTLSClientConfig(tlsCfg),
 				WithCompression(GzipCompression),
 				WithHeaders(headers),
+				WithMaxRequestSize(1),
+				WithMaxResponseSize(2),
 				WithTimeout(time.Second),
 				WithRetry(RetryConfig(rc)),
 				// Do not test WithProxy. Requires func comparison.
 			},
 			want: config{
-				endpoint:    newSetting("test"),
-				path:        newSetting("/path"),
-				insecure:    newSetting(true),
-				tlsCfg:      newSetting(tlsCfg),
-				headers:     newSetting(headers),
-				compression: newSetting(GzipCompression),
-				timeout:     newSetting(time.Second),
-				retryCfg:    newSetting(rc),
+				endpoint:        newSetting("test"),
+				path:            newSetting(endpointPath{Path: "/path"}),
+				insecure:        newSetting(true),
+				tlsCfg:          newSetting(tlsCfg),
+				headers:         newSetting(headers),
+				compression:     newSetting(GzipCompression),
+				maxRequestSize:  newSetting(1),
+				maxResponseSize: newSetting(int64(2)),
+				timeout:         newSetting(time.Second),
+				retryCfg:        newSetting(rc),
 			},
 		},
 		{
 			name: "WithEndpointURL",
 			options: []Option{
-				WithEndpointURL("http://test:8080/path"),
+				WithEndpointURL(httpEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
-				path:     newSetting("/path"),
+				path:     newSetting(endpointPath{Path: "/path"}),
+				insecure: newSetting(true),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+		},
+		{
+			name: "WithEndpointURLInvalidKeepsDefaults",
+			options: []Option{
+				WithEndpointURL(":\x7f"),
+			},
+			want: config{
+				endpoint: newSetting(defaultEndpoint),
+				path:     newSetting(endpointPath{Path: defaultPath}),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+		},
+		{
+			name: "WithEndpointURLInvalidPreservesPriorOptions",
+			options: []Option{
+				WithEndpoint("custom.endpoint:9090"),
+				WithURLPath("/custom/path"),
+				WithInsecure(),
+				WithEndpointURL("://invalid-url"),
+			},
+			want: config{
+				endpoint: newSetting("custom.endpoint:9090"),
+				path:     newSetting(endpointPath{Path: "/custom/path"}),
 				insecure: newSetting(true),
 				timeout:  newSetting(defaultTimeout),
 				retryCfg: newSetting(defaultRetryCfg),
@@ -138,14 +176,14 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "EndpointPrecedence",
 			options: []Option{
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 				WithEndpoint("not-test:9090"),
 				WithURLPath("/alt"),
 				WithInsecure(),
 			},
 			want: config{
 				endpoint: newSetting("not-test:9090"),
-				path:     newSetting("/alt"),
+				path:     newSetting(endpointPath{Path: "/alt"}),
 				insecure: newSetting(true),
 				timeout:  newSetting(defaultTimeout),
 				retryCfg: newSetting(defaultRetryCfg),
@@ -157,11 +195,11 @@ func TestNewConfig(t *testing.T) {
 				WithEndpoint("not-test:9090"),
 				WithURLPath("/alt"),
 				WithInsecure(),
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
-				path:     newSetting("/path"),
+				path:     newSetting(endpointPath{Path: "/path"}),
 				insecure: newSetting(false),
 				timeout:  newSetting(defaultTimeout),
 				retryCfg: newSetting(defaultRetryCfg),
@@ -173,11 +211,11 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "http://env.endpoint:8080/prefix",
 			},
 			options: []Option{
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
-				path:     newSetting("/path"),
+				path:     newSetting(endpointPath{Path: "/path"}),
 				insecure: newSetting(false),
 				timeout:  newSetting(defaultTimeout),
 				retryCfg: newSetting(defaultRetryCfg),
@@ -189,11 +227,11 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
 			},
 			options: []Option{
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
-				path:     newSetting("/path"),
+				path:     newSetting(endpointPath{Path: "/path"}),
 				insecure: newSetting(false),
 				timeout:  newSetting(defaultTimeout),
 				retryCfg: newSetting(defaultRetryCfg),
@@ -212,7 +250,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint:    newSetting("env.endpoint:8080"),
-				path:        newSetting("/prefix"),
+				path:        newSetting(endpointPath{Path: "/prefix"}),
 				insecure:    newSetting(false),
 				tlsCfg:      newSetting(tlsCfg),
 				headers:     newSetting(headers),
@@ -228,7 +266,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint: newSetting("env.endpoint"),
-				path:     newSetting("/"),
+				path:     newSetting(endpointPath{Path: "/"}),
 				insecure: newSetting(true),
 				timeout:  newSetting(defaultTimeout),
 				retryCfg: newSetting(defaultRetryCfg),
@@ -247,7 +285,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint:    newSetting("env.endpoint:8080"),
-				path:        newSetting("/prefix/v1/logs"),
+				path:        newSetting(endpointPath{Path: "/prefix/v1/logs"}),
 				insecure:    newSetting(true),
 				tlsCfg:      newSetting(tlsCfg),
 				headers:     newSetting(headers),
@@ -257,13 +295,26 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "OTLPEnvironmentVariablesTrailingSlash",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://env.endpoint:8080/prefix/",
+			},
+			want: config{
+				endpoint: newSetting("env.endpoint:8080"),
+				path:     newSetting(endpointPath{Path: "/prefix/v1/logs"}),
+				insecure: newSetting(true),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+		},
+		{
 			name: "OTLPEndpointEnvironmentVariablesDefaultPath",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "http://env.endpoint",
 			},
 			want: config{
 				endpoint: newSetting("env.endpoint"),
-				path:     newSetting(defaultPath),
+				path:     newSetting(endpointPath{Path: defaultPath}),
 				insecure: newSetting(true),
 				timeout:  newSetting(defaultTimeout),
 				retryCfg: newSetting(defaultRetryCfg),
@@ -272,7 +323,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "EnvironmentVariablesPrecedence",
 			envars: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":           "http://ignored:9090/alt",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":           ignoredEndpointURL,
 				"OTEL_EXPORTER_OTLP_HEADERS":            "b=B",
 				"OTEL_EXPORTER_OTLP_COMPRESSION":        "none",
 				"OTEL_EXPORTER_OTLP_TIMEOUT":            "30000",
@@ -290,7 +341,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint:    newSetting("env.endpoint:8080"),
-				path:        newSetting("/path"),
+				path:        newSetting(endpointPath{Path: "/path"}),
 				insecure:    newSetting(false),
 				tlsCfg:      newSetting(tlsCfg),
 				headers:     newSetting(headers),
@@ -302,7 +353,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "OptionsPrecedence",
 			envars: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":           "http://ignored:9090/alt",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":           ignoredEndpointURL,
 				"OTEL_EXPORTER_OTLP_HEADERS":            "b=B",
 				"OTEL_EXPORTER_OTLP_COMPRESSION":        "none",
 				"OTEL_EXPORTER_OTLP_TIMEOUT":            "30000",
@@ -320,7 +371,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			options: []Option{
 				WithEndpoint("test"),
-				WithEndpointURL("https://test2/path2"),
+				WithEndpointURL(httpsEndpointURL2),
 				WithURLPath("/path"),
 				WithInsecure(),
 				WithTLSClientConfig(tlsCfg),
@@ -331,7 +382,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint:    newSetting("test2"),
-				path:        newSetting("/path"),
+				path:        newSetting(endpointPath{Path: "/path"}),
 				insecure:    newSetting(true),
 				tlsCfg:      newSetting(tlsCfg),
 				headers:     newSetting(headers),
@@ -344,6 +395,7 @@ func TestNewConfig(t *testing.T) {
 			name: "InvalidEnvironmentVariables",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT":           "%invalid",
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE":           "not-a-bool",
 				"OTEL_EXPORTER_OTLP_LOGS_HEADERS":            "invalid key=value",
 				"OTEL_EXPORTER_OTLP_LOGS_COMPRESSION":        "xz",
 				"OTEL_EXPORTER_OTLP_LOGS_TIMEOUT":            "100 seconds",
@@ -353,18 +405,34 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint: newSetting(defaultEndpoint),
-				path:     newSetting(defaultPath),
+				path:     newSetting(endpointPath{Path: defaultPath}),
 				timeout:  newSetting(defaultTimeout),
 				retryCfg: newSetting(defaultRetryCfg),
 			},
 			errs: []string{
 				`invalid OTEL_EXPORTER_OTLP_LOGS_ENDPOINT value %invalid: parse "%invalid": invalid URL escape "%in"`,
+				`invalid OTEL_EXPORTER_OTLP_LOGS_INSECURE value not-a-bool: can't convert "not-a-bool" to bool`,
 				`failed to load TLS:`,
 				`certificate not added`,
 				`tls: failed to find any PEM data in certificate input`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_HEADERS value invalid key=value: invalid header key: invalid key`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_COMPRESSION value xz: unknown compression: xz`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value 100 seconds: strconv.Atoi: parsing "100 seconds": invalid syntax`,
+			},
+		},
+		{
+			name: "InvalidGenericEndpoint",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "%invalid",
+			},
+			want: config{
+				endpoint: newSetting(defaultEndpoint),
+				path:     newSetting(endpointPath{Path: defaultPath}),
+				timeout:  newSetting(defaultTimeout),
+				retryCfg: newSetting(defaultRetryCfg),
+			},
+			errs: []string{
+				`invalid OTEL_EXPORTER_OTLP_ENDPOINT value %invalid: parse "%invalid": invalid URL escape "%in"`,
 			},
 		},
 		{
@@ -380,7 +448,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint:    newSetting("env.endpoint:8080"),
-				path:        newSetting("/prefix"),
+				path:        newSetting(endpointPath{Path: "/prefix"}),
 				insecure:    newSetting(false),
 				tlsCfg:      newSetting(tlsCfg),
 				headers:     newSetting(map[string]string{"user%2Did": "42", "user%20name": "alice smith"}),
@@ -402,7 +470,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint:    newSetting("env.endpoint:8080"),
-				path:        newSetting("/prefix"),
+				path:        newSetting(endpointPath{Path: "/prefix"}),
 				insecure:    newSetting(false),
 				tlsCfg:      newSetting(tlsCfg),
 				compression: newSetting(GzipCompression),
@@ -417,7 +485,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint: newSetting("env.endpoint:8080"),
-				path:     newSetting("/prefix"),
+				path:     newSetting(endpointPath{Path: "/prefix"}),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
 			},
@@ -429,7 +497,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint: newSetting("env.endpoint:8080"),
-				path:     newSetting("/prefix"),
+				path:     newSetting(endpointPath{Path: "/prefix"}),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
 			},
@@ -441,7 +509,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint: newSetting(defaultEndpoint),
-				path:     newSetting(defaultPath),
+				path:     newSetting(endpointPath{Path: defaultPath}),
 				insecure: newSetting(true),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
@@ -455,7 +523,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint: newSetting("env.endpoint:8080"),
-				path:     newSetting("/prefix"),
+				path:     newSetting(endpointPath{Path: "/prefix"}),
 				insecure: newSetting(true),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
@@ -471,7 +539,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint: newSetting("env.endpoint:8080"),
-				path:     newSetting("/prefix"),
+				path:     newSetting(endpointPath{Path: "/prefix"}),
 				insecure: newSetting(true),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
@@ -487,7 +555,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint: newSetting("env.endpoint:8080"),
-				path:     newSetting(defaultPath),
+				path:     newSetting(endpointPath{Path: defaultPath}),
 				insecure: newSetting(true),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
@@ -509,6 +577,12 @@ func TestNewConfig(t *testing.T) {
 				return func() { otel.SetErrorHandler(orig) }
 			}(otel.GetErrorHandler()))
 			c := newConfig(tc.options)
+			if !tc.want.maxRequestSize.Set {
+				tc.want.maxRequestSize = newSetting(64 * 1024 * 1024)
+			}
+			if !tc.want.maxResponseSize.Set {
+				tc.want.maxResponseSize = newSetting(defaultMaxResponseSize)
+			}
 
 			// Do not compare pointer values.
 			assertTLSConfig(t, tc.want.tlsCfg, c.tlsCfg)
@@ -525,6 +599,16 @@ func TestNewConfig(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMaxResponseSize(t *testing.T) {
+	for _, size := range []int64{0, -1} {
+		cfg := newConfig([]Option{WithMaxResponseSize(size)})
+		assert.Equal(t, defaultMaxResponseSize, cfg.maxResponseSize.Value)
+	}
+
+	cfg := newConfig([]Option{WithMaxResponseSize(2), WithMaxResponseSize(0)})
+	assert.Equal(t, int64(2), cfg.maxResponseSize.Value)
 }
 
 func assertTLSConfig(t *testing.T, want, got setting[*tls.Config]) {

@@ -25,11 +25,9 @@ var (
 // conventions. It represents the describes the error the DNS lookup failed with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // LookupDuration is an instrument used to record metric values conforming to the
 // "dns.lookup.duration" semantic conventions. It represents the measures the
@@ -101,7 +99,9 @@ func (m LookupDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
+			attribute.String("dns.question.name", questionName),
+		))
 		return
 	}
 

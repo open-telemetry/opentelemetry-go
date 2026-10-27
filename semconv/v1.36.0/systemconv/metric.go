@@ -870,7 +870,6 @@ func (DiskIOTime) Description() string {
 //     ["Disk% Idle Time"]
 //     performance counter: `uptime * (100 - "Disk\% Idle Time") / 100`
 //
-//
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 // ["Disk% Idle Time"]: https://learn.microsoft.com/archive/blogs/askcore/windows-performance-monitor-disk-counters-explained#windows-performance-monitor-disk-counters-explained
 func (m DiskIOTime) Add(
@@ -908,7 +907,6 @@ func (m DiskIOTime) Add(
 //   - Windows: The complement of
 //     ["Disk% Idle Time"]
 //     performance counter: `uptime * (100 - "Disk\% Idle Time") / 100`
-//
 //
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 // ["Disk% Idle Time"]: https://learn.microsoft.com/archive/blogs/askcore/windows-performance-monitor-disk-counters-explained#windows-performance-monitor-disk-counters-explained
@@ -1199,7 +1197,6 @@ func (DiskOperationTime) Description() string {
 //   - Windows: "Avg. Disk sec/Read" perf counter multiplied by "Disk Reads/sec"
 //     perf counter (similar for Writes)
 //
-//
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 func (m DiskOperationTime) Add(
 	ctx context.Context,
@@ -1235,7 +1232,6 @@ func (m DiskOperationTime) Add(
 //   - Linux: Fields 7 & 11 from [procfs-diskstats]
 //   - Windows: "Avg. Disk sec/Read" perf counter multiplied by "Disk Reads/sec"
 //     perf counter (similar for Writes)
-//
 //
 // [procfs-diskstats]: https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats
 func (m DiskOperationTime) AddSet(ctx context.Context, incr float64, set attribute.Set) {
@@ -2449,7 +2445,6 @@ func (NetworkDropped) Description() string {
 //   - Windows: [`InDiscards`/`OutDiscards`]
 //     from [`GetIfEntry2`]
 //
-//
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InDiscards`/`OutDiscards`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
 // [`GetIfEntry2`]: https://docs.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getifentry2
@@ -2486,7 +2481,6 @@ func (m NetworkDropped) Add(
 //   - Linux: the `drop` column in `/proc/dev/net` ([source])
 //   - Windows: [`InDiscards`/`OutDiscards`]
 //     from [`GetIfEntry2`]
-//
 //
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InDiscards`/`OutDiscards`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
@@ -2581,7 +2575,6 @@ func (NetworkErrors) Description() string {
 //   - Windows: [`InErrors`/`OutErrors`]
 //     from [`GetIfEntry2`].
 //
-//
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InErrors`/`OutErrors`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2
 // [`GetIfEntry2`]: https://docs.microsoft.com/windows/win32/api/netioapi/nf-netioapi-getifentry2
@@ -2618,7 +2611,6 @@ func (m NetworkErrors) Add(
 //   - Linux: the `errs` column in `/proc/dev/net` ([source]).
 //   - Windows: [`InErrors`/`OutErrors`]
 //     from [`GetIfEntry2`].
-//
 //
 // [source]: https://web.archive.org/web/20180321091318/http://www.onlamp.com/pub/a/linux/2000/11/16/LinuxAdmin.html
 // [`InErrors`/`OutErrors`]: https://docs.microsoft.com/windows/win32/api/netioapi/ns-netioapi-mib_if_row2

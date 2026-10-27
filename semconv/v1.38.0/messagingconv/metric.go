@@ -26,11 +26,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // OperationTypeAttr is an attribute conforming to the messaging.operation.type
 // semantic conventions. It represents a string identifying the type of the
@@ -121,7 +119,7 @@ func NewClientConsumedMessages(
 		opt...,
 	)
 	if err != nil {
-	    return ClientConsumedMessages{noop.Int64Counter{}}, err
+		return ClientConsumedMessages{noop.Int64Counter{}}, err
 	}
 	return ClientConsumedMessages{i}, nil
 }
@@ -307,7 +305,7 @@ func NewClientOperationDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ClientOperationDuration{noop.Float64Histogram{}}, err
+		return ClientOperationDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientOperationDuration{i}, nil
 }
@@ -491,7 +489,7 @@ func NewClientSentMessages(
 		opt...,
 	)
 	if err != nil {
-	    return ClientSentMessages{noop.Int64Counter{}}, err
+		return ClientSentMessages{noop.Int64Counter{}}, err
 	}
 	return ClientSentMessages{i}, nil
 }
@@ -654,7 +652,7 @@ func NewProcessDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ProcessDuration{noop.Float64Histogram{}}, err
+		return ProcessDuration{noop.Float64Histogram{}}, err
 	}
 	return ProcessDuration{i}, nil
 }

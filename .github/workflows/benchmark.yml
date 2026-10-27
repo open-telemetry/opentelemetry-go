@@ -3,53 +3,117 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+      - 'Makefile'
+      - '.github/workflows/benchmark.yml'
+  schedule:
+    - cron: '0 8 * * 0'
+      timezone: America/Los_Angeles
   workflow_dispatch:
+    inputs:
+      full:
+        description: "Run benchmarks for every module, ignoring the affected-module diff."
+        type: boolean
+        default: false
 
 # Declare default permissions as read only.
-permissions: read-all
+permissions:
+  contents: read
 
 env:
-  DEFAULT_GO_VERSION: "~1.26.0"
+  DEFAULT_GO_VERSION: "~1.27.0"
 jobs:
-  benchmark:
-    permissions:
-      contents: write # required for pushing to gh-pages branch
-    name: Benchmarks
-    runs-on: oracle-bare-metal-64cpu-512gb-x86-64
+  # Related issue: https://github.com/CodSpeedHQ/codspeed-go/issues/51
+  sharding-benchmark:
+    name: Sharding benchmarks
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.sharding.outputs.shards }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Need history so the affected-module detector can diff
+          # against the prior commit.
+          fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true
           cache-dependency-path: "**/go.sum"
-      - name: Run benchmarks
-        run: make benchmark | tee output.txt
-      - name: Download previous benchmark data
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      - id: sharding
+        env:
+          # We want to diff HEAD against whatever "before this change"
+          # means for the current event.
+          #
+          # For a PR, that's the commit on main the PR branched from --
+          # we want every commit in the PR, not just the latest push.
+          # (Tempting to use github.event.before here, but on PRs it's
+          # the previous tip of the PR branch, so it'd miss earlier
+          # commits in the same PR.)
+          #
+          # For a push to main, it's the commit that was at the tip
+          # before this push -- exactly the new work this push brings.
+          #
+          # For a manual workflow_dispatch run, neither field is set,
+          # and the Makefile's default base ref kicks in.
+          BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
+          ARGS: ${{ (github.event_name == 'schedule' || inputs.full) && '-all' || '' }}
+        run: |
+          shards=$(make print-affected-benchmarks)
+          echo "shards=${shards}" >> "$GITHUB_OUTPUT"
+
+  benchmark:
+    needs: sharding-benchmark
+    # Skip the matrix entirely when nothing benchmark-relevant changed.
+    if: needs.sharding-benchmark.outputs.shards != '[]'
+    permissions:
+      contents: write # required for pushing to gh-pages branch
+    name: Benchmarks
+    runs-on: oracle-bare-metal-64cpu-1024gb-x86-64-ubuntu-24
+    container:
+      image: ubuntu:26.04@sha256:157dc3d6e4a3e4f2c68d12df9df9ed6e808b59af6d4c3757b432b4f519916725
+      # CodSpeed's profiling feature needs elevated permissions.
+      options: --cap-add=PERFMON
+    strategy:
+      matrix:
+        shard: ${{ fromJson(needs.sharding-benchmark.outputs.shards) }}
+    steps:
+      # The benchmark container does not have the build toolchain preinstalled.
+      - name: Install prerequisites
+        run: |
+          apt-get update
+          apt-get install -y make build-essential git ca-certificates curl
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: ./benchmarks
-          # `github.event.before` means the commit before the push (i.e. the previous commit).
-          # So we can fetch the exact benchmark data from the previous commit.
-          key: ${{ runner.os }}-benchmark-${{ github.event.before }}
-      - name: Store benchmarks result
-        uses: benchmark-action/github-action-benchmark@4bdcce38c94cec68da58d012ac24b7b1155efe8b # v1.20.7
+          persist-credentials: false
+      # This makes CodSpeed running inside the container use git correctly.
+      - name: Mark workspace as a safe Git directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          name: Benchmarks
-          tool: 'go'
-          output-file-path: output.txt
-          external-data-json-path: ./benchmarks/data.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          gh-pages-branch: benchmarks
-          fail-on-alert: true
-          alert-threshold: "400%"
-          # Add benchmark summary to GitHub workflow run report
-          summary-always: true
-      - name: Save benchmark data
-        uses: actions/cache/save@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
-        # The cache will be saved even if a step fails.
-        if: always()
+          go-version: ${{ env.DEFAULT_GO_VERSION }}
+          check-latest: true
+          # Disable setup-go's GOMODCACHE/GOCACHE caching on the bare-metal
+          # runner. The runner is persistent, so ~/go/pkg/mod and
+          # ~/.cache/go-build already survive between jobs locally. The
+          # Actions cache for this key reaches multiple GB across the matrix,
+          # which makes every shard pay ~1-2 min on either the restore
+          # (download + tar -xf) or the post-step save (tar + upload), with
+          # no benefit over the on-disk caches.
+          cache: false
+      - name: Run the benchmarks
+        env:
+          # Job containers do not run systemd. Without this override,
+          # CodSpeed tries to start the benchmark using systemd-run.
+          CODSPEED_ISOLATION: "false"
+        uses: CodSpeedHQ/action@78102a468f96d8e0ccb92d0ec49425753fc42062 # v5.6.0
         with:
-          path: ./benchmarks
-          # Use the current commit SHA as the cache key.
-          key: ${{ runner.os }}-benchmark-${{ github.sha }}
+          mode: walltime
+          allow-empty: true
+          # CodSpeed runs extremely slow when there are 128 processes involved, which is the number
+          # of CPUs on the bare metal machine. Limiting the number of processes to 4 helps mitigate this. 4 also matches the number of CPUs on GitHub runners.
+          run: GOMAXPROCS=4 make benchmark/${{matrix.shard}}

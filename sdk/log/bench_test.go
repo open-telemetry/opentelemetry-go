@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -114,13 +115,13 @@ func BenchmarkProcessor(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					r := log.Record{}
-					r.SetBody(log.StringValue("message"))
+					r.SetBody(attribute.StringValue("message"))
 					r.SetSeverity(log.SeverityInfo)
 					r.AddAttributes(
-						log.String("foo", "bar"),
-						log.Float64("float", 3.14),
-						log.Int("int", 123),
-						log.Bool("bool", true),
+						attribute.String("foo", "bar"),
+						attribute.Float64("float", 3.14),
+						attribute.Int("int", 123),
+						attribute.Bool("bool", true),
 					)
 					logger.Emit(b.Context(), r)
 				}
@@ -155,7 +156,7 @@ func (attrAddProcessor) Enabled(context.Context, EnabledParameters) bool {
 }
 
 func (attrAddProcessor) OnEmit(_ context.Context, r *Record) error {
-	r.AddAttributes(log.String("add", "me"))
+	r.AddAttributes(attribute.String("add", "me"))
 	return nil
 }
 
@@ -174,7 +175,7 @@ func (attrSetDecorator) Enabled(context.Context, EnabledParameters) bool {
 }
 
 func (attrSetDecorator) OnEmit(_ context.Context, r *Record) error {
-	r.SetAttributes(log.String("replace", "me"))
+	r.SetAttributes(attribute.String("replace", "me"))
 	return nil
 }
 

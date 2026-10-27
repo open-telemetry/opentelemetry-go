@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metric // import "go.opentelemetry.io/otel/sdk/metric"
+package metric
 
 import (
 	"context"
@@ -32,8 +32,9 @@ type ManualReader struct {
 	isShutdown        bool
 	externalProducers atomic.Value
 
-	temporalitySelector TemporalitySelector
-	aggregationSelector AggregationSelector
+	temporalitySelector      TemporalitySelector
+	aggregationSelector      AggregationSelector
+	cardinalityLimitSelector CardinalityLimitSelector
 
 	inst *observ.Instrumentation
 }
@@ -45,8 +46,9 @@ var _ = map[Reader]struct{}{&ManualReader{}: {}}
 func NewManualReader(opts ...ManualReaderOption) *ManualReader {
 	cfg := newManualReaderConfig(opts)
 	r := &ManualReader{
-		temporalitySelector: cfg.temporalitySelector,
-		aggregationSelector: cfg.aggregationSelector,
+		temporalitySelector:      cfg.temporalitySelector,
+		aggregationSelector:      cfg.aggregationSelector,
+		cardinalityLimitSelector: cfg.cardinalityLimitSelector,
 	}
 	r.externalProducers.Store(cfg.producers)
 
@@ -87,6 +89,11 @@ func (mr *ManualReader) aggregation(
 	kind InstrumentKind,
 ) Aggregation { // nolint:revive  // import-shadow for method scoped by type.
 	return mr.aggregationSelector(kind)
+}
+
+// cardinalityLimit returns the cardinality limit for kind.
+func (mr *ManualReader) cardinalityLimit(kind InstrumentKind) (int, bool) {
+	return mr.cardinalityLimitSelector(kind)
 }
 
 // Shutdown closes any connections and frees any resources used by the reader.
@@ -162,33 +169,35 @@ func (mr *ManualReader) Collect(ctx context.Context, rm *metricdata.ResourceMetr
 }
 
 // MarshalLog returns logging data about the ManualReader.
-func (r *ManualReader) MarshalLog() any {
-	r.mu.Lock()
-	down := r.isShutdown
-	r.mu.Unlock()
+func (mr *ManualReader) MarshalLog() any {
+	mr.mu.Lock()
+	down := mr.isShutdown
+	mr.mu.Unlock()
 	return struct {
 		Type       string
 		Registered bool
 		Shutdown   bool
 	}{
 		Type:       "ManualReader",
-		Registered: r.sdkProducer.Load() != nil,
+		Registered: mr.sdkProducer.Load() != nil,
 		Shutdown:   down,
 	}
 }
 
 // manualReaderConfig contains configuration options for a ManualReader.
 type manualReaderConfig struct {
-	temporalitySelector TemporalitySelector
-	aggregationSelector AggregationSelector
-	producers           []Producer
+	temporalitySelector      TemporalitySelector
+	aggregationSelector      AggregationSelector
+	cardinalityLimitSelector CardinalityLimitSelector
+	producers                []Producer
 }
 
 // newManualReaderConfig returns a manualReaderConfig configured with options.
 func newManualReaderConfig(opts []ManualReaderOption) manualReaderConfig {
 	cfg := manualReaderConfig{
-		temporalitySelector: DefaultTemporalitySelector,
-		aggregationSelector: DefaultAggregationSelector,
+		temporalitySelector:      DefaultTemporalitySelector,
+		aggregationSelector:      DefaultAggregationSelector,
+		cardinalityLimitSelector: defaultCardinalityLimitSelector,
 	}
 	for _, opt := range opts {
 		cfg = opt.applyManual(cfg)
@@ -204,6 +213,7 @@ type ManualReaderOption interface {
 // WithTemporalitySelector sets the TemporalitySelector a reader will use to
 // determine the Temporality of an instrument based on its kind. If this
 // option is not used, the reader will use the DefaultTemporalitySelector.
+// If selector is nil, this option does nothing.
 func WithTemporalitySelector(selector TemporalitySelector) ManualReaderOption {
 	return temporalitySelectorOption{selector: selector}
 }
@@ -214,7 +224,9 @@ type temporalitySelectorOption struct {
 
 // applyManual returns a manualReaderConfig with option applied.
 func (t temporalitySelectorOption) applyManual(mrc manualReaderConfig) manualReaderConfig {
-	mrc.temporalitySelector = t.selector
+	if t.selector != nil {
+		mrc.temporalitySelector = t.selector
+	}
 	return mrc
 }
 
@@ -222,6 +234,7 @@ func (t temporalitySelectorOption) applyManual(mrc manualReaderConfig) manualRea
 // determine the aggregation to use for an instrument based on its kind. If
 // this option is not used, the reader will use the DefaultAggregationSelector
 // or the aggregation explicitly passed for a view matching an instrument.
+// If selector is nil, this option does nothing.
 func WithAggregationSelector(selector AggregationSelector) ManualReaderOption {
 	return aggregationSelectorOption{selector: selector}
 }
@@ -232,6 +245,8 @@ type aggregationSelectorOption struct {
 
 // applyManual returns a manualReaderConfig with option applied.
 func (t aggregationSelectorOption) applyManual(c manualReaderConfig) manualReaderConfig {
-	c.aggregationSelector = t.selector
+	if t.selector != nil {
+		c.aggregationSelector = t.selector
+	}
 	return c
 }

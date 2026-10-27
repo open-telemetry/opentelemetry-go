@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package stdoutlog // import "go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
+package stdoutlog
 
 import (
 	"os"
@@ -27,6 +27,33 @@ func TestNewConfig(t *testing.T) {
 		{
 			name:    "WithWriter",
 			options: []Option{WithWriter(os.Stderr)},
+			expected: config{
+				Writer:      os.Stderr,
+				PrettyPrint: false,
+				Timestamps:  true,
+			},
+		},
+		{
+			name:    "WithNilWriter",
+			options: []Option{WithWriter(nil)},
+			expected: config{
+				Writer:      os.Stdout,
+				PrettyPrint: false,
+				Timestamps:  true,
+			},
+		},
+		{
+			name:    "WithWriterThenNilWriter",
+			options: []Option{WithWriter(os.Stderr), WithWriter(nil)},
+			expected: config{
+				Writer:      os.Stderr,
+				PrettyPrint: false,
+				Timestamps:  true,
+			},
+		},
+		{
+			name:    "WithNilWriterThenWriter",
+			options: []Option{WithWriter(nil), WithWriter(os.Stderr)},
 			expected: config{
 				Writer:      os.Stderr,
 				PrettyPrint: false,

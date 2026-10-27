@@ -36,7 +36,21 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 		attribute.Float64("float64", 42),
 		attribute.Float64Slice("float64Slice", []float64{42, -1}),
 		attribute.String("string", "value"),
+		attribute.ByteSlice("byteSlice", []byte("value")),
 		attribute.StringSlice("stringSlice", []string{"value", "value-1"}),
+		attribute.Slice(
+			"slice",
+			attribute.StringValue("value"),
+			attribute.StringSliceValue([]string{"value", "value-1"}),
+			attribute.ByteSliceValue([]byte{1, 2, 3}),
+		),
+		attribute.Map(
+			"map",
+			attribute.String("string", "value"),
+			attribute.StringSlice("stringSlice", []string{"value", "value-1"}),
+			attribute.ByteSlice("byteSlice", []byte("value")),
+			attribute.Slice("slice", attribute.StringValue("value")),
+		),
 	}
 
 	links := make([]trace.Link, count)
@@ -78,6 +92,11 @@ func benchmarkSpanLimits(b *testing.B, limits sdktrace.SpanLimits) {
 }
 
 func BenchmarkSpanLimits(b *testing.B) {
+	b.Run("None", func(b *testing.B) {
+		limits := sdktrace.NewSpanLimits()
+		benchmarkSpanLimits(b, limits)
+	})
+
 	b.Run("AttributeValueLengthLimit", func(b *testing.B) {
 		limits := sdktrace.NewSpanLimits()
 		limits.AttributeValueLengthLimit = 2
@@ -412,7 +431,8 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 		sdktrace.WithBatcher(
 			tracetest.NewNoopExporter(),
 			sdktrace.WithMaxExportBatchSize(10),
-		))
+		),
+	)
 	b.Cleanup(func() {
 		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 		_ = tp.Shutdown(context.Background())

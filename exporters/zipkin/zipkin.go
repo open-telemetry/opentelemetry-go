@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package zipkin // import "go.opentelemetry.io/otel/exporters/zipkin"
+package zipkin
 
 import (
 	"bytes"
@@ -60,7 +60,11 @@ func (fn optionFunc) apply(cfg config) config {
 
 // WithLogger configures the exporter to use the passed logger.
 // WithLogger and WithLogr will overwrite each other.
+// If logger is nil, this option has no effect.
 func WithLogger(logger *log.Logger) Option {
+	if logger == nil {
+		return optionFunc(func(cfg config) config { return cfg })
+	}
 	return WithLogr(stdr.New(logger))
 }
 
@@ -153,7 +157,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpa
 		}
 	}
 
-	resp, err := e.client.Do(req) // nolint:bodyclose  // False-positive.
+	resp, err := e.client.Do(req) // nolint:bodyclose,gosec  // False-positive.
 	if err != nil {
 		return e.errf("request to %s failed: %v", e.url, err)
 	}
@@ -201,12 +205,10 @@ func (e *Exporter) errf(format string, args ...any) error {
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Exporter.
-func (e *Exporter) MarshalLog() any {
+func (*Exporter) MarshalLog() any {
 	return struct {
 		Type string
-		URL  string
 	}{
 		Type: "zipkin",
-		URL:  e.url,
 	}
 }

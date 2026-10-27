@@ -26,11 +26,9 @@ var (
 // with.
 type ErrorTypeAttr string
 
-var (
-	// ErrorTypeOther is a fallback error value to be used when the instrumentation
-	// doesn't define a custom value.
-	ErrorTypeOther ErrorTypeAttr = "_OTHER"
-)
+// ErrorTypeOther is a fallback error value to be used when the instrumentation
+// doesn't define a custom value.
+var ErrorTypeOther ErrorTypeAttr = "_OTHER"
 
 // ConnectionStateAttr is an attribute conforming to the http.connection.state
 // semantic conventions. It represents the state of the HTTP connection in the
@@ -119,7 +117,7 @@ func NewClientActiveRequests(
 		opt...,
 	)
 	if err != nil {
-	    return ClientActiveRequests{noop.Int64UpDownCounter{}}, err
+		return ClientActiveRequests{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientActiveRequests{i}, nil
 }
@@ -259,7 +257,7 @@ func NewClientConnectionDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ClientConnectionDuration{noop.Float64Histogram{}}, err
+		return ClientConnectionDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientConnectionDuration{i}, nil
 }
@@ -398,7 +396,7 @@ func NewClientOpenConnections(
 		opt...,
 	)
 	if err != nil {
-	    return ClientOpenConnections{noop.Int64UpDownCounter{}}, err
+		return ClientOpenConnections{noop.Int64UpDownCounter{}}, err
 	}
 	return ClientOpenConnections{i}, nil
 }
@@ -541,7 +539,7 @@ func NewClientRequestBodySize(
 		opt...,
 	)
 	if err != nil {
-	    return ClientRequestBodySize{noop.Int64Histogram{}}, err
+		return ClientRequestBodySize{noop.Int64Histogram{}}, err
 	}
 	return ClientRequestBodySize{i}, nil
 }
@@ -724,7 +722,7 @@ func NewClientRequestDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ClientRequestDuration{noop.Float64Histogram{}}, err
+		return ClientRequestDuration{noop.Float64Histogram{}}, err
 	}
 	return ClientRequestDuration{i}, nil
 }
@@ -893,7 +891,7 @@ func NewClientResponseBodySize(
 		opt...,
 	)
 	if err != nil {
-	    return ClientResponseBodySize{noop.Int64Histogram{}}, err
+		return ClientResponseBodySize{noop.Int64Histogram{}}, err
 	}
 	return ClientResponseBodySize{i}, nil
 }
@@ -1076,7 +1074,7 @@ func NewServerActiveRequests(
 		opt...,
 	)
 	if err != nil {
-	    return ServerActiveRequests{noop.Int64UpDownCounter{}}, err
+		return ServerActiveRequests{noop.Int64UpDownCounter{}}, err
 	}
 	return ServerActiveRequests{i}, nil
 }
@@ -1206,7 +1204,7 @@ func NewServerRequestBodySize(
 		opt...,
 	)
 	if err != nil {
-	    return ServerRequestBodySize{noop.Int64Histogram{}}, err
+		return ServerRequestBodySize{noop.Int64Histogram{}}, err
 	}
 	return ServerRequestBodySize{i}, nil
 }
@@ -1239,13 +1237,12 @@ func (ServerRequestBodySize) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-//
 // The size of the request payload body in bytes. This is the number of bytes
 // transferred excluding headers and is often, but not always, present as the
 // [Content-Length] header. For requests using transport encoding, this should be
 // the compressed size.
 //
+// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
 func (m ServerRequestBodySize) Record(
 	ctx context.Context,
@@ -1397,7 +1394,7 @@ func NewServerRequestDuration(
 		opt...,
 	)
 	if err != nil {
-	    return ServerRequestDuration{noop.Float64Histogram{}}, err
+		return ServerRequestDuration{noop.Float64Histogram{}}, err
 	}
 	return ServerRequestDuration{i}, nil
 }
@@ -1574,7 +1571,7 @@ func NewServerResponseBodySize(
 		opt...,
 	)
 	if err != nil {
-	    return ServerResponseBodySize{noop.Int64Histogram{}}, err
+		return ServerResponseBodySize{noop.Int64Histogram{}}, err
 	}
 	return ServerResponseBodySize{i}, nil
 }
@@ -1607,13 +1604,12 @@ func (ServerResponseBodySize) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
-//
 // The size of the response payload body in bytes. This is the number of bytes
 // transferred excluding headers and is often, but not always, present as the
 // [Content-Length] header. For requests using transport encoding, this should be
 // the compressed size.
 //
+// [URI scheme]: https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 // [Content-Length]: https://www.rfc-editor.org/rfc/rfc9110.html#field.content-length
 func (m ServerResponseBodySize) Record(
 	ctx context.Context,

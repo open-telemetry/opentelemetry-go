@@ -18,7 +18,7 @@ func TestNewSpanConfig(t *testing.T) {
 	k2v2 := attribute.String("key2", "value2")
 
 	timestamp0 := time.Unix(0, 0)
-	timestamp1 := time.Unix(0, 0)
+	timestamp1 := time.Unix(1, 0)
 
 	link1 := Link{
 		SpanContext: SpanContext{traceID: TraceID([16]byte{1, 1}), spanID: SpanID{3}},
@@ -543,4 +543,22 @@ func TestWithInstrumentationAttributesMerge(t *testing.T) {
 		assert.Equal(t, bobAdmin, c.InstrumentationAttributes(),
 			"Attributes and attribute sets should be merged together.")
 	})
+}
+
+type testExperimentalOption struct {
+	TracerOption
+	SpanStartOption
+	SpanEndOption
+	EventOption
+}
+
+func (testExperimentalOption) Experimental() {}
+
+func TestExperimentalOptionSafe(t *testing.T) {
+	var opt testExperimentalOption
+
+	assert.NotPanics(t, func() { _ = NewTracerConfig(opt) })
+	assert.NotPanics(t, func() { _ = NewSpanStartConfig(opt) })
+	assert.NotPanics(t, func() { _ = NewSpanEndConfig(opt) })
+	assert.NotPanics(t, func() { _ = NewEventConfig(opt) })
 }

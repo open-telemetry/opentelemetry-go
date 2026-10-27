@@ -224,7 +224,10 @@ func (m ChangeCount) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("vcs.change.state", string(changeState)),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -369,7 +372,11 @@ func (m ChangeDuration) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.change.state", string(changeState)),
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -512,7 +519,10 @@ func (m ChangeTimeToApproval) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -683,7 +693,10 @@ func (m ChangeTimeToMerge) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -848,7 +861,9 @@ func (m ContributorCount) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -987,7 +1002,10 @@ func (m RefCount) Add(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+			attribute.String("vcs.ref.type", string(refType)),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -1129,18 +1147,19 @@ func (RefLinesDelta) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [canonical URL]: https://support.google.com/webmasters/answer/10347851
-//
 // This metric should be reported for each `vcs.line_change.type` value. For
 // example if a ref added 3 lines and removed 2 lines,
 // instrumentation SHOULD report two measurements: 3 and 2 (both positive
 // numbers).
 // If number of lines added/removed should be calculated from the start of time,
 // then `vcs.ref.base.name` SHOULD be set to an empty string.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefLinesDelta) Record(
 	ctx context.Context,
 	val int64,
@@ -1153,7 +1172,14 @@ func (m RefLinesDelta) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.line_change.type", string(lineChangeType)),
+			attribute.String("vcs.ref.base.name", refBaseName),
+			attribute.String("vcs.ref.base.type", string(refBaseType)),
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.ref.head.type", string(refHeadType)),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 
@@ -1313,16 +1339,17 @@ func (RefRevisionsDelta) Description() string {
 //
 // All additional attrs passed are included in the recorded value.
 //
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [canonical URL]: https://support.google.com/webmasters/answer/10347851
-//
 // This metric should be reported for each `vcs.revision_delta.direction` value.
 // For example if branch `a` is 3 commits behind and 2 commits ahead of `trunk`,
 // instrumentation SHOULD report two measurements: 3 and 2 (both positive
 // numbers) and `vcs.ref.base.name` is set to `trunk`.
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [canonical URL]: https://support.google.com/webmasters/answer/10347851
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefRevisionsDelta) Record(
 	ctx context.Context,
 	val int64,
@@ -1335,7 +1362,14 @@ func (m RefRevisionsDelta) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.ref.base.name", refBaseName),
+			attribute.String("vcs.ref.base.type", string(refBaseType)),
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.ref.head.type", string(refHeadType)),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+			attribute.String("vcs.revision_delta.direction", string(revisionDeltaDirection)),
+		))
 		return
 	}
 
@@ -1487,8 +1521,9 @@ func (RefTime) Description() string {
 // All additional attrs passed are included in the recorded value.
 //
 // [reference]: https://git-scm.com/docs/gitglossary#def_ref
-// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 // [canonical URL]: https://support.google.com/webmasters/answer/10347851
+//
+// [reference]: https://git-scm.com/docs/gitglossary#def_ref
 func (m RefTime) Record(
 	ctx context.Context,
 	val float64,
@@ -1498,7 +1533,11 @@ func (m RefTime) Record(
 	attrs ...attribute.KeyValue,
 ) {
 	if len(attrs) == 0 {
-		m.Float64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
+			attribute.String("vcs.ref.head.name", refHeadName),
+			attribute.String("vcs.ref.head.type", string(refHeadType)),
+			attribute.String("vcs.repository.url.full", repositoryUrlFull),
+		))
 		return
 	}
 

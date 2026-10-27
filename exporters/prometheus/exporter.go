@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package prometheus // import "go.opentelemetry.io/otel/exporters/prometheus"
+package prometheus
 
 import (
 	"context"
@@ -17,7 +17,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/otlptranslator"
-	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -99,14 +98,18 @@ type collector struct {
 	namespace                string
 	resourceAttributesFilter attribute.Filter
 
-	mu                sync.Mutex // mu protects all members below from the concurrent access.
+	mu                sync.Mutex
 	disableTargetInfo bool
 	targetInfo        prometheus.Metric
 	metricFamilies    map[string]*dto.MetricFamily
-	resourceKeyVals   keyVals
-	metricNamer       otlptranslator.MetricNamer
-	labelNamer        otlptranslator.LabelNamer
-	unitNamer         otlptranslator.UnitNamer
+
+	resourceKeyValsOnce sync.Once
+	resourceKeyVals     keyVals
+	resourceKeyValsErr  error
+
+	metricNamer otlptranslator.MetricNamer
+	labelNamer  otlptranslator.LabelNamer
+	unitNamer   otlptranslator.UnitNamer
 
 	inst *observ.Instrumentation
 
@@ -186,7 +189,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	metrics := metricsPool.Get().(*metricdata.ResourceMetrics)
-	defer metricsPool.Put(metrics)
+	defer func() {
+		*metrics = metricdata.ResourceMetrics{} // erase fields to allow GC to collect them.
+		metricsPool.Put(metrics)
+	}()
 
 	endCollection := func(error) {}
 	if c.inst != nil {
@@ -234,11 +240,13 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		ch <- c.targetInfo
 	}
 
-	if c.resourceAttributesFilter != nil && len(c.resourceKeyVals.keys) == 0 {
-		e := c.createResourceAttributes(metrics.Resource)
-		if e != nil {
-			otel.Handle(e)
-			err = errors.Join(err, fmt.Errorf("failed to createResourceAttributes: %w", e))
+	if c.resourceAttributesFilter != nil {
+		c.resourceKeyValsOnce.Do(func() {
+			c.resourceKeyVals, c.resourceKeyValsErr = c.createResourceAttributes(metrics.Resource)
+		})
+		if c.resourceKeyValsErr != nil {
+			otel.Handle(c.resourceKeyValsErr)
+			err = errors.Join(err, fmt.Errorf("failed to createResourceAttributes: %w", c.resourceKeyValsErr))
 			return
 		}
 	}
@@ -250,7 +258,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			})
 			continue
 		}
-		n := len(c.resourceKeyVals.keys) + 2 // resource attrs + scope name + scope version
+		// resource attributes + (if enabled) scope fields
+		n := len(c.resourceKeyVals.keys)
+		if !c.disableScopeInfo {
+			n += 3 + scopeMetrics.Scope.Attributes.Len()
+		}
 		kv := keyVals{
 			keys: make([]string, 0, n),
 			vals: make([]string, 0, n),
@@ -260,14 +272,11 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel, scopeSchemaLabel)
 			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version, scopeMetrics.Scope.SchemaURL)
 
-			attrKeys, attrVals, e := getAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
+			attrKeys, attrVals, e := getScopeAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
 			if e != nil {
 				reportError(ch, nil, e)
-				err = errors.Join(err, fmt.Errorf("failed to getAttrs for ScopeMetrics %d: %w", j, e))
+				err = errors.Join(err, fmt.Errorf("failed to translate scope attributes for ScopeMetrics %d: %w", j, e))
 				continue
-			}
-			for i := range attrKeys {
-				attrKeys[i] = scopeLabelPrefix + attrKeys[i]
 			}
 			kv.keys = append(kv.keys, attrKeys...)
 			kv.vals = append(kv.vals, attrVals...)
@@ -301,22 +310,21 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 			switch v := m.Data.(type) {
 			case metricdata.Histogram[int64]:
-				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addHistogramMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.Histogram[float64]:
-				addHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addHistogramMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.ExponentialHistogram[int64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addExponentialHistogramMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.ExponentialHistogram[float64]:
-				addExponentialHistogramMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addExponentialHistogramMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.Sum[int64]:
-				addSumMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addSumMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.Sum[float64]:
-				addSumMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
-
+				addSumMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.Gauge[int64]:
-				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addGaugeMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			case metricdata.Gauge[float64]:
-				addGaugeMetric(ch, v, m, name, kv, c.labelNamer, c.inst, ctx)
+				addGaugeMetric(ctx, ch, v, m, name, kv, c.labelNamer, c.inst)
 			}
 		}
 	}
@@ -376,6 +384,7 @@ func downscaleExponentialBucket(bucket metricdata.ExponentialBucket, scaleDelta 
 }
 
 func addExponentialHistogramMetric[N int64 | float64](
+	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	histogram metricdata.ExponentialHistogram[N],
 	m metricdata.Metrics,
@@ -383,7 +392,6 @@ func addExponentialHistogramMetric[N int64 | float64](
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
 	inst *observ.Instrumentation,
-	ctx context.Context,
 ) {
 	var err error
 	var success int64
@@ -408,12 +416,13 @@ func addExponentialHistogramMetric[N int64 | float64](
 		scale := dp.Scale
 		if scale < -4 {
 			// Reject scales below -4 as they cannot be represented in Prometheus
+			scaleErr := fmt.Errorf("%w: %d (min -4)", errEHScaleBelowMin, scale)
 			reportError(
 				ch,
 				desc,
-				fmt.Errorf("%w: %d (min -4)", errEHScaleBelowMin, scale),
+				scaleErr,
 			)
-			err = errors.Join(err, e)
+			err = errors.Join(err, scaleErr)
 			continue
 		}
 
@@ -460,7 +469,8 @@ func addExponentialHistogramMetric[N int64 | float64](
 			scale,
 			dp.ZeroThreshold,
 			dp.StartTime,
-			values...)
+			values...,
+		)
 		if e != nil {
 			reportError(ch, desc, e)
 			err = errors.Join(
@@ -477,6 +487,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 }
 
 func addHistogramMetric[N int64 | float64](
+	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	histogram metricdata.Histogram[N],
 	m metricdata.Metrics,
@@ -484,7 +495,6 @@ func addHistogramMetric[N int64 | float64](
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
 	inst *observ.Instrumentation,
-	ctx context.Context,
 ) {
 	var err error
 	var success int64
@@ -525,6 +535,7 @@ func addHistogramMetric[N int64 | float64](
 }
 
 func addSumMetric[N int64 | float64](
+	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	sum metricdata.Sum[N],
 	m metricdata.Metrics,
@@ -532,7 +543,6 @@ func addSumMetric[N int64 | float64](
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
 	inst *observ.Instrumentation,
-	ctx context.Context,
 ) {
 	var err error
 	var success int64
@@ -575,6 +585,7 @@ func addSumMetric[N int64 | float64](
 }
 
 func addGaugeMetric[N int64 | float64](
+	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	gauge metricdata.Gauge[N],
 	m metricdata.Metrics,
@@ -582,7 +593,6 @@ func addGaugeMetric[N int64 | float64](
 	kv keyVals,
 	labelNamer otlptranslator.LabelNamer,
 	inst *observ.Instrumentation,
-	ctx context.Context,
 ) {
 	var err error
 	var success int64
@@ -626,7 +636,7 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 		for itr.Next() {
 			kv := itr.Attribute()
 			keys = append(keys, string(kv.Key))
-			values = append(values, kv.Value.Emit())
+			values = append(values, kv.Value.String())
 		}
 	} else {
 		// It sanitizes invalid characters and handles duplicate keys
@@ -636,14 +646,13 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 			kv := itr.Attribute()
 			key, err := labelNamer.Build(string(kv.Key))
 			if err != nil {
-				// TODO(#7066) Handle this error better.
 				return nil, nil, err
 			}
 			if _, ok := keysMap[key]; !ok {
-				keysMap[key] = []string{kv.Value.Emit()}
+				keysMap[key] = []string{kv.Value.String()}
 			} else {
 				// if the sanitized key is a duplicate, append to the list of keys
-				keysMap[key] = append(keysMap[key], kv.Value.Emit())
+				keysMap[key] = append(keysMap[key], kv.Value.String())
 			}
 		}
 		for key, vals := range keysMap {
@@ -653,6 +662,55 @@ func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]stri
 		}
 	}
 	return keys, values, nil
+}
+
+func getScopeAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]string, []string, error) {
+	keys := make([]string, 0, attrs.Len())
+	values := make([]string, 0, attrs.Len())
+	itr := attrs.Iter()
+
+	if labelNamer.UTF8Allowed {
+		for itr.Next() {
+			kv := itr.Attribute()
+			key := string(kv.Key)
+			if isReservedScopeLabel(key) {
+				continue
+			}
+			keys = append(keys, scopeLabelPrefix+key)
+			values = append(values, kv.Value.String())
+		}
+		return keys, values, nil
+	}
+
+	keysMap := make(map[string][]string)
+	for itr.Next() {
+		kv := itr.Attribute()
+		key, err := labelNamer.Build(string(kv.Key))
+		if err != nil {
+			return nil, nil, err
+		}
+		if isReservedScopeLabel(key) {
+			continue
+		}
+		keysMap[key] = append(keysMap[key], kv.Value.String())
+	}
+
+	for key, vals := range keysMap {
+		keys = append(keys, scopeLabelPrefix+key)
+		slices.Sort(vals)
+		values = append(values, strings.Join(vals, ";"))
+	}
+
+	return keys, values, nil
+}
+
+func isReservedScopeLabel(key string) bool {
+	switch key {
+	case "name", "version", "schema_url":
+		return true
+	default:
+		return false
+	}
 }
 
 func (c *collector) createInfoMetric(name, description string, res *resource.Resource) (prometheus.Metric, error) {
@@ -728,18 +786,14 @@ func (c *collector) namingMetricType(m metricdata.Metrics) otlptranslator.Metric
 	return otlptranslator.MetricTypeUnknown
 }
 
-func (c *collector) createResourceAttributes(res *resource.Resource) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+func (c *collector) createResourceAttributes(res *resource.Resource) (keyVals, error) {
 	resourceAttrs, _ := res.Set().Filter(c.resourceAttributesFilter)
 	resourceKeys, resourceValues, err := getAttrs(resourceAttrs, c.labelNamer)
 	if err != nil {
-		return err
+		return keyVals{}, err
 	}
 
-	c.resourceKeyVals = keyVals{keys: resourceKeys, vals: resourceValues}
-	return nil
+	return keyVals{keys: resourceKeys, vals: resourceValues}, nil
 }
 
 func (c *collector) validateMetrics(name, description string, metricType *dto.MetricType) (drop bool, help string) {
@@ -750,8 +804,8 @@ func (c *collector) validateMetrics(name, description string, metricType *dto.Me
 
 	if !exist {
 		c.metricFamilies[name] = &dto.MetricFamily{
-			Name: proto.String(name),
-			Help: proto.String(description),
+			Name: new(name),
+			Help: new(description),
 			Type: metricType,
 		}
 		return false, ""
@@ -805,9 +859,23 @@ func addExemplars[N int64 | float64](
 			otel.Handle(err)
 			return m
 		}
+		traceID := hex.EncodeToString(exemplar.TraceID)
+		spanID := hex.EncodeToString(exemplar.SpanID)
+		if exemplarLabelRunes(labels, traceID, spanID) > prometheus.ExemplarMaxRunes {
+			// The filtered attributes alone, or combined with the trace and
+			// span IDs, exceed the limit prometheus client-go enforces on
+			// exemplar labels. Drop the filtered attributes so the trace and
+			// span IDs, which are the most valuable part of an exemplar, are
+			// not lost along with them.
+			global.Warn(
+				"dropping exemplar filtered attributes: combined exemplar labels exceed the limit",
+				"limit", prometheus.ExemplarMaxRunes,
+			)
+			labels = make(prometheus.Labels, 2)
+		}
 		// Overwrite any existing trace ID or span ID attributes
-		labels[otlptranslator.ExemplarTraceIDKey] = traceId
-		labels[otlptranslator.ExemplarSpanIDKey] = spanId
+		labels[otlptranslator.ExemplarTraceIDKey] = traceID
+		labels[otlptranslator.ExemplarSpanIDKey] = spanID
 		promExemplars[i] = prometheus.Exemplar{
 			Value:     float64(exemplar.Value),
 			Timestamp: exemplar.Time,
@@ -833,6 +901,26 @@ func attributesToLabels(
 	if remainingSpace <= 0 {
 		return labels, nil
 	}
+}
+// exemplarLabelRunes returns the total number of runes in labels plus the
+// trace and span ID labels that would be added to it, mirroring the count
+// prometheus client-go uses to enforce [prometheus.ExemplarMaxRunes].
+func exemplarLabelRunes(labels prometheus.Labels, traceID, spanID string) int {
+	runes := utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey) + utf8.RuneCountInString(traceID)
+	runes += utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey) + utf8.RuneCountInString(spanID)
+	for k, v := range labels {
+		if k == otlptranslator.ExemplarTraceIDKey || k == otlptranslator.ExemplarSpanIDKey {
+			// Already counted above; addExemplars overwrites these keys so
+			// counting them again would double-count a collision.
+			continue
+		}
+		runes += utf8.RuneCountInString(k) + utf8.RuneCountInString(v)
+	}
+	return runes
+}
+
+func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.LabelNamer) (prometheus.Labels, error) {
+	labels := make(map[string]string)
 	for _, attr := range attrs {
 		name, err := labelNamer.Build(string(attr.Key))
 		if err != nil {
@@ -844,6 +932,7 @@ func attributesToLabels(
 			labels[name] = val
 			remainingSpace -= attrLength
 		}
+		labels[name] = attr.Value.String()
 	}
 	return labels, nil
 }

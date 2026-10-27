@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package metricdatatest // import "go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+package metricdatatest
 
 import (
 	"encoding/json"
@@ -722,6 +722,280 @@ func TestAssertEqual(t *testing.T) {
 	t.Run("Summary", testDatatype(summaryA, summaryB, equalSummary))
 	t.Run("SummaryDataPoint", testDatatype(summaryDataPointA, summaryDataPointB, equalSummaryDataPoint))
 	t.Run("QuantileValues", testDatatype(quantileValueA, quantileValueB, equalQuantileValue))
+}
+
+func TestAttributeSetStringFormatting(t *testing.T) {
+	expectedAttrs := attribute.NewSet(
+		attribute.String("z", `quoted "value"`),
+		attribute.Int("a", 1),
+	)
+	actualAttrs := attribute.NewSet()
+
+	expected := metricdata.DataPoint[int64]{Attributes: expectedAttrs}
+	actual := metricdata.DataPoint[int64]{Attributes: actualAttrs}
+
+	const (
+		expectedAttrsStr = `{"a":1,"z":"quoted \"value\""}`
+		actualAttrsStr   = `{}`
+	)
+	assert.Equal(t, []string{
+		"Attributes not equal:\nexpected: " + expectedAttrsStr + "\nactual: " + actualAttrsStr,
+	}, equalDataPoints(expected, actual, config{}))
+
+	tests := []struct {
+		name    string
+		context string
+		compare func() []string
+	}{
+		{
+			name:    "Gauge",
+			context: "DataPoint",
+			compare: func() []string {
+				return equalGauges(
+					metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{expected}},
+					metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{actual}},
+					config{},
+				)
+			},
+		},
+		{
+			name:    "Sum",
+			context: "DataPoint",
+			compare: func() []string {
+				return equalSums(
+					metricdata.Sum[int64]{DataPoints: []metricdata.DataPoint[int64]{expected}},
+					metricdata.Sum[int64]{DataPoints: []metricdata.DataPoint[int64]{actual}},
+					config{},
+				)
+			},
+		},
+		{
+			name:    "Histogram",
+			context: "HistogramDataPoint",
+			compare: func() []string {
+				return equalHistograms(
+					metricdata.Histogram[int64]{
+						DataPoints: []metricdata.HistogramDataPoint[int64]{{Attributes: expectedAttrs}},
+					},
+					metricdata.Histogram[int64]{
+						DataPoints: []metricdata.HistogramDataPoint[int64]{{Attributes: actualAttrs}},
+					},
+					config{},
+				)
+			},
+		},
+		{
+			name:    "ExponentialHistogram",
+			context: "ExponentialHistogramDataPoint",
+			compare: func() []string {
+				return equalExponentialHistograms(
+					metricdata.ExponentialHistogram[int64]{
+						DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{{Attributes: expectedAttrs}},
+					},
+					metricdata.ExponentialHistogram[int64]{
+						DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{{Attributes: actualAttrs}},
+					},
+					config{},
+				)
+			},
+		},
+		{
+			name:    "Summary",
+			context: "SummaryDataPoint",
+			compare: func() []string {
+				return equalSummary(
+					metricdata.Summary{DataPoints: []metricdata.SummaryDataPoint{{Attributes: expectedAttrs}}},
+					metricdata.Summary{DataPoints: []metricdata.SummaryDataPoint{{Attributes: actualAttrs}}},
+					config{},
+				)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reasons := tt.compare()
+			if assert.Len(t, reasons, 1) {
+				assert.Contains(t, reasons[0], "\n"+tt.context+" "+expectedAttrsStr+":\n")
+				assert.Contains(t, reasons[0], "\texpected: "+expectedAttrsStr+"\n")
+				assert.Contains(t, reasons[0], "\tactual: "+actualAttrsStr+"\n")
+			}
+		})
+	}
+}
+
+func TestEqualKeyValue(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		a    attribute.KeyValue
+		b    attribute.KeyValue
+		want bool
+	}{
+		{
+			name: "different key",
+			a:    attribute.Bool("a", true),
+			b:    attribute.Bool("b", true),
+			want: false,
+		},
+		{
+			name: "different type",
+			a:    attribute.Bool("key", true),
+			b:    attribute.String("key", "true"),
+			want: false,
+		},
+		{
+			name: "bool equal",
+			a:    attribute.Bool("key", true),
+			b:    attribute.Bool("key", true),
+			want: true,
+		},
+		{
+			name: "bool different value",
+			a:    attribute.Bool("key", true),
+			b:    attribute.Bool("key", false),
+			want: false,
+		},
+		{
+			name: "int64 equal",
+			a:    attribute.Int64("key", 1),
+			b:    attribute.Int64("key", 1),
+			want: true,
+		},
+		{
+			name: "int64 different value",
+			a:    attribute.Int64("key", 1),
+			b:    attribute.Int64("key", 2),
+			want: false,
+		},
+		{
+			name: "float64 equal",
+			a:    attribute.Float64("key", 1.5),
+			b:    attribute.Float64("key", 1.5),
+			want: true,
+		},
+		{
+			name: "float64 different value",
+			a:    attribute.Float64("key", 1.5),
+			b:    attribute.Float64("key", 2.5),
+			want: false,
+		},
+		{
+			name: "string equal",
+			a:    attribute.String("key", "value"),
+			b:    attribute.String("key", "value"),
+			want: true,
+		},
+		{
+			name: "string different value",
+			a:    attribute.String("key", "value"),
+			b:    attribute.String("key", "other"),
+			want: false,
+		},
+		{
+			name: "bool slice equal",
+			a:    attribute.BoolSlice("key", []bool{true, false}),
+			b:    attribute.BoolSlice("key", []bool{true, false}),
+			want: true,
+		},
+		{
+			name: "bool slice different value",
+			a:    attribute.BoolSlice("key", []bool{true, false}),
+			b:    attribute.BoolSlice("key", []bool{false, true}),
+			want: false,
+		},
+		{
+			name: "int64 slice equal",
+			a:    attribute.Int64Slice("key", []int64{1, 2}),
+			b:    attribute.Int64Slice("key", []int64{1, 2}),
+			want: true,
+		},
+		{
+			name: "int64 slice different value",
+			a:    attribute.Int64Slice("key", []int64{1, 2}),
+			b:    attribute.Int64Slice("key", []int64{1, 3}),
+			want: false,
+		},
+		{
+			name: "float64 slice equal",
+			a:    attribute.Float64Slice("key", []float64{1.5, 2.5}),
+			b:    attribute.Float64Slice("key", []float64{1.5, 2.5}),
+			want: true,
+		},
+		{
+			name: "float64 slice different value",
+			a:    attribute.Float64Slice("key", []float64{1.5, 2.5}),
+			b:    attribute.Float64Slice("key", []float64{1.5, 3.5}),
+			want: false,
+		},
+		{
+			name: "string slice equal",
+			a:    attribute.StringSlice("key", []string{"a", "b"}),
+			b:    attribute.StringSlice("key", []string{"a", "b"}),
+			want: true,
+		},
+		{
+			name: "string slice different value",
+			a:    attribute.StringSlice("key", []string{"a", "b"}),
+			b:    attribute.StringSlice("key", []string{"a", "c"}),
+			want: false,
+		},
+		{
+			name: "byte slice equal",
+			a:    attribute.ByteSlice("bytes", []byte{1, 2, 3}),
+			b:    attribute.ByteSlice("bytes", []byte{1, 2, 3}),
+			want: true,
+		},
+		{
+			name: "byte slice different value",
+			a:    attribute.ByteSlice("bytes", []byte{1, 2, 3}),
+			b:    attribute.ByteSlice("bytes", []byte{1, 2, 4}),
+			want: false,
+		},
+		{
+			name: "map equal",
+			a: attribute.Map(
+				"map",
+				attribute.String("b", "two"),
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+			),
+			b: attribute.Map(
+				"map",
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+				attribute.String("b", "two"),
+			),
+			want: true,
+		},
+		{
+			name: "map different value",
+			a: attribute.Map(
+				"map",
+				attribute.String("b", "two"),
+				attribute.Key("a").Map(attribute.Int("nested", 1)),
+			),
+			b: attribute.Map(
+				"map",
+				attribute.Key("a").Map(attribute.Int("nested", 2)),
+				attribute.String("b", "two"),
+			),
+			want: false,
+		},
+		{
+			name: "empty",
+			a:    attribute.KeyValue{},
+			b:    attribute.KeyValue{},
+			want: true,
+		},
+		{
+			name: "empty and non-empty",
+			a:    attribute.KeyValue{},
+			b:    attribute.Bool("key", true),
+			want: false,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, equalKeyValue(tt.a, tt.b))
+		})
+	}
 }
 
 func TestAssertEqualIgnoreTime(t *testing.T) {

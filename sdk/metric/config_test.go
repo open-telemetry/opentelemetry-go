@@ -20,13 +20,14 @@ import (
 )
 
 type reader struct {
-	producer          sdkProducer
-	externalProducers []Producer
-	temporalityFunc   TemporalitySelector
-	aggregationFunc   AggregationSelector
-	collectFunc       func(context.Context, *metricdata.ResourceMetrics) error
-	forceFlushFunc    func(context.Context) error
-	shutdownFunc      func(context.Context) error
+	producer                 sdkProducer
+	externalProducers        []Producer
+	temporalityFunc          TemporalitySelector
+	aggregationFunc          AggregationSelector
+	cardinalityLimitSelector CardinalityLimitSelector
+	collectFunc              func(context.Context, *metricdata.ResourceMetrics) error
+	forceFlushFunc           func(context.Context) error
+	shutdownFunc             func(context.Context) error
 }
 
 const envVarResourceAttributes = "OTEL_RESOURCE_ATTRIBUTES"
@@ -41,8 +42,16 @@ func (r *reader) aggregation(
 
 func (r *reader) register(p sdkProducer)      { r.producer = p }
 func (r *reader) RegisterProducer(p Producer) { r.externalProducers = append(r.externalProducers, p) }
+
 func (r *reader) temporality(kind InstrumentKind) metricdata.Temporality {
 	return r.temporalityFunc(kind)
+}
+
+func (r *reader) cardinalityLimit(kind InstrumentKind) (int, bool) {
+	if r.cardinalityLimitSelector != nil {
+		return r.cardinalityLimitSelector(kind)
+	}
+	return 0, true
 }
 
 func (r *reader) Collect(ctx context.Context, rm *metricdata.ResourceMetrics) error {
@@ -215,6 +224,38 @@ func TestWithView(t *testing.T) {
 	assert.Len(t, c.views, 2)
 }
 
+func TestWithNilViewUsesDefault(t *testing.T) {
+	reader := NewManualReader()
+	provider := NewMeterProvider(WithReader(reader), WithView(nil))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+	counter, err := provider.Meter("test").Int64Counter("counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	assert.Equal(t, "counter", rm.ScopeMetrics[0].Metrics[0].Name)
+	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 1)
+	assert.Equal(t, int64(1), sum.DataPoints[0].Value)
+}
+
+func TestWithNilViewPreservesViewOrder(t *testing.T) {
+	viewA := NewView(Instrument{Kind: InstrumentKindCounter}, Stream{Name: "a"})
+	viewB := NewView(Instrument{Kind: InstrumentKindCounter}, Stream{Name: "b"})
+	cfg := newConfig([]Option{WithView(viewA, nil), WithView(nil, viewB)})
+	require.Len(t, cfg.views, 2)
+	stream, match := cfg.views[0](Instrument{Kind: InstrumentKindCounter})
+	require.True(t, match)
+	assert.Equal(t, "a", stream.Name)
+	stream, match = cfg.views[1](Instrument{Kind: InstrumentKindCounter})
+	require.True(t, match)
+	assert.Equal(t, "b", stream.Name)
+}
+
 func TestWithExemplarFilterOff(t *testing.T) {
 	for _, tc := range []struct {
 		desc                   string
@@ -308,45 +349,32 @@ func TestWithExemplarFilterOff(t *testing.T) {
 func TestWithCardinalityLimit(t *testing.T) {
 	cases := []struct {
 		name          string
-		envValue      string
 		options       []Option
 		expectedLimit int
 	}{
 		{
-			name:          "only cardinality limit from option",
-			envValue:      "",
+			name:          "default limit",
+			expectedLimit: defaultCardinalityLimit,
+		},
+		{
+			name:          "cardinality limit from option",
 			options:       []Option{WithCardinalityLimit(1000)},
 			expectedLimit: 1000,
 		},
 		{
-			name:          "cardinality limit from option overrides env",
-			envValue:      "500",
-			options:       []Option{WithCardinalityLimit(1000)},
-			expectedLimit: 1000,
+			name:          "zero cardinality limit from option disables limit",
+			options:       []Option{WithCardinalityLimit(0)},
+			expectedLimit: 0,
 		},
 		{
-			name:          "cardinality limit from env",
-			envValue:      "1234",
-			options:       []Option{},
-			expectedLimit: 1234,
-		},
-		{
-			name:          "invalid env value uses default",
-			envValue:      "not-a-number",
-			options:       []Option{},
-			expectedLimit: defaultCardinalityLimit,
-		},
-		{
-			name:          "empty env and no option uses default",
-			envValue:      "",
-			options:       []Option{},
-			expectedLimit: defaultCardinalityLimit,
+			name:          "negative cardinality limit from option disables limit",
+			options:       []Option{WithCardinalityLimit(-5)},
+			expectedLimit: -5,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", tc.envValue)
 			c := newConfig(tc.options)
 			assert.Equal(t, tc.expectedLimit, c.cardinalityLimit)
 		})
@@ -360,4 +388,18 @@ func sample(parent context.Context) context.Context {
 		TraceFlags: trace.FlagsSampled,
 	})
 	return trace.ContextWithSpanContext(parent, sc)
+}
+
+type testExperimentalOption struct {
+	Option
+}
+
+func (testExperimentalOption) Experimental() {}
+
+func TestExperimentalOptionSafe(t *testing.T) {
+	var opt testExperimentalOption
+
+	var conf config
+	assert.NotPanics(t, func() { conf = newConfig([]Option{opt}) })
+	assert.Equal(t, []experimentalOption{opt}, conf.experimental)
 }

@@ -5,6 +5,7 @@ package attribute_test
 
 import (
 	"encoding/json"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -108,13 +109,66 @@ func TestEmit(t *testing.T) {
 			v:    attribute.StringSliceValue([]string{"foo", "bar"}),
 			want: `["foo","bar"]`,
 		},
+		{
+			name: `test Key.Emit() can emit a string representing self.BYTESLICE`,
+			v:    attribute.ByteSliceValue([]byte("foo")),
+			want: "Zm9v",
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.SLICE`,
+			v: attribute.SliceValue(
+				attribute.BoolValue(true),
+				attribute.StringValue("foo\"bar"),
+				attribute.Float64Value(math.Inf(1)),
+				attribute.ByteSliceValue([]byte("bin")),
+			),
+			want: `[true,"foo\"bar","Infinity","Ymlu"]`,
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.MAP`,
+			v: attribute.MapValue(
+				attribute.String("b", "foo\"bar"),
+				attribute.Float64("a", math.Inf(1)),
+				attribute.Key("bytes").ByteSlice([]byte("bin")),
+			),
+			want: `{"a":"Infinity","b":"foo\"bar","bytes":"Ymlu"}`,
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.EMPTY`,
+			v:    attribute.Value{},
+			want: "",
+		},
 	} {
 		t.Run(testcase.name, func(t *testing.T) {
 			// proto: func (v attribute.Value) Emit() string {
-			have := testcase.v.Emit()
+			have := testcase.v.Emit() //nolint:staticcheck // Verify the deprecated formatter's legacy output.
 			if have != testcase.want {
 				t.Errorf("Want: %s, but have: %s", testcase.want, have)
 			}
 		})
 	}
+}
+
+func TestString(t *testing.T) {
+	v := attribute.SliceValue(
+		attribute.StringValue("foo\nbar"),
+		attribute.Float64Value(math.NaN()),
+		attribute.SliceValue(
+			attribute.ByteSliceValue([]byte("bin")),
+			attribute.Value{},
+		),
+	)
+
+	require.Equal(t, `["foo\nbar","NaN",["Ymlu",null]]`, v.String())
+
+	m := attribute.MapValue(
+		attribute.String("foo\nbar", "value"),
+		attribute.Float64("nan", math.NaN()),
+		attribute.Key("nested").Map(
+			attribute.Key("bytes").ByteSlice([]byte("bin")),
+			attribute.Key("empty").Slice(attribute.Value{}),
+		),
+	)
+
+	require.JSONEq(t, `{"foo\nbar":"value","nan":"NaN","nested":{"bytes":"Ymlu","empty":[null]}}`, m.String())
 }

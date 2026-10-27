@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package stdoutmetric // import "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+package stdoutmetric
 
 import (
 	"encoding/json"
@@ -73,7 +73,11 @@ func WithEncoder(encoder Encoder) Option {
 
 // WithWriter sets the export stream destination.
 // Using this option overrides any previously set encoder.
+// If w is nil, this option has no effect.
 func WithWriter(w io.Writer) Option {
+	if w == nil {
+		return WithEncoder(nil)
+	}
 	return WithEncoder(json.NewEncoder(w))
 }
 

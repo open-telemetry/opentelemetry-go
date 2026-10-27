@@ -4,6 +4,7 @@
 package otlptracegrpc_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -39,7 +41,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
 )
 
 func TestMain(m *testing.M) {
@@ -47,6 +49,25 @@ func TestMain(m *testing.M) {
 }
 
 var roSpans = tracetest.SpanStubs{{Name: "Span 0"}}.Snapshots()
+
+func TestClientMarshalLogDoesNotIncludeEndpointConfig(t *testing.T) {
+	const sensitiveEndpoint = "user:pass@collector.internal:4317"
+
+	var buf bytes.Buffer
+	logger := funcr.New(func(_, args string) {
+		_, _ = buf.WriteString(args)
+	}, funcr.Options{})
+
+	client := otlptracegrpc.NewClient(
+		otlptracegrpc.WithEndpoint(sensitiveEndpoint),
+		otlptracegrpc.WithInsecure(),
+	)
+	logger.Info("client", "config", client)
+
+	logged := buf.String()
+	assert.Contains(t, logged, "otlptracegrpc")
+	assert.NotContains(t, logged, sensitiveEndpoint)
+}
 
 func contextWithTimeout(
 	parent context.Context,
@@ -93,7 +114,8 @@ func TestNewEndToEnd(t *testing.T) {
 					grpc.WithConnectParams(grpc.ConnectParams{
 						Backoff:           backoff.DefaultConfig,
 						MinConnectTimeout: time.Second,
-					})),
+					}),
+				),
 			},
 		},
 	}
@@ -109,7 +131,7 @@ func TestWithEndpointURL(t *testing.T) {
 	mc := runMockCollector(t)
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, "", []otlptracegrpc.Option{
+	exp := newGRPCExporter(ctx, t, "", []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpointURL("http://" + mc.endpoint),
 	}...)
 	t.Cleanup(func() {
@@ -124,8 +146,8 @@ func TestWithEndpointURL(t *testing.T) {
 }
 
 func newGRPCExporter(
-	tb testing.TB,
 	ctx context.Context,
+	tb testing.TB,
 	endpoint string,
 	additionalOpts ...otlptracegrpc.Option,
 ) *otlptrace.Exporter {
@@ -148,7 +170,7 @@ func newExporterEndToEndTest(t *testing.T, additionalOpts []otlptracegrpc.Option
 	mc := runMockCollector(t)
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, mc.endpoint, additionalOpts...)
+	exp := newGRPCExporter(ctx, t, mc.endpoint, additionalOpts...)
 	t.Cleanup(func() {
 		ctx, cancel := contextWithTimeout(ctx, t, 10*time.Second)
 		defer cancel()
@@ -178,7 +200,7 @@ func TestNewInvokeStartThenStopManyTimes(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	exp := newGRPCExporter(ctx, t, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	// Invoke Start numerous times, should return errAlreadyStarted
@@ -205,7 +227,7 @@ func TestNewCollectorOnBadConnection(t *testing.T) {
 		t.Skipf("Skipping this long running test")
 	}
 
-	ln, err := net.Listen("tcp", "localhost:0")
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 	if err != nil {
 		t.Fatalf("Failed to grab an available port: %v", err)
 	}
@@ -217,7 +239,7 @@ func TestNewCollectorOnBadConnection(t *testing.T) {
 
 	endpoint := fmt.Sprintf("localhost:%s", collectorPortStr)
 	ctx := t.Context()
-	exp := newGRPCExporter(t, ctx, endpoint)
+	exp := newGRPCExporter(ctx, t, endpoint)
 	require.NoError(t, exp.Shutdown(ctx))
 }
 
@@ -226,7 +248,7 @@ func TestNewWithEndpoint(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := t.Context()
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	exp := newGRPCExporter(ctx, t, mc.endpoint)
 	require.NoError(t, exp.Shutdown(ctx))
 }
 
@@ -237,7 +259,7 @@ func TestNewWithHeaders(t *testing.T) {
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	additionalKey := "additional-custom-header"
 	ctx = metadata.AppendToOutgoingContext(ctx, additionalKey, "additional-value")
-	exp := newGRPCExporter(t, ctx, mc.endpoint,
+	exp := newGRPCExporter(ctx, t, mc.endpoint,
 		otlptracegrpc.WithHeaders(map[string]string{"header1": "value1"}))
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 	require.NoError(t, exp.ExportSpans(ctx, roSpans))
@@ -260,8 +282,8 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	exp := newGRPCExporter(
-		t,
 		ctx,
+		t,
 		mc.endpoint,
 		otlptracegrpc.WithTimeout(1*time.Nanosecond),
 		otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}),
@@ -277,6 +299,29 @@ func TestExportSpansTimeoutHonored(t *testing.T) {
 	require.True(t, strings.HasPrefix(err.Error(), "traces export: "), "%+v", err)
 }
 
+func TestExportSpansRequestSizeLimit(t *testing.T) {
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	ctx := t.Context()
+	exp := newGRPCExporter(
+		ctx,
+		t,
+		mc.endpoint,
+		otlptracegrpc.WithMaxRequestSize(1),
+		otlptracegrpc.WithRetry(otlptracegrpc.RetryConfig{Enabled: false}),
+	)
+	t.Cleanup(func() {
+		ctx, cancel := contextWithTimeout(context.WithoutCancel(t.Context()), t, 10*time.Second)
+		defer cancel()
+		require.NoError(t, exp.Shutdown(ctx))
+	})
+
+	err := exp.ExportSpans(ctx, roSpans)
+	assert.ErrorContains(t, err, "request message too large")
+	assert.Empty(t, mc.getResourceSpans(), "oversized request must fail before sending")
+}
+
 func TestNewWithMultipleAttributeTypes(t *testing.T) {
 	mc := runMockCollector(t)
 
@@ -284,7 +329,7 @@ func TestNewWithMultipleAttributeTypes(t *testing.T) {
 	ctx, cancel := contextWithTimeout(context.Background(), t, 10*time.Second)
 	t.Cleanup(cancel)
 
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	exp := newGRPCExporter(ctx, t, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	tp := sdktrace.NewTracerProvider(
@@ -401,7 +446,7 @@ func TestEmptyData(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	exp := newGRPCExporter(ctx, t, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	assert.NoError(t, exp.ExportSpans(ctx, nil))
@@ -417,7 +462,7 @@ func TestPartialSuccess(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, mc.endpoint)
+	exp := newGRPCExporter(ctx, t, mc.endpoint)
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 
 	err := exp.ExportSpans(ctx, roSpans)
@@ -431,13 +476,72 @@ func TestCustomUserAgent(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
 	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
-	exp := newGRPCExporter(t, ctx, mc.endpoint,
+	exp := newGRPCExporter(ctx, t, mc.endpoint,
 		otlptracegrpc.WithDialOption(grpc.WithUserAgent(customUserAgent)))
 	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
 	require.NoError(t, exp.ExportSpans(ctx, roSpans))
 
 	headers := mc.getHeaders()
 	require.Contains(t, headers.Get("user-agent")[0], customUserAgent)
+}
+
+// A raw grpc.DialOption passed via WithDialOption must not be overridden by the
+// internally computed default credentials, which kick-in in absence of
+// otlptracegrpc.WithInsecure and otlptracegrpc.WithTLSCredentials.
+func TestWithDialOptionCredentialsTakePrecedence(t *testing.T) {
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	client := otlptracegrpc.NewClient(
+		otlptracegrpc.WithEndpoint(mc.endpoint),
+		otlptracegrpc.WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
+	)
+	exp, err := otlptrace.New(ctx, client)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+
+	require.NoError(t, exp.ExportSpans(ctx, roSpans))
+}
+
+// Guards against accidental replacement by an unrelated WithDialOption call:
+// it must not silently drop the exporter's default grpc.WithUserAgent dial option.
+func TestWithDialOptionPreservesDefaultUserAgent(t *testing.T) {
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	exp := newGRPCExporter(ctx, t, mc.endpoint,
+		otlptracegrpc.WithDialOption(grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff:           backoff.DefaultConfig,
+			MinConnectTimeout: time.Second,
+		})),
+	)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+	require.NoError(t, exp.ExportSpans(ctx, roSpans))
+
+	headers := mc.getHeaders()
+	wantUserAgent := "OTel OTLP Exporter Go/" + otlptrace.Version()
+	require.Contains(t, headers.Get("user-agent")[0], wantUserAgent)
+}
+
+// Confirms WithDialOption's contract: repeated calls replace, not accumulate.
+func TestWithDialOptionLastCallWins(t *testing.T) {
+	mc := runMockCollector(t)
+	t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+	const firstUserAgent, secondUserAgent = "first-user-agent", "second-user-agent"
+	ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	exp := newGRPCExporter(ctx, t, mc.endpoint,
+		otlptracegrpc.WithDialOption(grpc.WithUserAgent(firstUserAgent)),
+		otlptracegrpc.WithDialOption(grpc.WithUserAgent(secondUserAgent)),
+	)
+	t.Cleanup(func() { require.NoError(t, exp.Shutdown(ctx)) })
+	require.NoError(t, exp.ExportSpans(ctx, roSpans))
+
+	headers := mc.getHeaders()
+	require.Contains(t, headers.Get("user-agent")[0], secondUserAgent)
+	require.NotContains(t, headers.Get("user-agent")[0], firstUserAgent)
 }
 
 func TestClientInstrumentation(t *testing.T) {
@@ -467,8 +571,9 @@ func TestClientInstrumentation(t *testing.T) {
 	})
 	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	exp := newGRPCExporter(t, t.Context(), mc.endpoint)
-	err := exp.ExportSpans(t.Context(), roSpans)
+	exp := newGRPCExporter(t.Context(), t, mc.endpoint)
+	localSpans := tracetest.SpanStubs{{Name: "Span 0"}, {Name: "Span 1"}}.Snapshots()
+	err := exp.ExportSpans(t.Context(), localSpans)
 	assert.ErrorIs(t, err, internal.TracePartialSuccessError(n, msg))
 	require.NoError(t, exp.Shutdown(t.Context()))
 
@@ -489,7 +594,7 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(attrs...), Value: 0},
 					},
 					Temporality: metricdata.CumulativeTemporality,
 				},
@@ -500,11 +605,11 @@ func TestClientInstrumentation(t *testing.T) {
 				Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...)},
+						{Attributes: attribute.NewSet(attrs...), Value: 0},
 						{Attributes: attribute.NewSet(append(
 							attrs,
 							otelconv.SDKExporterSpanExported{}.AttrErrorType("*errors.joinError"),
-						)...)},
+						)...), Value: 2},
 					},
 					Temporality: 0x1,
 					IsMonotonic: true,
@@ -530,12 +635,18 @@ func TestClientInstrumentation(t *testing.T) {
 		},
 	}
 	require.Len(t, got.ScopeMetrics, 1)
-	opt := []metricdatatest.Option{
+	gotMetrics := got.ScopeMetrics[0].Metrics
+	require.Len(t, gotMetrics, 3)
+
+	metricdatatest.AssertEqual(t, want.Metrics[0], gotMetrics[0], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(t, want.Metrics[1], gotMetrics[1], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(
+		t,
+		want.Metrics[2],
+		gotMetrics[2],
 		metricdatatest.IgnoreTimestamp(),
-		metricdatatest.IgnoreExemplars(),
 		metricdatatest.IgnoreValue(),
-	}
-	metricdatatest.AssertEqual(t, want, got.ScopeMetrics[0], opt...)
+	)
 }
 
 func canonical(t *testing.T, endpoint string) string {
@@ -565,7 +676,7 @@ func BenchmarkExporterExportSpans(b *testing.B) {
 		})
 		b.Cleanup(func() { require.NoError(b, mc.stop()) })
 
-		exp := newGRPCExporter(b, b.Context(), mc.endpoint)
+		exp := newGRPCExporter(b.Context(), b, mc.endpoint)
 		b.Cleanup(func() {
 			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 			assert.NoError(b, exp.Shutdown(context.Background()))

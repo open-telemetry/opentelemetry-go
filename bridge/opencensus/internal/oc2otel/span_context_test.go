@@ -16,7 +16,8 @@ import (
 )
 
 func TestSpanContextConversion(t *testing.T) {
-	tsOc, _ := tracestate.New(nil,
+	tsOc, _ := tracestate.New(
+		nil,
 		tracestate.Entry{Key: "key1", Value: "value1"},
 		tracestate.Entry{Key: "key2", Value: "value2"},
 	)

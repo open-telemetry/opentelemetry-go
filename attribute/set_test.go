@@ -4,8 +4,10 @@
 package attribute_test
 
 import (
+	"math"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,6 +45,7 @@ func TestSetDedup(t *testing.T) {
 	cases := []testCase{
 		expect("A=B", attribute.String("A", "2"), attribute.String("A", "B")),
 		expect("A=B", attribute.String("A", "2"), attribute.Int("A", 1), attribute.String("A", "B")),
+		expect("A=[true false]", attribute.BoolSlice("A", []bool{true, false})),
 		expect(
 			"A=B",
 			attribute.String("A", "B"),
@@ -119,11 +122,11 @@ func TestSetDedup(t *testing.T) {
 				}
 			}
 		}
-		for _, strings := range d2s {
-			if strings[0] == s {
+		for _, strs := range d2s {
+			if strs[0] == s {
 				continue
 			}
-			for _, otherString := range strings {
+			for _, otherString := range strs {
 				require.NotEqual(t, otherString, s)
 			}
 		}
@@ -252,6 +255,26 @@ func TestFiltering(t *testing.T) {
 	}
 }
 
+func TestSetFilterNilReceiver(t *testing.T) {
+	var set *attribute.Set
+
+	t.Run("KeepAll", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			got, dropped := set.Filter(func(attribute.KeyValue) bool { return true })
+			assert.Empty(t, got.ToSlice())
+			assert.Nil(t, dropped)
+		})
+	})
+
+	t.Run("NilFilter", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			got, dropped := set.Filter(nil)
+			assert.Empty(t, got.ToSlice())
+			assert.Nil(t, dropped)
+		})
+	})
+}
+
 func TestUniqueness(t *testing.T) {
 	short := []attribute.KeyValue{
 		attribute.String("A", "0"),
@@ -316,8 +339,7 @@ func TestLookup(t *testing.T) {
 func TestZeroSetExportedMethodsNoPanic(t *testing.T) {
 	rType := reflect.TypeFor[*attribute.Set]()
 	rVal := reflect.ValueOf(&attribute.Set{})
-	for n := 0; n < rType.NumMethod(); n++ {
-		mType := rType.Method(n)
+	for mType := range rType.Methods() {
 		if !mType.IsExported() {
 			t.Logf("ignoring unexported %s", mType.Name)
 			continue
@@ -472,6 +494,7 @@ func TestMarshalJSON(t *testing.T) {
 func TestSetEqualsEmpty(t *testing.T) {
 	e := attribute.EmptySet()
 	empty := *e
+	t.Cleanup(func() { *e = empty })
 
 	alt := attribute.NewSet(attribute.String("A", "B"))
 	*e = alt
@@ -548,28 +571,140 @@ func BenchmarkNewSet(b *testing.B) {
 // generateStringAttrsWithSize creates 5 string attributes with specified key and value lengths.
 func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
 	// Generate base strings of specified lengths
-	keyBase := ""
-	valueBase := ""
+	var keyBase strings.Builder
 
 	// Build key base string
 	for i := range keyLen {
-		keyBase += string(rune('a' + i%26))
+		_, _ = keyBase.WriteString(string(rune('a' + i%26)))
 	}
 
 	// Build value base string
+	var sb strings.Builder
 	for i := range valueLen {
-		valueBase += string(rune('0' + i%10))
+		_ = sb.WriteByte(byte('0' + i%10))
 	}
+	valueBase := sb.String()
 
 	// Create 5 attributes with different suffixes to ensure uniqueness
 	attrs := []attribute.KeyValue{
-		attribute.String(keyBase+"1", valueBase+"x"),
-		attribute.String(keyBase+"2", valueBase+"y"),
-		attribute.String(keyBase+"3", valueBase+"z"),
-		attribute.String(keyBase+"4", valueBase+"w"),
-		attribute.String(keyBase+"5", valueBase+"v"),
+		attribute.String(keyBase.String()+"1", valueBase+"x"),
+		attribute.String(keyBase.String()+"2", valueBase+"y"),
+		attribute.String(keyBase.String()+"3", valueBase+"z"),
+		attribute.String(keyBase.String()+"4", valueBase+"w"),
+		attribute.String(keyBase.String()+"5", valueBase+"v"),
 	}
 	return attrs
+}
+
+func TestSetString(t *testing.T) {
+	tests := []struct {
+		name string
+		set  *attribute.Set
+		want string
+	}{
+		{
+			name: "Nil",
+			set:  nil,
+			want: "{}",
+		},
+		{
+			name: "ZeroValue",
+			set:  new(attribute.Set{}),
+			want: "{}",
+		},
+		{
+			name: "Empty",
+			set:  new(attribute.NewSet()),
+			want: "{}",
+		},
+		{
+			name: "SingleBool",
+			set:  new(attribute.NewSet(attribute.Bool("a", true))),
+			want: `{"a":true}`,
+		},
+		{
+			name: "SingleInt",
+			set:  new(attribute.NewSet(attribute.Int64("count", 42))),
+			want: `{"count":42}`,
+		},
+		{
+			name: "SingleFloat",
+			set:  new(attribute.NewSet(attribute.Float64("pi", 3.14))),
+			want: `{"pi":3.14}`,
+		},
+		{
+			name: "SingleString",
+			set:  new(attribute.NewSet(attribute.String("name", "hello"))),
+			want: `{"name":"hello"}`,
+		},
+		{
+			name: "MultipleAttributes",
+			set: new(attribute.NewSet(
+				attribute.String("b", "world"),
+				attribute.Int64("a", 1),
+			)),
+			want: `{"a":1,"b":"world"}`,
+		},
+		{
+			name: "BoolSlice",
+			set:  new(attribute.NewSet(attribute.BoolSlice("flags", []bool{true, false}))),
+			want: `{"flags":[true,false]}`,
+		},
+		{
+			name: "Int64Slice",
+			set:  new(attribute.NewSet(attribute.Int64Slice("nums", []int64{1, 2, 3}))),
+			want: `{"nums":[1,2,3]}`,
+		},
+		{
+			name: "Float64Slice",
+			set:  new(attribute.NewSet(attribute.Float64Slice("vals", []float64{1.5, 2.5}))),
+			want: `{"vals":[1.5,2.5]}`,
+		},
+		{
+			name: "StringSlice",
+			set:  new(attribute.NewSet(attribute.StringSlice("tags", []string{"a", "b"}))),
+			want: `{"tags":["a","b"]}`,
+		},
+		{
+			name: "ByteSlice",
+			set:  new(attribute.NewSet(attribute.ByteSlice("data", []byte("foo")))),
+			want: `{"data":"Zm9v"}`,
+		},
+		{
+			name: "CompositeValues",
+			set: new(attribute.NewSet(
+				attribute.Map(
+					"context",
+					attribute.String("name", "x"),
+					attribute.Map("nested", attribute.Bool("value", true)),
+				),
+				attribute.KeyValue{Key: "empty"},
+				attribute.Slice(
+					"mixed",
+					attribute.StringValue("x"),
+					attribute.IntValue(2),
+					attribute.BoolValue(false),
+					attribute.Value{},
+				),
+				attribute.Float64("nan", math.NaN()),
+				attribute.Float64("neg-inf", math.Inf(-1)),
+				attribute.Float64("pos-inf", math.Inf(1)),
+			)),
+			want: `{"context":{"name":"x","nested":{"value":true}},"empty":null,"mixed":["x",2,false,null],"nan":"NaN","neg-inf":"-Infinity","pos-inf":"Infinity"}`,
+		},
+		{
+			name: "StringsNeedEscaping",
+			set:  new(attribute.NewSet(attribute.String("k\"ey", "line\n\"quoted\""))),
+			want: `{"k\"ey":"line\n\"quoted\""}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.set.String()
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
 func BenchmarkNewSetStringAttrs(b *testing.B) {
