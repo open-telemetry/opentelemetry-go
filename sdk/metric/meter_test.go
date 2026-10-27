@@ -121,6 +121,29 @@ func TestMapDeduplication(t *testing.T) {
 	assert.Equal(t, attribute.NewSet(dedup), sum.DataPoints[0].Attributes)
 }
 
+func TestSliceMapDeduplication(t *testing.T) {
+	dup := attribute.Slice("slice", attribute.MapValue(
+		attribute.String("key", "first"),
+		attribute.String("key", "second"),
+	))
+	dedup := attribute.Slice("slice", attribute.MapValue(attribute.String("key", "second")))
+
+	reader := NewManualReader()
+	counter, err := NewMeterProvider(WithReader(reader)).Meter("scope").Int64Counter("counter")
+	require.NoError(t, err)
+
+	counter.Add(t.Context(), 1, metric.WithAttributes(attribute.String("s", "v"), dup))
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 1)
+	assert.Equal(t, attribute.NewSet(attribute.String("s", "v"), dedup), sum.DataPoints[0].Attributes)
+}
+
 var emptyCallback metric.Callback = func(context.Context, metric.Observer) error { return nil }
 
 // A Meter Should be able register Callbacks Concurrently.

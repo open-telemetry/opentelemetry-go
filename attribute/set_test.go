@@ -503,6 +503,40 @@ func TestSetEqualsEmpty(t *testing.T) {
 	assert.Truef(t, s.Equals(&empty), "expected %v to equal empty set %v", s, attribute.EmptySet())
 }
 
+func TestSetHasComposite(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		set  attribute.Set
+		want bool
+	}{
+		{"Empty", attribute.NewSet(), false},
+		{"Scalars", attribute.NewSet(
+			attribute.Bool("b", true),
+			attribute.Int("i", 1),
+			attribute.Float64("f", 1),
+			attribute.String("s", "v"),
+		), false},
+		{"TypedSlice", attribute.NewSet(attribute.StringSlice("s", []string{"a"})), false},
+		{"Map", attribute.NewSet(attribute.String("s", "v"), attribute.Map("m")), true},
+		{"Slice", attribute.NewSet(attribute.Slice("s", attribute.StringValue("a"))), true},
+		{"Large", attribute.NewSet(
+			attribute.Int("0", 0), attribute.Int("1", 1), attribute.Int("2", 2),
+			attribute.Int("3", 3), attribute.Int("4", 4), attribute.Int("5", 5),
+			attribute.Int("6", 6), attribute.Int("7", 7), attribute.Int("8", 8),
+			attribute.Int("9", 9), attribute.Map("m"),
+		), true},
+		{"FilteredOut", func() attribute.Set {
+			s := attribute.NewSet(attribute.String("s", "v"), attribute.Map("m"))
+			f, _ := s.Filter(attribute.NewDenyKeysFilter("m"))
+			return f
+		}(), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, tc.set.HasComposite())
+		})
+	}
+}
+
 type simpleStringer struct {
 	val string
 }
