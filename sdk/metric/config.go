@@ -88,6 +88,21 @@ func newConfig(options []Option) config {
 		switch experimental := o.(type) {
 		case experimentalOption:
 			conf.experimental = append(conf.experimental, experimental)
+			if vOpt, ok := o.(interface {
+				ExperimentalViews() []func(Instrument) (Stream, *bool, bool)
+			}); ok {
+				for _, v := range vOpt.ExperimentalViews() {
+					if v == nil {
+						continue
+					}
+					v := v
+					conf.views = append(conf.views, func(inst Instrument) (Stream, bool) {
+						s, enabled, match := v(inst)
+						s.enabled = enabled
+						return s, match
+					})
+				}
+			}
 		default:
 			conf = o.apply(conf)
 		}
