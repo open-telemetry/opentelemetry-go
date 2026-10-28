@@ -4,12 +4,6 @@
 // Package stdoutlog provides an exporter for OpenTelemetry logs.
 //
 // Values and attributes use the attribute package's non-OTLP representation.
-// Nested maps and resource and scope attribute sets are encoded as JSON objects.
-// Log attributes retain their order as an array of single-attribute objects.
-// Log bodies are encoded directly as JSON values.
-//
-// Non-finite floating-point values are exported as the JSON strings "NaN",
-// "Infinity", and "-Infinity".
 //
 // The exporter is intended to be used for testing and debugging; it is not
 // meant for production use. Additionally, it does not provide an interchange
