@@ -9,7 +9,6 @@ package grpcendpoint
 
 import (
 	"net/url"
-	"path"
 	"strings"
 )
 
@@ -20,7 +19,7 @@ func Target(u *url.URL) string {
 		return u.Host
 	case "":
 		if u.Host != "" {
-			return path.Join(u.Host, u.Path)
+			return u.Host
 		}
 	}
 	return u.String()
