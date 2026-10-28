@@ -630,7 +630,7 @@ func TestPartialSuccessWithCaseInsensitiveProtobufContentType(t *testing.T) {
 	mcCfg := mockCollectorConfig{
 		InjectContentType: "Application/X-Protobuf; charset=utf-8",
 		Partial: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: 2,
+			RejectedSpans: 1,
 			ErrorMessage:  "partially successful",
 		},
 	}
@@ -648,14 +648,17 @@ func TestPartialSuccessWithCaseInsensitiveProtobufContentType(t *testing.T) {
 	}()
 
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
-	want := internal.TracePartialSuccessError(0, "")
-	assert.ErrorIs(t, err, want)
+	var partialSuccess internal.PartialSuccess
+	require.ErrorAs(t, err, &partialSuccess)
+	assert.Equal(t, int64(1), partialSuccess.RejectedItems)
+	assert.Equal(t, "spans", partialSuccess.RejectedKind)
+	assert.Equal(t, "partially successful", partialSuccess.ErrorMessage)
 }
 
 func TestPartialSuccessWithCaseInsensitiveJSONContentType(t *testing.T) {
 	response, err := otlpjson.MarshalExportTraceServiceResponse(&coltracepb.ExportTraceServiceResponse{
 		PartialSuccess: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: 2,
+			RejectedSpans: 1,
 			ErrorMessage:  "partially successful",
 		},
 	})
@@ -673,7 +676,11 @@ func TestPartialSuccessWithCaseInsensitiveJSONContentType(t *testing.T) {
 	defer func() { assert.NoError(t, exporter.Shutdown(t.Context())) }()
 
 	err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
-	assert.ErrorIs(t, err, internal.TracePartialSuccessError(0, ""))
+	var partialSuccess internal.PartialSuccess
+	require.ErrorAs(t, err, &partialSuccess)
+	assert.Equal(t, int64(1), partialSuccess.RejectedItems)
+	assert.Equal(t, "spans", partialSuccess.RejectedKind)
+	assert.Equal(t, "partially successful", partialSuccess.ErrorMessage)
 }
 
 func TestOtherHTTPSuccess(t *testing.T) {

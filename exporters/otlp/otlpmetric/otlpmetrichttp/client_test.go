@@ -93,7 +93,7 @@ func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 func TestPartialSuccessWithCaseInsensitiveProtobufContentType(t *testing.T) {
 	response, err := proto.Marshal(&colmetricpb.ExportMetricsServiceResponse{
 		PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
-			RejectedDataPoints: 2,
+			RejectedDataPoints: 1,
 			ErrorMessage:       "partially successful",
 		},
 	})
@@ -112,8 +112,23 @@ func TestPartialSuccessWithCaseInsensitiveProtobufContentType(t *testing.T) {
 	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 	t.Cleanup(func() { require.NoError(t, c.Shutdown(context.Background())) })
 
-	err = c.UploadMetrics(t.Context(), &mpb.ResourceMetrics{})
-	assert.ErrorIs(t, err, internal.MetricPartialSuccessError(0, ""))
+	metrics := &mpb.ResourceMetrics{
+		ScopeMetrics: []*mpb.ScopeMetrics{{
+			Metrics: []*mpb.Metric{{
+				Data: &mpb.Metric_Gauge{Gauge: &mpb.Gauge{
+					DataPoints: []*mpb.NumberDataPoint{{
+						Value: &mpb.NumberDataPoint_AsInt{AsInt: 42},
+					}},
+				}},
+			}},
+		}},
+	}
+	err = c.UploadMetrics(t.Context(), metrics)
+	var partialSuccess internal.PartialSuccess
+	require.ErrorAs(t, err, &partialSuccess)
+	assert.Equal(t, int64(1), partialSuccess.RejectedItems)
+	assert.Equal(t, "metric data points", partialSuccess.RejectedKind)
+	assert.Equal(t, "partially successful", partialSuccess.ErrorMessage)
 }
 
 func TestNewWithInvalidEndpoint(t *testing.T) {
