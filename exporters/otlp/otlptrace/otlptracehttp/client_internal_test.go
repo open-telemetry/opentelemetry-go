@@ -210,7 +210,7 @@ func TestRetryableNetworkErrorRealErrors(t *testing.T) {
 
 	t.Run("proxy connection refused", func(t *testing.T) {
 		// Reserve a local port, then close it so dialing the proxy is refused.
-		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 		require.NoError(t, err)
 		proxyURL := &url.URL{Scheme: "http", Host: ln.Addr().String()}
 		require.NoError(t, ln.Close())
