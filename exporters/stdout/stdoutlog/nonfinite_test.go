@@ -158,6 +158,26 @@ func TestExporterNonFiniteValues(t *testing.T) {
 	}
 }
 
+func TestExporterBodyEscaping(t *testing.T) {
+	for _, pretty := range []bool{false, true} {
+		t.Run(fmt.Sprintf("pretty=%t", pretty), func(t *testing.T) {
+			var buf bytes.Buffer
+			opts := []Option{WithWriter(&buf), WithoutTimestamps()}
+			if pretty {
+				opts = append(opts, WithPrettyPrint())
+			}
+			exporter, err := New(opts...)
+			require.NoError(t, err)
+			factory := nonFiniteRecordFactory("escaping")
+			factory.Body = attribute.StringValue("quote\"\\\n\t\x00<>&\u2028\u2029")
+			require.NoError(t, exporter.Export(t.Context(), []sdklog.Record{factory.NewRecord()}))
+			var got struct{ Body json.RawMessage }
+			require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
+			assert.Equal(t, `"quote\"\\\n\t\u0000\u003c\u003e\u0026\u2028\u2029"`, string(got.Body))
+		})
+	}
+}
+
 func nonFiniteRecordFactory(name string) logtest.RecordFactory {
 	attrs := []attribute.KeyValue{attribute.String("z", "last"), attribute.String("a", "first")}
 	return logtest.RecordFactory{

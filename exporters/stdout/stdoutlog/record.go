@@ -21,7 +21,7 @@ type recordJSON struct {
 	EventName         string     `json:",omitempty"`
 	Severity          log.Severity
 	SeverityText      string
-	Body              any
+	Body              json.RawMessage
 	Attributes        []json.RawMessage
 	TraceID           trace.TraceID
 	SpanID            trace.SpanID
