@@ -37,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Implement per-series start timestamps for cumulative asynchronous instruments when `OTEL_GO_X_PER_SERIES_START_TIMESTAMPS=true` is set in `go.opentelemetry.io/otel/sdk/metric`.
 - Interpret OTLP log exporter compression environment variables case-insensitively in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. `WithCompressor` in
