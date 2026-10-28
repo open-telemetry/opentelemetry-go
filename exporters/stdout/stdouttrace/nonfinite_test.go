@@ -36,9 +36,49 @@ type attributeShape struct {
 func attributeShapes(value float64, want any) []attributeShape {
 	return []attributeShape{
 		{"scalar", attribute.Float64Value(value), debugValue("FLOAT64", want)},
-		{"homogeneous", attribute.Float64SliceValue([]float64{1.5, value, -2.5}), debugValue("FLOAT64SLICE", []any{1.5, want, -2.5})},
-		{"heterogeneous", attribute.SliceValue(attribute.StringValue("text"), attribute.Float64Value(value), attribute.Int64Value(42)), debugValue("SLICE", []any{debugValue("STRING", "text"), debugValue("FLOAT64", want), debugValue("INT64", float64(42))})},
-		{"nested", attribute.MapValue(attribute.KeyValue{Key: "nested", Value: attribute.SliceValue(attribute.MapValue(attribute.Float64("float", value)))}), debugValue("MAP", []any{map[string]any{"Key": "nested", "Value": debugValue("SLICE", []any{debugValue("MAP", []any{map[string]any{"Key": "float", "Value": debugValue("FLOAT64", want)}})})}})},
+		{
+			"homogeneous",
+			attribute.Float64SliceValue([]float64{1.5, value, -2.5}),
+			debugValue("FLOAT64SLICE", []any{1.5, want, -2.5}),
+		},
+		{
+			"heterogeneous",
+			attribute.SliceValue(
+				attribute.StringValue("text"),
+				attribute.Float64Value(value),
+				attribute.Int64Value(42),
+			),
+			debugValue(
+				"SLICE",
+				[]any{debugValue("STRING", "text"), debugValue("FLOAT64", want), debugValue("INT64", float64(42))},
+			),
+		},
+		{
+			"nested",
+			attribute.MapValue(
+				attribute.KeyValue{
+					Key:   "nested",
+					Value: attribute.SliceValue(attribute.MapValue(attribute.Float64("float", value))),
+				},
+			),
+			debugValue(
+				"MAP",
+				[]any{
+					map[string]any{
+						"Key": "nested",
+						"Value": debugValue(
+							"SLICE",
+							[]any{
+								debugValue(
+									"MAP",
+									[]any{map[string]any{"Key": "float", "Value": debugValue("FLOAT64", want)}},
+								),
+							},
+						),
+					},
+				},
+			),
+		},
 	}
 }
 
@@ -51,11 +91,18 @@ func spanWithAttribute(location string, value attribute.Value) tracetest.SpanStu
 	case "resource":
 		stub.Resource = resource.NewSchemaless(attrs...)
 	case "event":
-		stub.Events = []sdktrace.Event{{Name: "event", Attributes: attrs, DroppedAttributeCount: 2, Time: time.Unix(1, 0)}}
+		stub.Events = []sdktrace.Event{
+			{Name: "event", Attributes: attrs, DroppedAttributeCount: 2, Time: time.Unix(1, 0)},
+		}
 	case "link":
 		stub.Links = []sdktrace.Link{{Attributes: attrs, DroppedAttributeCount: 3}}
 	case "scope":
-		stub.InstrumentationScope = instrumentation.Scope{Name: "scope", Version: "1.2.3", SchemaURL: "https://example.com/schema", Attributes: attribute.NewSet(attrs...)}
+		stub.InstrumentationScope = instrumentation.Scope{
+			Name:       "scope",
+			Version:    "1.2.3",
+			SchemaURL:  "https://example.com/schema",
+			Attributes: attribute.NewSet(attrs...),
+		}
 	}
 	return stub
 }
@@ -116,10 +163,18 @@ func TestExporterNonFiniteAttributes(t *testing.T) {
 						assert.Equal(t, []any{debugAttribute(shape.want)}, exportedAttributes(t, got, location))
 						assert.Equal(t, before, shape.value.String(), "the input attribute must remain unchanged")
 						if location == "event" {
-							assert.Equal(t, float64(2), got["Events"].([]any)[0].(map[string]any)["DroppedAttributeCount"])
+							assert.Equal(
+								t,
+								float64(2),
+								got["Events"].([]any)[0].(map[string]any)["DroppedAttributeCount"],
+							)
 						}
 						if location == "link" {
-							assert.Equal(t, float64(3), got["Links"].([]any)[0].(map[string]any)["DroppedAttributeCount"])
+							assert.Equal(
+								t,
+								float64(3),
+								got["Links"].([]any)[0].(map[string]any)["DroppedAttributeCount"],
+							)
 						}
 					})
 				}
@@ -138,7 +193,10 @@ func TestExporterNonFiniteBatch(t *testing.T) {
 		exporter, err := stdouttrace.New(opts...)
 		require.NoError(t, err)
 		bad := spanWithAttribute("span", attribute.Float64Value(math.NaN()))
-		require.NoError(t, exporter.ExportSpans(t.Context(), tracetest.SpanStubs{{Name: "before"}, bad, {Name: "after"}}.Snapshots()))
+		require.NoError(
+			t,
+			exporter.ExportSpans(t.Context(), tracetest.SpanStubs{{Name: "before"}, bad, {Name: "after"}}.Snapshots()),
+		)
 		decoder := json.NewDecoder(&buf)
 		for _, name := range []string{"before", "nonfinite", "after"} {
 			var span map[string]any
@@ -152,12 +210,21 @@ func TestExporterNonFiniteBatch(t *testing.T) {
 
 func TestExporterFiniteRepresentation(t *testing.T) {
 	attrs := []attribute.KeyValue{
-		attribute.Float64("finite", 1.5), attribute.Int64("integer", math.MaxInt64), attribute.Float64("negativeZero", math.Copysign(0, -1)),
-		{Key: "empty", Value: attribute.Value{}}, {Key: "array", Value: attribute.SliceValue()}, {Key: "map", Value: attribute.MapValue()}, {Key: "bytes", Value: attribute.ByteSliceValue(nil)},
+		attribute.Float64(
+			"finite",
+			1.5,
+		),
+		attribute.Int64("integer", math.MaxInt64),
+		attribute.Float64("negativeZero", math.Copysign(0, -1)),
+		{Key: "empty", Value: attribute.Value{}},
+		{Key: "array", Value: attribute.SliceValue()},
+		{Key: "map", Value: attribute.MapValue()},
+		{Key: "bytes", Value: attribute.ByteSliceValue(nil)},
 	}
 	for _, pretty := range []bool{false, true} {
 		for _, stub := range []tracetest.SpanStub{
-			{}, {Attributes: []attribute.KeyValue{}, Events: []sdktrace.Event{}, Links: []sdktrace.Link{}, Resource: resource.Empty()},
+			{},
+			{Attributes: []attribute.KeyValue{}, Events: []sdktrace.Event{}, Links: []sdktrace.Link{}, Resource: resource.Empty()},
 			{InstrumentationScope: instrumentation.Scope{Name: "scope", Attributes: attribute.NewSet()}},
 			{Attributes: attrs, Events: []sdktrace.Event{{Attributes: attrs}}, Links: []sdktrace.Link{{Attributes: attrs}}, Resource: resource.NewSchemaless(attrs...), InstrumentationScope: instrumentation.Scope{Name: "scope", Attributes: attribute.NewSet(attrs...)}},
 		} {
@@ -184,7 +251,10 @@ func TestExporterFiniteRepresentation(t *testing.T) {
 			require.NoError(t, json.Unmarshal(want.Bytes(), &expectedJSON))
 			require.NoError(t, json.Unmarshal(got.Bytes(), &actualJSON))
 			attributes, _ := expectedJSON["Attributes"].([]any)
-			expectedJSON["Attributes"] = append(attributes, map[string]any{"Key": "nonfinite", "Value": debugValue("FLOAT64", "NaN")})
+			expectedJSON["Attributes"] = append(
+				attributes,
+				map[string]any{"Key": "nonfinite", "Value": debugValue("FLOAT64", "NaN")},
+			)
 			assert.Equal(t, expectedJSON, actualJSON)
 		}
 	}
@@ -218,9 +288,22 @@ func TestExporterNonFiniteSDK(t *testing.T) {
 	var buf bytes.Buffer
 	exporter, err := stdouttrace.New(stdouttrace.WithWriter(&buf))
 	require.NoError(t, err)
-	provider := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter), sdktrace.WithResource(resource.NewSchemaless(attrs...)))
-	tracer := provider.Tracer("scope", trace.WithInstrumentationVersion("1.2.3"), trace.WithSchemaURL("https://example.com/schema"), trace.WithInstrumentationAttributes(attrs...))
-	_, span := tracer.Start(t.Context(), "SDK", trace.WithAttributes(attrs...), trace.WithLinks(trace.Link{Attributes: attrs}))
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSyncer(exporter),
+		sdktrace.WithResource(resource.NewSchemaless(attrs...)),
+	)
+	tracer := provider.Tracer(
+		"scope",
+		trace.WithInstrumentationVersion("1.2.3"),
+		trace.WithSchemaURL("https://example.com/schema"),
+		trace.WithInstrumentationAttributes(attrs...),
+	)
+	_, span := tracer.Start(
+		t.Context(),
+		"SDK",
+		trace.WithAttributes(attrs...),
+		trace.WithLinks(trace.Link{Attributes: attrs}),
+	)
 	span.AddEvent("event", trace.WithAttributes(attrs...))
 	span.End()
 	require.NoError(t, provider.Shutdown(t.Context()))
@@ -256,7 +339,10 @@ func TestExporterErrorsContinue(t *testing.T) {
 	writer := &errorWriter{err: writeErr}
 	exporter, err = stdouttrace.New(stdouttrace.WithWriter(writer))
 	require.NoError(t, err)
-	err = exporter.ExportSpans(t.Context(), tracetest.SpanStubs{spanWithAttribute("span", attribute.Float64Value(math.NaN())), {Name: "after"}}.Snapshots())
+	err = exporter.ExportSpans(
+		t.Context(),
+		tracetest.SpanStubs{spanWithAttribute("span", attribute.Float64Value(math.NaN())), {Name: "after"}}.Snapshots(),
+	)
 	require.ErrorIs(t, err, writeErr)
 	require.ErrorContains(t, err, "failed to encode span 0")
 	require.ErrorContains(t, err, "failed to encode span 1")
@@ -282,7 +368,9 @@ func BenchmarkExporterAttributes(b *testing.B) {
 		name  string
 		value attribute.Value
 	}{
-		{"finite", attribute.Float64Value(1.5)}, {"nonfinite", attribute.Float64Value(math.NaN())}, {"finiteSlice", attribute.Float64SliceValue(large)},
+		{"finite", attribute.Float64Value(1.5)},
+		{"nonfinite", attribute.Float64Value(math.NaN())},
+		{"finiteSlice", attribute.Float64SliceValue(large)},
 		{"nested", attribute.MapValue(attribute.KeyValue{Key: "nested", Value: attribute.SliceValue(attribute.Float64Value(1.5))})},
 	} {
 		b.Run(tc.name, func(b *testing.B) {
