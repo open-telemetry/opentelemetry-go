@@ -962,6 +962,168 @@ func TestSpanAttributeLimits(t *testing.T) {
 	}
 }
 
+func TestConvCappedAttrsRejectedDuplicatesMatchSetAttributes(t *testing.T) {
+	// Once the limit is reached, sdk/trace and SetAttributes count every
+	// entry for a rejected key, so span creation counts the same way.
+	input := []attribute.KeyValue{
+		attribute.Int("a", 1),
+		attribute.Int("b", 2),
+		attribute.Int("b", 3),
+	}
+	got, dropped := convCappedAttrs(1, input)
+	assert.Equal(t, []telemetry.Attr{telemetry.Int("a", 1)}, got, "kept")
+	assert.Equal(t, uint32(2), dropped, "creation dropped")
+
+	orig := maxSpan
+	t.Cleanup(func() { maxSpan = orig })
+	maxSpan.Attrs = 1
+	s := &autoSpan{span: &telemetry.Span{}}
+	s.sampled.Store(true)
+	s.SetAttributes(input...)
+	assert.Equal(t, got, s.span.Attrs, "SetAttributes kept")
+	assert.Equal(t, dropped, s.span.DroppedAttrs, "SetAttributes dropped")
+}
+
+func TestConvCappedAttrsDedupAndEmpty(t *testing.T) {
+	// Top-level keys are deduplicated before the count limit applies, so
+	// the last value wins and duplicates do not consume limit slots.
+	input := []attribute.KeyValue{
+		attribute.Int("a", 1),
+		attribute.Int("a", 2),
+		attribute.Int("b", 3),
+	}
+	want := []telemetry.Attr{
+		telemetry.Int("a", 2),
+		telemetry.Int("b", 3),
+	}
+
+	got, dropped := convCappedAttrs(2, input)
+	assert.Equal(t, want, got, "dedup then cap")
+	assert.Zero(t, dropped, "dedup then cap dropped")
+
+	got, dropped = convCappedAttrs(1, input)
+	assert.Equal(t, want[:1], got, "cap after dedup")
+	assert.Equal(t, uint32(1), dropped, "cap after dedup dropped")
+
+	got, dropped = convCappedAttrs(-1, input)
+	assert.Equal(t, want, got, "unlimited dedup")
+	assert.Zero(t, dropped, "unlimited dedup dropped")
+
+	// A valid top-level empty attribute value is kept, not counted dropped.
+	empty := attribute.KeyValue{Key: "empty"}
+	got, dropped = convCappedAttrs(128, []attribute.KeyValue{empty})
+	assert.Equal(t, []telemetry.Attr{{Key: "empty"}}, got, "empty value kept")
+	assert.Zero(t, dropped, "empty value dropped")
+
+	// A key-value without a key is invalid: dropped and counted.
+	got, dropped = convCappedAttrs(128, []attribute.KeyValue{{}})
+	assert.Empty(t, got, "invalid key-value dropped")
+	assert.Equal(t, uint32(1), dropped, "invalid key-value counted")
+}
+
+func TestConvCappedAttrsConvertsKeptValueOnce(t *testing.T) {
+	// A repeated key keeps its last value, and the earlier values are never
+	// converted, so the allocations do not grow with the number of repeats.
+	input := func(n int) []attribute.KeyValue {
+		out := make([]attribute.KeyValue, n)
+		for i := range out {
+			out[i] = attribute.StringSlice("a", []string{strconv.Itoa(i)})
+		}
+		return out
+	}
+	got, dropped := convCappedAttrs(1, input(3))
+	want := []telemetry.Attr{{
+		Key:   "a",
+		Value: telemetry.SliceValue(telemetry.StringValue("2")),
+	}}
+	assert.Equal(t, want, got, "last value wins")
+	assert.Zero(t, dropped, "repeats dropped")
+
+	few, many := input(10), input(1_000)
+	allocs := func(in []attribute.KeyValue) float64 {
+		return testing.AllocsPerRun(10, func() { _, _ = convCappedAttrs(1, in) })
+	}
+	assert.Equal(t, allocs(few), allocs(many), "allocations per repeat")
+}
+
+func TestSpanAttributeDedupAndEmpty(t *testing.T) {
+	orig := maxSpan
+	t.Cleanup(func() { maxSpan = orig })
+
+	input := []attribute.KeyValue{
+		attribute.Int("a", 1),
+		attribute.Int("a", 2),
+		attribute.Int("b", 3),
+	}
+	want := []telemetry.Attr{
+		telemetry.Int("a", 2),
+		telemetry.Int("b", 3),
+	}
+	empty := attribute.KeyValue{Key: "empty"}
+
+	maxSpan.Attrs = 2
+
+	s := spanBuilder{Options: []SpanStartOption{WithAttributes(input...)}}.Build()
+	assert.Equal(t, want, s.span.Attrs, "span creation dedup")
+	assert.Zero(t, s.span.DroppedAttrs, "span creation dropped")
+
+	s = spanBuilder{}.Build()
+	s.SetAttributes(input...)
+	assert.Equal(t, want, s.span.Attrs, "SetAttributes dedup")
+	assert.Zero(t, s.span.DroppedAttrs, "SetAttributes dropped")
+
+	s = spanBuilder{Options: []SpanStartOption{WithAttributes(empty)}}.Build()
+	assert.Equal(t, []telemetry.Attr{{Key: "empty"}}, s.span.Attrs, "creation keeps empty value")
+	assert.Zero(t, s.span.DroppedAttrs, "creation empty dropped")
+
+	s = spanBuilder{}.Build()
+	s.SetAttributes(empty)
+	assert.Equal(t, []telemetry.Attr{{Key: "empty"}}, s.span.Attrs, "SetAttributes keeps empty value")
+	assert.Zero(t, s.span.DroppedAttrs, "SetAttributes empty dropped")
+
+	// At capacity an existing key still updates; a new key drops.
+	s = spanBuilder{Options: []SpanStartOption{WithAttributes(
+		attribute.Int("a", 1),
+		attribute.Int("b", 2),
+	)}}.Build()
+	s.SetAttributes(attribute.Int("a", 9), attribute.Int("c", 3))
+	assert.Equal(t, []telemetry.Attr{
+		telemetry.Int("a", 9),
+		telemetry.Int("b", 2),
+	}, s.span.Attrs, "update at capacity")
+	assert.Equal(t, uint32(1), s.span.DroppedAttrs, "new key at capacity dropped")
+
+	maxSpan.Attrs = 128
+	maxSpan.EventAttrs = 2
+	maxSpan.LinkAttrs = 2
+
+	s = spanBuilder{}.Build()
+	s.AddEvent("e", WithAttributes(input...))
+	require.Len(t, s.span.Events, 1)
+	assert.Equal(t, want, s.span.Events[0].Attrs, "event dedup")
+	assert.Zero(t, s.span.Events[0].DroppedAttrs, "event dropped")
+
+	s = spanBuilder{}.Build()
+	s.AddEvent("e", WithAttributes(empty))
+	require.Len(t, s.span.Events, 1)
+	assert.Equal(t, []telemetry.Attr{{Key: "empty"}}, s.span.Events[0].Attrs, "event keeps empty value")
+	assert.Zero(t, s.span.Events[0].DroppedAttrs, "event empty dropped")
+
+	s = spanBuilder{}.Build()
+	s.AddLink(Link{SpanContext: spanContext0, Attributes: input})
+	require.Len(t, s.span.Links, 1)
+	assert.Equal(t, want, s.span.Links[0].Attrs, "AddLink dedup")
+	assert.Zero(t, s.span.Links[0].DroppedAttrs, "AddLink dropped")
+
+	s = spanBuilder{Options: []SpanStartOption{WithLinks(Link{
+		SpanContext: spanContext0,
+		Attributes:  input,
+	})}}.Build()
+	require.Len(t, s.span.Links, 1)
+	assert.Equal(t, want, s.span.Links[0].Attrs, "link creation dedup")
+	assert.Zero(t, s.span.Links[0].DroppedAttrs, "link creation dropped")
+}
+
 func TestSpanAttributeValueLimits(t *testing.T) {
 	value := "hello world"
 
@@ -1210,6 +1372,35 @@ func TestTruncate(t *testing.T) {
 			})
 		}
 	}
+}
+
+func BenchmarkConvCappedAttrs(b *testing.B) {
+	attrs := func(n, distinct int) []attribute.KeyValue {
+		out := make([]attribute.KeyValue, n)
+		for i := range out {
+			out[i] = attribute.Int("k"+strconv.Itoa(i%distinct), i)
+		}
+		return out
+	}
+	run := func(limit int, in []attribute.KeyValue) func(b *testing.B) {
+		return func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				_, _ = convCappedAttrs(limit, in)
+			}
+		}
+	}
+	b.Run("Unique8", run(128, attrs(8, 8)))
+	b.Run("Unique128", run(128, attrs(128, 128)))
+	b.Run("OneKey100k/Limit1", run(1, attrs(100_000, 1)))
+	b.Run("TenKeys1k/Limit128", run(128, attrs(1_000, 10)))
+	b.Run("OneKey100kInvalid/Limit1", run(1, append(attrs(100_000, 1), attribute.KeyValue{})))
+
+	ss := make([]attribute.KeyValue, 1_000)
+	for i := range ss {
+		ss[i] = attribute.StringSlice("k"+strconv.Itoa(i%10), []string{"a", "b"})
+	}
+	b.Run("TenKeys1kStringSlice/Limit128", run(128, ss))
 }
 
 func BenchmarkTruncate(b *testing.B) {
