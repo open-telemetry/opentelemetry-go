@@ -90,7 +90,7 @@ func jsonNumber[N int64 | float64](n N) any {
 	return n
 }
 
-func jsonSlice[T any, U any](in []T, convert func(T) U) []U {
+func jsonSlice[T, U any](in []T, convert func(T) U) []U {
 	if in == nil {
 		return nil
 	}

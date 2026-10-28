@@ -73,10 +73,19 @@ func TestNonFiniteAttributes(t *testing.T) {
 					for _, location := range []string{"resource", "scope", "point", "exemplar"} {
 						t.Run(location, func(t *testing.T) {
 							outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
-								rm := &metricdata.ResourceMetrics{ScopeMetrics: []metricdata.ScopeMetrics{{
-									Scope:   instrumentation.Scope{Name: "scope", Version: "v1", SchemaURL: "schema"},
-									Metrics: []metricdata.Metrics{{Name: "valid", Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{Value: 7}}}}},
-								}}}
+								rm := &metricdata.ResourceMetrics{ScopeMetrics: []metricdata.ScopeMetrics{
+									{
+										Scope: instrumentation.Scope{Name: "scope", Version: "v1", SchemaURL: "schema"},
+										Metrics: []metricdata.Metrics{
+											{
+												Name: "valid",
+												Data: metricdata.Gauge[int64]{
+													DataPoints: []metricdata.DataPoint[int64]{{Value: 7}},
+												},
+											},
+										},
+									},
+								}}
 								dp := metricdata.DataPoint[int64]{Value: 1}
 								switch location {
 								case "resource":
@@ -86,9 +95,17 @@ func TestNonFiniteAttributes(t *testing.T) {
 								case "point":
 									dp.Attributes = attribute.NewSet(kv)
 								case "exemplar":
-									dp.Exemplars = []metricdata.Exemplar[int64]{{Value: 3, FilteredAttributes: []attribute.KeyValue{kv}}}
+									dp.Exemplars = []metricdata.Exemplar[int64]{
+										{Value: 3, FilteredAttributes: []attribute.KeyValue{kv}},
+									}
 								}
-								rm.ScopeMetrics[0].Metrics = append(rm.ScopeMetrics[0].Metrics, metricdata.Metrics{Name: "affected", Data: metricdata.Sum[int64]{DataPoints: []metricdata.DataPoint[int64]{dp}}})
+								rm.ScopeMetrics[0].Metrics = append(
+									rm.ScopeMetrics[0].Metrics,
+									metricdata.Metrics{
+										Name: "affected",
+										Data: metricdata.Sum[int64]{DataPoints: []metricdata.DataPoint[int64]{dp}},
+									},
+								)
 								before := kv.Value.String()
 								doc := decodeJSON(t, exportJSON(t, rm, opts...)).(map[string]any)
 								sm := doc["ScopeMetrics"].([]any)[0].(map[string]any)
@@ -122,7 +139,9 @@ func TestNonFiniteAttributes(t *testing.T) {
 								case "scope":
 									after, _ = rm.ScopeMetrics[0].Scope.Attributes.Value(kv.Key)
 								case "point":
-									after, _ = rm.ScopeMetrics[0].Metrics[1].Data.(metricdata.Sum[int64]).DataPoints[0].Attributes.Value(kv.Key)
+									after, _ = rm.ScopeMetrics[0].Metrics[1].Data.(metricdata.Sum[int64]).DataPoints[0].Attributes.Value(
+										kv.Key,
+									)
 								case "exemplar":
 									after = rm.ScopeMetrics[0].Metrics[1].Data.(metricdata.Sum[int64]).DataPoints[0].Exemplars[0].FilteredAttributes[0].Value
 								}
@@ -141,25 +160,95 @@ func TestNonFiniteAttributes(t *testing.T) {
 func numericMetrics(value float64) *metricdata.ResourceMetrics {
 	attrs := attribute.NewSet(attribute.Int64("large", math.MaxInt64), attribute.String("label", "<&>"))
 	tm := time.Unix(1, 2).UTC()
-	ex := []metricdata.Exemplar[float64]{{Value: value, Time: tm, FilteredAttributes: []attribute.KeyValue{attribute.String("ok", "yes")}, SpanID: []byte{1}, TraceID: []byte{2}}}
-	dp := []metricdata.DataPoint[float64]{{Attributes: attrs, StartTime: tm, Time: tm, Value: value, Exemplars: ex}}
-	hdp := []metricdata.HistogramDataPoint[float64]{{Attributes: attrs, StartTime: tm, Time: tm, Count: 1, Bounds: []float64{value}, BucketCounts: []uint64{1, 0}, Min: metricdata.NewExtrema(value), Sum: value, Exemplars: ex}}
-	edp := []metricdata.ExponentialHistogramDataPoint[float64]{{Attributes: attrs, StartTime: tm, Time: tm, Count: 1, Min: metricdata.NewExtrema(value), Max: metricdata.NewExtrema(value), Sum: value, ZeroThreshold: value, Exemplars: ex}}
-	aggs := []metricdata.Aggregation{
-		metricdata.Gauge[float64]{DataPoints: dp}, metricdata.Sum[float64]{DataPoints: dp, IsMonotonic: true, Temporality: metricdata.CumulativeTemporality},
-		metricdata.Histogram[float64]{DataPoints: hdp, Temporality: metricdata.DeltaTemporality}, metricdata.ExponentialHistogram[float64]{DataPoints: edp},
-		metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{Attributes: attrs, Value: math.MaxInt64, Exemplars: []metricdata.Exemplar[int64]{{Value: math.MaxInt64}}}}},
-		metricdata.Sum[int64]{DataPoints: []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 1}}},
-		metricdata.Histogram[int64]{DataPoints: []metricdata.HistogramDataPoint[int64]{{Attributes: attrs, Bounds: []float64{value}, Sum: math.MaxInt64, Min: metricdata.NewExtrema(int64(math.MinInt64)), Max: metricdata.NewExtrema(int64(math.MaxInt64))}}},
-		metricdata.ExponentialHistogram[int64]{DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{{Attributes: attrs, ZeroThreshold: value, Sum: math.MaxInt64}}},
-		metricdata.Summary{DataPoints: []metricdata.SummaryDataPoint{{Attributes: attrs, Sum: value, QuantileValues: []metricdata.QuantileValue{{Quantile: value, Value: value}}}}},
+	ex := []metricdata.Exemplar[float64]{
+		{
+			Value:              value,
+			Time:               tm,
+			FilteredAttributes: []attribute.KeyValue{attribute.String("ok", "yes")},
+			SpanID:             []byte{1},
+			TraceID:            []byte{2},
+		},
 	}
-	rm := &metricdata.ResourceMetrics{Resource: resource.NewSchemaless(attribute.String("service", "test")), ScopeMetrics: []metricdata.ScopeMetrics{{Scope: instrumentation.Scope{Name: "numeric", Attributes: attrs}}}}
+	dp := []metricdata.DataPoint[float64]{{Attributes: attrs, StartTime: tm, Time: tm, Value: value, Exemplars: ex}}
+	hdp := []metricdata.HistogramDataPoint[float64]{
+		{
+			Attributes:   attrs,
+			StartTime:    tm,
+			Time:         tm,
+			Count:        1,
+			Bounds:       []float64{value},
+			BucketCounts: []uint64{1, 0},
+			Min:          metricdata.NewExtrema(value),
+			Sum:          value,
+			Exemplars:    ex,
+		},
+	}
+	edp := []metricdata.ExponentialHistogramDataPoint[float64]{
+		{
+			Attributes:    attrs,
+			StartTime:     tm,
+			Time:          tm,
+			Count:         1,
+			Min:           metricdata.NewExtrema(value),
+			Max:           metricdata.NewExtrema(value),
+			Sum:           value,
+			ZeroThreshold: value,
+			Exemplars:     ex,
+		},
+	}
+	aggs := []metricdata.Aggregation{
+		metricdata.Gauge[float64]{DataPoints: dp},
+		metricdata.Sum[float64]{DataPoints: dp, IsMonotonic: true, Temporality: metricdata.CumulativeTemporality},
+		metricdata.Histogram[float64]{DataPoints: hdp, Temporality: metricdata.DeltaTemporality},
+		metricdata.ExponentialHistogram[float64]{DataPoints: edp},
+		metricdata.Gauge[int64]{
+			DataPoints: []metricdata.DataPoint[int64]{
+				{
+					Attributes: attrs,
+					Value:      math.MaxInt64,
+					Exemplars:  []metricdata.Exemplar[int64]{{Value: math.MaxInt64}},
+				},
+			},
+		},
+		metricdata.Sum[int64]{DataPoints: []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 1}}},
+		metricdata.Histogram[int64]{
+			DataPoints: []metricdata.HistogramDataPoint[int64]{
+				{
+					Attributes: attrs,
+					Bounds:     []float64{value},
+					Sum:        math.MaxInt64,
+					Min:        metricdata.NewExtrema(int64(math.MinInt64)),
+					Max:        metricdata.NewExtrema(int64(math.MaxInt64)),
+				},
+			},
+		},
+		metricdata.ExponentialHistogram[int64]{
+			DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+				{Attributes: attrs, ZeroThreshold: value, Sum: math.MaxInt64},
+			},
+		},
+		metricdata.Summary{
+			DataPoints: []metricdata.SummaryDataPoint{
+				{
+					Attributes:     attrs,
+					Sum:            value,
+					QuantileValues: []metricdata.QuantileValue{{Quantile: value, Value: value}},
+				},
+			},
+		},
+	}
+	rm := &metricdata.ResourceMetrics{
+		Resource:     resource.NewSchemaless(attribute.String("service", "test")),
+		ScopeMetrics: []metricdata.ScopeMetrics{{Scope: instrumentation.Scope{Name: "numeric", Attributes: attrs}}},
+	}
 	for _, agg := range aggs {
 		rm.ScopeMetrics[0].Metrics = append(rm.ScopeMetrics[0].Metrics, metricdata.Metrics{Name: "value", Data: agg})
 		ptr := reflect.New(reflect.TypeOf(agg))
 		ptr.Elem().Set(reflect.ValueOf(agg))
-		rm.ScopeMetrics[0].Metrics = append(rm.ScopeMetrics[0].Metrics, metricdata.Metrics{Name: "pointer", Data: ptr.Interface().(metricdata.Aggregation)})
+		rm.ScopeMetrics[0].Metrics = append(
+			rm.ScopeMetrics[0].Metrics,
+			metricdata.Metrics{Name: "pointer", Data: ptr.Interface().(metricdata.Aggregation)},
+		)
 	}
 	return rm
 }
@@ -203,9 +292,9 @@ func TestNonFiniteNumericFields(t *testing.T) {
 				assert.Equal(t, math.Float64bits(value), math.Float64bits(dp.Value))
 				hdp := rm.ScopeMetrics[0].Metrics[4].Data.(metricdata.Histogram[float64]).DataPoints[0]
 				assert.Equal(t, math.Float64bits(value), math.Float64bits(hdp.Bounds[0]))
-				min, defined := hdp.Min.Value()
+				minimum, defined := hdp.Min.Value()
 				assert.True(t, defined)
-				assert.Equal(t, math.Float64bits(value), math.Float64bits(min))
+				assert.Equal(t, math.Float64bits(value), math.Float64bits(minimum))
 			})
 		})
 	}
@@ -215,26 +304,72 @@ func TestNonFinitePreservesFiniteShapes(t *testing.T) {
 	const sentinel = 1.23456789
 	fixture := func(marker float64) *metricdata.ResourceMetrics {
 		attrs := []attribute.KeyValue{
-			attribute.Bool("bool", true), attribute.BoolSlice("bools", []bool{true, false}),
-			attribute.Int64Slice("ints", []int64{math.MaxInt64}), attribute.StringSlice("strings", []string{"<&>", "quote\""}),
+			attribute.Bool("bool", true),
+			attribute.BoolSlice("bools", []bool{true, false}),
+			attribute.Int64Slice(
+				"ints",
+				[]int64{math.MaxInt64},
+			),
+			attribute.StringSlice("strings", []string{"<&>", "quote\""}),
 			attribute.Float64Slice("floats", []float64{1.5, math.Copysign(0, -1)}),
-			attribute.KeyValue{Key: "bytes", Value: attribute.ByteSliceValue([]byte{0, 1, 255})},
-			attribute.KeyValue{Key: "map", Value: attribute.MapValue(attribute.String("duplicate", "first"), attribute.String("duplicate", "second"))},
-			attribute.KeyValue{Key: "array", Value: attribute.SliceValue(attribute.StringValue("x"), attribute.Int64Value(3), attribute.Value{})},
-			attribute.KeyValue{Key: "empty-map", Value: attribute.MapValue()},
-			attribute.KeyValue{Key: "empty-array", Value: attribute.SliceValue()},
-		}
-		rm := &metricdata.ResourceMetrics{Resource: resource.NewSchemaless(attribute.Float64("marker", marker)), ScopeMetrics: []metricdata.ScopeMetrics{{
-			Scope: instrumentation.Scope{Attributes: attribute.NewSet(attrs...)},
-			Metrics: []metricdata.Metrics{
-				{Data: nil}, {Data: (*metricdata.Gauge[float64])(nil)},
-				{Data: metricdata.Gauge[int64]{}}, {Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{}}},
-				{Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{}, {Attributes: attribute.NewSet()}}}},
-				{Data: metricdata.Histogram[int64]{DataPoints: []metricdata.HistogramDataPoint[int64]{{Attributes: attribute.NewSet(), Bounds: []float64{}, BucketCounts: []uint64{}, Exemplars: []metricdata.Exemplar[int64]{}}}}},
-				{Data: metricdata.ExponentialHistogram[int64]{DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{{Attributes: attribute.NewSet()}}}},
-				{Data: metricdata.Summary{DataPoints: []metricdata.SummaryDataPoint{{Attributes: attribute.NewSet(), QuantileValues: []metricdata.QuantileValue{}}}}},
+			{Key: "bytes", Value: attribute.ByteSliceValue([]byte{0, 1, 255})},
+			{
+				Key: "map",
+				Value: attribute.MapValue(
+					attribute.String("duplicate", "first"),
+					attribute.String("duplicate", "second"),
+				),
 			},
-		}, {Scope: instrumentation.Scope{Attributes: attribute.NewSet()}, Metrics: []metricdata.Metrics{}}, {}}}
+			{
+				Key:   "array",
+				Value: attribute.SliceValue(attribute.StringValue("x"), attribute.Int64Value(3), attribute.Value{}),
+			},
+			{Key: "empty-map", Value: attribute.MapValue()},
+			{Key: "empty-array", Value: attribute.SliceValue()},
+		}
+		rm := &metricdata.ResourceMetrics{
+			Resource: resource.NewSchemaless(attribute.Float64("marker", marker)),
+			ScopeMetrics: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{Attributes: attribute.NewSet(attrs...)},
+				Metrics: []metricdata.Metrics{
+					{Data: nil},
+					{Data: (*metricdata.Gauge[float64])(nil)},
+					{Data: metricdata.Gauge[int64]{}},
+					{Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{}}},
+					{
+						Data: metricdata.Gauge[int64]{
+							DataPoints: []metricdata.DataPoint[int64]{{}, {Attributes: attribute.NewSet()}},
+						},
+					},
+					{
+						Data: metricdata.Histogram[int64]{
+							DataPoints: []metricdata.HistogramDataPoint[int64]{
+								{
+									Attributes:   attribute.NewSet(),
+									Bounds:       []float64{},
+									BucketCounts: []uint64{},
+									Exemplars:    []metricdata.Exemplar[int64]{},
+								},
+							},
+						},
+					},
+					{
+						Data: metricdata.ExponentialHistogram[int64]{
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+								{Attributes: attribute.NewSet()},
+							},
+						},
+					},
+					{
+						Data: metricdata.Summary{
+							DataPoints: []metricdata.SummaryDataPoint{
+								{Attributes: attribute.NewSet(), QuantileValues: []metricdata.QuantileValue{}},
+							},
+						},
+					},
+				},
+			}, {Scope: instrumentation.Scope{Attributes: attribute.NewSet()}, Metrics: []metricdata.Metrics{}}, {}},
+		}
 		return rm
 	}
 	control, err := json.Marshal(fixture(sentinel))
@@ -268,9 +403,17 @@ func TestNonFinitePublicSDK(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
 				reader := metric.NewManualReader()
-				provider := metric.NewMeterProvider(metric.WithReader(reader), metric.WithResource(resource.NewSchemaless(attribute.Float64("resource", value))))
+				provider := metric.NewMeterProvider(
+					metric.WithReader(reader),
+					metric.WithResource(resource.NewSchemaless(attribute.Float64("resource", value))),
+				)
 				t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
-				meter := provider.Meter("public", api.WithInstrumentationVersion("v1"), api.WithSchemaURL("schema"), api.WithInstrumentationAttributes(attribute.Float64("scope", value)))
+				meter := provider.Meter(
+					"public",
+					api.WithInstrumentationVersion("v1"),
+					api.WithSchemaURL("schema"),
+					api.WithInstrumentationAttributes(attribute.Float64("scope", value)),
+				)
 				counter, err := meter.Int64Counter("valid")
 				require.NoError(t, err)
 				counter.Add(t.Context(), 5)
