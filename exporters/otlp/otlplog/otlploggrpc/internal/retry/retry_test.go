@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cenkalti/backoff/v5"
+	"github.com/cenkalti/backoff/v7"
 	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 

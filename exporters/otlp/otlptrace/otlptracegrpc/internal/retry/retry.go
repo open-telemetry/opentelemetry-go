@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cenkalti/backoff/v5"
+	"github.com/cenkalti/backoff/v7"
 
 	"go.opentelemetry.io/otel/internal/global"
 )
