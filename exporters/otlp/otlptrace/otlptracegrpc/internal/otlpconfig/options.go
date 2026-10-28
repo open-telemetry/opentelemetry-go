@@ -23,6 +23,7 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/grpcendpoint"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/retry"
 	"go.opentelemetry.io/otel/internal/global"
 )
@@ -289,13 +290,13 @@ func WithEndpoint(endpoint string) GenericOption {
 // WithEndpointURL configures the trace scheme, host, port, and path; the
 // provided value should resemble "https://example.com:4318/v1/traces".
 func WithEndpointURL(v string) GenericOption {
-	return newGenericOption(func(cfg Config) Config {
-		u, err := url.Parse(v)
-		if err != nil {
-			global.Error(err, "otlptrace: parse endpoint url", "url", v)
-			return cfg
-		}
+	u, err := url.Parse(v)
+	if err != nil {
+		global.Error(err, "otlptrace: parse endpoint url", "url", v)
+		return newGenericOption(func(cfg Config) Config { return cfg })
+	}
 
+	httpFn := func(cfg Config) Config {
 		cfg.Traces.Endpoint = u.Host
 		cfg.Traces.URLPath = u.Path
 		cfg.Traces.URLRawPath = u.RawPath
@@ -307,7 +308,20 @@ func WithEndpointURL(v string) GenericOption {
 		cfg.Traces.Insecure = u.Scheme != "https"
 
 		return cfg
-	})
+	}
+	grpcFn := func(cfg Config) Config {
+		cfg.Traces.Endpoint = grpcendpoint.Target(u)
+		cfg.Traces.URLPath = u.Path
+		cfg.Traces.URLRawPath = u.RawPath
+		if cfg.Traces.URLPath == "" {
+			cfg.Traces.URLPath = "/"
+		}
+		if insecureTransport, ok := grpcendpoint.Insecure(u); ok {
+			cfg.Traces.Insecure = insecureTransport
+		}
+		return cfg
+	}
+	return newSplitOption(httpFn, grpcFn)
 }
 
 // WithCompression configures the compression used for exports.

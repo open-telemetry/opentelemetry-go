@@ -124,6 +124,34 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test With Unix Endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL("unix:///tmp/otel.sock"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				if grpcOption {
+					assert.Equal(t, "unix:///tmp/otel.sock", c.Traces.Endpoint)
+					assert.True(t, c.Traces.Insecure)
+				} else {
+					assert.Empty(t, c.Traces.Endpoint)
+				}
+			},
+		},
+		{
+			name: "Test With Unix Abstract Endpoint URL",
+			opts: []GenericOption{
+				WithEndpointURL("unix-abstract:otel"),
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				if grpcOption {
+					assert.Equal(t, "unix-abstract:otel", c.Traces.Endpoint)
+					assert.True(t, c.Traces.Insecure)
+				} else {
+					assert.Empty(t, c.Traces.Endpoint)
+				}
+			},
+		},
+		{
 			name: "Test With Invalid Endpoint URL",
 			opts: []GenericOption{
 				WithEndpointURL("%invalid"),

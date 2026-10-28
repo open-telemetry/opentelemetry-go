@@ -368,7 +368,7 @@ func TestNewConfig(t *testing.T) {
 				WithEndpointURL("//env.endpoint:8080/prefix"),
 			},
 			want: config{
-				endpoint: newSetting("env.endpoint:8080"),
+				endpoint: newSetting("env.endpoint:8080/prefix"),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
 			},
@@ -379,7 +379,7 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "//env.endpoint:8080/prefix",
 			},
 			want: config{
-				endpoint: newSetting("env.endpoint:8080"),
+				endpoint: newSetting("env.endpoint:8080/prefix"),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
 			},
@@ -403,7 +403,7 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
 			},
 			want: config{
-				endpoint: newSetting("env.endpoint:8080"),
+				endpoint: newSetting("env.endpoint:8080/prefix"),
 				insecure: newSetting(true),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
@@ -418,7 +418,7 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
 			},
 			want: config{
-				endpoint: newSetting("env.endpoint:8080"),
+				endpoint: newSetting("env.endpoint:8080/prefix"),
 				insecure: newSetting(true),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
@@ -511,6 +511,16 @@ func TestNewConfig(t *testing.T) {
 				assert.ErrorContains(t, err, errMsg)
 			}
 		})
+	}
+}
+
+func TestEndpointURLResolverSecurity(t *testing.T) {
+	for _, target := range []string{"dns:///collector:4317", "//collector:4317/path"} {
+		for _, insecure := range []bool{false, true} {
+			cfg := config{insecure: newSetting(insecure)}
+			cfg = WithEndpointURL(target).applyOption(cfg)
+			assert.Equal(t, newSetting(insecure), cfg.insecure)
+		}
 	}
 }
 
