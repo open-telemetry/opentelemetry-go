@@ -14,6 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -892,4 +893,40 @@ func TestIsAggregatorCompatible(t *testing.T) {
 			assert.ErrorIs(t, err, tt.want)
 		})
 	}
+}
+
+func TestMetricFilterMultipleReaders(t *testing.T) {
+	ctx := t.Context()
+
+	dropFilter := testMetricFilterOption{
+		testMetric: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string) int {
+			return metricFilterDrop
+		},
+	}
+	acceptFilter := testMetricFilterOption{
+		testMetric: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string) int {
+			return metricFilterAccept
+		},
+		testAttributes: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, _ attribute.Set) int {
+			return metricFilterAttrAccept
+		},
+	}
+
+	dropReader := NewManualReader(dropFilter)
+	acceptReader := NewManualReader(acceptFilter)
+
+	mp := NewMeterProvider(WithReader(dropReader), WithReader(acceptReader))
+	meter := mp.Meter("test")
+
+	counter, err := meter.Int64Counter("shared")
+	require.NoError(t, err)
+	counter.Add(ctx, 1)
+
+	dropRM := &metricdata.ResourceMetrics{}
+	require.NoError(t, dropReader.Collect(ctx, dropRM))
+	assert.Equal(t, 0, sumDataPointCount(dropRM, "shared"))
+
+	acceptRM := &metricdata.ResourceMetrics{}
+	require.NoError(t, acceptReader.Collect(ctx, acceptRM))
+	assert.Equal(t, 1, sumDataPointCount(acceptRM, "shared"))
 }

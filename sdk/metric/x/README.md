@@ -12,6 +12,7 @@ They may be changed in backwards-incompatible ways, or removed entirely.
 ## Features
 
 - [MeterConfigurator](#meterconfigurator)
+- [MetricFilter](#metricfilter)
 
 ### MeterConfigurator
 
@@ -28,6 +29,16 @@ The configuration can be updated at runtime with `MeterConfiguratorHandle.Set`.
 
 This behavior differs from the specification's current requirement that a disabled Meter behaves as a no-op, and it can change.
 That difference needs to be resolved before stabilization; see [specification issue #5301](https://github.com/open-telemetry/opentelemetry-specification/issues/5301).
+
+### MetricFilter
+
+`WithMetricFilter` configures a reader to filter aggregated metric streams during collection.
+`MetricFilter.TestMetric` receives `TestMetricParameters` and returns `Accept`, `Drop`, or `AcceptPartial`.
+For `AcceptPartial`, `MetricFilter.TestAttributes` receives `TestAttributesParameters` for each data point and returns `AttrAccept` or `AttrDrop`.
+Parameters contain the instrumentation scope, metric name, aggregation kind, and unit.
+Attribute parameters also contain the data point's attributes.
+The aggregation is passed as `metricdata.Aggregation`, matching the collected data, including view-selected aggregations.
+If the filter passed to `WithMetricFilter` is nil, the option does nothing.
 
 ## Compatibility and Stability
 
