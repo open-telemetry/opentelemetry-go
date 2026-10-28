@@ -1422,7 +1422,11 @@ func TestRecoveredRetryDiagnostics(t *testing.T) {
 			Response: &collogpb.ExportLogsServiceResponse{},
 		}
 
-		client, _ := clientFactory(t, rCh)
+		client, coll := clientFactory(t, rCh)
+		t.Cleanup(coll.srv.Stop)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { assert.NoError(t, client.Shutdown(ctx)) })
+
 		err := client.UploadLogs(t.Context(), resourceLogs)
 		assert.NoError(t, err)
 
@@ -1447,7 +1451,11 @@ func TestRecoveredRetryDiagnostics(t *testing.T) {
 			Err: status.Error(codes.InvalidArgument, "irremediable-bad-request"),
 		}
 
-		client, _ := clientFactory(t, rCh)
+		client, coll := clientFactory(t, rCh)
+		t.Cleanup(coll.srv.Stop)
+		ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		t.Cleanup(func() { assert.NoError(t, client.Shutdown(ctx)) })
+
 		err := client.UploadLogs(t.Context(), resourceLogs)
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, "irremediable-bad-request")
