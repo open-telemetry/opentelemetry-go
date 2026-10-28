@@ -199,6 +199,9 @@ func WithEndpoint(endpoint string) Option {
 // If both this option and WithEndpoint are used, the last used option will
 // take precedence.
 //
+// If the URL has a "unix" or "unix-abstract" scheme, the full URL is used as
+// the gRPC target and client security is disabled.
+//
 // If an invalid URL is provided, the default value will be kept.
 //
 // By default, if an environment variable is not set, and this option is not
@@ -212,7 +215,7 @@ func WithEndpointURL(rawURL string) Option {
 		return fnOpt(func(c config) config { return c })
 	}
 	return fnOpt(func(c config) config {
-		c.endpoint = newSetting(u.Host)
+		c.endpoint = newSetting(endpointFromURL(u))
 		c.insecure = insecureFromScheme(c.insecure, u.Scheme)
 		return c
 	})
@@ -412,7 +415,19 @@ func convEndpoint(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return u.Host, nil
+	return endpointFromURL(u), nil
+}
+
+// endpointFromURL returns the gRPC target for u. Unix socket URLs are
+// returned in full so the gRPC resolver can use them. Otherwise, only the
+// host is returned.
+func endpointFromURL(u *url.URL) string {
+	switch u.Scheme {
+	case "unix", "unix-abstract":
+		return u.String()
+	default:
+		return u.Host
+	}
 }
 
 // convInsecure converts s from a string to a bool without case sensitivity.

@@ -385,6 +385,91 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "OptionEndpointURLUnix",
+			options: []Option{
+				WithEndpointURL("unix:///tmp/otel.sock"),
+			},
+			want: config{
+				endpoint: newSetting("unix:///tmp/otel.sock"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "OptionEndpointURLUnixAbstract",
+			options: []Option{
+				WithEndpointURL("unix-abstract:///otel.sock"),
+			},
+			want: config{
+				endpoint: newSetting("unix-abstract:///otel.sock"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "EnvEndpointUnix",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "unix:///tmp/otel.sock",
+			},
+			want: config{
+				endpoint: newSetting("unix:///tmp/otel.sock"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "EnvEndpointUnixAbstract",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "unix-abstract:///otel.sock",
+			},
+			want: config{
+				endpoint: newSetting("unix-abstract:///otel.sock"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "EnvLogsEndpointUnix",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "unix:///tmp/otel.sock",
+			},
+			want: config{
+				endpoint: newSetting("unix:///tmp/otel.sock"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "EnvLogsEndpointUnixAbstract",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "unix-abstract:///otel.sock",
+			},
+			want: config{
+				endpoint: newSetting("unix-abstract:///otel.sock"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "EnvLogsEndpointUnixAbstractPrecedence",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":      "https://env.endpoint:8080",
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "unix-abstract:///otel.sock",
+			},
+			want: config{
+				endpoint: newSetting("unix-abstract:///otel.sock"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
 			name: "DefaultEndpointWithEnvInsecure",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
