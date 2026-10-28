@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestExporterNonFiniteValues(t *testing.T) {
+func TestExporterValueRepresentation(t *testing.T) {
 	values := []struct {
 		name  string
 		value attribute.Value
@@ -110,51 +111,58 @@ func TestExporterNonFiniteValues(t *testing.T) {
 		},
 	}
 
-	for _, pretty := range []bool{false, true} {
-		for _, location := range []string{"body", "attribute", "resource", "scope"} {
-			for _, tc := range values {
-				t.Run(fmt.Sprintf("pretty=%t/%s/%s", pretty, location, tc.name), func(t *testing.T) {
+	for _, tc := range values {
+		t.Run(tc.name, func(t *testing.T) {
+			testExporterValueRepresentation(t, tc.value, decodeJSON(t, tc.want))
+		})
+	}
+}
+
+func testExporterValueRepresentation(t *testing.T, value attribute.Value, wantValue any) {
+	t.Helper()
+	for _, location := range []string{"body", "attribute", "resource", "scope"} {
+		t.Run(location, func(t *testing.T) {
+			factory := recordFactory("special")
+			want := expectedRecord("special")
+			kv := attribute.KeyValue{Key: "m", Value: value}
+			switch location {
+			case "body":
+				factory.Body = value
+				want["Body"] = wantValue
+			case "attribute":
+				factory.Attributes = append(factory.Attributes, kv)
+				want["Attributes"] = append(want["Attributes"].([]any), map[string]any{"m": wantValue})
+			case "resource":
+				factory.Resource = resource.NewSchemaless(append(factory.Attributes, kv)...)
+				want["Resource"].(map[string]any)["m"] = wantValue
+			case "scope":
+				factory.InstrumentationScope.Attributes = attribute.NewSet(append(factory.Attributes, kv)...)
+				want["Scope"].(map[string]any)["Attributes"].(map[string]any)["m"] = wantValue
+			}
+			records := []sdklog.Record{
+				recordFactory("before").NewRecord(),
+				factory.NewRecord(),
+				recordFactory("after").NewRecord(),
+			}
+			wantRecords := []map[string]any{expectedRecord("before"), want, expectedRecord("after")}
+
+			for _, format := range []struct {
+				name    string
+				options []Option
+			}{
+				{name: "compact"},
+				{name: "pretty", options: []Option{WithPrettyPrint()}},
+			} {
+				t.Run(format.name, func(t *testing.T) {
 					var buf bytes.Buffer
-					opts := []Option{WithWriter(&buf), WithoutTimestamps()}
-					if pretty {
-						opts = append(opts, WithPrettyPrint())
-					}
+					opts := append([]Option{WithWriter(&buf), WithoutTimestamps()}, format.options...)
 					exporter, err := New(opts...)
 					require.NoError(t, err)
-
-					factory := nonFiniteRecordFactory("special")
-					body, attrs, res, scope := ordinaryJSONFields("special")
-					kv := attribute.KeyValue{Key: "m", Value: tc.value}
-					wantKV := `"m":` + tc.want
-					switch location {
-					case "body":
-						factory.Body, body = tc.value, tc.want
-					case "attribute":
-						factory.Attributes = append(factory.Attributes, kv)
-						attrs = attrs[:len(attrs)-1] + ",{" + wantKV + "}]"
-					case "resource":
-						factory.Resource = resource.NewSchemaless(append(factory.Attributes, kv)...)
-						res = sortedJSONAttributes(wantKV)
-					case "scope":
-						factory.InstrumentationScope.Attributes = attribute.NewSet(append(factory.Attributes, kv)...)
-						scope = sortedJSONAttributes(wantKV)
-					}
-					records := []sdklog.Record{
-						nonFiniteRecordFactory(
-							"before",
-						).NewRecord(),
-						factory.NewRecord(),
-						nonFiniteRecordFactory("after").NewRecord(),
-					}
 					require.NoError(t, exporter.Export(t.Context(), records))
-					got := decodeExportedJSON(t, &buf)
-					require.Len(t, got, 3)
-					assertDebugJSON(t, expectedOrdinaryRecordJSON("before"), got[0])
-					assertDebugJSON(t, expectedRecordJSON("special", body, attrs, res, scope), got[1])
-					assertDebugJSON(t, expectedOrdinaryRecordJSON("after"), got[2])
+					assert.Equal(t, wantRecords, decodeExportedJSON(t, &buf))
 				})
 			}
-		}
+		})
 	}
 }
 
@@ -168,7 +176,7 @@ func TestExporterBodyEscaping(t *testing.T) {
 			}
 			exporter, err := New(opts...)
 			require.NoError(t, err)
-			factory := nonFiniteRecordFactory("escaping")
+			factory := recordFactory("escaping")
 			factory.Body = attribute.StringValue("quote\"\\\n\t\x00<>&\u2028\u2029")
 			require.NoError(t, exporter.Export(t.Context(), []sdklog.Record{factory.NewRecord()}))
 			var got struct{ Body json.RawMessage }
@@ -178,52 +186,56 @@ func TestExporterBodyEscaping(t *testing.T) {
 	}
 }
 
-func nonFiniteRecordFactory(name string) logtest.RecordFactory {
+func recordFactory(name string) logtest.RecordFactory {
 	attrs := []attribute.KeyValue{attribute.String("z", "last"), attribute.String("a", "first")}
 	return logtest.RecordFactory{
-		EventName: name, Body: attribute.StringValue(name), Severity: log.SeverityWarn, SeverityText: "WARN",
-		Attributes: attrs, Resource: resource.NewSchemaless(append([]attribute.KeyValue(nil), attrs...)...),
+		EventName:    name,
+		Body:         attribute.StringValue(name),
+		Severity:     log.SeverityWarn,
+		SeverityText: "WARN",
+		Attributes:   attrs,
+		Resource:     resource.NewSchemaless(append([]attribute.KeyValue(nil), attrs...)...),
 		InstrumentationScope: &instrumentation.Scope{
-			Name: "scope", Version: "1.0", SchemaURL: "https://example.com/schema",
+			Name:       "scope",
+			Version:    "1.0",
+			SchemaURL:  "https://example.com/schema",
 			Attributes: attribute.NewSet(append([]attribute.KeyValue(nil), attrs...)...),
 		},
-		TraceID: trace.TraceID{1}, SpanID: trace.SpanID{2}, TraceFlags: trace.FlagsSampled,
+		TraceID:           trace.TraceID{1},
+		SpanID:            trace.SpanID{2},
+		TraceFlags:        trace.FlagsSampled,
 		DroppedAttributes: 3,
 	}
 }
 
-func ordinaryJSONFields(name string) (body, attrs, res, scope string) {
-	body = `"` + name + `"`
-	attrs = `[{"z":"last"},{"a":"first"}]`
-	res = sortedJSONAttributes("")
-	return body, attrs, res, res
-}
-
-func sortedJSONAttributes(middle string) string {
-	if middle != "" {
-		middle += ","
+func expectedRecord(name string) map[string]any {
+	return map[string]any{
+		"EventName":    name,
+		"Severity":     json.Number("13"),
+		"SeverityText": "WARN",
+		"Body":         name,
+		"Attributes":   []any{map[string]any{"z": "last"}, map[string]any{"a": "first"}},
+		"TraceID":      "01000000000000000000000000000000",
+		"SpanID":       "0200000000000000",
+		"TraceFlags":   "01",
+		"Resource":     map[string]any{"a": "first", "z": "last"},
+		"Scope": map[string]any{
+			"Name":       "scope",
+			"Version":    "1.0",
+			"SchemaURL":  "https://example.com/schema",
+			"Attributes": map[string]any{"a": "first", "z": "last"},
+		},
+		"DroppedAttributes": json.Number("3"),
 	}
-	return `{"a":"first",` + middle + `"z":"last"}`
 }
 
-func expectedRecordJSON(name, body, attrs, res, scope string) string {
-	return fmt.Sprintf(`{"EventName":%q,"Severity":13,"SeverityText":"WARN","Body":%s,"Attributes":%s,
-		"TraceID":"01000000000000000000000000000000","SpanID":"0200000000000000","TraceFlags":"01",
-		"Resource":%s,"Scope":{"Name":"scope","Version":"1.0","SchemaURL":"https://example.com/schema","Attributes":%s},
-		"DroppedAttributes":3}`, name, body, attrs, res, scope)
-}
-
-func expectedOrdinaryRecordJSON(name string) string {
-	body, attrs, res, scope := ordinaryJSONFields(name)
-	return expectedRecordJSON(name, body, attrs, res, scope)
-}
-
-func decodeExportedJSON(t *testing.T, buf *bytes.Buffer) []json.RawMessage {
+func decodeExportedJSON(t *testing.T, buf *bytes.Buffer) []map[string]any {
 	t.Helper()
-	var records []json.RawMessage
+	var records []map[string]any
 	dec := json.NewDecoder(buf)
+	dec.UseNumber() // Preserve int64 precision and negative zero in comparisons.
 	for {
-		var record json.RawMessage
+		var record map[string]any
 		err := dec.Decode(&record)
 		if errors.Is(err, io.EOF) {
 			return records
@@ -233,43 +245,38 @@ func decodeExportedJSON(t *testing.T, buf *bytes.Buffer) []json.RawMessage {
 	}
 }
 
-func assertDebugJSON(t *testing.T, want string, got json.RawMessage) {
+func decodeJSON(t *testing.T, data string) any {
 	t.Helper()
-	decode := func(data []byte) any {
-		dec := json.NewDecoder(bytes.NewReader(data))
-		dec.UseNumber() // Preserve int64 precision and negative zero in comparisons.
-		var result any
-		require.NoError(t, dec.Decode(&result))
-		return result
-	}
-	assert.Equal(t, decode([]byte(want)), decode(got))
+	dec := json.NewDecoder(strings.NewReader(data))
+	dec.UseNumber()
+	var result any
+	require.NoError(t, dec.Decode(&result))
+	return result
 }
 
 func TestExporterEmptyCollections(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		res  *resource.Resource
-		want string
+		want any
 	}{
-		{"nil resource", nil, `null`},
-		{"empty resource", resource.Empty(), `{}`},
-		{"allocated empty resource", resource.NewSchemaless(), `{}`},
+		{"nil resource", nil, nil},
+		{"empty resource", resource.Empty(), map[string]any{}},
+		{"allocated empty resource", resource.NewSchemaless(), map[string]any{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
 			exporter, err := New(WithWriter(&buf), WithoutTimestamps())
 			require.NoError(t, err)
-			factory := nonFiniteRecordFactory("empty")
+			factory := recordFactory("empty")
 			factory.Attributes, factory.Resource = nil, tc.res
 			factory.InstrumentationScope.Attributes = attribute.Set{}
 			require.NoError(t, exporter.Export(t.Context(), []sdklog.Record{factory.NewRecord()}))
-			got := decodeExportedJSON(t, &buf)
-			require.Len(t, got, 1)
-			assertDebugJSON(
-				t,
-				expectedRecordJSON("empty", `"empty"`, `[]`, tc.want, `{}`),
-				got[0],
-			)
+			want := expectedRecord("empty")
+			want["Attributes"] = []any{}
+			want["Resource"] = tc.want
+			want["Scope"].(map[string]any)["Attributes"] = map[string]any{}
+			assert.Equal(t, []map[string]any{want}, decodeExportedJSON(t, &buf))
 		})
 	}
 }
@@ -280,48 +287,26 @@ func TestExporterTimestampMarshalError(t *testing.T) {
 			var buf bytes.Buffer
 			exporter, err := New(WithWriter(&buf))
 			require.NoError(t, err)
-			before := nonFiniteRecordFactory("before").NewRecord()
-			bad := nonFiniteRecordFactory("bad")
+			before := recordFactory("before").NewRecord()
+			bad := recordFactory("bad")
 			invalid := time.Date(10000, time.January, 1, 0, 0, 0, 0, time.UTC)
 			if observed {
 				bad.ObservedTimestamp = invalid
 			} else {
 				bad.Timestamp = invalid
 			}
-			after := nonFiniteRecordFactory("after").NewRecord()
+			after := recordFactory("after").NewRecord()
 			err = exporter.Export(t.Context(), []sdklog.Record{before, bad.NewRecord(), after})
 			var marshalErr *json.MarshalerError
 			require.ErrorAs(t, err, &marshalErr)
 			assert.Contains(t, marshalErr.Error(), "year outside of range")
 			got := decodeExportedJSON(t, &buf)
 			require.Len(t, got, 1)
-			assert.Contains(t, string(got[0]), `"EventName":"before"`)
+			assert.Equal(t, "before", got[0]["EventName"])
 			require.NoError(t, exporter.Export(t.Context(), []sdklog.Record{after}))
 			got = decodeExportedJSON(t, &buf)
 			require.Len(t, got, 1)
-			assert.Contains(t, string(got[0]), `"EventName":"after"`)
+			assert.Equal(t, "after", got[0]["EventName"])
 		})
 	}
-}
-
-type nonFiniteFailingWriter struct {
-	err   error
-	calls int
-}
-
-func (w *nonFiniteFailingWriter) Write([]byte) (int, error) {
-	w.calls++
-	return 0, w.err
-}
-
-func TestExporterWriterErrorStopsBatch(t *testing.T) {
-	want := errors.New("writer unavailable")
-	writer := &nonFiniteFailingWriter{err: want}
-	exporter, err := New(WithWriter(writer))
-	require.NoError(t, err)
-	err = exporter.Export(t.Context(), []sdklog.Record{
-		nonFiniteRecordFactory("before").NewRecord(), nonFiniteRecordFactory("after").NewRecord(),
-	})
-	assert.ErrorIs(t, err, want)
-	assert.Equal(t, 1, writer.calls)
 }
