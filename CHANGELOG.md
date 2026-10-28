@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Export spans containing non-finite floating-point attributes as valid JSON in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`, including resource, event, link, and instrumentation scope attributes and nested arrays and maps.
 - Interpret OTLP log exporter compression environment variables case-insensitively in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. `WithCompressor` in

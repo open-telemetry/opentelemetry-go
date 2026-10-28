@@ -435,7 +435,7 @@ func BenchmarkExporterExportSpans(b *testing.B) {
 	ss := tracetest.SpanStubs{
 		{Name: "/foo"},
 		{
-			Name:       "JSON encoder cannot marshal math.Inf(1)",
+			Name:       "span with a non-finite attribute",
 			Attributes: []attribute.KeyValue{attribute.Float64("", math.Inf(1))},
 		},
 		{Name: "/bar"},
