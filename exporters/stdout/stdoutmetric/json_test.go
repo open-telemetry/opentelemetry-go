@@ -165,16 +165,60 @@ func TestNonFiniteNumericFields(t *testing.T) {
 				var want, got any
 				require.NoError(t, json.Unmarshal(control, &want))
 				want = replaceFloat(want, sentinel, name)
-				require.NoError(t, json.Unmarshal(exportJSON(t, rm, opts...), &got))
+				out := exportJSON(t, rm, opts...)
+				require.NoError(t, json.Unmarshal(out, &got))
 				assert.Equal(t, want, got)
-				// Exporting twice also verifies that caller-owned slices and extrema
-				// have not been rewritten to produce the JSON representation.
-				assert.JSONEq(t, string(exportJSON(t, rm, opts...)), string(exportJSON(t, rm, opts...)))
+				assert.Contains(t, string(out), "9223372036854775807")
+				assert.Contains(t, string(out), "-9223372036854775808")
+				assert.JSONEq(t, string(out), string(exportJSON(t, rm, opts...)))
 				dp := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Gauge[float64]).DataPoints[0]
 				assert.Equal(t, math.Float64bits(value), math.Float64bits(dp.Value))
+				hdp := rm.ScopeMetrics[0].Metrics[4].Data.(metricdata.Histogram[float64]).DataPoints[0]
+				assert.Equal(t, math.Float64bits(value), math.Float64bits(hdp.Bounds[0]))
+				min, defined := hdp.Min.Value()
+				assert.True(t, defined)
+				assert.Equal(t, math.Float64bits(value), math.Float64bits(min))
 			})
 		})
 	}
+}
+
+func TestNonFinitePreservesFiniteShapes(t *testing.T) {
+	const sentinel = 1.23456789
+	fixture := func(marker float64) *metricdata.ResourceMetrics {
+		attrs := []attribute.KeyValue{
+			attribute.Bool("bool", true), attribute.BoolSlice("bools", []bool{true, false}),
+			attribute.Int64Slice("ints", []int64{math.MaxInt64}), attribute.StringSlice("strings", []string{"<&>", "quote\""}),
+			attribute.Float64Slice("floats", []float64{1.5, math.Copysign(0, -1)}),
+			attribute.KeyValue{Key: "bytes", Value: attribute.ByteSliceValue([]byte{0, 1, 255})},
+			attribute.KeyValue{Key: "map", Value: attribute.MapValue(attribute.String("duplicate", "first"), attribute.String("duplicate", "second"))},
+			attribute.KeyValue{Key: "array", Value: attribute.SliceValue(attribute.StringValue("x"), attribute.Int64Value(3), attribute.Value{})},
+			attribute.KeyValue{Key: "empty-map", Value: attribute.MapValue()},
+			attribute.KeyValue{Key: "empty-array", Value: attribute.SliceValue()},
+		}
+		rm := &metricdata.ResourceMetrics{Resource: resource.NewSchemaless(attribute.Float64("marker", marker)), ScopeMetrics: []metricdata.ScopeMetrics{{
+			Scope: instrumentation.Scope{Attributes: attribute.NewSet(attrs...)},
+			Metrics: []metricdata.Metrics{
+				{Data: nil}, {Data: (*metricdata.Gauge[float64])(nil)},
+				{Data: metricdata.Gauge[int64]{}}, {Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{}}},
+				{Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{}, {Attributes: attribute.NewSet()}}}},
+				{Data: metricdata.Histogram[int64]{DataPoints: []metricdata.HistogramDataPoint[int64]{{Attributes: attribute.NewSet(), Bounds: []float64{}, BucketCounts: []uint64{}, Exemplars: []metricdata.Exemplar[int64]{}}}}},
+				{Data: metricdata.ExponentialHistogram[int64]{DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{{Attributes: attribute.NewSet()}}}},
+				{Data: metricdata.Summary{DataPoints: []metricdata.SummaryDataPoint{{Attributes: attribute.NewSet(), QuantileValues: []metricdata.QuantileValue{}}}}},
+			},
+		}, {Scope: instrumentation.Scope{Attributes: attribute.NewSet()}, Metrics: []metricdata.Metrics{}}, {}}}
+		return rm
+	}
+	control, err := json.Marshal(fixture(sentinel))
+	require.NoError(t, err)
+	var want any
+	require.NoError(t, json.Unmarshal(control, &want))
+	want = replaceFloat(want, sentinel, "NaN")
+	outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
+		var got any
+		require.NoError(t, json.Unmarshal(exportJSON(t, fixture(math.NaN()), opts...), &got))
+		assert.Equal(t, want, got)
+	})
 }
 
 func TestJSONFiniteCompatibility(t *testing.T) {
@@ -258,13 +302,15 @@ func (w *errorWriter) Write([]byte) (int, error) {
 
 func TestJSONErrors(t *testing.T) {
 	for _, writeErr := range []error{errors.New("write failed"), &json.UnsupportedValueError{Value: reflect.ValueOf(math.NaN()), Str: "NaN"}} {
-		w := &errorWriter{err: writeErr}
-		exp, err := stdoutmetric.New(stdoutmetric.WithWriter(w))
-		require.NoError(t, err)
-		for range 2 {
-			assert.ErrorIs(t, exp.Export(t.Context(), numericMetrics(1)), writeErr)
+		for _, value := range []float64{1, math.NaN()} {
+			w := &errorWriter{err: writeErr}
+			exp, err := stdoutmetric.New(stdoutmetric.WithWriter(w))
+			require.NoError(t, err)
+			for range 2 {
+				assert.ErrorIs(t, exp.Export(t.Context(), numericMetrics(value)), writeErr)
+			}
+			assert.Equal(t, 1, w.calls, "a writer error must not trigger a second write")
 		}
-		assert.Equal(t, 1, w.calls, "a writer error must not trigger a second write")
 	}
 	rm := numericMetrics(math.NaN())
 	badTime := time.Date(10000, time.January, 1, 0, 0, 0, 0, time.UTC)
@@ -272,6 +318,12 @@ func TestJSONErrors(t *testing.T) {
 	dp[0].Time = badTime
 	exp, err := stdoutmetric.New(stdoutmetric.WithWriter(io.Discard))
 	require.NoError(t, err)
+	assert.ErrorContains(t, exp.Export(t.Context(), rm), "year outside of range")
+	// A normal encoding error discovered after the first non-finite value must
+	// still be returned by the retry.
+	rm = numericMetrics(math.NaN())
+	last := len(rm.ScopeMetrics[0].Metrics) - 2
+	rm.ScopeMetrics[0].Metrics[last].Data.(metricdata.Summary).DataPoints[0].Time = badTime
 	assert.ErrorContains(t, exp.Export(t.Context(), rm), "year outside of range")
 }
 

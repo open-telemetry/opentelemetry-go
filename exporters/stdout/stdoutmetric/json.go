@@ -25,6 +25,9 @@ func newJSONEncoder(w io.Writer) *jsonEncoder {
 
 func (e *jsonEncoder) Encode(v any) error {
 	err := e.Encoder.Encode(v)
+	if err == nil {
+		return nil
+	}
 	var writeErr *jsonWriteError
 	if errors.As(err, &writeErr) {
 		return writeErr.err
@@ -109,6 +112,14 @@ func jsonAttributes(kvs []attribute.KeyValue) []jsonAttribute {
 	})
 }
 
+func jsonAttributeSet(set attribute.Set) any {
+	if set.Len() == 0 {
+		// An initialized empty Set encodes as [], while the zero Set is null.
+		return &set
+	}
+	return jsonAttributes(set.ToSlice())
+}
+
 func jsonAttributeValue(v attribute.Value) any {
 	var value any
 	switch v.Type() {
@@ -132,7 +143,7 @@ func jsonAttributeValue(v attribute.Value) any {
 func jsonResourceMetrics(rm *metricdata.ResourceMetrics) any {
 	var res any
 	if rm.Resource != nil {
-		res = jsonAttributes(rm.Resource.Attributes())
+		res = jsonAttributeSet(*rm.Resource.Set())
 	}
 	return struct {
 		Resource     any
@@ -144,8 +155,8 @@ func jsonResourceMetrics(rm *metricdata.ResourceMetrics) any {
 		}{
 			Scope: struct {
 				instrumentation.Scope
-				Attributes []jsonAttribute
-			}{sm.Scope, jsonAttributes(sm.Scope.Attributes.ToSlice())},
+				Attributes any
+			}{sm.Scope, jsonAttributeSet(sm.Scope.Attributes)},
 			Metrics: jsonSlice(sm.Metrics, func(m metricdata.Metrics) any {
 				return struct {
 					metricdata.Metrics
@@ -230,10 +241,10 @@ func jsonSum[N int64 | float64](a metricdata.Sum[N]) any {
 func jsonDataPoint[N int64 | float64](dp metricdata.DataPoint[N]) any {
 	return struct {
 		metricdata.DataPoint[N]
-		Attributes []jsonAttribute
+		Attributes any
 		Value      any
 		Exemplars  []any `json:",omitempty"`
-	}{dp, jsonAttributes(dp.Attributes.ToSlice()), jsonNumber(dp.Value), jsonSlice(dp.Exemplars, jsonExemplar[N])}
+	}{dp, jsonAttributeSet(dp.Attributes), jsonNumber(dp.Value), jsonSlice(dp.Exemplars, jsonExemplar[N])}
 }
 
 func jsonExemplar[N int64 | float64](ex metricdata.Exemplar[N]) any {
@@ -258,13 +269,13 @@ func jsonHistogram[N int64 | float64](a metricdata.Histogram[N]) any {
 	}{a, jsonSlice(a.DataPoints, func(dp metricdata.HistogramDataPoint[N]) any {
 		return struct {
 			metricdata.HistogramDataPoint[N]
-			Attributes []jsonAttribute
+			Attributes any
 			Bounds     []any
 			Min        any
 			Max        any
 			Sum        any
 			Exemplars  []any `json:",omitempty"`
-		}{dp, jsonAttributes(dp.Attributes.ToSlice()), jsonSlice(dp.Bounds, jsonFloat), jsonExtrema(dp.Min), jsonExtrema(dp.Max), jsonNumber(dp.Sum), jsonSlice(dp.Exemplars, jsonExemplar[N])}
+		}{dp, jsonAttributeSet(dp.Attributes), jsonSlice(dp.Bounds, jsonFloat), jsonExtrema(dp.Min), jsonExtrema(dp.Max), jsonNumber(dp.Sum), jsonSlice(dp.Exemplars, jsonExemplar[N])}
 	})}
 }
 
@@ -275,13 +286,13 @@ func jsonExponentialHistogram[N int64 | float64](a metricdata.ExponentialHistogr
 	}{a, jsonSlice(a.DataPoints, func(dp metricdata.ExponentialHistogramDataPoint[N]) any {
 		return struct {
 			metricdata.ExponentialHistogramDataPoint[N]
-			Attributes    []jsonAttribute
+			Attributes    any
 			Min           any
 			Max           any
 			Sum           any
 			ZeroThreshold any
 			Exemplars     []any `json:",omitempty"`
-		}{dp, jsonAttributes(dp.Attributes.ToSlice()), jsonExtrema(dp.Min), jsonExtrema(dp.Max), jsonNumber(dp.Sum), jsonFloat(dp.ZeroThreshold), jsonSlice(dp.Exemplars, jsonExemplar[N])}
+		}{dp, jsonAttributeSet(dp.Attributes), jsonExtrema(dp.Min), jsonExtrema(dp.Max), jsonNumber(dp.Sum), jsonFloat(dp.ZeroThreshold), jsonSlice(dp.Exemplars, jsonExemplar[N])}
 	})}
 }
 
@@ -289,10 +300,10 @@ func jsonSummary(a metricdata.Summary) any {
 	return struct{ DataPoints []any }{jsonSlice(a.DataPoints, func(dp metricdata.SummaryDataPoint) any {
 		return struct {
 			metricdata.SummaryDataPoint
-			Attributes     []jsonAttribute
+			Attributes     any
 			Sum            any
 			QuantileValues []any
-		}{dp, jsonAttributes(dp.Attributes.ToSlice()), jsonFloat(dp.Sum), jsonSlice(dp.QuantileValues, func(q metricdata.QuantileValue) any {
+		}{dp, jsonAttributeSet(dp.Attributes), jsonFloat(dp.Sum), jsonSlice(dp.QuantileValues, func(q metricdata.QuantileValue) any {
 			return struct{ Quantile, Value any }{jsonFloat(q.Quantile), jsonFloat(q.Value)}
 		})}
 	})}
