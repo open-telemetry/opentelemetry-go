@@ -41,6 +41,15 @@ func exportJSON(t *testing.T, rm *metricdata.ResourceMetrics, opts ...stdoutmetr
 	return out.Bytes()
 }
 
+func decodeJSON(t *testing.T, data []byte) any {
+	t.Helper()
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	var value any
+	require.NoError(t, decoder.Decode(&value))
+	return value
+}
+
 func TestNonFiniteAttributes(t *testing.T) {
 	for _, special := range []struct {
 		name  string
@@ -81,12 +90,31 @@ func TestNonFiniteAttributes(t *testing.T) {
 								}
 								rm.ScopeMetrics[0].Metrics = append(rm.ScopeMetrics[0].Metrics, metricdata.Metrics{Name: "affected", Data: metricdata.Sum[int64]{DataPoints: []metricdata.DataPoint[int64]{dp}}})
 								before := kv.Value.String()
-								var compact bytes.Buffer
-								require.NoError(t, json.Compact(&compact, exportJSON(t, rm, opts...)))
-								assert.Contains(t, compact.String(), `"Value":`+shape.want)
-								assert.Contains(t, compact.String(), `"Name":"valid"`)
-								assert.Contains(t, compact.String(), `"Name":"affected"`)
-								assert.Contains(t, compact.String(), `"Name":"scope","Version":"v1","SchemaURL":"schema"`)
+								doc := decodeJSON(t, exportJSON(t, rm, opts...)).(map[string]any)
+								sm := doc["ScopeMetrics"].([]any)[0].(map[string]any)
+								scope := sm["Scope"].(map[string]any)
+								assert.Equal(t, "scope", scope["Name"])
+								assert.Equal(t, "v1", scope["Version"])
+								assert.Equal(t, "schema", scope["SchemaURL"])
+								metrics := sm["Metrics"].([]any)
+								require.Len(t, metrics, 2)
+								assert.Equal(t, "valid", metrics[0].(map[string]any)["Name"])
+								assert.Equal(t, "affected", metrics[1].(map[string]any)["Name"])
+								data := metrics[1].(map[string]any)["Data"].(map[string]any)
+								point := data["DataPoints"].([]any)[0].(map[string]any)
+								var gotAttributes any
+								switch location {
+								case "resource":
+									gotAttributes = doc["Resource"]
+								case "scope":
+									gotAttributes = scope["Attributes"]
+								case "point":
+									gotAttributes = point["Attributes"]
+								case "exemplar":
+									gotAttributes = point["Exemplars"].([]any)[0].(map[string]any)["FilteredAttributes"]
+								}
+								wantAttributes := decodeJSON(t, []byte(`[{"Key":"problem","Value":`+shape.want+`}]`))
+								assert.Equal(t, wantAttributes, gotAttributes)
 								var after attribute.Value
 								switch location {
 								case "resource":
