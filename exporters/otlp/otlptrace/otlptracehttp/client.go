@@ -535,6 +535,11 @@ func retryableNetworkError(ctx context.Context, err error) bool {
 	// alerts are also *net.OpError but use the "local error" and "remote
 	// error" ops, and are permanent.
 	opErr, ok := errors.AsType[*net.OpError](err)
+	// net/http wraps failures reaching a proxy in an outer "proxyconnect"
+	// *net.OpError; classify the underlying failure instead.
+	for ok && opErr.Op == "proxyconnect" {
+		opErr, ok = errors.AsType[*net.OpError](opErr.Err)
+	}
 	if !ok {
 		return false
 	}

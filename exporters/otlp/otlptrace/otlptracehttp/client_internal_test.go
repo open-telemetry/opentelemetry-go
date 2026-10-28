@@ -96,6 +96,31 @@ func TestRetryableNetworkError(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "proxy connection refused",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{
+					Op:  "proxyconnect",
+					Net: "tcp",
+					Err: &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "proxy tls alert",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "https://example.com",
+				Err: &net.OpError{
+					Op:  "proxyconnect",
+					Net: "tcp",
+					Err: &net.OpError{Op: "remote error", Err: errors.New("tls: protocol version not supported")},
+				},
+			},
+		},
+		{
 			name: "connection reset",
 			err: &url.Error{
 				Op:  "Post",
@@ -180,6 +205,18 @@ func TestRetryableNetworkErrorRealErrors(t *testing.T) {
 		t.Cleanup(func() { close(release) })
 
 		err := post(t, &http.Client{Timeout: 10 * time.Millisecond}, srv.URL)
+		assert.True(t, retryableNetworkError(t.Context(), err), "err: %v", err)
+	})
+
+	t.Run("proxy connection refused", func(t *testing.T) {
+		// Reserve a local port, then close it so dialing the proxy is refused.
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		proxyURL := &url.URL{Scheme: "http", Host: ln.Addr().String()}
+		require.NoError(t, ln.Close())
+
+		c := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+		err = post(t, c, "http://example.com/")
 		assert.True(t, retryableNetworkError(t.Context(), err), "err: %v", err)
 	})
 
