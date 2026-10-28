@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -223,13 +224,18 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 				return nil
 			}
 
+			mediatype, _, err := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+			if err != nil {
+				return nil
+			}
+
 			var respProto coltracepb.ExportTraceServiceResponse
-			switch resp.Header.Get("Content-Type") {
-			case contentTypeProto:
+			switch {
+			case strings.EqualFold(mediatype, contentTypeProto):
 				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
 					return err
 				}
-			case contentTypeJSON:
+			case strings.EqualFold(mediatype, contentTypeJSON):
 				if err := otlpjson.UnmarshalExportTraceServiceResponse(respData.Bytes(), &respProto); err != nil {
 					return err
 				}
