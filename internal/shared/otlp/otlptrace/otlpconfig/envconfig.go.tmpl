@@ -11,11 +11,16 @@ import (
 	"crypto/x509"
 	"net/url"
 	"os"
+{{- if .isHTTP }}
 	"path"
+{{- end }}
 	"strings"
 	"time"
 
 	"{{ .envconfigImportPath }}"
+{{- if not .isHTTP }}
+	"{{ .grpcEndpointImportPath }}"
+{{- end }}
 )
 
 // DefaultEnvOptionsReader is the default environments reader.
@@ -119,15 +124,23 @@ func getOptionsFromEnv() []GenericOption {
 }
 
 func withEndpointScheme(u *url.URL) GenericOption {
+{{- if .isHTTP }}
 	switch strings.ToLower(u.Scheme) {
 	case "http", "unix", "unix-abstract":
 		return WithInsecure()
 	default:
 		return WithSecure()
 	}
+{{- else }}
+	if insecure, ok := grpcendpoint.Insecure(u); ok {
+		return withInsecure(insecure)
+	}
+	return WithSecure()
+{{- end }}
 }
 
 func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
+{{- if .isHTTP }}
 	target := u.String()
 	switch strings.ToLower(u.Scheme) {
 	case "http", "https":
@@ -137,6 +150,9 @@ func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
 			target = path.Join(u.Host, u.Path)
 		}
 	}
+{{- else }}
+	target := grpcendpoint.Target(u)
+{{- end }}
 
 	return func(cfg Config) Config {
 		// For OTLP/gRPC endpoints, this is the target to which the

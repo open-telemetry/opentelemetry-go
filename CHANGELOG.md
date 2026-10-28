@@ -45,7 +45,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` now interprets its argument
   case-insensitively as well, where a differently-cased value previously reported an unknown
   compressor and fell back to no compression. (#9230)
-- Preserve Unix socket targets configured through `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`, or `WithEndpointURL` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#9286)
+- Preserve Unix socket targets configured through `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`, or `WithEndpointURL` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, and through `WithEndpointURL` in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#9286)
+- Align gRPC endpoint URL handling across `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`.
+  Preserve resolver targets and scheme-less host/path targets, and retain the configured transport security for URL options with unknown or empty schemes. (#9286)
 - Prevent underflowed measurements from updating sum, min, or max in exponential histograms in `go.opentelemetry.io/otel/sdk/metric`. (#8077)
 - Report the module's registered version from `Version()` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, which also corrects the exporter version sent in the default User-Agent. (#9232)
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
