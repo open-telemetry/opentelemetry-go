@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -215,7 +216,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			// Success, do not retry.
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if err := internal.CopyResponseBody(&respData, resp.Body, c.cfg.MaxResponseSize); err != nil {
+			if err := internal.CopyHTTPResponseBody(&respData, resp, c.cfg.MaxResponseSize); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
@@ -253,7 +254,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if err := internal.CopyResponseBody(&respData, resp.Body, c.cfg.MaxResponseSize); err != nil {
+		if err := internal.CopyHTTPResponseBody(&respData, resp, c.cfg.MaxResponseSize); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
@@ -294,7 +295,7 @@ func (c *client) marshalRequest(pbRequest *coltracepb.ExportTraceServiceRequest)
 }
 
 func (c *client) newRequest(pbRequest *coltracepb.ExportTraceServiceRequest) (request, error) {
-	u := url.URL{Scheme: c.getScheme(), Host: c.cfg.Endpoint, Path: c.cfg.URLPath}
+	u := url.URL{Scheme: c.getScheme(), Host: c.cfg.Endpoint, Path: c.cfg.URLPath, RawPath: c.cfg.URLRawPath}
 	r, err := http.NewRequestWithContext(context.Background(), http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
 		return request{Request: r}, err
@@ -413,9 +414,9 @@ func newResponseError(header http.Header, wrapped error) error {
 
 func retryAfterDuration(v string) time.Duration {
 	if t, err := strconv.ParseInt(v, 10, 64); err == nil && t >= 0 {
-		const maxRetryAfterSeconds = int64(1<<63-1) / int64(time.Second)
+		const maxRetryAfterSeconds = math.MaxInt64 / int64(time.Second)
 		if t > maxRetryAfterSeconds {
-			return time.Duration(1<<63 - 1)
+			return time.Duration(math.MaxInt64)
 		}
 		return time.Duration(t) * time.Second
 	}

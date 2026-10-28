@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -92,9 +93,10 @@ func newClient(cfg oconf.Config) (*client, error) {
 	}
 
 	u := &url.URL{
-		Scheme: "https",
-		Host:   cfg.Metrics.Endpoint,
-		Path:   cfg.Metrics.URLPath,
+		Scheme:  "https",
+		Host:    cfg.Metrics.Endpoint,
+		Path:    cfg.Metrics.URLPath,
+		RawPath: cfg.Metrics.URLRawPath,
 	}
 	if cfg.Metrics.Insecure {
 		u.Scheme = "http"
@@ -211,7 +213,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
+			if err := internal.CopyHTTPResponseBody(&respData, resp, c.maxResponseSize); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
@@ -242,7 +244,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
+		if err := internal.CopyHTTPResponseBody(&respData, resp, c.maxResponseSize); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
@@ -359,9 +361,9 @@ func newResponseError(header http.Header, wrapped error) error {
 
 func retryAfterDuration(v string) time.Duration {
 	if t, err := strconv.ParseInt(v, 10, 64); err == nil && t >= 0 {
-		const maxRetryAfterSeconds = int64(1<<63-1) / int64(time.Second)
+		const maxRetryAfterSeconds = math.MaxInt64 / int64(time.Second)
 		if t > maxRetryAfterSeconds {
-			return time.Duration(1<<63 - 1)
+			return time.Duration(math.MaxInt64)
 		}
 		return time.Duration(t) * time.Second
 	}

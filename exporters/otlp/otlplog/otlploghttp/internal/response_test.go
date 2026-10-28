@@ -8,8 +8,11 @@ package internal
 
 import (
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"io"
+	"math"
+	"net/http"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -36,7 +39,7 @@ func TestCopyResponseBody(t *testing.T) {
 			want:    "x",
 			wantErr: "response body too large: exceeded 1 bytes",
 		},
-		{name: "MaxInt64", src: strings.NewReader("ok"), limit: 1<<63 - 1, want: "ok"},
+		{name: "MaxInt64", src: strings.NewReader("ok"), limit: math.MaxInt64, want: "ok"},
 		{name: "CopyError", src: iotest.ErrReader(readErr), limit: 1, wantErr: readErr.Error()},
 		{
 			name:    "ProbeError",
@@ -56,6 +59,74 @@ func TestCopyResponseBody(t *testing.T) {
 				assert.EqualError(t, err, test.wantErr)
 			}
 			assert.Equal(t, test.want, dst.String())
+		})
+	}
+}
+
+func TestCopyHTTPResponseBody(t *testing.T) {
+	var compressed bytes.Buffer
+	zw := gzip.NewWriter(&compressed)
+	_, err := zw.Write([]byte("ok"))
+	assert.NoError(t, err)
+	assert.NoError(t, zw.Close())
+	badChecksum := append([]byte(nil), compressed.Bytes()...)
+	badChecksum[len(badChecksum)-8] ^= 1
+	tests := []struct {
+		name     string
+		encoding string
+		body     []byte
+		limit    int64
+		want     string
+		wantErr  string
+	}{
+		{name: "plain", body: []byte("ok"), limit: 2, want: "ok"},
+		{name: "gzip", encoding: "gzip", body: compressed.Bytes(), limit: 3, want: "ok"},
+		{name: "mixed case", encoding: "GZip", body: compressed.Bytes(), limit: 3, want: "ok"},
+		{name: "at limit", encoding: "gzip", body: compressed.Bytes(), limit: 2, want: "ok"},
+		{
+			name:     "over limit",
+			encoding: "gzip",
+			body:     compressed.Bytes(),
+			limit:    1,
+			want:     "o",
+			wantErr:  "response body too large: exceeded 1 bytes",
+		},
+		{
+			name:     "invalid header",
+			encoding: "gzip",
+			body:     []byte("invalid gzip data"),
+			limit:    2,
+			wantErr:  "gzip: invalid header",
+		},
+		{
+			name:     "truncated",
+			encoding: "gzip",
+			body:     compressed.Bytes()[:compressed.Len()-1],
+			limit:    3,
+			want:     "ok",
+			wantErr:  "unexpected EOF",
+		},
+		{
+			name:     "invalid checksum",
+			encoding: "gzip",
+			body:     badChecksum,
+			limit:    3,
+			want:     "ok",
+			wantErr:  "gzip: invalid checksum",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := &http.Response{Header: make(http.Header), Body: io.NopCloser(bytes.NewReader(tc.body))}
+			resp.Header.Set("Content-Encoding", tc.encoding)
+			var dst bytes.Buffer
+			err := CopyHTTPResponseBody(&dst, resp, tc.limit)
+			if tc.wantErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tc.wantErr)
+			}
+			assert.Equal(t, tc.want, dst.String())
 		})
 	}
 }

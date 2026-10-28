@@ -349,51 +349,32 @@ func TestWithExemplarFilterOff(t *testing.T) {
 func TestWithCardinalityLimit(t *testing.T) {
 	cases := []struct {
 		name          string
-		envValue      string
 		options       []Option
 		expectedLimit int
 	}{
 		{
-			name:          "only cardinality limit from option",
-			envValue:      "",
+			name:          "default limit",
+			expectedLimit: defaultCardinalityLimit,
+		},
+		{
+			name:          "cardinality limit from option",
 			options:       []Option{WithCardinalityLimit(1000)},
 			expectedLimit: 1000,
 		},
 		{
-			name:          "cardinality limit from option overrides env",
-			envValue:      "500",
-			options:       []Option{WithCardinalityLimit(1000)},
-			expectedLimit: 1000,
-		},
-		{
-			name:          "cardinality limit from env",
-			envValue:      "1234",
-			options:       []Option{},
-			expectedLimit: 1234,
-		},
-		{
-			name:          "zero cardinality limit from env disables limit",
-			envValue:      "0",
-			options:       []Option{},
+			name:          "zero cardinality limit from option disables limit",
+			options:       []Option{WithCardinalityLimit(0)},
 			expectedLimit: 0,
 		},
 		{
-			name:          "invalid env value uses default",
-			envValue:      "not-a-number",
-			options:       []Option{},
-			expectedLimit: defaultCardinalityLimit,
-		},
-		{
-			name:          "empty env and no option uses default",
-			envValue:      "",
-			options:       []Option{},
-			expectedLimit: defaultCardinalityLimit,
+			name:          "negative cardinality limit from option disables limit",
+			options:       []Option{WithCardinalityLimit(-5)},
+			expectedLimit: -5,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", tc.envValue)
 			c := newConfig(tc.options)
 			assert.Equal(t, tc.expectedLimit, c.cardinalityLimit)
 		})
@@ -418,5 +399,7 @@ func (testExperimentalOption) Experimental() {}
 func TestExperimentalOptionSafe(t *testing.T) {
 	var opt testExperimentalOption
 
-	assert.NotPanics(t, func() { _ = newConfig([]Option{opt}) })
+	var conf config
+	assert.NotPanics(t, func() { conf = newConfig([]Option{opt}) })
+	assert.Equal(t, []experimentalOption{opt}, conf.experimental)
 }
