@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package x provides experimental extensions to the OpenTelemetry Go Metric
-// SDK. The API in this package is not stable and may change incompatibly.
+// Package x contains experimental SDK-level metric configuration.
+// Types and functions in this package are under active development
+// and may change in backwards-incompatible ways or be removed entirely.
 package x
