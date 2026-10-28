@@ -31,31 +31,48 @@ func TestExporterNonFiniteValues(t *testing.T) {
 		value attribute.Value
 		want  string
 	}{
-		{"NaN", attribute.Float64Value(math.NaN()), `{"Type":"FLOAT64","Value":"NaN"}`},
-		{"positive infinity", attribute.Float64Value(math.Inf(1)), `{"Type":"FLOAT64","Value":"Infinity"}`},
-		{"negative infinity", attribute.Float64Value(math.Inf(-1)), `{"Type":"FLOAT64","Value":"-Infinity"}`},
-		{"finite float", attribute.Float64Value(1e-7), `{"Type":"FLOAT64","Value":1e-07}`},
-		{"int64", attribute.Int64Value(math.MaxInt64), `{"Type":"INT64","Value":9223372036854775807}`},
+		{"NaN", attribute.Float64Value(math.NaN()), `"NaN"`},
+		{"positive infinity", attribute.Float64Value(math.Inf(1)), `"Infinity"`},
+		{"negative infinity", attribute.Float64Value(math.Inf(-1)), `"-Infinity"`},
+		{"finite float", attribute.Float64Value(1e-7), `1e-07`},
+		{"int64", attribute.Int64Value(math.MaxInt64), `9223372036854775807`},
 		{
 			"JSON-looking string",
 			attribute.StringValue(`{"admin":true}`),
-			`{"Type":"STRING","Value":"{\"admin\":true}"}`,
+			`"{\"admin\":true}"`,
 		},
-		{"byte slice", attribute.ByteSliceValue([]byte{0, 1, 255}), `{"Type":"BYTESLICE","Value":"AAH/"}`},
-		{"empty", attribute.Value{}, `{"Type":"EMPTY","Value":null}`},
+		{"byte slice", attribute.ByteSliceValue([]byte{0, 1, 255}), `"AAH/"`},
+		{"empty", attribute.Value{}, `null`},
+		{"boolean", attribute.BoolValue(true), `true`},
+		{"minimum int64", attribute.Int64Value(math.MinInt64), `-9223372036854775808`},
+		{"empty string", attribute.StringValue(""), `""`},
+		{"empty byte slice", attribute.ByteSliceValue(nil), `""`},
+		{"empty float slice", attribute.Float64SliceValue(nil), `[]`},
+		{"empty slice", attribute.SliceValue(), `[]`},
+		{"empty map", attribute.MapValue(), `{}`},
+		{
+			"escaped string",
+			attribute.StringValue("quote\"\\\n\t\x00<>&\u2028\u2029\xff"),
+			`"quote\"\\\n\t\u0000<>&\u2028\u2029\ufffd"`,
+		},
+		{
+			"Type and Value map keys",
+			attribute.MapValue(attribute.String("Type", "FLOAT64"), attribute.String("Value", "NaN")),
+			`{"Type":"FLOAT64","Value":"NaN"}`,
+		},
 		{
 			name: "finite float slice",
 			value: attribute.Float64SliceValue([]float64{
 				1.5, math.Copysign(0, -1), math.SmallestNonzeroFloat64, math.MaxFloat64,
 			}),
-			want: `{"Type":"FLOAT64SLICE","Value":[1.5,-0,5e-324,1.7976931348623157e+308]}`,
+			want: `[1.5,-0,5e-324,1.7976931348623157e+308]`,
 		},
 		{
 			name: "float slice",
 			value: attribute.Float64SliceValue(
 				[]float64{1.5, math.NaN(), math.Inf(1), math.Inf(-1), math.Copysign(0, -1)},
 			),
-			want: `{"Type":"FLOAT64SLICE","Value":[1.5,"NaN","Infinity","-Infinity",-0]}`,
+			want: `[1.5,"NaN","Infinity","-Infinity",-0]`,
 		},
 		{
 			name: "heterogeneous slice",
@@ -65,7 +82,7 @@ func TestExporterNonFiniteValues(t *testing.T) {
 				attribute.Float64Value(1.5), attribute.Int64Value(math.MaxInt64),
 				attribute.ByteSliceValue([]byte{0, 1, 255}), attribute.Value{},
 			),
-			want: `{"Type":"SLICE","Value":["NaN","NaN","Infinity","-Infinity",1.5,9223372036854775807,"AAH/",null]}`,
+			want: `["NaN","NaN","Infinity","-Infinity",1.5,9223372036854775807,"AAH/",null]`,
 		},
 		{
 			name: "nested map and slice",
@@ -77,7 +94,7 @@ func TestExporterNonFiniteValues(t *testing.T) {
 				)},
 				attribute.String("Duplicate", "first"), attribute.String("duplicate", "second"),
 			),
-			want: `{"Type":"MAP","Value":{"Duplicate":"first","a":[{"special":"NaN"},["Infinity","-Infinity"]],"duplicate":"second","z":"last"}}`,
+			want: `{"Duplicate":"first","a":[{"special":"NaN"},["Infinity","-Infinity"]],"duplicate":"second","z":"last"}`,
 		},
 		{
 			name: "other types",
@@ -89,7 +106,7 @@ func TestExporterNonFiniteValues(t *testing.T) {
 				attribute.Float64SliceValue(nil), attribute.SliceValue(), attribute.MapValue(),
 				attribute.ByteSliceValue(nil), attribute.Value{}, attribute.Float64Value(math.NaN()),
 			),
-			want: `{"Type":"SLICE","Value":[true,[true,false],[-9223372036854775808,9223372036854775807],["Infinity","<tag>"],-0,[],[],{},"",null,"NaN"]}`,
+			want: `[true,[true,false],[-9223372036854775808,9223372036854775807],["Infinity","<tag>"],-0,[],[],{},"",null,"NaN"]`,
 		},
 	}
 
@@ -108,9 +125,7 @@ func TestExporterNonFiniteValues(t *testing.T) {
 					factory := nonFiniteRecordFactory("special")
 					body, attrs, res, scope := ordinaryJSONFields("special")
 					kv := attribute.KeyValue{Key: "m", Value: tc.value}
-					var wantBody struct{ Value json.RawMessage }
-					require.NoError(t, json.Unmarshal([]byte(tc.want), &wantBody))
-					wantKV := `"m":` + string(wantBody.Value)
+					wantKV := `"m":` + tc.want
 					switch location {
 					case "body":
 						factory.Body, body = tc.value, tc.want
@@ -158,7 +173,7 @@ func nonFiniteRecordFactory(name string) logtest.RecordFactory {
 }
 
 func ordinaryJSONFields(name string) (body, attrs, res, scope string) {
-	body = `{"Type":"STRING","Value":"` + name + `"}`
+	body = `"` + name + `"`
 	attrs = `[{"z":"last"},{"a":"first"}]`
 	res = sortedJSONAttributes("")
 	return body, attrs, res, res
@@ -232,7 +247,7 @@ func TestExporterEmptyCollections(t *testing.T) {
 			require.Len(t, got, 1)
 			assertDebugJSON(
 				t,
-				expectedRecordJSON("empty", `{"Type":"STRING","Value":"empty"}`, `[]`, tc.want, `{}`),
+				expectedRecordJSON("empty", `"empty"`, `[]`, tc.want, `{}`),
 				got[0],
 			)
 		})

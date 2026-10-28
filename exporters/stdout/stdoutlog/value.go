@@ -10,30 +10,19 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// valueJSON retains the body's debug type envelope around the shared non-OTLP
-// representation.
-type valueJSON struct {
-	Type  string
-	Value any
-}
-
-func newValueJSON(v attribute.Value) valueJSON {
-	result := valueJSON{Type: v.Type().String()}
+func newValueJSON(v attribute.Value) any {
 	switch v.Type() {
 	case attribute.EMPTY:
-		return result
+		return nil
 	case attribute.STRING, attribute.BYTESLICE:
-		result.Value = v.String()
-		return result
+		return v.String()
 	case attribute.FLOAT64:
 		f := v.AsFloat64()
 		if math.IsNaN(f) || math.IsInf(f, 0) {
-			result.Value = v.String()
-			return result
+			return v.String()
 		}
 	}
 	// String returns logical text for scalar strings, bytes, and special floats;
 	// the remaining types are JSON literals, arrays, or objects.
-	result.Value = json.RawMessage(v.String())
-	return result
+	return json.RawMessage(v.String())
 }

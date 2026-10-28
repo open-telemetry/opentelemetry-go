@@ -213,7 +213,7 @@ func getJSON(now *time.Time) string {
 		timestamps = "\"Timestamp\":" + string(serializedNow) + ",\"ObservedTimestamp\":" + string(serializedNow) + ","
 	}
 
-	return "{" + timestamps + `"EventName":"testing.event","Severity":9,"SeverityText":"INFO","Body":{"Type":"STRING","Value":"test"},"Attributes":[{"key":"value"},{"key2":"value"},{"key3":"value"},{"key4":"value"},{"key5":"value"},{"bool":true}],"TraceID":"0102030405060708090a0b0c0d0e0f10","SpanID":"0102030405060708","TraceFlags":"01","Resource":{"foo":"bar"},"Scope":{"Name":"name","Version":"version","SchemaURL":"https://example.com/custom-schema","Attributes":{}},"DroppedAttributes":10}` + "\n"
+	return "{" + timestamps + `"EventName":"testing.event","Severity":9,"SeverityText":"INFO","Body":"test","Attributes":[{"key":"value"},{"key2":"value"},{"key3":"value"},{"key4":"value"},{"key5":"value"},{"bool":true}],"TraceID":"0102030405060708090a0b0c0d0e0f10","SpanID":"0102030405060708","TraceFlags":"01","Resource":{"foo":"bar"},"Scope":{"Name":"name","Version":"version","SchemaURL":"https://example.com/custom-schema","Attributes":{}},"DroppedAttributes":10}` + "\n"
 }
 
 func getJSONs(now *time.Time) string {
@@ -235,10 +235,7 @@ func getPrettyJSON(now *time.Time) string {
 	"EventName": "testing.event",
 	"Severity": 9,
 	"SeverityText": "INFO",
-	"Body": {
-		"Type": "STRING",
-		"Value": "test"
-	},
+	"Body": "test",
 	"Attributes": [
 		{
 			"key": "value"
