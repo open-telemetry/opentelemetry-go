@@ -126,6 +126,12 @@ func (v *finishSumValue[N]) shutdown(ctx context.Context) error {
 }
 
 // FinishSum contains the operations of a finish-aware Sum aggregation.
+//
+// Stop disables subsequent Measure, Finish, and ComputeAggregation calls.
+// Wait calls Stop, retires series observed during cleanup, and clears the map.
+// A recording overlapping Stop may complete after Wait returns. If it publishes
+// a series missed by cleanup, it retires that series when recording completes.
+// Wait returns a context error if cleanup is interrupted by cancellation.
 type FinishSum[N int64 | float64] struct {
 	Measure            Measure[N]
 	ComputeAggregation ComputeAggregation
