@@ -109,12 +109,13 @@ type jsonSpan struct {
 }
 
 func spanJSON(stub *tracetest.SpanStub) jsonSpan {
+	scope := scopeJSON(stub.InstrumentationScope)
 	result := jsonSpan{
 		SpanStub:               stub,
 		Attributes:             attributesJSON(stub.Attributes),
 		Resource:               attributesJSON(stub.Resource.Attributes()),
-		InstrumentationScope:   scopeJSON(stub.InstrumentationScope),
-		InstrumentationLibrary: scopeJSON(stub.InstrumentationLibrary),
+		InstrumentationScope:   scope,
+		InstrumentationLibrary: scope,
 	}
 	if stub.Events != nil {
 		result.Events = make([]jsonEvent, len(stub.Events))
