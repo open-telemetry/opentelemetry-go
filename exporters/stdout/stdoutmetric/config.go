@@ -28,12 +28,15 @@ func newConfig(options ...Option) config {
 	}
 
 	if cfg.encoder == nil {
-		enc := json.NewEncoder(os.Stdout)
+		enc := newJSONEncoder(os.Stdout)
 		cfg.encoder = &encoderHolder{encoder: enc}
 	}
 
 	if cfg.prettyPrint {
-		if e, ok := cfg.encoder.encoder.(*json.Encoder); ok {
+		switch e := cfg.encoder.encoder.(type) {
+		case *json.Encoder:
+			e.SetIndent("", "\t")
+		case *jsonEncoder:
 			e.SetIndent("", "\t")
 		}
 	}
@@ -78,12 +81,15 @@ func WithWriter(w io.Writer) Option {
 	if w == nil {
 		return WithEncoder(nil)
 	}
-	return WithEncoder(json.NewEncoder(w))
+	return optionFunc(func(c config) config {
+		c.encoder = &encoderHolder{encoder: newJSONEncoder(w)}
+		return c
+	})
 }
 
 // WithPrettyPrint prettifies the emitted output.
-// This option only works if the encoder is a *json.Encoder, as is the case
-// when using `WithWriter`.
+// This option works with the default encoder, WithWriter, or a *json.Encoder
+// passed to WithEncoder.
 func WithPrettyPrint() Option {
 	return optionFunc(func(c config) config {
 		c.prettyPrint = true
