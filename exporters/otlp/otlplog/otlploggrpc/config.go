@@ -398,7 +398,8 @@ func WithRetry(rc RetryConfig) Option {
 // convCompression returns the parsed compression encoded in s. NoCompression
 // and an error are returned if s is unknown.
 func convCompression(s string) (Compression, error) {
-	switch s {
+	// Enum values are case-insensitive per the spec.
+	switch strings.ToLower(s) {
 	case "gzip":
 		return GzipCompression, nil
 	case "none", "":
@@ -583,6 +584,8 @@ func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 	return []tls.Certificate{crt}, nil
 }
 
+// compressorToCompression converts compressor to a Compression. Like the
+// compression environment variables, the value is interpreted case-insensitively.
 func compressorToCompression(compressor string) Compression {
 	c, err := convCompression(compressor)
 	if err != nil {
