@@ -368,7 +368,7 @@ func TestNewConfig(t *testing.T) {
 				WithEndpointURL("//env.endpoint:8080/prefix"),
 			},
 			want: config{
-				endpoint: newSetting("env.endpoint:8080/prefix"),
+				endpoint: newSetting("env.endpoint:8080"),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
 			},
@@ -379,7 +379,46 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "//env.endpoint:8080/prefix",
 			},
 			want: config{
-				endpoint: newSetting("env.endpoint:8080/prefix"),
+				endpoint: newSetting("env.endpoint:8080"),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "OptionEndpointURLSchemelessAuthorityWithPath",
+			options: []Option{
+				WithInsecure(),
+				WithEndpointURL("//127.0.0.1:4317/prefix"),
+			},
+			want: config{
+				endpoint: newSetting("127.0.0.1:4317"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "LogEndpointSchemelessAuthorityWithPath",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "//127.0.0.1:4317/prefix",
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("127.0.0.1:4317"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "OTLPEndpointSchemelessAuthorityWithPath",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "//127.0.0.1:4317/prefix",
+				"OTEL_EXPORTER_OTLP_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("127.0.0.1:4317"),
+				insecure: newSetting(true),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
 			},
@@ -403,7 +442,7 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
 			},
 			want: config{
-				endpoint: newSetting("env.endpoint:8080/prefix"),
+				endpoint: newSetting("env.endpoint:8080"),
 				insecure: newSetting(true),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
@@ -418,7 +457,7 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
 			},
 			want: config{
-				endpoint: newSetting("env.endpoint:8080/prefix"),
+				endpoint: newSetting("env.endpoint:8080"),
 				insecure: newSetting(true),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),

@@ -124,6 +124,42 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test With Schemeless Authority Endpoint URL With Path",
+			opts: []GenericOption{WithInsecure(), WithEndpointURL("//127.0.0.1:4317/prefix")},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "127.0.0.1:4317", c.Traces.Endpoint)
+					assert.True(t, c.Traces.Insecure)
+				}
+			},
+		},
+		{
+			name: "Test Environment Schemeless Authority Endpoint With Path",
+			env: env{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "//127.0.0.1:4317/prefix",
+				"OTEL_EXPORTER_OTLP_INSECURE": "true",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "127.0.0.1:4317", c.Traces.Endpoint)
+					assert.True(t, c.Traces.Insecure)
+				}
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Schemeless Authority Endpoint With Path",
+			env: env{
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "//127.0.0.1:4317/prefix",
+				"OTEL_EXPORTER_OTLP_TRACES_INSECURE": "true",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "127.0.0.1:4317", c.Traces.Endpoint)
+					assert.True(t, c.Traces.Insecure)
+				}
+			},
+		},
+		{
 			name: "Test With Unix Endpoint URL",
 			opts: []GenericOption{
 				WithEndpointURL("unix:///tmp/otel.sock"),
@@ -220,7 +256,7 @@ func TestConfigs(t *testing.T) {
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.False(t, c.Traces.Insecure)
 				if grpcOption {
-					assert.Equal(t, "env.endpoint:4317/prefix", c.Traces.Endpoint)
+					assert.Equal(t, "env.endpoint:4317", c.Traces.Endpoint)
 				} else {
 					assert.Equal(t, "env.endpoint:4317", c.Traces.Endpoint)
 					assert.Equal(t, "/prefix/v1/traces", c.Traces.URLPath)
