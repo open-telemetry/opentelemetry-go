@@ -291,6 +291,7 @@ func TestObservability(t *testing.T) {
 		require.NoError(t, exporter.ExportSpans(t.Context(), tracetest.SpanStubs{
 			{Name: "/foo"},
 			{Name: "/bar"},
+			{Name: "/nonfinite", Attributes: []attribute.KeyValue{attribute.Float64("value", math.NaN())}},
 		}.Snapshots()))
 	}
 
@@ -356,7 +357,7 @@ func TestObservability(t *testing.T) {
 									semconv.OTelComponentName(observ.ComponentName(0)),
 									semconv.OTelComponentTypeKey.String(observ.ComponentType),
 								),
-								Value: 2,
+								Value: 3,
 							},
 						},
 					},

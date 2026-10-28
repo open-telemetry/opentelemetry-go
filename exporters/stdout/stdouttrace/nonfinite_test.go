@@ -158,6 +158,7 @@ func TestExporterFiniteRepresentation(t *testing.T) {
 	for _, pretty := range []bool{false, true} {
 		for _, stub := range []tracetest.SpanStub{
 			{}, {Attributes: []attribute.KeyValue{}, Events: []sdktrace.Event{}, Links: []sdktrace.Link{}, Resource: resource.Empty()},
+			{InstrumentationScope: instrumentation.Scope{Name: "scope", Attributes: attribute.NewSet()}},
 			{Attributes: attrs, Events: []sdktrace.Event{{Attributes: attrs}}, Links: []sdktrace.Link{{Attributes: attrs}}, Resource: resource.NewSchemaless(attrs...), InstrumentationScope: instrumentation.Scope{Name: "scope", Attributes: attribute.NewSet(attrs...)}},
 		} {
 			var got, want bytes.Buffer

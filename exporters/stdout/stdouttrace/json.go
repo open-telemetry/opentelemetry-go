@@ -77,10 +77,14 @@ func attributesJSON(attrs []attribute.KeyValue) []jsonAttribute {
 
 type jsonScope struct {
 	instrumentation.Scope
-	Attributes []jsonAttribute
+	Attributes any
 }
 
 func scopeJSON(scope instrumentation.Scope) jsonScope {
+	if scope.Attributes.Len() == 0 {
+		// Let Set preserve the difference between zero and initialized empty sets.
+		return jsonScope{Scope: scope, Attributes: &scope.Attributes}
+	}
 	return jsonScope{Scope: scope, Attributes: attributesJSON(scope.Attributes.ToSlice())}
 }
 
