@@ -42,6 +42,11 @@ const (
 	bridgeScopeName = "go.opentelemetry.io/contrib/bridges/prometheus"
 )
 
+var (
+	traceKeyLen = utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey)
+	spanKeyLen  = utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey)
+)
+
 var metricsPool = sync.Pool{
 	New: func() any {
 		return &metricdata.ResourceMetrics{}
@@ -836,14 +841,22 @@ func addExemplars[N int64 | float64](
 		return m
 	}
 	promExemplars := make([]prometheus.Exemplar, len(exemplars))
+
 	for i, exemplar := range exemplars {
-		labels, err := attributesToLabels(exemplar.FilteredAttributes, labelNamer)
+		traceID := hex.EncodeToString(exemplar.TraceID)
+		spanID := hex.EncodeToString(exemplar.SpanID)
+
+		remaingSpace := prometheus.ExemplarMaxRunes - traceKeyLen - utf8.RuneCountInString(
+			traceID,
+		) - spanKeyLen - utf8.RuneCountInString(
+			spanID,
+		)
+
+		labels, err := attributesToLabels(exemplar.FilteredAttributes, labelNamer, remaingSpace)
 		if err != nil {
 			otel.Handle(err)
 			return m
 		}
-		traceID := hex.EncodeToString(exemplar.TraceID)
-		spanID := hex.EncodeToString(exemplar.SpanID)
 		if exemplarLabelRunes(labels, traceID, spanID) > prometheus.ExemplarMaxRunes {
 			// The filtered attributes alone, or combined with the trace and
 			// span IDs, exceed the limit prometheus client-go enforces on
@@ -892,14 +905,26 @@ func exemplarLabelRunes(labels prometheus.Labels, traceID, spanID string) int {
 	return runes
 }
 
-func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.LabelNamer) (prometheus.Labels, error) {
+func attributesToLabels(
+	attrs []attribute.KeyValue,
+	labelNamer otlptranslator.LabelNamer,
+	remainingSpace int,
+) (prometheus.Labels, error) {
 	labels := make(map[string]string)
 	for _, attr := range attrs {
 		name, err := labelNamer.Build(string(attr.Key))
 		if err != nil {
 			return nil, err
 		}
-		labels[name] = attr.Value.String()
+		if name == otlptranslator.ExemplarSpanIDKey || name == otlptranslator.ExemplarTraceIDKey {
+			continue
+		}
+		val := attr.Value.String()
+		attrLength := utf8.RuneCountInString(val) + utf8.RuneCountInString(name)
+		if attrLength <= remainingSpace {
+			labels[name] = val
+			remainingSpace -= attrLength
+		}
 	}
 	return labels, nil
 }
