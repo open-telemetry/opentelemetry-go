@@ -143,7 +143,6 @@ func testGaugeFinish[N int64 | float64](t *testing.T, step N) {
 	t.Run("Fanout", testGaugeFinishFanout[N])
 	t.Run("Overflow", testGaugeFinishOverflow[N])
 	t.Run("Fallback", testGaugeFinishFallback[N])
-	t.Run("Concurrent", testGaugeFinishConcurrent[N])
 }
 
 func testGaugeStaleFinish[N int64 | float64](t *testing.T) {
@@ -339,6 +338,11 @@ func testGaugeFinishFallback[N int64 | float64](t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGaugeFinishConcurrentSafe(t *testing.T) {
+	t.Run("Int64", testGaugeFinishConcurrent[int64])
+	t.Run("Float64", testGaugeFinishConcurrent[float64])
 }
 
 func testGaugeFinishConcurrent[N int64 | float64](t *testing.T) {
