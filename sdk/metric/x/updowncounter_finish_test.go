@@ -63,6 +63,11 @@ func TestUpDownCounterFinish(t *testing.T) {
 	t.Run("Float64", func(t *testing.T) { testUpDownCounterFinish[float64](t, 0.25) })
 }
 
+func TestUpDownCounterFinishConcurrentSafe(t *testing.T) {
+	t.Run("Int64", testUpDownCounterFinishConcurrent[int64])
+	t.Run("Float64", testUpDownCounterFinishConcurrent[float64])
+}
+
 func TestUpDownCounterFinishConcurrentSafeLifetime(t *testing.T) {
 	t.Run("Int64", func(t *testing.T) { testUpDownCounterFinishLifetime(t, int64(-3)) })
 	t.Run("Float64", func(t *testing.T) { testUpDownCounterFinishLifetime(t, -0.75) })
@@ -216,7 +221,6 @@ func testUpDownCounterFinish[N int64 | float64](t *testing.T, step N) {
 	t.Run("Fanout", testUpDownCounterFinishFanout[N])
 	t.Run("Overflow", testUpDownCounterFinishOverflow[N])
 	t.Run("Fallback", testUpDownCounterFinishFallback[N])
-	t.Run("Concurrent", testUpDownCounterFinishConcurrent[N])
 }
 
 func testUpDownCounterFinishFanout[N int64 | float64](t *testing.T) {
