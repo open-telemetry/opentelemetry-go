@@ -195,11 +195,10 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		request.reset(ctx)
 		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
 		resp, err := c.client.Do(request.Request)
-		var urlErr *url.Error
-		if errors.As(err, &urlErr) && urlErr.Temporary() {
-			return newResponseError(http.Header{}, err)
-		}
 		if err != nil {
+			if retryableNetworkError(err) {
+				return newResponseError(http.Header{}, err)
+			}
 			return err
 		}
 
@@ -499,4 +498,45 @@ func (c *client) contextWithStop(ctx context.Context) (context.Context, context.
 		}
 	}(ctx, cancel)
 	return ctx, cancel
+}
+
+// retryableNetworkError reports whether err is a transient network failure that
+// should be retried for OTLP/HTTP trace export.
+//
+// The stable exporter specification requires transient errors to be retried, and
+// it names the wire protocol's disconnect and cannot-connect failures explicitly.
+// Go's url.Error.Temporary returns false for ordinary disconnects (EOF, connection
+// reset) and for a refused connection, so classifying on Temporary alone returned
+// those batches as permanently failed after a single attempt - including the
+// keep-alive race where a pooled connection is closed by the server just as the
+// next export reuses it.
+func retryableNetworkError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		// Cancellation is the caller's decision, not a transient failure.
+		return false
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		if netErr.Timeout() {
+			return true
+		}
+		// Temporary is deprecated but remains the only signal for some
+		// transient network conditions.
+		//nolint:staticcheck // SA1019: Temporary is deprecated.
+		if netErr.Temporary() {
+			return true
+		}
+	}
+
+	// Dial/read/write failures (connection refused, reset, unreachable) are
+	// wrapped as *net.OpError and are transient for OTLP export.
+	var opErr *net.OpError
+	return errors.As(err, &opErr)
 }

@@ -11,17 +11,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -1451,4 +1454,60 @@ type roundTripperFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 	return f(r)
+}
+
+// TestTransientDisconnectRetries reproduces the keep-alive race from #9299: the
+// server closes the connection (EOF) or resets it before answering the first
+// export. The batch must be retried - the stable exporter specification names both
+// the wire protocol's disconnect and cannot-connect failures as transient - rather
+// than returned as permanently failed after one attempt.
+func TestTransientDisconnectRetries(t *testing.T) {
+	for _, reset := range []bool{false, true} {
+		name := "EOF"
+		if reset {
+			name = "Reset"
+		}
+		t.Run(name, func(t *testing.T) {
+			var attempts atomic.Int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = io.Copy(io.Discard, r.Body)
+				if attempts.Add(1) == 1 {
+					conn, _, err := w.(http.Hijacker).Hijack()
+					if err != nil {
+						t.Error(err)
+						return
+					}
+					if reset {
+						_ = conn.(*net.TCPConn).SetLinger(0)
+					}
+					_ = conn.Close()
+					return
+				}
+				w.Header().Set("Content-Type", "application/x-protobuf")
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer srv.Close()
+
+			c := otlptracehttp.NewClient(
+				otlptracehttp.WithEndpointURL(srv.URL),
+				otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Millisecond,
+					MaxInterval:     time.Millisecond,
+					MaxElapsedTime:  100 * time.Millisecond,
+				}),
+			)
+			if err := c.Start(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = c.Stop(t.Context()) }()
+
+			err := c.UploadTraces(t.Context(), []*tracepb.ResourceSpans{{
+				ScopeSpans: []*tracepb.ScopeSpans{{Spans: []*tracepb.Span{{}}}},
+			}})
+			if err != nil || attempts.Load() != 2 {
+				t.Fatalf("wanted retry followed by success; attempts=%d err=%v", attempts.Load(), err)
+			}
+		})
+	}
 }
