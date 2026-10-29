@@ -305,14 +305,14 @@ func testBoundDeltaSum[N int64 | float64]() func(t *testing.T) {
 			DataPoints: []metricdata.DataPoint[N]{
 				{
 					Attributes: fltrAlice,
-					StartTime:  y2kPlus(5),
-					Time:       y2kPlus(6),
+					StartTime:  y2kPlus(1),
+					Time:       y2kPlus(2),
 					Value:      3,
 				},
 				{
 					Attributes: fltrBob,
-					StartTime:  y2kPlus(5),
-					Time:       y2kPlus(6),
+					StartTime:  y2kPlus(1),
+					Time:       y2kPlus(2),
 					Value:      -11,
 				},
 			},
@@ -331,14 +331,14 @@ func testBoundDeltaSum[N int64 | float64]() func(t *testing.T) {
 			DataPoints: []metricdata.DataPoint[N]{
 				{
 					Attributes: fltrAlice,
-					StartTime:  y2kPlus(6),
-					Time:       y2kPlus(7),
+					StartTime:  y2kPlus(2),
+					Time:       y2kPlus(3),
 					Value:      0,
 				},
 				{
 					Attributes: fltrBob,
-					StartTime:  y2kPlus(6),
-					Time:       y2kPlus(7),
+					StartTime:  y2kPlus(2),
+					Time:       y2kPlus(3),
 					Value:      0,
 				},
 			},
@@ -367,20 +367,20 @@ func testBoundDeltaSum[N int64 | float64]() func(t *testing.T) {
 			DataPoints: []metricdata.DataPoint[N]{
 				{
 					Attributes: fltrAlice,
-					StartTime:  y2kPlus(8),
-					Time:       y2kPlus(11),
+					StartTime:  y2kPlus(4),
+					Time:       y2kPlus(5),
 					Value:      1,
 				},
 				{
 					Attributes: fltrBob,
-					StartTime:  y2kPlus(8),
-					Time:       y2kPlus(11),
+					StartTime:  y2kPlus(4),
+					Time:       y2kPlus(5),
 					Value:      2,
 				},
 				{
 					Attributes: overflowSet,
-					StartTime:  y2kPlus(8),
-					Time:       y2kPlus(11),
+					StartTime:  y2kPlus(4),
+					Time:       y2kPlus(5),
 					Value:      7,
 				},
 			},
@@ -406,8 +406,8 @@ func testBoundCumulativeSum[N int64 | float64]() func(t *testing.T) {
 		bobStartTime := y2kPlus(0)
 		overflowStartTime := y2kPlus(0)
 		if x.PerSeriesStartTimestamps.Enabled() {
-			aliceStartTime = y2kPlus(1)
-			bobStartTime = y2kPlus(2)
+			aliceStartTime = y2kPlus(2)
+			bobStartTime = y2kPlus(3)
 			overflowStartTime = y2kPlus(6)
 		}
 
@@ -534,6 +534,53 @@ func TestBoundSumExemplarDroppedAttributes(t *testing.T) {
 			require.Len(t, s.DataPoints[0].Exemplars, 1)
 			assert.Equal(t, int64(42), s.DataPoints[0].Exemplars[0].Value)
 			assert.Equal(t, []attribute.KeyValue{adminTrue}, s.DataPoints[0].Exemplars[0].FilteredAttributes)
+		})
+	}
+}
+
+func TestBoundCumulativeSumDelayedFirstMeasurement(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	for _, enabled := range []bool{false, true} {
+		name := "PerSeriesStartTimeDisabled"
+		if enabled {
+			name = "PerSeriesStartTimeEnabled"
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", strconv.FormatBool(enabled))
+			c.Reset()
+
+			agg := Builder[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				Filter:      attrFltr,
+			}.BoundSum(true)
+
+			// Step 0: Bind handle while clock is at tick 0 (agg.start is tick 0).
+			// Binding must not record a start timestamp before the first measurement.
+			boundAlice := agg.Bind(alice)
+
+			// Step 1: Multiple collection cycles while the handle is idle.
+			var got metricdata.Aggregation
+			require.Equal(t, 0, agg.ComputeAggregation(&got))
+			require.Equal(t, 0, agg.ComputeAggregation(&got))
+
+			// Step 2: First measurement occurs after delayed idle cycles.
+			measurementTime := y2kPlus(c.ticks.Load())
+			boundAlice(t.Context(), 42)
+
+			// Step 3: Collect aggregation.
+			require.Equal(t, 1, agg.ComputeAggregation(&got))
+			s, ok := got.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.Len(t, s.DataPoints, 1)
+
+			expectedStartTime := y2kPlus(0)
+			if enabled {
+				expectedStartTime = measurementTime
+			}
+			assert.Equal(t, expectedStartTime, s.DataPoints[0].StartTime)
+			assert.Equal(t, int64(42), s.DataPoints[0].Value)
 		})
 	}
 }

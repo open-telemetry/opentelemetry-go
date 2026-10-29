@@ -19,6 +19,7 @@ import (
 // one measurement in the current collection cycle.
 type boundEntry[V any] struct {
 	val      V
+	once     sync.Once
 	measured atomic.Bool
 	bound    bool
 }
@@ -234,7 +235,6 @@ func newBoundSumValue[N int64 | float64](
 	return sumValue[N]{
 		res:           r,
 		attrs:         attr,
-		startTime:     now(),
 		dropExemplars: isDrop,
 	}
 }
@@ -396,11 +396,18 @@ func (s *boundCumulativeSum[N]) newValue(attr attribute.Set) sumValue[N] {
 	return newBoundSumValue(attr, s.newRes)
 }
 
+func (s *boundCumulativeSum[N]) markMeasured(e *boundEntry[sumValue[N]]) {
+	e.once.Do(func() {
+		e.val.startTime = now()
+		e.measured.Store(true)
+	})
+}
+
 func (s *boundCumulativeSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAttributes) {
 	e := s.values.LoadOrStoreAttr(lazy, s.newValue)
 	e.val.n.add(value)
 	if !e.measured.Load() {
-		e.measured.Store(true)
+		s.markMeasured(e)
 	}
 	if !e.val.dropExemplars {
 		e.val.res.Offer(ctx, value, lazy)
@@ -413,14 +420,14 @@ func (s *boundCumulativeSum[N]) bind(lazy lazyFilteredAttributes) BoundMeasure[N
 		return func(_ context.Context, val N) {
 			e.val.n.add(val)
 			if !e.measured.Load() {
-				e.measured.Store(true)
+				s.markMeasured(e)
 			}
 		}
 	}
 	return func(ctx context.Context, val N) {
 		e.val.n.add(val)
 		if !e.measured.Load() {
-			e.measured.Store(true)
+			s.markMeasured(e)
 		}
 		e.val.res.Offer(ctx, val, lazy)
 	}
