@@ -248,8 +248,7 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "counter with suffixes disabled",
 			expectedFile: "testdata/counter_disabled_suffix.txt",
 			options: []Option{
-				WithoutCounterSuffixes(),
-				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -365,7 +364,6 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "sanitized attributes to labels",
 			expectedFile: "testdata/sanitized_labels.txt",
 			options: []Option{
-				WithoutUnits(),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
@@ -381,8 +379,6 @@ func TestPrometheusExporter(t *testing.T) {
 				counter, err := meter.Float64Counter(
 					"foo",
 					otelmetric.WithDescription("a sanitary counter"),
-					// This unit is not added to
-					otelmetric.WithUnit("By"),
 				)
 				require.NoError(t, err)
 				counter.Add(ctx, 5, opt)
@@ -1120,7 +1116,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				assert.NoError(t, err)
 				bazB.Add(ctx, 100, withTypeBar)
 			},
-			options:               []Option{WithoutUnits()},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
 			possibleExpectedFiles: []string{"testdata/conflict_unit_two_counters.txt"},
 		},
 		{
@@ -1138,7 +1134,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				assert.NoError(t, err)
 				barB.Add(ctx, 100, withTypeBar)
 			},
-			options:               []Option{WithoutUnits()},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
 			possibleExpectedFiles: []string{"testdata/conflict_unit_two_updowncounters.txt"},
 		},
 		{
@@ -1156,25 +1152,22 @@ func TestDuplicateMetrics(t *testing.T) {
 				assert.NoError(t, err)
 				barB.Record(ctx, 100, withAB)
 			},
-			options:               []Option{WithoutUnits()},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
 			possibleExpectedFiles: []string{"testdata/conflict_unit_two_histograms.txt"},
 		},
 		{
 			name: "conflict_type_counter_and_updowncounter",
 			recordMetrics: func(ctx context.Context, meterA, _ otelmetric.Meter) {
 				counter, err := meterA.Int64Counter("foo",
-					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter foo"))
 				assert.NoError(t, err)
 				counter.Add(ctx, 100, withTypeFoo)
 
 				gauge, err := meterA.Int64UpDownCounter("foo_total",
-					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter foo"))
 				assert.NoError(t, err)
 				gauge.Add(ctx, 200, withTypeFoo)
 			},
-			options: []Option{WithoutUnits()},
 			possibleExpectedFiles: []string{
 				"testdata/conflict_type_counter_and_updowncounter_1.txt",
 				"testdata/conflict_type_counter_and_updowncounter_2.txt",
@@ -3033,8 +3026,6 @@ func TestExporterSelfInstrumentationErrors(t *testing.T) {
 			collector := &collector{
 				reader:                   reader,
 				disableTargetInfo:        cfg.disableTargetInfo,
-				withoutUnits:             cfg.withoutUnits,
-				withoutCounterSuffixes:   cfg.withoutCounterSuffixes,
 				disableScopeInfo:         cfg.disableScopeInfo,
 				metricFamilies:           make(map[string]*dto.MetricFamily),
 				namespace:                cfg.namespace,

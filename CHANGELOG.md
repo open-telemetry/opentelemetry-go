@@ -76,6 +76,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Remove the experimental `WithUnsafeAttributes` option from `go.opentelemetry.io/otel/metric/x`.
+- Remove the deprecated `WithoutUnits` and `WithoutCounterSuffixes` options in `go.opentelemetry.io/otel/exporters/prometheus`.
+  Use `WithTranslationStrategy` instead. (#9275)
 - Remove support for the deprecated `OTEL_GO_X_CARDINALITY_LIMIT` environment variable in `go.opentelemetry.io/otel/sdk/metric`.
   Use `WithCardinalityLimit` instead, including `WithCardinalityLimit(0)` to disable the default limit of 2000. (#9210)
 
