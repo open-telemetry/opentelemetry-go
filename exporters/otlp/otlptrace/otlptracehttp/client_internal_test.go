@@ -6,6 +6,8 @@ package otlptracehttp
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"io"
 	"math"
@@ -58,25 +60,47 @@ func TestClientMarshalLogDoesNotIncludeEndpointConfig(t *testing.T) {
 }
 
 func TestRetryableNetworkError(t *testing.T) {
+	live := context.Background()
+	canceledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+	expiredCtx, cancelExpired := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancelExpired()
+
 	tests := []struct {
 		name string
+		ctx  context.Context
 		err  error
 		want bool
 	}{
-		{name: "nil"},
-		{name: "canceled", err: context.Canceled},
-		{name: "deadline exceeded", err: context.DeadlineExceeded},
-		{name: "EOF", err: io.EOF, want: true},
-		{name: "unexpected EOF", err: io.ErrUnexpectedEOF, want: true},
+		{name: "nil", ctx: live},
+
+		// Cancellation: nothing would be delivered.
+		{name: "explicitly canceled error", ctx: live, err: context.Canceled},
+		{name: "canceled export context", ctx: canceledCtx, err: io.EOF},
+		{name: "export context deadline passed", ctx: expiredCtx, err: &timeoutError{}},
+
+		// A client-level timeout is transient while the export is still running:
+		// http.Client.Timeout wraps context.DeadlineExceeded just like the export
+		// context's own deadline does, so the context has to decide.
+		{
+			name: "client timeout while the export is live",
+			ctx:  live,
+			err:  &url.Error{Op: "Post", URL: "https://example.com", Err: &timeoutError{}},
+			want: true,
+		},
+
+		// Transient disconnects.
+		{name: "EOF", ctx: live, err: io.EOF, want: true},
+		{name: "unexpected EOF", ctx: live, err: io.ErrUnexpectedEOF, want: true},
 		{
 			name: "url wrapped EOF",
+			ctx:  live,
 			err:  &url.Error{Op: "Post", URL: "https://example.com", Err: io.EOF},
 			want: true,
 		},
 		{
-			// The URL is a placeholder: the classifier decides on the wrapped error, and
-			// a literal loopback URL here is picked up by the repository's link checker.
 			name: "connection refused",
+			ctx:  live,
 			err: &url.Error{
 				Op:  "Post",
 				URL: "https://example.com",
@@ -86,6 +110,7 @@ func TestRetryableNetworkError(t *testing.T) {
 		},
 		{
 			name: "connection reset",
+			ctx:  live,
 			err: &url.Error{
 				Op:  "Post",
 				URL: "https://example.com",
@@ -93,19 +118,41 @@ func TestRetryableNetworkError(t *testing.T) {
 			},
 			want: true,
 		},
+
+		// Permanent configuration and trust failures must fail fast.
 		{
-			name: "timeout",
-			err:  &url.Error{Op: "Post", URL: "https://example.com", Err: &timeoutError{}},
-			want: true,
+			name: "invalid port",
+			ctx:  live,
+			err: &url.Error{
+				Op:  "Post",
+				URL: "https://example.com",
+				Err: &net.OpError{Op: "dial", Net: "tcp",
+					Err: &net.AddrError{Err: "invalid port", Addr: "127.0.0.1:99999"}},
+			},
 		},
 		{
-			name: "non-network error stays permanent",
-			err:  errors.New("invalid configuration"),
+			name: "tls handshake alert",
+			ctx:  live,
+			err: &url.Error{
+				Op:  "Post",
+				URL: "https://example.com",
+				Err: &net.OpError{Op: "remote error", Net: "tcp", Err: tls.AlertError(42)},
+			},
 		},
+		{
+			name: "certificate verification",
+			ctx:  live,
+			err: &url.Error{
+				Op:  "Post",
+				URL: "https://example.com",
+				Err: &tls.CertificateVerificationError{Err: x509.UnknownAuthorityError{}},
+			},
+		},
+		{name: "non-network error stays permanent", ctx: live, err: errors.New("invalid configuration")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, retryableNetworkError(tt.err))
+			assert.Equal(t, tt.want, retryableNetworkError(tt.ctx, tt.err))
 		})
 	}
 }

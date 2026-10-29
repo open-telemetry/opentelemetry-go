@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -196,7 +197,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
 		resp, err := c.client.Do(request.Request)
 		if err != nil {
-			if retryableNetworkError(err) {
+			if retryableNetworkError(ctx, err) {
 				return newResponseError(http.Header{}, err)
 			}
 			return err
@@ -503,27 +504,51 @@ func (c *client) contextWithStop(ctx context.Context) (context.Context, context.
 // retryableNetworkError reports whether err is a transient network failure that
 // should be retried for OTLP/HTTP trace export.
 //
-// The stable exporter specification requires transient errors to be retried, and
-// it names the wire protocol's disconnect and cannot-connect failures explicitly.
-// Go's url.Error.Temporary returns false for ordinary disconnects (EOF, connection
-// reset) and for a refused connection, so classifying on Temporary alone returned
-// those batches as permanently failed after a single attempt - including the
-// keep-alive race where a pooled connection is closed by the server just as the
-// next export reuses it.
-func retryableNetworkError(err error) bool {
+// The stable exporter specification requires transient errors to be retried, and it
+// names the wire protocol's disconnect and cannot-connect failures explicitly. Go's
+// url.Error.Temporary returns false for ordinary disconnects (EOF, connection reset)
+// and for a refused connection, so classifying on Temporary alone returned those
+// batches as permanently failed after a single attempt - including the keep-alive race
+// where a pooled connection is closed by the server just as the next export reuses it.
+//
+// ctx is the export context, and it decides what a deadline means: an http.Client
+// timeout also wraps context.DeadlineExceeded, but that is transient while the export
+// is still running, whereas the export context's own cancellation leaves nothing to
+// retry with.
+func retryableNetworkError(ctx context.Context, err error) bool {
 	if err == nil {
 		return false
 	}
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		// Cancellation is the caller's decision, not a transient failure.
+	if errors.Is(err, context.Canceled) {
+		// The caller gave up; a retry would not be delivered.
 		return false
 	}
+	if ctx.Err() != nil {
+		// Covers both cancellation and the export context's own deadline.
+		return false
+	}
+
+	// Permanent trust and configuration failures must fail fast rather than consume the
+	// retry budget: an invalid port arrives as *net.AddrError, certificate problems as
+	// *tls.CertificateVerificationError or an x509 error, and a TLS handshake alert as
+	// tls.AlertError wrapped in *net.OpError.
+	var addrErr *net.AddrError
+	if errors.As(err, &addrErr) {
+		return false
+	}
+	var verifyErr *tls.CertificateVerificationError
+	if errors.As(err, &verifyErr) {
+		return false
+	}
+	if alertErr, ok := errors.AsType[tls.AlertError](err); ok && alertErr != 0 {
+		return false
+	}
+
 	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 		return true
 	}
 
-	var netErr net.Error
-	if errors.As(err, &netErr) {
+	if netErr, ok := errors.AsType[net.Error](err); ok {
 		if netErr.Timeout() {
 			return true
 		}
@@ -537,6 +562,6 @@ func retryableNetworkError(err error) bool {
 
 	// Dial/read/write failures (connection refused, reset, unreachable) are
 	// wrapped as *net.OpError and are transient for OTLP export.
-	var opErr *net.OpError
-	return errors.As(err, &opErr)
+	_, isOpErr := errors.AsType[*net.OpError](err)
+	return isOpErr
 }

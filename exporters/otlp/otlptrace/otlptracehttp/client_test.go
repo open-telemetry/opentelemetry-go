@@ -1511,3 +1511,47 @@ func TestTransientDisconnectRetries(t *testing.T) {
 		})
 	}
 }
+
+// TestClientTimeoutRetries covers the case a Temporary()-only classifier also got
+// wrong in the other direction: an http.Client timeout wraps
+// context.DeadlineExceeded, but the export context is still alive, so the attempt is
+// transient and must be retried rather than dropped after one slow response.
+func TestClientTimeoutRetries(t *testing.T) {
+	var attempts atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		if attempts.Add(1) == 1 {
+			// Longer than the client timeout: the first attempt is abandoned by the
+			// client while the handler is still sleeping.
+			time.Sleep(200 * time.Millisecond)
+		}
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpointURL(srv.URL),
+		otlptracehttp.WithHTTPClient(&http.Client{Timeout: 20 * time.Millisecond}),
+		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  5 * time.Second,
+		}),
+	)
+	if err := c.Start(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = c.Stop(t.Context()) }()
+
+	err := c.UploadTraces(t.Context(), []*tracepb.ResourceSpans{{
+		ScopeSpans: []*tracepb.ScopeSpans{{Spans: []*tracepb.Span{{}}}},
+	}})
+	if err != nil {
+		t.Fatalf("wanted the timed-out attempt to be retried: %v", err)
+	}
+	if got := attempts.Load(); got < 2 {
+		t.Fatalf("wanted at least 2 attempts, got %d", got)
+	}
+}
