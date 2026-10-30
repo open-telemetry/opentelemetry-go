@@ -265,7 +265,7 @@ func (i *inserter[N]) Instrument(
 	return measures, err
 }
 
-func (i *inserter[N]) forEachStream(
+func (i *inserter[N]) forEachStream( // nolint:revive // optIn is not a control flag.
 	inst Instrument,
 	allowedKeys []attribute.Key,
 	optIn bool,
@@ -289,7 +289,7 @@ func (i *inserter[N]) forEachStream(
 }
 
 // defaultInstrument resolves the implicit default stream when no views match.
-func (i *inserter[N]) defaultInstrument(
+func (i *inserter[N]) defaultInstrument( // nolint:revive // optIn is not a control flag.
 	inst Instrument,
 	allowedKeys []attribute.Key,
 	optIn bool,
@@ -315,7 +315,7 @@ func (i *inserter[N]) defaultInstrument(
 }
 
 // independentInstrument resolves views using independent matching semantics.
-func (i *inserter[N]) independentInstrument(
+func (i *inserter[N]) independentInstrument( // nolint:revive // optIn is not a control flag.
 	inst Instrument,
 	allowedKeys []attribute.Key,
 	optIn bool,
@@ -398,7 +398,7 @@ func composeAttributeFilters(streams []Stream) attribute.Filter {
 // view matching semantics: views matching the same instrument are grouped by target stream
 // name, scalar properties use last-wins precedence, aggregations fall back in reverse order,
 // and attribute filters are composed with logical AND.
-func (i *inserter[N]) composableInstrument(
+func (i *inserter[N]) composableInstrument( // nolint:revive // optIn is not a control flag.
 	inst Instrument,
 	matches []Stream,
 	allowedKeys []attribute.Key,
@@ -579,7 +579,7 @@ func (i *inserter[N]) readerDefaultAggregation(kind InstrumentKind) Aggregation 
 //
 // If the instrument defines an unknown or incompatible aggregation, an error
 // is returned.
-func (i *inserter[N]) cachedAggregator(
+func (i *inserter[N]) cachedAggregator( // nolint:revive // optIn is not a control flag.
 	scope instrumentation.Scope,
 	kind InstrumentKind,
 	stream Stream,
