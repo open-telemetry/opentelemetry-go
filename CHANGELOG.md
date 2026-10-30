@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Support the `OTEL_METRIC_EXPORT_MAX_BATCH_SIZE` environment variable in `NewPeriodicReader` in `go.opentelemetry.io/otel/sdk/metric`. The `WithMaxExportBatchSize` option takes precedence. (#9316)
 - Add experimental `WithFinish` support for `Float64Counter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9186)
 - Add experimental `WithFinish` support for `Int64Counter` Sum aggregation,
   including cancellable provider shutdown and parked waits for in-flight measurements,
