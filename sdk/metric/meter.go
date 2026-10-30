@@ -71,7 +71,7 @@ func (m *meter) Int64Counter(name string, options ...metric.Int64CounterOption) 
 	cfg := metric.NewInt64CounterConfig(options...)
 	const kind = InstrumentKindCounter
 	p := int64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options))
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options), isOptIn(options))
 	if err != nil {
 		return i, err
 	}
@@ -89,7 +89,7 @@ func (m *meter) Int64UpDownCounter(
 	cfg := metric.NewInt64UpDownCounterConfig(options...)
 	const kind = InstrumentKindUpDownCounter
 	p := int64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options))
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options), isOptIn(options))
 	if err != nil {
 		return i, err
 	}
@@ -103,7 +103,7 @@ func (m *meter) Int64UpDownCounter(
 func (m *meter) Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	cfg := metric.NewInt64HistogramConfig(options...)
 	p := int64InstProvider{m}
-	i, err := p.lookupHistogram(name, cfg, defaultAttributes(options))
+	i, err := p.lookupHistogram(name, cfg, defaultAttributes(options), isOptIn(options))
 	if err != nil {
 		return i, err
 	}
@@ -118,7 +118,7 @@ func (m *meter) Int64Gauge(name string, options ...metric.Int64GaugeOption) (met
 	cfg := metric.NewInt64GaugeConfig(options...)
 	const kind = InstrumentKindGauge
 	p := int64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options))
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options), isOptIn(options))
 	if err != nil {
 		return i, err
 	}
@@ -131,6 +131,7 @@ func (m *meter) Int64Gauge(name string, options ...metric.Int64GaugeOption) (met
 func (m *meter) int64ObservableInstrument(
 	id Instrument,
 	allowedKeys []attribute.Key,
+	optIn bool,
 	callbacks []metric.Int64Callback,
 ) (int64Observable, error) {
 	key := instID{
@@ -147,7 +148,7 @@ func (m *meter) int64ObservableInstrument(
 		for _, insert := range m.int64Resolver.inserters {
 			// Connect the measure functions for instruments in this pipeline with the
 			// callbacks for this pipeline.
-			in, err := insert.Instrument(id, allowedKeys, insert.readerDefaultAggregation(id.Kind))
+			in, err := insert.Instrument(id, allowedKeys, optIn, insert.readerDefaultAggregation(id.Kind))
 			if err != nil {
 				return inst, err
 			}
@@ -193,7 +194,7 @@ func (m *meter) Int64ObservableCounter(
 		Kind:        InstrumentKindObservableCounter,
 		Scope:       m.scope,
 	}
-	return m.int64ObservableInstrument(id, defaultAttributes(options), cfg.Callbacks())
+	return m.int64ObservableInstrument(id, defaultAttributes(options), isOptIn(options), cfg.Callbacks())
 }
 
 // Int64ObservableUpDownCounter returns a new instrument identified by name and
@@ -217,7 +218,7 @@ func (m *meter) Int64ObservableUpDownCounter(
 		Kind:        InstrumentKindObservableUpDownCounter,
 		Scope:       m.scope,
 	}
-	return m.int64ObservableInstrument(id, defaultAttributes(options), cfg.Callbacks())
+	return m.int64ObservableInstrument(id, defaultAttributes(options), isOptIn(options), cfg.Callbacks())
 }
 
 // Int64ObservableGauge returns a new instrument identified by name and
@@ -241,7 +242,7 @@ func (m *meter) Int64ObservableGauge(
 		Kind:        InstrumentKindObservableGauge,
 		Scope:       m.scope,
 	}
-	return m.int64ObservableInstrument(id, defaultAttributes(options), cfg.Callbacks())
+	return m.int64ObservableInstrument(id, defaultAttributes(options), isOptIn(options), cfg.Callbacks())
 }
 
 // Float64Counter returns a new instrument identified by name and configured
@@ -251,7 +252,7 @@ func (m *meter) Float64Counter(name string, options ...metric.Float64CounterOpti
 	cfg := metric.NewFloat64CounterConfig(options...)
 	const kind = InstrumentKindCounter
 	p := float64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options))
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options), isOptIn(options))
 	if err != nil {
 		return i, err
 	}
@@ -269,7 +270,7 @@ func (m *meter) Float64UpDownCounter(
 	cfg := metric.NewFloat64UpDownCounterConfig(options...)
 	const kind = InstrumentKindUpDownCounter
 	p := float64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options))
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options), isOptIn(options))
 	if err != nil {
 		return i, err
 	}
@@ -286,7 +287,7 @@ func (m *meter) Float64Histogram(
 ) (metric.Float64Histogram, error) {
 	cfg := metric.NewFloat64HistogramConfig(options...)
 	p := float64InstProvider{m}
-	i, err := p.lookupHistogram(name, cfg, defaultAttributes(options))
+	i, err := p.lookupHistogram(name, cfg, defaultAttributes(options), isOptIn(options))
 	if err != nil {
 		return i, err
 	}
@@ -301,7 +302,7 @@ func (m *meter) Float64Gauge(name string, options ...metric.Float64GaugeOption) 
 	cfg := metric.NewFloat64GaugeConfig(options...)
 	const kind = InstrumentKindGauge
 	p := float64InstProvider{m}
-	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options))
+	i, err := p.lookup(kind, name, cfg.Description(), cfg.Unit(), defaultAttributes(options), isOptIn(options))
 	if err != nil {
 		return i, err
 	}
@@ -314,6 +315,7 @@ func (m *meter) Float64Gauge(name string, options ...metric.Float64GaugeOption) 
 func (m *meter) float64ObservableInstrument(
 	id Instrument,
 	allowedKeys []attribute.Key,
+	optIn bool,
 	callbacks []metric.Float64Callback,
 ) (float64Observable, error) {
 	key := instID{
@@ -330,7 +332,7 @@ func (m *meter) float64ObservableInstrument(
 		for _, insert := range m.float64Resolver.inserters {
 			// Connect the measure functions for instruments in this pipeline with the
 			// callbacks for this pipeline.
-			in, err := insert.Instrument(id, allowedKeys, insert.readerDefaultAggregation(id.Kind))
+			in, err := insert.Instrument(id, allowedKeys, optIn, insert.readerDefaultAggregation(id.Kind))
 			if err != nil {
 				return inst, err
 			}
@@ -376,7 +378,7 @@ func (m *meter) Float64ObservableCounter(
 		Kind:        InstrumentKindObservableCounter,
 		Scope:       m.scope,
 	}
-	return m.float64ObservableInstrument(id, defaultAttributes(options), cfg.Callbacks())
+	return m.float64ObservableInstrument(id, defaultAttributes(options), isOptIn(options), cfg.Callbacks())
 }
 
 // Float64ObservableUpDownCounter returns a new instrument identified by name
@@ -400,7 +402,7 @@ func (m *meter) Float64ObservableUpDownCounter(
 		Kind:        InstrumentKindObservableUpDownCounter,
 		Scope:       m.scope,
 	}
-	return m.float64ObservableInstrument(id, defaultAttributes(options), cfg.Callbacks())
+	return m.float64ObservableInstrument(id, defaultAttributes(options), isOptIn(options), cfg.Callbacks())
 }
 
 // Float64ObservableGauge returns a new instrument identified by name and
@@ -424,7 +426,7 @@ func (m *meter) Float64ObservableGauge(
 		Kind:        InstrumentKindObservableGauge,
 		Scope:       m.scope,
 	}
-	return m.float64ObservableInstrument(id, defaultAttributes(options), cfg.Callbacks())
+	return m.float64ObservableInstrument(id, defaultAttributes(options), isOptIn(options), cfg.Callbacks())
 }
 
 func validateInstrumentName(name string) error {
@@ -648,6 +650,7 @@ func (p int64InstProvider) aggs(
 	kind InstrumentKind,
 	name, desc, u string,
 	allowedKeys []attribute.Key,
+	optIn bool,
 ) ([]aggregate.Measure[int64], error) {
 	inst := Instrument{
 		Name:        name,
@@ -656,13 +659,14 @@ func (p int64InstProvider) aggs(
 		Kind:        kind,
 		Scope:       p.scope,
 	}
-	return p.int64Resolver.Aggregators(inst, allowedKeys)
+	return p.int64Resolver.Aggregators(inst, allowedKeys, optIn)
 }
 
 func (p int64InstProvider) histogramAggs(
 	name string,
 	cfg metric.Int64HistogramConfig,
 	allowedKeys []attribute.Key,
+	optIn bool,
 ) ([]aggregate.Measure[int64], error) {
 	boundaries := cfg.ExplicitBucketBoundaries()
 	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
@@ -677,7 +681,7 @@ func (p int64InstProvider) histogramAggs(
 		Kind:        InstrumentKindHistogram,
 		Scope:       p.scope,
 	}
-	measures, err := p.int64Resolver.HistogramAggregators(inst, allowedKeys, boundaries)
+	measures, err := p.int64Resolver.HistogramAggregators(inst, allowedKeys, boundaries, optIn)
 	return measures, errors.Join(aggError, err)
 }
 
@@ -686,6 +690,7 @@ func (p int64InstProvider) lookup(
 	kind InstrumentKind,
 	name, desc, u string,
 	allowedKeys []attribute.Key,
+	optIn bool,
 ) (*int64Inst, error) {
 	return p.int64Insts.Lookup(instID{
 		Name:        name,
@@ -693,7 +698,7 @@ func (p int64InstProvider) lookup(
 		Unit:        u,
 		Kind:        kind,
 	}, func() (*int64Inst, error) {
-		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
+		aggs, err := p.aggs(kind, name, desc, u, allowedKeys, optIn)
 		return &int64Inst{measures: aggs}, err
 	})
 }
@@ -703,6 +708,7 @@ func (p int64InstProvider) lookupHistogram(
 	name string,
 	cfg metric.Int64HistogramConfig,
 	allowedKeys []attribute.Key,
+	optIn bool,
 ) (*int64Inst, error) {
 	return p.int64Insts.Lookup(instID{
 		Name:        name,
@@ -710,7 +716,7 @@ func (p int64InstProvider) lookupHistogram(
 		Unit:        cfg.Unit(),
 		Kind:        InstrumentKindHistogram,
 	}, func() (*int64Inst, error) {
-		aggs, err := p.histogramAggs(name, cfg, allowedKeys)
+		aggs, err := p.histogramAggs(name, cfg, allowedKeys, optIn)
 		return &int64Inst{measures: aggs}, err
 	})
 }
@@ -722,6 +728,7 @@ func (p float64InstProvider) aggs(
 	kind InstrumentKind,
 	name, desc, u string,
 	allowedKeys []attribute.Key,
+	optIn bool,
 ) ([]aggregate.Measure[float64], error) {
 	inst := Instrument{
 		Name:        name,
@@ -730,13 +737,14 @@ func (p float64InstProvider) aggs(
 		Kind:        kind,
 		Scope:       p.scope,
 	}
-	return p.float64Resolver.Aggregators(inst, allowedKeys)
+	return p.float64Resolver.Aggregators(inst, allowedKeys, optIn)
 }
 
 func (p float64InstProvider) histogramAggs(
 	name string,
 	cfg metric.Float64HistogramConfig,
 	allowedKeys []attribute.Key,
+	optIn bool,
 ) ([]aggregate.Measure[float64], error) {
 	boundaries := cfg.ExplicitBucketBoundaries()
 	aggError := AggregationExplicitBucketHistogram{Boundaries: boundaries}.err()
@@ -751,7 +759,7 @@ func (p float64InstProvider) histogramAggs(
 		Kind:        InstrumentKindHistogram,
 		Scope:       p.scope,
 	}
-	measures, err := p.float64Resolver.HistogramAggregators(inst, allowedKeys, boundaries)
+	measures, err := p.float64Resolver.HistogramAggregators(inst, allowedKeys, boundaries, optIn)
 	return measures, errors.Join(aggError, err)
 }
 
@@ -760,6 +768,7 @@ func (p float64InstProvider) lookup(
 	kind InstrumentKind,
 	name, desc, u string,
 	allowedKeys []attribute.Key,
+	optIn bool,
 ) (*float64Inst, error) {
 	return p.float64Insts.Lookup(instID{
 		Name:        name,
@@ -767,7 +776,7 @@ func (p float64InstProvider) lookup(
 		Unit:        u,
 		Kind:        kind,
 	}, func() (*float64Inst, error) {
-		aggs, err := p.aggs(kind, name, desc, u, allowedKeys)
+		aggs, err := p.aggs(kind, name, desc, u, allowedKeys, optIn)
 		return &float64Inst{measures: aggs}, err
 	})
 }
@@ -777,6 +786,7 @@ func (p float64InstProvider) lookupHistogram(
 	name string,
 	cfg metric.Float64HistogramConfig,
 	allowedKeys []attribute.Key,
+	optIn bool,
 ) (*float64Inst, error) {
 	return p.float64Insts.Lookup(instID{
 		Name:        name,
@@ -784,7 +794,7 @@ func (p float64InstProvider) lookupHistogram(
 		Unit:        cfg.Unit(),
 		Kind:        InstrumentKindHistogram,
 	}, func() (*float64Inst, error) {
-		aggs, err := p.histogramAggs(name, cfg, allowedKeys)
+		aggs, err := p.histogramAggs(name, cfg, allowedKeys, optIn)
 		return &float64Inst{measures: aggs}, err
 	})
 }
@@ -822,4 +832,14 @@ func defaultAttributes[T any](opts []T) []attribute.Key {
 		return []attribute.Key{}
 	}
 	return keys
+}
+
+func isOptIn[T any](opts []T) bool {
+	var optIn bool
+	for _, o := range opts {
+		if exp, ok := any(o).(interface{ OptIn() bool }); ok {
+			optIn = exp.OptIn()
+		}
+	}
+	return optIn
 }

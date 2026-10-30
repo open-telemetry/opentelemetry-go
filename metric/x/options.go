@@ -28,6 +28,26 @@ func WithDefaultAttributes(keys ...attribute.Key) metric.InstrumentOption {
 	return defaultAttributesOption{keys: keys}
 }
 
+type optInOption struct {
+	metric.InstrumentOption
+}
+
+// Experimental prevents the API from panicking when the option is used.
+func (optInOption) Experimental() {}
+
+func (optInOption) OptIn() bool {
+	return true
+}
+
+// WithOptIn returns a [metric.InstrumentOption] that marks an instrument as
+// opt-in (disabled by default).
+//
+// The implementation should use the drop aggregation for the instrument by
+// default unless it is explicitly enabled by a View.
+func WithOptIn() metric.InstrumentOption {
+	return optInOption{}
+}
+
 // Settable is an optional interface that Options can implement
 // to allow reuse without additional allocations.
 //
