@@ -19,6 +19,8 @@ type factory struct {
 	registry        *finish.Registry
 	int64Counters   cacheWithErr[instID, metric.Int64Counter]
 	float64Counters cacheWithErr[instID, metric.Float64Counter]
+	int64Gauges     cacheWithErr[instID, metric.Int64Gauge]
+	float64Gauges   cacheWithErr[instID, metric.Float64Gauge]
 }
 
 var _ finish.Factory = (*factory)(nil)
@@ -38,7 +40,7 @@ func (f *factory) Int64Counter(name string, options ...metric.Int64CounterOption
 			Kind:        InstrumentKindCounter,
 			Scope:       f.meter.scope,
 		}
-		measures, finishers, err := finishCounterAggregators(
+		measures, finishers, err := finishAggregators(
 			f.meter.int64Resolver,
 			inst,
 			defaultAttributes(options),
@@ -70,7 +72,7 @@ func (f *factory) Float64Counter(name string, options ...metric.Float64CounterOp
 			Kind:        InstrumentKindCounter,
 			Scope:       f.meter.scope,
 		}
-		measures, finishers, err := finishCounterAggregators(
+		measures, finishers, err := finishAggregators(
 			f.meter.float64Resolver,
 			inst,
 			defaultAttributes(options),
@@ -87,9 +89,73 @@ func (f *factory) Float64Counter(name string, options ...metric.Float64CounterOp
 	return counter, validateInstrumentName(name)
 }
 
-// finishCounterAggregators adapts the SDK pipeline resolver to the
+func (f *factory) Int64Gauge(name string, options ...metric.Int64GaugeOption) (metric.Int64Gauge, error) {
+	cfg := metric.NewInt64GaugeConfig(options...)
+	gauge, err := f.int64Gauges.Lookup(instID{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindGauge,
+	}, func() (metric.Int64Gauge, error) {
+		inst := Instrument{
+			Name:        name,
+			Description: cfg.Description(),
+			Unit:        cfg.Unit(),
+			Kind:        InstrumentKindGauge,
+			Scope:       f.meter.scope,
+		}
+		measures, finishers, err := finishAggregators(
+			f.meter.int64Resolver,
+			inst,
+			defaultAttributes(options),
+			f.registry.Register,
+		)
+		return finish.NewInt64Gauge(
+			&int64Inst{measures: measures},
+			finishers,
+		), err
+	})
+	if err != nil {
+		return gauge, err
+	}
+	return gauge, validateInstrumentName(name)
+}
+
+func (f *factory) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
+	cfg := metric.NewFloat64GaugeConfig(options...)
+	gauge, err := f.float64Gauges.Lookup(instID{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindGauge,
+	}, func() (metric.Float64Gauge, error) {
+		inst := Instrument{
+			Name:        name,
+			Description: cfg.Description(),
+			Unit:        cfg.Unit(),
+			Kind:        InstrumentKindGauge,
+			Scope:       f.meter.scope,
+		}
+		measures, finishers, err := finishAggregators(
+			f.meter.float64Resolver,
+			inst,
+			defaultAttributes(options),
+			f.registry.Register,
+		)
+		return finish.NewFloat64Gauge(
+			&float64Inst{measures: measures},
+			finishers,
+		), err
+	})
+	if err != nil {
+		return gauge, err
+	}
+	return gauge, validateInstrumentName(name)
+}
+
+// finishAggregators adapts the SDK pipeline resolver to the
 // internal Finish implementation.
-func finishCounterAggregators[N int64 | float64](
+func finishAggregators[N int64 | float64](
 	r resolver[N],
 	id Instrument,
 	allowedKeys []attribute.Key,
@@ -114,6 +180,18 @@ func finishCounterAggregators[N int64 | float64](
 						measure: sum.Measure,
 						compute: sum.ComputeAggregation,
 						finish:  sum.Finish,
+					}, nil
+				}
+			}
+
+			if kind == InstrumentKindGauge {
+				if _, ok := agg.(AggregationLastValue); ok {
+					gauge := b.FinishLastValue()
+					registerShutdown(gauge.Stop, gauge.Wait)
+					return streamAggregation[N]{
+						measure: gauge.Measure,
+						compute: gauge.ComputeAggregation,
+						finish:  gauge.Finish,
 					}, nil
 				}
 			}
