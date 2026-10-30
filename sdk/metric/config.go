@@ -127,7 +127,7 @@ func newConfig(options []Option) config {
 					conf.viewMatchingMode = viewMatchingMode(mode)
 				}
 			}
-			default:
+		default:
 			conf = o.apply(conf)
 		}
 	}
