@@ -396,7 +396,7 @@ func (s *boundCumulativeSum[N]) newValue(attr attribute.Set) sumValue[N] {
 	return newBoundSumValue(attr, s.newRes)
 }
 
-func (s *boundCumulativeSum[N]) markMeasured(e *boundEntry[sumValue[N]]) {
+func markCumulativeMeasured[N int64 | float64](e *boundEntry[sumValue[N]]) {
 	e.once.Do(func() {
 		e.val.startTime = now()
 		e.measured.Store(true)
@@ -407,7 +407,7 @@ func (s *boundCumulativeSum[N]) measure(ctx context.Context, value N, lazy lazyF
 	e := s.values.LoadOrStoreAttr(lazy, s.newValue)
 	e.val.n.add(value)
 	if !e.measured.Load() {
-		s.markMeasured(e)
+		markCumulativeMeasured(e)
 	}
 	if !e.val.dropExemplars {
 		e.val.res.Offer(ctx, value, lazy)
@@ -420,14 +420,14 @@ func (s *boundCumulativeSum[N]) bind(lazy lazyFilteredAttributes) BoundMeasure[N
 		return func(_ context.Context, val N) {
 			e.val.n.add(val)
 			if !e.measured.Load() {
-				s.markMeasured(e)
+				markCumulativeMeasured(e)
 			}
 		}
 	}
 	return func(ctx context.Context, val N) {
 		e.val.n.add(val)
 		if !e.measured.Load() {
-			s.markMeasured(e)
+			markCumulativeMeasured(e)
 		}
 		e.val.res.Offer(ctx, val, lazy)
 	}
