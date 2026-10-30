@@ -724,3 +724,16 @@ func BenchmarkLastValue(b *testing.B) {
 	b.Run("Int64", benchmarkAggregate(Builder[int64]{}.PrecomputedLastValue))
 	b.Run("Float64", benchmarkAggregate(Builder[float64]{}.PrecomputedLastValue))
 }
+
+func BenchmarkPrecomputedLastValueCycle(b *testing.B) {
+	b.Run("Int64", benchmarkCollectCycle(func() (Measure[int64], ComputeAggregation) {
+		return Builder[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+		}.PrecomputedLastValue()
+	}))
+	b.Run("Float64", benchmarkCollectCycle(func() (Measure[float64], ComputeAggregation) {
+		return Builder[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+		}.PrecomputedLastValue()
+	}))
+}

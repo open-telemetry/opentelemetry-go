@@ -837,3 +837,16 @@ func BenchmarkSum(b *testing.B) {
 		}.PrecomputedSum(false)
 	}))
 }
+
+func BenchmarkPrecomputedSumCycle(b *testing.B) {
+	b.Run("Int64", benchmarkCollectCycle(func() (Measure[int64], ComputeAggregation) {
+		return Builder[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+		}.PrecomputedSum(false)
+	}))
+	b.Run("Float64", benchmarkCollectCycle(func() (Measure[float64], ComputeAggregation) {
+		return Builder[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+		}.PrecomputedSum(false)
+	}))
+}

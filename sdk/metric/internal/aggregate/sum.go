@@ -216,8 +216,9 @@ func newPrecomputedSum[N int64 | float64](
 type precomputedSum[N int64 | float64] struct {
 	*deltaSum[N]
 
-	reported   map[any]N
-	startTimes map[any]time.Time
+	reported       map[any]N
+	startTimes     map[any]time.Time
+	nextStartTimes map[any]time.Time
 }
 
 func (s *precomputedSum[N]) delta(
@@ -285,9 +286,12 @@ func (s *precomputedSum[N]) cumulative(
 	dPts := reset(sData.DataPoints, n, n)
 
 	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
-	var newStartTimes map[any]time.Time
 	if perSeriesStartTimeEnabled {
-		newStartTimes = make(map[any]time.Time, n)
+		if s.nextStartTimes == nil && n > 0 {
+			s.nextStartTimes = make(map[any]time.Time, n)
+		} else {
+			clear(s.nextStartTimes)
+		}
 	}
 
 	var i int
@@ -299,7 +303,7 @@ func (s *precomputedSum[N]) cumulative(
 			if startTime, ok = s.startTimes[key]; !ok {
 				startTime = s.start
 			}
-			newStartTimes[key] = startTime
+			s.nextStartTimes[key] = startTime
 		}
 		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
 		dPts[i].Attributes = val.attrs
@@ -312,7 +316,7 @@ func (s *precomputedSum[N]) cumulative(
 	// Unused attribute sets do not report.
 	s.vals.Clear(readIdx)
 	if perSeriesStartTimeEnabled {
-		s.startTimes = newStartTimes
+		s.startTimes, s.nextStartTimes = s.nextStartTimes, s.startTimes
 		s.start = t
 	}
 
