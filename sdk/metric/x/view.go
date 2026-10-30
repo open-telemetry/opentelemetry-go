@@ -112,7 +112,6 @@ func (o viewOption) ExperimentalViews() []func(sdkmetric.Instrument) (sdkmetric.
 		if v == nil {
 			continue
 		}
-		v := v
 		out = append(out, func(inst sdkmetric.Instrument) (sdkmetric.Stream, *bool, bool) {
 			s, match := v(inst)
 			if !match {

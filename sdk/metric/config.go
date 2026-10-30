@@ -95,7 +95,6 @@ func newConfig(options []Option) config {
 					if v == nil {
 						continue
 					}
-					v := v
 					conf.views = append(conf.views, func(inst Instrument) (Stream, bool) {
 						s, enabled, match := v(inst)
 						s.enabled = enabled
