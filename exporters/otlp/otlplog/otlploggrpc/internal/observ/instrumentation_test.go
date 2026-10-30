@@ -4,7 +4,9 @@
 package observ
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
 	mapi "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -293,6 +296,101 @@ func TestInstrumentationExportLogsInvalidPartialErrored(t *testing.T) {
 
 	success += 0
 	assertMetrics(t, collect(), n+n, success, err, status.Code(err))
+}
+
+type instrumentSpy struct {
+	enabled      bool
+	enabledCalls int
+	calls        int
+}
+
+func (s *instrumentSpy) Enabled(context.Context) bool {
+	s.enabledCalls++
+	return s.enabled
+}
+
+type upDownCounterSpy struct {
+	embedded.Int64UpDownCounter
+	instrumentSpy
+}
+
+func (c *upDownCounterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.calls++ }
+
+type counterSpy struct {
+	embedded.Int64Counter
+	instrumentSpy
+}
+
+func (c *counterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.calls++ }
+
+type histogramSpy struct {
+	embedded.Float64Histogram
+	instrumentSpy
+}
+
+func (h *histogramSpy) Record(context.Context, float64, ...mapi.RecordOption) { h.calls++ }
+
+func TestEndSkipsDisabledInstruments(t *testing.T) {
+	tests := []struct {
+		name     string
+		inflight bool
+		exported bool
+		duration bool
+	}{
+		{name: "all disabled"},
+		{name: "inflight only", inflight: true},
+		{name: "exported only", exported: true},
+		{name: "duration only", duration: true},
+		{name: "inflight disabled", exported: true, duration: true},
+		{name: "exported disabled", inflight: true, duration: true},
+		{name: "duration disabled", inflight: true, exported: true},
+		{name: "all enabled", inflight: true, exported: true, duration: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, result := range []struct {
+				name string
+				err  error
+			}{
+				{name: "success"},
+				{name: "partial failure", err: internal.PartialSuccess{RejectedItems: 5}},
+				{name: "failure", err: assert.AnError},
+			} {
+				t.Run(result.name, func(t *testing.T) {
+					inflight := &upDownCounterSpy{instrumentSpy: instrumentSpy{enabled: tt.inflight}}
+					exported := &counterSpy{instrumentSpy: instrumentSpy{enabled: tt.exported}}
+					duration := &histogramSpy{instrumentSpy: instrumentSpy{enabled: tt.duration}}
+					inst := &Instrumentation{
+						logInflightMetric:         inflight,
+						logExportedMetric:         exported,
+						logExportedDurationMetric: duration,
+					}
+					op := ExportOp{inst: inst, ctx: t.Context(), nLogs: 10, start: time.Now()}
+					op.End(result.err)
+
+					assert.Equal(t, 1, inflight.enabledCalls)
+					assert.Equal(t, 1, exported.enabledCalls)
+					assert.Equal(t, 1, duration.enabledCalls)
+					var wantInflight, wantExported, wantDuration int
+					if tt.inflight {
+						wantInflight = 1
+					}
+					if tt.exported {
+						wantExported = 1
+						if result.err != nil {
+							wantExported++
+						}
+					}
+					if tt.duration {
+						wantDuration = 1
+					}
+					assert.Equal(t, wantInflight, inflight.calls)
+					assert.Equal(t, wantExported, exported.calls)
+					assert.Equal(t, wantDuration, duration.calls)
+				})
+			}
+		})
+	}
 }
 
 func BenchmarkInstrumentationExportLogs(b *testing.B) {
