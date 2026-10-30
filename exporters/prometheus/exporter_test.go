@@ -221,6 +221,20 @@ func TestPrometheusExporter(t *testing.T) {
 				WithNamespace("my.dotted.namespace"),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 			},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var counter *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "my_dotted_namespace_foo_seconds_total" {
+						counter = mf
+						break
+					}
+				}
+				require.NotNil(t, counter)
+				for _, m := range counter.GetMetric() {
+					require.NotNil(t, m.GetCounter().GetCreatedTimestamp())
+					assert.False(t, m.GetCounter().GetCreatedTimestamp().AsTime().IsZero())
+				}
+			},
 		},
 		{
 			name:         "counter that already has the unit suffix",
@@ -344,6 +358,20 @@ func TestPrometheusExporter(t *testing.T) {
 				WithNamespace("my.dotted.namespace"),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 			},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var counter *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "my_dotted_namespace_foo_seconds_total" {
+						counter = mf
+						break
+					}
+				}
+				require.NotNil(t, counter)
+				for _, m := range counter.GetMetric() {
+					require.NotNil(t, m.GetCounter().GetCreatedTimestamp())
+					assert.False(t, m.GetCounter().GetCreatedTimestamp().AsTime().IsZero())
+				}
+			},
 		},
 		{
 			name:         "counter with suffixes disabled",
@@ -444,6 +472,20 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "histogram",
 			expectedFile: "testdata/histogram.txt",
 			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var hist *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "histogram_baz_bytes" {
+						hist = mf
+						break
+					}
+				}
+				require.NotNil(t, hist)
+				for _, m := range hist.GetMetric() {
+					require.NotNil(t, m.GetHistogram().GetCreatedTimestamp())
+					assert.False(t, m.GetHistogram().GetCreatedTimestamp().AsTime().IsZero())
+				}
+			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -931,6 +973,86 @@ func TestNilReaderOptionsPreservePrevious(t *testing.T) {
 	assert.True(t, selectorCalled)
 	require.Len(t, rm.ScopeMetrics, 2)
 	assert.Equal(t, external, rm.ScopeMetrics[1])
+}
+
+func TestCreatedTimestampZeroStartTime(t *testing.T) {
+	startTime := time.Date(2026, 10, 27, 12, 0, 0, 0, time.UTC)
+	external := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{Name: "external"},
+		Metrics: []metricdata.Metrics{
+			{
+				Name: "counter_zero_start",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Value: 5}},
+				},
+			},
+			{
+				Name: "counter_with_start",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Value: 5, StartTime: startTime}},
+				},
+			},
+			{
+				Name: "hist_zero_start",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{{
+						Bounds:       []float64{10},
+						BucketCounts: []uint64{1, 0},
+						Count:        1,
+						Sum:          5,
+					}},
+				},
+			},
+			{
+				Name: "hist_with_start",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{{
+						Bounds:       []float64{10},
+						BucketCounts: []uint64{1, 0},
+						Count:        1,
+						Sum:          5,
+						StartTime:    startTime,
+					}},
+				},
+			},
+		},
+	}
+
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithoutTargetInfo(),
+		WithoutScopeInfo(),
+		WithProducer(producerFunc(func(context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{external}, nil
+		})),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+
+	mfs, err := registry.Gather()
+	require.NoError(t, err)
+
+	byName := make(map[string]*dto.Metric, len(mfs))
+	for _, mf := range mfs {
+		require.Len(t, mf.GetMetric(), 1)
+		byName[mf.GetName()] = mf.GetMetric()[0]
+	}
+
+	assert.Nil(t, byName["counter_zero_start_total"].GetCounter().GetCreatedTimestamp())
+	require.NotNil(t, byName["counter_with_start_total"].GetCounter().GetCreatedTimestamp())
+	assert.Equal(t, startTime, byName["counter_with_start_total"].GetCounter().GetCreatedTimestamp().AsTime())
+
+	assert.Nil(t, byName["hist_zero_start"].GetHistogram().GetCreatedTimestamp())
+	require.NotNil(t, byName["hist_with_start"].GetHistogram().GetCreatedTimestamp())
+	assert.Equal(t, startTime, byName["hist_with_start"].GetHistogram().GetCreatedTimestamp().AsTime())
 }
 
 func TestMultiScopes(t *testing.T) {
