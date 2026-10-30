@@ -105,6 +105,37 @@ func testBuilderFilter[N int64 | float64]() func(t *testing.T) {
 	}
 }
 
+func TestBuilderBind(t *testing.T) {
+	t.Run("Int64", testBuilderBind[int64]())
+	t.Run("Float64", testBuilderBind[float64]())
+}
+
+func testBuilderBind[N int64 | float64]() func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+
+		value, attr := N(1), alice
+		run := func(b Builder[N], wantF attribute.Set, wantD []attribute.KeyValue) func(*testing.T) {
+			return func(t *testing.T) {
+				t.Helper()
+
+				binder := b.bind(func(lazy lazyFilteredAttributes) BoundMeasure[N] {
+					assert.Equal(t, wantF, lazy.Set(), "bound incorrect filtered attributes")
+					assert.ElementsMatch(t, wantD, lazy.Dropped(), "bound incorrect dropped attributes")
+					return func(_ context.Context, v N) {
+						assert.Equal(t, value, v, "measured incorrect value")
+					}
+				})
+				bm := binder(attr)
+				bm(t.Context(), value)
+			}
+		}
+
+		t.Run("NoFilter", run(Builder[N]{}, attr, nil))
+		t.Run("Filter", run(Builder[N]{Filter: attrFltr}, fltrAlice, []attribute.KeyValue{adminTrue}))
+	}
+}
+
 type arg[N int64 | float64] struct {
 	ctx context.Context
 
@@ -269,6 +300,70 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 			meas, comp := factory()
 			for _, attr := range attrs {
 				meas(ctx, 1, attr)
+			}
+			comps[n] = comp
+		}
+
+		got := &bmarkRes
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for n := 0; n < b.N; n++ {
+			comps[n](got)
+		}
+	})
+}
+
+func benchmarkBoundAggregate[N int64 | float64](
+	factory func() (Measure[N], ComputeAggregation, Binder[N]),
+) func(*testing.B) {
+	counts := []int{1, 10, 100}
+	return func(b *testing.B) {
+		for _, n := range counts {
+			b.Run(strconv.Itoa(n), func(b *testing.B) {
+				benchmarkBoundAggregateN(b, factory, n)
+			})
+		}
+	}
+}
+
+func benchmarkBoundAggregateN[N int64 | float64](
+	b *testing.B,
+	factory func() (Measure[N], ComputeAggregation, Binder[N]),
+	count int,
+) {
+	ctx := b.Context()
+	attrs := make([]attribute.Set, count)
+	for i := range attrs {
+		attrs[i] = attribute.NewSet(attribute.Int("value", i))
+	}
+
+	b.Run("BoundMeasure", func(b *testing.B) {
+		got := &bmarkRes
+		_, comp, binder := factory()
+		handles := make([]BoundMeasure[N], len(attrs))
+		for i, attr := range attrs {
+			handles[i] = binder(attr)
+		}
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for n := 0; n < b.N; n++ {
+			for _, bm := range handles {
+				bm(ctx, 1)
+			}
+		}
+
+		comp(got)
+	})
+
+	b.Run("ComputeAggregation", func(b *testing.B) {
+		comps := make([]ComputeAggregation, b.N)
+		for n := range comps {
+			_, comp, binder := factory()
+			for _, attr := range attrs {
+				bm := binder(attr)
+				bm(ctx, 1)
 			}
 			comps[n] = comp
 		}
