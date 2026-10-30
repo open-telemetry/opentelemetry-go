@@ -113,72 +113,13 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "legacy validation mode, unit suffixes disabled",
-			options: []Option{
-				WithoutUnits(),
-			},
-			wantConfig: config{
-				translationStrategy: otlptranslator.UnderscoreEscapingWithSuffixes,
-				registerer:          prometheus.DefaultRegisterer,
-				withoutUnits:        true,
-			},
-		},
-		{
-			name: "legacy validation mode, counter suffixes disabled",
-			options: []Option{
-				WithoutCounterSuffixes(),
-			},
-			wantConfig: config{
-				translationStrategy:    otlptranslator.UnderscoreEscapingWithSuffixes,
-				registerer:             prometheus.DefaultRegisterer,
-				withoutCounterSuffixes: true,
-			},
-		},
-		{
-			name: "unit suffixes disabled",
-			options: []Option{
-				WithoutUnits(),
-			},
-			wantConfig: config{
-				translationStrategy: otlptranslator.UnderscoreEscapingWithSuffixes,
-				registerer:          prometheus.DefaultRegisterer,
-				withoutUnits:        true,
-			},
-		},
-		{
-			name: "NoTranslation implies no suffixes",
+			name: "WithTranslationStrategy",
 			options: []Option{
 				WithTranslationStrategy(otlptranslator.NoTranslation),
 			},
 			wantConfig: config{
-				translationStrategy:    otlptranslator.NoTranslation,
-				withoutUnits:           true,
-				withoutCounterSuffixes: true,
-				registerer:             prometheus.DefaultRegisterer,
-			},
-		},
-		{
-			name: "translation strategy does not override unit suffixes disabled",
-			options: []Option{
-				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
-				WithoutUnits(),
-			},
-			wantConfig: config{
-				translationStrategy: otlptranslator.NoUTF8EscapingWithSuffixes,
+				translationStrategy: otlptranslator.NoTranslation,
 				registerer:          prometheus.DefaultRegisterer,
-				withoutUnits:        true,
-			},
-		},
-		{
-			name: "translation strategy does not override counter suffixes disabled",
-			options: []Option{
-				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
-				WithoutCounterSuffixes(),
-			},
-			wantConfig: config{
-				translationStrategy:    otlptranslator.UnderscoreEscapingWithSuffixes,
-				registerer:             prometheus.DefaultRegisterer,
-				withoutCounterSuffixes: true,
 			},
 		},
 		{
