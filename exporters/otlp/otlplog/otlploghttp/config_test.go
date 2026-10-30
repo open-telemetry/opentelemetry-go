@@ -417,7 +417,7 @@ func TestNewConfig(t *testing.T) {
 				`tls: failed to find any PEM data in certificate input`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_HEADERS value invalid key=value: invalid header key: invalid key`,
 				`invalid OTEL_EXPORTER_OTLP_LOGS_COMPRESSION value xz: unknown compression: xz`,
-				`invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value 100 seconds: strconv.Atoi: parsing "100 seconds": invalid syntax`,
+				`invalid OTEL_EXPORTER_OTLP_LOGS_TIMEOUT value 100 seconds: strconv.ParseInt: parsing "100 seconds": invalid syntax`,
 			},
 		},
 		{
@@ -765,4 +765,39 @@ func TestConvCompressionIsCaseInsensitive(t *testing.T) {
 			t.Errorf("convCompression(%q) = %v, want %v", tc.in, got, tc.want)
 		}
 	}
+}
+
+func TestConvDurationRejectsInvalidTimeouts(t *testing.T) {
+	for _, s := range []string{"-1", "-1000", "9223372036855"} {
+		_, err := convDuration(s)
+		assert.Error(t, err, s)
+	}
+
+	d, err := convDuration("0")
+	require.NoError(t, err)
+	assert.Equal(t, time.Duration(0), d)
+
+	d, err = convDuration("1500")
+	require.NoError(t, err)
+	assert.Equal(t, 1500*time.Millisecond, d)
+
+	d, err = convDuration("9223372036854")
+	require.NoError(t, err)
+	assert.Equal(t, time.Duration(9223372036854)*time.Millisecond, d)
+}
+
+func TestWithTimeoutNegativeIgnored(t *testing.T) {
+	var diags []error
+	prev := otel.GetErrorHandler()
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { diags = append(diags, err) }))
+	defer otel.SetErrorHandler(prev)
+
+	c := newConfig([]Option{WithTimeout(-time.Second)})
+	assert.Equal(t, defaultTimeout, c.timeout.Value)
+	assert.Len(t, diags, 1)
+
+	diags = nil
+	c = newConfig([]Option{WithTimeout(5 * time.Second)})
+	assert.Equal(t, 5*time.Second, c.timeout.Value)
+	assert.Empty(t, diags)
 }

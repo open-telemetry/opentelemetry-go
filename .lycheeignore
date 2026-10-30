@@ -25,3 +25,6 @@ https?://someendpoint.*
 https?://overrode\.by\.signal\.specific.*
 https?://overrode_by_signal_specific.*
 https?://proxy\.com.*
+# Fake hosts used as OTLP endpoint fixtures in Go tests; they are never resolvable.
+https?://test[:/]
+https?://ignored[:/]
