@@ -723,6 +723,22 @@ func TestLoadEnvTLSClientCertKeyResolvedIndependently(t *testing.T) {
 			wantSet: false,
 			errs:    []string{"failed to load TLS"},
 		},
+		{
+			name: "LogsClientCertificateWithoutKey",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE": "cert_path",
+			},
+			wantSet: false,
+			errs:    []string{"both a client certificate and a client key are required"},
+		},
+		{
+			name: "LogsClientKeyWithoutCertificate",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY": "key_path",
+			},
+			wantSet: false,
+			errs:    []string{"both a client certificate and a client key are required"},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -741,6 +757,11 @@ func TestLoadEnvTLSClientCertKeyResolvedIndependently(t *testing.T) {
 			assert.Equal(t, tc.wantSet, c.tlsCfg.Set)
 			if tc.wantSet {
 				assert.Equal(t, wantTLS, c.tlsCfg.Value)
+			}
+			if len(tc.errs) == 0 {
+				assert.NoError(t, got)
+			} else {
+				require.Error(t, got)
 			}
 			for _, e := range tc.errs {
 				assert.Contains(t, got.Error(), e)

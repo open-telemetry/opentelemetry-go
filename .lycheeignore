@@ -26,5 +26,5 @@ https?://overrode\.by\.signal\.specific.*
 https?://overrode_by_signal_specific.*
 https?://proxy\.com.*
 # Fake domains used in otlplog config tests
-https?://test[:/].*
-https?://ignored:.*
+https?://test(:[0-9]+)?(/.*)?
+https?://ignored(:[0-9]+)?(/.*)?

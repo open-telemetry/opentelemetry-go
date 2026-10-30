@@ -467,6 +467,8 @@ func loadEnvTLS[T *tls.Config]() resolver[T] {
 			var e error
 			certs, e = loadCertificates(cert, key)
 			err = errors.Join(err, e)
+		} else if cert != "" || key != "" {
+			err = errors.Join(err, errors.New("both a client certificate and a client key are required to configure mTLS"))
 		}
 
 		if err != nil {
