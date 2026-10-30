@@ -25,3 +25,6 @@ https?://someendpoint.*
 https?://overrode\.by\.signal\.specific.*
 https?://overrode_by_signal_specific.*
 https?://proxy\.com.*
+# Fake endpoints used in otlploggrpc config_test.go tests
+https?://ignored:9090.*
+https?://test(:8080)?/.*

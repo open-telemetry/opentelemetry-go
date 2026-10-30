@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -658,5 +659,125 @@ func TestConvCompressionIsCaseInsensitive(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("convCompression(%q) = %v, want %v", tc.in, got, tc.want)
 		}
+	}
+}
+
+func TestLoadInsecureFromEnv(t *testing.T) {
+	const (
+		logsKey    = "OTEL_EXPORTER_OTLP_LOGS_INSECURE"
+		genericKey = "OTEL_EXPORTER_OTLP_INSECURE"
+	)
+
+	tests := []struct {
+		name string
+		logs string
+		gen  string
+		want bool
+		set  bool
+	}{
+		{name: "logs true", logs: "true", want: true, set: true},
+		{name: "logs case-insensitive true", logs: "TRUE", want: true, set: true},
+		{name: "logs false suppresses generic true", logs: "false", gen: "true", set: true},
+		{
+			// An invalid signal-specific value must not fall through to the generic one.
+			name: "invalid logs resolves false and does not fall through",
+			logs: "invalid", gen: "true", want: false, set: true,
+		},
+		{name: "invalid logs with numeric value", logs: "1", gen: "true", want: false, set: true},
+		{name: "invalid generic resolves false", gen: "invalid", want: false, set: true},
+		{name: "generic is used when logs is empty", gen: "true", want: true, set: true},
+		{name: "nothing set leaves the setting unset"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(logsKey, tc.logs)
+			t.Setenv(genericKey, tc.gen)
+
+			got := loadInsecureFromEnv(envInsecure)(setting[bool]{})
+			if got.Set != tc.set {
+				t.Errorf("Set = %v, want %v", got.Set, tc.set)
+			}
+			if got.Value != tc.want {
+				t.Errorf("Value = %v, want %v", got.Value, tc.want)
+			}
+		})
+	}
+
+	t.Run("an explicit option has precedence", func(t *testing.T) {
+		t.Setenv(logsKey, "invalid")
+		got := loadInsecureFromEnv(envInsecure)(newSetting(false))
+		if !got.Set || got.Value {
+			t.Errorf("got set=%v value=%v, want the passed setting untouched", got.Set, got.Value)
+		}
+	})
+}
+
+func TestLoadInsecureFromEnvReportsInvalidValue(t *testing.T) {
+	const (
+		logsKey    = "OTEL_EXPORTER_OTLP_LOGS_INSECURE"
+		genericKey = "OTEL_EXPORTER_OTLP_INSECURE"
+	)
+
+	var (
+		mu      sync.Mutex
+		handled []error
+	)
+	t.Cleanup(func(orig otel.ErrorHandler) func() {
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			mu.Lock()
+			defer mu.Unlock()
+			handled = append(handled, err)
+		}))
+		return func() { otel.SetErrorHandler(orig) }
+	}(otel.GetErrorHandler()))
+
+	tests := []struct {
+		name    string
+		logs    string
+		gen     string
+		wantErr string
+	}{
+		{
+			name:    "invalid logs value is reported and does not fall through",
+			logs:    "invalid",
+			gen:     "true",
+			wantErr: `invalid OTEL_EXPORTER_OTLP_LOGS_INSECURE value "invalid": expected "true" or "false", using false`,
+		},
+		{
+			name:    "invalid generic value is reported",
+			gen:     "invalid",
+			wantErr: `invalid OTEL_EXPORTER_OTLP_INSECURE value "invalid": expected "true" or "false", using false`,
+		},
+		{name: "valid values are not reported", logs: "true", gen: "false"},
+		{name: "unset values are not reported"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mu.Lock()
+			handled = nil
+			mu.Unlock()
+
+			t.Setenv(logsKey, tc.logs)
+			t.Setenv(genericKey, tc.gen)
+			loadInsecureFromEnv(envInsecure)(setting[bool]{})
+
+			mu.Lock()
+			defer mu.Unlock()
+
+			if tc.wantErr == "" {
+				if len(handled) != 0 {
+					t.Fatalf("expected no reported errors, got %d: %v", len(handled), handled)
+				}
+				return
+			}
+			if len(handled) != 1 {
+				t.Fatalf("expected exactly one reported error, got %d: %v", len(handled), handled)
+			}
+			if got := handled[0].Error(); got != tc.wantErr {
+				t.Fatalf("reported error = %q, want %q", got, tc.wantErr)
+			}
+		})
 	}
 }
