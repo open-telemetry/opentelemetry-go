@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/observ"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpjson"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -623,6 +624,63 @@ func TestPartialSuccess(t *testing.T) {
 	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
 	want := internal.TracePartialSuccessError(0, "")
 	assert.ErrorIs(t, err, want)
+}
+
+func TestPartialSuccessWithCaseInsensitiveProtobufContentType(t *testing.T) {
+	mcCfg := mockCollectorConfig{
+		InjectContentType: "Application/X-Protobuf; charset=utf-8",
+		Partial: &coltracepb.ExportTracePartialSuccess{
+			RejectedSpans: 1,
+			ErrorMessage:  "partially successful",
+		},
+	}
+	mc := runMockCollector(t, mcCfg)
+	defer mc.MustStop(t)
+	driver := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint(mc.Endpoint()),
+		otlptracehttp.WithInsecure(),
+	)
+	ctx := t.Context()
+	exporter, err := otlptrace.New(ctx, driver)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, exporter.Shutdown(t.Context()))
+	}()
+
+	err = exporter.ExportSpans(ctx, otlptracetest.SingleReadOnlySpan())
+	var partialSuccess internal.PartialSuccess
+	require.ErrorAs(t, err, &partialSuccess)
+	assert.Equal(t, int64(1), partialSuccess.RejectedItems)
+	assert.Equal(t, "spans", partialSuccess.RejectedKind)
+	assert.Equal(t, "partially successful", partialSuccess.ErrorMessage)
+}
+
+func TestPartialSuccessWithCaseInsensitiveJSONContentType(t *testing.T) {
+	response, err := otlpjson.MarshalExportTraceServiceResponse(&coltracepb.ExportTraceServiceResponse{
+		PartialSuccess: &coltracepb.ExportTracePartialSuccess{
+			RejectedSpans: 1,
+			ErrorMessage:  "partially successful",
+		},
+	})
+	require.NoError(t, err)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "Application/JSON; charset=utf-8")
+		_, _ = w.Write(response)
+	}))
+	t.Cleanup(server.Close)
+
+	driver := otlptracehttp.NewClient(otlptracehttp.WithEndpointURL(server.URL))
+	exporter, err := otlptrace.New(t.Context(), driver)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, exporter.Shutdown(t.Context())) }()
+
+	err = exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan())
+	var partialSuccess internal.PartialSuccess
+	require.ErrorAs(t, err, &partialSuccess)
+	assert.Equal(t, int64(1), partialSuccess.RejectedItems)
+	assert.Equal(t, "spans", partialSuccess.RejectedKind)
+	assert.Equal(t, "partially successful", partialSuccess.ErrorMessage)
 }
 
 func TestOtherHTTPSuccess(t *testing.T) {
