@@ -318,9 +318,6 @@ func benchmarkCollectCycle[N int64 | float64](factory func() (Measure[N], Comput
 		}
 	}
 }
-		}
-	})
-}
 
 func benchmarkBoundAggregate[N int64 | float64](
 	factory func() (Measure[N], ComputeAggregation, Binder[N]),
