@@ -71,6 +71,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Preserve exemplar trace and span IDs in `go.opentelemetry.io/otel/exporters/prometheus` by dropping filtered attribute labels instead of the whole exemplar when the combined exemplar labels would exceed the prometheus client-go limit. (#9031)
 - Do not emit the `target_info` metric in `go.opentelemetry.io/otel/exporters/prometheus` when the OpenTelemetry `Resource` is empty. (#9296)
 - Treat `unix-abstract://` endpoints from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` as insecure in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, matching `unix://` endpoints and the metric exporters. (#9261)
+- ⚠️ **Breaking Change:** Let an `http` or `https` scheme in `OTEL_EXPORTER_OTLP_ENDPOINT` or the signal-specific endpoint environment variable take precedence over `OTEL_EXPORTER_OTLP_INSECURE` and the signal-specific insecure environment variable in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9273)
+  Previously, `OTEL_EXPORTER_OTLP_INSECURE=true` made these exporters send plaintext to an `https://` endpoint.
 - Preserve `ScopeMetrics` slice capacity in `PeriodicReader`'s `sync.Pool` by resetting slice length instead of overwriting the struct, avoiding per-cycle heap allocations in `go.opentelemetry.io/otel/sdk/metric`. (#8535)
 
 ### Removed
