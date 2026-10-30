@@ -72,6 +72,19 @@ func (s *deltaLastValue[N]) collect(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
+	n := s.copyAndClearDpts(dest, t, nil)
+	// Update start time for delta temporality.
+	s.start = t
+	return n
+}
+
+// copyAndClearDpts copies the lastValuePoints held by s into dest. The number of lastValuePoints
+// copied is returned.
+func (s *deltaLastValue[N]) copyAndClearDpts(
+	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
+	t time.Time,
+	startFor func(key any) time.Time,
+) int {
 	// Ignore if dest is not a metricdata.Gauge. The chance for memory reuse of
 	// the DataPoints is missed (better luck next time).
 	gData, _ := (*dest).(metricdata.Gauge[N])
@@ -83,10 +96,14 @@ func (s *deltaLastValue[N]) collect(
 	dPts := reset(gData.DataPoints, n, n)
 
 	var i int
-	s.vals.Range(readIdx, func(_, value any) bool {
+	s.vals.Range(readIdx, func(key, value any) bool {
 		v := value.(*lastValuePoint[N])
+		startTime := s.start
+		if startFor != nil {
+			startTime = startFor(key)
+		}
 		dPts[i].Attributes = v.attrs
-		dPts[i].StartTime = s.start
+		dPts[i].StartTime = startTime
 		dPts[i].Time = t
 		dPts[i].Value = v.value.Load()
 		collectExemplars[N](&dPts[i].Exemplars, v.res.Collect)
@@ -95,8 +112,6 @@ func (s *deltaLastValue[N]) collect(
 	})
 	// Do not report stale values.
 	s.vals.Clear(readIdx)
-	// Update start time for delta temporality.
-	s.start = t
 
 	gData.DataPoints = dPts
 	*dest = gData
@@ -214,49 +229,20 @@ func (s *precomputedLastValue[N]) cumulative(
 	dest *metricdata.Aggregation, //nolint:gocritic // The pointer is needed for the ComputeAggregation interface
 ) int {
 	t := now()
-	// Ignore if dest is not a metricdata.Gauge. The chance for memory reuse of
-	// the DataPoints is missed (better luck next time).
-	gData, _ := (*dest).(metricdata.Gauge[N])
-	// cumulative precomputed always clears values on collection
-	readIdx := s.vals.swapHotAndWait()
-	// The len will not change while we iterate over values, since we waited
-	// for all writes to finish to the cold values and len.
-	n := s.vals.Len(readIdx)
-	dPts := reset(gData.DataPoints, n, n)
-
-	perSeriesStartTimeEnabled := x.PerSeriesStartTimestamps.Enabled()
-	var newStartTimes map[any]time.Time
-	if perSeriesStartTimeEnabled {
-		newStartTimes = make(map[any]time.Time, n)
+	if !x.PerSeriesStartTimestamps.Enabled() {
+		// Do not reset the start time.
+		return s.copyAndClearDpts(dest, t, nil)
 	}
-
-	var i int
-	s.vals.Range(readIdx, func(key, value any) bool {
-		v := value.(*lastValuePoint[N])
-		startTime := s.start
-		if perSeriesStartTimeEnabled {
-			var ok bool
-			if startTime, ok = s.startTimes[key]; !ok {
-				startTime = s.start
-			}
-			newStartTimes[key] = startTime
+	newStartTimes := make(map[any]time.Time)
+	n := s.copyAndClearDpts(dest, t, func(key any) time.Time {
+		startTime, ok := s.startTimes[key]
+		if !ok {
+			startTime = s.start
 		}
-		dPts[i].Attributes = v.attrs
-		dPts[i].StartTime = startTime
-		dPts[i].Time = t
-		dPts[i].Value = v.value.Load()
-		collectExemplars[N](&dPts[i].Exemplars, v.res.Collect)
-		i++
-		return true
+		newStartTimes[key] = startTime
+		return startTime
 	})
-	// Do not report stale values.
-	s.vals.Clear(readIdx)
-	if perSeriesStartTimeEnabled {
-		s.startTimes = newStartTimes
-		s.start = t
-	}
-
-	gData.DataPoints = dPts
-	*dest = gData
-	return i
+	s.startTimes = newStartTimes
+	s.start = t
+	return n
 }
