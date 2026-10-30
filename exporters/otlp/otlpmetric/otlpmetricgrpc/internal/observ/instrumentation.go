@@ -17,8 +17,8 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

@@ -1,6 +1,7 @@
 <!-- Generated. DO NOT MODIFY. -->
 {{ if .PrevVer -}} 
 # Migration from {{ .PrevVer }} to {{ .CurVer }}
+
 {{ if or .Removals .Renames }}
 The `go.opentelemetry.io/otel/semconv/{{ .CurVer }}` package should be a drop-in replacement for `go.opentelemetry.io/otel/semconv/{{ .PrevVer }}` with the following exceptions.
 {{ if .Renames }}
