@@ -685,22 +685,38 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 	riDrop := newResolver[int64](pDrop, &vcDrop)
 	rfDrop := newResolver[float64](pDrop, &vcDrop)
 
-	intAggs, err = riDrop.Aggregators(Instrument{Name: "dropped-conflict", Kind: InstrumentKindCounter}, nil, false)
+	intAggs, err = riDrop.Aggregators(
+		Instrument{Name: "dropped-conflict", Kind: InstrumentKindCounter},
+		nil,
+		false,
+	)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, l.InfoN(), "dropped stream should not log conflict")
 	assert.Empty(t, intAggs)
 
-	floatAggs, err = rfDrop.Aggregators(Instrument{Name: "dropped-conflict", Kind: InstrumentKindCounter}, nil, false)
+	floatAggs, err = rfDrop.Aggregators(
+		Instrument{Name: "dropped-conflict", Kind: InstrumentKindCounter},
+		nil,
+		false,
+	)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, l.InfoN(), "conflicting dropped stream should not log conflict")
 	assert.Empty(t, floatAggs)
 
-	intAggs, err = riDrop.Aggregators(Instrument{Name: "baz", Description: "first", Kind: InstrumentKindCounter}, nil, false)
+	intAggs, err = riDrop.Aggregators(
+		Instrument{Name: "baz", Description: "first", Kind: InstrumentKindCounter},
+		nil,
+		false,
+	)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, l.InfoN(), "dropped stream should not register for conflict detection")
 	assert.Empty(t, intAggs)
 
-	intAggs, err = riDrop.Aggregators(Instrument{Name: "baz", Description: "second", Kind: InstrumentKindCounter}, nil, false)
+	intAggs, err = riDrop.Aggregators(
+		Instrument{Name: "baz", Description: "second", Kind: InstrumentKindCounter},
+		nil,
+		false,
+	)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, l.InfoN(), "active stream should not conflict with earlier dropped stream")
 	assert.Len(t, intAggs, 1)
