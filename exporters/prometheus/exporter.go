@@ -660,7 +660,8 @@ func getAttrsWithKV(attrs attribute.Set, kv keyVals, labelNamer otlptranslator.L
 		}
 	} else {
 		// It sanitizes invalid characters and handles duplicate keys
-		// (due to sanitization) by sorting and concatenating the values following the spec.
+		// (due to sanitization) by concatenating the values in the
+		// lexicographical order of the original keys following the spec.
 		var (
 			dups   map[int][]string
 			keyIdx map[string]int
@@ -701,7 +702,6 @@ func getAttrsWithKV(attrs attribute.Set, kv keyVals, labelNamer otlptranslator.L
 			values = append(values, val)
 		}
 		for idx, vals := range dups {
-			slices.Sort(vals)
 			values[idx] = strings.Join(vals, ";")
 		}
 	}
@@ -774,7 +774,6 @@ func appendScopeAttrs(kv keyVals, attrs attribute.Set, labelNamer otlptranslator
 		kv.vals = append(kv.vals, val)
 	}
 	for idx, vals := range dups {
-		slices.Sort(vals)
 		kv.vals[idx] = strings.Join(vals, ";")
 	}
 
