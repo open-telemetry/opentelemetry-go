@@ -46,7 +46,9 @@ type Stream struct {
 	//
 	// If nil, the instrument's default enabled state is preserved (enabled for
 	// standard instruments, or dropped for opt-in instruments created with
-	// [go.opentelemetry.io/otel/metric/x.WithOptIn]).
+	// [go.opentelemetry.io/otel/metric/x.WithOptIn]). For opt-in instruments,
+	// a matching view must set Enabled to true. A view that leaves Enabled nil
+	// still results in the stream being dropped.
 	// If true, the stream is enabled, including for opt-in instruments.
 	// If false, the stream is disabled and uses [sdkmetric.AggregationDrop].
 	Enabled *bool

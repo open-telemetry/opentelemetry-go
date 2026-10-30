@@ -497,6 +497,30 @@ func TestOptInAllInstrumentKinds(t *testing.T) {
 				}
 			})
 
+			t.Run("OptIn_RenameOnlyViewStillDrops", func(t *testing.T) {
+				rdr := sdkmetric.NewManualReader()
+				view := x.NewView(
+					sdkmetric.Instrument{Name: tc.instName},
+					x.Stream{
+						Name: tc.instName + ".renamed",
+					},
+				)
+				mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(rdr), x.WithView(view))
+				m := mp.Meter("test")
+
+				enabled, cbCalled := tc.record(t, m, metricx.WithOptIn())
+				if tc.isSync {
+					assert.False(t, enabled, "OptIn instrument with rename-only view should remain disabled")
+				}
+
+				var rm metricdata.ResourceMetrics
+				require.NoError(t, rdr.Collect(t.Context(), &rm))
+				assert.Empty(t, rm.ScopeMetrics)
+				if cbCalled != nil {
+					assert.False(t, cbCalled.Load())
+				}
+			})
+
 			t.Run("OptIn_EnabledByView", func(t *testing.T) {
 				rdr := sdkmetric.NewManualReader()
 				view := x.NewView(
