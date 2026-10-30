@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Implement per-series start timestamps for cumulative asynchronous instruments when `OTEL_GO_X_PER_SERIES_START_TIMESTAMPS=true` is set in `go.opentelemetry.io/otel/sdk/metric`. (#9311)
 - Add experimental `WithOptIn` instrument option in `go.opentelemetry.io/otel/metric/x` and experimental View `Enabled` configuration (`Stream`, `View`, `NewView`, and `WithView`) in `go.opentelemetry.io/otel/sdk/metric/x`. (#9298)
 - Add experimental `WithFinish` support for `Float64Counter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9186)
 - Add experimental `WithFinish` support for `Int64Counter` Sum aggregation,
@@ -37,7 +38,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Implement per-series start timestamps for cumulative asynchronous instruments when `OTEL_GO_X_PER_SERIES_START_TIMESTAMPS=true` is set in `go.opentelemetry.io/otel/sdk/metric`. (#9311)
 - Interpret OTLP log exporter compression environment variables case-insensitively in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. `WithCompressor` in
