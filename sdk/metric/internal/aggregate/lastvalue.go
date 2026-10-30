@@ -216,7 +216,8 @@ func newPrecomputedLastValue[N int64 | float64](
 type precomputedLastValue[N int64 | float64] struct {
 	*deltaLastValue[N]
 
-	startTimes map[any]time.Time
+	startTimes     map[any]time.Time
+	nextStartTimes map[any]time.Time
 }
 
 func (s *precomputedLastValue[N]) delta(
@@ -233,16 +234,19 @@ func (s *precomputedLastValue[N]) cumulative(
 		// Do not reset the start time.
 		return s.copyAndClearDpts(dest, t, nil)
 	}
-	newStartTimes := make(map[any]time.Time)
+	clear(s.nextStartTimes)
 	n := s.copyAndClearDpts(dest, t, func(key any) time.Time {
 		startTime, ok := s.startTimes[key]
 		if !ok {
 			startTime = s.start
 		}
-		newStartTimes[key] = startTime
+		if s.nextStartTimes == nil {
+			s.nextStartTimes = make(map[any]time.Time)
+		}
+		s.nextStartTimes[key] = startTime
 		return startTime
 	})
-	s.startTimes = newStartTimes
+	s.startTimes, s.nextStartTimes = s.nextStartTimes, s.startTimes
 	s.start = t
 	return n
 }
