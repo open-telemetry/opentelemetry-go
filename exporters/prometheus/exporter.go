@@ -397,6 +397,10 @@ func addExponentialHistogramMetric[N int64 | float64](
 		defer func() { op.End(success, err) }()
 	}
 
+	var (
+		lastDesc *prometheus.Desc
+		lastKeys []string
+	)
 	for j, dp := range histogram.DataPoints {
 		keys, values, e := getAttrsWithKV(dp.Attributes, kv, labelNamer)
 		if e != nil {
@@ -405,7 +409,9 @@ func addExponentialHistogramMetric[N int64 | float64](
 			continue
 		}
 
-		desc := prometheus.NewDesc(name, m.Description, keys, nil)
+		var desc *prometheus.Desc
+		desc, lastKeys = getOrReuseDesc(name, m.Description, keys, lastKeys, lastDesc)
+		lastDesc = desc
 
 		// Prometheus native histograms support scales in the range [-4, 8]
 		scale := dp.Scale
@@ -498,6 +504,10 @@ func addHistogramMetric[N int64 | float64](
 		defer func() { op.End(success, err) }()
 	}
 
+	var (
+		lastDesc *prometheus.Desc
+		lastKeys []string
+	)
 	for j, dp := range histogram.DataPoints {
 		keys, values, e := getAttrsWithKV(dp.Attributes, kv, labelNamer)
 		if e != nil {
@@ -506,7 +516,9 @@ func addHistogramMetric[N int64 | float64](
 			continue
 		}
 
-		desc := prometheus.NewDesc(name, m.Description, keys, nil)
+		var desc *prometheus.Desc
+		desc, lastKeys = getOrReuseDesc(name, m.Description, keys, lastKeys, lastDesc)
+		lastDesc = desc
 		buckets := make(map[float64]uint64, len(dp.Bounds))
 
 		cumulativeCount := uint64(0)
@@ -561,6 +573,10 @@ func addSumMetric[N int64 | float64](
 		valueType = prometheus.GaugeValue
 	}
 
+	var (
+		lastDesc *prometheus.Desc
+		lastKeys []string
+	)
 	for i, dp := range sum.DataPoints {
 		keys, values, e := getAttrsWithKV(dp.Attributes, kv, labelNamer)
 		if e != nil {
@@ -569,7 +585,10 @@ func addSumMetric[N int64 | float64](
 			continue
 		}
 
-		desc := prometheus.NewDesc(name, m.Description, keys, nil)
+		var desc *prometheus.Desc
+		desc, lastKeys = getOrReuseDesc(name, m.Description, keys, lastKeys, lastDesc)
+		lastDesc = desc
+
 		var pm prometheus.Metric
 		if valueType == prometheus.CounterValue && !dp.StartTime.IsZero() {
 			pm, e = prometheus.NewConstMetricWithCreatedTimestamp(
@@ -615,6 +634,10 @@ func addGaugeMetric[N int64 | float64](
 		defer func() { op.End(success, err) }()
 	}
 
+	var (
+		lastDesc *prometheus.Desc
+		lastKeys []string
+	)
 	for i, dp := range gauge.DataPoints {
 		keys, values, e := getAttrsWithKV(dp.Attributes, kv, labelNamer)
 		if e != nil {
@@ -623,7 +646,9 @@ func addGaugeMetric[N int64 | float64](
 			continue
 		}
 
-		desc := prometheus.NewDesc(name, m.Description, keys, nil)
+		var desc *prometheus.Desc
+		desc, lastKeys = getOrReuseDesc(name, m.Description, keys, lastKeys, lastDesc)
+		lastDesc = desc
 		m, e := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
 		if e != nil {
 			reportError(ch, desc, e)
@@ -634,6 +659,17 @@ func addGaugeMetric[N int64 | float64](
 
 		success++
 	}
+}
+
+func getOrReuseDesc(
+	name, description string,
+	keys, lastKeys []string,
+	lastDesc *prometheus.Desc,
+) (*prometheus.Desc, []string) {
+	if lastDesc != nil && slices.Equal(keys, lastKeys) {
+		return lastDesc, lastKeys
+	}
+	return prometheus.NewDesc(name, description, keys, nil), keys
 }
 
 // getAttrs converts the attribute.Set to two lists of matching Prometheus-style
