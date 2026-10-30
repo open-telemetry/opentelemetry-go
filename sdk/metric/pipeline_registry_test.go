@@ -667,6 +667,43 @@ func TestResolveAggregatorsDuplicateErrors(t *testing.T) {
 	// conflict. Therefore, 2 warning messages should be logged.
 	assert.Equal(t, 2, l.InfoN(), "instrument conflicts not logged")
 	assert.Len(t, floatAggs, 2)
+
+	// A dropped stream (via AggregationDrop or an un-enabled opt-in instrument)
+	// should not log a conflict warning or record a stream definition that
+	// causes later active streams to log a conflict warning.
+	dropView := NewView(Instrument{Name: "dropped-conflict"}, Stream{Aggregation: AggregationDrop{}})
+	bazDroppedView := NewView(Instrument{Name: "baz", Description: "first"}, Stream{Aggregation: AggregationDrop{}})
+	bazActiveView := NewView(Instrument{Name: "baz", Description: "second"}, Stream{Aggregation: AggregationSum{}})
+	pDrop := newPipelines(
+		resource.Empty(),
+		[]Reader{NewManualReader()},
+		[]View{dropView, bazDroppedView, bazActiveView},
+		exemplar.AlwaysOffFilter,
+		0,
+	)
+	var vcDrop cache[string, instID]
+	riDrop := newResolver[int64](pDrop, &vcDrop)
+	rfDrop := newResolver[float64](pDrop, &vcDrop)
+
+	intAggs, err = riDrop.Aggregators(Instrument{Name: "dropped-conflict", Kind: InstrumentKindCounter}, nil, false)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, l.InfoN(), "dropped stream should not log conflict")
+	assert.Empty(t, intAggs)
+
+	floatAggs, err = rfDrop.Aggregators(Instrument{Name: "dropped-conflict", Kind: InstrumentKindCounter}, nil, false)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, l.InfoN(), "conflicting dropped stream should not log conflict")
+	assert.Empty(t, floatAggs)
+
+	intAggs, err = riDrop.Aggregators(Instrument{Name: "baz", Description: "first", Kind: InstrumentKindCounter}, nil, false)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, l.InfoN(), "dropped stream should not register for conflict detection")
+	assert.Empty(t, intAggs)
+
+	intAggs, err = riDrop.Aggregators(Instrument{Name: "baz", Description: "second", Kind: InstrumentKindCounter}, nil, false)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, l.InfoN(), "active stream should not conflict with earlier dropped stream")
+	assert.Len(t, intAggs, 1)
 }
 
 func TestIsAggregatorCompatible(t *testing.T) {
