@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
 - Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
   Include instructions for upgrading the bridge to v1.47.0.
@@ -37,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Interpret OTLP log exporter compression environment variables case-insensitively in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. `WithCompressor` in
