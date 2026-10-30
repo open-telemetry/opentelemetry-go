@@ -11,11 +11,11 @@ import (
 	"crypto/x509"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/envconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/grpcendpoint"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
@@ -130,19 +130,8 @@ func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
 	return func(cfg Config) Config {
 		// For OTLP/gRPC endpoints, this is the target to which the
 		// exporter is going to send telemetry.
-		cfg.Metrics.Endpoint = grpcEndpoint(u)
+		cfg.Metrics.Endpoint = grpcendpoint.Target(u)
 		return cfg
-	}
-}
-
-func grpcEndpoint(u *url.URL) string {
-	switch strings.ToLower(u.Scheme) {
-	case "http", "https":
-		return u.Host
-	case "":
-		return path.Join(u.Host, u.Path)
-	default:
-		return u.String()
 	}
 }
 
@@ -161,12 +150,10 @@ func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOpt
 }
 
 func withEndpointScheme(u *url.URL) GenericOption {
-	switch strings.ToLower(u.Scheme) {
-	case "http", "unix", "unix-abstract":
-		return WithInsecure()
-	default:
-		return WithSecure()
+	if insecure, ok := grpcendpoint.Insecure(u); ok {
+		return withInsecure(insecure)
 	}
+	return WithSecure()
 }
 
 // revive:disable-next-line:flag-parameter

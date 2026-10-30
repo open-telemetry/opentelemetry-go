@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/grpcendpoint"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
 	"go.opentelemetry.io/otel/internal/global"
 )
@@ -212,8 +213,10 @@ func WithEndpointURL(rawURL string) Option {
 		return fnOpt(func(c config) config { return c })
 	}
 	return fnOpt(func(c config) config {
-		c.endpoint = newSetting(u.Host)
-		c.insecure = insecureFromScheme(c.insecure, u.Scheme)
+		c.endpoint = newSetting(grpcendpoint.Target(u))
+		if insecure, ok := grpcendpoint.Insecure(u); ok {
+			c.insecure = newSetting(insecure)
+		}
 		return c
 	})
 }
@@ -412,7 +415,7 @@ func convEndpoint(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return u.Host, nil
+	return grpcendpoint.Target(u), nil
 }
 
 // convInsecure converts s from a string to a bool without case sensitivity.
@@ -443,7 +446,11 @@ func loadInsecureFromEnvEndpoint(envEndpoint []string) resolver[bool] {
 					continue
 				}
 
-				return insecureFromScheme(s, u.Scheme)
+				if insecure, ok := grpcendpoint.Insecure(u); ok {
+					s.Set = true
+					s.Value = insecure
+				}
+				return s
 			}
 		}
 		return s
@@ -575,18 +582,6 @@ func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 		return nil, err
 	}
 	return []tls.Certificate{crt}, nil
-}
-
-// insecureFromScheme returns the insecure setting implied by scheme.
-// An empty scheme does not force an insecure setting.
-func insecureFromScheme(prev setting[bool], scheme string) setting[bool] {
-	if scheme == "https" {
-		return newSetting(false)
-	} else if scheme != "" {
-		return newSetting(true)
-	}
-
-	return prev
 }
 
 // compressorToCompression converts compressor to a Compression. Like the

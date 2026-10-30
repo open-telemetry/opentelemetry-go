@@ -385,6 +385,45 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "OptionEndpointURLSchemelessAuthorityWithPath",
+			options: []Option{
+				WithInsecure(),
+				WithEndpointURL("//127.0.0.1:4317/prefix"),
+			},
+			want: config{
+				endpoint: newSetting("127.0.0.1:4317"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "LogEndpointSchemelessAuthorityWithPath",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "//127.0.0.1:4317/prefix",
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("127.0.0.1:4317"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "OTLPEndpointSchemelessAuthorityWithPath",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "//127.0.0.1:4317/prefix",
+				"OTEL_EXPORTER_OTLP_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("127.0.0.1:4317"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
 			name: "DefaultEndpointWithEnvInsecure",
 			envars: map[string]string{
 				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
@@ -509,6 +548,93 @@ func TestNewConfig(t *testing.T) {
 
 			for _, errMsg := range tc.errs {
 				assert.ErrorContains(t, err, errMsg)
+			}
+		})
+	}
+}
+
+func TestEndpointURLResolverSecurity(t *testing.T) {
+	for _, target := range []string{"dns:///collector:4317", "//collector:4317/path"} {
+		for _, insecure := range []bool{false, true} {
+			cfg := config{insecure: newSetting(insecure)}
+			cfg = WithEndpointURL(target).applyOption(cfg)
+			assert.Equal(t, newSetting(insecure), cfg.insecure)
+		}
+	}
+}
+
+func TestNewConfigUnixEndpoint(t *testing.T) {
+	for _, scheme := range []string{"unix", "unix-abstract"} {
+		t.Run(scheme, func(t *testing.T) {
+			target := scheme + ":///otel.sock"
+			testcases := []struct {
+				name     string
+				endpoint string
+				logs     string
+				options  []Option
+				want     string
+				insecure bool
+			}{
+				{
+					name:     "GeneralEnvironment",
+					endpoint: target,
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "LogsEnvironment",
+					logs:     target,
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "WithEndpointURL",
+					options:  []Option{WithEndpointURL(target)},
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "LogsUnixOverridesGeneralHTTPS",
+					endpoint: "https://general:4317",
+					logs:     target,
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "LogsHTTPSOverridesGeneralUnix",
+					endpoint: target,
+					logs:     "https://logs:4317",
+					want:     "logs:4317",
+					insecure: false,
+				},
+				{
+					name:     "OptionUnixOverridesEnvironmentHTTPS",
+					endpoint: "https://general:4317",
+					logs:     "https://logs:4317",
+					options:  []Option{WithEndpointURL(target)},
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "OptionHTTPSOverridesEnvironmentUnix",
+					endpoint: target,
+					logs:     target,
+					options:  []Option{WithEndpointURL("https://option:4317")},
+					want:     "option:4317",
+					insecure: false,
+				},
+			}
+			for _, tc := range testcases {
+				t.Run(tc.name, func(t *testing.T) {
+					t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", tc.endpoint)
+					t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", tc.logs)
+					t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "")
+					t.Setenv("OTEL_EXPORTER_OTLP_LOGS_INSECURE", "")
+
+					cfg := newConfig(tc.options)
+					assert.Equal(t, newSetting(tc.want), cfg.endpoint, "endpoint")
+					assert.Equal(t, newSetting(tc.insecure), cfg.insecure, "insecure")
+				})
 			}
 		})
 	}
