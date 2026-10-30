@@ -15,10 +15,12 @@ import (
 
 // factory adapts the SDK pipeline resolver to Finish instrument construction.
 type factory struct {
-	meter           *meter
-	registry        *finish.Registry
-	int64Counters   cacheWithErr[instID, metric.Int64Counter]
-	float64Counters cacheWithErr[instID, metric.Float64Counter]
+	meter                 *meter
+	registry              *finish.Registry
+	int64Counters         cacheWithErr[instID, metric.Int64Counter]
+	float64Counters       cacheWithErr[instID, metric.Float64Counter]
+	int64UpDownCounters   cacheWithErr[instID, metric.Int64UpDownCounter]
+	float64UpDownCounters cacheWithErr[instID, metric.Float64UpDownCounter]
 }
 
 var _ finish.Factory = (*factory)(nil)
@@ -87,6 +89,76 @@ func (f *factory) Float64Counter(name string, options ...metric.Float64CounterOp
 	return counter, validateInstrumentName(name)
 }
 
+func (f *factory) Int64UpDownCounter(
+	name string,
+	options ...metric.Int64UpDownCounterOption,
+) (metric.Int64UpDownCounter, error) {
+	cfg := metric.NewInt64UpDownCounterConfig(options...)
+	counter, err := f.int64UpDownCounters.Lookup(instID{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindUpDownCounter,
+	}, func() (metric.Int64UpDownCounter, error) {
+		inst := Instrument{
+			Name:        name,
+			Description: cfg.Description(),
+			Unit:        cfg.Unit(),
+			Kind:        InstrumentKindUpDownCounter,
+			Scope:       f.meter.scope,
+		}
+		measures, finishers, err := finishCounterAggregators(
+			f.meter.int64Resolver,
+			inst,
+			defaultAttributes(options),
+			f.registry.Register,
+		)
+		return finish.NewInt64UpDownCounter(
+			&int64Inst{measures: measures},
+			finishers,
+		), err
+	})
+	if err != nil {
+		return counter, err
+	}
+	return counter, validateInstrumentName(name)
+}
+
+func (f *factory) Float64UpDownCounter(
+	name string,
+	options ...metric.Float64UpDownCounterOption,
+) (metric.Float64UpDownCounter, error) {
+	cfg := metric.NewFloat64UpDownCounterConfig(options...)
+	counter, err := f.float64UpDownCounters.Lookup(instID{
+		Name:        name,
+		Description: cfg.Description(),
+		Unit:        cfg.Unit(),
+		Kind:        InstrumentKindUpDownCounter,
+	}, func() (metric.Float64UpDownCounter, error) {
+		inst := Instrument{
+			Name:        name,
+			Description: cfg.Description(),
+			Unit:        cfg.Unit(),
+			Kind:        InstrumentKindUpDownCounter,
+			Scope:       f.meter.scope,
+		}
+		measures, finishers, err := finishCounterAggregators(
+			f.meter.float64Resolver,
+			inst,
+			defaultAttributes(options),
+			f.registry.Register,
+		)
+		return finish.NewFloat64UpDownCounter(
+			&float64Inst{measures: measures},
+			finishers,
+		), err
+	})
+	if err != nil {
+		return counter, err
+	}
+	return counter, validateInstrumentName(name)
+}
+
 // finishCounterAggregators adapts the SDK pipeline resolver to the
 // internal Finish implementation.
 func finishCounterAggregators[N int64 | float64](
@@ -106,9 +178,9 @@ func finishCounterAggregators[N int64 | float64](
 			agg Aggregation,
 			kind InstrumentKind,
 		) (streamAggregation[N], error) {
-			if kind == InstrumentKindCounter {
+			if kind == InstrumentKindCounter || kind == InstrumentKindUpDownCounter {
 				if _, ok := agg.(AggregationSum); ok {
-					sum := b.FinishSum(true)
+					sum := b.FinishSum(kind == InstrumentKindCounter)
 					registerShutdown(sum.Stop, sum.Wait)
 					return streamAggregation[N]{
 						measure: sum.Measure,
