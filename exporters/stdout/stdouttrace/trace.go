@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"sync"
 	"time"
@@ -26,13 +27,15 @@ var _ trace.SpanExporter = &Exporter{}
 func New(options ...Option) (*Exporter, error) {
 	cfg := newConfig(options...)
 
-	enc := json.NewEncoder(cfg.Writer)
+	writer := &writer{Writer: cfg.Writer}
+	enc := json.NewEncoder(writer)
 	if cfg.PrettyPrint {
 		enc.SetIndent("", "\t")
 	}
 
 	exporter := &Exporter{
 		encoder:    enc,
+		writer:     writer,
 		timestamps: cfg.Timestamps,
 	}
 
@@ -44,6 +47,7 @@ func New(options ...Option) (*Exporter, error) {
 // Exporter is an implementation of trace.SpanSyncer that writes spans to stdout.
 type Exporter struct {
 	encoder    *json.Encoder
+	writer     *writer
 	encoderMu  sync.Mutex
 	timestamps bool
 
@@ -94,13 +98,36 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 		}
 
 		// Encode span stubs, one by one
-		if e := e.encoder.Encode(stub); e != nil {
-			err = errors.Join(err, fmt.Errorf("failed to encode span %d: %w", i, e))
+		encodeErr := e.encoder.Encode(stub)
+		// Marshal failures write no bytes. Retry only non-finite attributes;
+		// writer failures are retained by the encoder and must not be retried.
+		if encodeErr != nil && !e.writer.failed {
+			var unsupported *json.UnsupportedValueError
+			if errors.As(encodeErr, &unsupported) &&
+				(unsupported.Str == "NaN" || unsupported.Str == "+Inf" || unsupported.Str == "-Inf") {
+				encodeErr = e.encoder.Encode(spanJSON(stub))
+			}
+		}
+		if encodeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to encode span %d: %w", i, encodeErr))
 			continue
 		}
 		success++
 	}
 	return err
+}
+
+// writer distinguishes encoder failures from errors returned by the destination.
+// Its state is protected by encoderMu.
+type writer struct {
+	io.Writer
+	failed bool
+}
+
+func (w *writer) Write(p []byte) (int, error) {
+	n, err := w.Writer.Write(p)
+	w.failed = err != nil
+	return n, err
 }
 
 // Shutdown is called to stop the exporter, it performs no action.
