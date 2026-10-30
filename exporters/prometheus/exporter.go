@@ -934,9 +934,13 @@ func addExemplars[N int64 | float64](
 			)
 			labels = make(prometheus.Labels, 2)
 		}
-		// Overwrite any existing trace ID or span ID attributes
-		labels[otlptranslator.ExemplarTraceIDKey] = traceID
-		labels[otlptranslator.ExemplarSpanIDKey] = spanID
+		// Overwrite any existing trace ID or span ID attributes when present.
+		if traceID != "" {
+			labels[otlptranslator.ExemplarTraceIDKey] = traceID
+		}
+		if spanID != "" {
+			labels[otlptranslator.ExemplarSpanIDKey] = spanID
+		}
 		promExemplars[i] = prometheus.Exemplar{
 			Value:     float64(exemplar.Value),
 			Timestamp: exemplar.Time,
@@ -957,10 +961,16 @@ func addExemplars[N int64 | float64](
 // trace and span ID labels that would be added to it, mirroring the count
 // prometheus client-go uses to enforce [prometheus.ExemplarMaxRunes].
 func exemplarLabelRunes(labels prometheus.Labels, traceID, spanID string) int {
-	runes := utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey) + utf8.RuneCountInString(traceID)
-	runes += utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey) + utf8.RuneCountInString(spanID)
+	var runes int
+	if traceID != "" {
+		runes += utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey) + utf8.RuneCountInString(traceID)
+	}
+	if spanID != "" {
+		runes += utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey) + utf8.RuneCountInString(spanID)
+	}
 	for k, v := range labels {
-		if k == otlptranslator.ExemplarTraceIDKey || k == otlptranslator.ExemplarSpanIDKey {
+		if (k == otlptranslator.ExemplarTraceIDKey && traceID != "") ||
+			(k == otlptranslator.ExemplarSpanIDKey && spanID != "") {
 			// Already counted above; addExemplars overwrites these keys so
 			// counting them again would double-count a collision.
 			continue
