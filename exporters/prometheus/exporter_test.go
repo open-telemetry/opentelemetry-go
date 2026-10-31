@@ -30,6 +30,7 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
@@ -68,6 +69,106 @@ func TestGetAttrs(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{"bools", "float", "strings"}, keys)
 	require.Equal(t, []string{"[true,false]", "Infinity", `["foo","bar"]`}, values)
+}
+
+func TestGetAttrsSanitizedCollisions(t *testing.T) {
+	t.Run("linear_scan_fast_path", func(t *testing.T) {
+		attrs := attribute.NewSet(
+			attribute.String("A_B", "first"),
+			attribute.String("C-D", "z"),
+			attribute.String("C.D", "b;c"),
+			attribute.String("C/D", "a"),
+		)
+
+		keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Equal(t, []string{"A_B", "C_D"}, keys)
+		require.Equal(t, []string{"first", "z;b;c;a"}, values)
+	})
+
+	t.Run("map_fallback_above_threshold", func(t *testing.T) {
+		kvs := make([]attribute.KeyValue, 0, maxLinearScanAttrs+4)
+		for i := range maxLinearScanAttrs {
+			kvs = append(kvs, attribute.String(fmt.Sprintf("attr_%03d", i), fmt.Sprintf("v%d", i)))
+		}
+		kvs = append(kvs,
+			attribute.String("z-dup", "z"),
+			attribute.String("z.dup", "b;c"),
+			attribute.String("z/dup", "a"),
+		)
+
+		keys, values, err := getAttrs(attribute.NewSet(kvs...), otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Len(t, keys, maxLinearScanAttrs+1)
+		require.Equal(t, "z_dup", keys[len(keys)-1])
+		require.Equal(t, "z;b;c;a", values[len(values)-1])
+	})
+}
+
+func TestAppendScopeAttrsSanitizedCollisions(t *testing.T) {
+	t.Run("linear_scan_fast_path", func(t *testing.T) {
+		attrs := attribute.NewSet(
+			attribute.String("name", "ignored"),
+			attribute.String("schema.url", "ignored"),
+			attribute.String("scope-key", "z"),
+			attribute.String("scope.key", "a"),
+			attribute.String("scope/key", "m"),
+		)
+
+		kv := keyVals{
+			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
+			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
+		}
+		kv, err := appendScopeAttrs(kv, attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Equal(t, []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel, "otel_scope_scope_key"}, kv.keys)
+		require.Equal(t, []string{"my-scope", "v1.0.0", "https://example.com", "z;a;m"}, kv.vals)
+	})
+
+	t.Run("map_fallback_above_threshold", func(t *testing.T) {
+		kvs := make([]attribute.KeyValue, 0, maxLinearScanAttrs+5)
+		kvs = append(kvs,
+			attribute.String("name", "ignored"),
+			attribute.String("schema.url", "ignored"),
+		)
+		for i := range maxLinearScanAttrs {
+			kvs = append(kvs, attribute.String(fmt.Sprintf("scope_attr_%03d", i), fmt.Sprintf("v%d", i)))
+		}
+		kvs = append(kvs,
+			attribute.String("z-scope-dup", "z"),
+			attribute.String("z.scope.dup", "a"),
+			attribute.String("z/scope/dup", "m"),
+		)
+
+		kv := keyVals{
+			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
+			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
+		}
+		kv, err := appendScopeAttrs(kv, attribute.NewSet(kvs...), otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Len(t, kv.keys, 3+maxLinearScanAttrs+1)
+		require.Equal(t, "otel_scope_z_scope_dup", kv.keys[len(kv.keys)-1])
+		require.Equal(t, "z;a;m", kv.vals[len(kv.vals)-1])
+	})
+}
+
+func TestSanitizedCollisionKeyOrder(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.String("C/D", "A"),
+		attribute.String("C.D", "Z"),
+		attribute.String("C-D", "M"),
+	)
+
+	keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+	require.NoError(t, err)
+	require.Equal(t, []string{"C_D"}, keys)
+	// Original keys in lexicographical order are "C-D", "C.D", "C/D".
+	require.Equal(t, []string{"M;Z;A"}, values)
+
+	kv, err := appendScopeAttrs(keyVals{}, attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+	require.NoError(t, err)
+	require.Equal(t, []string{"otel_scope_C_D"}, kv.keys)
+	require.Equal(t, []string{"M;Z;A"}, kv.vals)
 }
 
 func TestAttributesToLabels(t *testing.T) {
@@ -119,6 +220,20 @@ func TestPrometheusExporter(t *testing.T) {
 			options: []Option{
 				WithNamespace("my.dotted.namespace"),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+			},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var counter *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "my_dotted_namespace_foo_seconds_total" {
+						counter = mf
+						break
+					}
+				}
+				require.NotNil(t, counter)
+				for _, m := range counter.GetMetric() {
+					require.NotNil(t, m.GetCounter().GetCreatedTimestamp())
+					assert.False(t, m.GetCounter().GetCreatedTimestamp().AsTime().IsZero())
+				}
 			},
 		},
 		{
@@ -243,13 +358,26 @@ func TestPrometheusExporter(t *testing.T) {
 				WithNamespace("my.dotted.namespace"),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 			},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var counter *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "my_dotted_namespace_foo_seconds_total" {
+						counter = mf
+						break
+					}
+				}
+				require.NotNil(t, counter)
+				for _, m := range counter.GetMetric() {
+					require.NotNil(t, m.GetCounter().GetCreatedTimestamp())
+					assert.False(t, m.GetCounter().GetCreatedTimestamp().AsTime().IsZero())
+				}
+			},
 		},
 		{
 			name:         "counter with suffixes disabled",
 			expectedFile: "testdata/counter_disabled_suffix.txt",
 			options: []Option{
-				WithoutCounterSuffixes(),
-				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -344,6 +472,20 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "histogram",
 			expectedFile: "testdata/histogram.txt",
 			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var hist *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "histogram_baz_bytes" {
+						hist = mf
+						break
+					}
+				}
+				require.NotNil(t, hist)
+				for _, m := range hist.GetMetric() {
+					require.NotNil(t, m.GetHistogram().GetCreatedTimestamp())
+					assert.False(t, m.GetHistogram().GetCreatedTimestamp().AsTime().IsZero())
+				}
+			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -365,7 +507,6 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "sanitized attributes to labels",
 			expectedFile: "testdata/sanitized_labels.txt",
 			options: []Option{
-				WithoutUnits(),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
@@ -375,14 +516,13 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A.B").String("Q"),
 
 					// unintended match due to sanitization, values should be concatenated
-					attribute.Key("C.D").String("Y"),
-					attribute.Key("C/D").String("Z"),
+					// in the lexicographical order of the original keys ("C.D" < "C/D")
+					attribute.Key("C.D").String("Z"),
+					attribute.Key("C/D").String("Y"),
 				)
 				counter, err := meter.Float64Counter(
 					"foo",
 					otelmetric.WithDescription("a sanitary counter"),
-					// This unit is not added to
-					otelmetric.WithUnit("By"),
 				)
 				require.NoError(t, err)
 				counter.Add(ctx, 5, opt)
@@ -835,6 +975,86 @@ func TestNilReaderOptionsPreservePrevious(t *testing.T) {
 	assert.Equal(t, external, rm.ScopeMetrics[1])
 }
 
+func TestCreatedTimestampZeroStartTime(t *testing.T) {
+	startTime := time.Date(2026, 10, 27, 12, 0, 0, 0, time.UTC)
+	external := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{Name: "external"},
+		Metrics: []metricdata.Metrics{
+			{
+				Name: "counter_zero_start",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Value: 5}},
+				},
+			},
+			{
+				Name: "counter_with_start",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Value: 5, StartTime: startTime}},
+				},
+			},
+			{
+				Name: "hist_zero_start",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{{
+						Bounds:       []float64{10},
+						BucketCounts: []uint64{1, 0},
+						Count:        1,
+						Sum:          5,
+					}},
+				},
+			},
+			{
+				Name: "hist_with_start",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{{
+						Bounds:       []float64{10},
+						BucketCounts: []uint64{1, 0},
+						Count:        1,
+						Sum:          5,
+						StartTime:    startTime,
+					}},
+				},
+			},
+		},
+	}
+
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithoutTargetInfo(),
+		WithoutScopeInfo(),
+		WithProducer(producerFunc(func(context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{external}, nil
+		})),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+
+	mfs, err := registry.Gather()
+	require.NoError(t, err)
+
+	byName := make(map[string]*dto.Metric, len(mfs))
+	for _, mf := range mfs {
+		require.Len(t, mf.GetMetric(), 1)
+		byName[mf.GetName()] = mf.GetMetric()[0]
+	}
+
+	assert.Nil(t, byName["counter_zero_start_total"].GetCounter().GetCreatedTimestamp())
+	require.NotNil(t, byName["counter_with_start_total"].GetCounter().GetCreatedTimestamp())
+	assert.Equal(t, startTime, byName["counter_with_start_total"].GetCounter().GetCreatedTimestamp().AsTime())
+
+	assert.Nil(t, byName["hist_zero_start"].GetHistogram().GetCreatedTimestamp())
+	require.NotNil(t, byName["hist_with_start"].GetHistogram().GetCreatedTimestamp())
+	assert.Equal(t, startTime, byName["hist_with_start"].GetHistogram().GetCreatedTimestamp().AsTime())
+}
+
 func TestMultiScopes(t *testing.T) {
 	ctx := t.Context()
 	registry := prometheus.NewRegistry()
@@ -1120,7 +1340,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				assert.NoError(t, err)
 				bazB.Add(ctx, 100, withTypeBar)
 			},
-			options:               []Option{WithoutUnits()},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
 			possibleExpectedFiles: []string{"testdata/conflict_unit_two_counters.txt"},
 		},
 		{
@@ -1138,7 +1358,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				assert.NoError(t, err)
 				barB.Add(ctx, 100, withTypeBar)
 			},
-			options:               []Option{WithoutUnits()},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
 			possibleExpectedFiles: []string{"testdata/conflict_unit_two_updowncounters.txt"},
 		},
 		{
@@ -1156,25 +1376,22 @@ func TestDuplicateMetrics(t *testing.T) {
 				assert.NoError(t, err)
 				barB.Record(ctx, 100, withAB)
 			},
-			options:               []Option{WithoutUnits()},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
 			possibleExpectedFiles: []string{"testdata/conflict_unit_two_histograms.txt"},
 		},
 		{
 			name: "conflict_type_counter_and_updowncounter",
 			recordMetrics: func(ctx context.Context, meterA, _ otelmetric.Meter) {
 				counter, err := meterA.Int64Counter("foo",
-					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter foo"))
 				assert.NoError(t, err)
 				counter.Add(ctx, 100, withTypeFoo)
 
 				gauge, err := meterA.Int64UpDownCounter("foo_total",
-					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter foo"))
 				assert.NoError(t, err)
 				gauge.Add(ctx, 200, withTypeFoo)
 			},
-			options: []Option{WithoutUnits()},
 			possibleExpectedFiles: []string{
 				"testdata/conflict_type_counter_and_updowncounter_1.txt",
 				"testdata/conflict_type_counter_and_updowncounter_2.txt",
@@ -1613,11 +1830,11 @@ func TestExemplarsExceedingLabelLimit(t *testing.T) {
 	require.Len(t, got, 1)
 	family := got[0]
 	require.Len(t, family.GetMetric(), 1)
-	exemplar := family.GetMetric()[0].GetCounter().GetExemplar()
-	require.NotNil(t, exemplar, "exemplar should still be present with only trace/span ID labels")
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex, "exemplar should still be present with only trace/span ID labels")
 
-	labels := make(map[string]string, len(exemplar.GetLabel()))
-	for _, label := range exemplar.GetLabel() {
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
 		labels[label.GetName()] = label.GetValue()
 	}
 	assert.Equal(t, map[string]string{
@@ -1678,11 +1895,11 @@ func TestExemplarsLabelLimitKeyCollision(t *testing.T) {
 	require.Len(t, got, 1)
 	family := got[0]
 	require.Len(t, family.GetMetric(), 1)
-	exemplar := family.GetMetric()[0].GetCounter().GetExemplar()
-	require.NotNil(t, exemplar)
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex)
 
-	labels := make(map[string]string, len(exemplar.GetLabel()))
-	for _, label := range exemplar.GetLabel() {
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
 		labels[label.GetName()] = label.GetValue()
 	}
 	assert.Equal(t, map[string]string{
@@ -1690,6 +1907,55 @@ func TestExemplarsLabelLimitKeyCollision(t *testing.T) {
 		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
 		"method":                          "GET",
 	}, labels, "non-colliding filtered attribute should be preserved, trace/span ID overwritten")
+}
+
+func TestExemplarsWithoutSpanContext(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(resource.Default()),
+		metric.WithExemplarFilter(exemplar.AlwaysOnFilter),
+		metric.WithView(
+			metric.NewView(
+				metric.Instrument{Name: "foo"},
+				metric.Stream{
+					AttributeFilter: attribute.NewAllowKeysFilter(),
+				},
+			),
+		),
+	)
+	meter := provider.Meter("meter")
+
+	counter, err := meter.Float64Counter("foo")
+	require.NoError(t, err)
+	// Record without an active span context; filtered attributes up to
+	// ExemplarMaxRunes should fit because empty trace_id/span_id keys are not added.
+	val := strings.Repeat("a", prometheus.ExemplarMaxRunes-len("filtered"))
+	counter.Add(ctx, 9, otelmetric.WithAttributes(
+		attribute.String("filtered", val),
+	))
+
+	got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+	defer done()
+	require.NoError(t, err)
+
+	require.Len(t, got, 1)
+	family := got[0]
+	require.Len(t, family.GetMetric(), 1)
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex)
+
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
+		labels[label.GetName()] = label.GetValue()
+	}
+	assert.Equal(t, map[string]string{
+		"filtered": val,
+	}, labels, "empty trace_id and span_id labels should not be added")
 }
 
 func TestExponentialHistogramScaleValidation(t *testing.T) {
@@ -3033,8 +3299,6 @@ func TestExporterSelfInstrumentationErrors(t *testing.T) {
 			collector := &collector{
 				reader:                   reader,
 				disableTargetInfo:        cfg.disableTargetInfo,
-				withoutUnits:             cfg.withoutUnits,
-				withoutCounterSuffixes:   cfg.withoutCounterSuffixes,
 				disableScopeInfo:         cfg.disableScopeInfo,
 				metricFamilies:           make(map[string]*dto.MetricFamily),
 				namespace:                cfg.namespace,

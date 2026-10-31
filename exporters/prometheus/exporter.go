@@ -40,6 +40,11 @@ const (
 	// Registerer, rather than round-tripping them through the bridge and
 	// exporter.
 	bridgeScopeName = "go.opentelemetry.io/contrib/bridges/prometheus"
+
+	// maxLinearScanAttrs is the maximum attribute.Set size for which sanitized
+	// label collision detection uses a linear slice scan before falling back to
+	// a key-to-index map.
+	maxLinearScanAttrs = 64
 )
 
 var metricsPool = sync.Pool{
@@ -85,8 +90,6 @@ type keyVals struct {
 type collector struct {
 	reader metric.Reader
 
-	withoutUnits             bool
-	withoutCounterSuffixes   bool
 	disableScopeInfo         bool
 	namespace                string
 	resourceAttributesFilter attribute.Filter
@@ -133,8 +136,6 @@ func New(opts ...Option) (*Exporter, error) {
 	collector := &collector{
 		reader:                   reader,
 		disableTargetInfo:        cfg.disableTargetInfo,
-		withoutUnits:             cfg.withoutUnits,
-		withoutCounterSuffixes:   cfg.withoutCounterSuffixes,
 		disableScopeInfo:         cfg.disableScopeInfo,
 		metricFamilies:           make(map[string]*dto.MetricFamily),
 		namespace:                escapedNamespace,
@@ -212,6 +213,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		defer c.mu.Unlock()
 
 		if c.targetInfo == nil && !c.disableTargetInfo {
+			if metrics.Resource.Len() == 0 {
+				c.disableTargetInfo = true
+				return
+			}
 			targetInfo, e := c.createInfoMetric(
 				otlptranslator.TargetInfoMetricName,
 				targetInfoDescription,
@@ -265,14 +270,13 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			kv.keys = append(kv.keys, scopeNameLabel, scopeVersionLabel, scopeSchemaLabel)
 			kv.vals = append(kv.vals, scopeMetrics.Scope.Name, scopeMetrics.Scope.Version, scopeMetrics.Scope.SchemaURL)
 
-			attrKeys, attrVals, e := getScopeAttrs(scopeMetrics.Scope.Attributes, c.labelNamer)
+			var e error
+			kv, e = appendScopeAttrs(kv, scopeMetrics.Scope.Attributes, c.labelNamer)
 			if e != nil {
 				reportError(ch, nil, e)
 				err = errors.Join(err, fmt.Errorf("failed to translate scope attributes for ScopeMetrics %d: %w", j, e))
 				continue
 			}
-			kv.keys = append(kv.keys, attrKeys...)
-			kv.vals = append(kv.vals, attrVals...)
 		}
 
 		kv.keys = append(kv.keys, c.resourceKeyVals.keys...)
@@ -394,14 +398,12 @@ func addExponentialHistogramMetric[N int64 | float64](
 	}
 
 	for j, dp := range histogram.DataPoints {
-		keys, values, e := getAttrs(dp.Attributes, labelNamer)
+		keys, values, e := getAttrsWithKV(dp.Attributes, kv, labelNamer)
 		if e != nil {
 			reportError(ch, nil, e)
 			err = errors.Join(err, fmt.Errorf("failed to getAttrs for histogram.DataPoints %d: %w", j, e))
 			continue
 		}
-		keys = append(keys, kv.keys...)
-		values = append(values, kv.vals...)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 
@@ -430,7 +432,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 		}
 
 		// From spec: note that Prometheus Native Histograms buckets are indexed by upper boundary while Exponential Histograms are indexed by lower boundary, the result being that the Offset fields are different-by-one.
-		positiveBuckets := make(map[int]int64)
+		positiveBuckets := make(map[int]int64, len(positiveBucket.Counts))
 		for i, c := range positiveBucket.Counts {
 			if c > math.MaxInt64 {
 				e := fmt.Errorf("positive count %d is too large to be represented as int64", c)
@@ -441,7 +443,7 @@ func addExponentialHistogramMetric[N int64 | float64](
 			positiveBuckets[int(positiveBucket.Offset)+i+1] = int64(c) // nolint: gosec  // Size check above.
 		}
 
-		negativeBuckets := make(map[int]int64)
+		negativeBuckets := make(map[int]int64, len(negativeBucket.Counts))
 		for i, c := range negativeBucket.Counts {
 			if c > math.MaxInt64 {
 				e := fmt.Errorf("negative count %d is too large to be represented as int64", c)
@@ -497,14 +499,12 @@ func addHistogramMetric[N int64 | float64](
 	}
 
 	for j, dp := range histogram.DataPoints {
-		keys, values, e := getAttrs(dp.Attributes, labelNamer)
+		keys, values, e := getAttrsWithKV(dp.Attributes, kv, labelNamer)
 		if e != nil {
 			reportError(ch, nil, e)
 			err = errors.Join(err, fmt.Errorf("failed to getAttrs for histogram.DataPoints %d: %w", j, e))
 			continue
 		}
-		keys = append(keys, kv.keys...)
-		values = append(values, kv.vals...)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		buckets := make(map[float64]uint64, len(dp.Bounds))
@@ -514,14 +514,26 @@ func addHistogramMetric[N int64 | float64](
 			cumulativeCount += dp.BucketCounts[i]
 			buckets[bound] = cumulativeCount
 		}
-		m, e := prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
+		var pm prometheus.Metric
+		if !dp.StartTime.IsZero() {
+			pm, e = prometheus.NewConstHistogramWithCreatedTimestamp(
+				desc,
+				dp.Count,
+				float64(dp.Sum),
+				buckets,
+				dp.StartTime,
+				values...,
+			)
+		} else {
+			pm, e = prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
+		}
 		if e != nil {
 			reportError(ch, desc, e)
-			err = errors.Join(err, fmt.Errorf("failed to NewConstMetric for histogram.DataPoints %d: %w", j, e))
+			err = errors.Join(err, fmt.Errorf("failed to NewConstHistogram for histogram.DataPoints %d: %w", j, e))
 			continue
 		}
-		m = addExemplars(m, dp.Exemplars, labelNamer)
-		ch <- m
+		pm = addExemplars(pm, dp.Exemplars, labelNamer)
+		ch <- pm
 
 		success++
 	}
@@ -550,17 +562,26 @@ func addSumMetric[N int64 | float64](
 	}
 
 	for i, dp := range sum.DataPoints {
-		keys, values, e := getAttrs(dp.Attributes, labelNamer)
+		keys, values, e := getAttrsWithKV(dp.Attributes, kv, labelNamer)
 		if e != nil {
 			reportError(ch, nil, e)
 			err = errors.Join(err, fmt.Errorf("failed to getAttrs for sum.DataPoints %d: %w", i, e))
 			continue
 		}
-		keys = append(keys, kv.keys...)
-		values = append(values, kv.vals...)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
-		m, e := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
+		var pm prometheus.Metric
+		if valueType == prometheus.CounterValue && !dp.StartTime.IsZero() {
+			pm, e = prometheus.NewConstMetricWithCreatedTimestamp(
+				desc,
+				valueType,
+				float64(dp.Value),
+				dp.StartTime,
+				values...,
+			)
+		} else {
+			pm, e = prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
+		}
 		if e != nil {
 			reportError(ch, desc, e)
 			err = errors.Join(err, fmt.Errorf("failed to NewConstMetric for sum.DataPoints %d: %w", i, e))
@@ -569,9 +590,9 @@ func addSumMetric[N int64 | float64](
 		// GaugeValues don't support Exemplars at this time
 		// https://github.com/prometheus/client_golang/blob/aef8aedb4b6e1fb8ac1c90790645169125594096/prometheus/metric.go#L199
 		if valueType != prometheus.GaugeValue {
-			m = addExemplars(m, dp.Exemplars, labelNamer)
+			pm = addExemplars(pm, dp.Exemplars, labelNamer)
 		}
-		ch <- m
+		ch <- pm
 
 		success++
 	}
@@ -595,14 +616,12 @@ func addGaugeMetric[N int64 | float64](
 	}
 
 	for i, dp := range gauge.DataPoints {
-		keys, values, e := getAttrs(dp.Attributes, labelNamer)
+		keys, values, e := getAttrsWithKV(dp.Attributes, kv, labelNamer)
 		if e != nil {
 			reportError(ch, nil, e)
 			err = errors.Join(err, fmt.Errorf("failed to getAttrs for gauge.DataPoints %d: %w", i, e))
 			continue
 		}
-		keys = append(keys, kv.keys...)
-		values = append(values, kv.vals...)
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
 		m, e := prometheus.NewConstMetric(desc, prometheus.GaugeValue, float64(dp.Value), values...)
@@ -620,81 +639,145 @@ func addGaugeMetric[N int64 | float64](
 // getAttrs converts the attribute.Set to two lists of matching Prometheus-style
 // keys and values.
 func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]string, []string, error) {
-	keys := make([]string, 0, attrs.Len())
-	values := make([]string, 0, attrs.Len())
+	return getAttrsWithKV(attrs, keyVals{}, labelNamer)
+}
+
+func getAttrsWithKV(attrs attribute.Set, kv keyVals, labelNamer otlptranslator.LabelNamer) ([]string, []string, error) {
+	if attrs.Len() == 0 {
+		return kv.keys, kv.vals, nil
+	}
+	n := attrs.Len() + len(kv.keys)
+	keys := make([]string, 0, n)
+	values := make([]string, 0, n)
 	itr := attrs.Iter()
 
 	if labelNamer.UTF8Allowed {
 		// Do not perform sanitization if prometheus supports UTF-8.
 		for itr.Next() {
-			kv := itr.Attribute()
-			keys = append(keys, string(kv.Key))
-			values = append(values, kv.Value.String())
+			attr := itr.Attribute()
+			keys = append(keys, string(attr.Key))
+			values = append(values, attr.Value.String())
 		}
 	} else {
 		// It sanitizes invalid characters and handles duplicate keys
-		// (due to sanitization) by sorting and concatenating the values following the spec.
-		keysMap := make(map[string][]string)
+		// (due to sanitization) by concatenating the values in the
+		// lexicographical order of the original keys following the spec.
+		var (
+			dups   map[int][]string
+			keyIdx map[string]int
+		)
+		if attrs.Len() > maxLinearScanAttrs {
+			keyIdx = make(map[string]int, attrs.Len())
+		}
 		for itr.Next() {
-			kv := itr.Attribute()
-			key, err := labelNamer.Build(string(kv.Key))
+			attr := itr.Attribute()
+			key, err := labelNamer.Build(string(attr.Key))
 			if err != nil {
 				return nil, nil, err
 			}
-			if _, ok := keysMap[key]; !ok {
-				keysMap[key] = []string{kv.Value.String()}
+			val := attr.Value.String()
+			idx := -1
+			if keyIdx != nil {
+				if i, ok := keyIdx[key]; ok {
+					idx = i
+				}
 			} else {
-				// if the sanitized key is a duplicate, append to the list of keys
-				keysMap[key] = append(keysMap[key], kv.Value.String())
+				idx = slices.Index(keys, key)
 			}
-		}
-		for key, vals := range keysMap {
+			if idx >= 0 {
+				if dups == nil {
+					dups = make(map[int][]string)
+				}
+				if existing, ok := dups[idx]; ok {
+					dups[idx] = append(existing, val)
+				} else {
+					dups[idx] = []string{values[idx], val}
+				}
+				continue
+			}
+			if keyIdx != nil {
+				keyIdx[key] = len(keys)
+			}
 			keys = append(keys, key)
-			slices.Sort(vals)
-			values = append(values, strings.Join(vals, ";"))
+			values = append(values, val)
+		}
+		for idx, vals := range dups {
+			values[idx] = strings.Join(vals, ";")
 		}
 	}
+	keys = append(keys, kv.keys...)
+	values = append(values, kv.vals...)
 	return keys, values, nil
 }
 
-func getScopeAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]string, []string, error) {
-	keys := make([]string, 0, attrs.Len())
-	values := make([]string, 0, attrs.Len())
+func appendScopeAttrs(kv keyVals, attrs attribute.Set, labelNamer otlptranslator.LabelNamer) (keyVals, error) {
+	if attrs.Len() == 0 {
+		return kv, nil
+	}
 	itr := attrs.Iter()
 
 	if labelNamer.UTF8Allowed {
 		for itr.Next() {
-			kv := itr.Attribute()
-			key := string(kv.Key)
+			attr := itr.Attribute()
+			key := string(attr.Key)
 			if isReservedScopeLabel(key) {
 				continue
 			}
-			keys = append(keys, scopeLabelPrefix+key)
-			values = append(values, kv.Value.String())
+			kv.keys = append(kv.keys, scopeLabelPrefix+key)
+			kv.vals = append(kv.vals, attr.Value.String())
 		}
-		return keys, values, nil
+		return kv, nil
 	}
 
-	keysMap := make(map[string][]string)
+	startIdx := len(kv.keys)
+	var (
+		dups   map[int][]string
+		keyIdx map[string]int
+	)
+	if attrs.Len() > maxLinearScanAttrs {
+		keyIdx = make(map[string]int, attrs.Len())
+	}
 	for itr.Next() {
-		kv := itr.Attribute()
-		key, err := labelNamer.Build(string(kv.Key))
+		attr := itr.Attribute()
+		key, err := labelNamer.Build(string(attr.Key))
 		if err != nil {
-			return nil, nil, err
+			return kv, err
 		}
 		if isReservedScopeLabel(key) {
 			continue
 		}
-		keysMap[key] = append(keysMap[key], kv.Value.String())
+		scopeKey := scopeLabelPrefix + key
+		val := attr.Value.String()
+		idx := -1
+		if keyIdx != nil {
+			if i, ok := keyIdx[scopeKey]; ok {
+				idx = i
+			}
+		} else if relIdx := slices.Index(kv.keys[startIdx:], scopeKey); relIdx >= 0 {
+			idx = startIdx + relIdx
+		}
+		if idx >= 0 {
+			if dups == nil {
+				dups = make(map[int][]string)
+			}
+			if existing, ok := dups[idx]; ok {
+				dups[idx] = append(existing, val)
+			} else {
+				dups[idx] = []string{kv.vals[idx], val}
+			}
+			continue
+		}
+		if keyIdx != nil {
+			keyIdx[scopeKey] = len(kv.keys)
+		}
+		kv.keys = append(kv.keys, scopeKey)
+		kv.vals = append(kv.vals, val)
+	}
+	for idx, vals := range dups {
+		kv.vals[idx] = strings.Join(vals, ";")
 	}
 
-	for key, vals := range keysMap {
-		keys = append(keys, scopeLabelPrefix+key)
-		slices.Sort(vals)
-		values = append(values, strings.Join(vals, ";"))
-	}
-
-	return keys, values, nil
+	return kv, nil
 }
 
 func isReservedScopeLabel(key string) bool {
@@ -720,10 +803,8 @@ func (c *collector) createInfoMetric(name, description string, res *resource.Res
 func (c *collector) getName(m metricdata.Metrics) (string, error) {
 	translatorMetric := otlptranslator.Metric{
 		Name: m.Name,
+		Unit: m.Unit,
 		Type: c.namingMetricType(m),
-	}
-	if !c.withoutUnits {
-		translatorMetric.Unit = m.Unit
 	}
 	return c.metricNamer.Build(translatorMetric)
 }
@@ -751,23 +832,19 @@ func (*collector) metricType(m metricdata.Metrics) *dto.MetricType {
 }
 
 // namingMetricType provides the metric type for naming purposes.
-func (c *collector) namingMetricType(m metricdata.Metrics) otlptranslator.MetricType {
+func (*collector) namingMetricType(m metricdata.Metrics) otlptranslator.MetricType {
 	switch v := m.Data.(type) {
 	case metricdata.ExponentialHistogram[int64], metricdata.ExponentialHistogram[float64]:
 		return otlptranslator.MetricTypeHistogram
 	case metricdata.Histogram[int64], metricdata.Histogram[float64]:
 		return otlptranslator.MetricTypeHistogram
 	case metricdata.Sum[float64]:
-		// If counter suffixes are disabled, treat them like non-monotonic
-		// suffixes for the purposes of naming.
-		if v.IsMonotonic && !c.withoutCounterSuffixes {
+		if v.IsMonotonic {
 			return otlptranslator.MetricTypeMonotonicCounter
 		}
 		return otlptranslator.MetricTypeNonMonotonicCounter
 	case metricdata.Sum[int64]:
-		// If counter suffixes are disabled, treat them like non-monotonic
-		// suffixes for the purposes of naming.
-		if v.IsMonotonic && !c.withoutCounterSuffixes {
+		if v.IsMonotonic {
 			return otlptranslator.MetricTypeMonotonicCounter
 		}
 		return otlptranslator.MetricTypeNonMonotonicCounter
@@ -856,9 +933,13 @@ func addExemplars[N int64 | float64](
 			)
 			labels = make(prometheus.Labels, 2)
 		}
-		// Overwrite any existing trace ID or span ID attributes
-		labels[otlptranslator.ExemplarTraceIDKey] = traceID
-		labels[otlptranslator.ExemplarSpanIDKey] = spanID
+		// Overwrite any existing trace ID or span ID attributes when present.
+		if traceID != "" {
+			labels[otlptranslator.ExemplarTraceIDKey] = traceID
+		}
+		if spanID != "" {
+			labels[otlptranslator.ExemplarSpanIDKey] = spanID
+		}
 		promExemplars[i] = prometheus.Exemplar{
 			Value:     float64(exemplar.Value),
 			Timestamp: exemplar.Time,
@@ -879,10 +960,16 @@ func addExemplars[N int64 | float64](
 // trace and span ID labels that would be added to it, mirroring the count
 // prometheus client-go uses to enforce [prometheus.ExemplarMaxRunes].
 func exemplarLabelRunes(labels prometheus.Labels, traceID, spanID string) int {
-	runes := utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey) + utf8.RuneCountInString(traceID)
-	runes += utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey) + utf8.RuneCountInString(spanID)
+	var runes int
+	if traceID != "" {
+		runes += utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey) + utf8.RuneCountInString(traceID)
+	}
+	if spanID != "" {
+		runes += utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey) + utf8.RuneCountInString(spanID)
+	}
 	for k, v := range labels {
-		if k == otlptranslator.ExemplarTraceIDKey || k == otlptranslator.ExemplarSpanIDKey {
+		if (k == otlptranslator.ExemplarTraceIDKey && traceID != "") ||
+			(k == otlptranslator.ExemplarSpanIDKey && spanID != "") {
 			// Already counted above; addExemplars overwrites these keys so
 			// counting them again would double-count a collision.
 			continue
@@ -893,7 +980,7 @@ func exemplarLabelRunes(labels prometheus.Labels, traceID, spanID string) int {
 }
 
 func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.LabelNamer) (prometheus.Labels, error) {
-	labels := make(map[string]string)
+	labels := make(map[string]string, len(attrs)+2)
 	for _, attr := range attrs {
 		name, err := labelNamer.Build(string(attr.Key))
 		if err != nil {

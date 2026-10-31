@@ -141,7 +141,7 @@ func TestExporterExport(t *testing.T) {
 			options:    []Option{WithPrettyPrint()},
 			ctx:        t.Context(),
 			records:    records,
-			wantResult: getPrettyJSONs(&now),
+			wantResult: getPrettyJSONs(t, &now),
 		},
 		{
 			name:       "WithoutTimestamps",
@@ -155,7 +155,7 @@ func TestExporterExport(t *testing.T) {
 			options:    []Option{WithoutTimestamps(), WithPrettyPrint()},
 			ctx:        t.Context(),
 			records:    records,
-			wantResult: getPrettyJSONs(nil),
+			wantResult: getPrettyJSONs(t, nil),
 		},
 		{
 			name: "WithCanceledContext",
@@ -187,21 +187,23 @@ func TestExporterExport(t *testing.T) {
 
 func TestExporterWriterError(t *testing.T) {
 	writeErr := errors.New("write failed")
-	writer := &failingWriter{err: writeErr}
 	for _, tc := range []struct {
 		name    string
-		options []Option
+		options func(Option) []Option
 	}{
-		{name: "WithWriter", options: []Option{WithWriter(writer)}},
-		{name: "WithNilWriterThenWriter", options: []Option{WithWriter(nil), WithWriter(writer)}},
-		{name: "WithWriterThenNilWriter", options: []Option{WithWriter(writer), WithWriter(nil)}},
+		{name: "WithWriter", options: func(writer Option) []Option { return []Option{writer} }},
+		{name: "WithNilWriterThenWriter", options: func(writer Option) []Option { return []Option{WithWriter(nil), writer} }},
+		{name: "WithWriterThenNilWriter", options: func(writer Option) []Option { return []Option{writer, WithWriter(nil)} }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			exporter, err := New(tc.options...)
+			writer := &failingWriter{err: writeErr}
+			exporter, err := New(tc.options(WithWriter(writer))...)
 			require.NoError(t, err)
 			t.Cleanup(func() { assert.NoError(t, exporter.Shutdown(context.WithoutCancel(t.Context()))) })
-			err = exporter.Export(t.Context(), []sdklog.Record{getRecord(time.Now())})
+			record := getRecord(time.Now())
+			err = exporter.Export(t.Context(), []sdklog.Record{record, record})
 			assert.ErrorIs(t, err, writeErr)
+			assert.Equal(t, 1, writer.calls)
 		})
 	}
 }
@@ -213,101 +215,24 @@ func getJSON(now *time.Time) string {
 		timestamps = "\"Timestamp\":" + string(serializedNow) + ",\"ObservedTimestamp\":" + string(serializedNow) + ","
 	}
 
-	return "{" + timestamps + "\"EventName\":\"testing.event\",\"Severity\":9,\"SeverityText\":\"INFO\",\"Body\":{\"Type\":\"STRING\",\"Value\":\"test\"},\"Attributes\":[{\"Key\":\"key\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key2\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key3\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key4\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"key5\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"value\"}},{\"Key\":\"bool\",\"Value\":{\"Type\":\"BOOL\",\"Value\":true}}],\"TraceID\":\"0102030405060708090a0b0c0d0e0f10\",\"SpanID\":\"0102030405060708\",\"TraceFlags\":\"01\",\"Resource\":[{\"Key\":\"foo\",\"Value\":{\"Type\":\"STRING\",\"Value\":\"bar\"}}],\"Scope\":{\"Name\":\"name\",\"Version\":\"version\",\"SchemaURL\":\"https://example.com/custom-schema\",\"Attributes\":{}},\"DroppedAttributes\":10}\n"
+	return "{" + timestamps + `"EventName":"testing.event","Severity":9,"SeverityText":"INFO","Body":"test","Attributes":[{"key":"value"},{"key2":"value"},{"key3":"value"},{"key4":"value"},{"key5":"value"},{"bool":true}],"TraceID":"0102030405060708090a0b0c0d0e0f10","SpanID":"0102030405060708","TraceFlags":"01","Resource":{"foo":"bar"},"Scope":{"Name":"name","Version":"version","SchemaURL":"https://example.com/custom-schema","Attributes":{}},"DroppedAttributes":10}` + "\n"
 }
 
 func getJSONs(now *time.Time) string {
 	return getJSON(now) + getJSON(now)
 }
 
-func getPrettyJSON(now *time.Time) string {
-	var timestamps string
-	if now != nil {
-		serializedNow, _ := json.Marshal(now)
-		timestamps = "\n\t\"Timestamp\": " + string(
-			serializedNow,
-		) + ",\n\t\"ObservedTimestamp\": " + string(
-			serializedNow,
-		) + ","
-	}
-
-	return `{` + timestamps + `
-	"EventName": "testing.event",
-	"Severity": 9,
-	"SeverityText": "INFO",
-	"Body": {
-		"Type": "STRING",
-		"Value": "test"
-	},
-	"Attributes": [
-		{
-			"Key": "key",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
-		},
-		{
-			"Key": "key2",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
-		},
-		{
-			"Key": "key3",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
-		},
-		{
-			"Key": "key4",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
-		},
-		{
-			"Key": "key5",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
-		},
-		{
-			"Key": "bool",
-			"Value": {
-				"Type": "BOOL",
-				"Value": true
-			}
-		}
-	],
-	"TraceID": "0102030405060708090a0b0c0d0e0f10",
-	"SpanID": "0102030405060708",
-	"TraceFlags": "01",
-	"Resource": [
-		{
-			"Key": "foo",
-			"Value": {
-				"Type": "STRING",
-				"Value": "bar"
-			}
-		}
-	],
-	"Scope": {
-		"Name": "name",
-		"Version": "version",
-		"SchemaURL": "https://example.com/custom-schema",
-		"Attributes": {}
-	},
-	"DroppedAttributes": 10
-}
-`
+func getPrettyJSON(t *testing.T, now *time.Time) string {
+	t.Helper()
+	var buf bytes.Buffer
+	require.NoError(t, json.Indent(&buf, []byte(getJSON(now)), "", "\t"))
+	return buf.String()
 }
 
-func getPrettyJSONs(now *time.Time) string {
-	return getPrettyJSON(now) + getPrettyJSON(now)
+func getPrettyJSONs(t *testing.T, now *time.Time) string {
+	t.Helper()
+	record := getPrettyJSON(t, now)
+	return record + record
 }
 
 func TestExporterShutdown(t *testing.T) {
@@ -526,10 +451,12 @@ func BenchmarkExporterObservability(b *testing.B) {
 
 // failingWriter implements [io.Writer] and always returns an error.
 type failingWriter struct {
-	err error
+	err   error
+	calls int
 }
 
 func (w *failingWriter) Write([]byte) (int, error) {
+	w.calls++
 	return 0, w.err
 }
 
