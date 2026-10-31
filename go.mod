@@ -14,7 +14,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.47.0
 )
 
-require go.yaml.in/yaml/v3 v3.0.5 // indirect
+require go.yaml.in/yaml/v3 v3.0.6 // indirect
 
 replace go.opentelemetry.io/otel/trace => ./trace
 
