@@ -38,7 +38,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 - Percent-encoded whitespace in `OTEL_EXPORTER_OTLP_*_HEADERS` environment values is now preserved by the `convHeaders` functions in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9253)
-
 - Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Interpret OTLP log exporter compression environment variables case-insensitively in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
@@ -47,7 +46,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   case-insensitively as well, where a differently-cased value previously reported an unknown
   compressor and fell back to no compression. (#9230)
 - Prevent underflowed measurements from updating sum, min, or max in exponential histograms in `go.opentelemetry.io/otel/sdk/metric`. (#8077)
+<<<<<<< HEAD
 - Report the module's registered version from `Version()` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, which also corrects the exporter version sent in the default User-Agent. (#9232)
+=======
+>>>>>>> Update CHANGELOG.md
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
 - Report dropped event and link counts in the span snapshot when the event or link limit is `0` in `go.opentelemetry.io/otel/sdk/trace`.
   Previously, an ended span reported `0` dropped events and links even though the recording span had counted them. (#9238)
