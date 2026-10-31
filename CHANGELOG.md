@@ -38,8 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Resolve the mTLS client certificate and key environment variables (`OTEL_EXPORTER_OTLP_[LOGS_]CLIENT_CERTIFICATE` and `OTEL_EXPORTER_OTLP_[LOGS_]CLIENT_KEY`) independently in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, so a signal-specific override can be paired with the generic value instead of requiring both files from the same scope. (#9255)
-
+- Resolve the mTLS client certificate and key environment variables (`OTEL_EXPORTER_OTLP_[LOGS_]CLIENT_CERTIFICATE` and `OTEL_EXPORTER_OTLP_[LOGS_]CLIENT_KEY`) independently in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, so a signal-specific override can be paired with the generic value instead of requiring both files from the same scope. A lone certificate or key with no counterpart, which was previously ignored silently, is now reported through the error handler. (#9255)
 - Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Interpret OTLP log exporter compression environment variables case-insensitively in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
