@@ -40,8 +40,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix numeric instrument types, histogram bucket option precedence, and mutation of caller-owned constructor options in `go.opentelemetry.io/otel/semconv/v1.44.0`.
-- Preserve metric API migration guidance when regenerating `go.opentelemetry.io/otel/semconv/v1.44.0`, and document value semantics and telemetry name changes.
+- Fix numeric instrument types, histogram bucket option precedence, and mutation of caller-owned constructor options in `go.opentelemetry.io/otel/semconv/v1.44.0`. (#9332)
+- Preserve metric API migration guidance when regenerating `go.opentelemetry.io/otel/semconv/v1.44.0`, and document value semantics and telemetry name changes. (#9332)
 
 - Skip measurement preparation and recording for disabled observability instruments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#9318)
 - Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
