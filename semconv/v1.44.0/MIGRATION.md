@@ -3,9 +3,6 @@
 
 The `go.opentelemetry.io/otel/semconv/v1.44.0` package should be a drop-in replacement for `go.opentelemetry.io/otel/semconv/v1.43.0` with the following exceptions.
 
-<!-- This fragment is included in the generated MIGRATION.md. -->
-<!-- markdownlint-disable MD041 -->
-
 ## Metric API changes
 
 The following changes affect metric subpackages as well as their constructor options and embedded instrument types.

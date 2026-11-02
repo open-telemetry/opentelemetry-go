@@ -227,7 +227,7 @@ func newMigration(cur, prev string) (*Migration, error) {
 		return nil, fmt.Errorf("error parsing previous version %q: %w", prev, err)
 	}
 
-	notes, err := os.ReadFile(filepath.Join(cur, "MIGRATION_NOTES.md"))
+	notes, err := os.ReadFile(filepath.Join(cur, "MIGRATION_NOTES.md.inc"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("error reading migration notes: %w", err)
 	}

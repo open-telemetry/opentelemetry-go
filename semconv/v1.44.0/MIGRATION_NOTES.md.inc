@@ -1,6 +1,3 @@
-<!-- This fragment is included in the generated MIGRATION.md. -->
-<!-- markdownlint-disable MD041 -->
-
 ## Metric API changes
 
 The following changes affect metric subpackages as well as their constructor options and embedded instrument types.

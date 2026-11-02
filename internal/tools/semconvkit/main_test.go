@@ -64,7 +64,7 @@ func TestMigrationPreservesNotes(t *testing.T) {
 	writeGoFile(t, prev, "semconv", "package semconv\n")
 	writeGoFile(t, cur, "semconv", "package semconv\n")
 	const notes = "## Metric API changes\n\nUse deltas with Add.\n"
-	path := filepath.Join(cur, "MIGRATION_NOTES.md")
+	path := filepath.Join(cur, "MIGRATION_NOTES.md.inc")
 	if err := os.WriteFile(path, []byte(notes), 0o600); err != nil {
 		t.Fatal(err)
 	}
