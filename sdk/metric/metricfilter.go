@@ -20,16 +20,26 @@ const (
 	metricFilterAttrDrop
 )
 
+// These values must match AggregationKind in sdk/metric/x.
+const (
+	aggregationKindUnknown uint8 = iota
+	aggregationKindSum
+	aggregationKindGauge
+	aggregationKindHistogram
+	aggregationKindExponentialHistogram
+	aggregationKindSummary
+)
+
 // metricFilter is an internal, private mirror of the experimental metricFilter
 // interface from the 'x' package. It is duplicated here to avoid package
 // import cycles and layer violations while leveraging Go's implicit interfaces.
 type metricFilter interface {
 	Experimental()
-	TestMetric(scope instrumentation.Scope, name string, kind metricdata.Aggregation, unit string) int
+	TestMetric(scope instrumentation.Scope, name string, kind uint8, unit string) int
 	TestAttributes(
 		scope instrumentation.Scope,
 		name string,
-		kind metricdata.Aggregation,
+		kind uint8,
 		unit string,
 		attrs attribute.Set,
 	) int
@@ -40,13 +50,12 @@ type metricFilter interface {
 // dropped.
 func filterScopeMetrics(sm []metricdata.ScopeMetrics, filter metricFilter) []metricdata.ScopeMetrics {
 	i := 0
-	for _, scopeMetric := range sm {
-		metrics := filterMetrics(scopeMetric.Scope, scopeMetric.Metrics, filter)
-		if len(metrics) == 0 {
+	for idx := range sm {
+		sm[idx].Metrics = filterMetrics(sm[idx].Scope, sm[idx].Metrics, filter)
+		if len(sm[idx].Metrics) == 0 {
 			continue
 		}
-		scopeMetric.Metrics = metrics
-		sm[i] = scopeMetric
+		sm[i], sm[idx] = sm[idx], sm[i]
 		i++
 	}
 	return sm[:i]
@@ -61,24 +70,48 @@ func filterMetrics(
 	filter metricFilter,
 ) []metricdata.Metrics {
 	j := 0
-	for _, m := range metrics {
-		switch filter.TestMetric(scope, m.Name, m.Data, m.Unit) {
+	for i := range metrics {
+		kind := aggregationKind(metrics[i].Data)
+		switch filter.TestMetric(scope, metrics[i].Name, kind, metrics[i].Unit) {
 		case metricFilterAccept:
 		case metricFilterAcceptPartial:
 			keep := func(attrs attribute.Set) bool {
-				return filter.TestAttributes(scope, m.Name, m.Data, m.Unit, attrs) == metricFilterAttrAccept
+				return filter.TestAttributes(
+					scope,
+					metrics[i].Name,
+					kind,
+					metrics[i].Unit,
+					attrs,
+				) == metricFilterAttrAccept
 			}
-			m.Data = filterAggregation(m.Data, keep)
-			if dataPointCount(m.Data) == 0 {
+			metrics[i].Data = filterAggregation(metrics[i].Data, keep)
+			if dataPointCount(metrics[i].Data) == 0 {
 				continue
 			}
 		default: // metricFilterDrop
 			continue
 		}
-		metrics[j] = m
+		metrics[j], metrics[i] = metrics[i], metrics[j]
 		j++
 	}
 	return metrics[:j]
+}
+
+func aggregationKind(data metricdata.Aggregation) uint8 {
+	switch data.(type) {
+	case metricdata.Sum[int64], metricdata.Sum[float64]:
+		return aggregationKindSum
+	case metricdata.Gauge[int64], metricdata.Gauge[float64]:
+		return aggregationKindGauge
+	case metricdata.Histogram[int64], metricdata.Histogram[float64]:
+		return aggregationKindHistogram
+	case metricdata.ExponentialHistogram[int64], metricdata.ExponentialHistogram[float64]:
+		return aggregationKindExponentialHistogram
+	case metricdata.Summary:
+		return aggregationKindSummary
+	default:
+		return aggregationKindUnknown
+	}
 }
 
 // dataPointCount returns the number of data points in data. Needed after

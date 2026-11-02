@@ -1182,13 +1182,13 @@ func TestPeriodicReaderMetricFilter(t *testing.T) {
 	ctx := t.Context()
 
 	filter := testMetricFilterOption{
-		testMetric: func(_ instrumentation.Scope, name string, _ metricdata.Aggregation, _ string) int {
+		testMetric: func(_ instrumentation.Scope, name string, _ uint8, _ string) int {
 			if name == "dropped" {
 				return metricFilterDrop
 			}
 			return metricFilterAccept
 		},
-		testAttributes: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, _ attribute.Set) int {
+		testAttributes: func(_ instrumentation.Scope, _ string, _ uint8, _ string, _ attribute.Set) int {
 			return metricFilterAttrAccept
 		},
 	}
@@ -1210,6 +1210,7 @@ func TestPeriodicReaderMetricFilter(t *testing.T) {
 	assert.Equal(t, 0, sumDataPointCount(rm, "dropped"))
 	assert.Equal(t, 1, sumDataPointCount(rm, "kept"))
 }
+
 func BenchmarkPeriodicReader_collectAndExport(b *testing.B) {
 	b.Run("WithoutExternalProducer", func(b *testing.B) {
 		exp := &fnExporter{

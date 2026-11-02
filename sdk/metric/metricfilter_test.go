@@ -17,8 +17,8 @@ import (
 
 type testAggregationMetricFilter struct {
 	ReaderOption
-	testMetric func(instrumentation.Scope, string, metricdata.Aggregation, string) int
-	testAttrs  func(instrumentation.Scope, string, metricdata.Aggregation, string, attribute.Set) int
+	testMetric func(instrumentation.Scope, string, uint8, string) int
+	testAttrs  func(instrumentation.Scope, string, uint8, string, attribute.Set) int
 }
 
 func (testAggregationMetricFilter) Experimental() {}
@@ -26,20 +26,20 @@ func (testAggregationMetricFilter) Experimental() {}
 func (f testAggregationMetricFilter) TestMetric(
 	scope instrumentation.Scope,
 	name string,
-	data metricdata.Aggregation,
+	kind uint8,
 	unit string,
 ) int {
-	return f.testMetric(scope, name, data, unit)
+	return f.testMetric(scope, name, kind, unit)
 }
 
 func (f testAggregationMetricFilter) TestAttributes(
 	scope instrumentation.Scope,
 	name string,
-	data metricdata.Aggregation,
+	kind uint8,
 	unit string,
 	attrs attribute.Set,
 ) int {
-	return f.testAttrs(scope, name, data, unit, attrs)
+	return f.testAttrs(scope, name, kind, unit, attrs)
 }
 
 func TestFilterScopeMetrics(t *testing.T) {
@@ -70,7 +70,7 @@ func TestFilterScopeMetrics(t *testing.T) {
 				Metrics: metrics("metric"),
 			}},
 			filter: testAggregationMetricFilter{
-				testMetric: func(instrumentation.Scope, string, metricdata.Aggregation, string) int {
+				testMetric: func(instrumentation.Scope, string, uint8, string) int {
 					return metricFilterAccept
 				},
 			},
@@ -86,7 +86,7 @@ func TestFilterScopeMetrics(t *testing.T) {
 				Metrics: metrics("metric"),
 			}},
 			filter: testAggregationMetricFilter{
-				testMetric: func(instrumentation.Scope, string, metricdata.Aggregation, string) int {
+				testMetric: func(instrumentation.Scope, string, uint8, string) int {
 					return metricFilterDrop
 				},
 			},
@@ -100,10 +100,10 @@ func TestFilterScopeMetrics(t *testing.T) {
 				Metrics: metrics("metric"),
 			}},
 			filter: testAggregationMetricFilter{
-				testMetric: func(instrumentation.Scope, string, metricdata.Aggregation, string) int {
+				testMetric: func(instrumentation.Scope, string, uint8, string) int {
 					return metricFilterAcceptPartial
 				},
-				testAttrs: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, attrs attribute.Set) int {
+				testAttrs: func(_ instrumentation.Scope, _ string, _ uint8, _ string, attrs attribute.Set) int {
 					if attrs.Equals(&drop) {
 						return metricFilterAttrDrop
 					}
@@ -122,10 +122,10 @@ func TestFilterScopeMetrics(t *testing.T) {
 				Metrics: metrics("metric"),
 			}},
 			filter: testAggregationMetricFilter{
-				testMetric: func(instrumentation.Scope, string, metricdata.Aggregation, string) int {
+				testMetric: func(instrumentation.Scope, string, uint8, string) int {
 					return metricFilterAcceptPartial
 				},
-				testAttrs: func(instrumentation.Scope, string, metricdata.Aggregation, string, attribute.Set) int {
+				testAttrs: func(instrumentation.Scope, string, uint8, string, attribute.Set) int {
 					return metricFilterAttrDrop
 				},
 			},
@@ -140,7 +140,7 @@ func TestFilterScopeMetrics(t *testing.T) {
 				{Scope: instrumentation.Scope{Name: "keep"}, Metrics: metrics("keep")},
 			},
 			filter: testAggregationMetricFilter{
-				testMetric: func(_ instrumentation.Scope, name string, _ metricdata.Aggregation, _ string) int {
+				testMetric: func(_ instrumentation.Scope, name string, _ uint8, _ string) int {
 					if name == "drop" {
 						return metricFilterDrop
 					}
@@ -168,10 +168,10 @@ func TestFilterScopeMetricsAcceptPartialAggregations(t *testing.T) {
 	keep := attribute.NewSet(attribute.String("keep", "true"))
 	drop := attribute.NewSet(attribute.String("drop", "true"))
 	filter := testAggregationMetricFilter{
-		testMetric: func(instrumentation.Scope, string, metricdata.Aggregation, string) int {
+		testMetric: func(instrumentation.Scope, string, uint8, string) int {
 			return metricFilterAcceptPartial
 		},
-		testAttrs: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, attrs attribute.Set) int {
+		testAttrs: func(_ instrumentation.Scope, _ string, _ uint8, _ string, attrs attribute.Set) int {
 			if attrs.Equals(&drop) {
 				return metricFilterAttrDrop
 			}
@@ -280,8 +280,8 @@ func TestFilterHistogramDataPointsPreservesStorage(t *testing.T) {
 // MetricFilter plumbing without importing the experimental x package.
 type testMetricFilterOption struct {
 	ReaderOption
-	testMetric     func(instrumentation.Scope, string, metricdata.Aggregation, string) int
-	testAttributes func(instrumentation.Scope, string, metricdata.Aggregation, string, attribute.Set) int
+	testMetric     func(instrumentation.Scope, string, uint8, string) int
+	testAttributes func(instrumentation.Scope, string, uint8, string, attribute.Set) int
 }
 
 func (testMetricFilterOption) Experimental() {}
@@ -289,7 +289,7 @@ func (testMetricFilterOption) Experimental() {}
 func (o testMetricFilterOption) TestMetric(
 	scope instrumentation.Scope,
 	name string,
-	kind metricdata.Aggregation,
+	kind uint8,
 	unit string,
 ) int {
 	return o.testMetric(scope, name, kind, unit)
@@ -298,7 +298,7 @@ func (o testMetricFilterOption) TestMetric(
 func (o testMetricFilterOption) TestAttributes(
 	scope instrumentation.Scope,
 	name string,
-	kind metricdata.Aggregation,
+	kind uint8,
 	unit string,
 	attrs attribute.Set,
 ) int {

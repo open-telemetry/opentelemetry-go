@@ -952,15 +952,15 @@ func TestMetricFilterMultipleReaders(t *testing.T) {
 	ctx := t.Context()
 
 	dropFilter := testMetricFilterOption{
-		testMetric: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string) int {
+		testMetric: func(_ instrumentation.Scope, _ string, _ uint8, _ string) int {
 			return metricFilterDrop
 		},
 	}
 	acceptFilter := testMetricFilterOption{
-		testMetric: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string) int {
+		testMetric: func(_ instrumentation.Scope, _ string, _ uint8, _ string) int {
 			return metricFilterAccept
 		},
-		testAttributes: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, _ attribute.Set) int {
+		testAttributes: func(_ instrumentation.Scope, _ string, _ uint8, _ string, _ attribute.Set) int {
 			return metricFilterAttrAccept
 		},
 	}

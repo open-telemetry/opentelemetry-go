@@ -455,10 +455,10 @@ func TestManualReaderMetricFilter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			filter := testMetricFilterOption{
-				testMetric: func(_ instrumentation.Scope, name string, _ metricdata.Aggregation, _ string) int {
+				testMetric: func(_ instrumentation.Scope, name string, _ uint8, _ string) int {
 					return tt.testMetric(name)
 				},
-				testAttributes: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, _ attribute.Set) int {
+				testAttributes: func(_ instrumentation.Scope, _ string, _ uint8, _ string, _ attribute.Set) int {
 					return metricFilterAttrAccept
 				},
 			}
@@ -482,10 +482,10 @@ func TestManualReaderMetricFilterAcceptPartial(t *testing.T) {
 	ctx := t.Context()
 
 	filter := testMetricFilterOption{
-		testMetric: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string) int {
+		testMetric: func(_ instrumentation.Scope, _ string, _ uint8, _ string) int {
 			return metricFilterAcceptPartial
 		},
-		testAttributes: func(_ instrumentation.Scope, _ string, _ metricdata.Aggregation, _ string, attrs attribute.Set) int {
+		testAttributes: func(_ instrumentation.Scope, _ string, _ uint8, _ string, attrs attribute.Set) int {
 			for _, attr := range attrs.ToSlice() {
 				if attr.Key == "drop" {
 					return metricFilterAttrDrop
@@ -510,11 +510,11 @@ func TestManualReaderMetricFilterAcceptPartial(t *testing.T) {
 }
 
 func TestMetricFilterPointKind(t *testing.T) {
-	collect := func(t *testing.T, drop func(metricdata.Aggregation) bool) *metricdata.Metrics {
+	collect := func(t *testing.T, drop func(uint8) bool) *metricdata.Metrics {
 		t.Helper()
 		rdr := NewManualReader(testAggregationMetricFilter{
-			testMetric: func(_ instrumentation.Scope, _ string, data metricdata.Aggregation, _ string) int {
-				if drop(data) {
+			testMetric: func(_ instrumentation.Scope, _ string, kind uint8, _ string) int {
+				if drop(kind) {
 					return metricFilterDrop
 				}
 				return metricFilterAccept
@@ -537,16 +537,14 @@ func TestMetricFilterPointKind(t *testing.T) {
 	}
 
 	t.Run("Drop Histogram", func(t *testing.T) {
-		metric := collect(t, func(data metricdata.Aggregation) bool {
-			_, ok := data.(metricdata.Histogram[int64])
-			return ok
+		metric := collect(t, func(kind uint8) bool {
+			return kind == aggregationKindHistogram
 		})
 		assert.Nil(t, metric)
 	})
 	t.Run("Drop Sum", func(t *testing.T) {
-		metric := collect(t, func(data metricdata.Aggregation) bool {
-			_, ok := data.(metricdata.Sum[int64])
-			return ok
+		metric := collect(t, func(kind uint8) bool {
+			return kind == aggregationKindSum
 		})
 		require.NotNil(t, metric)
 		_, ok := metric.Data.(metricdata.Histogram[int64])

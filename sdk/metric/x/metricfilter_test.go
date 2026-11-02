@@ -11,7 +11,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // stableMetricFilter mirrors the internal interface the SDK checks for so we
@@ -19,11 +18,11 @@ import (
 // package importing the SDK's internal types.
 type stableMetricFilter interface {
 	Experimental()
-	TestMetric(instrumentationScope instrumentation.Scope, name string, kind metricdata.Aggregation, unit string) int
+	TestMetric(instrumentationScope instrumentation.Scope, name string, kind uint8, unit string) int
 	TestAttributes(
 		instrumentationScope instrumentation.Scope,
 		name string,
-		kind metricdata.Aggregation,
+		kind uint8,
 		unit string,
 		attributes attribute.Set,
 	) int
@@ -107,7 +106,7 @@ func TestWithMetricFilterEnumMapping(t *testing.T) {
 			mf := opt.(stableMetricFilter)
 
 			scope := instrumentation.Scope{Name: "test"}
-			kind := metricdata.Sum[int64]{}
+			kind := uint8(AggregationKindSum)
 			attrs := attribute.NewSet(attribute.String("k", "v"))
 
 			assert.Equal(t, tt.wantM, mf.TestMetric(scope, "name", kind, "1"))

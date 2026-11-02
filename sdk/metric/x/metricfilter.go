@@ -8,7 +8,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 // MetricFilter defines the interface which enables the MetricReader's
@@ -31,7 +30,7 @@ type MetricFilter interface {
 type TestMetricParameters struct {
 	Scope instrumentation.Scope
 	Name  string
-	Kind  metricdata.Aggregation
+	Kind  AggregationKind
 	Unit  string
 }
 
@@ -40,10 +39,28 @@ type TestMetricParameters struct {
 type TestAttributesParameters struct {
 	Scope      instrumentation.Scope
 	Name       string
-	Kind       metricdata.Aggregation
+	Kind       AggregationKind
 	Unit       string
 	Attributes attribute.Set
 }
+
+// AggregationKind identifies a metric aggregation family, independent of its numeric type.
+type AggregationKind uint8
+
+const (
+	// AggregationKindUnknown identifies an unknown aggregation.
+	AggregationKindUnknown AggregationKind = iota
+	// AggregationKindSum identifies a sum aggregation.
+	AggregationKindSum
+	// AggregationKindGauge identifies a gauge aggregation.
+	AggregationKindGauge
+	// AggregationKindHistogram identifies an explicit bucket histogram aggregation.
+	AggregationKindHistogram
+	// AggregationKindExponentialHistogram identifies an exponential histogram aggregation.
+	AggregationKindExponentialHistogram
+	// AggregationKindSummary identifies a summary aggregation.
+	AggregationKindSummary
+)
 
 // Result is an enumeration used to decide whether to accept,
 // drop, or partially accept a metric stream.
@@ -90,14 +107,14 @@ func (metricFilterOption) Experimental() {}
 func (o metricFilterOption) TestMetric(
 	scope instrumentation.Scope,
 	name string,
-	kind metricdata.Aggregation,
+	kind uint8,
 	unit string,
 ) int {
 	if o.filter == nil {
 		return int(Accept)
 	}
 	return int(
-		o.filter.TestMetric(TestMetricParameters{Scope: scope, Name: name, Kind: kind, Unit: unit}),
+		o.filter.TestMetric(TestMetricParameters{Scope: scope, Name: name, Kind: AggregationKind(kind), Unit: unit}),
 	)
 }
 
@@ -106,7 +123,7 @@ func (o metricFilterOption) TestMetric(
 func (o metricFilterOption) TestAttributes(
 	scope instrumentation.Scope,
 	name string,
-	kind metricdata.Aggregation,
+	kind uint8,
 	unit string,
 	attrs attribute.Set,
 ) int {
@@ -114,7 +131,7 @@ func (o metricFilterOption) TestAttributes(
 		return int(AttrAccept)
 	}
 	return int(o.filter.TestAttributes(TestAttributesParameters{
-		Scope: scope, Name: name, Kind: kind, Unit: unit, Attributes: attrs,
+		Scope: scope, Name: name, Kind: AggregationKind(kind), Unit: unit, Attributes: attrs,
 	}))
 }
 
