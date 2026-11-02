@@ -452,7 +452,7 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 	if x.PerSeriesStartTimestamps.Enabled() {
 		firstStartTime = y2kPlus(1)
 		reobservedStartTime = y2kPlus(5)
-		overflowStartTime = y2kPlus(8)
+		overflowStartTime = y2kPlus(6)
 	}
 
 	ctx := context.Background()
@@ -504,13 +504,13 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  reobservedStartTime,
-							Time:       y2kPlus(8),
+							Time:       y2kPlus(6),
 							Value:      10,
 						},
 						{
 							Attributes: fltrBob,
 							StartTime:  reobservedStartTime,
-							Time:       y2kPlus(8),
+							Time:       y2kPlus(6),
 							Value:      3,
 						},
 					},
@@ -531,19 +531,19 @@ func testCumulativePrecomputedLastValue[N int64 | float64]() func(*testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  reobservedStartTime,
-							Time:       y2kPlus(12),
+							Time:       y2kPlus(10),
 							Value:      1,
 						},
 						{
 							Attributes: fltrBob,
 							StartTime:  reobservedStartTime,
-							Time:       y2kPlus(12),
+							Time:       y2kPlus(10),
 							Value:      1,
 						},
 						{
 							Attributes: overflowSet,
 							StartTime:  overflowStartTime,
-							Time:       y2kPlus(12),
+							Time:       y2kPlus(10),
 							Value:      1,
 						},
 					},
@@ -638,13 +638,13 @@ func testCumulativePrecomputedLastValuePerSeriesStartTime[N int64 | float64]() f
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(7),
-							Time:       y2kPlus(10),
+							Time:       y2kPlus(8),
 							Value:      2,
 						},
 						{
 							Attributes: fltrBob,
 							StartTime:  y2kPlus(2),
-							Time:       y2kPlus(10),
+							Time:       y2kPlus(8),
 							Value:      10,
 						},
 					},

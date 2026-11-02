@@ -496,7 +496,7 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 	reobservedStartTime := y2kPlus(0)
 	if x.PerSeriesStartTimestamps.Enabled() {
 		firstStartTime = y2kPlus(1)
-		reobservedStartTime = y2kPlus(8)
+		reobservedStartTime = y2kPlus(4)
 	}
 
 	ctx := context.Background()
@@ -529,13 +529,13 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  firstStartTime,
-							Time:       y2kPlus(4),
+							Time:       y2kPlus(2),
 							Value:      4,
 						},
 						{
 							Attributes: fltrBob,
 							StartTime:  firstStartTime,
-							Time:       y2kPlus(4),
+							Time:       y2kPlus(2),
 							Value:      -11,
 						},
 					},
@@ -557,13 +557,13 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  firstStartTime,
-							Time:       y2kPlus(7),
+							Time:       y2kPlus(3),
 							Value:      11,
 						},
 						{
 							Attributes: fltrBob,
 							StartTime:  firstStartTime,
-							Time:       y2kPlus(7),
+							Time:       y2kPlus(3),
 							Value:      3,
 						},
 					},
@@ -599,19 +599,19 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 						{
 							Attributes: fltrAlice,
 							StartTime:  reobservedStartTime,
-							Time:       y2kPlus(12),
+							Time:       y2kPlus(5),
 							Value:      1,
 						},
 						{
 							Attributes: fltrBob,
 							StartTime:  reobservedStartTime,
-							Time:       y2kPlus(12),
+							Time:       y2kPlus(5),
 							Value:      1,
 						},
 						{
 							Attributes: overflowSet,
 							StartTime:  reobservedStartTime,
-							Time:       y2kPlus(12),
+							Time:       y2kPlus(5),
 							Value:      2,
 						},
 					},
@@ -644,7 +644,7 @@ func testCumulativePrecomputedSumPerSeriesStartTime[N int64 | float64]() func(t 
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(2),
+							Time:       y2kPlus(1),
 							Value:      5,
 						},
 					},
@@ -666,13 +666,13 @@ func testCumulativePrecomputedSumPerSeriesStartTime[N int64 | float64]() func(t 
 						{
 							Attributes: fltrAlice,
 							StartTime:  y2kPlus(0),
-							Time:       y2kPlus(5),
+							Time:       y2kPlus(2),
 							Value:      8,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(2),
-							Time:       y2kPlus(5),
+							StartTime:  y2kPlus(1),
+							Time:       y2kPlus(2),
 							Value:      3,
 						},
 					},
@@ -692,8 +692,8 @@ func testCumulativePrecomputedSumPerSeriesStartTime[N int64 | float64]() func(t 
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(2),
-							Time:       y2kPlus(7),
+							StartTime:  y2kPlus(1),
+							Time:       y2kPlus(3),
 							Value:      6,
 						},
 					},
@@ -714,14 +714,14 @@ func testCumulativePrecomputedSumPerSeriesStartTime[N int64 | float64]() func(t 
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(7),
-							Time:       y2kPlus(10),
+							StartTime:  y2kPlus(3),
+							Time:       y2kPlus(4),
 							Value:      2,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(2),
-							Time:       y2kPlus(10),
+							StartTime:  y2kPlus(1),
+							Time:       y2kPlus(4),
 							Value:      10,
 						},
 					},
@@ -850,6 +850,8 @@ func BenchmarkPrecomputedSumCycle(b *testing.B) {
 			Temporality: metricdata.CumulativeTemporality,
 		}.PrecomputedSum(false)
 	}))
+}
+
 func TestDeltaSumLazyCleanup(t *testing.T) {
 	c := new(clock)
 	t.Cleanup(c.Register())
