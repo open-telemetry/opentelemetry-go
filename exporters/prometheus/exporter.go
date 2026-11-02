@@ -514,14 +514,26 @@ func addHistogramMetric[N int64 | float64](
 			cumulativeCount += dp.BucketCounts[i]
 			buckets[bound] = cumulativeCount
 		}
-		m, e := prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
+		var pm prometheus.Metric
+		if !dp.StartTime.IsZero() {
+			pm, e = prometheus.NewConstHistogramWithCreatedTimestamp(
+				desc,
+				dp.Count,
+				float64(dp.Sum),
+				buckets,
+				dp.StartTime,
+				values...,
+			)
+		} else {
+			pm, e = prometheus.NewConstHistogram(desc, dp.Count, float64(dp.Sum), buckets, values...)
+		}
 		if e != nil {
 			reportError(ch, desc, e)
-			err = errors.Join(err, fmt.Errorf("failed to NewConstMetric for histogram.DataPoints %d: %w", j, e))
+			err = errors.Join(err, fmt.Errorf("failed to NewConstHistogram for histogram.DataPoints %d: %w", j, e))
 			continue
 		}
-		m = addExemplars(m, dp.Exemplars, labelNamer)
-		ch <- m
+		pm = addExemplars(pm, dp.Exemplars, labelNamer)
+		ch <- pm
 
 		success++
 	}
@@ -558,7 +570,18 @@ func addSumMetric[N int64 | float64](
 		}
 
 		desc := prometheus.NewDesc(name, m.Description, keys, nil)
-		m, e := prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
+		var pm prometheus.Metric
+		if valueType == prometheus.CounterValue && !dp.StartTime.IsZero() {
+			pm, e = prometheus.NewConstMetricWithCreatedTimestamp(
+				desc,
+				valueType,
+				float64(dp.Value),
+				dp.StartTime,
+				values...,
+			)
+		} else {
+			pm, e = prometheus.NewConstMetric(desc, valueType, float64(dp.Value), values...)
+		}
 		if e != nil {
 			reportError(ch, desc, e)
 			err = errors.Join(err, fmt.Errorf("failed to NewConstMetric for sum.DataPoints %d: %w", i, e))
@@ -567,9 +590,9 @@ func addSumMetric[N int64 | float64](
 		// GaugeValues don't support Exemplars at this time
 		// https://github.com/prometheus/client_golang/blob/aef8aedb4b6e1fb8ac1c90790645169125594096/prometheus/metric.go#L199
 		if valueType != prometheus.GaugeValue {
-			m = addExemplars(m, dp.Exemplars, labelNamer)
+			pm = addExemplars(pm, dp.Exemplars, labelNamer)
 		}
-		ch <- m
+		ch <- pm
 
 		success++
 	}
@@ -637,7 +660,8 @@ func getAttrsWithKV(attrs attribute.Set, kv keyVals, labelNamer otlptranslator.L
 		}
 	} else {
 		// It sanitizes invalid characters and handles duplicate keys
-		// (due to sanitization) by sorting and concatenating the values following the spec.
+		// (due to sanitization) by concatenating the values in the
+		// lexicographical order of the original keys following the spec.
 		var (
 			dups   map[int][]string
 			keyIdx map[string]int
@@ -678,7 +702,6 @@ func getAttrsWithKV(attrs attribute.Set, kv keyVals, labelNamer otlptranslator.L
 			values = append(values, val)
 		}
 		for idx, vals := range dups {
-			slices.Sort(vals)
 			values[idx] = strings.Join(vals, ";")
 		}
 	}
@@ -751,7 +774,6 @@ func appendScopeAttrs(kv keyVals, attrs attribute.Set, labelNamer otlptranslator
 		kv.vals = append(kv.vals, val)
 	}
 	for idx, vals := range dups {
-		slices.Sort(vals)
 		kv.vals[idx] = strings.Join(vals, ";")
 	}
 
@@ -911,9 +933,13 @@ func addExemplars[N int64 | float64](
 			)
 			labels = make(prometheus.Labels, 2)
 		}
-		// Overwrite any existing trace ID or span ID attributes
-		labels[otlptranslator.ExemplarTraceIDKey] = traceID
-		labels[otlptranslator.ExemplarSpanIDKey] = spanID
+		// Overwrite any existing trace ID or span ID attributes when present.
+		if traceID != "" {
+			labels[otlptranslator.ExemplarTraceIDKey] = traceID
+		}
+		if spanID != "" {
+			labels[otlptranslator.ExemplarSpanIDKey] = spanID
+		}
 		promExemplars[i] = prometheus.Exemplar{
 			Value:     float64(exemplar.Value),
 			Timestamp: exemplar.Time,
@@ -934,10 +960,16 @@ func addExemplars[N int64 | float64](
 // trace and span ID labels that would be added to it, mirroring the count
 // prometheus client-go uses to enforce [prometheus.ExemplarMaxRunes].
 func exemplarLabelRunes(labels prometheus.Labels, traceID, spanID string) int {
-	runes := utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey) + utf8.RuneCountInString(traceID)
-	runes += utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey) + utf8.RuneCountInString(spanID)
+	var runes int
+	if traceID != "" {
+		runes += utf8.RuneCountInString(otlptranslator.ExemplarTraceIDKey) + utf8.RuneCountInString(traceID)
+	}
+	if spanID != "" {
+		runes += utf8.RuneCountInString(otlptranslator.ExemplarSpanIDKey) + utf8.RuneCountInString(spanID)
+	}
 	for k, v := range labels {
-		if k == otlptranslator.ExemplarTraceIDKey || k == otlptranslator.ExemplarSpanIDKey {
+		if (k == otlptranslator.ExemplarTraceIDKey && traceID != "") ||
+			(k == otlptranslator.ExemplarSpanIDKey && spanID != "") {
 			// Already counted above; addExemplars overwrites these keys so
 			// counting them again would double-count a collision.
 			continue
