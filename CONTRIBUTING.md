@@ -19,6 +19,21 @@ seasoned OpenTelemetry developer, just starting your journey, or
 simply curious about the work we do, you're more than welcome to
 participate!
 
+## Before Opening an Issue or Pull Request
+
+Before opening an issue or pull request, double-check whether the report or
+proposed change could involve a security vulnerability. This applies to all
+contributors, including AI agents.
+
+Do not open public issues or public pull requests (including draft PRs) for
+known or suspected security vulnerabilities or their fixes. Follow the
+[OpenTelemetry security policy](https://github.com/open-telemetry/.github/blob/main/SECURITY.md)
+and report them privately using
+[Report a vulnerability](https://github.com/open-telemetry/opentelemetry-go/security/advisories/new).
+If you are unsure whether a problem is a security vulnerability, use the private
+reporting process first. Keep vulnerability details, reproductions, and fixes
+private, and follow the maintainers' instructions for coordinated disclosure.
+
 ## Development
 
 You can view and edit the source code by cloning this repository:
