@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 const (
@@ -296,7 +296,7 @@ func TestBaseAttrs(t *testing.T) {
 		},
 		{
 			name:   "Port",
-			target: "dns://:4317",
+			target: "dns://" + ":4317",
 			want: []attribute.KeyValue{
 				semconv.OTelComponentName(observ.ComponentName(ID)),
 				semconv.OTelComponentTypeOtlpGRPCSpanExporter,
