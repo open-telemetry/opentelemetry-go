@@ -584,18 +584,6 @@ func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 	return []tls.Certificate{crt}, nil
 }
 
-// insecureFromScheme returns the insecure setting implied by scheme.
-// An empty scheme does not force an insecure setting.
-func insecureFromScheme(prev setting[bool], scheme string) setting[bool] {
-	if scheme == "https" {
-		return newSetting(false)
-	} else if scheme != "" {
-		return newSetting(true)
-	}
-
-	return prev
-}
-
 // compressorToCompression converts compressor to a Compression. Like the
 // compression environment variables, the value is interpreted case-insensitively.
 func compressorToCompression(compressor string) Compression {
