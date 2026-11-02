@@ -208,6 +208,7 @@ type Migration struct {
 	PrevVer  string
 	Removals []string
 	Renames  []Rename
+	Notes    string
 }
 
 // Remove is a semantic convention declaration that has been renamed.
@@ -226,11 +227,17 @@ func newMigration(cur, prev string) (*Migration, error) {
 		return nil, fmt.Errorf("error parsing previous version %q: %w", prev, err)
 	}
 
+	notes, err := os.ReadFile(filepath.Join(cur, "MIGRATION_NOTES.md"))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("error reading migration notes: %w", err)
+	}
+
 	m := Migration{
 		CurVer:   filepath.Base(cur),
 		PrevVer:  filepath.Base(prev),
 		Removals: inAnotB(pDecl, cDecl),
 		Renames:  renames(pDecl, cDecl),
+		Notes:    string(notes),
 	}
 
 	sort.Strings(m.Removals)

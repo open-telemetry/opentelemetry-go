@@ -110,7 +110,7 @@ func NewPipelineRunActive(
 	if len(opt) == 0 {
 		opt = newPipelineRunActiveOpts
 	} else {
-		opt = append(opt, newPipelineRunActiveOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPipelineRunActiveOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -229,7 +229,7 @@ func NewPipelineRunActiveObservable(
 	if len(opt) == 0 {
 		opt = newPipelineRunActiveObservableOpts
 	} else {
-		opt = append(opt, newPipelineRunActiveObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPipelineRunActiveObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -301,7 +301,7 @@ func NewPipelineRunDuration(
 	if len(opt) == 0 {
 		opt = newPipelineRunDurationOpts
 	} else {
-		opt = append(opt, newPipelineRunDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPipelineRunDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -434,7 +434,7 @@ func NewPipelineRunErrors(
 	if len(opt) == 0 {
 		opt = newPipelineRunErrorsOpts
 	} else {
-		opt = append(opt, newPipelineRunErrorsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPipelineRunErrorsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -562,7 +562,7 @@ func NewPipelineRunErrorsObservable(
 	if len(opt) == 0 {
 		opt = newPipelineRunErrorsObservableOpts
 	} else {
-		opt = append(opt, newPipelineRunErrorsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPipelineRunErrorsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -634,7 +634,7 @@ func NewSystemErrors(
 	if len(opt) == 0 {
 		opt = newSystemErrorsOpts
 	} else {
-		opt = append(opt, newSystemErrorsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSystemErrorsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -756,7 +756,7 @@ func NewSystemErrorsObservable(
 	if len(opt) == 0 {
 		opt = newSystemErrorsObservableOpts
 	} else {
-		opt = append(opt, newSystemErrorsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSystemErrorsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -828,7 +828,7 @@ func NewWorkerCount(
 	if len(opt) == 0 {
 		opt = newWorkerCountOpts
 	} else {
-		opt = append(opt, newWorkerCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newWorkerCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -938,7 +938,7 @@ func NewWorkerCountObservable(
 	if len(opt) == 0 {
 		opt = newWorkerCountObservableOpts
 	} else {
-		opt = append(opt, newWorkerCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newWorkerCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(

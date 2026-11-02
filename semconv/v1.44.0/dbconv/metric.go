@@ -237,7 +237,7 @@ func NewClientConnectionCount(
 	if len(opt) == 0 {
 		opt = newClientConnectionCountOpts
 	} else {
-		opt = append(opt, newClientConnectionCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -360,7 +360,7 @@ func NewClientConnectionCountObservable(
 	if len(opt) == 0 {
 		opt = newClientConnectionCountObservableOpts
 	} else {
-		opt = append(opt, newClientConnectionCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -439,7 +439,7 @@ func NewClientConnectionCreateTime(
 	if len(opt) == 0 {
 		opt = newClientConnectionCreateTimeOpts
 	} else {
-		opt = append(opt, newClientConnectionCreateTimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionCreateTimeOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -555,7 +555,7 @@ func NewClientConnectionIdleMax(
 	if len(opt) == 0 {
 		opt = newClientConnectionIdleMaxOpts
 	} else {
-		opt = append(opt, newClientConnectionIdleMaxOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionIdleMaxOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -672,7 +672,7 @@ func NewClientConnectionIdleMaxObservable(
 	if len(opt) == 0 {
 		opt = newClientConnectionIdleMaxObservableOpts
 	} else {
-		opt = append(opt, newClientConnectionIdleMaxObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionIdleMaxObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -743,7 +743,7 @@ func NewClientConnectionIdleMin(
 	if len(opt) == 0 {
 		opt = newClientConnectionIdleMinOpts
 	} else {
-		opt = append(opt, newClientConnectionIdleMinOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionIdleMinOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -860,7 +860,7 @@ func NewClientConnectionIdleMinObservable(
 	if len(opt) == 0 {
 		opt = newClientConnectionIdleMinObservableOpts
 	} else {
-		opt = append(opt, newClientConnectionIdleMinObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionIdleMinObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -931,7 +931,7 @@ func NewClientConnectionMax(
 	if len(opt) == 0 {
 		opt = newClientConnectionMaxOpts
 	} else {
-		opt = append(opt, newClientConnectionMaxOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionMaxOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1048,7 +1048,7 @@ func NewClientConnectionMaxObservable(
 	if len(opt) == 0 {
 		opt = newClientConnectionMaxObservableOpts
 	} else {
-		opt = append(opt, newClientConnectionMaxObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionMaxObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1121,7 +1121,7 @@ func NewClientConnectionPendingRequests(
 	if len(opt) == 0 {
 		opt = newClientConnectionPendingRequestsOpts
 	} else {
-		opt = append(opt, newClientConnectionPendingRequestsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionPendingRequestsOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1239,7 +1239,7 @@ func NewClientConnectionPendingRequestsObservable(
 	if len(opt) == 0 {
 		opt = newClientConnectionPendingRequestsObservableOpts
 	} else {
-		opt = append(opt, newClientConnectionPendingRequestsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionPendingRequestsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1311,7 +1311,7 @@ func NewClientConnectionTimeouts(
 	if len(opt) == 0 {
 		opt = newClientConnectionTimeoutsOpts
 	} else {
-		opt = append(opt, newClientConnectionTimeoutsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionTimeoutsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1429,7 +1429,7 @@ func NewClientConnectionTimeoutsObservable(
 	if len(opt) == 0 {
 		opt = newClientConnectionTimeoutsObservableOpts
 	} else {
-		opt = append(opt, newClientConnectionTimeoutsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionTimeoutsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1501,7 +1501,7 @@ func NewClientConnectionUseTime(
 	if len(opt) == 0 {
 		opt = newClientConnectionUseTimeOpts
 	} else {
-		opt = append(opt, newClientConnectionUseTimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionUseTimeOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -1617,7 +1617,7 @@ func NewClientConnectionWaitTime(
 	if len(opt) == 0 {
 		opt = newClientConnectionWaitTimeOpts
 	} else {
-		opt = append(opt, newClientConnectionWaitTimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionWaitTimeOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -1733,7 +1733,7 @@ func NewClientOperationDuration(
 	if len(opt) == 0 {
 		opt = newClientOperationDurationOpts
 	} else {
-		opt = append(opt, newClientOperationDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientOperationDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -1932,7 +1932,7 @@ func NewClientResponseReturnedRows(
 	if len(opt) == 0 {
 		opt = newClientResponseReturnedRowsOpts
 	} else {
-		opt = append(opt, newClientResponseReturnedRowsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientResponseReturnedRowsOpts...)
 	}
 
 	i, err := m.Int64Histogram(

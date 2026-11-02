@@ -51,7 +51,7 @@ func NewLookupDuration(
 	if len(opt) == 0 {
 		opt = newLookupDurationOpts
 	} else {
-		opt = append(opt, newLookupDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newLookupDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(
