@@ -245,6 +245,18 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test Environment Unix Abstract Endpoint",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "unix-abstract:///otel.sock",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Traces.Insecure)
+				if grpcOption {
+					assert.Equal(t, "unix-abstract:///otel.sock", c.Traces.Endpoint)
+				}
+			},
+		},
+		{
 			name: "Test Mixed Environment and With Endpoint",
 			opts: []GenericOption{
 				WithEndpointURL("https://traces_endpoint2/somepath"),

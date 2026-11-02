@@ -429,11 +429,6 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 			fn:       benchPrecomputedWithAttributes,
 		},
 		{
-			name:     "NoFilter/Precomputed/WithUnsafeAttributes",
-			provider: noFilterProvider,
-			fn:       benchPrecomputedWithUnsafeAttributes,
-		},
-		{
 			name:     "NoFilter/Dynamic/WithAttributeSet",
 			provider: noFilterProvider,
 			fn:       benchDynamicWithAttributeSet,
@@ -442,11 +437,6 @@ func BenchmarkEndToEndCounterAdd(b *testing.B) {
 			name:     "NoFilter/Dynamic/WithAttributes",
 			provider: noFilterProvider,
 			fn:       benchDynamicWithAttributes,
-		},
-		{
-			name:     "NoFilter/Dynamic/WithUnsafeAttributes",
-			provider: noFilterProvider,
-			fn:       benchDynamicWithUnsafeAttributes,
 		},
 		{
 			name:     "NoFilter/Naive/WithAttributes",
@@ -487,16 +477,6 @@ func benchPrecomputedWithAttributeSet(b *testing.B, ctx context.Context, counter
 
 func benchPrecomputedWithAttributes(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
 	precomputedOpts := []metric.AddOption{metric.WithAttributes(attributes()...)}
-	b.ReportAllocs()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			counter.Add(ctx, 1, precomputedOpts...)
-		}
-	})
-}
-
-func benchPrecomputedWithUnsafeAttributes(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
-	precomputedOpts := []metric.AddOption{x.WithUnsafeAttributes(attributes()...)}
 	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -607,47 +587,6 @@ func benchDynamicWithAttributes(b *testing.B, ctx context.Context, counter metri
 				}
 
 				*addOpt = append(*addOpt, opt.(metric.AddOption))
-				counter.Add(ctx, 1, *addOpt...)
-			}()
-		}
-	})
-}
-
-func benchDynamicWithUnsafeAttributes(b *testing.B, ctx context.Context, counter metric.Float64Counter) {
-	attrPool := &sync.Pool{
-		New: func() any {
-			s := make([]attribute.KeyValue, 0, endToEndAttrsLen)
-			return &s
-		},
-	}
-	addOptPool := &sync.Pool{
-		New: func() any {
-			o := make([]metric.AddOption, 0, 1)
-			return &o
-		},
-	}
-	b.ReportAllocs()
-	b.RunParallel(func(pb *testing.PB) {
-		opt := x.WithUnsafeAttributes()
-		for pb.Next() {
-			func() {
-				attrsSlice := attrPool.Get().(*[]attribute.KeyValue)
-				defer func() {
-					*attrsSlice = (*attrsSlice)[:0] // Reset.
-					attrPool.Put(attrsSlice)
-				}()
-				*attrsSlice = appendAttributes(*attrsSlice)
-				addOpt := addOptPool.Get().(*[]metric.AddOption)
-				defer func() {
-					*addOpt = (*addOpt)[:0]
-					addOptPool.Put(addOpt)
-				}()
-				if settable, ok := opt.(x.Settable[[]attribute.KeyValue]); ok {
-					settable.Set(*attrsSlice)
-				} else {
-					opt = x.WithUnsafeAttributes(*attrsSlice...)
-				}
-				*addOpt = append(*addOpt, opt)
 				counter.Add(ctx, 1, *addOpt...)
 			}()
 		}

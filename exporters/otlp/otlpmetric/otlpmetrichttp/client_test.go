@@ -649,7 +649,7 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, []string{headers[key]}, got[key])
 	})
 
-	t.Run("WithProxy", func(t *testing.T) {
+	t.Run("WithHTTPClient", func(t *testing.T) {
 		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
 		headerValueSetInProxy := "true"
 		exp, coll := factoryFunc("", nil, WithHTTPClient(&http.Client{
@@ -671,7 +671,7 @@ func TestConfig(t *testing.T) {
 		assert.Equal(t, []string{headerValueSetInProxy}, got[headerKeySetInProxy])
 	})
 
-	t.Run("WithHTTPClient", func(t *testing.T) {
+	t.Run("WithProxy", func(t *testing.T) {
 		headerKeySetInProxy := http.CanonicalHeaderKey("X-Using-Proxy")
 		headerValueSetInProxy := "true"
 		exp, coll := factoryFunc("", nil, WithProxy(func(r *http.Request) (*url.URL, error) {

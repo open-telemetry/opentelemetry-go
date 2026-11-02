@@ -213,7 +213,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
+			if err := internal.CopyHTTPResponseBody(&respData, resp, c.maxResponseSize); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
@@ -244,7 +244,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
+		if err := internal.CopyHTTPResponseBody(&respData, resp, c.maxResponseSize); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())

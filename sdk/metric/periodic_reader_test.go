@@ -304,7 +304,7 @@ func TestPeriodicReaderRun(t *testing.T) {
 		exp := &fnExporter{
 			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
 				// The testSDKProducer produces testResourceMetricsAB.
-				assert.Equal(t, testResourceMetricsAB, *m)
+				assert.Equal(t, testResourceMetricsAB(), *m)
 				return assert.AnError
 			},
 		}
@@ -406,7 +406,9 @@ func TestPeriodicReaderBatching_Disabled(t *testing.T) {
 		var exported []metricdata.ResourceMetrics
 		exp := &fnExporter{
 			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
-				exported = append(exported, *m)
+				cp := *m
+				cp.ScopeMetrics = append([]metricdata.ScopeMetrics(nil), m.ScopeMetrics...)
+				exported = append(exported, cp)
 				return nil
 			},
 		}
@@ -503,7 +505,7 @@ func TestPeriodicReaderBatching_WithoutCancel(t *testing.T) {
 					return ctx.Err()
 				}
 
-				*rm = testResourceMetricsAB // Has 2 data points
+				*rm = testResourceMetricsAB() // Has 2 data points
 				return nil
 			},
 		})
@@ -524,7 +526,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 		return &fnExporter{
 			exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
 				// The testSDKProducer produces testResourceMetricsA.
-				assert.Equal(t, testResourceMetricsAB, *m)
+				assert.Equal(t, testResourceMetricsAB(), *m)
 				*called = true
 				return assert.AnError
 			},
@@ -550,7 +552,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 				select {
 				case <-time.After(timeout + time.Second):
-					*rm = testResourceMetricsA
+					*rm = testResourceMetricsA()
 				case <-ctx.Done():
 					// we timed out before we could collect metrics
 					return ctx.Err()
@@ -576,7 +578,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 					// we timed out before we could collect metrics
 					return nil, ctx.Err()
 				}
-				return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
+				return []metricdata.ScopeMetrics{testScopeMetricsA()}, nil
 			},
 		}))
 		r.register(testSDKProducer{})
@@ -651,7 +653,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 			produceFunc: func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 				select {
 				case <-time.After(timeout + time.Second):
-					*rm = testResourceMetricsA
+					*rm = testResourceMetricsA()
 				case <-ctx.Done():
 					// we timed out before we could collect metrics
 					return ctx.Err()
@@ -674,7 +676,7 @@ func TestPeriodicReaderFlushesPending(t *testing.T) {
 					// we timed out before we could collect metrics
 					return nil, ctx.Err()
 				}
-				return []metricdata.ScopeMetrics{testScopeMetricsA}, nil
+				return []metricdata.ScopeMetrics{testScopeMetricsA()}, nil
 			},
 		}))
 		r.register(testSDKProducer{})
@@ -1174,6 +1176,366 @@ func BenchmarkPeriodicReaderInstrumentation(b *testing.B) {
 		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 		run(b, true)
 	})
+}
+
+func BenchmarkPeriodicReader_collectAndExport(b *testing.B) {
+	b.Run("WithoutExternalProducer", func(b *testing.B) {
+		exp := &fnExporter{
+			exportFunc: func(_ context.Context, _ *metricdata.ResourceMetrics) error { return nil },
+		}
+		r := NewPeriodicReader(exp)
+		r.register(testSDKProducer{
+			produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+				if cap(rm.ScopeMetrics) == 0 {
+					rm.ScopeMetrics = make([]metricdata.ScopeMetrics, 1)
+				} else {
+					rm.ScopeMetrics = rm.ScopeMetrics[:1]
+				}
+				rm.ScopeMetrics[0] = metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{Name: "benchmark"},
+				}
+				return nil
+			},
+		})
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = r.collectAndExport(b.Context())
+		}
+	})
+
+	b.Run("WithExternalProducer", func(b *testing.B) {
+		exp := &fnExporter{
+			exportFunc: func(_ context.Context, _ *metricdata.ResourceMetrics) error { return nil },
+		}
+		externalData := []metricdata.ScopeMetrics{
+			{
+				Scope: instrumentation.Scope{Name: "external"},
+			},
+		}
+		ep := testExternalProducer{
+			produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+				return externalData, nil
+			},
+		}
+		r := NewPeriodicReader(exp, WithProducer(ep))
+		r.register(testSDKProducer{
+			produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+				if cap(rm.ScopeMetrics) == 0 {
+					rm.ScopeMetrics = make([]metricdata.ScopeMetrics, 1, 2)
+				} else {
+					rm.ScopeMetrics = rm.ScopeMetrics[:1]
+				}
+				rm.ScopeMetrics[0] = metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{Name: "benchmark"},
+				}
+				return nil
+			},
+		})
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			_ = r.collectAndExport(b.Context())
+		}
+	})
+}
+
+func TestPeriodicReader_ExternalProducerOwnership(t *testing.T) {
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, _ *metricdata.ResourceMetrics) error { return nil },
+	}
+
+	externalData := []metricdata.ScopeMetrics{
+		{
+			Scope: instrumentation.Scope{Name: "external-scope"},
+			Metrics: []metricdata.Metrics{{
+				Name: "external-metric",
+				Data: metricdata.Sum[int64]{},
+			}},
+		},
+	}
+
+	ep := testExternalProducer{
+		produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return externalData, nil
+		},
+	}
+
+	r := NewPeriodicReader(exp, WithProducer(ep))
+	var callCount int
+	sp := testSDKProducer{
+		produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+			callCount++
+			needed := 1
+			if callCount >= 2 {
+				needed = 2
+			}
+			if cap(rm.ScopeMetrics) >= needed {
+				rm.ScopeMetrics = rm.ScopeMetrics[:needed]
+			} else {
+				rm.ScopeMetrics = make([]metricdata.ScopeMetrics, needed)
+			}
+			rm.ScopeMetrics[0] = metricdata.ScopeMetrics{
+				Scope: instrumentation.Scope{Name: "internal-scope-1"},
+			}
+			if needed >= 2 {
+				// Simulate pipeline.produce reusing the inner slice capacity
+				if len(rm.ScopeMetrics[1].Metrics) > 0 {
+					rm.ScopeMetrics[1].Metrics[0].Name = "corrupted-by-internal"
+				}
+				rm.ScopeMetrics[1].Scope = instrumentation.Scope{Name: "internal-scope-2"}
+			}
+			return nil
+		},
+	}
+	r.register(sp)
+
+	_ = r.collectAndExport(t.Context())
+	_ = r.collectAndExport(t.Context())
+
+	assert.Equal(t, "external-metric", externalData[0].Metrics[0].Name, "external producer data was corrupted")
+}
+
+func TestPeriodicReader_ExporterTruncatesSlice(t *testing.T) {
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+			if len(m.ScopeMetrics) > 0 {
+				m.ScopeMetrics = m.ScopeMetrics[:0]
+			}
+			return nil
+		},
+		shutdownFunc: func(context.Context) error { return nil },
+	}
+
+	externalData := []metricdata.ScopeMetrics{
+		{
+			Scope: instrumentation.Scope{Name: "external"},
+		},
+	}
+	ep := testExternalProducer{
+		produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return externalData, nil
+		},
+	}
+
+	r := NewPeriodicReader(exp, WithProducer(ep))
+	sp := testSDKProducer{
+		produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+			if cap(rm.ScopeMetrics) == 0 {
+				rm.ScopeMetrics = make([]metricdata.ScopeMetrics, 1)
+			} else {
+				rm.ScopeMetrics = rm.ScopeMetrics[:1]
+			}
+			rm.ScopeMetrics[0] = metricdata.ScopeMetrics{
+				Scope: instrumentation.Scope{Name: "internal"},
+			}
+			return nil
+		},
+	}
+	r.register(sp)
+
+	// Hit collectAndExport branch
+	_ = r.collectAndExport(t.Context())
+	// Hit Shutdown branch
+	_ = r.Shutdown(t.Context())
+}
+
+func TestCleanResourceMetrics(t *testing.T) {
+	testCases := []struct {
+		name   string
+		mutate func(m *metricdata.ResourceMetrics)
+	}{
+		{
+			name:   "unmodified slice",
+			mutate: func(_ *metricdata.ResourceMetrics) {},
+		},
+		{
+			name: "nil slice",
+			mutate: func(m *metricdata.ResourceMetrics) {
+				m.ScopeMetrics = nil
+			},
+		},
+		{
+			name: "reduced capacity",
+			mutate: func(m *metricdata.ResourceMetrics) {
+				m.ScopeMetrics = m.ScopeMetrics[:0:0]
+			},
+		},
+		{
+			name: "replaced slice with smaller capacity",
+			mutate: func(m *metricdata.ResourceMetrics) {
+				m.ScopeMetrics = make([]metricdata.ScopeMetrics, 0)
+			},
+		},
+		{
+			name: "replaced non-empty slice",
+			mutate: func(m *metricdata.ResourceMetrics) {
+				m.ScopeMetrics = []metricdata.ScopeMetrics{
+					{Scope: instrumentation.Scope{Name: "replaced"}},
+				}
+			},
+		},
+		{
+			name: "truncated slice",
+			mutate: func(m *metricdata.ResourceMetrics) {
+				if len(m.ScopeMetrics) > 0 {
+					m.ScopeMetrics = m.ScopeMetrics[:0]
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			backing := make([]metricdata.ScopeMetrics, 3, 5)
+			backing[0] = metricdata.ScopeMetrics{Scope: instrumentation.Scope{Name: "sdk-0"}}
+			backing[1] = metricdata.ScopeMetrics{Scope: instrumentation.Scope{Name: "sdk-1"}}
+			backing[2] = metricdata.ScopeMetrics{Scope: instrumentation.Scope{Name: "external-0"}}
+
+			rm := &metricdata.ResourceMetrics{
+				Resource:     resource.Default(),
+				ScopeMetrics: backing,
+			}
+			sdkLen := 2
+			collected := rm.ScopeMetrics
+
+			// Simulate exporter mutation
+			tc.mutate(rm)
+
+			cleanResourceMetrics(rm, collected, sdkLen)
+
+			assert.Nil(t, rm.Resource)
+			assert.Empty(t, rm.ScopeMetrics)
+			assert.Equal(t, 5, cap(rm.ScopeMetrics), "full underlying array capacity should be preserved")
+
+			// Check that external producer entries were cleared
+			assert.Equal(t, metricdata.ScopeMetrics{}, collected[2], "producer-owned entry was not cleared")
+
+			// Check that SDK entries were left untouched for reuse by pipeline.produce
+			assert.Equal(t, "sdk-0", collected[0].Scope.Name)
+			assert.Equal(t, "sdk-1", collected[1].Scope.Name)
+		})
+	}
+}
+
+func TestPeriodicReader_ExporterMutatesSlice(t *testing.T) {
+	testCases := []struct {
+		name   string
+		mutate func(m *metricdata.ResourceMetrics)
+	}{
+		{
+			name: "nil slice",
+			mutate: func(m *metricdata.ResourceMetrics) {
+				m.ScopeMetrics = nil
+			},
+		},
+		{
+			name: "reduced capacity",
+			mutate: func(m *metricdata.ResourceMetrics) {
+				m.ScopeMetrics = m.ScopeMetrics[:0:0]
+			},
+		},
+		{
+			name: "replaced slice with smaller capacity",
+			mutate: func(m *metricdata.ResourceMetrics) {
+				m.ScopeMetrics = make([]metricdata.ScopeMetrics, 0)
+			},
+		},
+		{
+			name: "replaced non-empty slice",
+			mutate: func(m *metricdata.ResourceMetrics) {
+				m.ScopeMetrics = []metricdata.ScopeMetrics{
+					{Scope: instrumentation.Scope{Name: "replaced"}},
+				}
+			},
+		},
+		{
+			name: "truncated slice",
+			mutate: func(m *metricdata.ResourceMetrics) {
+				if len(m.ScopeMetrics) > 0 {
+					m.ScopeMetrics = m.ScopeMetrics[:0]
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name+"/WithoutExternalProducers", func(t *testing.T) {
+			exp := &fnExporter{
+				exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+					tc.mutate(m)
+					return nil
+				},
+				shutdownFunc: func(context.Context) error { return nil },
+			}
+
+			r := NewPeriodicReader(exp)
+			sp := testSDKProducer{
+				produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+					if cap(rm.ScopeMetrics) == 0 {
+						rm.ScopeMetrics = make([]metricdata.ScopeMetrics, 2)
+					} else {
+						rm.ScopeMetrics = rm.ScopeMetrics[:2]
+					}
+					rm.ScopeMetrics[0] = metricdata.ScopeMetrics{
+						Scope: instrumentation.Scope{Name: "internal-0"},
+					}
+					rm.ScopeMetrics[1] = metricdata.ScopeMetrics{
+						Scope: instrumentation.Scope{Name: "internal-1"},
+					}
+					return nil
+				},
+			}
+			r.register(sp)
+
+			require.NoError(t, r.collectAndExport(t.Context()))
+			require.NoError(t, r.collectAndExport(t.Context()))
+			require.NoError(t, r.Shutdown(t.Context()))
+		})
+
+		t.Run(tc.name+"/WithExternalProducers", func(t *testing.T) {
+			exp := &fnExporter{
+				exportFunc: func(_ context.Context, m *metricdata.ResourceMetrics) error {
+					tc.mutate(m)
+					return nil
+				},
+				shutdownFunc: func(context.Context) error { return nil },
+			}
+
+			externalData := []metricdata.ScopeMetrics{
+				{
+					Scope: instrumentation.Scope{Name: "external"},
+				},
+			}
+			ep := testExternalProducer{
+				produceFunc: func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+					return externalData, nil
+				},
+			}
+
+			r := NewPeriodicReader(exp, WithProducer(ep))
+			sp := testSDKProducer{
+				produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+					if cap(rm.ScopeMetrics) == 0 {
+						rm.ScopeMetrics = make([]metricdata.ScopeMetrics, 1)
+					} else {
+						rm.ScopeMetrics = rm.ScopeMetrics[:1]
+					}
+					rm.ScopeMetrics[0] = metricdata.ScopeMetrics{
+						Scope: instrumentation.Scope{Name: "internal"},
+					}
+					return nil
+				},
+			}
+			r.register(sp)
+
+			// Hit collectAndExport branch
+			require.NoError(t, r.collectAndExport(t.Context()))
+			require.NoError(t, r.collectAndExport(t.Context()))
+			// Hit Shutdown branch
+			require.NoError(t, r.Shutdown(t.Context()))
+		})
+	}
 }
 
 func TestNewPeriodicReaderInstRace(t *testing.T) {

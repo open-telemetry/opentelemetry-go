@@ -815,12 +815,12 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.droppedAttributeCount = s.droppedAttributes
 	if len(s.events.queue) > 0 {
 		sd.events = s.events.copy()
-		sd.droppedEventCount = s.events.droppedCount
 	}
+	sd.droppedEventCount = s.events.droppedCount
 	if len(s.links.queue) > 0 {
 		sd.links = s.links.copy()
-		sd.droppedLinkCount = s.links.droppedCount
 	}
+	sd.droppedLinkCount = s.links.droppedCount
 	return &sd
 }
 

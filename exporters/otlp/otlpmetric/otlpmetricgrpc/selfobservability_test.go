@@ -309,7 +309,8 @@ func TestSelfObservability(t *testing.T) {
 
 			exp, err := New(t.Context(),
 				WithEndpoint(tt.endpoint),
-				WithInsecure())
+				WithInsecure(),
+				WithRetry(RetryConfig{Enabled: false}))
 			require.NoError(t, err)
 			ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 			t.Cleanup(func() {

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -65,13 +66,14 @@ func (e *exporter) Export(ctx context.Context, data *metricdata.ResourceMetrics)
 	if err != nil {
 		return err
 	}
+	output := data
 	if e.redactTimestamps {
-		redactTimestamps(data)
+		output = redactTimestamps(data)
 	}
 
-	global.Debug("STDOUT exporter export", "Data", data)
+	global.Debug("STDOUT exporter export", "Data", output)
 
-	return e.encVal.Load().(encoderHolder).Encode(data)
+	return e.encVal.Load().(encoderHolder).Encode(output)
 }
 
 func (*exporter) ForceFlush(context.Context) error {
@@ -92,14 +94,16 @@ func (*exporter) MarshalLog() any {
 	return struct{ Type string }{Type: "STDOUT"}
 }
 
-func redactTimestamps(orig *metricdata.ResourceMetrics) {
+func redactTimestamps(orig *metricdata.ResourceMetrics) *metricdata.ResourceMetrics {
+	rm := *orig
+	rm.ScopeMetrics = slices.Clone(orig.ScopeMetrics)
 	for i, sm := range orig.ScopeMetrics {
-		metrics := sm.Metrics
-		for j, m := range metrics {
-			data := m.Data
-			orig.ScopeMetrics[i].Metrics[j].Data = redactAggregationTimestamps(data)
+		rm.ScopeMetrics[i].Metrics = slices.Clone(sm.Metrics)
+		for j, m := range sm.Metrics {
+			rm.ScopeMetrics[i].Metrics[j].Data = redactAggregationTimestamps(m.Data)
 		}
 	}
+	return &rm
 }
 
 var errUnknownAggType = errors.New("unknown aggregation type")
