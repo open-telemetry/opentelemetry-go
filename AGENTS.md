@@ -5,6 +5,13 @@ This file contains active, task-oriented instructions for autonomous and semi-au
 Before starting any task, read `.github/copilot-instructions.md`, `CONTRIBUTING.md`, and this file.
 Treat `.github/copilot-instructions.md` as global passive guidance for every task, including docs-only and review-only work.
 
+## Before opening issues or pull requests
+
+- Before creating any issue or pull request, double-check whether the finding or proposed change could involve a security vulnerability.
+- Do not create public issues or public pull requests, including drafts, for known or suspected security vulnerabilities or their fixes.
+- If a vulnerability is suspected or you are unsure, use the private reporting process in the [OpenTelemetry security policy](https://github.com/open-telemetry/.github/blob/main/SECURITY.md), starting with [Report a vulnerability](https://github.com/open-telemetry/opentelemetry-go/security/advisories/new).
+- Keep vulnerability details, reproductions, and fixes private. Follow the maintainers' instructions for coordinated disclosure.
+
 ## Core expectations
 
 - Preserve OpenTelemetry specification compliance, API stability, and idiomatic Go.

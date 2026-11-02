@@ -216,7 +216,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			// Success, do not retry.
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if err := internal.CopyResponseBody(&respData, resp.Body, c.cfg.MaxResponseSize); err != nil {
+			if err := internal.CopyHTTPResponseBody(&respData, resp, c.cfg.MaxResponseSize); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
@@ -254,7 +254,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if err := internal.CopyResponseBody(&respData, resp.Body, c.cfg.MaxResponseSize); err != nil {
+		if err := internal.CopyHTTPResponseBody(&respData, resp, c.cfg.MaxResponseSize); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
