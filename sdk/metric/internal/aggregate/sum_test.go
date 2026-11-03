@@ -59,10 +59,46 @@ func TestSum(t *testing.T) {
 	t.Run("Float64/DeltaPrecomputedSum", testDeltaPrecomputedSum[float64]())
 	c.Reset()
 
-	t.Run("Int64/CumulativePrecomputedSum", testCumulativePrecomputedSum[int64]())
+	t.Run("Int64/CumulativePrecomputedSum", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		assert.False(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativePrecomputedSum[int64]()(t)
+	})
 	c.Reset()
 
-	t.Run("Float64/CumulativePrecomputedSum", testCumulativePrecomputedSum[float64]())
+	t.Run("Int64/CumulativePrecomputedSum/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativePrecomputedSum[int64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/CumulativePrecomputedSum", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		assert.False(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativePrecomputedSum[float64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/CumulativePrecomputedSum/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativePrecomputedSum[float64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Int64/CumulativePrecomputedSum/PerSeriesStartTimeLifecycle", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativePrecomputedSumPerSeriesStartTime[int64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/CumulativePrecomputedSum/PerSeriesStartTimeLifecycle", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativePrecomputedSumPerSeriesStartTime[float64]()(t)
+	})
 }
 
 func testDeltaSum[N int64 | float64]() func(t *testing.T) {
@@ -454,6 +490,14 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 		Filter:           attrFltr,
 		AggregationLimit: 3,
 	}.PrecomputedSum(mono)
+
+	firstStartTime := y2kPlus(0)
+	reobservedStartTime := y2kPlus(0)
+	if x.PerSeriesStartTimestamps.Enabled() {
+		firstStartTime = y2kPlus(1)
+		reobservedStartTime = y2kPlus(8)
+	}
+
 	ctx := context.Background()
 	return test[N](in, out, []teststep[N]{
 		{
@@ -483,13 +527,13 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
+							StartTime:  firstStartTime,
 							Time:       y2kPlus(4),
 							Value:      4,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
+							StartTime:  firstStartTime,
 							Time:       y2kPlus(4),
 							Value:      -11,
 						},
@@ -511,13 +555,13 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
+							StartTime:  firstStartTime,
 							Time:       y2kPlus(7),
 							Value:      11,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
+							StartTime:  firstStartTime,
 							Time:       y2kPlus(7),
 							Value:      3,
 						},
@@ -553,21 +597,131 @@ func testCumulativePrecomputedSum[N int64 | float64]() func(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[N]{
 						{
 							Attributes: fltrAlice,
-							StartTime:  y2kPlus(0),
+							StartTime:  reobservedStartTime,
 							Time:       y2kPlus(12),
 							Value:      1,
 						},
 						{
 							Attributes: fltrBob,
-							StartTime:  y2kPlus(0),
+							StartTime:  reobservedStartTime,
 							Time:       y2kPlus(12),
 							Value:      1,
 						},
 						{
 							Attributes: overflowSet,
-							StartTime:  y2kPlus(0),
+							StartTime:  reobservedStartTime,
 							Time:       y2kPlus(12),
 							Value:      2,
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func testCumulativePrecomputedSumPerSeriesStartTime[N int64 | float64]() func(t *testing.T) {
+	mono := true
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.PrecomputedSum(mono)
+	ctx := context.Background()
+	return test[N](in, out, []teststep[N]{
+		{
+			// Series observed in the first collection interval gets instrument creation time y2kPlus(0).
+			input: []arg[N]{
+				{ctx, 5, alice},
+			},
+			expect: output{
+				n: 1,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  y2kPlus(0),
+							Time:       y2kPlus(2),
+							Value:      5,
+						},
+					},
+				},
+			},
+		},
+		{
+			// Alice keeps y2kPlus(0); Bob is first observed in the second collection interval and gets y2kPlus(2).
+			input: []arg[N]{
+				{ctx, 8, alice},
+				{ctx, 3, bob},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  y2kPlus(0),
+							Time:       y2kPlus(5),
+							Value:      8,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  y2kPlus(2),
+							Time:       y2kPlus(5),
+							Value:      3,
+						},
+					},
+				},
+			},
+		},
+		{
+			// Alice is omitted (evicted); Bob persists with y2kPlus(2).
+			input: []arg[N]{
+				{ctx, 6, bob},
+			},
+			expect: output{
+				n: 1,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrBob,
+							StartTime:  y2kPlus(2),
+							Time:       y2kPlus(7),
+							Value:      6,
+						},
+					},
+				},
+			},
+		},
+		{
+			// Alice is re-observed and gets the previous collection timestamp y2kPlus(7); Bob keeps y2kPlus(2).
+			input: []arg[N]{
+				{ctx, 2, alice},
+				{ctx, 10, bob},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.Sum[N]{
+					IsMonotonic: mono,
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  y2kPlus(7),
+							Time:       y2kPlus(10),
+							Value:      2,
+						},
+						{
+							Attributes: fltrBob,
+							StartTime:  y2kPlus(2),
+							Time:       y2kPlus(10),
+							Value:      10,
 						},
 					},
 				},
@@ -680,6 +834,19 @@ func BenchmarkSum(b *testing.B) {
 	b.Run("Precomputed/Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
 		return Builder[int64]{
 			Temporality: metricdata.DeltaTemporality,
+		}.PrecomputedSum(false)
+	}))
+}
+
+func BenchmarkPrecomputedSumCycle(b *testing.B) {
+	b.Run("Int64", benchmarkCollectCycle(func() (Measure[int64], ComputeAggregation) {
+		return Builder[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+		}.PrecomputedSum(false)
+	}))
+	b.Run("Float64", benchmarkCollectCycle(func() (Measure[float64], ComputeAggregation) {
+		return Builder[float64]{
+			Temporality: metricdata.CumulativeTemporality,
 		}.PrecomputedSum(false)
 	}))
 }
