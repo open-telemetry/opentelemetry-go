@@ -31,8 +31,8 @@ func newDeltaLastValue[N int64 | float64](
 		p := &lastValuePoint[N]{
 			res:           res,
 			attrs:         attr,
-			startTime:     now(),
 			dropExemplars: isDrop,
+			// delta aggregators ignore p.startTime, so we leave it zero to save a clock fetch.
 		}
 		return p
 	}
