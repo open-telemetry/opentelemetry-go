@@ -536,8 +536,10 @@ func retryableNetworkError(ctx context.Context, err error) bool {
 	// error" ops, and are permanent.
 	opErr, ok := errors.AsType[*net.OpError](err)
 	// net/http wraps failures reaching a proxy in an outer "proxyconnect"
-	// *net.OpError; classify the underlying failure instead.
-	for ok && opErr.Op == "proxyconnect" {
+	// *net.OpError, and SOCKS handshake failures in a "socks connect" one;
+	// classify the underlying failure instead. SOCKS authentication and
+	// protocol failures are not *net.OpError underneath, so stay permanent.
+	for ok && (opErr.Op == "proxyconnect" || opErr.Op == "socks connect") {
 		opErr, ok = errors.AsType[*net.OpError](opErr.Err)
 	}
 	if !ok {

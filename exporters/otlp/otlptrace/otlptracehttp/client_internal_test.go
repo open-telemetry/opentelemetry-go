@@ -121,6 +121,31 @@ func TestRetryableNetworkError(t *testing.T) {
 			},
 		},
 		{
+			name: "socks handshake reset",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{
+					Op:  "socks connect",
+					Net: "tcp",
+					Err: &net.OpError{Op: "read", Net: "tcp", Err: syscall.ECONNRESET},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "socks authentication failure",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{
+					Op:  "socks connect",
+					Net: "tcp",
+					Err: errors.New("username/password authentication failed"),
+				},
+			},
+		},
+		{
 			name: "connection reset",
 			err: &url.Error{
 				Op:  "Post",
