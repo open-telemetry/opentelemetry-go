@@ -3665,3 +3665,15 @@ func (m *errMeter) Int64Counter(string, ...otelmetric.Int64CounterOption) (otelm
 func (m *errMeter) Float64Histogram(string, ...otelmetric.Float64HistogramOption) (otelmetric.Float64Histogram, error) {
 	return nil, m.err
 }
+
+func TestIsCompliantLabelName(t *testing.T) {
+	assert.True(t, isCompliantLabelName("a", false))
+	assert.True(t, isCompliantLabelName("Z_0_9", false))
+	assert.False(t, isCompliantLabelName("", false))
+	assert.False(t, isCompliantLabelName("0abc", false))
+	assert.False(t, isCompliantLabelName("_abc", false))
+	assert.False(t, isCompliantLabelName("__reserved__", false))
+	assert.False(t, isCompliantLabelName("a__b", false))
+	assert.True(t, isCompliantLabelName("a__b", true))
+	assert.False(t, isCompliantLabelName("a.b", false))
+}

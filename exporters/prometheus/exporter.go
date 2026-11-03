@@ -127,7 +127,7 @@ func New(opts ...Option) (*Exporter, error) {
 		var err error
 		// If the namespace needs to be escaped, do that now when creating the new
 		// Collector object. The escaping is not persisted in the Config itself.
-		escapedNamespace, err = labelNamer.Build(escapedNamespace)
+		escapedNamespace, err = buildLabelName(labelNamer, escapedNamespace)
 		if err != nil {
 			return nil, err
 		}
@@ -672,6 +672,38 @@ func getOrReuseDesc(
 	return prometheus.NewDesc(name, description, keys, nil), keys
 }
 
+//nolint:revive // control coupling by design
+func isCompliantLabelName(name string, preserveMultipleUnderscores bool) bool {
+	if name == "" {
+		return false
+	}
+	c0 := name[0]
+	if (c0 < 'a' || c0 > 'z') && (c0 < 'A' || c0 > 'Z') {
+		return false
+	}
+	for i := 1; i < len(name); i++ {
+		c := name[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') {
+			continue
+		}
+		if c == '_' && (preserveMultipleUnderscores || name[i-1] != '_') {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func buildLabelName(labelNamer otlptranslator.LabelNamer, key string) (string, error) {
+	if isCompliantLabelName(key, labelNamer.PreserveMultipleUnderscores) {
+		return key, nil
+	}
+	if labelNamer.UTF8Allowed {
+		return labelNamer.Build(key)
+	}
+	return labelNamer.Build(key)
+}
+
 // getAttrs converts the attribute.Set to two lists of matching Prometheus-style
 // keys and values.
 func getAttrs(attrs attribute.Set, labelNamer otlptranslator.LabelNamer) ([]string, []string, error) {
@@ -707,7 +739,7 @@ func getAttrsWithKV(attrs attribute.Set, kv keyVals, labelNamer otlptranslator.L
 		}
 		for itr.Next() {
 			attr := itr.Attribute()
-			key, err := labelNamer.Build(string(attr.Key))
+			key, err := buildLabelName(labelNamer, string(attr.Key))
 			if err != nil {
 				return nil, nil, err
 			}
@@ -775,7 +807,7 @@ func appendScopeAttrs(kv keyVals, attrs attribute.Set, labelNamer otlptranslator
 	}
 	for itr.Next() {
 		attr := itr.Attribute()
-		key, err := labelNamer.Build(string(attr.Key))
+		key, err := buildLabelName(labelNamer, string(attr.Key))
 		if err != nil {
 			return kv, err
 		}
@@ -1018,7 +1050,7 @@ func exemplarLabelRunes(labels prometheus.Labels, traceID, spanID string) int {
 func attributesToLabels(attrs []attribute.KeyValue, labelNamer otlptranslator.LabelNamer) (prometheus.Labels, error) {
 	labels := make(map[string]string, len(attrs)+2)
 	for _, attr := range attrs {
-		name, err := labelNamer.Build(string(attr.Key))
+		name, err := buildLabelName(labelNamer, string(attr.Key))
 		if err != nil {
 			return nil, err
 		}
