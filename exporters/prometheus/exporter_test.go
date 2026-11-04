@@ -179,6 +179,107 @@ func TestAttributesToLabels(t *testing.T) {
 	require.Equal(t, prometheus.Labels{"float_slice": `["NaN","Infinity"]`}, labels)
 }
 
+func TestGetOrReuseDesc(t *testing.T) {
+	emptyDesc := prometheus.NewDesc("test_metric", "test help", nil, nil)
+	abDesc := prometheus.NewDesc("test_metric", "test help", []string{"a", "b"}, nil)
+
+	testCases := []struct {
+		name       string
+		keys       []string
+		lastKeys   []string
+		lastDesc   *prometheus.Desc
+		wantReuse  bool
+		wantLabels map[string]string
+		values     []string
+	}{
+		{
+			name:       "initial descriptor with empty keys",
+			keys:       nil,
+			lastKeys:   nil,
+			lastDesc:   nil,
+			wantReuse:  false,
+			wantLabels: map[string]string{},
+		},
+		{
+			name:       "reuse descriptor with empty keys",
+			keys:       []string{},
+			lastKeys:   nil,
+			lastDesc:   emptyDesc,
+			wantReuse:  true,
+			wantLabels: map[string]string{},
+		},
+		{
+			name:       "initial descriptor with non-empty keys",
+			keys:       []string{"a", "b"},
+			lastKeys:   nil,
+			lastDesc:   nil,
+			wantReuse:  false,
+			values:     []string{"v1", "v2"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2"},
+		},
+		{
+			name:       "reuse descriptor for equal ordered keys in distinct slices",
+			keys:       []string{"a", "b"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  true,
+			values:     []string{"v3", "v4"},
+			wantLabels: map[string]string{"a": "v3", "b": "v4"},
+		},
+		{
+			name:       "new descriptor for same-length changed keys",
+			keys:       []string{"a", "c"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v1", "v2"},
+			wantLabels: map[string]string{"a": "v1", "c": "v2"},
+		},
+		{
+			name:       "new descriptor for reordered keys",
+			keys:       []string{"b", "a"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v2", "v1"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2"},
+		},
+		{
+			name:       "new descriptor for different-length keys",
+			keys:       []string{"a", "b", "c"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v1", "v2", "v3"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2", "c": "v3"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			desc, gotKeys := getOrReuseDesc("test_metric", "test help", tc.keys, tc.lastKeys, tc.lastDesc)
+			require.NotNil(t, desc)
+			if tc.wantReuse {
+				assert.Same(t, tc.lastDesc, desc)
+				assert.Equal(t, tc.lastKeys, gotKeys)
+			} else {
+				assert.NotSame(t, tc.lastDesc, desc)
+				assert.Equal(t, tc.keys, gotKeys)
+			}
+
+			pm, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, 1, tc.values...)
+			require.NoError(t, err)
+			var dm dto.Metric
+			require.NoError(t, pm.Write(&dm))
+			gotLabels := make(map[string]string, len(dm.GetLabel()))
+			for _, lp := range dm.GetLabel() {
+				gotLabels[lp.GetName()] = lp.GetValue()
+			}
+			assert.Equal(t, tc.wantLabels, gotLabels)
+		})
+	}
+}
+
 func TestPrometheusExporter(t *testing.T) {
 	testCases := []struct {
 		name                string

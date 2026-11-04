@@ -243,5 +243,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/tools v0.8.2 // indirect
 	mvdan.cc/gofumpt v0.12.0 // indirect
-	mvdan.cc/unparam v0.0.0-20261011093844-7a2c2c0b7aa6 // indirect
+	mvdan.cc/unparam v0.0.0-20261102141913-394cd0a56cd5 // indirect
 )
