@@ -1362,3 +1362,57 @@ func TestViewMatchingModeComposableEnabled(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveAggregation(t *testing.T) {
+	inst := Instrument{Name: "foo", Kind: InstrumentKindCounter}
+
+	testcases := []struct {
+		name    string
+		streams []Stream
+		want    Aggregation
+	}{
+		{
+			name:    "NoAggregationReturnsNil",
+			streams: []Stream{{Name: "foo"}, {Description: "desc"}},
+			want:    nil,
+		},
+		{
+			name: "LastValidAggregationWins",
+			streams: []Stream{
+				{Aggregation: AggregationSum{}},
+				{Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{1, 5}}},
+			},
+			want: AggregationExplicitBucketHistogram{Boundaries: []float64{1, 5}},
+		},
+		{
+			name: "IncompatibleAggregationFallsBackToPrecedingValid",
+			streams: []Stream{
+				{Aggregation: AggregationSum{}},
+				{Aggregation: AggregationLastValue{}},
+			},
+			want: AggregationSum{},
+		},
+		{
+			name: "InvalidAggregationFallsBackToPrecedingValid",
+			streams: []Stream{
+				{Aggregation: AggregationSum{}},
+				{Aggregation: AggregationBase2ExponentialHistogram{MaxSize: 0}},
+			},
+			want: AggregationSum{},
+		},
+		{
+			name: "AllInvalidOrIncompatibleReturnsNil",
+			streams: []Stream{
+				{Aggregation: AggregationLastValue{}},
+				{Aggregation: AggregationBase2ExponentialHistogram{MaxSize: 0}},
+			},
+			want: nil,
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, resolveAggregation(inst, tt.streams))
+		})
+	}
+}
