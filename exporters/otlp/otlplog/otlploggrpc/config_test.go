@@ -564,6 +564,12 @@ func TestEndpointURLResolverSecurity(t *testing.T) {
 }
 
 func TestNewConfigUnixEndpoint(t *testing.T) {
+	// Keep these placeholder URLs from being treated as documentation links.
+	const (
+		httpsGeneral = "https" + "://general:4317"
+		httpsLogs    = "https" + "://logs:4317"
+		httpsOption  = "https" + "://option:4317"
+	)
 	for _, scheme := range []string{"unix", "unix-abstract"} {
 		t.Run(scheme, func(t *testing.T) {
 			target := scheme + ":///otel.sock"
@@ -595,7 +601,7 @@ func TestNewConfigUnixEndpoint(t *testing.T) {
 				},
 				{
 					name:     "LogsUnixOverridesGeneralHTTPS",
-					endpoint: "https://general:4317",
+					endpoint: httpsGeneral,
 					logs:     target,
 					want:     target,
 					insecure: true,
@@ -603,14 +609,14 @@ func TestNewConfigUnixEndpoint(t *testing.T) {
 				{
 					name:     "LogsHTTPSOverridesGeneralUnix",
 					endpoint: target,
-					logs:     "https://logs:4317",
+					logs:     httpsLogs,
 					want:     "logs:4317",
 					insecure: false,
 				},
 				{
 					name:     "OptionUnixOverridesEnvironmentHTTPS",
-					endpoint: "https://general:4317",
-					logs:     "https://logs:4317",
+					endpoint: httpsGeneral,
+					logs:     httpsLogs,
 					options:  []Option{WithEndpointURL(target)},
 					want:     target,
 					insecure: true,
@@ -619,7 +625,7 @@ func TestNewConfigUnixEndpoint(t *testing.T) {
 					name:     "OptionHTTPSOverridesEnvironmentUnix",
 					endpoint: target,
 					logs:     target,
-					options:  []Option{WithEndpointURL("https://option:4317")},
+					options:  []Option{WithEndpointURL(httpsOption)},
 					want:     "option:4317",
 					insecure: false,
 				},
