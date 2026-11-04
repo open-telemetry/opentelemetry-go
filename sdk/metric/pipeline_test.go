@@ -1416,3 +1416,117 @@ func TestResolveAggregation(t *testing.T) {
 		})
 	}
 }
+
+func TestViewMatchingModeComposableUnspecifiedStreamName(t *testing.T) {
+	t.Run("EmptyAndInstrumentNameViewsMergeIntoDefaultStream", func(t *testing.T) {
+		views := []View{
+			// Direct view returning empty Name leaves stream name unspecified.
+			View(func(inst Instrument) (Stream, bool) {
+				if inst.Name == "foo" {
+					return Stream{Name: "", Description: "desc from empty-name view", Unit: inst.Unit}, true
+				}
+				return Stream{}, false
+			}),
+			// Direct view returning instrument's own Name (even with different casing) leaves stream name unspecified,
+			// and returning inst.Description leaves Description unspecified.
+			View(func(inst Instrument) (Stream, bool) {
+				if inst.Name == "foo" {
+					return Stream{Name: "FOO", Description: inst.Description, Unit: "ms"}, true
+				}
+				return Stream{}, false
+			}),
+		}
+
+		r := NewManualReader()
+		p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+		r.register(p)
+		var vc cache[string, instID]
+		ins := newInserter[int64](p, &vc)
+		got, err := ins.Instrument(
+			Instrument{Name: "foo", Kind: InstrumentKindCounter, Description: "orig desc", Unit: "1"},
+			nil, false,
+			DefaultAggregationSelector(InstrumentKindCounter),
+		)
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+
+		got[0](t.Context(), 1, *attribute.EmptySet())
+		var data metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &data)
+		require.NoError(t, err)
+		require.Len(t, data.ScopeMetrics, 1)
+		require.Len(t, data.ScopeMetrics[0].Metrics, 1)
+		m := data.ScopeMetrics[0].Metrics[0]
+		assert.Equal(t, "foo", m.Name)
+		assert.Equal(t, "desc from empty-name view", m.Description)
+		assert.Equal(t, "ms", m.Unit)
+	})
+
+	t.Run("EmptyAndInstrumentNameViewsApplyAcrossRenamedStreamGroups", func(t *testing.T) {
+		views := []View{
+			NewView(Instrument{Name: "foo"}, Stream{Name: "foo_ms", Unit: "ms"}),
+			NewView(Instrument{Name: "foo"}, Stream{Name: "foo_s", Unit: "s"}),
+			// View returning instrument's own Name leaves stream name unspecified and applies to both groups.
+			NewView(Instrument{Name: "foo"}, Stream{Description: "common desc"}),
+			// Direct view returning empty Name leaves stream name unspecified and applies to both groups.
+			View(func(inst Instrument) (Stream, bool) {
+				if inst.Name == "foo" {
+					return Stream{
+						Name:            "",
+						Description:     inst.Description,
+						Unit:            inst.Unit,
+						AttributeFilter: attribute.NewAllowKeysFilter("k1"),
+					}, true
+				}
+				return Stream{}, false
+			}),
+		}
+
+		r := NewManualReader()
+		p := newPipeline(resource.Empty(), r, views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+		r.register(p)
+		var vc cache[string, instID]
+		ins := newInserter[int64](p, &vc)
+		got, err := ins.Instrument(
+			Instrument{Name: "foo", Kind: InstrumentKindCounter, Description: "orig desc", Unit: "1"},
+			nil, false,
+			DefaultAggregationSelector(InstrumentKindCounter),
+		)
+		require.NoError(t, err)
+		require.Len(t, got, 2)
+
+		attrs := attribute.NewSet(attribute.String("k1", "v1"), attribute.String("k2", "v2"))
+		for _, m := range got {
+			m(t.Context(), 1, attrs)
+		}
+
+		var data metricdata.ResourceMetrics
+		err = r.Collect(t.Context(), &data)
+		require.NoError(t, err)
+		require.Len(t, data.ScopeMetrics, 1)
+		require.Len(t, data.ScopeMetrics[0].Metrics, 2)
+
+		byName := make(map[string]metricdata.Metrics, 2)
+		for _, m := range data.ScopeMetrics[0].Metrics {
+			byName[m.Name] = m
+		}
+		require.Contains(t, byName, "foo_ms")
+		require.Contains(t, byName, "foo_s")
+		assert.NotContains(
+			t,
+			byName,
+			"foo",
+			"non-renaming views should not create an unrenamed stream when renaming views exist",
+		)
+
+		for name, wantUnit := range map[string]string{"foo_ms": "ms", "foo_s": "s"} {
+			m := byName[name]
+			assert.Equal(t, "common desc", m.Description)
+			assert.Equal(t, wantUnit, m.Unit)
+			sum, ok := m.Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.Len(t, sum.DataPoints, 1)
+			assert.Equal(t, attribute.NewSet(attribute.String("k1", "v1")), sum.DataPoints[0].Attributes)
+		}
+	})
+}

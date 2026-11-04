@@ -174,3 +174,77 @@ func TestMeterProviderComposableViewEnabled(t *testing.T) {
 		assert.Empty(t, rm.ScopeMetrics)
 	})
 }
+
+func TestMeterProviderComposableUnspecifiedStreamNameAndProperties(t *testing.T) {
+	r := metric.NewManualReader()
+	// Renaming views create two target stream groups.
+	vRenameMS := metric.NewView(
+		metric.Instrument{Name: "req.duration"},
+		metric.Stream{Name: "req.duration.ms", Unit: "ms"},
+	)
+	vRenameS := metric.NewView(
+		metric.Instrument{Name: "req.duration"},
+		metric.Stream{Name: "req.duration.s", Unit: "s"},
+	)
+	// View returning instrument's own Name (via NewView) leaves Name and Unit unspecified.
+	vInstrumentName := metric.NewView(
+		metric.Instrument{Name: "req.duration"},
+		metric.Stream{Description: "shared description"},
+	)
+	// Direct View returning empty Name and instrument's own Description/Unit leaves Name, Description,
+	// and Unit unspecified while contributing an AttributeFilter to both stream groups.
+	vEmptyName := metric.View(func(inst metric.Instrument) (metric.Stream, bool) {
+		if inst.Name == "req.duration" {
+			return metric.Stream{
+				Name:            "",
+				Description:     inst.Description,
+				Unit:            inst.Unit,
+				AttributeFilter: attribute.NewAllowKeysFilter("keep"),
+			}, true
+		}
+		return metric.Stream{}, false
+	})
+
+	mp := metric.NewMeterProvider(
+		metric.WithReader(r),
+		metric.WithView(vRenameMS, vRenameS, vInstrumentName, vEmptyName),
+		WithViewMatchingMode(ViewMatchingModeComposable),
+	)
+
+	ctx := t.Context()
+	m := mp.Meter("test")
+	ctr, err := m.Int64Counter(
+		"req.duration",
+		apiMetric.WithDescription("orig description"),
+		apiMetric.WithUnit("1"),
+	)
+	require.NoError(t, err)
+
+	ctr.Add(ctx, 10, apiMetric.WithAttributes(
+		attribute.String("keep", "yes"),
+		attribute.String("drop", "no"),
+	))
+
+	var rm metricdata.ResourceMetrics
+	err = r.Collect(ctx, &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+
+	byName := make(map[string]metricdata.Metrics, 2)
+	for _, mMetric := range rm.ScopeMetrics[0].Metrics {
+		byName[mMetric.Name] = mMetric
+	}
+	require.Contains(t, byName, "req.duration.ms")
+	require.Contains(t, byName, "req.duration.s")
+
+	for name, wantUnit := range map[string]string{"req.duration.ms": "ms", "req.duration.s": "s"} {
+		mMetric := byName[name]
+		assert.Equal(t, "shared description", mMetric.Description)
+		assert.Equal(t, wantUnit, mMetric.Unit)
+		sum, ok := mMetric.Data.(metricdata.Sum[int64])
+		require.True(t, ok)
+		require.Len(t, sum.DataPoints, 1)
+		assert.Equal(t, attribute.NewSet(attribute.String("keep", "yes")), sum.DataPoints[0].Attributes)
+	}
+}
