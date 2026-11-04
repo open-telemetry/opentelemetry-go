@@ -570,9 +570,21 @@ func TestStopWhileExportingConcurrentSafe(t *testing.T) {
 	}
 	mc := runMockCollector(t, mcCfg)
 	defer mc.MustStop(t)
+	responded := make(chan struct{}, 1)
+	client := &http.Client{
+		Transport: roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+			resp, err := http.DefaultTransport.RoundTrip(r)
+			select {
+			case responded <- struct{}{}:
+			default:
+			}
+			return resp, err
+		}),
+	}
 	driver := otlptracehttp.NewClient(
 		otlptracehttp.WithEndpoint(mc.Endpoint()),
 		otlptracehttp.WithInsecure(),
+		otlptracehttp.WithHTTPClient(client),
 		otlptracehttp.WithRetry(otlptracehttp.RetryConfig{
 			Enabled:         true,
 			InitialInterval: 1 * time.Hour,
@@ -594,7 +606,7 @@ func TestStopWhileExportingConcurrentSafe(t *testing.T) {
 		assert.Empty(t, mc.GetSpans())
 		close(doneCh)
 	}()
-	<-time.After(time.Second)
+	<-responded
 	err = exporter.Shutdown(ctx)
 	assert.NoError(t, err)
 	<-doneCh
