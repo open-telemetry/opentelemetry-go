@@ -5,6 +5,7 @@ package metric
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -20,21 +21,31 @@ type finishOption interface {
 }
 
 // rejectDistinctExperimental returns an error if options contain more than one
-// distinct experimental option type, or nil otherwise. Combinations of
-// experimental features are unsupported until a user requests one, so any
-// two distinct types are rejected. Repeating the same type is allowed, and an
-// option counts whether or not it enables its feature.
+// distinct option type of the same kind, or nil otherwise. Options that
+// contribute views (experimentalViewsOption) are one kind, and all other
+// experimental options are the other. Combinations within a kind are
+// unsupported until a user requests one, while options of different kinds are
+// independent: views do not affect how meters are built. Repeating the same
+// type is allowed and counted once, and an option counts whether or not it
+// enables its feature.
 func rejectDistinctExperimental(options []experimentalOption) error {
-	var types []reflect.Type
+	var meterTypes, viewTypes []reflect.Type
 	for _, o := range options {
-		if t := reflect.TypeOf(o); !slices.Contains(types, t) {
-			types = append(types, t)
+		types := &meterTypes
+		if _, ok := o.(experimentalViewsOption); ok {
+			types = &viewTypes
+		}
+		if t := reflect.TypeOf(o); !slices.Contains(*types, t) {
+			*types = append(*types, t)
 		}
 	}
+	return errors.Join(conflictError(meterTypes), conflictError(viewTypes))
+}
+
+func conflictError(types []reflect.Type) error {
 	if len(types) <= 1 {
 		return nil
 	}
-
 	names := make([]string, len(types))
 	for i, t := range types {
 		names[i] = t.String()

@@ -74,6 +74,13 @@ type experimentalOption interface {
 	Experimental()
 }
 
+// experimentalViewsOption is an experimentalOption that only contributes
+// views to the MeterProvider.
+type experimentalViewsOption interface {
+	experimentalOption
+	ExperimentalViews() []func(Instrument) (Stream, *bool, bool)
+}
+
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
 	conf := config{
@@ -88,9 +95,7 @@ func newConfig(options []Option) config {
 		switch experimental := o.(type) {
 		case experimentalOption:
 			conf.experimental = append(conf.experimental, experimental)
-			if vOpt, ok := o.(interface {
-				ExperimentalViews() []func(Instrument) (Stream, *bool, bool)
-			}); ok {
+			if vOpt, ok := o.(experimentalViewsOption); ok {
 				for _, v := range vOpt.ExperimentalViews() {
 					if v == nil {
 						continue
