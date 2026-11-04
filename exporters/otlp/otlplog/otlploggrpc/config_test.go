@@ -84,6 +84,14 @@ func TestNewConfig(t *testing.T) {
 
 	dialOptions := []grpc.DialOption{grpc.WithUserAgent("test-agent")}
 
+	// Keep these placeholder URLs from being treated as documentation links.
+	const (
+		httpEndpointURL    = "http" + "://test:8080/path"
+		httpsEndpointURL   = "https" + "://test:8080/path"
+		httpsEndpointURL2  = "https" + "://test/path"
+		ignoredEndpointURL = "http" + "://ignored:9090/alt"
+	)
+
 	testcases := []struct {
 		name    string
 		options []Option
@@ -104,7 +112,7 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{
 				WithInsecure(),
 				WithEndpoint("test"),
-				WithEndpointURL("http://test:8080/path"),
+				WithEndpointURL(httpEndpointURL),
 				WithReconnectionPeriod(time.Second),
 				WithCompressor("gzip"),
 				WithHeaders(headers),
@@ -134,7 +142,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "WithEndpointURL",
 			options: []Option{
-				WithEndpointURL("http://test:8080/path"),
+				WithEndpointURL(httpEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
@@ -146,7 +154,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "EndpointPrecedence",
 			options: []Option{
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 				WithEndpoint("not-test:9090"),
 				WithInsecure(),
 			},
@@ -162,7 +170,7 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{
 				WithEndpoint("not-test:9090"),
 				WithInsecure(),
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
@@ -177,7 +185,7 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "http://env.endpoint:8080/prefix",
 			},
 			options: []Option{
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
@@ -258,7 +266,7 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
 			},
 			options: []Option{
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
@@ -270,7 +278,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "EnvironmentVariablesPrecedence",
 			envars: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":           "http://ignored:9090/alt",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":           ignoredEndpointURL,
 				"OTEL_EXPORTER_OTLP_HEADERS":            "b=B",
 				"OTEL_EXPORTER_OTLP_COMPRESSION":        "none",
 				"OTEL_EXPORTER_OTLP_TIMEOUT":            "30000",
@@ -299,7 +307,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "OptionsPrecedence",
 			envars: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":           "http://ignored:9090/alt",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":           ignoredEndpointURL,
 				"OTEL_EXPORTER_OTLP_HEADERS":            "b=B",
 				"OTEL_EXPORTER_OTLP_COMPRESSION":        "none",
 				"OTEL_EXPORTER_OTLP_TIMEOUT":            "30000",
@@ -317,7 +325,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			options: []Option{
 				WithEndpoint("foo"),
-				WithEndpointURL("https://test/path"),
+				WithEndpointURL(httpsEndpointURL2),
 				WithInsecure(),
 				WithTLSCredentials(credentials.NewTLS(tlsCfg)),
 				WithCompressor("gzip"),
