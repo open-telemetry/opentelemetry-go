@@ -21,7 +21,7 @@
 //   - Scalar properties (Description, Unit, ExemplarReservoirProviderSelector,
 //     Enabled) follow last-wins precedence among matching views.
 //   - Aggregations follow last-wins precedence. If an invalid or incompatible
-//     aggregation is specified, the SDK logs a warning and falls back to
+//     aggregation is specified, the SDK logs an error and falls back to
 //     preceding matching views or the reader default.
 //   - Per-view cardinality limits (aggregation_cardinality_limit) are not yet
 //     supported on [go.opentelemetry.io/otel/sdk/metric.Stream]; cardinality
