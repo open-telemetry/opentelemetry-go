@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -87,6 +88,47 @@ func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 	require.NoError(t, client.Shutdown(ctx))
 	got := coll.Collect().Dump()
 	require.Len(t, got, 1, "upload of one ResourceMetrics")
+}
+
+func TestPartialSuccessWithCaseInsensitiveProtobufContentType(t *testing.T) {
+	response, err := proto.Marshal(&colmetricpb.ExportMetricsServiceResponse{
+		PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
+			RejectedDataPoints: 1,
+			ErrorMessage:       "partially successful",
+		},
+	})
+	require.NoError(t, err)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "Application/X-Protobuf; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(response)
+	}))
+	t.Cleanup(server.Close)
+
+	opts := []Option{WithEndpoint(strings.TrimPrefix(server.URL, "http://")), WithInsecure()}
+	c, err := newClient(oconf.NewHTTPConfig(asHTTPOptions(opts)...))
+	require.NoError(t, err)
+	//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+	t.Cleanup(func() { require.NoError(t, c.Shutdown(context.Background())) })
+
+	metrics := &mpb.ResourceMetrics{
+		ScopeMetrics: []*mpb.ScopeMetrics{{
+			Metrics: []*mpb.Metric{{
+				Data: &mpb.Metric_Gauge{Gauge: &mpb.Gauge{
+					DataPoints: []*mpb.NumberDataPoint{{
+						Value: &mpb.NumberDataPoint_AsInt{AsInt: 42},
+					}},
+				}},
+			}},
+		}},
+	}
+	err = c.UploadMetrics(t.Context(), metrics)
+	var partialSuccess internal.PartialSuccess
+	require.ErrorAs(t, err, &partialSuccess)
+	assert.Equal(t, int64(1), partialSuccess.RejectedItems)
+	assert.Equal(t, "metric data points", partialSuccess.RejectedKind)
+	assert.Equal(t, "partially successful", partialSuccess.ErrorMessage)
 }
 
 func TestNewWithInvalidEndpoint(t *testing.T) {
