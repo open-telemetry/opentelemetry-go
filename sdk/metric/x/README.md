@@ -12,6 +12,7 @@ They may be changed in backwards-incompatible ways, or removed entirely.
 ## Features
 
 - [MeterConfigurator](#meterconfigurator)
+- [View Enabled and Opt-In Instruments](#view-enabled-and-opt-in-instruments)
 
 ### MeterConfigurator
 
@@ -28,6 +29,14 @@ The configuration can be updated at runtime with `MeterConfiguratorHandle.Set`.
 
 This behavior differs from the specification's current requirement that a disabled Meter behaves as a no-op, and it can change.
 That difference needs to be resolved before stabilization; see [specification issue #5301](https://github.com/open-telemetry/opentelemetry-specification/issues/5301).
+
+### View Enabled and Opt-In Instruments
+
+`WithView`, `NewView`, `View`, and `Stream.Enabled` allow enabling or disabling metric streams via Views, including opting in instruments created with `go.opentelemetry.io/otel/metric/x.WithOptIn`.
+
+- If `Stream.Enabled` is `nil` (unset), standard instruments use their configured or default aggregation, while opt-in instruments created with `WithOptIn` default to `sdkmetric.AggregationDrop`.
+- If `Stream.Enabled` points to `true`, the stream is enabled (including for opt-in instruments).
+- If `Stream.Enabled` points to `false`, the stream is disabled and uses `sdkmetric.AggregationDrop`.
 
 ## Compatibility and Stability
 

@@ -11,11 +11,16 @@ import (
 	"crypto/x509"
 	"net/url"
 	"os"
+{{- if .isHTTP }}
 	"path"
+{{- end }}
 	"strings"
 	"time"
 
 	"{{ .envconfigImportPath }}"
+{{- if not .isHTTP }}
+	"{{ .grpcEndpointImportPath }}"
+{{- end }}
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
@@ -142,10 +147,15 @@ func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
 	return func(cfg Config) Config {
 		// For OTLP/gRPC endpoints, this is the target to which the
 		// exporter is going to send telemetry.
+{{- if .isHTTP }}
 		cfg.Metrics.Endpoint = grpcEndpoint(u)
+{{- else }}
+		cfg.Metrics.Endpoint = grpcendpoint.Target(u)
+{{- end }}
 		return cfg
 	}
 }
+{{- if .isHTTP }}
 
 func grpcEndpoint(u *url.URL) string {
 	switch strings.ToLower(u.Scheme) {
@@ -157,6 +167,7 @@ func grpcEndpoint(u *url.URL) string {
 		return u.String()
 	}
 }
+{{- end }}
 
 // WithEnvCompression retrieves the specified config and passes it to ConfigFn as a Compression.
 func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOptionsReader) {
@@ -174,9 +185,10 @@ func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOpt
 
 // endpointScheme classifies the scheme of an endpoint URL. The returned
 // insecure value is the transport security implied by the scheme, and
-// decides reports whether the scheme is http or https, in which case it
+// decides reports whether the scheme determines it, in which case it
 // takes precedence over the insecure environment variables.
 func endpointScheme(u *url.URL) (insecure, decides bool) {
+{{- if .isHTTP }}
 	switch strings.ToLower(u.Scheme) {
 	case "http":
 		return true, true
@@ -187,6 +199,9 @@ func endpointScheme(u *url.URL) (insecure, decides bool) {
 	default:
 		return false, false
 	}
+{{- else }}
+	return grpcendpoint.Insecure(u)
+{{- end }}
 }
 
 // revive:disable-next-line:flag-parameter

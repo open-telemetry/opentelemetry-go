@@ -11,11 +11,16 @@ import (
 	"crypto/x509"
 	"net/url"
 	"os"
+{{- if .isHTTP }}
 	"path"
+{{- end }}
 	"strings"
 	"time"
 
 	"{{ .envconfigImportPath }}"
+{{- if not .isHTTP }}
+	"{{ .grpcEndpointImportPath }}"
+{{- end }}
 )
 
 // DefaultEnvOptionsReader is the default environments reader.
@@ -132,9 +137,10 @@ func getOptionsFromEnv() []GenericOption {
 
 // endpointScheme classifies the scheme of an endpoint URL. The returned
 // insecure value is the transport security implied by the scheme, and
-// decides reports whether the scheme is http or https, in which case it
+// decides reports whether the scheme determines it, in which case it
 // takes precedence over the insecure environment variables.
 func endpointScheme(u *url.URL) (insecure, decides bool) {
+{{- if .isHTTP }}
 	switch strings.ToLower(u.Scheme) {
 	case "http":
 		return true, true
@@ -145,9 +151,13 @@ func endpointScheme(u *url.URL) (insecure, decides bool) {
 	default:
 		return false, false
 	}
+{{- else }}
+	return grpcendpoint.Insecure(u)
+{{- end }}
 }
 
 func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
+{{- if .isHTTP }}
 	target := u.String()
 	switch strings.ToLower(u.Scheme) {
 	case "http", "https":
@@ -157,6 +167,9 @@ func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
 			target = path.Join(u.Host, u.Path)
 		}
 	}
+{{- else }}
+	target := grpcendpoint.Target(u)
+{{- end }}
 
 	return func(cfg Config) Config {
 		// For OTLP/gRPC endpoints, this is the target to which the

@@ -132,7 +132,7 @@ func getOptionsFromEnv() []GenericOption {
 
 // endpointScheme classifies the scheme of an endpoint URL. The returned
 // insecure value is the transport security implied by the scheme, and
-// decides reports whether the scheme is http or https, in which case it
+// decides reports whether the scheme determines it, in which case it
 // takes precedence over the insecure environment variables.
 func endpointScheme(u *url.URL) (insecure, decides bool) {
 	switch strings.ToLower(u.Scheme) {
