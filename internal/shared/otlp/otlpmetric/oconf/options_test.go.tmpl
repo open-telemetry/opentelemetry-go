@@ -145,6 +145,46 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test With Resolver Endpoint URL Preserves Secure",
+			opts: []GenericOption{WithSecure(), WithEndpointURL("dns:///collector:4317")},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "dns:///collector:4317", c.Metrics.Endpoint)
+					assert.False(t, c.Metrics.Insecure)
+				}
+			},
+		},
+		{
+			name: "Test With Resolver Endpoint URL Preserves Insecure",
+			opts: []GenericOption{WithInsecure(), WithEndpointURL("dns:///collector:4317")},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "dns:///collector:4317", c.Metrics.Endpoint)
+					assert.True(t, c.Metrics.Insecure)
+				}
+			},
+		},
+		{
+			name: "Test With Schemeless Endpoint URL With Path Preserves Secure",
+			opts: []GenericOption{WithSecure(), WithEndpointURL("//collector:4317/path")},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "collector:4317", c.Metrics.Endpoint)
+					assert.False(t, c.Metrics.Insecure)
+				}
+			},
+		},
+		{
+			name: "Test With Schemeless Endpoint URL With Path Preserves Insecure",
+			opts: []GenericOption{WithInsecure(), WithEndpointURL("//collector:4317/path")},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) {
+				if grpcOption {
+					assert.Equal(t, "collector:4317", c.Metrics.Endpoint)
+					assert.True(t, c.Metrics.Insecure)
+				}
+			},
+		},
+		{
 			name: "Test Environment Schemeless Authority Endpoint With Path",
 			env: env{
 				"OTEL_EXPORTER_OTLP_ENDPOINT": "//127.0.0.1:4317/prefix",
