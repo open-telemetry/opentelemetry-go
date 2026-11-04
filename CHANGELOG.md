@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Support the `OTEL_METRIC_EXPORT_MAX_BATCH_SIZE` environment variable in `NewPeriodicReader` in `go.opentelemetry.io/otel/sdk/metric`. The `WithMaxExportBatchSize` option takes precedence. (#9316)
 - Add `go.opentelemetry.io/otel/semconv/v1.44.0` package. The package contains semantic conventions from the `v1.44.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.44.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.43.0`. (#9265)
 - Implement per-series start timestamps for cumulative asynchronous instruments when `OTEL_GO_X_PER_SERIES_START_TIMESTAMPS=true` is set in `go.opentelemetry.io/otel/sdk/metric`. (#9311)

@@ -39,6 +39,7 @@ func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfi
 	c := periodicReaderConfig{
 		interval:                 envDuration(envInterval, defaultInterval),
 		timeout:                  envDuration(envTimeout, defaultTimeout),
+		maxExportBatchSize:       envPositiveInt(envMaxExportBatchSize),
 		cardinalityLimitSelector: defaultCardinalityLimitSelector,
 	}
 	for _, o := range options {
@@ -102,8 +103,12 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 // WithMaxExportBatchSize configures the maximum number of metric data points in
 // a batch that are exported at once.
 //
-// If this option is not used or size is less than or equal to zero, no limit is
-// applied.
+// If size is positive, this option overrides the value set by the
+// OTEL_METRIC_EXPORT_MAX_BATCH_SIZE environment variable. Otherwise, this
+// option is ignored.
+//
+// If neither this option nor the environment variable sets a positive size,
+// no limit is applied.
 func WithMaxExportBatchSize(size int) PeriodicReaderOption {
 	return periodicReaderOptionFunc(func(conf periodicReaderConfig) periodicReaderConfig {
 		if size <= 0 {
