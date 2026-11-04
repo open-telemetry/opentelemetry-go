@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Support the `OTEL_METRIC_EXPORT_MAX_BATCH_SIZE` environment variable in `NewPeriodicReader` in `go.opentelemetry.io/otel/sdk/metric`. The `WithMaxExportBatchSize` option takes precedence. (#9316)
 - Add `go.opentelemetry.io/otel/semconv/v1.44.0` package. The package contains semantic conventions from the `v1.44.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.44.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.43.0`. (#9265)
 - Implement per-series start timestamps for cumulative asynchronous instruments when `OTEL_GO_X_PER_SERIES_START_TIMESTAMPS=true` is set in `go.opentelemetry.io/otel/sdk/metric`. (#9311)
@@ -44,6 +45,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Align gRPC endpoint URL handling across `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. Preserve Unix socket targets configured through `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`, or `WithEndpointURL`, resolver targets, and scheme-less URLs with an authority using only the host and port, while retaining the configured transport security for URL options with unknown or empty schemes. (#9331)
 - Skip measurement preparation and recording for disabled observability instruments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#9318)
 - Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Interpret OTLP log exporter compression environment variables case-insensitively in
@@ -78,6 +80,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Pass the context containing the new span to the auto-instrumentation hook in `go.opentelemetry.io/otel/trace`. (#9029)
 - Encode an empty attribute value nested in a slice or map as `{}` in `go.opentelemetry.io/otel/trace`, so the auto-instrumentation span that carries it is no longer dropped. (#9182)
 - Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP protobuf partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9188)
+- Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9303)
 - Do not report an error through the global error handler when `WithCompressor("none")` is passed to `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` or `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#9056)
 - Decode gzip responses with explicitly configured `Accept-Encoding` headers in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, enforcing response limits after decompression. (#9203)
 - Preserve exemplar trace and span IDs in `go.opentelemetry.io/otel/exporters/prometheus` by dropping filtered attribute labels instead of the whole exemplar when the combined exemplar labels would exceed the prometheus client-go limit. (#9031)
@@ -86,6 +89,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Order concatenated values of colliding sanitized attribute keys in `go.opentelemetry.io/otel/exporters/prometheus` by the lexicographical order of the original keys instead of sorting by attribute value. (#9294)
 - Do not add empty `trace_id` or `span_id` exemplar labels in `go.opentelemetry.io/otel/exporters/prometheus` when an exemplar has no trace or span ID. (#9295)
 - Treat `unix-abstract://` endpoints from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` as insecure in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, matching `unix://` endpoints and the metric exporters. (#9261)
+- ⚠️ **Breaking Change:** Let an `http` or `https` scheme in `OTEL_EXPORTER_OTLP_ENDPOINT` or the signal-specific endpoint environment variable take precedence over `OTEL_EXPORTER_OTLP_INSECURE` and the signal-specific insecure environment variable in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9273)
+  Previously, `OTEL_EXPORTER_OTLP_INSECURE=true` made these exporters send plaintext to an `https://` endpoint.
 - Preserve `ScopeMetrics` slice capacity in `PeriodicReader`'s `sync.Pool` by resetting slice length instead of overwriting the struct, avoiding per-cycle heap allocations in `go.opentelemetry.io/otel/sdk/metric`. (#8535)
 
 ### Removed
