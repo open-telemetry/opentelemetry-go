@@ -171,6 +171,92 @@ func TestWithMaxExportBatchSize(t *testing.T) {
 	)
 }
 
+func TestMaxExportBatchSizeEnvVar(t *testing.T) {
+	testCases := []struct {
+		v    string
+		want int
+	}{
+		{v: "", want: 0},
+		{v: "1", want: 1},
+		{v: "512", want: 512},
+		{v: "0", want: 0},
+		{v: "-1", want: 0},
+		{v: "1.5", want: 0},
+		{v: "abc", want: 0},
+		{v: "9223372036854775808", want: 0},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.v, func(t *testing.T) {
+			t.Setenv(envMaxExportBatchSize, tc.v)
+			got := newPeriodicReaderConfig(nil).maxExportBatchSize
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestMaxExportBatchSizeEnvAndOption(t *testing.T) {
+	t.Setenv(envMaxExportBatchSize, "999")
+
+	opts := []PeriodicReaderOption{WithMaxExportBatchSize(5)}
+	assert.Equal(
+		t,
+		5,
+		newPeriodicReaderConfig(opts).maxExportBatchSize,
+		"option should have precedence over env var",
+	)
+
+	opts = []PeriodicReaderOption{WithMaxExportBatchSize(-1)}
+	assert.Equal(
+		t,
+		999,
+		newPeriodicReaderConfig(opts).maxExportBatchSize,
+		"invalid option should not override env var",
+	)
+}
+
+func TestPeriodicReaderBatching_Env(t *testing.T) {
+	t.Setenv(envMaxExportBatchSize, "1")
+
+	var exported []*metricdata.ResourceMetrics
+	exp := &fnExporter{
+		exportFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+			exported = append(exported, rm)
+			return nil
+		},
+	}
+	r := NewPeriodicReader(exp, WithProducer(testExternalProducer{
+		produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{{
+				Metrics: []metricdata.Metrics{{
+					Name: "metric",
+					Data: metricdata.Gauge[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{Value: 1},
+							{Value: 2},
+						},
+					},
+				}},
+			}}, nil
+		},
+	}))
+	// testSDKProducer generates 1 data point, the external producer 2.
+	r.register(testSDKProducer{})
+	assert.NoError(t, r.ForceFlush(t.Context()))
+
+	assert.Len(t, exported, 3)
+	for _, rm := range exported {
+		points := 0
+		for _, sm := range rm.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				points += metricDPC(m)
+			}
+		}
+		assert.Equal(t, 1, points)
+	}
+
+	_ = r.Shutdown(t.Context())
+}
+
 func TestEnvDurationRejectsOverflow(t *testing.T) {
 	const value = "9223372036855"
 	for _, tc := range []struct {
