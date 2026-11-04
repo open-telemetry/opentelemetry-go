@@ -453,6 +453,9 @@ func (i *inserter[N]) composableInstrument( // nolint:revive // optIn is not a c
 			if s.ExemplarReservoirProviderSelector != nil {
 				resolved.ExemplarReservoirProviderSelector = s.ExemplarReservoirProviderSelector
 			}
+			if s.enabled != nil {
+				resolved.enabled = s.enabled
+			}
 		}
 
 		// The last matching view that specifies an aggregation takes precedence. If that

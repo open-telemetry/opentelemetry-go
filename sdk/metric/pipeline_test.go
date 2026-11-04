@@ -1284,3 +1284,81 @@ func TestViewMatchingModeComposableDirectViewZeroedFields(t *testing.T) {
 		assert.Empty(t, m.Unit, "unit should remain zeroed from earlier direct view")
 	})
 }
+
+func TestViewMatchingModeComposableEnabled(t *testing.T) {
+	boolPtr := func(b bool) *bool { return &b }
+
+	testcases := []struct {
+		name      string
+		optIn     bool
+		views     []View
+		wantCount int
+		wantDesc  string
+	}{
+		{
+			name:  "StandardInstrumentDisabledByView",
+			optIn: false,
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{Description: "desc", enabled: boolPtr(false)}),
+			},
+			wantCount: 0,
+		},
+		{
+			name:  "OptInInstrumentRemainsDisabledWhenViewLeavesEnabledNil",
+			optIn: true,
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{Description: "desc"}),
+			},
+			wantCount: 0,
+		},
+		{
+			name:  "OptInInstrumentEnabledByViewAndPreservedAcrossSubsequentView",
+			optIn: true,
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{enabled: boolPtr(true)}),
+				NewView(Instrument{Name: "foo"}, Stream{Description: "merged desc"}),
+			},
+			wantCount: 1,
+			wantDesc:  "merged desc",
+		},
+		{
+			name:  "EnabledLastWinsTrueThenFalseDisables",
+			optIn: false,
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{enabled: boolPtr(true)}),
+				NewView(Instrument{Name: "foo"}, Stream{enabled: boolPtr(false)}),
+			},
+			wantCount: 0,
+		},
+		{
+			name:  "EnabledLastWinsFalseThenTrueEnables",
+			optIn: false,
+			views: []View{
+				NewView(Instrument{Name: "foo"}, Stream{enabled: boolPtr(false)}),
+				NewView(Instrument{Name: "foo"}, Stream{Description: "re-enabled", enabled: boolPtr(true)}),
+			},
+			wantCount: 1,
+			wantDesc:  "re-enabled",
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			r := NewManualReader()
+			p := newPipeline(resource.Empty(), r, tt.views, exemplar.AlwaysOffFilter, 0, viewMatchingModeComposable)
+			var vc cache[string, instID]
+			ins := newInserter[int64](p, &vc)
+			got, err := ins.Instrument(
+				Instrument{Name: "foo", Kind: InstrumentKindCounter},
+				nil, tt.optIn,
+				DefaultAggregationSelector(InstrumentKindCounter),
+			)
+			require.NoError(t, err)
+			assert.Len(t, got, tt.wantCount)
+			if tt.wantDesc != "" {
+				cached := vc.Lookup("foo", func() instID { return instID{} })
+				assert.Equal(t, tt.wantDesc, cached.Description)
+			}
+		})
+	}
+}

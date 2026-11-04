@@ -11,6 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	apiMetric "go.opentelemetry.io/otel/metric"
+	metricx "go.opentelemetry.io/otel/metric/x"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -103,4 +104,73 @@ func TestMeterProviderIntegration(t *testing.T) {
 	dp := histData.DataPoints[0]
 	assert.True(t, dp.Attributes.HasValue("http.method"))
 	assert.False(t, dp.Attributes.HasValue("http.flavor"))
+}
+
+func TestMeterProviderComposableViewEnabled(t *testing.T) {
+	t.Run("OptInInstrumentEnabledAndComposed", func(t *testing.T) {
+		r := metric.NewManualReader()
+		enabled := true
+		v1 := NewView(
+			metric.Instrument{Name: "optin.counter"},
+			Stream{Enabled: &enabled},
+		)
+		v2 := metric.NewView(
+			metric.Instrument{Name: "optin.counter"},
+			metric.Stream{Description: "composed opt-in counter"},
+		)
+		mp := metric.NewMeterProvider(
+			metric.WithReader(r),
+			WithView(v1),
+			metric.WithView(v2),
+			WithViewMatchingMode(ViewMatchingModeComposable),
+		)
+
+		ctx := t.Context()
+		m := mp.Meter("test")
+		ctr, err := m.Int64Counter("optin.counter", metricx.WithOptIn())
+		require.NoError(t, err)
+		assert.True(t, ctr.Enabled(ctx))
+
+		ctr.Add(ctx, 7)
+
+		var rm metricdata.ResourceMetrics
+		err = r.Collect(ctx, &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+		assert.Equal(t, "optin.counter", rm.ScopeMetrics[0].Metrics[0].Name)
+		assert.Equal(t, "composed opt-in counter", rm.ScopeMetrics[0].Metrics[0].Description)
+	})
+
+	t.Run("StandardInstrumentDisabledByComposableView", func(t *testing.T) {
+		r := metric.NewManualReader()
+		disabled := false
+		v1 := metric.NewView(
+			metric.Instrument{Name: "std.counter"},
+			metric.Stream{Description: "custom desc"},
+		)
+		v2 := NewView(
+			metric.Instrument{Name: "std.counter"},
+			Stream{Enabled: &disabled},
+		)
+		mp := metric.NewMeterProvider(
+			metric.WithReader(r),
+			metric.WithView(v1),
+			WithView(v2),
+			WithViewMatchingMode(ViewMatchingModeComposable),
+		)
+
+		ctx := t.Context()
+		m := mp.Meter("test")
+		ctr, err := m.Int64Counter("std.counter")
+		require.NoError(t, err)
+		assert.False(t, ctr.Enabled(ctx))
+
+		ctr.Add(ctx, 7)
+
+		var rm metricdata.ResourceMetrics
+		err = r.Collect(ctx, &rm)
+		require.NoError(t, err)
+		assert.Empty(t, rm.ScopeMetrics)
+	})
 }

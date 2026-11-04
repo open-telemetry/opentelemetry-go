@@ -18,8 +18,8 @@
 //     instrument's own Description or Unit is treated as leaving that property
 //     unspecified; a direct View function can explicitly alter or zero
 //     Description and Unit by returning different values.
-//   - Scalar properties (Description, Unit, ExemplarReservoirProviderSelector)
-//     follow last-wins precedence among matching views.
+//   - Scalar properties (Description, Unit, ExemplarReservoirProviderSelector,
+//     Enabled) follow last-wins precedence among matching views.
 //   - Aggregations follow last-wins precedence. If an invalid or incompatible
 //     aggregation is specified, the SDK logs a warning and falls back to
 //     preceding matching views or the reader default.
