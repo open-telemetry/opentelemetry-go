@@ -11,11 +11,11 @@ import (
 	"crypto/x509"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/envconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/grpcendpoint"
 )
 
 // DefaultEnvOptionsReader is the default environments reader.
@@ -119,24 +119,14 @@ func getOptionsFromEnv() []GenericOption {
 }
 
 func withEndpointScheme(u *url.URL) GenericOption {
-	switch strings.ToLower(u.Scheme) {
-	case "http", "unix", "unix-abstract":
-		return WithInsecure()
-	default:
-		return WithSecure()
+	if insecure, ok := grpcendpoint.Insecure(u); ok {
+		return withInsecure(insecure)
 	}
+	return WithSecure()
 }
 
 func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
-	target := u.String()
-	switch strings.ToLower(u.Scheme) {
-	case "http", "https":
-		target = u.Host
-	case "":
-		if u.Host != "" {
-			target = path.Join(u.Host, u.Path)
-		}
-	}
+	target := grpcendpoint.Target(u)
 
 	return func(cfg Config) Config {
 		// For OTLP/gRPC endpoints, this is the target to which the
