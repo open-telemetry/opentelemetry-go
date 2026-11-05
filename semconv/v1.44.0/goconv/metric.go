@@ -71,7 +71,7 @@ func NewConfigGogc(
 	if len(opt) == 0 {
 		opt = newConfigGogcOpts
 	} else {
-		opt = append(opt, newConfigGogcOpts...)
+		opt = append(opt[:len(opt):len(opt)], newConfigGogcOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -129,7 +129,7 @@ func NewCPUTime(
 	if len(opt) == 0 {
 		opt = newCPUTimeOpts
 	} else {
-		opt = append(opt, newCPUTimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCPUTimeOpts...)
 	}
 
 	i, err := m.Float64Counter(
@@ -256,7 +256,7 @@ func NewCPUTimeObservable(
 	if len(opt) == 0 {
 		opt = newCPUTimeObservableOpts
 	} else {
-		opt = append(opt, newCPUTimeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCPUTimeObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableCounter(
@@ -327,7 +327,7 @@ func NewGoroutineCount(
 	if len(opt) == 0 {
 		opt = newGoroutineCountOpts
 	} else {
-		opt = append(opt, newGoroutineCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newGoroutineCountOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -385,7 +385,7 @@ func NewMemoryAllocated(
 	if len(opt) == 0 {
 		opt = newMemoryAllocatedOpts
 	} else {
-		opt = append(opt, newMemoryAllocatedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryAllocatedOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -443,7 +443,7 @@ func NewMemoryAllocations(
 	if len(opt) == 0 {
 		opt = newMemoryAllocationsOpts
 	} else {
-		opt = append(opt, newMemoryAllocationsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryAllocationsOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -501,7 +501,7 @@ func NewMemoryGCCycles(
 	if len(opt) == 0 {
 		opt = newMemoryGCCyclesOpts
 	} else {
-		opt = append(opt, newMemoryGCCyclesOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryGCCyclesOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -597,7 +597,7 @@ func NewMemoryGCCyclesObservable(
 	if len(opt) == 0 {
 		opt = newMemoryGCCyclesObservableOpts
 	} else {
-		opt = append(opt, newMemoryGCCyclesObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryGCCyclesObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -655,7 +655,7 @@ func NewMemoryGCGoal(
 	if len(opt) == 0 {
 		opt = newMemoryGCGoalOpts
 	} else {
-		opt = append(opt, newMemoryGCGoalOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryGCGoalOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -714,7 +714,7 @@ func NewMemoryGCPauseDuration(
 	if len(opt) == 0 {
 		opt = newMemoryGCPauseDurationOpts
 	} else {
-		opt = append(opt, newMemoryGCPauseDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryGCPauseDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -812,7 +812,7 @@ func NewMemoryLimit(
 	if len(opt) == 0 {
 		opt = newMemoryLimitOpts
 	} else {
-		opt = append(opt, newMemoryLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryLimitOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -870,7 +870,7 @@ func NewMemoryUsed(
 	if len(opt) == 0 {
 		opt = newMemoryUsedOpts
 	} else {
-		opt = append(opt, newMemoryUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryUsedOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -941,7 +941,7 @@ func NewProcessorLimit(
 	if len(opt) == 0 {
 		opt = newProcessorLimitOpts
 	} else {
-		opt = append(opt, newProcessorLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newProcessorLimitOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1000,7 +1000,7 @@ func NewScheduleDuration(
 	if len(opt) == 0 {
 		opt = newScheduleDurationOpts
 	} else {
-		opt = append(opt, newScheduleDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newScheduleDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(

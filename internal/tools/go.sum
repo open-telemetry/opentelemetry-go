@@ -14,8 +14,8 @@ dev.gaijin.team/go/exhaustruct/v4 v4.0.0 h1:873r7aNneqoBB3IaFIzhvt2RFYTuHgmMjoKf
 dev.gaijin.team/go/exhaustruct/v4 v4.0.0/go.mod h1:aZ/k2o4Y05aMJtiux15x8iXaumE88YdiB0Ai4fXOzPI=
 dev.gaijin.team/go/exhaustruct/v5 v5.2.0 h1:HZB49Fshn8qHJCi9VzYtrcnR1jbLteRHXfnQz8Adams=
 dev.gaijin.team/go/exhaustruct/v5 v5.2.0/go.mod h1:5IshpqhgGdKIrF8lBmi3M6YKmI7T3hMzAL9nrflko88=
-dev.gaijin.team/go/golib v0.8.1 h1:JYju4x9BSo+QD/AYeHULVDcvEhiFg8wOi6pT0IaZF5E=
-dev.gaijin.team/go/golib v0.8.1/go.mod h1:c5fu7t1RSGMxSQgcUYO1sODbzsYnOCXJLmHeNG1Eb+0=
+dev.gaijin.team/go/golib v0.9.0 h1:6cA78yIjdgimPQgaf0W9oHhaFDHxeOyhf2wmdRoDJTc=
+dev.gaijin.team/go/golib v0.9.0/go.mod h1:J6xujTcJ4o8QcgApNjGTxpz2tg9uNjrwFJQczoM0VYE=
 github.com/4meepo/tagalign v1.4.4 h1:052JDGj2pBORc6NkD30dDXpsUpoYszDeUwr9/5YZuVA=
 github.com/4meepo/tagalign v1.4.4/go.mod h1:00WwRjiuSbrRJnSVeGWPLp2epS5Q/l4UEy0apLLS37c=
 github.com/Abirdcfly/dupword v0.1.8 h1:SrhcUuGsROBuChFxHALRYzyyPODWn9zwghmzPvD9Cd8=
@@ -498,8 +498,8 @@ github.com/xanzy/ssh-agent v0.3.3 h1:+/15pJfg/RsTxqYcX6fHqOXZwwMP+2VyYWJeWM2qQFM
 github.com/xanzy/ssh-agent v0.3.3/go.mod h1:6dzNDKs0J9rVPHPhaGCukekBHKqfl+L3KghI1Bc68Uw=
 github.com/xen0n/gosmopolitan v1.3.0 h1:zAZI1zefvo7gcpbCOrPSHJZJYA9ZgLfJqtKzZ5pHqQM=
 github.com/xen0n/gosmopolitan v1.3.0/go.mod h1:rckfr5T6o4lBtM1ga7mLGKZmLxswUoH1zxHgNXOsEt4=
-github.com/xo/terminfo v1.3.0 h1:KstyePbNW6UaLq9y12+544VK4aTP3Eku/sym3a9+UgQ=
-github.com/xo/terminfo v1.3.0/go.mod h1:lGzkSo8Fe7IRh/w+Gqz7n5mDog4FVXCj3gy/DYTBqio=
+github.com/xo/terminfo v1.3.1 h1:4ZwPCuu4PEFw0PkNp3Hv/x3gqvgLCzYhurszsj101cM=
+github.com/xo/terminfo v1.3.1/go.mod h1:lGzkSo8Fe7IRh/w+Gqz7n5mDog4FVXCj3gy/DYTBqio=
 github.com/yagipy/maintidx v1.0.0 h1:h5NvIsCz+nRDapQ0exNv4aJ0yXSI0420omVANTv3GJM=
 github.com/yagipy/maintidx v1.0.0/go.mod h1:0qNf/I/CCZXSMhsRsrEPDZ+DkekpKLXAJfsTACwgXLk=
 github.com/yeya24/promlinter v0.3.0 h1:JVDbMp08lVCP7Y6NP3qHroGAO6z2yGKQtS5JsjqtoFs=
