@@ -44,6 +44,7 @@ func (f *factory) Int64Counter(name string, options ...metric.Int64CounterOption
 			f.meter.int64Resolver,
 			inst,
 			defaultAttributes(options),
+			isOptIn(options),
 			f.registry.Register,
 		)
 		return finish.NewInt64Counter(
@@ -76,6 +77,7 @@ func (f *factory) Float64Counter(name string, options ...metric.Float64CounterOp
 			f.meter.float64Resolver,
 			inst,
 			defaultAttributes(options),
+			isOptIn(options),
 			f.registry.Register,
 		)
 		return finish.NewFloat64Counter(
@@ -111,6 +113,7 @@ func (f *factory) Int64UpDownCounter(
 			f.meter.int64Resolver,
 			inst,
 			defaultAttributes(options),
+			isOptIn(options),
 			f.registry.Register,
 		)
 		return finish.NewInt64UpDownCounter(
@@ -146,6 +149,7 @@ func (f *factory) Float64UpDownCounter(
 			f.meter.float64Resolver,
 			inst,
 			defaultAttributes(options),
+			isOptIn(options),
 			f.registry.Register,
 		)
 		return finish.NewFloat64UpDownCounter(
@@ -165,6 +169,7 @@ func finishCounterAggregators[N int64 | float64](
 	r resolver[N],
 	id Instrument,
 	allowedKeys []attribute.Key,
+	optIn bool,
 	registerShutdown func(func(), func(context.Context) error),
 ) ([]aggregate.Measure[N], []finish.Func, error) {
 	var (
@@ -194,6 +199,7 @@ func finishCounterAggregators[N int64 | float64](
 		e := i.forEachStream(
 			id,
 			allowedKeys,
+			optIn,
 			i.readerDefaultAggregation(id.Kind),
 			newAggregation,
 			func(agg aggVal[N]) {

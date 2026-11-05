@@ -63,6 +63,67 @@ func TestUpDownCounterFinish(t *testing.T) {
 	t.Run("Float64", func(t *testing.T) { testUpDownCounterFinish[float64](t, 0.25) })
 }
 
+func TestUpDownCounterFinishOptIn(t *testing.T) {
+	t.Run("Int64", testUpDownCounterFinishOptIn[int64])
+	t.Run("Float64", testUpDownCounterFinishOptIn[float64])
+}
+
+func testUpDownCounterFinishOptIn[N int64 | float64](t *testing.T) {
+	for _, temporality := range []metricdata.Temporality{metricdata.CumulativeTemporality, metricdata.DeltaTemporality} {
+		t.Run(temporality.String(), func(t *testing.T) {
+			for _, tt := range []struct {
+				name    string
+				view    bool
+				enabled *bool
+			}{
+				{name: "NoView"},
+				{name: "Unset", view: true},
+				{name: "Disabled", view: true, enabled: new(false)},
+				{name: "Enabled", view: true, enabled: new(true)},
+			} {
+				t.Run(tt.name, func(t *testing.T) {
+					reader := sdkmetric.NewManualReader(sdkmetric.WithTemporalitySelector(
+						func(sdkmetric.InstrumentKind) metricdata.Temporality { return temporality },
+					))
+					options := []sdkmetric.Option{sdkmetric.WithReader(reader), sdkmetricx.WithFinish()}
+					if tt.view {
+						options = append(options, sdkmetricx.WithView(sdkmetricx.NewView(
+							sdkmetric.Instrument{Name: "active"},
+							sdkmetricx.Stream{Aggregation: sdkmetric.AggregationSum{}, Enabled: tt.enabled},
+						)))
+					}
+					provider := sdkmetric.NewMeterProvider(options...)
+					t.Cleanup(func() { assert.NoError(t, provider.Shutdown(context.WithoutCancel(t.Context()))) })
+					meter := provider.Meter("test")
+					var counter finishUpDownCounter[N]
+					switch any(N(0)).(type) {
+					case int64:
+						c, err := meter.Int64UpDownCounter("active", metricx.WithOptIn())
+						require.NoError(t, err)
+						counter = any(c).(finishUpDownCounter[N])
+					case float64:
+						c, err := meter.Float64UpDownCounter("active", metricx.WithOptIn())
+						require.NoError(t, err)
+						counter = any(c).(finishUpDownCounter[N])
+					}
+					enabled := tt.enabled != nil && *tt.enabled
+					assert.Equal(t, enabled, counter.Enabled(t.Context()))
+					counter.Add(t.Context(), -3)
+					counter.(metricx.Finisher).Finish(t.Context())
+					points := collectUpDownSum[N](t, reader)
+					if enabled {
+						require.Len(t, points, 1)
+						assert.Equal(t, N(-3), points[0].Value)
+					} else {
+						assert.Empty(t, points)
+					}
+					assert.Empty(t, collectUpDownSum[N](t, reader), "Finish must retire the enabled series")
+				})
+			}
+		})
+	}
+}
+
 func TestUpDownCounterFinishConcurrentSafe(t *testing.T) {
 	t.Run("Int64", testUpDownCounterFinishConcurrent[int64])
 	t.Run("Float64", testUpDownCounterFinishConcurrent[float64])
