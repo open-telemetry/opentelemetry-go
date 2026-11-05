@@ -1,0 +1,131 @@
+{% import 'helpers.j2' as h -%}
+{% import 'instrument.j2' as i -%}
+// Code generated from semantic convention specification. DO NOT EDIT.
+
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package semconv_test
+
+import (
+	"reflect"
+	"slices"
+	"testing"
+
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
+{%- for group in ctx %}
+	"go.opentelemetry.io/otel/semconv/{{ params.tag }}/{{ group.root_namespace | camel_case | lower }}conv"
+{%- endfor %}
+)
+
+func TestMetricConstructorOptions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		run  func(*testing.T)
+	}{
+{%- for group in ctx %}
+{%- set pkg = group.root_namespace | camel_case | lower ~ "conv" %}
+{%- for metric in group.metrics %}
+{%- set name = h.to_go_name(metric.metric_name, group.root_namespace) %}
+{%- set inst = i.instrument(metric) %}
+{%- set variants = [name] %}
+{%- if "Observable" is not in inst and metric.instrument != "histogram" %}
+  {%- set variants = variants + [name ~ "Observable"] %}
+{%- endif %}
+{%- set boundaries = metric.metric_name | map_text("custom_bucket_boundaries", "nil") %}
+{%- for variant in variants %}
+		{"{{ pkg }}/{{ variant }}", constructorTest({{ pkg }}.New{{ variant }}, "{{ metric.metric_name }}", {{ i.desc(metric) | tojson }}, "{{ metric.unit }}", {{ "true" if metric.instrument == "histogram" else "false" }}, {{ boundaries }})},
+{%- endfor %}
+{%- endfor %}
+{%- endfor %}
+	}
+	for _, test := range tests {
+		t.Run(test.name, test.run)
+	}
+}
+
+func constructorTest[O, I any](
+	newInstrument func(metric.Meter, ...O) (I, error),
+	name, description, unit string,
+	histogram bool,
+	advice []float64,
+) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Parallel()
+		for _, callerOptions := range []bool{false, true} {
+			label := "defaults"
+			if callerOptions {
+				label = "caller_options"
+			}
+			t.Run(label, func(t *testing.T) {
+				m := &constructorMeter{Meter: noop.NewMeterProvider().Meter("test")}
+				var options, storage, before []O
+				wantBoundaries := advice
+				if callerOptions {
+					// Keep sentinels beyond len(options) to detect writes into spare capacity.
+					storage = make([]O, 16)
+					for j := range storage {
+						storage[j] = any(metric.WithUnit("sentinel")).(O)
+					}
+					options = storage[:2]
+					options[0] = any(metric.WithDescription("caller description")).(O)
+					options[1] = any(metric.WithUnit("caller unit")).(O)
+					if histogram {
+						wantBoundaries = []float64{1, 2, 3}
+						options = append(options, any(metric.WithExplicitBucketBoundaries(wantBoundaries...)).(O))
+					}
+					before = slices.Clone(storage)
+				}
+				if _, err := newInstrument(m, options...); err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(storage, before) {
+					t.Error("constructor changed caller option storage")
+				}
+				if m.config == nil {
+					t.Fatal("constructor did not create an instrument")
+				}
+				if m.name != name {
+					t.Errorf("name = %q, want %q", m.name, name)
+				}
+				if got := m.config.Description(); got != description {
+					t.Errorf("description = %q, want %q", got, description)
+				}
+				if got := m.config.Unit(); got != unit {
+					t.Errorf("unit = %q, want %q", got, unit)
+				}
+				if histogram {
+					config, ok := m.config.(interface{ ExplicitBucketBoundaries() []float64 })
+					if !ok {
+						t.Fatal("constructor did not create a histogram")
+					}
+					if got := config.ExplicitBucketBoundaries(); !slices.Equal(got, wantBoundaries) {
+						t.Errorf("bucket boundaries = %v, want %v", got, wantBoundaries)
+					}
+				}
+			})
+		}
+	}
+}
+
+type constructorMeter struct {
+	metric.Meter
+	name   string
+	config interface {
+		Description() string
+		Unit() string
+	}
+}
+{%- for value in ["Int64", "Float64"] %}
+{%- for kind in ["Counter", "UpDownCounter", "Histogram", "Gauge", "ObservableCounter", "ObservableUpDownCounter", "ObservableGauge"] %}
+{%- set inst = value ~ kind %}
+
+func (m *constructorMeter) {{ inst }}(name string, options ...metric.{{ inst }}Option) (metric.{{ inst }}, error) {
+	m.name = name
+	m.config = metric.New{{ inst }}Config(options...)
+	return m.Meter.{{ inst }}(name, options...)
+}
+{%- endfor %}
+{%- endfor %}{{ "\n" }}

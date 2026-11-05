@@ -243,12 +243,14 @@ func newInserter[N int64 | float64](p *pipeline, vc *cache[string, instID]) *ins
 func (i *inserter[N]) Instrument(
 	inst Instrument,
 	allowedKeys []attribute.Key,
+	optIn bool,
 	readerAggregation Aggregation,
 ) ([]aggregate.Measure[N], error) {
 	var measures []aggregate.Measure[N]
 	err := i.forEachStream(
 		inst,
 		allowedKeys,
+		optIn,
 		readerAggregation,
 		i.newStreamAggregation,
 		func(agg aggVal[N]) { measures = append(measures, agg.Measure) },
@@ -259,6 +261,7 @@ func (i *inserter[N]) Instrument(
 func (i *inserter[N]) forEachStream(
 	inst Instrument,
 	allowedKeys []attribute.Key,
+	optIn bool,
 	readerAggregation Aggregation,
 	newAggregation streamAggregationFactory[N],
 	yield func(aggVal[N]),
@@ -276,7 +279,7 @@ func (i *inserter[N]) forEachStream(
 		}
 		matched = true
 		agg := i.cachedAggregator(
-			inst.Scope, inst.Kind, stream, allowedKeys, readerAggregation, newAggregation,
+			inst.Scope, inst.Kind, stream, allowedKeys, optIn, readerAggregation, newAggregation,
 		)
 		if agg.Err != nil {
 			err = errors.Join(err, agg.Err)
@@ -307,7 +310,7 @@ func (i *inserter[N]) forEachStream(
 		Unit:        inst.Unit,
 	}
 	agg := i.cachedAggregator(
-		inst.Scope, inst.Kind, stream, allowedKeys, readerAggregation, newAggregation,
+		inst.Scope, inst.Kind, stream, allowedKeys, optIn, readerAggregation, newAggregation,
 	)
 	if agg.Err != nil {
 		if err == nil {
@@ -394,11 +397,12 @@ func (i *inserter[N]) readerDefaultAggregation(kind InstrumentKind) Aggregation 
 //
 // If the instrument defines an unknown or incompatible aggregation, an error
 // is returned.
-func (i *inserter[N]) cachedAggregator(
+func (i *inserter[N]) cachedAggregator( // nolint:revive // optIn is not a control flag.
 	scope instrumentation.Scope,
 	kind InstrumentKind,
 	stream Stream,
 	allowedKeys []attribute.Key,
+	optIn bool,
 	readerAggregation Aggregation,
 	newAggregation streamAggregationFactory[N],
 ) aggVal[N] {
@@ -423,11 +427,20 @@ func (i *inserter[N]) cachedAggregator(
 		stream.AttributeFilter = attribute.NewAllowKeysFilter(allowedKeys...)
 	}
 
+	isEnabled := stream.enabled != nil && *stream.enabled
+	isDisabled := stream.enabled != nil && !*stream.enabled
+	if (optIn && !isEnabled) || isDisabled {
+		stream.Aggregation = AggregationDrop{}
+	}
+
 	if err := isAggregatorCompatible(kind, stream.Aggregation); err != nil {
 		return aggVal[N]{Err: fmt.Errorf(
 			"creating aggregator with instrumentKind: %d, aggregation %v: %w",
 			kind, stream.Aggregation, err,
 		)}
+	}
+	if _, ok := stream.Aggregation.(AggregationDrop); ok {
+		return aggVal[N]{}
 	}
 
 	id := i.instID(kind, stream)
@@ -730,12 +743,16 @@ func newResolver[N int64 | float64](p pipelines, vc *cache[string, instID]) reso
 
 // Aggregators returns the Aggregators that must be updated by the instrument
 // defined by key.
-func (r resolver[N]) Aggregators(id Instrument, allowedKeys []attribute.Key) ([]aggregate.Measure[N], error) {
+func (r resolver[N]) Aggregators(
+	id Instrument,
+	allowedKeys []attribute.Key,
+	optIn bool,
+) ([]aggregate.Measure[N], error) {
 	var measures []aggregate.Measure[N]
 
 	var err error
 	for _, i := range r.inserters {
-		in, e := i.Instrument(id, allowedKeys, i.readerDefaultAggregation(id.Kind))
+		in, e := i.Instrument(id, allowedKeys, optIn, i.readerDefaultAggregation(id.Kind))
 		if e != nil {
 			err = errors.Join(err, e)
 		}
@@ -751,6 +768,7 @@ func (r resolver[N]) HistogramAggregators(
 	id Instrument,
 	allowedKeys []attribute.Key,
 	boundaries []float64,
+	optIn bool,
 ) ([]aggregate.Measure[N], error) {
 	var measures []aggregate.Measure[N]
 
@@ -761,7 +779,7 @@ func (r resolver[N]) HistogramAggregators(
 			histAgg.Boundaries = boundaries
 			agg = histAgg
 		}
-		in, e := i.Instrument(id, allowedKeys, agg)
+		in, e := i.Instrument(id, allowedKeys, optIn, agg)
 		if e != nil {
 			err = errors.Join(err, e)
 		}
