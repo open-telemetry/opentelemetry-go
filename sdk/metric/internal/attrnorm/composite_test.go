@@ -28,14 +28,16 @@ func TestSetMayHaveComposite(t *testing.T) {
 			continue
 		}
 		for _, at := range []int{0, size - 1} {
+			// Keep the key so sorting in NewSet leaves the composite at index at.
 			kvs := slices.Clone(scalars)
-			kvs[at] = attribute.Slice("composite", dup.Value)
+			kvs[at].Value = attribute.SliceValue(dup.Value)
 			withSlice := attribute.NewSet(kvs...)
 			if !SetMayHaveComposite(&withSlice) {
 				t.Errorf("size %d, index %d: SLICE value not detected", size, at)
 			}
 
-			kvs[at] = dup
+			kvs = slices.Clone(scalars)
+			kvs[at].Value = dup.Value
 			withMap := attribute.NewSet(kvs...)
 			if !SetMayHaveComposite(&withMap) {
 				t.Errorf("size %d, index %d: MAP value not detected", size, at)
