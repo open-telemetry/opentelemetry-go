@@ -110,6 +110,7 @@ func (f *factory) Int64Gauge(name string, options ...metric.Int64GaugeOption) (m
 			f.meter.int64Resolver,
 			inst,
 			defaultAttributes(options),
+			isOptIn(options),
 			f.registry.Register,
 		)
 		return finish.NewInt64Gauge(
@@ -142,6 +143,7 @@ func (f *factory) Float64Gauge(name string, options ...metric.Float64GaugeOption
 			f.meter.float64Resolver,
 			inst,
 			defaultAttributes(options),
+			isOptIn(options),
 			f.registry.Register,
 		)
 		return finish.NewFloat64Gauge(
