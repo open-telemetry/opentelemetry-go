@@ -26,6 +26,9 @@ is designed so the following goals can be achieved.
 
         > Warning: methods may be added to this interface in minor releases.
 
+      * Stable SDK components may make the narrowly scoped changes described in
+        [Security-related changes](#security-related-changes).
+
     * If a module is version `v2` or higher, the major version of the module
       must be included as a `/vN` at the end of the module paths used in
       `go.mod` files (e.g., `module go.opentelemetry.io/otel/v2`, `require
@@ -72,7 +75,8 @@ is designed so the following goals can be achieved.
   * [Semantic import
     versioning](https://github.com/golang/go/wiki/Modules#semantic-import-versioning)
     will be used.
-    * Versions will comply with [semver 2.0](https://semver.org/spec/v2.0.0.html).
+    * Versions will comply with [semver 2.0](https://semver.org/spec/v2.0.0.html),
+      subject to [Security-related changes](#security-related-changes).
     * If a module is version `v2` or higher, the
       major version of the module must be included as a `/vN` at the end of the
       module paths used in `go.mod` files (e.g., `module
@@ -88,8 +92,9 @@ is designed so the following goals can be achieved.
     * If a module is version `v0` or `v1`, do not include the major version
       in either the module path or the import path.
   * In addition to public APIs, telemetry produced by stable instrumentation
-    will remain stable and backwards compatible. This is to avoid breaking
-    alerts and dashboards.
+    will remain stable and backwards compatible, except as permitted by
+    [Security-related changes](#security-related-changes). This is to avoid
+    breaking alerts and dashboards.
   * Modules will be used to encapsulate instrumentation, detectors, exporters,
     propagators, and any other independent sets of related components.
     * Experimental modules still under active development will be versioned at
@@ -132,6 +137,38 @@ is designed so the following goals can be achieved.
       stable release except for a stable release of the contrib repository.
 * GitHub releases will be made for all releases.
 * Go modules will be made available at Go package mirrors.
+
+## Security-related changes
+
+This project follows the OpenTelemetry client policy for
+[security-related changes](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/versioning-and-stability.md#security-related-changes).
+
+Stable SDK and contrib components may make backwards-incompatible behavioral
+changes, change configuration defaults, restrict supported configuration values,
+or tighten supported runtime or dependency version requirements in minor or
+patch releases when necessary to address an identified, concrete security risk.
+This applies even when the previous behavior or requirements were documented.
+Such changes remain subject to the OpenTelemetry client support requirements.
+
+Each change must be limited to what is necessary to mitigate the risk. Reducing
+resource consumption or improving performance alone does not qualify. Changes
+must preserve existing source and ABI compatibility guarantees, including SDK
+plugin interfaces, and comply with OpenTelemetry's
+[error handling requirements](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/error-handling.md).
+This exception does not permit removing or renaming public APIs, changing their
+signatures, renaming or removing configuration parameters, redefining semantic
+conventions, bypassing signal deprecation or removal requirements, or including
+unrelated incompatible changes. Stable API packages retain their compatibility
+guarantees within the same major version.
+
+Release notes must explain the security risk and mitigation, identify affected
+behavior, configuration settings, and runtime or dependency requirements, and
+describe the previous and new behavior and requirements. They must cover newly
+rejected inputs or configuration values, truncated or dropped telemetry,
+required user actions, and available migration paths with their security
+implications. Where safe and feasible, a configuration override or another
+migration path should be provided. Providing an override does not make an
+incompatible change backwards compatible.
 
 ## Example Versioning Lifecycle
 
