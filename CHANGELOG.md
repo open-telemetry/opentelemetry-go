@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html),
-with the exceptions described in the [versioning policy](VERSIONING.md).
+with further details in the [versioning policy](VERSIONING.md).
 
 ## [Unreleased]
 
@@ -24,7 +24,7 @@ with the exceptions described in the [versioning policy](VERSIONING.md).
 
 ### Changed
 
-- Document the narrowly scoped security exception to the versioning policy, including compatibility guarantees and release-note requirements. (#9436)
+- Clarify the security-related versioning exception by linking to the OpenTelemetry client specification. (#9436)
 - Expand the upgrade guidance for the default cardinality limit introduced in `go.opentelemetry.io/otel/sdk/metric` v1.44.0, including overflow detection and configuration options. (#9436)
 - Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
