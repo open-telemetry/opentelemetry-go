@@ -21,10 +21,10 @@ import (
 // conventions. It represents the enforced hard limit of the resource across all
 // projects.
 type ClusterquotaCPULimitHard struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newClusterquotaCPULimitHardOpts = []metric.Int64UpDownCounterOption{
+var newClusterquotaCPULimitHardOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("The enforced hard limit of the resource across all projects."),
 	metric.WithUnit("{cpu}"),
 }
@@ -32,32 +32,32 @@ var newClusterquotaCPULimitHardOpts = []metric.Int64UpDownCounterOption{
 // NewClusterquotaCPULimitHard returns a new ClusterquotaCPULimitHard instrument.
 func NewClusterquotaCPULimitHard(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ClusterquotaCPULimitHard, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ClusterquotaCPULimitHard{noop.Int64UpDownCounter{}}, nil
+		return ClusterquotaCPULimitHard{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newClusterquotaCPULimitHardOpts
 	} else {
-		opt = append(opt, newClusterquotaCPULimitHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaCPULimitHardOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"openshift.clusterquota.cpu.limit.hard",
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPULimitHard{noop.Int64UpDownCounter{}}, err
+		return ClusterquotaCPULimitHard{noop.Float64UpDownCounter{}}, err
 	}
 	return ClusterquotaCPULimitHard{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ClusterquotaCPULimitHard) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ClusterquotaCPULimitHard) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -84,12 +84,12 @@ func (ClusterquotaCPULimitHard) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
-func (m ClusterquotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ClusterquotaCPULimitHard) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -97,7 +97,7 @@ func (m ClusterquotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ...
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -109,12 +109,12 @@ func (m ClusterquotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ...
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
-func (m ClusterquotaCPULimitHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ClusterquotaCPULimitHard) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (m ClusterquotaCPULimitHard) AddSet(ctx context.Context, incr int64, set at
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ClusterquotaCPULimitHardObservable is an instrument used to record metric
@@ -130,10 +130,10 @@ func (m ClusterquotaCPULimitHard) AddSet(ctx context.Context, incr int64, set at
 // conventions. It represents the enforced hard limit of the resource across all
 // projects.
 type ClusterquotaCPULimitHardObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newClusterquotaCPULimitHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newClusterquotaCPULimitHardObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("The enforced hard limit of the resource across all projects."),
 	metric.WithUnit("{cpu}"),
 }
@@ -142,32 +142,32 @@ var newClusterquotaCPULimitHardObservableOpts = []metric.Int64ObservableUpDownCo
 // ClusterquotaCPULimitHardObservable instrument.
 func NewClusterquotaCPULimitHardObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ClusterquotaCPULimitHardObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ClusterquotaCPULimitHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ClusterquotaCPULimitHardObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newClusterquotaCPULimitHardObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaCPULimitHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaCPULimitHardObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"openshift.clusterquota.cpu.limit.hard",
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPULimitHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ClusterquotaCPULimitHardObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ClusterquotaCPULimitHardObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ClusterquotaCPULimitHardObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ClusterquotaCPULimitHardObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -190,10 +190,10 @@ func (ClusterquotaCPULimitHardObservable) Description() string {
 // conventions. It represents the current observed total usage of the resource
 // across all projects.
 type ClusterquotaCPULimitUsed struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newClusterquotaCPULimitUsedOpts = []metric.Int64UpDownCounterOption{
+var newClusterquotaCPULimitUsedOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("The current observed total usage of the resource across all projects."),
 	metric.WithUnit("{cpu}"),
 }
@@ -201,32 +201,32 @@ var newClusterquotaCPULimitUsedOpts = []metric.Int64UpDownCounterOption{
 // NewClusterquotaCPULimitUsed returns a new ClusterquotaCPULimitUsed instrument.
 func NewClusterquotaCPULimitUsed(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ClusterquotaCPULimitUsed, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ClusterquotaCPULimitUsed{noop.Int64UpDownCounter{}}, nil
+		return ClusterquotaCPULimitUsed{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newClusterquotaCPULimitUsedOpts
 	} else {
-		opt = append(opt, newClusterquotaCPULimitUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaCPULimitUsedOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"openshift.clusterquota.cpu.limit.used",
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPULimitUsed{noop.Int64UpDownCounter{}}, err
+		return ClusterquotaCPULimitUsed{noop.Float64UpDownCounter{}}, err
 	}
 	return ClusterquotaCPULimitUsed{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ClusterquotaCPULimitUsed) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ClusterquotaCPULimitUsed) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -253,12 +253,12 @@ func (ClusterquotaCPULimitUsed) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
-func (m ClusterquotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ClusterquotaCPULimitUsed) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -266,7 +266,7 @@ func (m ClusterquotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ...
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -278,12 +278,12 @@ func (m ClusterquotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ...
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
-func (m ClusterquotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ClusterquotaCPULimitUsed) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -291,7 +291,7 @@ func (m ClusterquotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set at
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ClusterquotaCPULimitUsedObservable is an instrument used to record metric
@@ -299,10 +299,10 @@ func (m ClusterquotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set at
 // conventions. It represents the current observed total usage of the resource
 // across all projects.
 type ClusterquotaCPULimitUsedObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newClusterquotaCPULimitUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newClusterquotaCPULimitUsedObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("The current observed total usage of the resource across all projects."),
 	metric.WithUnit("{cpu}"),
 }
@@ -311,32 +311,32 @@ var newClusterquotaCPULimitUsedObservableOpts = []metric.Int64ObservableUpDownCo
 // ClusterquotaCPULimitUsedObservable instrument.
 func NewClusterquotaCPULimitUsedObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ClusterquotaCPULimitUsedObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ClusterquotaCPULimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ClusterquotaCPULimitUsedObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newClusterquotaCPULimitUsedObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaCPULimitUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaCPULimitUsedObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"openshift.clusterquota.cpu.limit.used",
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPULimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ClusterquotaCPULimitUsedObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ClusterquotaCPULimitUsedObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ClusterquotaCPULimitUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ClusterquotaCPULimitUsedObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -359,10 +359,10 @@ func (ClusterquotaCPULimitUsedObservable) Description() string {
 // conventions. It represents the enforced hard limit of the resource across all
 // projects.
 type ClusterquotaCPURequestHard struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newClusterquotaCPURequestHardOpts = []metric.Int64UpDownCounterOption{
+var newClusterquotaCPURequestHardOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("The enforced hard limit of the resource across all projects."),
 	metric.WithUnit("{cpu}"),
 }
@@ -371,32 +371,32 @@ var newClusterquotaCPURequestHardOpts = []metric.Int64UpDownCounterOption{
 // instrument.
 func NewClusterquotaCPURequestHard(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ClusterquotaCPURequestHard, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ClusterquotaCPURequestHard{noop.Int64UpDownCounter{}}, nil
+		return ClusterquotaCPURequestHard{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newClusterquotaCPURequestHardOpts
 	} else {
-		opt = append(opt, newClusterquotaCPURequestHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaCPURequestHardOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"openshift.clusterquota.cpu.request.hard",
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPURequestHard{noop.Int64UpDownCounter{}}, err
+		return ClusterquotaCPURequestHard{noop.Float64UpDownCounter{}}, err
 	}
 	return ClusterquotaCPURequestHard{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ClusterquotaCPURequestHard) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ClusterquotaCPURequestHard) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -423,12 +423,12 @@ func (ClusterquotaCPURequestHard) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
-func (m ClusterquotaCPURequestHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ClusterquotaCPURequestHard) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -436,7 +436,7 @@ func (m ClusterquotaCPURequestHard) Add(ctx context.Context, incr int64, attrs .
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -448,12 +448,12 @@ func (m ClusterquotaCPURequestHard) Add(ctx context.Context, incr int64, attrs .
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
-func (m ClusterquotaCPURequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ClusterquotaCPURequestHard) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -461,7 +461,7 @@ func (m ClusterquotaCPURequestHard) AddSet(ctx context.Context, incr int64, set 
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ClusterquotaCPURequestHardObservable is an instrument used to record metric
@@ -469,10 +469,10 @@ func (m ClusterquotaCPURequestHard) AddSet(ctx context.Context, incr int64, set 
 // conventions. It represents the enforced hard limit of the resource across all
 // projects.
 type ClusterquotaCPURequestHardObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newClusterquotaCPURequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newClusterquotaCPURequestHardObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("The enforced hard limit of the resource across all projects."),
 	metric.WithUnit("{cpu}"),
 }
@@ -481,32 +481,32 @@ var newClusterquotaCPURequestHardObservableOpts = []metric.Int64ObservableUpDown
 // ClusterquotaCPURequestHardObservable instrument.
 func NewClusterquotaCPURequestHardObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ClusterquotaCPURequestHardObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ClusterquotaCPURequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ClusterquotaCPURequestHardObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newClusterquotaCPURequestHardObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaCPURequestHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaCPURequestHardObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"openshift.clusterquota.cpu.request.hard",
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPURequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ClusterquotaCPURequestHardObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ClusterquotaCPURequestHardObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ClusterquotaCPURequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ClusterquotaCPURequestHardObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -529,10 +529,10 @@ func (ClusterquotaCPURequestHardObservable) Description() string {
 // conventions. It represents the current observed total usage of the resource
 // across all projects.
 type ClusterquotaCPURequestUsed struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newClusterquotaCPURequestUsedOpts = []metric.Int64UpDownCounterOption{
+var newClusterquotaCPURequestUsedOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("The current observed total usage of the resource across all projects."),
 	metric.WithUnit("{cpu}"),
 }
@@ -541,32 +541,32 @@ var newClusterquotaCPURequestUsedOpts = []metric.Int64UpDownCounterOption{
 // instrument.
 func NewClusterquotaCPURequestUsed(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ClusterquotaCPURequestUsed, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ClusterquotaCPURequestUsed{noop.Int64UpDownCounter{}}, nil
+		return ClusterquotaCPURequestUsed{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newClusterquotaCPURequestUsedOpts
 	} else {
-		opt = append(opt, newClusterquotaCPURequestUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaCPURequestUsedOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"openshift.clusterquota.cpu.request.used",
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPURequestUsed{noop.Int64UpDownCounter{}}, err
+		return ClusterquotaCPURequestUsed{noop.Float64UpDownCounter{}}, err
 	}
 	return ClusterquotaCPURequestUsed{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ClusterquotaCPURequestUsed) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ClusterquotaCPURequestUsed) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -593,12 +593,12 @@ func (ClusterquotaCPURequestUsed) Description() string {
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
-func (m ClusterquotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ClusterquotaCPURequestUsed) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -606,7 +606,7 @@ func (m ClusterquotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs .
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -618,12 +618,12 @@ func (m ClusterquotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs .
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
 // [ClusterResourceQuota]: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
-func (m ClusterquotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ClusterquotaCPURequestUsed) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -631,7 +631,7 @@ func (m ClusterquotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set 
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ClusterquotaCPURequestUsedObservable is an instrument used to record metric
@@ -639,10 +639,10 @@ func (m ClusterquotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set 
 // conventions. It represents the current observed total usage of the resource
 // across all projects.
 type ClusterquotaCPURequestUsedObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newClusterquotaCPURequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newClusterquotaCPURequestUsedObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("The current observed total usage of the resource across all projects."),
 	metric.WithUnit("{cpu}"),
 }
@@ -651,32 +651,32 @@ var newClusterquotaCPURequestUsedObservableOpts = []metric.Int64ObservableUpDown
 // ClusterquotaCPURequestUsedObservable instrument.
 func NewClusterquotaCPURequestUsedObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ClusterquotaCPURequestUsedObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ClusterquotaCPURequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ClusterquotaCPURequestUsedObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newClusterquotaCPURequestUsedObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaCPURequestUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaCPURequestUsedObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"openshift.clusterquota.cpu.request.used",
 		opt...,
 	)
 	if err != nil {
-		return ClusterquotaCPURequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ClusterquotaCPURequestUsedObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ClusterquotaCPURequestUsedObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ClusterquotaCPURequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ClusterquotaCPURequestUsedObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -721,7 +721,7 @@ func NewClusterquotaEphemeralStorageLimitHard(
 	if len(opt) == 0 {
 		opt = newClusterquotaEphemeralStorageLimitHardOpts
 	} else {
-		opt = append(opt, newClusterquotaEphemeralStorageLimitHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaEphemeralStorageLimitHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -831,7 +831,7 @@ func NewClusterquotaEphemeralStorageLimitHardObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaEphemeralStorageLimitHardObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaEphemeralStorageLimitHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaEphemeralStorageLimitHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -891,7 +891,7 @@ func NewClusterquotaEphemeralStorageLimitUsed(
 	if len(opt) == 0 {
 		opt = newClusterquotaEphemeralStorageLimitUsedOpts
 	} else {
-		opt = append(opt, newClusterquotaEphemeralStorageLimitUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaEphemeralStorageLimitUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1002,7 +1002,7 @@ func NewClusterquotaEphemeralStorageLimitUsedObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaEphemeralStorageLimitUsedObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaEphemeralStorageLimitUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaEphemeralStorageLimitUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1062,7 +1062,7 @@ func NewClusterquotaEphemeralStorageRequestHard(
 	if len(opt) == 0 {
 		opt = newClusterquotaEphemeralStorageRequestHardOpts
 	} else {
-		opt = append(opt, newClusterquotaEphemeralStorageRequestHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaEphemeralStorageRequestHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1172,7 +1172,7 @@ func NewClusterquotaEphemeralStorageRequestHardObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaEphemeralStorageRequestHardObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaEphemeralStorageRequestHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaEphemeralStorageRequestHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1233,7 +1233,7 @@ func NewClusterquotaEphemeralStorageRequestUsed(
 	if len(opt) == 0 {
 		opt = newClusterquotaEphemeralStorageRequestUsedOpts
 	} else {
-		opt = append(opt, newClusterquotaEphemeralStorageRequestUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaEphemeralStorageRequestUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1344,7 +1344,7 @@ func NewClusterquotaEphemeralStorageRequestUsedObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaEphemeralStorageRequestUsedObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaEphemeralStorageRequestUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaEphemeralStorageRequestUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1404,7 +1404,7 @@ func NewClusterquotaHugepageCountRequestHard(
 	if len(opt) == 0 {
 		opt = newClusterquotaHugepageCountRequestHardOpts
 	} else {
-		opt = append(opt, newClusterquotaHugepageCountRequestHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaHugepageCountRequestHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1532,7 +1532,7 @@ func NewClusterquotaHugepageCountRequestHardObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaHugepageCountRequestHardObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaHugepageCountRequestHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaHugepageCountRequestHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1598,7 +1598,7 @@ func NewClusterquotaHugepageCountRequestUsed(
 	if len(opt) == 0 {
 		opt = newClusterquotaHugepageCountRequestUsedOpts
 	} else {
-		opt = append(opt, newClusterquotaHugepageCountRequestUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaHugepageCountRequestUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1727,7 +1727,7 @@ func NewClusterquotaHugepageCountRequestUsedObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaHugepageCountRequestUsedObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaHugepageCountRequestUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaHugepageCountRequestUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1793,7 +1793,7 @@ func NewClusterquotaMemoryLimitHard(
 	if len(opt) == 0 {
 		opt = newClusterquotaMemoryLimitHardOpts
 	} else {
-		opt = append(opt, newClusterquotaMemoryLimitHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaMemoryLimitHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1903,7 +1903,7 @@ func NewClusterquotaMemoryLimitHardObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaMemoryLimitHardObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaMemoryLimitHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaMemoryLimitHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1963,7 +1963,7 @@ func NewClusterquotaMemoryLimitUsed(
 	if len(opt) == 0 {
 		opt = newClusterquotaMemoryLimitUsedOpts
 	} else {
-		opt = append(opt, newClusterquotaMemoryLimitUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaMemoryLimitUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2073,7 +2073,7 @@ func NewClusterquotaMemoryLimitUsedObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaMemoryLimitUsedObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaMemoryLimitUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaMemoryLimitUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2133,7 +2133,7 @@ func NewClusterquotaMemoryRequestHard(
 	if len(opt) == 0 {
 		opt = newClusterquotaMemoryRequestHardOpts
 	} else {
-		opt = append(opt, newClusterquotaMemoryRequestHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaMemoryRequestHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2243,7 +2243,7 @@ func NewClusterquotaMemoryRequestHardObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaMemoryRequestHardObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaMemoryRequestHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaMemoryRequestHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2303,7 +2303,7 @@ func NewClusterquotaMemoryRequestUsed(
 	if len(opt) == 0 {
 		opt = newClusterquotaMemoryRequestUsedOpts
 	} else {
-		opt = append(opt, newClusterquotaMemoryRequestUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaMemoryRequestUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2413,7 +2413,7 @@ func NewClusterquotaMemoryRequestUsedObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaMemoryRequestUsedObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaMemoryRequestUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaMemoryRequestUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2473,7 +2473,7 @@ func NewClusterquotaObjectCountHard(
 	if len(opt) == 0 {
 		opt = newClusterquotaObjectCountHardOpts
 	} else {
-		opt = append(opt, newClusterquotaObjectCountHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaObjectCountHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2602,7 +2602,7 @@ func NewClusterquotaObjectCountHardObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaObjectCountHardObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaObjectCountHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaObjectCountHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2669,7 +2669,7 @@ func NewClusterquotaObjectCountUsed(
 	if len(opt) == 0 {
 		opt = newClusterquotaObjectCountUsedOpts
 	} else {
-		opt = append(opt, newClusterquotaObjectCountUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaObjectCountUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2798,7 +2798,7 @@ func NewClusterquotaObjectCountUsedObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaObjectCountUsedObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaObjectCountUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaObjectCountUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2866,7 +2866,7 @@ func NewClusterquotaPersistentvolumeclaimCountHard(
 	if len(opt) == 0 {
 		opt = newClusterquotaPersistentvolumeclaimCountHardOpts
 	} else {
-		opt = append(opt, newClusterquotaPersistentvolumeclaimCountHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaPersistentvolumeclaimCountHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3006,7 +3006,7 @@ func NewClusterquotaPersistentvolumeclaimCountHardObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaPersistentvolumeclaimCountHardObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaPersistentvolumeclaimCountHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaPersistentvolumeclaimCountHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3076,7 +3076,7 @@ func NewClusterquotaPersistentvolumeclaimCountUsed(
 	if len(opt) == 0 {
 		opt = newClusterquotaPersistentvolumeclaimCountUsedOpts
 	} else {
-		opt = append(opt, newClusterquotaPersistentvolumeclaimCountUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaPersistentvolumeclaimCountUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3216,7 +3216,7 @@ func NewClusterquotaPersistentvolumeclaimCountUsedObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaPersistentvolumeclaimCountUsedObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaPersistentvolumeclaimCountUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaPersistentvolumeclaimCountUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3285,7 +3285,7 @@ func NewClusterquotaStorageRequestHard(
 	if len(opt) == 0 {
 		opt = newClusterquotaStorageRequestHardOpts
 	} else {
-		opt = append(opt, newClusterquotaStorageRequestHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaStorageRequestHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3424,7 +3424,7 @@ func NewClusterquotaStorageRequestHardObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaStorageRequestHardObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaStorageRequestHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaStorageRequestHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3493,7 +3493,7 @@ func NewClusterquotaStorageRequestUsed(
 	if len(opt) == 0 {
 		opt = newClusterquotaStorageRequestUsedOpts
 	} else {
-		opt = append(opt, newClusterquotaStorageRequestUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaStorageRequestUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3632,7 +3632,7 @@ func NewClusterquotaStorageRequestUsedObservable(
 	if len(opt) == 0 {
 		opt = newClusterquotaStorageRequestUsedObservableOpts
 	} else {
-		opt = append(opt, newClusterquotaStorageRequestUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClusterquotaStorageRequestUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(

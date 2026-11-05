@@ -186,10 +186,10 @@ var (
 // "hw.battery.charge" semantic conventions. It represents the remaining fraction
 // of battery charge.
 type BatteryCharge struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newBatteryChargeOpts = []metric.Int64GaugeOption{
+var newBatteryChargeOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Remaining fraction of battery charge."),
 	metric.WithUnit("1"),
 }
@@ -197,32 +197,32 @@ var newBatteryChargeOpts = []metric.Int64GaugeOption{
 // NewBatteryCharge returns a new BatteryCharge instrument.
 func NewBatteryCharge(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (BatteryCharge, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return BatteryCharge{noop.Int64Gauge{}}, nil
+		return BatteryCharge{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newBatteryChargeOpts
 	} else {
-		opt = append(opt, newBatteryChargeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newBatteryChargeOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.battery.charge",
 		opt...,
 	)
 	if err != nil {
-		return BatteryCharge{noop.Int64Gauge{}}, err
+		return BatteryCharge{noop.Float64Gauge{}}, err
 	}
 	return BatteryCharge{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m BatteryCharge) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m BatteryCharge) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -248,15 +248,15 @@ func (BatteryCharge) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m BatteryCharge) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -275,16 +275,16 @@ func (m BatteryCharge) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m BatteryCharge) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m BatteryCharge) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -292,7 +292,7 @@ func (m BatteryCharge) RecordSet(ctx context.Context, val int64, set attribute.S
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrBatteryCapacity returns an optional attribute for the
@@ -341,10 +341,10 @@ func (BatteryCharge) AttrVendor(val string) attribute.KeyValue {
 // conforming to the "hw.battery.charge" semantic conventions. It represents the
 // remaining fraction of battery charge.
 type BatteryChargeObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newBatteryChargeObservableOpts = []metric.Int64ObservableGaugeOption{
+var newBatteryChargeObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Remaining fraction of battery charge."),
 	metric.WithUnit("1"),
 }
@@ -352,32 +352,32 @@ var newBatteryChargeObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewBatteryChargeObservable returns a new BatteryChargeObservable instrument.
 func NewBatteryChargeObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (BatteryChargeObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return BatteryChargeObservable{noop.Int64ObservableGauge{}}, nil
+		return BatteryChargeObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newBatteryChargeObservableOpts
 	} else {
-		opt = append(opt, newBatteryChargeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newBatteryChargeObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.battery.charge",
 		opt...,
 	)
 	if err != nil {
-		return BatteryChargeObservable{noop.Int64ObservableGauge{}}, err
+		return BatteryChargeObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return BatteryChargeObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m BatteryChargeObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m BatteryChargeObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -448,10 +448,10 @@ func (BatteryChargeObservable) AttrVendor(val string) attribute.KeyValue {
 // the "hw.battery.charge.limit" semantic conventions. It represents the lower
 // limit of battery charge fraction to ensure proper operation.
 type BatteryChargeLimit struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newBatteryChargeLimitOpts = []metric.Int64GaugeOption{
+var newBatteryChargeLimitOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Lower limit of battery charge fraction to ensure proper operation."),
 	metric.WithUnit("1"),
 }
@@ -459,32 +459,32 @@ var newBatteryChargeLimitOpts = []metric.Int64GaugeOption{
 // NewBatteryChargeLimit returns a new BatteryChargeLimit instrument.
 func NewBatteryChargeLimit(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (BatteryChargeLimit, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return BatteryChargeLimit{noop.Int64Gauge{}}, nil
+		return BatteryChargeLimit{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newBatteryChargeLimitOpts
 	} else {
-		opt = append(opt, newBatteryChargeLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newBatteryChargeLimitOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.battery.charge.limit",
 		opt...,
 	)
 	if err != nil {
-		return BatteryChargeLimit{noop.Int64Gauge{}}, err
+		return BatteryChargeLimit{noop.Float64Gauge{}}, err
 	}
 	return BatteryChargeLimit{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m BatteryChargeLimit) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m BatteryChargeLimit) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -510,15 +510,15 @@ func (BatteryChargeLimit) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m BatteryChargeLimit) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -537,16 +537,16 @@ func (m BatteryChargeLimit) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m BatteryChargeLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m BatteryChargeLimit) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -554,7 +554,7 @@ func (m BatteryChargeLimit) RecordSet(ctx context.Context, val int64, set attrib
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrBatteryCapacity returns an optional attribute for the
@@ -614,10 +614,10 @@ func (BatteryChargeLimit) AttrVendor(val string) attribute.KeyValue {
 // represents the lower limit of battery charge fraction to ensure proper
 // operation.
 type BatteryChargeLimitObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newBatteryChargeLimitObservableOpts = []metric.Int64ObservableGaugeOption{
+var newBatteryChargeLimitObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Lower limit of battery charge fraction to ensure proper operation."),
 	metric.WithUnit("1"),
 }
@@ -626,32 +626,32 @@ var newBatteryChargeLimitObservableOpts = []metric.Int64ObservableGaugeOption{
 // instrument.
 func NewBatteryChargeLimitObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (BatteryChargeLimitObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return BatteryChargeLimitObservable{noop.Int64ObservableGauge{}}, nil
+		return BatteryChargeLimitObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newBatteryChargeLimitObservableOpts
 	} else {
-		opt = append(opt, newBatteryChargeLimitObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newBatteryChargeLimitObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.battery.charge.limit",
 		opt...,
 	)
 	if err != nil {
-		return BatteryChargeLimitObservable{noop.Int64ObservableGauge{}}, err
+		return BatteryChargeLimitObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return BatteryChargeLimitObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m BatteryChargeLimitObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m BatteryChargeLimitObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -753,7 +753,7 @@ func NewBatteryTimeLeft(
 	if len(opt) == 0 {
 		opt = newBatteryTimeLeftOpts
 	} else {
-		opt = append(opt, newBatteryTimeLeftOpts...)
+		opt = append(opt[:len(opt):len(opt)], newBatteryTimeLeftOpts...)
 	}
 
 	i, err := m.Float64Gauge(
@@ -920,7 +920,7 @@ func NewBatteryTimeLeftObservable(
 	if len(opt) == 0 {
 		opt = newBatteryTimeLeftObservableOpts
 	} else {
-		opt = append(opt, newBatteryTimeLeftObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newBatteryTimeLeftObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableGauge(
@@ -1038,7 +1038,7 @@ func NewCPUSpeed(
 	if len(opt) == 0 {
 		opt = newCPUSpeedOpts
 	} else {
-		opt = append(opt, newCPUSpeedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCPUSpeedOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -1177,7 +1177,7 @@ func NewCPUSpeedObservable(
 	if len(opt) == 0 {
 		opt = newCPUSpeedObservableOpts
 	} else {
-		opt = append(opt, newCPUSpeedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCPUSpeedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -1268,7 +1268,7 @@ func NewCPUSpeedLimit(
 	if len(opt) == 0 {
 		opt = newCPUSpeedLimitOpts
 	} else {
-		opt = append(opt, newCPUSpeedLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCPUSpeedLimitOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -1413,7 +1413,7 @@ func NewCPUSpeedLimitObservable(
 	if len(opt) == 0 {
 		opt = newCPUSpeedLimitObservableOpts
 	} else {
-		opt = append(opt, newCPUSpeedLimitObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCPUSpeedLimitObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -1489,10 +1489,10 @@ func (CPUSpeedLimitObservable) AttrVendor(val string) attribute.KeyValue {
 // "hw.energy" semantic conventions. It represents the energy consumed by the
 // component.
 type Energy struct {
-	metric.Int64Counter
+	metric.Float64Counter
 }
 
-var newEnergyOpts = []metric.Int64CounterOption{
+var newEnergyOpts = []metric.Float64CounterOption{
 	metric.WithDescription("Energy consumed by the component."),
 	metric.WithUnit("J"),
 }
@@ -1500,32 +1500,32 @@ var newEnergyOpts = []metric.Int64CounterOption{
 // NewEnergy returns a new Energy instrument.
 func NewEnergy(
 	m metric.Meter,
-	opt ...metric.Int64CounterOption,
+	opt ...metric.Float64CounterOption,
 ) (Energy, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return Energy{noop.Int64Counter{}}, nil
+		return Energy{noop.Float64Counter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newEnergyOpts
 	} else {
-		opt = append(opt, newEnergyOpts...)
+		opt = append(opt[:len(opt):len(opt)], newEnergyOpts...)
 	}
 
-	i, err := m.Int64Counter(
+	i, err := m.Float64Counter(
 		"hw.energy",
 		opt...,
 	)
 	if err != nil {
-		return Energy{noop.Int64Counter{}}, err
+		return Energy{noop.Float64Counter{}}, err
 	}
 	return Energy{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m Energy) Inst() metric.Int64Counter {
-	return m.Int64Counter
+func (m Energy) Inst() metric.Float64Counter {
+	return m.Float64Counter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1553,16 +1553,16 @@ func (Energy) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m Energy) Add(
 	ctx context.Context,
-	incr int64,
+	incr float64,
 	id string,
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Counter.Enabled(ctx) {
+	if !m.Float64Counter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Counter.Add(ctx, incr, metric.WithAttributes(
+		m.Float64Counter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
 			attribute.String("hw.type", string(hwType)),
 		))
@@ -1583,16 +1583,16 @@ func (m Energy) Add(
 		),
 	)
 
-	m.Int64Counter.Add(ctx, incr, *o...)
+	m.Float64Counter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
-func (m Energy) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64Counter.Enabled(ctx) {
+func (m Energy) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64Counter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Counter.Add(ctx, incr)
+		m.Float64Counter.Add(ctx, incr)
 		return
 	}
 
@@ -1600,7 +1600,7 @@ func (m Energy) AddSet(ctx context.Context, incr int64, set attribute.Set) {
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Counter.Add(ctx, incr, *o...)
+	m.Float64Counter.Add(ctx, incr, *o...)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
@@ -1620,10 +1620,10 @@ func (Energy) AttrParent(val string) attribute.KeyValue {
 // the "hw.energy" semantic conventions. It represents the energy consumed by the
 // component.
 type EnergyObservable struct {
-	metric.Int64ObservableCounter
+	metric.Float64ObservableCounter
 }
 
-var newEnergyObservableOpts = []metric.Int64ObservableCounterOption{
+var newEnergyObservableOpts = []metric.Float64ObservableCounterOption{
 	metric.WithDescription("Energy consumed by the component."),
 	metric.WithUnit("J"),
 }
@@ -1631,32 +1631,32 @@ var newEnergyObservableOpts = []metric.Int64ObservableCounterOption{
 // NewEnergyObservable returns a new EnergyObservable instrument.
 func NewEnergyObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableCounterOption,
+	opt ...metric.Float64ObservableCounterOption,
 ) (EnergyObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return EnergyObservable{noop.Int64ObservableCounter{}}, nil
+		return EnergyObservable{noop.Float64ObservableCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newEnergyObservableOpts
 	} else {
-		opt = append(opt, newEnergyObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newEnergyObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableCounter(
+	i, err := m.Float64ObservableCounter(
 		"hw.energy",
 		opt...,
 	)
 	if err != nil {
-		return EnergyObservable{noop.Int64ObservableCounter{}}, err
+		return EnergyObservable{noop.Float64ObservableCounter{}}, err
 	}
 	return EnergyObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m EnergyObservable) Inst() metric.Int64ObservableCounter {
-	return m.Int64ObservableCounter
+func (m EnergyObservable) Inst() metric.Float64ObservableCounter {
+	return m.Float64ObservableCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1725,7 +1725,7 @@ func NewErrors(
 	if len(opt) == 0 {
 		opt = newErrorsOpts
 	} else {
-		opt = append(opt, newErrorsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newErrorsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1862,7 +1862,7 @@ func NewErrorsObservable(
 	if len(opt) == 0 {
 		opt = newErrorsObservableOpts
 	} else {
-		opt = append(opt, newErrorsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newErrorsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1952,7 +1952,7 @@ func NewFanSpeed(
 	if len(opt) == 0 {
 		opt = newFanSpeedOpts
 	} else {
-		opt = append(opt, newFanSpeedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newFanSpeedOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -2084,7 +2084,7 @@ func NewFanSpeedObservable(
 	if len(opt) == 0 {
 		opt = newFanSpeedObservableOpts
 	} else {
-		opt = append(opt, newFanSpeedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newFanSpeedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -2168,7 +2168,7 @@ func NewFanSpeedLimit(
 	if len(opt) == 0 {
 		opt = newFanSpeedLimitOpts
 	} else {
-		opt = append(opt, newFanSpeedLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newFanSpeedLimitOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -2306,7 +2306,7 @@ func NewFanSpeedLimitObservable(
 	if len(opt) == 0 {
 		opt = newFanSpeedLimitObservableOpts
 	} else {
-		opt = append(opt, newFanSpeedLimitObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newFanSpeedLimitObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -2375,10 +2375,10 @@ func (FanSpeedLimitObservable) AttrSensorLocation(val string) attribute.KeyValue
 // "hw.fan.speed_ratio" semantic conventions. It represents the fan speed
 // expressed as a fraction of its maximum speed.
 type FanSpeedRatio struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newFanSpeedRatioOpts = []metric.Int64GaugeOption{
+var newFanSpeedRatioOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Fan speed expressed as a fraction of its maximum speed."),
 	metric.WithUnit("1"),
 }
@@ -2386,32 +2386,32 @@ var newFanSpeedRatioOpts = []metric.Int64GaugeOption{
 // NewFanSpeedRatio returns a new FanSpeedRatio instrument.
 func NewFanSpeedRatio(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (FanSpeedRatio, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return FanSpeedRatio{noop.Int64Gauge{}}, nil
+		return FanSpeedRatio{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newFanSpeedRatioOpts
 	} else {
-		opt = append(opt, newFanSpeedRatioOpts...)
+		opt = append(opt[:len(opt):len(opt)], newFanSpeedRatioOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.fan.speed_ratio",
 		opt...,
 	)
 	if err != nil {
-		return FanSpeedRatio{noop.Int64Gauge{}}, err
+		return FanSpeedRatio{noop.Float64Gauge{}}, err
 	}
 	return FanSpeedRatio{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m FanSpeedRatio) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m FanSpeedRatio) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -2437,15 +2437,15 @@ func (FanSpeedRatio) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m FanSpeedRatio) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -2464,16 +2464,16 @@ func (m FanSpeedRatio) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m FanSpeedRatio) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m FanSpeedRatio) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -2481,7 +2481,7 @@ func (m FanSpeedRatio) RecordSet(ctx context.Context, val int64, set attribute.S
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
@@ -2507,10 +2507,10 @@ func (FanSpeedRatio) AttrSensorLocation(val string) attribute.KeyValue {
 // conforming to the "hw.fan.speed_ratio" semantic conventions. It represents the
 // fan speed expressed as a fraction of its maximum speed.
 type FanSpeedRatioObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newFanSpeedRatioObservableOpts = []metric.Int64ObservableGaugeOption{
+var newFanSpeedRatioObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Fan speed expressed as a fraction of its maximum speed."),
 	metric.WithUnit("1"),
 }
@@ -2518,32 +2518,32 @@ var newFanSpeedRatioObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewFanSpeedRatioObservable returns a new FanSpeedRatioObservable instrument.
 func NewFanSpeedRatioObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (FanSpeedRatioObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return FanSpeedRatioObservable{noop.Int64ObservableGauge{}}, nil
+		return FanSpeedRatioObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newFanSpeedRatioObservableOpts
 	} else {
-		opt = append(opt, newFanSpeedRatioObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newFanSpeedRatioObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.fan.speed_ratio",
 		opt...,
 	)
 	if err != nil {
-		return FanSpeedRatioObservable{noop.Int64ObservableGauge{}}, err
+		return FanSpeedRatioObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return FanSpeedRatioObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m FanSpeedRatioObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m FanSpeedRatioObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -2612,7 +2612,7 @@ func NewGpuIO(
 	if len(opt) == 0 {
 		opt = newGpuIOOpts
 	} else {
-		opt = append(opt, newGpuIOOpts...)
+		opt = append(opt[:len(opt):len(opt)], newGpuIOOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -2780,7 +2780,7 @@ func NewGpuIOObservable(
 	if len(opt) == 0 {
 		opt = newGpuIOObservableOpts
 	} else {
-		opt = append(opt, newGpuIOObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newGpuIOObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -2901,7 +2901,7 @@ func NewGpuMemoryLimit(
 	if len(opt) == 0 {
 		opt = newGpuMemoryLimitOpts
 	} else {
-		opt = append(opt, newGpuMemoryLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newGpuMemoryLimitOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3061,7 +3061,7 @@ func NewGpuMemoryLimitObservable(
 	if len(opt) == 0 {
 		opt = newGpuMemoryLimitObservableOpts
 	} else {
-		opt = append(opt, newGpuMemoryLimitObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newGpuMemoryLimitObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3172,7 +3172,7 @@ func NewGpuMemoryUsage(
 	if len(opt) == 0 {
 		opt = newGpuMemoryUsageOpts
 	} else {
-		opt = append(opt, newGpuMemoryUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newGpuMemoryUsageOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3332,7 +3332,7 @@ func NewGpuMemoryUsageObservable(
 	if len(opt) == 0 {
 		opt = newGpuMemoryUsageObservableOpts
 	} else {
-		opt = append(opt, newGpuMemoryUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newGpuMemoryUsageObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3423,10 +3423,10 @@ func (GpuMemoryUsageObservable) AttrVendor(val string) attribute.KeyValue {
 // to the "hw.gpu.memory.utilization" semantic conventions. It represents the
 // fraction of GPU memory used.
 type GpuMemoryUtilization struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newGpuMemoryUtilizationOpts = []metric.Int64GaugeOption{
+var newGpuMemoryUtilizationOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Fraction of GPU memory used."),
 	metric.WithUnit("1"),
 }
@@ -3434,32 +3434,32 @@ var newGpuMemoryUtilizationOpts = []metric.Int64GaugeOption{
 // NewGpuMemoryUtilization returns a new GpuMemoryUtilization instrument.
 func NewGpuMemoryUtilization(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (GpuMemoryUtilization, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return GpuMemoryUtilization{noop.Int64Gauge{}}, nil
+		return GpuMemoryUtilization{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newGpuMemoryUtilizationOpts
 	} else {
-		opt = append(opt, newGpuMemoryUtilizationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newGpuMemoryUtilizationOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.gpu.memory.utilization",
 		opt...,
 	)
 	if err != nil {
-		return GpuMemoryUtilization{noop.Int64Gauge{}}, err
+		return GpuMemoryUtilization{noop.Float64Gauge{}}, err
 	}
 	return GpuMemoryUtilization{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m GpuMemoryUtilization) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m GpuMemoryUtilization) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -3485,15 +3485,15 @@ func (GpuMemoryUtilization) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m GpuMemoryUtilization) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -3512,16 +3512,16 @@ func (m GpuMemoryUtilization) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m GpuMemoryUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m GpuMemoryUtilization) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -3529,7 +3529,7 @@ func (m GpuMemoryUtilization) RecordSet(ctx context.Context, val int64, set attr
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrDriverVersion returns an optional attribute for the "hw.driver_version"
@@ -3583,10 +3583,10 @@ func (GpuMemoryUtilization) AttrVendor(val string) attribute.KeyValue {
 // conforming to the "hw.gpu.memory.utilization" semantic conventions. It
 // represents the fraction of GPU memory used.
 type GpuMemoryUtilizationObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newGpuMemoryUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+var newGpuMemoryUtilizationObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Fraction of GPU memory used."),
 	metric.WithUnit("1"),
 }
@@ -3595,32 +3595,32 @@ var newGpuMemoryUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
 // instrument.
 func NewGpuMemoryUtilizationObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (GpuMemoryUtilizationObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return GpuMemoryUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+		return GpuMemoryUtilizationObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newGpuMemoryUtilizationObservableOpts
 	} else {
-		opt = append(opt, newGpuMemoryUtilizationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newGpuMemoryUtilizationObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.gpu.memory.utilization",
 		opt...,
 	)
 	if err != nil {
-		return GpuMemoryUtilizationObservable{noop.Int64ObservableGauge{}}, err
+		return GpuMemoryUtilizationObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return GpuMemoryUtilizationObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m GpuMemoryUtilizationObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m GpuMemoryUtilizationObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -3696,10 +3696,10 @@ func (GpuMemoryUtilizationObservable) AttrVendor(val string) attribute.KeyValue 
 // "hw.gpu.utilization" semantic conventions. It represents the fraction of time
 // spent in a specific task.
 type GpuUtilization struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newGpuUtilizationOpts = []metric.Int64GaugeOption{
+var newGpuUtilizationOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Fraction of time spent in a specific task."),
 	metric.WithUnit("1"),
 }
@@ -3707,32 +3707,32 @@ var newGpuUtilizationOpts = []metric.Int64GaugeOption{
 // NewGpuUtilization returns a new GpuUtilization instrument.
 func NewGpuUtilization(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (GpuUtilization, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return GpuUtilization{noop.Int64Gauge{}}, nil
+		return GpuUtilization{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newGpuUtilizationOpts
 	} else {
-		opt = append(opt, newGpuUtilizationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newGpuUtilizationOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.gpu.utilization",
 		opt...,
 	)
 	if err != nil {
-		return GpuUtilization{noop.Int64Gauge{}}, err
+		return GpuUtilization{noop.Float64Gauge{}}, err
 	}
 	return GpuUtilization{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m GpuUtilization) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m GpuUtilization) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -3758,15 +3758,15 @@ func (GpuUtilization) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m GpuUtilization) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -3785,16 +3785,16 @@ func (m GpuUtilization) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m GpuUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m GpuUtilization) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -3802,7 +3802,7 @@ func (m GpuUtilization) RecordSet(ctx context.Context, val int64, set attribute.
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrDriverVersion returns an optional attribute for the "hw.driver_version"
@@ -3862,10 +3862,10 @@ func (GpuUtilization) AttrVendor(val string) attribute.KeyValue {
 // conforming to the "hw.gpu.utilization" semantic conventions. It represents the
 // fraction of time spent in a specific task.
 type GpuUtilizationObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newGpuUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+var newGpuUtilizationObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Fraction of time spent in a specific task."),
 	metric.WithUnit("1"),
 }
@@ -3873,32 +3873,32 @@ var newGpuUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewGpuUtilizationObservable returns a new GpuUtilizationObservable instrument.
 func NewGpuUtilizationObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (GpuUtilizationObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return GpuUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+		return GpuUtilizationObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newGpuUtilizationObservableOpts
 	} else {
-		opt = append(opt, newGpuUtilizationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newGpuUtilizationObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.gpu.utilization",
 		opt...,
 	)
 	if err != nil {
-		return GpuUtilizationObservable{noop.Int64ObservableGauge{}}, err
+		return GpuUtilizationObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return GpuUtilizationObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m GpuUtilizationObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m GpuUtilizationObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -3980,10 +3980,10 @@ func (GpuUtilizationObservable) AttrVendor(val string) attribute.KeyValue {
 // conforming to the "hw.host.ambient_temperature" semantic conventions. It
 // represents the ambient (external) temperature of the physical host.
 type HostAmbientTemperature struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newHostAmbientTemperatureOpts = []metric.Int64GaugeOption{
+var newHostAmbientTemperatureOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Ambient (external) temperature of the physical host."),
 	metric.WithUnit("Cel"),
 }
@@ -3991,32 +3991,32 @@ var newHostAmbientTemperatureOpts = []metric.Int64GaugeOption{
 // NewHostAmbientTemperature returns a new HostAmbientTemperature instrument.
 func NewHostAmbientTemperature(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (HostAmbientTemperature, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return HostAmbientTemperature{noop.Int64Gauge{}}, nil
+		return HostAmbientTemperature{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newHostAmbientTemperatureOpts
 	} else {
-		opt = append(opt, newHostAmbientTemperatureOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHostAmbientTemperatureOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.host.ambient_temperature",
 		opt...,
 	)
 	if err != nil {
-		return HostAmbientTemperature{noop.Int64Gauge{}}, err
+		return HostAmbientTemperature{noop.Float64Gauge{}}, err
 	}
 	return HostAmbientTemperature{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m HostAmbientTemperature) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m HostAmbientTemperature) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -4042,15 +4042,15 @@ func (HostAmbientTemperature) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m HostAmbientTemperature) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -4069,16 +4069,16 @@ func (m HostAmbientTemperature) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m HostAmbientTemperature) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m HostAmbientTemperature) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -4086,7 +4086,7 @@ func (m HostAmbientTemperature) RecordSet(ctx context.Context, val int64, set at
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
@@ -4106,10 +4106,10 @@ func (HostAmbientTemperature) AttrParent(val string) attribute.KeyValue {
 // conforming to the "hw.host.ambient_temperature" semantic conventions. It
 // represents the ambient (external) temperature of the physical host.
 type HostAmbientTemperatureObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newHostAmbientTemperatureObservableOpts = []metric.Int64ObservableGaugeOption{
+var newHostAmbientTemperatureObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Ambient (external) temperature of the physical host."),
 	metric.WithUnit("Cel"),
 }
@@ -4118,32 +4118,32 @@ var newHostAmbientTemperatureObservableOpts = []metric.Int64ObservableGaugeOptio
 // HostAmbientTemperatureObservable instrument.
 func NewHostAmbientTemperatureObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (HostAmbientTemperatureObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return HostAmbientTemperatureObservable{noop.Int64ObservableGauge{}}, nil
+		return HostAmbientTemperatureObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newHostAmbientTemperatureObservableOpts
 	} else {
-		opt = append(opt, newHostAmbientTemperatureObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHostAmbientTemperatureObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.host.ambient_temperature",
 		opt...,
 	)
 	if err != nil {
-		return HostAmbientTemperatureObservable{noop.Int64ObservableGauge{}}, err
+		return HostAmbientTemperatureObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return HostAmbientTemperatureObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m HostAmbientTemperatureObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m HostAmbientTemperatureObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -4206,7 +4206,7 @@ func NewHostEnergy(
 	if len(opt) == 0 {
 		opt = newHostEnergyOpts
 	} else {
-		opt = append(opt, newHostEnergyOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHostEnergyOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -4342,7 +4342,7 @@ func NewHostEnergyObservable(
 	if len(opt) == 0 {
 		opt = newHostEnergyObservableOpts
 	} else {
-		opt = append(opt, newHostEnergyObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHostEnergyObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -4400,10 +4400,10 @@ func (HostEnergyObservable) AttrParent(val string) attribute.KeyValue {
 // many degrees Celsius the temperature of the physical host can be increased,
 // before reaching a warning threshold on one of the internal sensors.
 type HostHeatingMargin struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newHostHeatingMarginOpts = []metric.Int64GaugeOption{
+var newHostHeatingMarginOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("By how many degrees Celsius the temperature of the physical host can be increased, before reaching a warning threshold on one of the internal sensors."),
 	metric.WithUnit("Cel"),
 }
@@ -4411,32 +4411,32 @@ var newHostHeatingMarginOpts = []metric.Int64GaugeOption{
 // NewHostHeatingMargin returns a new HostHeatingMargin instrument.
 func NewHostHeatingMargin(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (HostHeatingMargin, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return HostHeatingMargin{noop.Int64Gauge{}}, nil
+		return HostHeatingMargin{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newHostHeatingMarginOpts
 	} else {
-		opt = append(opt, newHostHeatingMarginOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHostHeatingMarginOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.host.heating_margin",
 		opt...,
 	)
 	if err != nil {
-		return HostHeatingMargin{noop.Int64Gauge{}}, err
+		return HostHeatingMargin{noop.Float64Gauge{}}, err
 	}
 	return HostHeatingMargin{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m HostHeatingMargin) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m HostHeatingMargin) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -4462,15 +4462,15 @@ func (HostHeatingMargin) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m HostHeatingMargin) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -4489,16 +4489,16 @@ func (m HostHeatingMargin) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m HostHeatingMargin) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m HostHeatingMargin) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -4506,7 +4506,7 @@ func (m HostHeatingMargin) RecordSet(ctx context.Context, val int64, set attribu
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
@@ -4527,10 +4527,10 @@ func (HostHeatingMargin) AttrParent(val string) attribute.KeyValue {
 // the by how many degrees Celsius the temperature of the physical host can be
 // increased, before reaching a warning threshold on one of the internal sensors.
 type HostHeatingMarginObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newHostHeatingMarginObservableOpts = []metric.Int64ObservableGaugeOption{
+var newHostHeatingMarginObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("By how many degrees Celsius the temperature of the physical host can be increased, before reaching a warning threshold on one of the internal sensors."),
 	metric.WithUnit("Cel"),
 }
@@ -4539,32 +4539,32 @@ var newHostHeatingMarginObservableOpts = []metric.Int64ObservableGaugeOption{
 // instrument.
 func NewHostHeatingMarginObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (HostHeatingMarginObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return HostHeatingMarginObservable{noop.Int64ObservableGauge{}}, nil
+		return HostHeatingMarginObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newHostHeatingMarginObservableOpts
 	} else {
-		opt = append(opt, newHostHeatingMarginObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHostHeatingMarginObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.host.heating_margin",
 		opt...,
 	)
 	if err != nil {
-		return HostHeatingMarginObservable{noop.Int64ObservableGauge{}}, err
+		return HostHeatingMarginObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return HostHeatingMarginObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m HostHeatingMarginObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m HostHeatingMarginObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -4606,10 +4606,10 @@ func (HostHeatingMarginObservable) AttrParent(val string) attribute.KeyValue {
 // "hw.host.power" semantic conventions. It represents the instantaneous power
 // consumed by the entire physical host in Watts (`hw.host.energy` is preferred).
 type HostPower struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newHostPowerOpts = []metric.Int64GaugeOption{
+var newHostPowerOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Instantaneous power consumed by the entire physical host in Watts (`hw.host.energy` is preferred)."),
 	metric.WithUnit("W"),
 }
@@ -4617,32 +4617,32 @@ var newHostPowerOpts = []metric.Int64GaugeOption{
 // NewHostPower returns a new HostPower instrument.
 func NewHostPower(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (HostPower, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return HostPower{noop.Int64Gauge{}}, nil
+		return HostPower{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newHostPowerOpts
 	} else {
-		opt = append(opt, newHostPowerOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHostPowerOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.host.power",
 		opt...,
 	)
 	if err != nil {
-		return HostPower{noop.Int64Gauge{}}, err
+		return HostPower{noop.Float64Gauge{}}, err
 	}
 	return HostPower{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m HostPower) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m HostPower) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -4673,15 +4673,15 @@ func (HostPower) Description() string {
 // summing up overlapping values.
 func (m HostPower) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -4700,7 +4700,7 @@ func (m HostPower) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
@@ -4709,12 +4709,12 @@ func (m HostPower) Record(
 // `hw.host.energy` and `hw.host.power` metrics **only**, instead of the generic
 // `hw.energy` and `hw.power` described in the previous section, to prevent
 // summing up overlapping values.
-func (m HostPower) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m HostPower) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -4722,7 +4722,7 @@ func (m HostPower) RecordSet(ctx context.Context, val int64, set attribute.Set) 
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
@@ -4743,10 +4743,10 @@ func (HostPower) AttrParent(val string) attribute.KeyValue {
 // power consumed by the entire physical host in Watts (`hw.host.energy` is
 // preferred).
 type HostPowerObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newHostPowerObservableOpts = []metric.Int64ObservableGaugeOption{
+var newHostPowerObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Instantaneous power consumed by the entire physical host in Watts (`hw.host.energy` is preferred)."),
 	metric.WithUnit("W"),
 }
@@ -4754,32 +4754,32 @@ var newHostPowerObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewHostPowerObservable returns a new HostPowerObservable instrument.
 func NewHostPowerObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (HostPowerObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return HostPowerObservable{noop.Int64ObservableGauge{}}, nil
+		return HostPowerObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newHostPowerObservableOpts
 	} else {
-		opt = append(opt, newHostPowerObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHostPowerObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.host.power",
 		opt...,
 	)
 	if err != nil {
-		return HostPowerObservable{noop.Int64ObservableGauge{}}, err
+		return HostPowerObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return HostPowerObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m HostPowerObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m HostPowerObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -4842,7 +4842,7 @@ func NewLogicalDiskLimit(
 	if len(opt) == 0 {
 		opt = newLogicalDiskLimitOpts
 	} else {
-		opt = append(opt, newLogicalDiskLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newLogicalDiskLimitOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -4976,7 +4976,7 @@ func NewLogicalDiskLimitObservable(
 	if len(opt) == 0 {
 		opt = newLogicalDiskLimitObservableOpts
 	} else {
-		opt = append(opt, newLogicalDiskLimitObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newLogicalDiskLimitObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -5061,7 +5061,7 @@ func NewLogicalDiskUsage(
 	if len(opt) == 0 {
 		opt = newLogicalDiskUsageOpts
 	} else {
-		opt = append(opt, newLogicalDiskUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newLogicalDiskUsageOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -5200,7 +5200,7 @@ func NewLogicalDiskUsageObservable(
 	if len(opt) == 0 {
 		opt = newLogicalDiskUsageObservableOpts
 	} else {
-		opt = append(opt, newLogicalDiskUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newLogicalDiskUsageObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -5271,10 +5271,10 @@ func (LogicalDiskUsageObservable) AttrParent(val string) attribute.KeyValue {
 // conforming to the "hw.logical_disk.utilization" semantic conventions. It
 // represents the logical disk space utilization as a fraction.
 type LogicalDiskUtilization struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newLogicalDiskUtilizationOpts = []metric.Int64GaugeOption{
+var newLogicalDiskUtilizationOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Logical disk space utilization as a fraction."),
 	metric.WithUnit("1"),
 }
@@ -5282,32 +5282,32 @@ var newLogicalDiskUtilizationOpts = []metric.Int64GaugeOption{
 // NewLogicalDiskUtilization returns a new LogicalDiskUtilization instrument.
 func NewLogicalDiskUtilization(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (LogicalDiskUtilization, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return LogicalDiskUtilization{noop.Int64Gauge{}}, nil
+		return LogicalDiskUtilization{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newLogicalDiskUtilizationOpts
 	} else {
-		opt = append(opt, newLogicalDiskUtilizationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newLogicalDiskUtilizationOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.logical_disk.utilization",
 		opt...,
 	)
 	if err != nil {
-		return LogicalDiskUtilization{noop.Int64Gauge{}}, err
+		return LogicalDiskUtilization{noop.Float64Gauge{}}, err
 	}
 	return LogicalDiskUtilization{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m LogicalDiskUtilization) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m LogicalDiskUtilization) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -5335,16 +5335,16 @@ func (LogicalDiskUtilization) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m LogicalDiskUtilization) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	logicalDiskState LogicalDiskStateAttr,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 			attribute.String("hw.logical_disk.state", string(logicalDiskState)),
 		))
@@ -5365,16 +5365,16 @@ func (m LogicalDiskUtilization) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m LogicalDiskUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m LogicalDiskUtilization) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -5382,7 +5382,7 @@ func (m LogicalDiskUtilization) RecordSet(ctx context.Context, val int64, set at
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrLogicalDiskRaidLevel returns an optional attribute for the
@@ -5409,10 +5409,10 @@ func (LogicalDiskUtilization) AttrParent(val string) attribute.KeyValue {
 // conforming to the "hw.logical_disk.utilization" semantic conventions. It
 // represents the logical disk space utilization as a fraction.
 type LogicalDiskUtilizationObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newLogicalDiskUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+var newLogicalDiskUtilizationObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Logical disk space utilization as a fraction."),
 	metric.WithUnit("1"),
 }
@@ -5421,32 +5421,32 @@ var newLogicalDiskUtilizationObservableOpts = []metric.Int64ObservableGaugeOptio
 // LogicalDiskUtilizationObservable instrument.
 func NewLogicalDiskUtilizationObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (LogicalDiskUtilizationObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return LogicalDiskUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+		return LogicalDiskUtilizationObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newLogicalDiskUtilizationObservableOpts
 	} else {
-		opt = append(opt, newLogicalDiskUtilizationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newLogicalDiskUtilizationObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.logical_disk.utilization",
 		opt...,
 	)
 	if err != nil {
-		return LogicalDiskUtilizationObservable{noop.Int64ObservableGauge{}}, err
+		return LogicalDiskUtilizationObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return LogicalDiskUtilizationObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m LogicalDiskUtilizationObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m LogicalDiskUtilizationObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -5523,7 +5523,7 @@ func NewMemorySize(
 	if len(opt) == 0 {
 		opt = newMemorySizeOpts
 	} else {
-		opt = append(opt, newMemorySizeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemorySizeOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -5675,7 +5675,7 @@ func NewMemorySizeObservable(
 	if len(opt) == 0 {
 		opt = newMemorySizeObservableOpts
 	} else {
-		opt = append(opt, newMemorySizeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemorySizeObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -5779,7 +5779,7 @@ func NewNetworkBandwidthLimit(
 	if len(opt) == 0 {
 		opt = newNetworkBandwidthLimitOpts
 	} else {
-		opt = append(opt, newNetworkBandwidthLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkBandwidthLimitOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -5940,7 +5940,7 @@ func NewNetworkBandwidthLimitObservable(
 	if len(opt) == 0 {
 		opt = newNetworkBandwidthLimitObservableOpts
 	} else {
-		opt = append(opt, newNetworkBandwidthLimitObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkBandwidthLimitObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -6031,10 +6031,10 @@ func (NetworkBandwidthLimitObservable) AttrVendor(val string) attribute.KeyValue
 // conforming to the "hw.network.bandwidth.utilization" semantic conventions. It
 // represents the utilization of the network bandwidth as a fraction.
 type NetworkBandwidthUtilization struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newNetworkBandwidthUtilizationOpts = []metric.Int64GaugeOption{
+var newNetworkBandwidthUtilizationOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Utilization of the network bandwidth as a fraction."),
 	metric.WithUnit("1"),
 }
@@ -6043,32 +6043,32 @@ var newNetworkBandwidthUtilizationOpts = []metric.Int64GaugeOption{
 // instrument.
 func NewNetworkBandwidthUtilization(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (NetworkBandwidthUtilization, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return NetworkBandwidthUtilization{noop.Int64Gauge{}}, nil
+		return NetworkBandwidthUtilization{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newNetworkBandwidthUtilizationOpts
 	} else {
-		opt = append(opt, newNetworkBandwidthUtilizationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkBandwidthUtilizationOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.network.bandwidth.utilization",
 		opt...,
 	)
 	if err != nil {
-		return NetworkBandwidthUtilization{noop.Int64Gauge{}}, err
+		return NetworkBandwidthUtilization{noop.Float64Gauge{}}, err
 	}
 	return NetworkBandwidthUtilization{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m NetworkBandwidthUtilization) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m NetworkBandwidthUtilization) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -6094,15 +6094,15 @@ func (NetworkBandwidthUtilization) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m NetworkBandwidthUtilization) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -6121,16 +6121,16 @@ func (m NetworkBandwidthUtilization) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m NetworkBandwidthUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m NetworkBandwidthUtilization) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -6138,7 +6138,7 @@ func (m NetworkBandwidthUtilization) RecordSet(ctx context.Context, val int64, s
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrModel returns an optional attribute for the "hw.model" semantic
@@ -6193,10 +6193,10 @@ func (NetworkBandwidthUtilization) AttrVendor(val string) attribute.KeyValue {
 // conventions. It represents the utilization of the network bandwidth as a
 // fraction.
 type NetworkBandwidthUtilizationObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newNetworkBandwidthUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+var newNetworkBandwidthUtilizationObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Utilization of the network bandwidth as a fraction."),
 	metric.WithUnit("1"),
 }
@@ -6205,32 +6205,32 @@ var newNetworkBandwidthUtilizationObservableOpts = []metric.Int64ObservableGauge
 // NetworkBandwidthUtilizationObservable instrument.
 func NewNetworkBandwidthUtilizationObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (NetworkBandwidthUtilizationObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return NetworkBandwidthUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+		return NetworkBandwidthUtilizationObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newNetworkBandwidthUtilizationObservableOpts
 	} else {
-		opt = append(opt, newNetworkBandwidthUtilizationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkBandwidthUtilizationObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.network.bandwidth.utilization",
 		opt...,
 	)
 	if err != nil {
-		return NetworkBandwidthUtilizationObservable{noop.Int64ObservableGauge{}}, err
+		return NetworkBandwidthUtilizationObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return NetworkBandwidthUtilizationObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m NetworkBandwidthUtilizationObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m NetworkBandwidthUtilizationObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -6327,7 +6327,7 @@ func NewNetworkIO(
 	if len(opt) == 0 {
 		opt = newNetworkIOOpts
 	} else {
-		opt = append(opt, newNetworkIOOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkIOOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -6495,7 +6495,7 @@ func NewNetworkIOObservable(
 	if len(opt) == 0 {
 		opt = newNetworkIOObservableOpts
 	} else {
-		opt = append(opt, newNetworkIOObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkIOObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -6616,7 +6616,7 @@ func NewNetworkPackets(
 	if len(opt) == 0 {
 		opt = newNetworkPacketsOpts
 	} else {
-		opt = append(opt, newNetworkPacketsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkPacketsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -6784,7 +6784,7 @@ func NewNetworkPacketsObservable(
 	if len(opt) == 0 {
 		opt = newNetworkPacketsObservableOpts
 	} else {
-		opt = append(opt, newNetworkPacketsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkPacketsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -6905,7 +6905,7 @@ func NewNetworkUp(
 	if len(opt) == 0 {
 		opt = newNetworkUpOpts
 	} else {
-		opt = append(opt, newNetworkUpOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkUpOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -7065,7 +7065,7 @@ func NewNetworkUpObservable(
 	if len(opt) == 0 {
 		opt = newNetworkUpObservableOpts
 	} else {
-		opt = append(opt, newNetworkUpObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkUpObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -7156,10 +7156,10 @@ func (NetworkUpObservable) AttrVendor(val string) attribute.KeyValue {
 // conforming to the "hw.physical_disk.endurance_utilization" semantic
 // conventions. It represents the endurance remaining for this SSD disk.
 type PhysicalDiskEnduranceUtilization struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newPhysicalDiskEnduranceUtilizationOpts = []metric.Int64GaugeOption{
+var newPhysicalDiskEnduranceUtilizationOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Endurance remaining for this SSD disk."),
 	metric.WithUnit("1"),
 }
@@ -7168,32 +7168,32 @@ var newPhysicalDiskEnduranceUtilizationOpts = []metric.Int64GaugeOption{
 // PhysicalDiskEnduranceUtilization instrument.
 func NewPhysicalDiskEnduranceUtilization(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (PhysicalDiskEnduranceUtilization, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return PhysicalDiskEnduranceUtilization{noop.Int64Gauge{}}, nil
+		return PhysicalDiskEnduranceUtilization{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newPhysicalDiskEnduranceUtilizationOpts
 	} else {
-		opt = append(opt, newPhysicalDiskEnduranceUtilizationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPhysicalDiskEnduranceUtilizationOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.physical_disk.endurance_utilization",
 		opt...,
 	)
 	if err != nil {
-		return PhysicalDiskEnduranceUtilization{noop.Int64Gauge{}}, err
+		return PhysicalDiskEnduranceUtilization{noop.Float64Gauge{}}, err
 	}
 	return PhysicalDiskEnduranceUtilization{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m PhysicalDiskEnduranceUtilization) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m PhysicalDiskEnduranceUtilization) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -7221,16 +7221,16 @@ func (PhysicalDiskEnduranceUtilization) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m PhysicalDiskEnduranceUtilization) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	physicalDiskState PhysicalDiskStateAttr,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 			attribute.String("hw.physical_disk.state", string(physicalDiskState)),
 		))
@@ -7251,16 +7251,16 @@ func (m PhysicalDiskEnduranceUtilization) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m PhysicalDiskEnduranceUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m PhysicalDiskEnduranceUtilization) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -7268,7 +7268,7 @@ func (m PhysicalDiskEnduranceUtilization) RecordSet(ctx context.Context, val int
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrFirmwareVersion returns an optional attribute for the
@@ -7322,10 +7322,10 @@ func (PhysicalDiskEnduranceUtilization) AttrVendor(val string) attribute.KeyValu
 // metric values conforming to the "hw.physical_disk.endurance_utilization"
 // semantic conventions. It represents the endurance remaining for this SSD disk.
 type PhysicalDiskEnduranceUtilizationObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newPhysicalDiskEnduranceUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+var newPhysicalDiskEnduranceUtilizationObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Endurance remaining for this SSD disk."),
 	metric.WithUnit("1"),
 }
@@ -7334,32 +7334,32 @@ var newPhysicalDiskEnduranceUtilizationObservableOpts = []metric.Int64Observable
 // PhysicalDiskEnduranceUtilizationObservable instrument.
 func NewPhysicalDiskEnduranceUtilizationObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (PhysicalDiskEnduranceUtilizationObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return PhysicalDiskEnduranceUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+		return PhysicalDiskEnduranceUtilizationObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newPhysicalDiskEnduranceUtilizationObservableOpts
 	} else {
-		opt = append(opt, newPhysicalDiskEnduranceUtilizationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPhysicalDiskEnduranceUtilizationObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.physical_disk.endurance_utilization",
 		opt...,
 	)
 	if err != nil {
-		return PhysicalDiskEnduranceUtilizationObservable{noop.Int64ObservableGauge{}}, err
+		return PhysicalDiskEnduranceUtilizationObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return PhysicalDiskEnduranceUtilizationObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m PhysicalDiskEnduranceUtilizationObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m PhysicalDiskEnduranceUtilizationObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -7463,7 +7463,7 @@ func NewPhysicalDiskSize(
 	if len(opt) == 0 {
 		opt = newPhysicalDiskSizeOpts
 	} else {
-		opt = append(opt, newPhysicalDiskSizeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPhysicalDiskSizeOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -7624,7 +7624,7 @@ func NewPhysicalDiskSizeObservable(
 	if len(opt) == 0 {
 		opt = newPhysicalDiskSizeObservableOpts
 	} else {
-		opt = append(opt, newPhysicalDiskSizeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPhysicalDiskSizeObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -7739,7 +7739,7 @@ func NewPhysicalDiskSmart(
 	if len(opt) == 0 {
 		opt = newPhysicalDiskSmartOpts
 	} else {
-		opt = append(opt, newPhysicalDiskSmartOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPhysicalDiskSmartOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -7913,7 +7913,7 @@ func NewPhysicalDiskSmartObservable(
 	if len(opt) == 0 {
 		opt = newPhysicalDiskSmartObservableOpts
 	} else {
-		opt = append(opt, newPhysicalDiskSmartObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPhysicalDiskSmartObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -8014,10 +8014,10 @@ func (PhysicalDiskSmartObservable) AttrVendor(val string) attribute.KeyValue {
 // "hw.power" semantic conventions. It represents the instantaneous power
 // consumed by the component.
 type Power struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newPowerOpts = []metric.Int64GaugeOption{
+var newPowerOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Instantaneous power consumed by the component."),
 	metric.WithUnit("W"),
 }
@@ -8025,32 +8025,32 @@ var newPowerOpts = []metric.Int64GaugeOption{
 // NewPower returns a new Power instrument.
 func NewPower(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (Power, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return Power{noop.Int64Gauge{}}, nil
+		return Power{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newPowerOpts
 	} else {
-		opt = append(opt, newPowerOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPowerOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.power",
 		opt...,
 	)
 	if err != nil {
-		return Power{noop.Int64Gauge{}}, err
+		return Power{noop.Float64Gauge{}}, err
 	}
 	return Power{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m Power) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m Power) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -8080,16 +8080,16 @@ func (Power) Description() string {
 // It is recommended to report `hw.energy` instead of `hw.power` when possible.
 func (m Power) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	hwType TypeAttr,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 			attribute.String("hw.type", string(hwType)),
 		))
@@ -8110,18 +8110,18 @@ func (m Power) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
 //
 // It is recommended to report `hw.energy` instead of `hw.power` when possible.
-func (m Power) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m Power) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -8129,7 +8129,7 @@ func (m Power) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
@@ -8149,10 +8149,10 @@ func (Power) AttrParent(val string) attribute.KeyValue {
 // the "hw.power" semantic conventions. It represents the instantaneous power
 // consumed by the component.
 type PowerObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newPowerObservableOpts = []metric.Int64ObservableGaugeOption{
+var newPowerObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Instantaneous power consumed by the component."),
 	metric.WithUnit("W"),
 }
@@ -8160,32 +8160,32 @@ var newPowerObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewPowerObservable returns a new PowerObservable instrument.
 func NewPowerObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (PowerObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return PowerObservable{noop.Int64ObservableGauge{}}, nil
+		return PowerObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newPowerObservableOpts
 	} else {
-		opt = append(opt, newPowerObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPowerObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.power",
 		opt...,
 	)
 	if err != nil {
-		return PowerObservable{noop.Int64ObservableGauge{}}, err
+		return PowerObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return PowerObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m PowerObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m PowerObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -8254,7 +8254,7 @@ func NewPowerSupplyLimit(
 	if len(opt) == 0 {
 		opt = newPowerSupplyLimitOpts
 	} else {
-		opt = append(opt, newPowerSupplyLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPowerSupplyLimitOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -8407,7 +8407,7 @@ func NewPowerSupplyLimitObservable(
 	if len(opt) == 0 {
 		opt = newPowerSupplyLimitObservableOpts
 	} else {
-		opt = append(opt, newPowerSupplyLimitObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPowerSupplyLimitObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -8490,10 +8490,10 @@ func (PowerSupplyLimitObservable) AttrVendor(val string) attribute.KeyValue {
 // the "hw.power_supply.usage" semantic conventions. It represents the current
 // power output of the power supply.
 type PowerSupplyUsage struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newPowerSupplyUsageOpts = []metric.Int64UpDownCounterOption{
+var newPowerSupplyUsageOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("Current power output of the power supply."),
 	metric.WithUnit("W"),
 }
@@ -8501,32 +8501,32 @@ var newPowerSupplyUsageOpts = []metric.Int64UpDownCounterOption{
 // NewPowerSupplyUsage returns a new PowerSupplyUsage instrument.
 func NewPowerSupplyUsage(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (PowerSupplyUsage, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return PowerSupplyUsage{noop.Int64UpDownCounter{}}, nil
+		return PowerSupplyUsage{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newPowerSupplyUsageOpts
 	} else {
-		opt = append(opt, newPowerSupplyUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPowerSupplyUsageOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"hw.power_supply.usage",
 		opt...,
 	)
 	if err != nil {
-		return PowerSupplyUsage{noop.Int64UpDownCounter{}}, err
+		return PowerSupplyUsage{noop.Float64UpDownCounter{}}, err
 	}
 	return PowerSupplyUsage{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m PowerSupplyUsage) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m PowerSupplyUsage) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -8552,15 +8552,15 @@ func (PowerSupplyUsage) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m PowerSupplyUsage) Add(
 	ctx context.Context,
-	incr int64,
+	incr float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
+		m.Float64UpDownCounter.Add(ctx, incr, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -8579,16 +8579,16 @@ func (m PowerSupplyUsage) Add(
 		),
 	)
 
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
-func (m PowerSupplyUsage) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m PowerSupplyUsage) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -8596,7 +8596,7 @@ func (m PowerSupplyUsage) AddSet(ctx context.Context, incr int64, set attribute.
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AttrModel returns an optional attribute for the "hw.model" semantic
@@ -8636,10 +8636,10 @@ func (PowerSupplyUsage) AttrVendor(val string) attribute.KeyValue {
 // conforming to the "hw.power_supply.usage" semantic conventions. It represents
 // the current power output of the power supply.
 type PowerSupplyUsageObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newPowerSupplyUsageObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newPowerSupplyUsageObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("Current power output of the power supply."),
 	metric.WithUnit("W"),
 }
@@ -8648,32 +8648,32 @@ var newPowerSupplyUsageObservableOpts = []metric.Int64ObservableUpDownCounterOpt
 // instrument.
 func NewPowerSupplyUsageObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (PowerSupplyUsageObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return PowerSupplyUsageObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return PowerSupplyUsageObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newPowerSupplyUsageObservableOpts
 	} else {
-		opt = append(opt, newPowerSupplyUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPowerSupplyUsageObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"hw.power_supply.usage",
 		opt...,
 	)
 	if err != nil {
-		return PowerSupplyUsageObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return PowerSupplyUsageObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return PowerSupplyUsageObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m PowerSupplyUsageObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m PowerSupplyUsageObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -8736,10 +8736,10 @@ func (PowerSupplyUsageObservable) AttrVendor(val string) attribute.KeyValue {
 // represents the utilization of the power supply as a fraction of its maximum
 // output.
 type PowerSupplyUtilization struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newPowerSupplyUtilizationOpts = []metric.Int64GaugeOption{
+var newPowerSupplyUtilizationOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Utilization of the power supply as a fraction of its maximum output."),
 	metric.WithUnit("1"),
 }
@@ -8747,32 +8747,32 @@ var newPowerSupplyUtilizationOpts = []metric.Int64GaugeOption{
 // NewPowerSupplyUtilization returns a new PowerSupplyUtilization instrument.
 func NewPowerSupplyUtilization(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (PowerSupplyUtilization, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return PowerSupplyUtilization{noop.Int64Gauge{}}, nil
+		return PowerSupplyUtilization{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newPowerSupplyUtilizationOpts
 	} else {
-		opt = append(opt, newPowerSupplyUtilizationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPowerSupplyUtilizationOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.power_supply.utilization",
 		opt...,
 	)
 	if err != nil {
-		return PowerSupplyUtilization{noop.Int64Gauge{}}, err
+		return PowerSupplyUtilization{noop.Float64Gauge{}}, err
 	}
 	return PowerSupplyUtilization{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m PowerSupplyUtilization) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m PowerSupplyUtilization) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -8798,15 +8798,15 @@ func (PowerSupplyUtilization) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m PowerSupplyUtilization) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -8825,16 +8825,16 @@ func (m PowerSupplyUtilization) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m PowerSupplyUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m PowerSupplyUtilization) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -8842,7 +8842,7 @@ func (m PowerSupplyUtilization) RecordSet(ctx context.Context, val int64, set at
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrModel returns an optional attribute for the "hw.model" semantic
@@ -8883,10 +8883,10 @@ func (PowerSupplyUtilization) AttrVendor(val string) attribute.KeyValue {
 // represents the utilization of the power supply as a fraction of its maximum
 // output.
 type PowerSupplyUtilizationObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newPowerSupplyUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+var newPowerSupplyUtilizationObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Utilization of the power supply as a fraction of its maximum output."),
 	metric.WithUnit("1"),
 }
@@ -8895,32 +8895,32 @@ var newPowerSupplyUtilizationObservableOpts = []metric.Int64ObservableGaugeOptio
 // PowerSupplyUtilizationObservable instrument.
 func NewPowerSupplyUtilizationObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (PowerSupplyUtilizationObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return PowerSupplyUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+		return PowerSupplyUtilizationObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newPowerSupplyUtilizationObservableOpts
 	} else {
-		opt = append(opt, newPowerSupplyUtilizationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPowerSupplyUtilizationObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.power_supply.utilization",
 		opt...,
 	)
 	if err != nil {
-		return PowerSupplyUtilizationObservable{noop.Int64ObservableGauge{}}, err
+		return PowerSupplyUtilizationObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return PowerSupplyUtilizationObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m PowerSupplyUtilizationObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m PowerSupplyUtilizationObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -9003,7 +9003,7 @@ func NewStatus(
 	if len(opt) == 0 {
 		opt = newStatusOpts
 	} else {
-		opt = append(opt, newStatusOpts...)
+		opt = append(opt[:len(opt):len(opt)], newStatusOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -9155,7 +9155,7 @@ func NewStatusObservable(
 	if len(opt) == 0 {
 		opt = newStatusObservableOpts
 	} else {
-		opt = append(opt, newStatusObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newStatusObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -9245,7 +9245,7 @@ func NewTapeDriveOperations(
 	if len(opt) == 0 {
 		opt = newTapeDriveOperationsOpts
 	} else {
-		opt = append(opt, newTapeDriveOperationsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newTapeDriveOperationsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -9399,7 +9399,7 @@ func NewTapeDriveOperationsObservable(
 	if len(opt) == 0 {
 		opt = newTapeDriveOperationsObservableOpts
 	} else {
-		opt = append(opt, newTapeDriveOperationsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newTapeDriveOperationsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -9483,10 +9483,10 @@ func (TapeDriveOperationsObservable) AttrVendor(val string) attribute.KeyValue {
 // "hw.temperature" semantic conventions. It represents the temperature in
 // degrees Celsius.
 type Temperature struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newTemperatureOpts = []metric.Int64GaugeOption{
+var newTemperatureOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Temperature in degrees Celsius."),
 	metric.WithUnit("Cel"),
 }
@@ -9494,32 +9494,32 @@ var newTemperatureOpts = []metric.Int64GaugeOption{
 // NewTemperature returns a new Temperature instrument.
 func NewTemperature(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (Temperature, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return Temperature{noop.Int64Gauge{}}, nil
+		return Temperature{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newTemperatureOpts
 	} else {
-		opt = append(opt, newTemperatureOpts...)
+		opt = append(opt[:len(opt):len(opt)], newTemperatureOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.temperature",
 		opt...,
 	)
 	if err != nil {
-		return Temperature{noop.Int64Gauge{}}, err
+		return Temperature{noop.Float64Gauge{}}, err
 	}
 	return Temperature{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m Temperature) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m Temperature) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -9545,15 +9545,15 @@ func (Temperature) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m Temperature) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -9572,16 +9572,16 @@ func (m Temperature) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m Temperature) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m Temperature) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -9589,7 +9589,7 @@ func (m Temperature) RecordSet(ctx context.Context, val int64, set attribute.Set
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
@@ -9615,10 +9615,10 @@ func (Temperature) AttrSensorLocation(val string) attribute.KeyValue {
 // to the "hw.temperature" semantic conventions. It represents the temperature in
 // degrees Celsius.
 type TemperatureObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newTemperatureObservableOpts = []metric.Int64ObservableGaugeOption{
+var newTemperatureObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Temperature in degrees Celsius."),
 	metric.WithUnit("Cel"),
 }
@@ -9626,32 +9626,32 @@ var newTemperatureObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewTemperatureObservable returns a new TemperatureObservable instrument.
 func NewTemperatureObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (TemperatureObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return TemperatureObservable{noop.Int64ObservableGauge{}}, nil
+		return TemperatureObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newTemperatureObservableOpts
 	} else {
-		opt = append(opt, newTemperatureObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newTemperatureObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.temperature",
 		opt...,
 	)
 	if err != nil {
-		return TemperatureObservable{noop.Int64ObservableGauge{}}, err
+		return TemperatureObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return TemperatureObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m TemperatureObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m TemperatureObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -9699,10 +9699,10 @@ func (TemperatureObservable) AttrSensorLocation(val string) attribute.KeyValue {
 // the "hw.temperature.limit" semantic conventions. It represents the temperature
 // limit in degrees Celsius.
 type TemperatureLimit struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newTemperatureLimitOpts = []metric.Int64GaugeOption{
+var newTemperatureLimitOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Temperature limit in degrees Celsius."),
 	metric.WithUnit("Cel"),
 }
@@ -9710,32 +9710,32 @@ var newTemperatureLimitOpts = []metric.Int64GaugeOption{
 // NewTemperatureLimit returns a new TemperatureLimit instrument.
 func NewTemperatureLimit(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (TemperatureLimit, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return TemperatureLimit{noop.Int64Gauge{}}, nil
+		return TemperatureLimit{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newTemperatureLimitOpts
 	} else {
-		opt = append(opt, newTemperatureLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newTemperatureLimitOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.temperature.limit",
 		opt...,
 	)
 	if err != nil {
-		return TemperatureLimit{noop.Int64Gauge{}}, err
+		return TemperatureLimit{noop.Float64Gauge{}}, err
 	}
 	return TemperatureLimit{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m TemperatureLimit) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m TemperatureLimit) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -9761,15 +9761,15 @@ func (TemperatureLimit) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m TemperatureLimit) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -9788,16 +9788,16 @@ func (m TemperatureLimit) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m TemperatureLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m TemperatureLimit) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -9805,7 +9805,7 @@ func (m TemperatureLimit) RecordSet(ctx context.Context, val int64, set attribut
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
@@ -9837,10 +9837,10 @@ func (TemperatureLimit) AttrSensorLocation(val string) attribute.KeyValue {
 // conforming to the "hw.temperature.limit" semantic conventions. It represents
 // the temperature limit in degrees Celsius.
 type TemperatureLimitObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newTemperatureLimitObservableOpts = []metric.Int64ObservableGaugeOption{
+var newTemperatureLimitObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Temperature limit in degrees Celsius."),
 	metric.WithUnit("Cel"),
 }
@@ -9849,32 +9849,32 @@ var newTemperatureLimitObservableOpts = []metric.Int64ObservableGaugeOption{
 // instrument.
 func NewTemperatureLimitObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (TemperatureLimitObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return TemperatureLimitObservable{noop.Int64ObservableGauge{}}, nil
+		return TemperatureLimitObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newTemperatureLimitObservableOpts
 	} else {
-		opt = append(opt, newTemperatureLimitObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newTemperatureLimitObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.temperature.limit",
 		opt...,
 	)
 	if err != nil {
-		return TemperatureLimitObservable{noop.Int64ObservableGauge{}}, err
+		return TemperatureLimitObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return TemperatureLimitObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m TemperatureLimitObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m TemperatureLimitObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -9928,10 +9928,10 @@ func (TemperatureLimitObservable) AttrSensorLocation(val string) attribute.KeyVa
 // "hw.voltage" semantic conventions. It represents the voltage measured by the
 // sensor.
 type Voltage struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newVoltageOpts = []metric.Int64GaugeOption{
+var newVoltageOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Voltage measured by the sensor."),
 	metric.WithUnit("V"),
 }
@@ -9939,32 +9939,32 @@ var newVoltageOpts = []metric.Int64GaugeOption{
 // NewVoltage returns a new Voltage instrument.
 func NewVoltage(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (Voltage, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return Voltage{noop.Int64Gauge{}}, nil
+		return Voltage{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newVoltageOpts
 	} else {
-		opt = append(opt, newVoltageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newVoltageOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.voltage",
 		opt...,
 	)
 	if err != nil {
-		return Voltage{noop.Int64Gauge{}}, err
+		return Voltage{noop.Float64Gauge{}}, err
 	}
 	return Voltage{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m Voltage) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m Voltage) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -9990,15 +9990,15 @@ func (Voltage) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m Voltage) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -10017,16 +10017,16 @@ func (m Voltage) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m Voltage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m Voltage) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -10034,7 +10034,7 @@ func (m Voltage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
@@ -10060,10 +10060,10 @@ func (Voltage) AttrSensorLocation(val string) attribute.KeyValue {
 // the "hw.voltage" semantic conventions. It represents the voltage measured by
 // the sensor.
 type VoltageObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newVoltageObservableOpts = []metric.Int64ObservableGaugeOption{
+var newVoltageObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Voltage measured by the sensor."),
 	metric.WithUnit("V"),
 }
@@ -10071,32 +10071,32 @@ var newVoltageObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewVoltageObservable returns a new VoltageObservable instrument.
 func NewVoltageObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (VoltageObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return VoltageObservable{noop.Int64ObservableGauge{}}, nil
+		return VoltageObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newVoltageObservableOpts
 	} else {
-		opt = append(opt, newVoltageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newVoltageObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.voltage",
 		opt...,
 	)
 	if err != nil {
-		return VoltageObservable{noop.Int64ObservableGauge{}}, err
+		return VoltageObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return VoltageObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m VoltageObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m VoltageObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -10144,10 +10144,10 @@ func (VoltageObservable) AttrSensorLocation(val string) attribute.KeyValue {
 // "hw.voltage.limit" semantic conventions. It represents the voltage limit in
 // Volts.
 type VoltageLimit struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newVoltageLimitOpts = []metric.Int64GaugeOption{
+var newVoltageLimitOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Voltage limit in Volts."),
 	metric.WithUnit("V"),
 }
@@ -10155,32 +10155,32 @@ var newVoltageLimitOpts = []metric.Int64GaugeOption{
 // NewVoltageLimit returns a new VoltageLimit instrument.
 func NewVoltageLimit(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (VoltageLimit, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return VoltageLimit{noop.Int64Gauge{}}, nil
+		return VoltageLimit{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newVoltageLimitOpts
 	} else {
-		opt = append(opt, newVoltageLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newVoltageLimitOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.voltage.limit",
 		opt...,
 	)
 	if err != nil {
-		return VoltageLimit{noop.Int64Gauge{}}, err
+		return VoltageLimit{noop.Float64Gauge{}}, err
 	}
 	return VoltageLimit{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m VoltageLimit) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m VoltageLimit) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -10206,15 +10206,15 @@ func (VoltageLimit) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m VoltageLimit) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -10233,16 +10233,16 @@ func (m VoltageLimit) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m VoltageLimit) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m VoltageLimit) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -10250,7 +10250,7 @@ func (m VoltageLimit) RecordSet(ctx context.Context, val int64, set attribute.Se
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrLimitType returns an optional attribute for the "hw.limit_type" semantic
@@ -10282,10 +10282,10 @@ func (VoltageLimit) AttrSensorLocation(val string) attribute.KeyValue {
 // conforming to the "hw.voltage.limit" semantic conventions. It represents the
 // voltage limit in Volts.
 type VoltageLimitObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newVoltageLimitObservableOpts = []metric.Int64ObservableGaugeOption{
+var newVoltageLimitObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Voltage limit in Volts."),
 	metric.WithUnit("V"),
 }
@@ -10293,32 +10293,32 @@ var newVoltageLimitObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewVoltageLimitObservable returns a new VoltageLimitObservable instrument.
 func NewVoltageLimitObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (VoltageLimitObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return VoltageLimitObservable{noop.Int64ObservableGauge{}}, nil
+		return VoltageLimitObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newVoltageLimitObservableOpts
 	} else {
-		opt = append(opt, newVoltageLimitObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newVoltageLimitObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.voltage.limit",
 		opt...,
 	)
 	if err != nil {
-		return VoltageLimitObservable{noop.Int64ObservableGauge{}}, err
+		return VoltageLimitObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return VoltageLimitObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m VoltageLimitObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m VoltageLimitObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -10372,10 +10372,10 @@ func (VoltageLimitObservable) AttrSensorLocation(val string) attribute.KeyValue 
 // "hw.voltage.nominal" semantic conventions. It represents the nominal
 // (expected) voltage.
 type VoltageNominal struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newVoltageNominalOpts = []metric.Int64GaugeOption{
+var newVoltageNominalOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Nominal (expected) voltage."),
 	metric.WithUnit("V"),
 }
@@ -10383,32 +10383,32 @@ var newVoltageNominalOpts = []metric.Int64GaugeOption{
 // NewVoltageNominal returns a new VoltageNominal instrument.
 func NewVoltageNominal(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (VoltageNominal, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return VoltageNominal{noop.Int64Gauge{}}, nil
+		return VoltageNominal{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newVoltageNominalOpts
 	} else {
-		opt = append(opt, newVoltageNominalOpts...)
+		opt = append(opt[:len(opt):len(opt)], newVoltageNominalOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"hw.voltage.nominal",
 		opt...,
 	)
 	if err != nil {
-		return VoltageNominal{noop.Int64Gauge{}}, err
+		return VoltageNominal{noop.Float64Gauge{}}, err
 	}
 	return VoltageNominal{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m VoltageNominal) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m VoltageNominal) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -10434,15 +10434,15 @@ func (VoltageNominal) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m VoltageNominal) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	id string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("hw.id", id),
 		))
 		return
@@ -10461,16 +10461,16 @@ func (m VoltageNominal) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m VoltageNominal) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m VoltageNominal) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -10478,7 +10478,7 @@ func (m VoltageNominal) RecordSet(ctx context.Context, val int64, set attribute.
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // AttrName returns an optional attribute for the "hw.name" semantic convention.
@@ -10504,10 +10504,10 @@ func (VoltageNominal) AttrSensorLocation(val string) attribute.KeyValue {
 // conforming to the "hw.voltage.nominal" semantic conventions. It represents the
 // nominal (expected) voltage.
 type VoltageNominalObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newVoltageNominalObservableOpts = []metric.Int64ObservableGaugeOption{
+var newVoltageNominalObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Nominal (expected) voltage."),
 	metric.WithUnit("V"),
 }
@@ -10515,32 +10515,32 @@ var newVoltageNominalObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewVoltageNominalObservable returns a new VoltageNominalObservable instrument.
 func NewVoltageNominalObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (VoltageNominalObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return VoltageNominalObservable{noop.Int64ObservableGauge{}}, nil
+		return VoltageNominalObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newVoltageNominalObservableOpts
 	} else {
-		opt = append(opt, newVoltageNominalObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newVoltageNominalObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"hw.voltage.nominal",
 		opt...,
 	)
 	if err != nil {
-		return VoltageNominalObservable{noop.Int64ObservableGauge{}}, err
+		return VoltageNominalObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return VoltageNominalObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m VoltageNominalObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m VoltageNominalObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.

@@ -58,9 +58,9 @@ type ClientCallDuration struct {
 }
 
 var newClientCallDurationOpts = []metric.Float64HistogramOption{
+	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 	metric.WithDescription("Measures the duration of an outgoing Remote Procedure Call (RPC)."),
 	metric.WithUnit("s"),
-	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 }
 
 // NewClientCallDuration returns a new ClientCallDuration instrument.
@@ -76,7 +76,11 @@ func NewClientCallDuration(
 	if len(opt) == 0 {
 		opt = newClientCallDurationOpts
 	} else {
-		opt = append(opt, newClientCallDurationOpts...)
+		// Bucket advice precedes caller options; semantic metadata stays fixed.
+		opts := make([]metric.Float64HistogramOption, 0, len(opt)+len(newClientCallDurationOpts))
+		opts = append(opts, newClientCallDurationOpts[0])
+		opts = append(opts, opt...)
+		opt = append(opts, newClientCallDurationOpts[1:]...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -211,9 +215,9 @@ type ServerCallDuration struct {
 }
 
 var newServerCallDurationOpts = []metric.Float64HistogramOption{
+	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 	metric.WithDescription("Measures the duration of an incoming Remote Procedure Call (RPC)."),
 	metric.WithUnit("s"),
-	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 }
 
 // NewServerCallDuration returns a new ServerCallDuration instrument.
@@ -229,7 +233,11 @@ func NewServerCallDuration(
 	if len(opt) == 0 {
 		opt = newServerCallDurationOpts
 	} else {
-		opt = append(opt, newServerCallDurationOpts...)
+		// Bucket advice precedes caller options; semantic metadata stays fixed.
+		opts := make([]metric.Float64HistogramOption, 0, len(opt)+len(newServerCallDurationOpts))
+		opts = append(opts, newServerCallDurationOpts[0])
+		opts = append(opts, opt...)
+		opt = append(opts, newServerCallDurationOpts[1:]...)
 	}
 
 	i, err := m.Float64Histogram(

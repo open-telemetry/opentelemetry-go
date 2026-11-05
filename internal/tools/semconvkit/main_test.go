@@ -56,6 +56,36 @@ func errorType(err error) {}
 	}
 }
 
+func TestMigrationPreservesNotes(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	prev := filepath.Join(root, "v1.43.0")
+	cur := filepath.Join(root, "v1.44.0")
+	writeGoFile(t, prev, "semconv", "package semconv\n")
+	writeGoFile(t, cur, "semconv", "package semconv\n")
+	const notes = "## Metric API changes\n\nUse deltas with Add.\n"
+	path := filepath.Join(cur, "MIGRATION_NOTES.md.inc")
+	if err := os.WriteFile(path, []byte(notes), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		m, err := newMigration(cur, prev)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := render("templates/MIGRATION.md.tmpl", cur, m); err != nil {
+			t.Fatal(err)
+		}
+		data, err := os.ReadFile(filepath.Join(cur, "MIGRATION.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Count(string(data), notes) != 1 {
+			t.Fatalf("migration does not preserve notes exactly once:\n%s", data)
+		}
+	}
+}
+
 // TestNoInvalidObservableHistogramTypes asserts that the semconv code
 // generator never emits types containing "HistogramObservable" or
 // "ObservableObservable", which would indicate the histogram-exclusion
