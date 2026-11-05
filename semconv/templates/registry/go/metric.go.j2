@@ -70,11 +70,11 @@ type {{ v.name }} struct {
 }
 
 var new{{ v.name }}Opts = []metric.{{ v.inst }}Option{
-	metric.WithDescription("{{ i.desc(metric) }}"),
-	metric.WithUnit("{{metric.unit}}"),
 {%- if metric.instrument == "histogram" and metric_bucket_boundaries != "" %}
 	metric.WithExplicitBucketBoundaries({{ metric_bucket_boundaries }}...),
 {%- endif %}
+	metric.WithDescription("{{ i.desc(metric) }}"),
+	metric.WithUnit("{{metric.unit}}"),
 }
 
 {{ ["New" ~ v.name ~ " returns a new " ~ v.name ~ " instrument."] | comment }}
@@ -90,7 +90,15 @@ func New{{ v.name }}(
 	if len(opt) == 0 {
 		opt = new{{ v.name }}Opts
 	} else {
-		opt = append(opt, new{{ v.name }}Opts...)
+{%- if metric.instrument == "histogram" and metric_bucket_boundaries != "" %}
+		// Bucket advice precedes caller options; semantic metadata stays fixed.
+		opts := make([]metric.{{ v.inst }}Option, 0, len(opt)+len(new{{ v.name }}Opts))
+		opts = append(opts, new{{ v.name }}Opts[0])
+		opts = append(opts, opt...)
+		opt = append(opts, new{{ v.name }}Opts[1:]...)
+{%- else %}
+		opt = append(opt[:len(opt):len(opt)], new{{ v.name }}Opts...)
+{%- endif %}
 	}
 
 	i, err := m.{{ v.inst }}(

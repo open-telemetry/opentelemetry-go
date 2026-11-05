@@ -119,7 +119,7 @@ func TestAppendScopeAttrsSanitizedCollisions(t *testing.T) {
 			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
 			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
 		}
-		kv, err := appendScopeAttrs(kv, attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+		kv, err := appendScopeAttrs(kv, attrs, labelNamer{})
 		require.NoError(t, err)
 		require.Equal(t, []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel, "otel_scope_scope_key"}, kv.keys)
 		require.Equal(t, []string{"my-scope", "v1.0.0", "https://example.com", "z;a;m"}, kv.vals)
@@ -144,7 +144,7 @@ func TestAppendScopeAttrsSanitizedCollisions(t *testing.T) {
 			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
 			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
 		}
-		kv, err := appendScopeAttrs(kv, attribute.NewSet(kvs...), otlptranslator.LabelNamer{UTF8Allowed: false})
+		kv, err := appendScopeAttrs(kv, attribute.NewSet(kvs...), labelNamer{})
 		require.NoError(t, err)
 		require.Len(t, kv.keys, 3+maxLinearScanAttrs+1)
 		require.Equal(t, "otel_scope_z_scope_dup", kv.keys[len(kv.keys)-1])
@@ -165,7 +165,7 @@ func TestSanitizedCollisionKeyOrder(t *testing.T) {
 	// Original keys in lexicographical order are "C-D", "C.D", "C/D".
 	require.Equal(t, []string{"M;Z;A"}, values)
 
-	kv, err := appendScopeAttrs(keyVals{}, attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+	kv, err := appendScopeAttrs(keyVals{}, attrs, labelNamer{})
 	require.NoError(t, err)
 	require.Equal(t, []string{"otel_scope_C_D"}, kv.keys)
 	require.Equal(t, []string{"M;Z;A"}, kv.vals)
@@ -174,9 +174,54 @@ func TestSanitizedCollisionKeyOrder(t *testing.T) {
 func TestAttributesToLabels(t *testing.T) {
 	labels, err := attributesToLabels([]attribute.KeyValue{
 		attribute.Float64Slice("float_slice", []float64{math.NaN(), math.Inf(1)}),
-	}, otlptranslator.LabelNamer{})
+	}, labelNamer{})
 	require.NoError(t, err)
 	require.Equal(t, prometheus.Labels{"float_slice": `["NaN","Infinity"]`}, labels)
+}
+
+func TestLabelNamerBuild(t *testing.T) {
+	t.Run("caches_sanitized_keys", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: false},
+		}
+		ln := c.newLabelNamer()
+		require.NotNil(t, ln.cache)
+
+		got, err := ln.build("http.request.method")
+		require.NoError(t, err)
+		require.Equal(t, "http_request_method", got)
+		require.Equal(t, "http_request_method", ln.cache["http.request.method"])
+
+		allocs := testing.AllocsPerRun(100, func() {
+			got, err = ln.build("http.request.method")
+		})
+		require.NoError(t, err)
+		require.Equal(t, "http_request_method", got)
+		require.Zero(t, allocs)
+	})
+
+	t.Run("does_not_cache_errors", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: false},
+		}
+		ln := c.newLabelNamer()
+
+		_, err := ln.build("")
+		require.Error(t, err)
+		require.Empty(t, ln.cache)
+	})
+
+	t.Run("utf8_allowed_nil_cache", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: true},
+		}
+		ln := c.newLabelNamer()
+		require.Nil(t, ln.cache)
+
+		got, err := ln.build("http.request.method")
+		require.NoError(t, err)
+		require.Equal(t, "http.request.method", got)
+	})
 }
 
 func TestGetOrReuseDesc(t *testing.T) {
@@ -2140,7 +2185,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 			m,
 			"test_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 		// Expect an invalid metric to be sent that carries the scale error.
@@ -2193,7 +2238,7 @@ func TestInvalidExponentialHistogramScaleReportsObservabilityError(t *testing.T)
 		metricdata.Metrics{Name: "test_histogram"},
 		"test_histogram",
 		keyVals{},
-		otlptranslator.LabelNamer{},
+		labelNamer{},
 		inst,
 	)
 
@@ -2372,7 +2417,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_high_scale_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 
@@ -2436,7 +2481,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_very_high_scale_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 
@@ -2500,7 +2545,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_histogram_with_negative_buckets",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 
@@ -2558,7 +2603,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_int64_exponential_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 

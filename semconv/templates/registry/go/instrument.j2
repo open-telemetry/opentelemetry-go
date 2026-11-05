@@ -6,6 +6,13 @@
 {%- if metric.unit is in divisible -%}
 {%- set ns.value="Float64" -%}
 {%- endif -%}
+{%- if metric.annotations is defined and metric.annotations.code_generation is defined -%}
+{%- if metric.annotations.code_generation.metric_value_type == "double" -%}
+{%- set ns.value="Float64" -%}
+{%- elif metric.annotations.code_generation.metric_value_type == "int" -%}
+{%- set ns.value="Int64" -%}
+{%- endif -%}
+{%- endif -%}
 {%- if metric.instrument == "counter" -%}
 {%- set ns.inst="Counter" -%}
 {%- elif metric.instrument == "updowncounter" -%}
