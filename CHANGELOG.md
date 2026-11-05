@@ -24,8 +24,8 @@ with the exceptions described in the [versioning policy](VERSIONING.md).
 
 ### Changed
 
-- Document the narrowly scoped security exception to the versioning policy, including compatibility guarantees and release-note requirements.
-- Expand the upgrade guidance for the default cardinality limit introduced in `go.opentelemetry.io/otel/sdk/metric` v1.44.0, including overflow detection and configuration options.
+- Document the narrowly scoped security exception to the versioning policy, including compatibility guarantees and release-note requirements. (#9436)
+- Expand the upgrade guidance for the default cardinality limit introduced in `go.opentelemetry.io/otel/sdk/metric` v1.44.0, including overflow detection and configuration options. (#9436)
 - Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
 - Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
