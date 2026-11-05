@@ -11,6 +11,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add experimental `WithFinish` support for `Int64UpDownCounter` and `Float64UpDownCounter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9251)
+- Add experimental `WithFinish` support for `Int64Gauge` and `Float64Gauge` LastValue aggregation in `go.opentelemetry.io/otel/sdk/metric/x`.
+  Ignore delayed Finish calls that predate the resolved series lifetime. (#9252)
 - Support the `OTEL_METRIC_EXPORT_MAX_BATCH_SIZE` environment variable in `NewPeriodicReader` in `go.opentelemetry.io/otel/sdk/metric`. The `WithMaxExportBatchSize` option takes precedence. (#9316)
 - Add `go.opentelemetry.io/otel/semconv/v1.44.0` package. The package contains semantic conventions from the `v1.44.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.44.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.43.0`. (#9265)
@@ -21,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   including cancellable provider shutdown and parked waits for in-flight measurements,
   in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 - Add experimental support for enabling/disabling `Meter`s per instrumentation scope via `MeterConfigurator`, `MeterConfig`, and `MeterConfiguratorHandle` in `go.opentelemetry.io/otel/sdk/metric/x`. Configuration is set at `MeterProvider` construction via `WithMeterConfigurator` and can be updated live through `MeterConfiguratorHandle.Set`. This gates recording (`Add`/`Record`/`Observe`) only. `MeterProvider`s without it are unaffected. (#8743)
+- Add `WithViewMatchingMode` and `ViewMatchingMode` in `go.opentelemetry.io/otel/sdk/metric/x` to support composable view matching. (#8510)
 
 ### Changed
 
@@ -44,7 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Keep experimental Finish Sum collections within the cardinality limit and preserve valid timestamps when new series are recorded concurrently in `go.opentelemetry.io/otel/sdk/metric`. (#9251)
-- Ignore delayed Finish calls that predate a Sum series lifetime in `go.opentelemetry.io/otel/sdk/metric`. (#9251)
+- Ignore delayed Finish calls that predate a Sum series lifetime in `go.opentelemetry.io/otel/sdk/metric`. (#9252)
 - Align gRPC endpoint URL handling across `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. Preserve Unix socket targets configured through `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`, or `WithEndpointURL`, resolver targets, and scheme-less URLs with an authority using only the host and port, while retaining the configured transport security for URL options with unknown or empty schemes. (#9331)
 - Skip measurement preparation and recording for disabled observability instruments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#9318)
 - Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)

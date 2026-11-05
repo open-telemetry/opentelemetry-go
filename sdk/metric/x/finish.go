@@ -19,7 +19,8 @@ func (finishingOption) FinishEnabled() bool { return true }
 //
 // This experimental implementation currently supports Int64Counter,
 // Float64Counter, Int64UpDownCounter, and Float64UpDownCounter instruments using
-// Sum aggregation. Finish is a no-op for other aggregations.
+// Sum aggregation, and Int64Gauge and Float64Gauge instruments using LastValue
+// aggregation. Finish is a no-op for other aggregations.
 func WithFinish() sdkmetric.Option {
 	return finishingOption{}
 }
