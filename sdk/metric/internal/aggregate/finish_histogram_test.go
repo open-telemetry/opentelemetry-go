@@ -52,13 +52,17 @@ func histogramPointWithAttrs[N int64 | float64](
 }
 
 func TestFinishHistogramLifecycle(t *testing.T) {
-	t.Run("Int64", func(t *testing.T) { testFinishHistogramLifecycle(t, int64(7), int64(-3)) })
-	t.Run("Float64", func(t *testing.T) { testFinishHistogramLifecycle(t, 7.25, -3.5) })
+	for _, enabled := range []string{"false", "true"} {
+		t.Run("PerSeriesStartTimestamps="+enabled, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", enabled)
+			t.Run("Int64", func(t *testing.T) { testFinishHistogramLifecycle(t, int64(7), int64(-3)) })
+			t.Run("Float64", func(t *testing.T) { testFinishHistogramLifecycle(t, 7.25, -3.5) })
+		})
+	}
 }
 
 func testFinishHistogramLifecycle[N int64 | float64](t *testing.T, first, last N) {
 	t.Helper()
-	t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
 	var c clock
 	t.Cleanup(c.Register())
 	for _, temporality := range []metricdata.Temporality{metricdata.CumulativeTemporality, metricdata.DeltaTemporality} {
