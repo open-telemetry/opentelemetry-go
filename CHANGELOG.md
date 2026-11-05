@@ -340,12 +340,13 @@ The next release will require at least [Go 1.26].
   Measurements for new attribute sets that exceed the limit are aggregated into a special attribute set containing `attribute.Bool("otel.metric.overflow", true)`, losing their original attribute detail.
   This can break dashboards and alerts that rely on those attributes, even though measurements are still aggregated.
   To detect affected metrics, look for data points carrying `otel.metric.overflow=true`, accounting for attribute-name translation by your exporter or backend.
-  Detect the presence of this attribute rather than testing whether the metric value is positive.
-  Configure an appropriate finite limit with [`WithCardinalityLimit`](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric#WithCardinalityLimit), or use `WithCardinalityLimit(0)` to restore unlimited cardinality, allowing memory usage to grow with the number of distinct attribute sets.
+  Configure an appropriate finite limit with [`WithCardinalityLimit`](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric#WithCardinalityLimit); disabling the limit allows memory usage to grow with the number of distinct attribute sets.
   A reader's [`WithCardinalityLimitSelector`](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric#WithCardinalityLimitSelector) can override the provider's limit.
   Reduce unnecessary attribute combinations in instrumentation or through a [View's attribute filter](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric#Stream).
   Validate critical metric dimensions, dashboards, alerts, and application memory usage in a representative environment before rolling out an upgrade.
-  For v1.44.0, the deprecated `OTEL_GO_X_CARDINALITY_LIMIT=0` environment variable also preserves unlimited cardinality; use `WithCardinalityLimit` for new configurations. (#8247)
+  See [Metric cardinality limits in OpenTelemetry: a practical guide](https://opentelemetry.io/blog/2026/cardinality-limits-in-opentelemetry/) for detailed sizing, detection, and monitoring guidance.
+  Set `WithCardinalityLimit(0)` or the deprecated `OTEL_GO_X_CARDINALITY_LIMIT=0` environment variable to preserve unlimited cardinality.
+  Note that support for `OTEL_GO_X_CARDINALITY_LIMIT` may be removed in a future release. (#8247)
 - `ErrorType` in `go.opentelemetry.io/otel/semconv` now unwraps errors created with `fmt.Errorf` when deriving the `error.type` attribute. (#8133)
 - `go.opentelemetry.io/otel/sdk/log` now unwraps error chains created with `fmt.Errorf` when deriving the `error.type` attribute from errors on log records. (#8133)
 - `Set.MarshalLog` method in `go.opentelemetry.io/otel/attribute` now uses `Value.String` formatting following the [OpenTelemetry AnyValue representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue). (#8169)
