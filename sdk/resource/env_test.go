@@ -110,3 +110,14 @@ func TestDetectServiceNameFromEnv(t *testing.T) {
 		semconv.ServiceName("bar"),
 	))
 }
+
+func TestInvalidPercentDecodingTrimsValue(t *testing.T) {
+	t.Setenv(resourceAttrKey, "key= %invalid ,k=v")
+	detector := &fromEnv{}
+	res, err := detector.Detect(t.Context())
+	assert.NoError(t, err)
+	assert.Equal(t, NewSchemaless(
+		attribute.String("key", "%invalid"),
+		attribute.String("k", "v"),
+	), res)
+}

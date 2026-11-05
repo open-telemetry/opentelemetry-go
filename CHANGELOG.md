@@ -84,6 +84,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Do not add empty `trace_id` or `span_id` exemplar labels in `go.opentelemetry.io/otel/exporters/prometheus` when an exemplar has no trace or span ID. (#9295)
 - Treat `unix-abstract://` endpoints from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` as insecure in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, matching `unix://` endpoints and the metric exporters. (#9261)
 - Preserve `ScopeMetrics` slice capacity in `PeriodicReader`'s `sync.Pool` by resetting slice length instead of overwriting the struct, avoiding per-cycle heap allocations in `go.opentelemetry.io/otel/sdk/metric`. (#8535)
+- Trim surrounding whitespace from an `OTEL_RESOURCE_ATTRIBUTES` value that fails percent-decoding in `go.opentelemetry.io/otel/sdk/resource`. (#PRNUM)
 
 ### Removed
 
