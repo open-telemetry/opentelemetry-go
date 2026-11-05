@@ -318,8 +318,8 @@ github.com/ldez/gomoddirectives v0.10.0 h1:Zb23rfMMkG21B6pZ9OfESzemByP5Qr7YvWcXQ
 github.com/ldez/gomoddirectives v0.10.0/go.mod h1:W9uh0721Vc7aaVoiMXTpKIveLmtHC9uaOSiHM4OK5a8=
 github.com/ldez/grignotin v0.10.1 h1:keYi9rYsgbvqAZGI1liek5c+jv9UUjbvdj3Tbn5fn4o=
 github.com/ldez/grignotin v0.10.1/go.mod h1:UlDbXFCARrXbWGNGP3S5vsysNXAPhnSuBufpTEbwOas=
-github.com/ldez/structtags v0.6.1 h1:bUooFLbXx41tW8SvkfwfFkkjPYvFFs59AAMgVg6DUBk=
-github.com/ldez/structtags v0.6.1/go.mod h1:YDxVSgDy/MON6ariaxLF2X09bh19qL7MtGBN5MrvbdY=
+github.com/ldez/structtags v0.6.2 h1:1KJCfTjNMFTD6IICI5U8VIur6Fs1nm43wAGYL4zqJEw=
+github.com/ldez/structtags v0.6.2/go.mod h1:arTakDbLbIbYBEKq+0ds2UB8OBd2zMeYLwI1cH5Yv78=
 github.com/ldez/tagliatelle v0.8.0 h1:QczqVPa22JdT40p3m5JTTVmPMv5wDORqdomJn6/Pnn0=
 github.com/ldez/tagliatelle v0.8.0/go.mod h1:K9n83Wv0wyVq3JYF9WI28BX8xXhDBVP3thHJ0ENuiEs=
 github.com/ldez/usetesting v0.5.0 h1:3/QtzZObBKLy1F4F8jLuKJiKBjjVFi1IavpoWbmqLwc=
