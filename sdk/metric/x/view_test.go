@@ -763,6 +763,7 @@ func TestOptInWithFinishAndMeterConfigurator(t *testing.T) {
 		_, err = m.Int64ObservableCounter(
 			"disabled.obs.optin",
 			metricx.WithOptIn(),
+			//nolint:unparam // The subtest is skipped, so the callback is unreachable.
 			metric.WithInt64Callback(func(_ context.Context, o metric.Int64Observer) error {
 				obsCalled.Store(true)
 				o.Observe(1)
