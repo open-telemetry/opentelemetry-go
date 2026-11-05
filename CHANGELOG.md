@@ -25,7 +25,6 @@ with further details in the [versioning policy](VERSIONING.md).
 ### Changed
 
 - Clarify the security-related versioning exception by linking to the OpenTelemetry client specification. (#9436)
-- Expand the upgrade guidance for the default cardinality limit introduced in `go.opentelemetry.io/otel/sdk/metric` v1.44.0, including overflow detection and configuration options. (#9436)
 - Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
 - Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
@@ -336,15 +335,9 @@ The next release will require at least [Go 1.26].
 
 ### Changed
 
-- ⚠️ **Breaking Change:** `go.opentelemetry.io/otel/sdk/metric` now applies a default cardinality limit of 2000 to align with the Metrics SDK specification recommendation.
-  Measurements for new attribute sets that exceed the limit are aggregated into a special attribute set containing `attribute.Bool("otel.metric.overflow", true)`, losing their original attribute detail.
-  This can break dashboards and alerts that rely on those attributes, even though measurements are still aggregated.
-  To detect affected metrics, look for data points carrying `otel.metric.overflow=true`, accounting for attribute-name translation by your exporter or backend.
-  Configure an appropriate finite limit with [`WithCardinalityLimit`](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric#WithCardinalityLimit); disabling the limit allows memory usage to grow with the number of distinct attribute sets.
-  A reader's [`WithCardinalityLimitSelector`](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric#WithCardinalityLimitSelector) can override the provider's limit.
-  Reduce unnecessary attribute combinations in instrumentation or through a [View's attribute filter](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric#Stream).
-  Validate critical metric dimensions, dashboards, alerts, and application memory usage in a representative environment before rolling out an upgrade.
-  See [Metric cardinality limits in OpenTelemetry: a practical guide](https://opentelemetry.io/blog/2026/cardinality-limits-in-opentelemetry/) for detailed sizing, detection, and monitoring guidance.
+- ⚠️ **Breaking Change:** `go.opentelemetry.io/otel/sdk/metric` now applies a default cardinality limit of 2000 to comply with the Metrics SDK specification recommendation.
+  New attribute sets are dropped when the cardinality limit is reached. The measurement of these sets are aggregated into a special attribute set containing `attribute.Bool("otel.metric.overflow", true)`.
+  This can break users who relied on the previous unlimited default.
   Set `WithCardinalityLimit(0)` or the deprecated `OTEL_GO_X_CARDINALITY_LIMIT=0` environment variable to preserve unlimited cardinality.
   Note that support for `OTEL_GO_X_CARDINALITY_LIMIT` may be removed in a future release. (#8247)
 - `ErrorType` in `go.opentelemetry.io/otel/semconv` now unwraps errors created with `fmt.Errorf` when deriving the `error.type` attribute. (#8133)
