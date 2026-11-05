@@ -108,12 +108,66 @@ func TestFinishSumLifecycle(t *testing.T) {
 	})
 }
 
+func TestFinishSumFinishTimestamp(t *testing.T) {
+	t.Run("Int64", func(t *testing.T) { testFinishSumFinishTimestamp(t, int64(7)) })
+	t.Run("Float64", func(t *testing.T) { testFinishSumFinishTimestamp(t, 1.25) })
+}
+
+func testFinishSumFinishTimestamp[N int64 | float64](t *testing.T, value N) {
+	t.Helper()
+	var c clock
+	t.Cleanup(c.Register())
+	for _, monotonic := range []bool{false, true} {
+		for _, recreate := range []bool{false, true} {
+			for _, offset := range []int64{-1, 0, 1} {
+				t.Run(
+					fmt.Sprintf("monotonic=%t/recreate=%t/offset=%d", monotonic, recreate, offset),
+					func(t *testing.T) {
+						c.Reset()
+						agg := Builder[N]{}.FinishSum(monotonic)
+						collect := func() []metricdata.DataPoint[N] {
+							var data metricdata.Aggregation
+							agg.ComputeAggregation(&data)
+							return data.(metricdata.Sum[N]).DataPoints
+						}
+						if recreate {
+							agg.Measure(t.Context(), value, alice)
+							agg.Finish(alice.Equivalent(), y2k)
+							require.Len(t, collect(), 1)
+							require.Empty(t, collect())
+						}
+						agg.Measure(t.Context(), value, alice)
+						points := collect()
+						require.Len(t, points, 1)
+						start := points[0].StartTime
+						finishTime := start.Add(time.Duration(offset) * time.Nanosecond)
+						agg.Finish(alice.Equivalent(), finishTime)
+						points = collect()
+						require.Len(t, points, 1)
+						assert.Equal(t, start, points[0].StartTime)
+						assert.Equal(t, value, points[0].Value)
+						if offset < 0 {
+							assert.False(t, points[0].Time.Before(start))
+							require.Len(t, collect(), 1, "stale Finish must not retire the new lifetime")
+							agg.Finish(alice.Equivalent(), y2kPlus(100))
+							require.Len(t, collect(), 1)
+						} else {
+							assert.Equal(t, finishTime, points[0].Time)
+						}
+						assert.Empty(t, collect())
+					},
+				)
+			}
+		}
+	}
+}
+
 func TestFinishSumAttributes(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
 		empty := attribute.NewSet()
 		agg := Builder[int64]{ReservoirFunc: dropExemplars[int64]}.FinishSum(true)
 		agg.Measure(t.Context(), 1, empty)
-		agg.Finish(empty.Equivalent(), y2k)
+		agg.Finish(empty.Equivalent(), now())
 
 		points := finishSumPoints(t, agg.ComputeAggregation)
 		require.Len(t, points, 1)
@@ -135,7 +189,7 @@ func TestFinishSumAttributes(t *testing.T) {
 			},
 		}.FinishSum(true)
 		agg.Measure(t.Context(), 7, alice)
-		agg.Finish(fltrAlice.Equivalent(), y2k)
+		agg.Finish(fltrAlice.Equivalent(), now())
 
 		points := finishSumPoints(t, agg.ComputeAggregation)
 		require.Len(t, points, 1)
@@ -157,7 +211,7 @@ func TestFinishSumCardinality(t *testing.T) {
 	agg.Measure(t.Context(), 1, alice)
 	agg.Measure(t.Context(), 2, bob)
 	agg.Measure(t.Context(), 3, carol) // Overflow.
-	agg.Finish(alice.Equivalent(), y2k)
+	agg.Finish(alice.Equivalent(), now())
 	points := finishSumPoints(t, agg.ComputeAggregation)
 	require.Len(t, points, 3)
 
@@ -171,7 +225,7 @@ func TestFinishSumCardinality(t *testing.T) {
 
 	// The shared overflow series cannot be finalized, even when addressed by
 	// its reserved attributes.
-	agg.Finish(overflowSet.Equivalent(), y2k)
+	agg.Finish(overflowSet.Equivalent(), now())
 	require.Len(t, finishSumPoints(t, agg.ComputeAggregation), 3)
 }
 
@@ -179,7 +233,7 @@ func TestFinishSumOverflowProvenance(t *testing.T) {
 	t.Run("UnlimitedMarkerSeries", func(t *testing.T) {
 		agg := Builder[int64]{ReservoirFunc: dropExemplars[int64]}.FinishSum(true)
 		agg.Measure(t.Context(), 1, overflowSet)
-		agg.Finish(overflowSet.Equivalent(), y2k)
+		agg.Finish(overflowSet.Equivalent(), now())
 
 		points := finishSumPoints(t, agg.ComputeAggregation)
 		require.Len(t, points, 1)
@@ -197,7 +251,7 @@ func TestFinishSumOverflowProvenance(t *testing.T) {
 		agg.Measure(t.Context(), 1, overflowSet)
 		agg.Measure(t.Context(), 2, alice)
 		agg.Measure(t.Context(), 3, bob)
-		agg.Finish(overflowSet.Equivalent(), y2k)
+		agg.Finish(overflowSet.Equivalent(), now())
 		// Routing this measurement to the marker series promotes it to shared
 		// overflow and cancels its pending finish.
 		agg.Measure(t.Context(), 4, carol)
@@ -521,6 +575,29 @@ func (r *blockingFinishSumReservoir) Offer(
 }
 
 func (*blockingFinishSumReservoir) Collect(*[]exemplar.Exemplar) {}
+
+func BenchmarkFinishSumLifecycle(b *testing.B) {
+	b.Run("Int64", benchmarkFinishSumLifecycle[int64])
+	b.Run("Float64", benchmarkFinishSumLifecycle[float64])
+}
+
+func benchmarkFinishSumLifecycle[N int64 | float64](b *testing.B) {
+	for _, name := range []string{"MeasureAndFinish", "RepeatedFinish"} {
+		b.Run(name, func(b *testing.B) {
+			agg := Builder[N]{}.FinishSum(true)
+			agg.Measure(b.Context(), N(1), alice)
+			finishTime := time.Now()
+			distinct := alice.Equivalent()
+			b.ReportAllocs()
+			for b.Loop() {
+				if name == "MeasureAndFinish" {
+					agg.Measure(b.Context(), N(1), alice)
+				}
+				agg.Finish(distinct, finishTime)
+			}
+		})
+	}
+}
 
 func BenchmarkFinishSum(b *testing.B) {
 	b.Run("Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {

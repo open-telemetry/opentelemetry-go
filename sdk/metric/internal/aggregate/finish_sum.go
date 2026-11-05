@@ -79,6 +79,10 @@ func (v *finishSumValue[N]) measureAcquired(
 }
 
 func (v *finishSumValue[N]) finish(t time.Time) {
+	// A delayed Finish must not retire a lifetime created after it began.
+	if t.Before(v.start) {
+		return
+	}
 	v.lifecycle.Finish(t)
 }
 

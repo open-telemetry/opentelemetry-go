@@ -50,3 +50,37 @@ func (i *float64Counter) Finish(_ context.Context, attrs ...attribute.KeyValue) 
 		f(attrs, t)
 	}
 }
+
+type int64Gauge struct {
+	metric.Int64Gauge
+	finishers []Func
+}
+
+// NewInt64Gauge decorates gauge with Finish support.
+func NewInt64Gauge(gauge metric.Int64Gauge, finishers []Func) metric.Int64Gauge {
+	return &int64Gauge{Int64Gauge: gauge, finishers: finishers}
+}
+
+func (i *int64Gauge) Finish(_ context.Context, attrs ...attribute.KeyValue) {
+	t := time.Now()
+	for _, f := range i.finishers {
+		f(attrs, t)
+	}
+}
+
+type float64Gauge struct {
+	metric.Float64Gauge
+	finishers []Func
+}
+
+// NewFloat64Gauge decorates gauge with Finish support.
+func NewFloat64Gauge(gauge metric.Float64Gauge, finishers []Func) metric.Float64Gauge {
+	return &float64Gauge{Float64Gauge: gauge, finishers: finishers}
+}
+
+func (i *float64Gauge) Finish(_ context.Context, attrs ...attribute.KeyValue) {
+	t := time.Now()
+	for _, f := range i.finishers {
+		f(attrs, t)
+	}
+}
