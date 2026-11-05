@@ -122,19 +122,19 @@ func finishCounterAggregators[N int64 | float64](
 			}
 			return i.newStreamAggregation(b, agg, kind)
 		}
-		e := i.forEachStream(
-			id,
-			allowedKeys,
-			optIn,
-			i.readerDefaultAggregation(id.Kind),
-			newAggregation,
-			func(agg aggVal[N]) {
+		e := i.forEachStream(streamConfig[N]{
+			inst:              id,
+			allowedKeys:       allowedKeys,
+			optIn:             optIn,
+			readerAggregation: i.readerDefaultAggregation(id.Kind),
+			newAggregation:    newAggregation,
+			yield: func(agg aggVal[N]) {
 				measures = append(measures, agg.Measure)
 				if agg.Finish != nil {
 					finishers = append(finishers, agg.Finish)
 				}
 			},
-		)
+		})
 		if e != nil {
 			err = errors.Join(err, e)
 		}
