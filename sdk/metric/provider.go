@@ -75,12 +75,11 @@ var _ metric.MeterProvider = (*MeterProvider)(nil)
 // created. This means the returned MeterProvider, one created with no
 // Readers, will perform no operations.
 //
-// Combining distinct experimental options of the same kind is not supported.
-// Experimental view options and all other experimental options are separate
-// kinds, and the two kinds can be combined. If options include more than one
-// distinct experimental option type of one kind, an error is logged and the
-// returned MeterProvider performs no operations; ForceFlush and Shutdown still
-// reach its Readers. Repeating the same experimental option is allowed.
+// Combining distinct experimental options is not supported. If options
+// include more than one distinct experimental option type, an error is logged
+// and the returned MeterProvider performs no operations; ForceFlush and
+// Shutdown still reach its Readers. Repeating the same experimental option is
+// allowed.
 func NewMeterProvider(options ...Option) *MeterProvider {
 	conf := newConfig(options)
 	flush, sdown := conf.readerSignals()

@@ -26,13 +26,6 @@ type (
 	expOptionC struct{}
 )
 
-// expViewOptionA and expViewOptionB are stub experimental options that only
-// contribute views.
-type (
-	expViewOptionA struct{}
-	expViewOptionB struct{}
-)
-
 func (expOptionA) apply(config) config {
 	panic("experimental options must not be applied as stable options")
 }
@@ -48,25 +41,8 @@ func (expOptionC) apply(config) config {
 }
 func (expOptionC) Experimental() {}
 
-func (expViewOptionA) apply(config) config {
-	panic("experimental options must not be applied as stable options")
-}
-func (expViewOptionA) Experimental() {}
-func (expViewOptionA) ExperimentalViews() []func(Instrument) (Stream, *bool, bool) {
-	return nil
-}
-
-func (expViewOptionB) apply(config) config {
-	panic("experimental options must not be applied as stable options")
-}
-func (expViewOptionB) Experimental() {}
-func (expViewOptionB) ExperimentalViews() []func(Instrument) (Stream, *bool, bool) {
-	return nil
-}
-
 func TestRejectDistinctExperimental(t *testing.T) {
 	a, b, c := expOptionA{}, expOptionB{}, expOptionC{}
-	va, vb := expViewOptionA{}, expViewOptionB{}
 	tests := []struct {
 		name    string
 		opts    []experimentalOption
@@ -81,15 +57,6 @@ func TestRejectDistinctExperimental(t *testing.T) {
 		{"RepeatedAndDistinct", []experimentalOption{a, a, b}, true},
 		{"FinishAndOther", []experimentalOption{testFinishOption(true), a}, true},
 		{"DisabledFinishAndOther", []experimentalOption{testFinishOption(false), a}, true},
-		{"ViewOnly", []experimentalOption{va}, false},
-		{"RepeatedView", []experimentalOption{va, va}, false},
-		{"ViewAndMeter", []experimentalOption{va, a}, false},
-		{"MeterAndView", []experimentalOption{a, va}, false},
-		{"ViewAndFinish", []experimentalOption{va, testFinishOption(true), va}, false},
-		{"RepeatedViewAndMeter", []experimentalOption{va, a, va, a}, false},
-		{"TwoDistinctViews", []experimentalOption{va, vb}, true},
-		{"TwoDistinctViewsAndMeter", []experimentalOption{va, a, vb}, true},
-		{"TwoDistinctMetersAndView", []experimentalOption{a, va, b}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -109,14 +76,6 @@ func TestRejectDistinctExperimentalErrorNamesOptions(t *testing.T) {
 	assert.ErrorContains(t, err, "metric.expOptionA")
 	assert.ErrorContains(t, err, "metric.expOptionB")
 	assert.ErrorContains(t, err, "metric.expOptionC")
-}
-
-func TestRejectDistinctExperimentalErrorNamesViewOptions(t *testing.T) {
-	err := rejectDistinctExperimental([]experimentalOption{expViewOptionA{}, expOptionA{}, expViewOptionB{}})
-	require.Error(t, err)
-	assert.ErrorContains(t, err, "metric.expViewOptionA")
-	assert.ErrorContains(t, err, "metric.expViewOptionB")
-	assert.NotContains(t, err.Error(), "metric.expOptionA")
 }
 
 func TestNewMeterProviderDistinctExperimentalIsNoop(t *testing.T) {
@@ -146,16 +105,6 @@ func TestNewMeterProviderDistinctExperimentalIsNoop(t *testing.T) {
 	assert.ErrorIs(t, mp.ForceFlush(t.Context()), assert.AnError)
 	assert.NoError(t, mp.Shutdown(t.Context()))
 	assert.ErrorIs(t, rdr.Collect(t.Context(), &rm), ErrReaderShutdown)
-}
-
-func TestNewMeterProviderExperimentalViewWithMeterOption(t *testing.T) {
-	mp := NewMeterProvider(testFinishOption(true), expViewOptionA{})
-	t.Cleanup(func() { assert.NoError(t, mp.Shutdown(t.Context())) })
-
-	counter, err := mp.Meter("scope").Int64Counter("requests")
-	require.NoError(t, err)
-	_, ok := counter.(metricx.Finisher)
-	assert.True(t, ok, "an experimental view option must not disable a meter option")
 }
 
 func TestNewMeterProviderRepeatedExperimental(t *testing.T) {

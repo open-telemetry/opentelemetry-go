@@ -30,7 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   See the [bridge version compatibility documentation](bridge/opentracing/README.md#version-compatibility). (#9209)
 - Document the concurrency guarantees of the `Exporter` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9244)
 - Upgrade `github.com/cenkalti/backoff` from `v5` to `v7` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9267)
-- `NewMeterProvider` in `go.opentelemetry.io/otel/sdk/metric` rejects options that combine more than one distinct experimental option of the same kind (experimental view options and other experimental options are separate kinds and can be combined).
+- `NewMeterProvider` in `go.opentelemetry.io/otel/sdk/metric` rejects options that combine more than one distinct experimental option.
   It logs an error, and the returned `MeterProvider` performs no operations while its Readers still receive `ForceFlush` and `Shutdown`.
   Repeating the same experimental option is still supported. (#9193)
 
