@@ -10,9 +10,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
 
 	"go.opentelemetry.io/otel"
@@ -34,11 +36,26 @@ func TestSelfObservability(t *testing.T) {
 	require.NoError(t, err)
 	defer coll.Shutdown()
 
+	rCh := make(chan otest.ExportResult, 1)
+	rCh <- otest.ExportResult{
+		Response: &colmetricpb.ExportMetricsServiceResponse{
+			PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
+				RejectedDataPoints: 1,
+				ErrorMessage:       "some points rejected",
+			},
+		},
+	}
+	partialColl, err := otest.NewGRPCCollector("", rCh)
+	require.NoError(t, err)
+	defer partialColl.Shutdown()
+	defer close(rCh)
+
 	tests := []struct {
 		name         string
 		envValue     string
 		endpoint     string
 		expectError  bool
+		wantErrIs    error
 		setupMetrics func(*metricdata.ResourceMetrics)
 		wantMetrics  func(actualComponentName, addr string, port int, err error) []metricdata.Metrics
 	}{
@@ -119,7 +136,7 @@ func TestSelfObservability(t *testing.T) {
 			// deterministic export failure to verify self-observability metrics.
 			endpoint:    "passthrough:///127.0.0.1:1",
 			expectError: true,
-			wantMetrics: func(actualComponentName, addr string, port int, err error) []metricdata.Metrics {
+			wantMetrics: func(actualComponentName, addr string, port int, _ error) []metricdata.Metrics {
 				baseAttrs := []attribute.KeyValue{
 					semconv.OTelComponentName(actualComponentName),
 					semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
@@ -131,7 +148,7 @@ func TestSelfObservability(t *testing.T) {
 					baseAttrs = append(baseAttrs, semconv.ServerPortKey.Int(port))
 				}
 
-				errorAttrs := append([]attribute.KeyValue{semconv.ErrorType(err)}, baseAttrs...)
+				errorAttrs := append([]attribute.KeyValue{semconv.ErrorTypeKey.String("*status.Error")}, baseAttrs...)
 
 				return []metricdata.Metrics{
 					{
@@ -179,6 +196,78 @@ func TestSelfObservability(t *testing.T) {
 										append(
 											[]attribute.KeyValue{semconv.RPCResponseStatusCode("Unavailable")},
 											errorAttrs...,
+										)...,
+									),
+									Count: 1,
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			name:        "partial success (rejected)",
+			envValue:    "true",
+			endpoint:    "dns:///" + partialColl.Addr().String(),
+			expectError: true,
+			wantErrIs:   internal.PartialSuccess{},
+			wantMetrics: func(actualComponentName, addr string, port int, _ error) []metricdata.Metrics {
+				baseAttrs := []attribute.KeyValue{
+					semconv.OTelComponentName(actualComponentName),
+					semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
+					semconv.ServerAddressKey.String(addr),
+					semconv.ServerPortKey.Int(port),
+				}
+				rejectedAttrs := append([]attribute.KeyValue{semconv.ErrorTypeKey.String("rejected")}, baseAttrs...)
+
+				return []metricdata.Metrics{
+					{
+						Name:        otelconv.SDKExporterMetricDataPointExported{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointExported{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointExported{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(baseAttrs...),
+									Value:      3,
+								},
+								{
+									Attributes: attribute.NewSet(rejectedAttrs...),
+									Value:      1,
+								},
+							},
+						},
+					},
+					{
+						Name:        otelconv.SDKExporterMetricDataPointInflight{}.Name(),
+						Description: otelconv.SDKExporterMetricDataPointInflight{}.Description(),
+						Unit:        otelconv.SDKExporterMetricDataPointInflight{}.Unit(),
+						Data: metricdata.Sum[int64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: false,
+							DataPoints: []metricdata.DataPoint[int64]{
+								{
+									Attributes: attribute.NewSet(baseAttrs...),
+									Value:      0,
+								},
+							},
+						},
+					},
+					{
+						Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+						Description: otelconv.SDKExporterOperationDuration{}.Description(),
+						Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Attributes: attribute.NewSet(
+										append(
+											[]attribute.KeyValue{semconv.RPCResponseStatusCode(codes.OK.String())},
+											rejectedAttrs...,
 										)...,
 									),
 									Count: 1,
@@ -324,6 +413,9 @@ func TestSelfObservability(t *testing.T) {
 			exportErr := exp.Export(t.Context(), rm)
 			if tt.expectError {
 				assert.Error(t, exportErr)
+				if tt.wantErrIs != nil {
+					assert.ErrorIs(t, exportErr, tt.wantErrIs)
+				}
 			} else {
 				require.NoError(t, exportErr)
 			}

@@ -229,24 +229,35 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		return fmt.Errorf("request message too large: exceeded %d bytes", maxSize)
 	}
 
-	return c.requestFunc(ctx, func(iCtx context.Context) error {
+	err := c.requestFunc(ctx, func(iCtx context.Context) error {
+		uploadErr = nil
 		resp, err := c.tsc.Export(iCtx, pbRequest)
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedSpans()
 			if n != 0 || msg != "" {
-				e := internal.TracePartialSuccessError(n, msg)
-				uploadErr = errors.Join(uploadErr, e)
+				uploadErr = internal.TracePartialSuccessError(n, msg)
 			}
 		}
 		// nil is converted to OK.
 		code = status.Code(err)
 		if code == codes.OK {
 			// Success.
-			return uploadErr
+			return nil
 		}
-		return errors.Join(uploadErr, err)
+		return err
 	})
+	return joinErrs(uploadErr, err)
+}
+
+func joinErrs(err1, err2 error) error {
+	if err1 == nil {
+		return err2
+	}
+	if err2 == nil {
+		return err1
+	}
+	return errors.Join(err1, err2)
 }
 
 // exportContext returns a copy of parent with an appropriate deadline and

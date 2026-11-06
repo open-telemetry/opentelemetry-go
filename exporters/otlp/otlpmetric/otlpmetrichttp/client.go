@@ -180,13 +180,14 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		defer cancel()
 	}
 
-	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
+	err = c.requestFunc(ctx, func(iCtx context.Context) error {
 		select {
 		case <-iCtx.Done():
 			return iCtx.Err()
 		default:
 		}
 
+		uploadErr = nil
 		statusCode = 0
 		request.reset(iCtx)
 		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
@@ -203,7 +204,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			if resp.Body != nil {
 				defer func() {
 					if err := resp.Body.Close(); err != nil {
-						uploadErr = errors.Join(uploadErr, err)
+						uploadErr = joinErrs(uploadErr, err)
 					}
 				}()
 			}
@@ -232,7 +233,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 					n := respProto.PartialSuccess.GetRejectedDataPoints()
 					if n != 0 || msg != "" {
 						err := internal.MetricPartialSuccessError(n, msg)
-						uploadErr = errors.Join(uploadErr, err)
+						uploadErr = joinErrs(uploadErr, err)
 					}
 				}
 			}
@@ -265,7 +266,18 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			// Non-retryable failure.
 			return fmt.Errorf("failed to send metrics to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
-	}))
+	})
+	return joinErrs(uploadErr, err)
+}
+
+func joinErrs(err1, err2 error) error {
+	if err1 == nil {
+		return err2
+	}
+	if err2 == nil {
+		return err1
+	}
+	return errors.Join(err1, err2)
 }
 
 // isProtobufContentType reports whether the Content-Type value denotes a
