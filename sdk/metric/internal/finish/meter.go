@@ -9,6 +9,8 @@ import "go.opentelemetry.io/otel/metric"
 type Factory interface {
 	Int64Counter(string, ...metric.Int64CounterOption) (metric.Int64Counter, error)
 	Float64Counter(string, ...metric.Float64CounterOption) (metric.Float64Counter, error)
+	Int64UpDownCounter(string, ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error)
+	Float64UpDownCounter(string, ...metric.Float64UpDownCounterOption) (metric.Float64UpDownCounter, error)
 	Int64Gauge(string, ...metric.Int64GaugeOption) (metric.Int64Gauge, error)
 	Float64Gauge(string, ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
 }
@@ -37,4 +39,18 @@ func (m *meter) Int64Gauge(name string, options ...metric.Int64GaugeOption) (met
 
 func (m *meter) Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error) {
 	return m.factory.Float64Gauge(name, options...)
+}
+
+func (m *meter) Int64UpDownCounter(
+	name string,
+	options ...metric.Int64UpDownCounterOption,
+) (metric.Int64UpDownCounter, error) {
+	return m.factory.Int64UpDownCounter(name, options...)
+}
+
+func (m *meter) Float64UpDownCounter(
+	name string,
+	options ...metric.Float64UpDownCounterOption,
+) (metric.Float64UpDownCounter, error) {
+	return m.factory.Float64UpDownCounter(name, options...)
 }
