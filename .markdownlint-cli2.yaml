@@ -1,0 +1,3 @@
+config:
+  extends: .markdownlint.yaml
+gitignore: '**/.{git,markdownlint}ignore'

@@ -24,6 +24,17 @@ MD029:
 # no-inline-html
 MD033: false
 
+# no-bare-urls
+MD034: false
+
 # fenced-code-language
 MD040: false
 
+# link-image-reference-definitions
+MD053: false
+
+# descriptive-link-text
+MD059: false
+
+# table-column-style
+MD060: false
