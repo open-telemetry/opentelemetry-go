@@ -45,14 +45,14 @@ The configuration can be overridden by the [WithExportTimeout] option.
 
 OTEL_BSP_MAX_QUEUE_SIZE (default: "2048") - the maximum number of spans a span
 processor returned from [NewBatchSpanProcessor] queues for export. Values that
-cannot be parsed as an integer are ignored, and the default is used instead.
-Other values are used as-is; valid values are positive.
+cannot be parsed as an integer, or that are zero or negative, are ignored, and
+the default is used instead.
 The configuration can be overridden by the [WithMaxQueueSize] option.
 
 OTEL_BSP_MAX_EXPORT_BATCH_SIZE (default: "512") - the maximum number of spans a
 span processor returned from [NewBatchSpanProcessor] exports in a single batch.
-Values that cannot be parsed as an integer are ignored, and the default is used
-instead. Other values are used as-is; valid values are positive. If the value
+Values that cannot be parsed as an integer, or that are zero or negative, are
+ignored, and the default is used instead. If the value
 is greater than OTEL_BSP_MAX_QUEUE_SIZE, the smaller of 512 and
 OTEL_BSP_MAX_QUEUE_SIZE is used instead.
 The configuration can be overridden by the [WithMaxExportBatchSize] option.
