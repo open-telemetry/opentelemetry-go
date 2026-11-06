@@ -232,10 +232,10 @@ func KeyValuesDedupLimitDepth(
 // Top-level key uniqueness remains attribute.Set's responsibility; this only
 // normalizes map attribute values.
 func SetDedup(set attribute.Set) (attribute.Set, bool) {
-	length := set.Len()
-	if length == 0 {
+	if !setMayHaveComposite(&set) {
 		return set, false
 	}
+	length := set.Len()
 
 	// Most attribute sets contain no duplicate map keys. Delay allocation until
 	// the first changed value so the no-op path returns the original Set.
@@ -799,4 +799,72 @@ func arrayAt[T any](storage any, elem reflect.Type, i int) T {
 		return zero
 	}
 	return array.Index(i).Interface().(T)
+}
+
+// rawSet mirrors attribute.Set. It is used only to read the immutable backing
+// array without calling Set.Get for every attribute.
+type rawSet struct {
+	hash uint64
+	data any
+}
+
+// setMayHaveComposite reports false only when set is known to hold no SLICE or
+// MAP value, so [SetDedup] cannot change it.
+func setMayHaveComposite(set *attribute.Set) bool {
+	switch kvs := (*rawSet)(unsafe.Pointer(set)).data.(type) { //nolint:gosec // Read-only mirror of attribute.Set.
+	case nil, [0]attribute.KeyValue:
+		return false
+	case [1]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [2]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [3]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [4]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [5]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [6]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [7]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [8]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [9]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [10]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [11]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [12]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [13]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [14]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [15]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [16]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [17]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [18]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [19]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	case [20]attribute.KeyValue:
+		return anyComposite(kvs[:])
+	default:
+		// Rarer large sets keep the full SetDedup path.
+		return true
+	}
+}
+
+func anyComposite(kvs []attribute.KeyValue) bool {
+	for i := range kvs {
+		if t := kvs[i].Value.Type(); t == attribute.SLICE || t == attribute.MAP {
+			return true
+		}
+	}
+	return false
 }
