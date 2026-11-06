@@ -470,6 +470,12 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			errorType:   errGreaterThanOneTraceIDRatio,
 		},
 		{
+			sampler:     "traceidratio",
+			samplerArg:  "NaN",
+			description: TraceIDRatioBased(1.0).Description(),
+			errorType:   errNaNNotAllowed,
+		},
+		{
 			sampler:             "traceidratio",
 			argOptional:         true,
 			description:         TraceIDRatioBased(1.0).Description(),
@@ -501,6 +507,12 @@ func TestTracerProviderSamplerConfigFromEnv(t *testing.T) {
 			samplerArg:  fmt.Sprintf("%g", 1+randFloat),
 			description: ParentBased(TraceIDRatioBased(1.0)).Description(),
 			errorType:   errGreaterThanOneTraceIDRatio,
+		},
+		{
+			sampler:     "parentbased_traceidratio",
+			samplerArg:  "NaN",
+			description: ParentBased(TraceIDRatioBased(1.0)).Description(),
+			errorType:   errNaNNotAllowed,
 		},
 		{
 			sampler:             "parentbased_traceidratio",
