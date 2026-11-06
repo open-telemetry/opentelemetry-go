@@ -162,6 +162,154 @@ func testFinishSumFinishTimestamp[N int64 | float64](t *testing.T, value N) {
 	}
 }
 
+func TestFinishSumCollectionTimestamp(t *testing.T) {
+	t.Run("Int64", testFinishSumCollectionTimestamp[int64])
+	t.Run("Float64", testFinishSumCollectionTimestamp[float64])
+}
+
+func testFinishSumCollectionTimestamp[N int64 | float64](t *testing.T) {
+	for _, monotonic := range []bool{false, true} {
+		t.Run(fmt.Sprint("monotonic=", monotonic), func(t *testing.T) {
+			var c clock
+			t.Cleanup(c.Register())
+			agg := Builder[N]{}.FinishSum(monotonic)
+			agg.Measure(t.Context(), N(1), alice)
+
+			now = func() time.Time {
+				timestamp := c.Now()
+				now = c.Now
+				// Create a series after the collection timestamp has been sampled.
+				agg.Measure(t.Context(), N(2), bob)
+				return timestamp
+			}
+			var data metricdata.Aggregation
+			agg.ComputeAggregation(&data)
+			points := data.(metricdata.Sum[N]).DataPoints
+			for _, point := range points {
+				assert.False(t, point.StartTime.After(point.Time), "collection emitted an inverted interval")
+			}
+			require.Len(t, points, 1, "series created after timestamp capture must wait for the next collection")
+			assert.Equal(t, alice, points[0].Attributes)
+
+			agg.ComputeAggregation(&data)
+			points = data.(metricdata.Sum[N]).DataPoints
+			require.Len(t, points, 2)
+			for _, point := range points {
+				assert.False(t, point.StartTime.After(point.Time))
+				if point.Attributes.Equals(&bob) {
+					assert.Equal(t, N(2), point.Value)
+					assert.Equal(t, y2kPlus(2), point.StartTime)
+					assert.Equal(t, y2kPlus(3), point.Time)
+				}
+			}
+		})
+	}
+}
+
+func TestFinishSumDeltaDeferredSeries(t *testing.T) {
+	t.Run("Int64", testFinishSumDeltaDeferredSeries[int64])
+	t.Run("Float64", testFinishSumDeltaDeferredSeries[float64])
+}
+
+func testFinishSumDeltaDeferredSeries[N int64 | float64](t *testing.T) {
+	for _, monotonic := range []bool{false, true} {
+		for _, finished := range []bool{false, true} {
+			t.Run(fmt.Sprintf("monotonic=%t/finished=%t", monotonic, finished), func(t *testing.T) {
+				var c clock
+				t.Cleanup(c.Register())
+				agg := Builder[N]{Temporality: metricdata.DeltaTemporality}.FinishSum(monotonic)
+				agg.Measure(t.Context(), N(1), alice)
+
+				now = func() time.Time {
+					now = c.Now
+					// Record after snapshotting but before sampling collection time.
+					agg.Measure(t.Context(), N(2), bob)
+					finishTime := c.Now()
+					if finished {
+						agg.Finish(bob.Equivalent(), finishTime)
+					}
+					return c.Now()
+				}
+				var data metricdata.Aggregation
+				agg.ComputeAggregation(&data)
+				points := data.(metricdata.Sum[N]).DataPoints
+				require.Len(t, points, 1)
+				assert.Equal(t, alice, points[0].Attributes)
+				assert.Equal(t, y2k, points[0].StartTime)
+				assert.Equal(t, y2kPlus(4), points[0].Time)
+
+				agg.ComputeAggregation(&data)
+				points = data.(metricdata.Sum[N]).DataPoints
+				require.Len(t, points, 1)
+				assert.Equal(t, bob, points[0].Attributes)
+				assert.Equal(t, N(2), points[0].Value)
+				assert.Equal(t, y2kPlus(2), points[0].StartTime)
+				end := y2kPlus(5)
+				if finished {
+					end = y2kPlus(3)
+				}
+				assert.Equal(t, end, points[0].Time)
+				assert.False(t, points[0].StartTime.After(points[0].Time))
+				agg.ComputeAggregation(&data)
+				assert.Empty(t, data.(metricdata.Sum[N]).DataPoints)
+			})
+		}
+	}
+}
+
+func TestFinishSumConcurrentSafeCollectDefersNewSeries(t *testing.T) {
+	barrier := &finishSumCollectionBarrier{entered: make(chan struct{}), release: make(chan struct{})}
+	agg := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality, AggregationLimit: 3,
+		ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] { return barrier },
+	}.FinishSum(false)
+	for _, attrs := range []attribute.Set{alice, bob, attribute.NewSet(userCarol)} {
+		agg.Measure(t.Context(), 1, attrs)
+	}
+	result := make(chan metricdata.Aggregation, 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		var data metricdata.Aggregation
+		agg.ComputeAggregation(&data)
+		result <- data
+	}()
+	var once sync.Once
+	release := func() { once.Do(func() { close(barrier.release) }) }
+	defer func() { release(); <-done }()
+	select {
+	case <-barrier.entered:
+	case <-time.After(time.Second):
+		t.Fatal("collection did not reach the second series")
+	}
+	agg.Measure(t.Context(), 123, attribute.NewSet(userDave))
+	release()
+	points := (<-result).(metricdata.Sum[int64]).DataPoints
+	require.Len(t, points, 3, "reclaimed slots must not expand collection beyond the cardinality limit")
+	for _, point := range points {
+		assert.Equal(t, int64(1), point.Value)
+	}
+	points = finishSumPoints(t, agg.ComputeAggregation)
+	require.Len(t, points, 1)
+	assert.Equal(t, int64(123), points[0].Value)
+	assert.Empty(t, finishSumPoints(t, agg.ComputeAggregation))
+}
+
+type finishSumCollectionBarrier struct {
+	calls   atomic.Int64
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (*finishSumCollectionBarrier) Offer(context.Context, int64, lazyFilteredAttributes) {}
+
+func (r *finishSumCollectionBarrier) Collect(*[]exemplar.Exemplar) {
+	if r.calls.Add(1) == 2 {
+		close(r.entered)
+		<-r.release
+	}
+}
+
 func TestFinishSumAttributes(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
 		empty := attribute.NewSet()
@@ -305,6 +453,18 @@ func TestFinishSumShutdown(t *testing.T) {
 	var data metricdata.Aggregation
 	assert.Zero(t, agg.ComputeAggregation(&data))
 	assert.Nil(t, data)
+}
+
+func TestFinishSumCollectionScratch(t *testing.T) {
+	store := newFinishSum(true, metricdata.CumulativeTemporality, 0, dropExemplars[int64])
+	store.measure(t.Context(), 1, newLazyFilteredAttributes(alice, nil))
+	var data metricdata.Aggregation
+	require.Equal(t, 1, store.collect(&data))
+	require.Len(t, store.points, 1)
+	assert.Nil(t, store.points[0], "collection scratch must not retain series")
+	require.NoError(t, store.wait(t.Context()))
+	assert.Nil(t, store.points)
+	assert.Zero(t, store.values.Len())
 }
 
 func TestFinishSumRetireAndDelete(t *testing.T) {
@@ -550,13 +710,19 @@ func (r *blockingFinishSumCollectionReservoir) Collect(*[]exemplar.Exemplar) {
 }
 
 func BenchmarkFinishSumCollect(b *testing.B) {
-	agg := Builder[int64]{ReservoirFunc: dropExemplars[int64]}.FinishSum(true)
-	agg.Measure(b.Context(), 1, alice)
-	var data metricdata.Aggregation
-	agg.ComputeAggregation(&data)
-	b.ReportAllocs()
-	for b.Loop() {
-		agg.ComputeAggregation(&data)
+	for _, count := range []int{1, 100, 1000} {
+		b.Run(fmt.Sprint(count), func(b *testing.B) {
+			agg := Builder[int64]{ReservoirFunc: dropExemplars[int64]}.FinishSum(true)
+			for i := range count {
+				agg.Measure(b.Context(), 1, attribute.NewSet(attribute.Int("id", i)))
+			}
+			var data metricdata.Aggregation
+			agg.ComputeAggregation(&data)
+			b.ReportAllocs()
+			for b.Loop() {
+				agg.ComputeAggregation(&data)
+			}
+		})
 	}
 }
 
