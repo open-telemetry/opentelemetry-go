@@ -189,9 +189,6 @@ func (i instID) normalize() instID {
 }
 
 func resolveAttributes(configAttrs attribute.Set) attribute.Set {
-	if !attrnorm.SetMayHaveComposite(&configAttrs) {
-		return configAttrs
-	}
 	configAttrs, _ = attrnorm.SetDedup(configAttrs)
 	return configAttrs
 }
