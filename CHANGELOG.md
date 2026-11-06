@@ -51,6 +51,7 @@ with further details in the [versioning policy](VERSIONING.md).
 
 ### Fixed
 
+- Record `otel.span.parent.origin` as `"none"` on `otel.sdk.span.started` when a span is started with `trace.WithNewRoot` in `go.opentelemetry.io/otel/sdk/trace`. (#9453)
 - Do not record a `queue_full` span drop on `otel.sdk.processor.span.processed` when `BatchSpanProcessor.ForceFlush` is canceled while the queue is full in `go.opentelemetry.io/otel/sdk/trace`. (#9461)
 - Record `otel.sdk.processor.span.processed` in `SimpleSpanProcessor.OnEnd` only when exporting a sampled span in `go.opentelemetry.io/otel/sdk/trace`. (#9460)
 - Keep experimental Finish Sum collections within the cardinality limit and preserve valid timestamps when new series are recorded concurrently in `go.opentelemetry.io/otel/sdk/metric`. (#9251)
