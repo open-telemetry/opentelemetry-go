@@ -545,108 +545,207 @@ func TestWithDialOptionLastCallWins(t *testing.T) {
 }
 
 func TestClientInstrumentation(t *testing.T) {
-	// Enable instrumentation for this test.
-	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	t.Run("partial success", func(t *testing.T) {
+		// Enable instrumentation for this test.
+		t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
-	// Reset client ID to be deterministic
-	const id = 0
-	counter.SetExporterID(id)
+		// Reset client ID to be deterministic
+		const id = 0
+		counter.SetExporterID(id)
 
-	// Save original meter provider and restore at end of test.
-	orig := otel.GetMeterProvider()
-	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+		// Save original meter provider and restore at end of test.
+		orig := otel.GetMeterProvider()
+		t.Cleanup(func() { otel.SetMeterProvider(orig) })
 
-	// Create a new meter provider to capture metrics.
-	reader := metric.NewManualReader()
-	mp := metric.NewMeterProvider(metric.WithReader(reader))
-	otel.SetMeterProvider(mp)
+		// Create a new meter provider to capture metrics.
+		reader := metric.NewManualReader()
+		mp := metric.NewMeterProvider(metric.WithReader(reader))
+		otel.SetMeterProvider(mp)
 
-	const n, msg = 2, "partially successful"
-	mc := runMockCollectorWithConfig(t, &mockConfig{
-		endpoint: "localhost:0", // Determine canonical endpoint.
-		partial: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: n,
-			ErrorMessage:  msg,
-		},
+		const n, msg = 2, "partially successful"
+		mc := runMockCollectorWithConfig(t, &mockConfig{
+			endpoint: "localhost:0", // Determine canonical endpoint.
+			partial: &coltracepb.ExportTracePartialSuccess{
+				RejectedSpans: n,
+				ErrorMessage:  msg,
+			},
+		})
+		t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+		exp := newGRPCExporter(t.Context(), t, mc.endpoint)
+		localSpans := tracetest.SpanStubs{{Name: "Span 0"}, {Name: "Span 1"}}.Snapshots()
+		err := exp.ExportSpans(t.Context(), localSpans)
+		assert.ErrorIs(t, err, internal.TracePartialSuccessError(n, msg))
+		require.NoError(t, exp.Shutdown(t.Context()))
+
+		var got metricdata.ResourceMetrics
+		require.NoError(t, reader.Collect(t.Context(), &got))
+
+		attrs := observ.BaseAttrs(id, canonical(t, mc.endpoint))
+		want := metricdata.ScopeMetrics{
+			Scope: instrumentation.Scope{
+				Name:      observ.ScopeName,
+				Version:   observ.Version,
+				SchemaURL: observ.SchemaURL,
+			},
+			Metrics: []metricdata.Metrics{
+				{
+					Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+					Description: otelconv.SDKExporterSpanInflight{}.Description(),
+					Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{Attributes: attribute.NewSet(attrs...), Value: 0},
+						},
+						Temporality: metricdata.CumulativeTemporality,
+					},
+				},
+				{
+					Name:        otelconv.SDKExporterSpanExported{}.Name(),
+					Description: otelconv.SDKExporterSpanExported{}.Description(),
+					Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{Attributes: attribute.NewSet(attrs...), Value: 0},
+							{Attributes: attribute.NewSet(append(
+								attrs,
+								otelconv.SDKExporterSpanExported{}.AttrErrorType("rejected"),
+							)...), Value: 2},
+						},
+						Temporality: 0x1,
+						IsMonotonic: true,
+					},
+				},
+				{
+					Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+					Description: otelconv.SDKExporterOperationDuration{}.Description(),
+					Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+					Data: metricdata.Histogram[float64]{
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{Attributes: attribute.NewSet(append(
+								attrs,
+								otelconv.SDKExporterOperationDuration{}.AttrErrorType("rejected"),
+								otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+									codes.OK.String(),
+								),
+							)...)},
+						},
+						Temporality: 0x1,
+					},
+				},
+			},
+		}
+		require.Len(t, got.ScopeMetrics, 1)
+		gotMetrics := got.ScopeMetrics[0].Metrics
+		require.Len(t, gotMetrics, 3)
+
+		metricdatatest.AssertEqual(t, want.Metrics[0], gotMetrics[0], metricdatatest.IgnoreTimestamp())
+		metricdatatest.AssertEqual(t, want.Metrics[1], gotMetrics[1], metricdatatest.IgnoreTimestamp())
+		metricdatatest.AssertEqual(
+			t,
+			want.Metrics[2],
+			gotMetrics[2],
+			metricdatatest.IgnoreTimestamp(),
+			metricdatatest.IgnoreValue(),
+		)
 	})
-	t.Cleanup(func() { require.NoError(t, mc.stop()) })
 
-	exp := newGRPCExporter(t.Context(), t, mc.endpoint)
-	localSpans := tracetest.SpanStubs{{Name: "Span 0"}, {Name: "Span 1"}}.Snapshots()
-	err := exp.ExportSpans(t.Context(), localSpans)
-	assert.ErrorIs(t, err, internal.TracePartialSuccessError(n, msg))
-	require.NoError(t, exp.Shutdown(t.Context()))
+	t.Run("export error", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
-	var got metricdata.ResourceMetrics
-	require.NoError(t, reader.Collect(t.Context(), &got))
+		const id = 0
+		counter.SetExporterID(id)
 
-	attrs := observ.BaseAttrs(id, canonical(t, mc.endpoint))
-	want := metricdata.ScopeMetrics{
-		Scope: instrumentation.Scope{
-			Name:      observ.ScopeName,
-			Version:   observ.Version,
-			SchemaURL: observ.SchemaURL,
-		},
-		Metrics: []metricdata.Metrics{
-			{
-				Name:        otelconv.SDKExporterSpanInflight{}.Name(),
-				Description: otelconv.SDKExporterSpanInflight{}.Description(),
-				Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
-				Data: metricdata.Sum[int64]{
-					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...), Value: 0},
+		orig := otel.GetMeterProvider()
+		t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+		reader := metric.NewManualReader()
+		mp := metric.NewMeterProvider(metric.WithReader(reader))
+		otel.SetMeterProvider(mp)
+
+		mc := runMockCollectorWithConfig(t, &mockConfig{
+			endpoint: "localhost:0",
+			errors:   []error{status.Error(codes.InvalidArgument, "bad request")},
+		})
+		t.Cleanup(func() { require.NoError(t, mc.stop()) })
+
+		exp := newGRPCExporter(t.Context(), t, mc.endpoint)
+		localSpans := tracetest.SpanStubs{{Name: "Span 0"}, {Name: "Span 1"}}.Snapshots()
+		err := exp.ExportSpans(t.Context(), localSpans)
+		assert.Error(t, err)
+		require.NoError(t, exp.Shutdown(t.Context()))
+
+		var got metricdata.ResourceMetrics
+		require.NoError(t, reader.Collect(t.Context(), &got))
+
+		attrs := observ.BaseAttrs(id, canonical(t, mc.endpoint))
+		want := metricdata.ScopeMetrics{
+			Scope: instrumentation.Scope{
+				Name:      observ.ScopeName,
+				Version:   observ.Version,
+				SchemaURL: observ.SchemaURL,
+			},
+			Metrics: []metricdata.Metrics{
+				{
+					Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+					Description: otelconv.SDKExporterSpanInflight{}.Description(),
+					Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{Attributes: attribute.NewSet(attrs...), Value: 0},
+						},
+						Temporality: metricdata.CumulativeTemporality,
 					},
-					Temporality: metricdata.CumulativeTemporality,
+				},
+				{
+					Name:        otelconv.SDKExporterSpanExported{}.Name(),
+					Description: otelconv.SDKExporterSpanExported{}.Description(),
+					Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{Attributes: attribute.NewSet(attrs...), Value: 0},
+							{Attributes: attribute.NewSet(append(
+								attrs,
+								otelconv.SDKExporterSpanExported{}.AttrErrorType("*status.Error"),
+							)...), Value: 2},
+						},
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+					},
+				},
+				{
+					Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+					Description: otelconv.SDKExporterOperationDuration{}.Description(),
+					Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+					Data: metricdata.Histogram[float64]{
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{Attributes: attribute.NewSet(append(
+								attrs,
+								otelconv.SDKExporterOperationDuration{}.AttrErrorType("*status.Error"),
+								otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+									codes.InvalidArgument.String(),
+								),
+							)...)},
+						},
+						Temporality: metricdata.CumulativeTemporality,
+					},
 				},
 			},
-			{
-				Name:        otelconv.SDKExporterSpanExported{}.Name(),
-				Description: otelconv.SDKExporterSpanExported{}.Description(),
-				Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
-				Data: metricdata.Sum[int64]{
-					DataPoints: []metricdata.DataPoint[int64]{
-						{Attributes: attribute.NewSet(attrs...), Value: 0},
-						{Attributes: attribute.NewSet(append(
-							attrs,
-							otelconv.SDKExporterSpanExported{}.AttrErrorType("*errors.joinError"),
-						)...), Value: 2},
-					},
-					Temporality: 0x1,
-					IsMonotonic: true,
-				},
-			},
-			{
-				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
-				Description: otelconv.SDKExporterOperationDuration{}.Description(),
-				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
-				Data: metricdata.Histogram[float64]{
-					DataPoints: []metricdata.HistogramDataPoint[float64]{
-						{Attributes: attribute.NewSet(append(
-							attrs,
-							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.joinError"),
-							otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
-								codes.OK.String(),
-							),
-						)...)},
-					},
-					Temporality: 0x1,
-				},
-			},
-		},
-	}
-	require.Len(t, got.ScopeMetrics, 1)
-	gotMetrics := got.ScopeMetrics[0].Metrics
-	require.Len(t, gotMetrics, 3)
+		}
+		require.Len(t, got.ScopeMetrics, 1)
+		gotMetrics := got.ScopeMetrics[0].Metrics
+		require.Len(t, gotMetrics, 3)
 
-	metricdatatest.AssertEqual(t, want.Metrics[0], gotMetrics[0], metricdatatest.IgnoreTimestamp())
-	metricdatatest.AssertEqual(t, want.Metrics[1], gotMetrics[1], metricdatatest.IgnoreTimestamp())
-	metricdatatest.AssertEqual(
-		t,
-		want.Metrics[2],
-		gotMetrics[2],
-		metricdatatest.IgnoreTimestamp(),
-		metricdatatest.IgnoreValue(),
-	)
+		metricdatatest.AssertEqual(t, want.Metrics[0], gotMetrics[0], metricdatatest.IgnoreTimestamp())
+		metricdatatest.AssertEqual(t, want.Metrics[1], gotMetrics[1], metricdatatest.IgnoreTimestamp())
+		metricdatatest.AssertEqual(
+			t,
+			want.Metrics[2],
+			gotMetrics[2],
+			metricdatatest.IgnoreTimestamp(),
+			metricdatatest.IgnoreValue(),
+		)
+	})
 }
 
 func canonical(t *testing.T, endpoint string) string {

@@ -192,13 +192,14 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		defer cancel()
 	}
 
-	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
+	err = c.requestFunc(ctx, func(iCtx context.Context) error {
 		select {
 		case <-iCtx.Done():
 			return iCtx.Err()
 		default:
 		}
 
+		uploadErr = nil
 		statusCode = 0
 		request.reset(iCtx)
 		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
@@ -213,7 +214,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 		if resp != nil && resp.Body != nil {
 			defer func() {
 				if err := resp.Body.Close(); err != nil {
-					uploadErr = errors.Join(uploadErr, err)
+					uploadErr = joinErrs(uploadErr, err)
 				}
 			}()
 		}
@@ -241,7 +242,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 					n := respProto.PartialSuccess.GetRejectedLogRecords()
 					if n != 0 || msg != "" {
 						err := internal.LogPartialSuccessError(n, msg)
-						uploadErr = errors.Join(uploadErr, err)
+						uploadErr = joinErrs(uploadErr, err)
 					}
 				}
 			}
@@ -270,7 +271,18 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 			// Non-retryable failure.
 			return fmt.Errorf("failed to send logs to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
-	}))
+	})
+	return joinErrs(uploadErr, err)
+}
+
+func joinErrs(err1, err2 error) error {
+	if err1 == nil {
+		return err2
+	}
+	if err2 == nil {
+		return err1
+	}
+	return errors.Join(err1, err2)
 }
 
 // readResponse returns the response body. A gzip Content-Encoding is

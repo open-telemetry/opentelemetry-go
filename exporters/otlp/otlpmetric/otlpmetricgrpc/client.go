@@ -104,15 +104,24 @@ func (c *client) Shutdown(ctx context.Context) error {
 //
 // Retryable errors from the server will be handled according to any
 // RetryConfig the client was created with.
-func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.ResourceMetrics) (uploadErr error) {
+func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.ResourceMetrics) error {
+	_, err := c.uploadMetrics(ctx, protoMetrics)
+	return err
+}
+
+func (c *client) uploadMetrics(
+	ctx context.Context,
+	protoMetrics *metricpb.ResourceMetrics,
+) (code codes.Code, uploadErr error) {
 	// The otlpmetric.Exporter synchronizes access to client methods, and
 	// ensures this is not called after the Exporter is shutdown. Only thing
 	// to do here is send data.
 
+	code = codes.Unknown
 	select {
 	case <-ctx.Done():
 		// Do not upload if the context is already expired.
-		return ctx.Err()
+		return code, ctx.Err()
 	default:
 	}
 
@@ -123,26 +132,38 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		ResourceMetrics: []*metricpb.ResourceMetrics{protoMetrics},
 	}
 	if maxSize := c.maxRequestSize; maxSize > 0 && proto.Size(pbRequest) > maxSize {
-		return fmt.Errorf("request message too large: exceeded %d bytes", maxSize)
+		return code, fmt.Errorf("request message too large: exceeded %d bytes", maxSize)
 	}
 
-	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
+	err := c.requestFunc(ctx, func(iCtx context.Context) error {
+		uploadErr = nil
 		resp, err := c.msc.Export(iCtx, pbRequest)
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedDataPoints()
 			if n != 0 || msg != "" {
-				e := internal.MetricPartialSuccessError(n, msg)
-				uploadErr = errors.Join(uploadErr, e)
+				uploadErr = internal.MetricPartialSuccessError(n, msg)
 			}
 		}
 		// nil is converted to OK.
-		if status.Code(err) == codes.OK {
+		code = status.Code(err)
+		if code == codes.OK {
 			// Success.
 			return nil
 		}
 		return err
-	}))
+	})
+	return code, joinErrs(uploadErr, err)
+}
+
+func joinErrs(err1, err2 error) error {
+	if err1 == nil {
+		return err2
+	}
+	if err2 == nil {
+		return err1
+	}
+	return errors.Join(err1, err2)
 }
 
 // exportContext returns a copy of parent with an appropriate deadline and

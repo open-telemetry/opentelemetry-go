@@ -185,13 +185,14 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		defer func() { op.End(uploadErr, statusCode) }()
 	}
 
-	return errors.Join(uploadErr, c.requestFunc(ctx, func(ctx context.Context) error {
+	err = c.requestFunc(ctx, func(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 		}
 
+		uploadErr = nil
 		statusCode = 0
 		request.reset(ctx)
 		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
@@ -207,7 +208,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		if resp != nil && resp.Body != nil {
 			defer func() {
 				if err := resp.Body.Close(); err != nil {
-					uploadErr = errors.Join(uploadErr, err)
+					uploadErr = joinErrs(uploadErr, err)
 				}
 			}()
 		}
@@ -248,7 +249,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 				n := respProto.PartialSuccess.GetRejectedSpans()
 				if n != 0 || msg != "" {
 					err := internal.TracePartialSuccessError(n, msg)
-					uploadErr = errors.Join(uploadErr, err)
+					uploadErr = joinErrs(uploadErr, err)
 				}
 			}
 			return nil
@@ -280,7 +281,18 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 			// Non-retryable failure.
 			return fmt.Errorf("failed to send to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
-	}))
+	})
+	return joinErrs(uploadErr, err)
+}
+
+func joinErrs(err1, err2 error) error {
+	if err1 == nil {
+		return err2
+	}
+	if err2 == nil {
+		return err1
+	}
+	return errors.Join(err1, err2)
 }
 
 func (c *client) marshalRequest(pbRequest *coltracepb.ExportTraceServiceRequest) ([]byte, error) {

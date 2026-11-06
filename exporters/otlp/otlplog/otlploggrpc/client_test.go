@@ -852,8 +852,7 @@ func TestClientObservability(t *testing.T) {
 
 				componentName := observ.GetComponentName(0)
 				serverAddrAttrs := observ.ServerAddrAttrs(client.conn.CanonicalTarget())
-				var wantErr error
-				wantErr = errors.Join(wantErr, internal.LogPartialSuccessError(n, msg))
+				wantErr := internal.LogPartialSuccessError(n, msg)
 				wantMetrics := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      observ.ScopeName,
@@ -910,7 +909,7 @@ func TestClientObservability(t *testing.T) {
 											),
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
-											semconv.ErrorType(wantErr),
+											otelconv.SDKExporterLogExported{}.AttrErrorType("rejected"),
 										),
 										Value: 2,
 									},
@@ -931,11 +930,11 @@ func TestClientObservability(t *testing.T) {
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
 											otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
-												status.Code(wantErr).String(),
+												codes.OK.String(),
 											),
 											serverAddrAttrs[0],
 											serverAddrAttrs[1],
-											semconv.ErrorType(wantErr),
+											otelconv.SDKExporterOperationDuration{}.AttrErrorType("rejected"),
 										),
 										Count: 1,
 									},
@@ -971,10 +970,7 @@ func TestClientObservability(t *testing.T) {
 			enabled: true,
 			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
 				err := status.Error(codes.InvalidArgument, "request contains invalid arguments")
-				var wantErr error
-				wantErr = errors.Join(wantErr, err)
-
-				wantErrTypeAttr := semconv.ErrorType(wantErr)
+				wantErrTypeAttr := semconv.ErrorTypeKey.String("*status.Error")
 				wantGRPCStatus := codes.InvalidArgument
 				rCh := make(chan exportResult, 1)
 				rCh <- exportResult{
@@ -1165,8 +1161,7 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 	componentName := observ.GetComponentName(0)
 
 	serverAddrAttrs := observ.ServerAddrAttrs(client.conn.CanonicalTarget())
-	var wantErr error
-	wantErr = errors.Join(wantErr, internal.LogPartialSuccessError(n, msg))
+	wantErr := internal.LogPartialSuccessError(n, msg)
 
 	wantMetrics := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
@@ -1223,7 +1218,7 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 								),
 								serverAddrAttrs[0],
 								serverAddrAttrs[1],
-								semconv.ErrorType(wantErr),
+								otelconv.SDKExporterLogExported{}.AttrErrorType("rejected"),
 							),
 							Value: n,
 						},
@@ -1244,11 +1239,11 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 									otelconv.ComponentTypeOtlpGRPCLogExporter,
 								),
 								otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
-									status.Code(wantErr).String(),
+									codes.OK.String(),
 								),
 								serverAddrAttrs[0],
 								serverAddrAttrs[1],
-								semconv.ErrorType(wantErr),
+								otelconv.SDKExporterOperationDuration{}.AttrErrorType("rejected"),
 							),
 							Count: 1,
 						},

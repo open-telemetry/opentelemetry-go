@@ -155,6 +155,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 	defer cancel()
 
 	pbRequest := &collogpb.ExportLogsServiceRequest{ResourceLogs: rl}
+	code := codes.Unknown
 	if c.instrumentation != nil {
 		var count int64
 		for _, resLogs := range rl {
@@ -164,7 +165,7 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 		}
 		eo := c.instrumentation.ExportLogs(ctx, count)
 		defer func() {
-			eo.End(uploadErr)
+			eo.End(uploadErr, code)
 		}()
 	}
 
@@ -172,23 +173,35 @@ func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uplo
 		return fmt.Errorf("request message too large: exceeded %d bytes", maxSize)
 	}
 
-	return errors.Join(uploadErr, c.requestFunc(ctx, func(ctx context.Context) error {
+	err := c.requestFunc(ctx, func(ctx context.Context) error {
+		uploadErr = nil
 		resp, err := c.lsc.Export(ctx, pbRequest)
 		if resp != nil && resp.PartialSuccess != nil {
 			msg := resp.PartialSuccess.GetErrorMessage()
 			n := resp.PartialSuccess.GetRejectedLogRecords()
 			if n != 0 || msg != "" {
-				err := internal.LogPartialSuccessError(n, msg)
-				uploadErr = errors.Join(uploadErr, err)
+				uploadErr = internal.LogPartialSuccessError(n, msg)
 			}
 		}
 		// nil is converted to OK.
-		if status.Code(err) == codes.OK {
+		code = status.Code(err)
+		if code == codes.OK {
 			// Success.
 			return nil
 		}
 		return err
-	}))
+	})
+	return joinErrs(uploadErr, err)
+}
+
+func joinErrs(err1, err2 error) error {
+	if err1 == nil {
+		return err2
+	}
+	if err2 == nil {
+		return err1
+	}
+	return errors.Join(err1, err2)
 }
 
 // Shutdown shuts down the client, freeing all resources.
