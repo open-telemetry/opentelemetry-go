@@ -95,6 +95,10 @@ with further details in the [versioning policy](VERSIONING.md).
 - ⚠️ **Breaking Change:** Let an `http` or `https` scheme in `OTEL_EXPORTER_OTLP_ENDPOINT` or the signal-specific endpoint environment variable take precedence over `OTEL_EXPORTER_OTLP_INSECURE` and the signal-specific insecure environment variable in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9273)
   Previously, `OTEL_EXPORTER_OTLP_INSECURE=true` made these exporters send plaintext to an `https://` endpoint.
 - Preserve `ScopeMetrics` slice capacity in `PeriodicReader`'s `sync.Pool` by resetting slice length instead of overwriting the struct, avoiding per-cycle heap allocations in `go.opentelemetry.io/otel/sdk/metric`. (#8535)
+- Reject negative and overflowing `OTEL_EXPORTER_OTLP_TIMEOUT` and `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT` values in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9338)
+  Previously, such a value produced a negative timeout that removed the export deadline.
+- Reject negative and overflowing `OTEL_EXPORTER_OTLP_TIMEOUT` and `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT` values in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9338)
+  Previously, such a value produced a negative timeout that removed the export deadline.
 
 ### Removed
 

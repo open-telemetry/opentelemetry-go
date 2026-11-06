@@ -607,6 +607,34 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test Environment Negative Timeout",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TIMEOUT": "-1",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, DefaultTimeout, c.Metrics.Timeout)
+			},
+		},
+		{
+			name: "Test Environment Overflowing Timeout",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TIMEOUT": "9223372036854775807",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, DefaultTimeout, c.Metrics.Timeout)
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Negative Timeout",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TIMEOUT":         "15000",
+				"OTEL_EXPORTER_OTLP_METRICS_TIMEOUT": "-1",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, 15*time.Second, c.Metrics.Timeout)
+			},
+		},
+		{
 			name: "Test Mixed Environment and With Timeout",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_TIMEOUT":         "15000",
