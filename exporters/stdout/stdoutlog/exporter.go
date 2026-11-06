@@ -44,14 +44,11 @@ func New(options ...Option) (*Exporter, error) {
 	return e, err
 }
 
-// Export exports log records synchronously to the writer. It returns
-// [log.ErrExporterShutdown] if called after Shutdown.
+// Export exports log records to the writer. It returns [log.ErrExporterShutdown]
+// if called after Shutdown.
 //
 // Export must not be called concurrently with another Export call on the same
 // Exporter. It may be called concurrently with Shutdown and ForceFlush.
-//
-// Context cancellation is checked before each record. It does not interrupt a
-// write already in progress.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error) {
 	enc := e.encoder.Load()
 	if e.stopped.Load() {
@@ -89,9 +86,6 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error)
 // Shutdown shuts down the Exporter. Calls to Export after Shutdown return
 // [log.ErrExporterShutdown].
 //
-// Shutdown does not wait for an Export call already in progress; that call may
-// continue writing after Shutdown returns. It does not flush or close the writer.
-//
 // It is safe to call Shutdown concurrently with Export, ForceFlush, and itself.
 // Repeated calls to Shutdown return nil.
 func (e *Exporter) Shutdown(context.Context) error {
@@ -102,8 +96,7 @@ func (e *Exporter) Shutdown(context.Context) error {
 	return nil
 }
 
-// ForceFlush performs no action and returns nil. It does not wait for an Export
-// call in progress or flush the writer.
+// ForceFlush performs no action.
 //
 // It is safe to call ForceFlush concurrently with Export, Shutdown, and itself.
 func (*Exporter) ForceFlush(context.Context) error {
