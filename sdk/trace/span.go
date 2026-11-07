@@ -217,6 +217,13 @@ func (s *recordingSpan) SetStatus(code codes.Code, description string) {
 	if !s.isRecording() {
 		return
 	}
+	s.setStatus(code, description)
+}
+
+// setStatus sets the status of the span.
+//
+// This method assumes s.mu.Lock is held by the caller.
+func (s *recordingSpan) setStatus(code codes.Code, description string) {
 	if s.status.Code > code {
 		return
 	}
@@ -249,7 +256,13 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 	if !s.isRecording() {
 		return
 	}
+	s.setAttributes(attributes...)
+}
 
+// setAttributes adds attributes to the span.
+//
+// This method assumes s.mu.Lock is held by the caller.
+func (s *recordingSpan) setAttributes(attributes ...attribute.KeyValue) {
 	limit := s.tracer.provider.spanLimits.AttributeCountLimit
 	if limit == 0 {
 		// No attributes allowed.
@@ -469,6 +482,13 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	if len(sps) == 0 {
 		return
 	}
+	if s.tracer.provider.hasOnEnding.Load() {
+		for _, sp := range sps {
+			if sp.onEnding != nil {
+				sp.onEnding.OnEnding(endingSpan{recordingSpan: s}, s)
+			}
+		}
+	}
 	snap := s.snapshot()
 	for _, sp := range sps {
 		sp.sp.OnEnd(snap)
@@ -511,6 +531,24 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 	}
 
 	s.AddEvent(semconv.ExceptionEventName, opts...)
+}
+
+// errorEventOptions appends exception type/message attributes to opts, and if
+// the options request a stack trace, also appends that attribute.
+func errorEventOptions(err error, opts []trace.EventOption) []trace.EventOption {
+	opts = append(opts, trace.WithAttributes(
+		semconv.ExceptionType(typeStr(err)),
+		semconv.ExceptionMessage(err.Error()),
+	))
+
+	c := trace.NewEventConfig(opts...)
+	if c.StackTrace() {
+		opts = append(opts, trace.WithAttributes(
+			semconv.ExceptionStacktrace(recordStackTrace()),
+		))
+	}
+
+	return opts
 }
 
 func typeStr(i any) string {
@@ -582,6 +620,13 @@ func (s *recordingSpan) SetName(name string) {
 	if !s.isRecording() {
 		return
 	}
+	s.setName(name)
+}
+
+// setName sets the name of the span.
+//
+// This method assumes s.mu.Lock is held by the caller.
+func (s *recordingSpan) setName(name string) {
 	s.name = name
 }
 
@@ -731,7 +776,13 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 	if !s.isRecording() {
 		return
 	}
+	s.addLink(link)
+}
 
+// addLink adds a link to the span.
+//
+// This method assumes s.mu.Lock is held by the caller.
+func (s *recordingSpan) addLink(link trace.Link) {
 	attrs, _, _ := attrnorm.KeyValuesDedupLimitDepth(
 		link.Attributes,
 		s.tracer.provider.spanLimits.AttributeValueDepthLimit,
