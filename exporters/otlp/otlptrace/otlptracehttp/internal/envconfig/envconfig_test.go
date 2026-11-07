@@ -422,7 +422,7 @@ func TestWithClientCert(t *testing.T) {
 
 	var option testOption
 	reader.Apply(
-		WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) {
+		WithClientCert([]string{"CLIENT_CERTIFICATE"}, []string{"CLIENT_KEY"}, func(c tls.Certificate) {
 			option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
 		}),
 	)
@@ -431,7 +431,7 @@ func TestWithClientCert(t *testing.T) {
 	reader.ReadFile = func(string) ([]byte, error) { return nil, errors.New("oops") }
 	option.TestTLS = nil
 	reader.Apply(
-		WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) {
+		WithClientCert([]string{"CLIENT_CERTIFICATE"}, []string{"CLIENT_KEY"}, func(c tls.Certificate) {
 			option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
 		}),
 	)
@@ -440,7 +440,108 @@ func TestWithClientCert(t *testing.T) {
 	reader.GetEnv = func(string) string { return "" }
 	option.TestTLS = nil
 	reader.Apply(
-		WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) {
+		WithClientCert([]string{"CLIENT_CERTIFICATE"}, []string{"CLIENT_KEY"}, func(c tls.Certificate) {
+			option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
+		}),
+	)
+	assert.Nil(t, option.TestTLS)
+}
+
+func TestWithClientCertMixedTier(t *testing.T) {
+	cert, err := tls.X509KeyPair([]byte(WeakCertificate), []byte(WeakKey))
+	assert.NoError(t, err)
+
+	// Cert from the signal-specific tier combined with the key from the generic
+	// tier must still resolve: each side is read independently.
+	reader := EnvOptionsReader{
+		GetEnv: func(n string) string {
+			switch n {
+			case "SIGNAL_CLIENT_CERTIFICATE":
+				return "/path/tls.crt"
+			case "CLIENT_KEY":
+				return "/path/tls.key"
+			}
+			return ""
+		},
+		ReadFile: func(n string) ([]byte, error) {
+			switch n {
+			case "/path/tls.crt":
+				return []byte(WeakCertificate), nil
+			case "/path/tls.key":
+				return []byte(WeakKey), nil
+			}
+			return []byte{}, nil
+		},
+	}
+
+	var option testOption
+	reader.Apply(
+		WithClientCert([]string{"SIGNAL_CLIENT_CERTIFICATE", "CLIENT_CERTIFICATE"},
+			[]string{"SIGNAL_CLIENT_KEY", "CLIENT_KEY"}, func(c tls.Certificate) {
+				option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
+			}),
+	)
+	assert.Equal(t, cert, option.TestTLS.Certificates[0])
+
+	// Signal-specific names take precedence over generic names.
+	reader.GetEnv = func(n string) string {
+		switch n {
+		case "SIGNAL_CLIENT_CERTIFICATE":
+			return "/path/tls.crt"
+		case "SIGNAL_CLIENT_KEY":
+			return "/path/tls.key"
+		case "CLIENT_CERTIFICATE", "CLIENT_KEY":
+			return "/path/other"
+		}
+		return ""
+	}
+	reader.ReadFile = func(n string) ([]byte, error) {
+		if n == "/path/tls.crt" {
+			return []byte(WeakCertificate), nil
+		}
+		if n == "/path/tls.key" {
+			return []byte(WeakKey), nil
+		}
+		return []byte{}, nil
+	}
+	reader.Apply(
+		WithClientCert([]string{"SIGNAL_CLIENT_CERTIFICATE", "CLIENT_CERTIFICATE"},
+			[]string{"SIGNAL_CLIENT_KEY", "CLIENT_KEY"}, func(c tls.Certificate) {
+				option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
+			}),
+	)
+	assert.Equal(t, cert, option.TestTLS.Certificates[0])
+}
+
+func TestWithClientCertSingleSided(t *testing.T) {
+	// Only one of the two sides configured must be reported as an error and
+	// leave the option untouched, instead of being silently dropped.
+	reader := EnvOptionsReader{
+		GetEnv: func(n string) string {
+			switch n {
+			case "CLIENT_CERTIFICATE":
+				return "/path/tls.crt"
+			}
+			return ""
+		},
+	}
+
+	var option testOption
+	reader.Apply(
+		WithClientCert([]string{"CLIENT_CERTIFICATE"}, []string{"CLIENT_KEY"}, func(c tls.Certificate) {
+			option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
+		}),
+	)
+	assert.Nil(t, option.TestTLS)
+
+	reader.GetEnv = func(n string) string {
+		if n == "CLIENT_KEY" {
+			return "/path/tls.key"
+		}
+		return ""
+	}
+	reader.Apply(
+		WithClientCert([]string{"CLIENT_CERTIFICATE"}, []string{"CLIENT_KEY"}, func(c tls.Certificate) {
 			option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
 		}),
 	)
