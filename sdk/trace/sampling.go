@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"math"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -103,7 +104,7 @@ func TraceIDRatioBased(fraction float64) Sampler {
 		}
 	}
 
-	if fraction <= 0 {
+	if fraction <= 0 || math.IsNaN(fraction) {
 		return predeterminedSampler{
 			description: "TraceIDRatioBased{0}",
 			decision:    Drop,
