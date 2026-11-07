@@ -122,12 +122,33 @@ func WithCertPool(n string, fn func(*x509.CertPool)) ConfigFn {
 	}
 }
 
-// WithClientCert returns a ConfigFn that reads the environment variable nc and nk as filepaths to a client certificate and key pair. If they exists, they are parsed as a crypto/tls.Certificate and it is passed to fn.
-func WithClientCert(nc, nk string, fn func(tls.Certificate)) ConfigFn {
+// WithClientCert returns a ConfigFn that resolves the client certificate and
+// the client key independently of each other: each side is read from the first
+// non-empty environment variable in its candidate list (signal-specific names
+// take precedence over generic names). This avoids silently dropping mTLS when
+// the certificate and the key come from different precedence tiers, and an
+// error is reported when only one of the two is configured. If a pair is
+// found, the files are parsed as a crypto/tls.Certificate and passed to fn.
+func WithClientCert(ncs, nks []string, fn func(tls.Certificate)) ConfigFn {
 	return func(e *EnvOptionsReader) {
-		vc, okc := e.GetEnvValue(nc)
-		vk, okk := e.GetEnvValue(nk)
-		if !okc || !okk {
+		var vc, vk string
+		for _, n := range ncs {
+			if v, ok := e.GetEnvValue(n); ok {
+				vc = v
+				break
+			}
+		}
+		for _, n := range nks {
+			if v, ok := e.GetEnvValue(n); ok {
+				vk = v
+				break
+			}
+		}
+		if vc == "" && vk == "" {
+			return
+		}
+		if vc == "" || vk == "" {
+			global.Error(errors.New("incomplete mTLS configuration"), "both a client certificate and a client key are required")
 			return
 		}
 		cert, err := e.ReadFile(vc)
