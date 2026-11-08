@@ -324,10 +324,10 @@ var (
 // represents the maximum CPU resource limit currently configured for a running
 // container.
 type ContainerCPULimitCurrent struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newContainerCPULimitCurrentOpts = []metric.Int64UpDownCounterOption{
+var newContainerCPULimitCurrentOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("Maximum CPU resource limit currently configured for a running container."),
 	metric.WithUnit("{cpu}"),
 }
@@ -335,32 +335,32 @@ var newContainerCPULimitCurrentOpts = []metric.Int64UpDownCounterOption{
 // NewContainerCPULimitCurrent returns a new ContainerCPULimitCurrent instrument.
 func NewContainerCPULimitCurrent(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ContainerCPULimitCurrent, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPULimitCurrent{noop.Int64UpDownCounter{}}, nil
+		return ContainerCPULimitCurrent{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPULimitCurrentOpts
 	} else {
-		opt = append(opt, newContainerCPULimitCurrentOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPULimitCurrentOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"k8s.container.cpu.limit.current",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPULimitCurrent{noop.Int64UpDownCounter{}}, err
+		return ContainerCPULimitCurrent{noop.Float64UpDownCounter{}}, err
 	}
 	return ContainerCPULimitCurrent{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPULimitCurrent) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ContainerCPULimitCurrent) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -391,12 +391,12 @@ func (ContainerCPULimitCurrent) Description() string {
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]: https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/
-func (m ContainerCPULimitCurrent) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ContainerCPULimitCurrent) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -404,7 +404,7 @@ func (m ContainerCPULimitCurrent) Add(ctx context.Context, incr int64, attrs ...
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -420,12 +420,12 @@ func (m ContainerCPULimitCurrent) Add(ctx context.Context, incr int64, attrs ...
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]: https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/
-func (m ContainerCPULimitCurrent) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ContainerCPULimitCurrent) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -433,7 +433,7 @@ func (m ContainerCPULimitCurrent) AddSet(ctx context.Context, incr int64, set at
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ContainerCPULimitCurrentObservable is an instrument used to record metric
@@ -441,10 +441,10 @@ func (m ContainerCPULimitCurrent) AddSet(ctx context.Context, incr int64, set at
 // conventions. It represents the maximum CPU resource limit currently configured
 // for a running container.
 type ContainerCPULimitCurrentObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newContainerCPULimitCurrentObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newContainerCPULimitCurrentObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("Maximum CPU resource limit currently configured for a running container."),
 	metric.WithUnit("{cpu}"),
 }
@@ -453,32 +453,32 @@ var newContainerCPULimitCurrentObservableOpts = []metric.Int64ObservableUpDownCo
 // ContainerCPULimitCurrentObservable instrument.
 func NewContainerCPULimitCurrentObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ContainerCPULimitCurrentObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPULimitCurrentObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ContainerCPULimitCurrentObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPULimitCurrentObservableOpts
 	} else {
-		opt = append(opt, newContainerCPULimitCurrentObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPULimitCurrentObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"k8s.container.cpu.limit.current",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPULimitCurrentObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ContainerCPULimitCurrentObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ContainerCPULimitCurrentObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPULimitCurrentObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ContainerCPULimitCurrentObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -500,10 +500,10 @@ func (ContainerCPULimitCurrentObservable) Description() string {
 // conforming to the "k8s.container.cpu.limit.desired" semantic conventions. It
 // represents the maximum CPU resource limit as defined by the container spec.
 type ContainerCPULimitDesired struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newContainerCPULimitDesiredOpts = []metric.Int64UpDownCounterOption{
+var newContainerCPULimitDesiredOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("Maximum CPU resource limit as defined by the container spec."),
 	metric.WithUnit("{cpu}"),
 }
@@ -511,32 +511,32 @@ var newContainerCPULimitDesiredOpts = []metric.Int64UpDownCounterOption{
 // NewContainerCPULimitDesired returns a new ContainerCPULimitDesired instrument.
 func NewContainerCPULimitDesired(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ContainerCPULimitDesired, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPULimitDesired{noop.Int64UpDownCounter{}}, nil
+		return ContainerCPULimitDesired{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPULimitDesiredOpts
 	} else {
-		opt = append(opt, newContainerCPULimitDesiredOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPULimitDesiredOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"k8s.container.cpu.limit.desired",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPULimitDesired{noop.Int64UpDownCounter{}}, err
+		return ContainerCPULimitDesired{noop.Float64UpDownCounter{}}, err
 	}
 	return ContainerCPULimitDesired{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPULimitDesired) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ContainerCPULimitDesired) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -567,12 +567,12 @@ func (ContainerCPULimitDesired) Description() string {
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]: https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/
-func (m ContainerCPULimitDesired) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ContainerCPULimitDesired) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -580,7 +580,7 @@ func (m ContainerCPULimitDesired) Add(ctx context.Context, incr int64, attrs ...
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -596,12 +596,12 @@ func (m ContainerCPULimitDesired) Add(ctx context.Context, incr int64, attrs ...
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]: https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/
-func (m ContainerCPULimitDesired) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ContainerCPULimitDesired) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -609,7 +609,7 @@ func (m ContainerCPULimitDesired) AddSet(ctx context.Context, incr int64, set at
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ContainerCPULimitDesiredObservable is an instrument used to record metric
@@ -617,10 +617,10 @@ func (m ContainerCPULimitDesired) AddSet(ctx context.Context, incr int64, set at
 // conventions. It represents the maximum CPU resource limit as defined by the
 // container spec.
 type ContainerCPULimitDesiredObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newContainerCPULimitDesiredObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newContainerCPULimitDesiredObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("Maximum CPU resource limit as defined by the container spec."),
 	metric.WithUnit("{cpu}"),
 }
@@ -629,32 +629,32 @@ var newContainerCPULimitDesiredObservableOpts = []metric.Int64ObservableUpDownCo
 // ContainerCPULimitDesiredObservable instrument.
 func NewContainerCPULimitDesiredObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ContainerCPULimitDesiredObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPULimitDesiredObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ContainerCPULimitDesiredObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPULimitDesiredObservableOpts
 	} else {
-		opt = append(opt, newContainerCPULimitDesiredObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPULimitDesiredObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"k8s.container.cpu.limit.desired",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPULimitDesiredObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ContainerCPULimitDesiredObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ContainerCPULimitDesiredObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPULimitDesiredObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ContainerCPULimitDesiredObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -676,10 +676,10 @@ func (ContainerCPULimitDesiredObservable) Description() string {
 // conforming to the "k8s.container.cpu.limit.utilization" semantic conventions.
 // It represents the ratio of container CPU usage to its current CPU limit.
 type ContainerCPULimitUtilization struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newContainerCPULimitUtilizationOpts = []metric.Int64GaugeOption{
+var newContainerCPULimitUtilizationOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("The ratio of container CPU usage to its current CPU limit."),
 	metric.WithUnit("1"),
 }
@@ -688,32 +688,32 @@ var newContainerCPULimitUtilizationOpts = []metric.Int64GaugeOption{
 // instrument.
 func NewContainerCPULimitUtilization(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (ContainerCPULimitUtilization, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPULimitUtilization{noop.Int64Gauge{}}, nil
+		return ContainerCPULimitUtilization{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPULimitUtilizationOpts
 	} else {
-		opt = append(opt, newContainerCPULimitUtilizationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPULimitUtilizationOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"k8s.container.cpu.limit.utilization",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPULimitUtilization{noop.Int64Gauge{}}, err
+		return ContainerCPULimitUtilization{noop.Float64Gauge{}}, err
 	}
 	return ContainerCPULimitUtilization{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPULimitUtilization) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m ContainerCPULimitUtilization) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -742,12 +742,12 @@ func (ContainerCPULimitUtilization) Description() string {
 // container.
 //
 // [ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
-func (m ContainerCPULimitUtilization) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m ContainerCPULimitUtilization) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -755,7 +755,7 @@ func (m ContainerCPULimitUtilization) Record(ctx context.Context, val int64, att
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
@@ -769,12 +769,12 @@ func (m ContainerCPULimitUtilization) Record(ctx context.Context, val int64, att
 // container.
 //
 // [ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
-func (m ContainerCPULimitUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m ContainerCPULimitUtilization) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -782,7 +782,7 @@ func (m ContainerCPULimitUtilization) RecordSet(ctx context.Context, val int64, 
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // ContainerCPULimitUtilizationObservable is an instrument used to record metric
@@ -790,10 +790,10 @@ func (m ContainerCPULimitUtilization) RecordSet(ctx context.Context, val int64, 
 // conventions. It represents the ratio of container CPU usage to its current CPU
 // limit.
 type ContainerCPULimitUtilizationObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newContainerCPULimitUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+var newContainerCPULimitUtilizationObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("The ratio of container CPU usage to its current CPU limit."),
 	metric.WithUnit("1"),
 }
@@ -802,32 +802,32 @@ var newContainerCPULimitUtilizationObservableOpts = []metric.Int64ObservableGaug
 // ContainerCPULimitUtilizationObservable instrument.
 func NewContainerCPULimitUtilizationObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (ContainerCPULimitUtilizationObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPULimitUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+		return ContainerCPULimitUtilizationObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPULimitUtilizationObservableOpts
 	} else {
-		opt = append(opt, newContainerCPULimitUtilizationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPULimitUtilizationObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"k8s.container.cpu.limit.utilization",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPULimitUtilizationObservable{noop.Int64ObservableGauge{}}, err
+		return ContainerCPULimitUtilizationObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return ContainerCPULimitUtilizationObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPULimitUtilizationObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m ContainerCPULimitUtilizationObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -850,10 +850,10 @@ func (ContainerCPULimitUtilizationObservable) Description() string {
 // represents the CPU resource requested currently configured for a running
 // container.
 type ContainerCPURequestCurrent struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newContainerCPURequestCurrentOpts = []metric.Int64UpDownCounterOption{
+var newContainerCPURequestCurrentOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("CPU resource requested currently configured for a running container."),
 	metric.WithUnit("{cpu}"),
 }
@@ -862,32 +862,32 @@ var newContainerCPURequestCurrentOpts = []metric.Int64UpDownCounterOption{
 // instrument.
 func NewContainerCPURequestCurrent(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ContainerCPURequestCurrent, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPURequestCurrent{noop.Int64UpDownCounter{}}, nil
+		return ContainerCPURequestCurrent{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPURequestCurrentOpts
 	} else {
-		opt = append(opt, newContainerCPURequestCurrentOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPURequestCurrentOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"k8s.container.cpu.request.current",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPURequestCurrent{noop.Int64UpDownCounter{}}, err
+		return ContainerCPURequestCurrent{noop.Float64UpDownCounter{}}, err
 	}
 	return ContainerCPURequestCurrent{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPURequestCurrent) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ContainerCPURequestCurrent) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -918,12 +918,12 @@ func (ContainerCPURequestCurrent) Description() string {
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]: https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/
-func (m ContainerCPURequestCurrent) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ContainerCPURequestCurrent) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -931,7 +931,7 @@ func (m ContainerCPURequestCurrent) Add(ctx context.Context, incr int64, attrs .
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -947,12 +947,12 @@ func (m ContainerCPURequestCurrent) Add(ctx context.Context, incr int64, attrs .
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]: https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/
-func (m ContainerCPURequestCurrent) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ContainerCPURequestCurrent) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -960,7 +960,7 @@ func (m ContainerCPURequestCurrent) AddSet(ctx context.Context, incr int64, set 
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ContainerCPURequestCurrentObservable is an instrument used to record metric
@@ -968,10 +968,10 @@ func (m ContainerCPURequestCurrent) AddSet(ctx context.Context, incr int64, set 
 // conventions. It represents the CPU resource requested currently configured for
 // a running container.
 type ContainerCPURequestCurrentObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newContainerCPURequestCurrentObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newContainerCPURequestCurrentObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("CPU resource requested currently configured for a running container."),
 	metric.WithUnit("{cpu}"),
 }
@@ -980,32 +980,32 @@ var newContainerCPURequestCurrentObservableOpts = []metric.Int64ObservableUpDown
 // ContainerCPURequestCurrentObservable instrument.
 func NewContainerCPURequestCurrentObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ContainerCPURequestCurrentObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPURequestCurrentObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ContainerCPURequestCurrentObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPURequestCurrentObservableOpts
 	} else {
-		opt = append(opt, newContainerCPURequestCurrentObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPURequestCurrentObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"k8s.container.cpu.request.current",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPURequestCurrentObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ContainerCPURequestCurrentObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ContainerCPURequestCurrentObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPURequestCurrentObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ContainerCPURequestCurrentObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1027,10 +1027,10 @@ func (ContainerCPURequestCurrentObservable) Description() string {
 // conforming to the "k8s.container.cpu.request.desired" semantic conventions. It
 // represents the CPU resource requested as defined by the container spec.
 type ContainerCPURequestDesired struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newContainerCPURequestDesiredOpts = []metric.Int64UpDownCounterOption{
+var newContainerCPURequestDesiredOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("CPU resource requested as defined by the container spec."),
 	metric.WithUnit("{cpu}"),
 }
@@ -1039,32 +1039,32 @@ var newContainerCPURequestDesiredOpts = []metric.Int64UpDownCounterOption{
 // instrument.
 func NewContainerCPURequestDesired(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ContainerCPURequestDesired, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPURequestDesired{noop.Int64UpDownCounter{}}, nil
+		return ContainerCPURequestDesired{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPURequestDesiredOpts
 	} else {
-		opt = append(opt, newContainerCPURequestDesiredOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPURequestDesiredOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"k8s.container.cpu.request.desired",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPURequestDesired{noop.Int64UpDownCounter{}}, err
+		return ContainerCPURequestDesired{noop.Float64UpDownCounter{}}, err
 	}
 	return ContainerCPURequestDesired{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPURequestDesired) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ContainerCPURequestDesired) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1095,12 +1095,12 @@ func (ContainerCPURequestDesired) Description() string {
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]: https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/
-func (m ContainerCPURequestDesired) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ContainerCPURequestDesired) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -1108,7 +1108,7 @@ func (m ContainerCPURequestDesired) Add(ctx context.Context, incr int64, attrs .
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -1124,12 +1124,12 @@ func (m ContainerCPURequestDesired) Add(ctx context.Context, incr int64, attrs .
 // [`resources`]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core
 // [K8s Container]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#container-v1-core
 // [https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/]: https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/
-func (m ContainerCPURequestDesired) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ContainerCPURequestDesired) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -1137,7 +1137,7 @@ func (m ContainerCPURequestDesired) AddSet(ctx context.Context, incr int64, set 
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ContainerCPURequestDesiredObservable is an instrument used to record metric
@@ -1145,10 +1145,10 @@ func (m ContainerCPURequestDesired) AddSet(ctx context.Context, incr int64, set 
 // conventions. It represents the CPU resource requested as defined by the
 // container spec.
 type ContainerCPURequestDesiredObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newContainerCPURequestDesiredObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newContainerCPURequestDesiredObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("CPU resource requested as defined by the container spec."),
 	metric.WithUnit("{cpu}"),
 }
@@ -1157,32 +1157,32 @@ var newContainerCPURequestDesiredObservableOpts = []metric.Int64ObservableUpDown
 // ContainerCPURequestDesiredObservable instrument.
 func NewContainerCPURequestDesiredObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ContainerCPURequestDesiredObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPURequestDesiredObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ContainerCPURequestDesiredObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPURequestDesiredObservableOpts
 	} else {
-		opt = append(opt, newContainerCPURequestDesiredObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPURequestDesiredObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"k8s.container.cpu.request.desired",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPURequestDesiredObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ContainerCPURequestDesiredObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ContainerCPURequestDesiredObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPURequestDesiredObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ContainerCPURequestDesiredObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1205,10 +1205,10 @@ func (ContainerCPURequestDesiredObservable) Description() string {
 // conventions. It represents the ratio of container CPU usage to its current CPU
 // request.
 type ContainerCPURequestUtilization struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newContainerCPURequestUtilizationOpts = []metric.Int64GaugeOption{
+var newContainerCPURequestUtilizationOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("The ratio of container CPU usage to its current CPU request."),
 	metric.WithUnit("1"),
 }
@@ -1217,32 +1217,32 @@ var newContainerCPURequestUtilizationOpts = []metric.Int64GaugeOption{
 // instrument.
 func NewContainerCPURequestUtilization(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (ContainerCPURequestUtilization, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPURequestUtilization{noop.Int64Gauge{}}, nil
+		return ContainerCPURequestUtilization{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPURequestUtilizationOpts
 	} else {
-		opt = append(opt, newContainerCPURequestUtilizationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPURequestUtilizationOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"k8s.container.cpu.request.utilization",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPURequestUtilization{noop.Int64Gauge{}}, err
+		return ContainerCPURequestUtilization{noop.Float64Gauge{}}, err
 	}
 	return ContainerCPURequestUtilization{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPURequestUtilization) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m ContainerCPURequestUtilization) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1271,12 +1271,12 @@ func (ContainerCPURequestUtilization) Description() string {
 // container.
 //
 // [ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
-func (m ContainerCPURequestUtilization) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m ContainerCPURequestUtilization) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -1284,7 +1284,7 @@ func (m ContainerCPURequestUtilization) Record(ctx context.Context, val int64, a
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
@@ -1298,12 +1298,12 @@ func (m ContainerCPURequestUtilization) Record(ctx context.Context, val int64, a
 // container.
 //
 // [ContainerStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#containerstatus-v1-core
-func (m ContainerCPURequestUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m ContainerCPURequestUtilization) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -1311,7 +1311,7 @@ func (m ContainerCPURequestUtilization) RecordSet(ctx context.Context, val int64
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // ContainerCPURequestUtilizationObservable is an instrument used to record
@@ -1319,10 +1319,10 @@ func (m ContainerCPURequestUtilization) RecordSet(ctx context.Context, val int64
 // semantic conventions. It represents the ratio of container CPU usage to its
 // current CPU request.
 type ContainerCPURequestUtilizationObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newContainerCPURequestUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+var newContainerCPURequestUtilizationObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("The ratio of container CPU usage to its current CPU request."),
 	metric.WithUnit("1"),
 }
@@ -1331,32 +1331,32 @@ var newContainerCPURequestUtilizationObservableOpts = []metric.Int64ObservableGa
 // ContainerCPURequestUtilizationObservable instrument.
 func NewContainerCPURequestUtilizationObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (ContainerCPURequestUtilizationObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ContainerCPURequestUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+		return ContainerCPURequestUtilizationObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newContainerCPURequestUtilizationObservableOpts
 	} else {
-		opt = append(opt, newContainerCPURequestUtilizationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerCPURequestUtilizationObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"k8s.container.cpu.request.utilization",
 		opt...,
 	)
 	if err != nil {
-		return ContainerCPURequestUtilizationObservable{noop.Int64ObservableGauge{}}, err
+		return ContainerCPURequestUtilizationObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return ContainerCPURequestUtilizationObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ContainerCPURequestUtilizationObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m ContainerCPURequestUtilizationObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -1401,7 +1401,7 @@ func NewContainerEphemeralStorageLimit(
 	if len(opt) == 0 {
 		opt = newContainerEphemeralStorageLimitOpts
 	} else {
-		opt = append(opt, newContainerEphemeralStorageLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerEphemeralStorageLimitOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1503,7 +1503,7 @@ func NewContainerEphemeralStorageLimitObservable(
 	if len(opt) == 0 {
 		opt = newContainerEphemeralStorageLimitObservableOpts
 	} else {
-		opt = append(opt, newContainerEphemeralStorageLimitObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerEphemeralStorageLimitObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1563,7 +1563,7 @@ func NewContainerEphemeralStorageRequest(
 	if len(opt) == 0 {
 		opt = newContainerEphemeralStorageRequestOpts
 	} else {
-		opt = append(opt, newContainerEphemeralStorageRequestOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerEphemeralStorageRequestOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1665,7 +1665,7 @@ func NewContainerEphemeralStorageRequestObservable(
 	if len(opt) == 0 {
 		opt = newContainerEphemeralStorageRequestObservableOpts
 	} else {
-		opt = append(opt, newContainerEphemeralStorageRequestObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerEphemeralStorageRequestObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1724,7 +1724,7 @@ func NewContainerEphemeralStorageUsage(
 	if len(opt) == 0 {
 		opt = newContainerEphemeralStorageUsageOpts
 	} else {
-		opt = append(opt, newContainerEphemeralStorageUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerEphemeralStorageUsageOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1844,7 +1844,7 @@ func NewContainerEphemeralStorageUsageObservable(
 	if len(opt) == 0 {
 		opt = newContainerEphemeralStorageUsageObservableOpts
 	} else {
-		opt = append(opt, newContainerEphemeralStorageUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerEphemeralStorageUsageObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1911,7 +1911,7 @@ func NewContainerMemoryLimitCurrent(
 	if len(opt) == 0 {
 		opt = newContainerMemoryLimitCurrentOpts
 	} else {
-		opt = append(opt, newContainerMemoryLimitCurrentOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerMemoryLimitCurrentOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2029,7 +2029,7 @@ func NewContainerMemoryLimitCurrentObservable(
 	if len(opt) == 0 {
 		opt = newContainerMemoryLimitCurrentObservableOpts
 	} else {
-		opt = append(opt, newContainerMemoryLimitCurrentObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerMemoryLimitCurrentObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2089,7 +2089,7 @@ func NewContainerMemoryLimitDesired(
 	if len(opt) == 0 {
 		opt = newContainerMemoryLimitDesiredOpts
 	} else {
-		opt = append(opt, newContainerMemoryLimitDesiredOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerMemoryLimitDesiredOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2207,7 +2207,7 @@ func NewContainerMemoryLimitDesiredObservable(
 	if len(opt) == 0 {
 		opt = newContainerMemoryLimitDesiredObservableOpts
 	} else {
-		opt = append(opt, newContainerMemoryLimitDesiredObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerMemoryLimitDesiredObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2267,7 +2267,7 @@ func NewContainerMemoryRequestCurrent(
 	if len(opt) == 0 {
 		opt = newContainerMemoryRequestCurrentOpts
 	} else {
-		opt = append(opt, newContainerMemoryRequestCurrentOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerMemoryRequestCurrentOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2385,7 +2385,7 @@ func NewContainerMemoryRequestCurrentObservable(
 	if len(opt) == 0 {
 		opt = newContainerMemoryRequestCurrentObservableOpts
 	} else {
-		opt = append(opt, newContainerMemoryRequestCurrentObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerMemoryRequestCurrentObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2444,7 +2444,7 @@ func NewContainerMemoryRequestDesired(
 	if len(opt) == 0 {
 		opt = newContainerMemoryRequestDesiredOpts
 	} else {
-		opt = append(opt, newContainerMemoryRequestDesiredOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerMemoryRequestDesiredOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2562,7 +2562,7 @@ func NewContainerMemoryRequestDesiredObservable(
 	if len(opt) == 0 {
 		opt = newContainerMemoryRequestDesiredObservableOpts
 	} else {
-		opt = append(opt, newContainerMemoryRequestDesiredObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerMemoryRequestDesiredObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2621,7 +2621,7 @@ func NewContainerReady(
 	if len(opt) == 0 {
 		opt = newContainerReadyOpts
 	} else {
-		opt = append(opt, newContainerReadyOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerReadyOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2724,7 +2724,7 @@ func NewContainerReadyObservable(
 	if len(opt) == 0 {
 		opt = newContainerReadyObservableOpts
 	} else {
-		opt = append(opt, newContainerReadyObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerReadyObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2783,7 +2783,7 @@ func NewContainerRestartCount(
 	if len(opt) == 0 {
 		opt = newContainerRestartCountOpts
 	} else {
-		opt = append(opt, newContainerRestartCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerRestartCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2897,7 +2897,7 @@ func NewContainerRestartCountObservable(
 	if len(opt) == 0 {
 		opt = newContainerRestartCountObservableOpts
 	} else {
-		opt = append(opt, newContainerRestartCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerRestartCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2956,7 +2956,7 @@ func NewContainerStatusReason(
 	if len(opt) == 0 {
 		opt = newContainerStatusReasonOpts
 	} else {
-		opt = append(opt, newContainerStatusReasonOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerStatusReasonOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3081,7 +3081,7 @@ func NewContainerStatusReasonObservable(
 	if len(opt) == 0 {
 		opt = newContainerStatusReasonObservableOpts
 	} else {
-		opt = append(opt, newContainerStatusReasonObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerStatusReasonObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3150,7 +3150,7 @@ func NewContainerStatusState(
 	if len(opt) == 0 {
 		opt = newContainerStatusStateOpts
 	} else {
-		opt = append(opt, newContainerStatusStateOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerStatusStateOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3273,7 +3273,7 @@ func NewContainerStatusStateObservable(
 	if len(opt) == 0 {
 		opt = newContainerStatusStateObservableOpts
 	} else {
-		opt = append(opt, newContainerStatusStateObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerStatusStateObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3340,7 +3340,7 @@ func NewContainerStorageLimit(
 	if len(opt) == 0 {
 		opt = newContainerStorageLimitOpts
 	} else {
-		opt = append(opt, newContainerStorageLimitOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerStorageLimitOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3441,7 +3441,7 @@ func NewContainerStorageLimitObservable(
 	if len(opt) == 0 {
 		opt = newContainerStorageLimitObservableOpts
 	} else {
-		opt = append(opt, newContainerStorageLimitObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerStorageLimitObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3499,7 +3499,7 @@ func NewContainerStorageRequest(
 	if len(opt) == 0 {
 		opt = newContainerStorageRequestOpts
 	} else {
-		opt = append(opt, newContainerStorageRequestOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerStorageRequestOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3600,7 +3600,7 @@ func NewContainerStorageRequestObservable(
 	if len(opt) == 0 {
 		opt = newContainerStorageRequestObservableOpts
 	} else {
-		opt = append(opt, newContainerStorageRequestObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContainerStorageRequestObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3658,7 +3658,7 @@ func NewCronJobJobActive(
 	if len(opt) == 0 {
 		opt = newCronJobJobActiveOpts
 	} else {
-		opt = append(opt, newCronJobJobActiveOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCronJobJobActiveOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3761,7 +3761,7 @@ func NewCronJobJobActiveObservable(
 	if len(opt) == 0 {
 		opt = newCronJobJobActiveObservableOpts
 	} else {
-		opt = append(opt, newCronJobJobActiveObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCronJobJobActiveObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3821,7 +3821,7 @@ func NewDaemonSetNodeCurrentScheduled(
 	if len(opt) == 0 {
 		opt = newDaemonSetNodeCurrentScheduledOpts
 	} else {
-		opt = append(opt, newDaemonSetNodeCurrentScheduledOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDaemonSetNodeCurrentScheduledOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -3925,7 +3925,7 @@ func NewDaemonSetNodeCurrentScheduledObservable(
 	if len(opt) == 0 {
 		opt = newDaemonSetNodeCurrentScheduledObservableOpts
 	} else {
-		opt = append(opt, newDaemonSetNodeCurrentScheduledObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDaemonSetNodeCurrentScheduledObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3985,7 +3985,7 @@ func NewDaemonSetNodeDesiredScheduled(
 	if len(opt) == 0 {
 		opt = newDaemonSetNodeDesiredScheduledOpts
 	} else {
-		opt = append(opt, newDaemonSetNodeDesiredScheduledOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDaemonSetNodeDesiredScheduledOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -4089,7 +4089,7 @@ func NewDaemonSetNodeDesiredScheduledObservable(
 	if len(opt) == 0 {
 		opt = newDaemonSetNodeDesiredScheduledObservableOpts
 	} else {
-		opt = append(opt, newDaemonSetNodeDesiredScheduledObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDaemonSetNodeDesiredScheduledObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -4149,7 +4149,7 @@ func NewDaemonSetNodeMisscheduled(
 	if len(opt) == 0 {
 		opt = newDaemonSetNodeMisscheduledOpts
 	} else {
-		opt = append(opt, newDaemonSetNodeMisscheduledOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDaemonSetNodeMisscheduledOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -4253,7 +4253,7 @@ func NewDaemonSetNodeMisscheduledObservable(
 	if len(opt) == 0 {
 		opt = newDaemonSetNodeMisscheduledObservableOpts
 	} else {
-		opt = append(opt, newDaemonSetNodeMisscheduledObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDaemonSetNodeMisscheduledObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -4312,7 +4312,7 @@ func NewDaemonSetNodeReady(
 	if len(opt) == 0 {
 		opt = newDaemonSetNodeReadyOpts
 	} else {
-		opt = append(opt, newDaemonSetNodeReadyOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDaemonSetNodeReadyOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -4416,7 +4416,7 @@ func NewDaemonSetNodeReadyObservable(
 	if len(opt) == 0 {
 		opt = newDaemonSetNodeReadyObservableOpts
 	} else {
-		opt = append(opt, newDaemonSetNodeReadyObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDaemonSetNodeReadyObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -4475,7 +4475,7 @@ func NewDeploymentPodAvailable(
 	if len(opt) == 0 {
 		opt = newDeploymentPodAvailableOpts
 	} else {
-		opt = append(opt, newDeploymentPodAvailableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDeploymentPodAvailableOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -4579,7 +4579,7 @@ func NewDeploymentPodAvailableObservable(
 	if len(opt) == 0 {
 		opt = newDeploymentPodAvailableObservableOpts
 	} else {
-		opt = append(opt, newDeploymentPodAvailableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDeploymentPodAvailableObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -4637,7 +4637,7 @@ func NewDeploymentPodDesired(
 	if len(opt) == 0 {
 		opt = newDeploymentPodDesiredOpts
 	} else {
-		opt = append(opt, newDeploymentPodDesiredOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDeploymentPodDesiredOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -4740,7 +4740,7 @@ func NewDeploymentPodDesiredObservable(
 	if len(opt) == 0 {
 		opt = newDeploymentPodDesiredObservableOpts
 	} else {
-		opt = append(opt, newDeploymentPodDesiredObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDeploymentPodDesiredObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -4800,7 +4800,7 @@ func NewHPAMetricTargetCPUAverageUtilization(
 	if len(opt) == 0 {
 		opt = newHPAMetricTargetCPUAverageUtilizationOpts
 	} else {
-		opt = append(opt, newHPAMetricTargetCPUAverageUtilizationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAMetricTargetCPUAverageUtilizationOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -4940,7 +4940,7 @@ func NewHPAMetricTargetCPUAverageUtilizationObservable(
 	if len(opt) == 0 {
 		opt = newHPAMetricTargetCPUAverageUtilizationObservableOpts
 	} else {
-		opt = append(opt, newHPAMetricTargetCPUAverageUtilizationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAMetricTargetCPUAverageUtilizationObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -5015,7 +5015,7 @@ func NewHPAMetricTargetCPUAverageValue(
 	if len(opt) == 0 {
 		opt = newHPAMetricTargetCPUAverageValueOpts
 	} else {
-		opt = append(opt, newHPAMetricTargetCPUAverageValueOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAMetricTargetCPUAverageValueOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -5154,7 +5154,7 @@ func NewHPAMetricTargetCPUAverageValueObservable(
 	if len(opt) == 0 {
 		opt = newHPAMetricTargetCPUAverageValueObservableOpts
 	} else {
-		opt = append(opt, newHPAMetricTargetCPUAverageValueObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAMetricTargetCPUAverageValueObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -5227,7 +5227,7 @@ func NewHPAMetricTargetCPUValue(
 	if len(opt) == 0 {
 		opt = newHPAMetricTargetCPUValueOpts
 	} else {
-		opt = append(opt, newHPAMetricTargetCPUValueOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAMetricTargetCPUValueOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -5365,7 +5365,7 @@ func NewHPAMetricTargetCPUValueObservable(
 	if len(opt) == 0 {
 		opt = newHPAMetricTargetCPUValueObservableOpts
 	} else {
-		opt = append(opt, newHPAMetricTargetCPUValueObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAMetricTargetCPUValueObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -5439,7 +5439,7 @@ func NewHPAPodCurrent(
 	if len(opt) == 0 {
 		opt = newHPAPodCurrentOpts
 	} else {
-		opt = append(opt, newHPAPodCurrentOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAPodCurrentOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -5542,7 +5542,7 @@ func NewHPAPodCurrentObservable(
 	if len(opt) == 0 {
 		opt = newHPAPodCurrentObservableOpts
 	} else {
-		opt = append(opt, newHPAPodCurrentObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAPodCurrentObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -5601,7 +5601,7 @@ func NewHPAPodDesired(
 	if len(opt) == 0 {
 		opt = newHPAPodDesiredOpts
 	} else {
-		opt = append(opt, newHPAPodDesiredOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAPodDesiredOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -5704,7 +5704,7 @@ func NewHPAPodDesiredObservable(
 	if len(opt) == 0 {
 		opt = newHPAPodDesiredObservableOpts
 	} else {
-		opt = append(opt, newHPAPodDesiredObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAPodDesiredObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -5762,7 +5762,7 @@ func NewHPAPodMax(
 	if len(opt) == 0 {
 		opt = newHPAPodMaxOpts
 	} else {
-		opt = append(opt, newHPAPodMaxOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAPodMaxOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -5864,7 +5864,7 @@ func NewHPAPodMaxObservable(
 	if len(opt) == 0 {
 		opt = newHPAPodMaxObservableOpts
 	} else {
-		opt = append(opt, newHPAPodMaxObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAPodMaxObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -5922,7 +5922,7 @@ func NewHPAPodMin(
 	if len(opt) == 0 {
 		opt = newHPAPodMinOpts
 	} else {
-		opt = append(opt, newHPAPodMinOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAPodMinOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -6024,7 +6024,7 @@ func NewHPAPodMinObservable(
 	if len(opt) == 0 {
 		opt = newHPAPodMinObservableOpts
 	} else {
-		opt = append(opt, newHPAPodMinObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newHPAPodMinObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -6082,7 +6082,7 @@ func NewJobPodActive(
 	if len(opt) == 0 {
 		opt = newJobPodActiveOpts
 	} else {
-		opt = append(opt, newJobPodActiveOpts...)
+		opt = append(opt[:len(opt):len(opt)], newJobPodActiveOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -6184,7 +6184,7 @@ func NewJobPodActiveObservable(
 	if len(opt) == 0 {
 		opt = newJobPodActiveObservableOpts
 	} else {
-		opt = append(opt, newJobPodActiveObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newJobPodActiveObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -6243,7 +6243,7 @@ func NewJobPodDesiredSuccessful(
 	if len(opt) == 0 {
 		opt = newJobPodDesiredSuccessfulOpts
 	} else {
-		opt = append(opt, newJobPodDesiredSuccessfulOpts...)
+		opt = append(opt[:len(opt):len(opt)], newJobPodDesiredSuccessfulOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -6347,7 +6347,7 @@ func NewJobPodDesiredSuccessfulObservable(
 	if len(opt) == 0 {
 		opt = newJobPodDesiredSuccessfulObservableOpts
 	} else {
-		opt = append(opt, newJobPodDesiredSuccessfulObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newJobPodDesiredSuccessfulObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -6405,7 +6405,7 @@ func NewJobPodFailed(
 	if len(opt) == 0 {
 		opt = newJobPodFailedOpts
 	} else {
-		opt = append(opt, newJobPodFailedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newJobPodFailedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -6507,7 +6507,7 @@ func NewJobPodFailedObservable(
 	if len(opt) == 0 {
 		opt = newJobPodFailedObservableOpts
 	} else {
-		opt = append(opt, newJobPodFailedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newJobPodFailedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -6565,7 +6565,7 @@ func NewJobPodMaxParallel(
 	if len(opt) == 0 {
 		opt = newJobPodMaxParallelOpts
 	} else {
-		opt = append(opt, newJobPodMaxParallelOpts...)
+		opt = append(opt[:len(opt):len(opt)], newJobPodMaxParallelOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -6669,7 +6669,7 @@ func NewJobPodMaxParallelObservable(
 	if len(opt) == 0 {
 		opt = newJobPodMaxParallelObservableOpts
 	} else {
-		opt = append(opt, newJobPodMaxParallelObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newJobPodMaxParallelObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -6727,7 +6727,7 @@ func NewJobPodSuccessful(
 	if len(opt) == 0 {
 		opt = newJobPodSuccessfulOpts
 	} else {
-		opt = append(opt, newJobPodSuccessfulOpts...)
+		opt = append(opt[:len(opt):len(opt)], newJobPodSuccessfulOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -6830,7 +6830,7 @@ func NewJobPodSuccessfulObservable(
 	if len(opt) == 0 {
 		opt = newJobPodSuccessfulObservableOpts
 	} else {
-		opt = append(opt, newJobPodSuccessfulObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newJobPodSuccessfulObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -6888,7 +6888,7 @@ func NewNamespacePhase(
 	if len(opt) == 0 {
 		opt = newNamespacePhaseOpts
 	} else {
-		opt = append(opt, newNamespacePhaseOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNamespacePhaseOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -6998,7 +6998,7 @@ func NewNamespacePhaseObservable(
 	if len(opt) == 0 {
 		opt = newNamespacePhaseObservableOpts
 	} else {
-		opt = append(opt, newNamespacePhaseObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNamespacePhaseObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -7062,7 +7062,7 @@ func NewNodeConditionStatus(
 	if len(opt) == 0 {
 		opt = newNodeConditionStatusOpts
 	} else {
-		opt = append(opt, newNodeConditionStatusOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeConditionStatusOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -7187,7 +7187,7 @@ func NewNodeConditionStatusObservable(
 	if len(opt) == 0 {
 		opt = newNodeConditionStatusObservableOpts
 	} else {
-		opt = append(opt, newNodeConditionStatusObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeConditionStatusObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -7238,10 +7238,10 @@ func (NodeConditionStatusObservable) AttrNodeConditionType(val NodeConditionType
 // the "k8s.node.cpu.allocatable" semantic conventions. It represents the amount
 // of CPU allocatable on the node.
 type NodeCPUAllocatable struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newNodeCPUAllocatableOpts = []metric.Int64UpDownCounterOption{
+var newNodeCPUAllocatableOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("Amount of CPU allocatable on the node."),
 	metric.WithUnit("{cpu}"),
 }
@@ -7249,32 +7249,32 @@ var newNodeCPUAllocatableOpts = []metric.Int64UpDownCounterOption{
 // NewNodeCPUAllocatable returns a new NodeCPUAllocatable instrument.
 func NewNodeCPUAllocatable(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (NodeCPUAllocatable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return NodeCPUAllocatable{noop.Int64UpDownCounter{}}, nil
+		return NodeCPUAllocatable{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newNodeCPUAllocatableOpts
 	} else {
-		opt = append(opt, newNodeCPUAllocatableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeCPUAllocatableOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"k8s.node.cpu.allocatable",
 		opt...,
 	)
 	if err != nil {
-		return NodeCPUAllocatable{noop.Int64UpDownCounter{}}, err
+		return NodeCPUAllocatable{noop.Float64UpDownCounter{}}, err
 	}
 	return NodeCPUAllocatable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m NodeCPUAllocatable) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m NodeCPUAllocatable) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -7293,12 +7293,12 @@ func (NodeCPUAllocatable) Description() string {
 }
 
 // Add adds incr to the existing count for attrs.
-func (m NodeCPUAllocatable) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m NodeCPUAllocatable) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -7306,16 +7306,16 @@ func (m NodeCPUAllocatable) Add(ctx context.Context, incr int64, attrs ...attrib
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
-func (m NodeCPUAllocatable) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m NodeCPUAllocatable) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -7323,17 +7323,17 @@ func (m NodeCPUAllocatable) AddSet(ctx context.Context, incr int64, set attribut
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // NodeCPUAllocatableObservable is an instrument used to record metric values
 // conforming to the "k8s.node.cpu.allocatable" semantic conventions. It
 // represents the amount of CPU allocatable on the node.
 type NodeCPUAllocatableObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newNodeCPUAllocatableObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newNodeCPUAllocatableObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("Amount of CPU allocatable on the node."),
 	metric.WithUnit("{cpu}"),
 }
@@ -7342,32 +7342,32 @@ var newNodeCPUAllocatableObservableOpts = []metric.Int64ObservableUpDownCounterO
 // instrument.
 func NewNodeCPUAllocatableObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (NodeCPUAllocatableObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return NodeCPUAllocatableObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return NodeCPUAllocatableObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newNodeCPUAllocatableObservableOpts
 	} else {
-		opt = append(opt, newNodeCPUAllocatableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeCPUAllocatableObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"k8s.node.cpu.allocatable",
 		opt...,
 	)
 	if err != nil {
-		return NodeCPUAllocatableObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return NodeCPUAllocatableObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return NodeCPUAllocatableObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m NodeCPUAllocatableObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m NodeCPUAllocatableObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -7410,7 +7410,7 @@ func NewNodeCPUTime(
 	if len(opt) == 0 {
 		opt = newNodeCPUTimeOpts
 	} else {
-		opt = append(opt, newNodeCPUTimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeCPUTimeOpts...)
 	}
 
 	i, err := m.Float64Counter(
@@ -7506,7 +7506,7 @@ func NewNodeCPUTimeObservable(
 	if len(opt) == 0 {
 		opt = newNodeCPUTimeObservableOpts
 	} else {
-		opt = append(opt, newNodeCPUTimeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeCPUTimeObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableCounter(
@@ -7543,10 +7543,10 @@ func (NodeCPUTimeObservable) Description() string {
 // "k8s.node.cpu.usage" semantic conventions. It represents the node's CPU usage,
 // measured in CPUs. Range from 0 to the number of allocatable CPUs.
 type NodeCPUUsage struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newNodeCPUUsageOpts = []metric.Int64GaugeOption{
+var newNodeCPUUsageOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Node's CPU usage, measured in CPUs. Range from 0 to the number of allocatable CPUs."),
 	metric.WithUnit("{cpu}"),
 }
@@ -7554,32 +7554,32 @@ var newNodeCPUUsageOpts = []metric.Int64GaugeOption{
 // NewNodeCPUUsage returns a new NodeCPUUsage instrument.
 func NewNodeCPUUsage(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (NodeCPUUsage, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return NodeCPUUsage{noop.Int64Gauge{}}, nil
+		return NodeCPUUsage{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newNodeCPUUsageOpts
 	} else {
-		opt = append(opt, newNodeCPUUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeCPUUsageOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"k8s.node.cpu.usage",
 		opt...,
 	)
 	if err != nil {
-		return NodeCPUUsage{noop.Int64Gauge{}}, err
+		return NodeCPUUsage{noop.Float64Gauge{}}, err
 	}
 	return NodeCPUUsage{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m NodeCPUUsage) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m NodeCPUUsage) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -7603,12 +7603,12 @@ func (NodeCPUUsage) Description() string {
 // the change in cumulative CPU time (k8s.node.cpu.time) over a measurement
 // interval, divided by the elapsed time: usageCores = (cpuTimeEnd -
 // cpuTimeStart) / elapsedSeconds
-func (m NodeCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m NodeCPUUsage) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -7616,7 +7616,7 @@ func (m NodeCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
@@ -7625,12 +7625,12 @@ func (m NodeCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.
 // the change in cumulative CPU time (k8s.node.cpu.time) over a measurement
 // interval, divided by the elapsed time: usageCores = (cpuTimeEnd -
 // cpuTimeStart) / elapsedSeconds
-func (m NodeCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m NodeCPUUsage) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -7638,7 +7638,7 @@ func (m NodeCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Se
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // NodeCPUUsageObservable is an instrument used to record metric values
@@ -7646,10 +7646,10 @@ func (m NodeCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Se
 // node's CPU usage, measured in CPUs. Range from 0 to the number of allocatable
 // CPUs.
 type NodeCPUUsageObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newNodeCPUUsageObservableOpts = []metric.Int64ObservableGaugeOption{
+var newNodeCPUUsageObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Node's CPU usage, measured in CPUs. Range from 0 to the number of allocatable CPUs."),
 	metric.WithUnit("{cpu}"),
 }
@@ -7657,32 +7657,32 @@ var newNodeCPUUsageObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewNodeCPUUsageObservable returns a new NodeCPUUsageObservable instrument.
 func NewNodeCPUUsageObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (NodeCPUUsageObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return NodeCPUUsageObservable{noop.Int64ObservableGauge{}}, nil
+		return NodeCPUUsageObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newNodeCPUUsageObservableOpts
 	} else {
-		opt = append(opt, newNodeCPUUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeCPUUsageObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"k8s.node.cpu.usage",
 		opt...,
 	)
 	if err != nil {
-		return NodeCPUUsageObservable{noop.Int64ObservableGauge{}}, err
+		return NodeCPUUsageObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return NodeCPUUsageObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m NodeCPUUsageObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m NodeCPUUsageObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -7727,7 +7727,7 @@ func NewNodeEphemeralStorageAllocatable(
 	if len(opt) == 0 {
 		opt = newNodeEphemeralStorageAllocatableOpts
 	} else {
-		opt = append(opt, newNodeEphemeralStorageAllocatableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeEphemeralStorageAllocatableOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -7821,7 +7821,7 @@ func NewNodeEphemeralStorageAllocatableObservable(
 	if len(opt) == 0 {
 		opt = newNodeEphemeralStorageAllocatableObservableOpts
 	} else {
-		opt = append(opt, newNodeEphemeralStorageAllocatableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeEphemeralStorageAllocatableObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -7879,7 +7879,7 @@ func NewNodeFilesystemAvailable(
 	if len(opt) == 0 {
 		opt = newNodeFilesystemAvailableOpts
 	} else {
-		opt = append(opt, newNodeFilesystemAvailableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeFilesystemAvailableOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -7988,7 +7988,7 @@ func NewNodeFilesystemAvailableObservable(
 	if len(opt) == 0 {
 		opt = newNodeFilesystemAvailableObservableOpts
 	} else {
-		opt = append(opt, newNodeFilesystemAvailableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeFilesystemAvailableObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -8046,7 +8046,7 @@ func NewNodeFilesystemCapacity(
 	if len(opt) == 0 {
 		opt = newNodeFilesystemCapacityOpts
 	} else {
-		opt = append(opt, newNodeFilesystemCapacityOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeFilesystemCapacityOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -8155,7 +8155,7 @@ func NewNodeFilesystemCapacityObservable(
 	if len(opt) == 0 {
 		opt = newNodeFilesystemCapacityObservableOpts
 	} else {
-		opt = append(opt, newNodeFilesystemCapacityObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeFilesystemCapacityObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -8213,7 +8213,7 @@ func NewNodeFilesystemInodeCount(
 	if len(opt) == 0 {
 		opt = newNodeFilesystemInodeCountOpts
 	} else {
-		opt = append(opt, newNodeFilesystemInodeCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeFilesystemInodeCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -8322,7 +8322,7 @@ func NewNodeFilesystemInodeCountObservable(
 	if len(opt) == 0 {
 		opt = newNodeFilesystemInodeCountObservableOpts
 	} else {
-		opt = append(opt, newNodeFilesystemInodeCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeFilesystemInodeCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -8380,7 +8380,7 @@ func NewNodeFilesystemInodeFree(
 	if len(opt) == 0 {
 		opt = newNodeFilesystemInodeFreeOpts
 	} else {
-		opt = append(opt, newNodeFilesystemInodeFreeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeFilesystemInodeFreeOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -8489,7 +8489,7 @@ func NewNodeFilesystemInodeFreeObservable(
 	if len(opt) == 0 {
 		opt = newNodeFilesystemInodeFreeObservableOpts
 	} else {
-		opt = append(opt, newNodeFilesystemInodeFreeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeFilesystemInodeFreeObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -8547,7 +8547,7 @@ func NewNodeFilesystemUsage(
 	if len(opt) == 0 {
 		opt = newNodeFilesystemUsageOpts
 	} else {
-		opt = append(opt, newNodeFilesystemUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeFilesystemUsageOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -8660,7 +8660,7 @@ func NewNodeFilesystemUsageObservable(
 	if len(opt) == 0 {
 		opt = newNodeFilesystemUsageObservableOpts
 	} else {
-		opt = append(opt, newNodeFilesystemUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeFilesystemUsageObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -8718,7 +8718,7 @@ func NewNodeMemoryAllocatable(
 	if len(opt) == 0 {
 		opt = newNodeMemoryAllocatableOpts
 	} else {
-		opt = append(opt, newNodeMemoryAllocatableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeMemoryAllocatableOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -8811,7 +8811,7 @@ func NewNodeMemoryAllocatableObservable(
 	if len(opt) == 0 {
 		opt = newNodeMemoryAllocatableObservableOpts
 	} else {
-		opt = append(opt, newNodeMemoryAllocatableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeMemoryAllocatableObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -8869,7 +8869,7 @@ func NewNodeMemoryAvailable(
 	if len(opt) == 0 {
 		opt = newNodeMemoryAvailableOpts
 	} else {
-		opt = append(opt, newNodeMemoryAvailableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeMemoryAvailableOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -8978,7 +8978,7 @@ func NewNodeMemoryAvailableObservable(
 	if len(opt) == 0 {
 		opt = newNodeMemoryAvailableObservableOpts
 	} else {
-		opt = append(opt, newNodeMemoryAvailableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeMemoryAvailableObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -9035,7 +9035,7 @@ func NewNodeMemoryRss(
 	if len(opt) == 0 {
 		opt = newNodeMemoryRssOpts
 	} else {
-		opt = append(opt, newNodeMemoryRssOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeMemoryRssOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -9143,7 +9143,7 @@ func NewNodeMemoryRssObservable(
 	if len(opt) == 0 {
 		opt = newNodeMemoryRssObservableOpts
 	} else {
-		opt = append(opt, newNodeMemoryRssObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeMemoryRssObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -9201,7 +9201,7 @@ func NewNodeMemoryUsage(
 	if len(opt) == 0 {
 		opt = newNodeMemoryUsageOpts
 	} else {
-		opt = append(opt, newNodeMemoryUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeMemoryUsageOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -9310,7 +9310,7 @@ func NewNodeMemoryUsageObservable(
 	if len(opt) == 0 {
 		opt = newNodeMemoryUsageObservableOpts
 	} else {
-		opt = append(opt, newNodeMemoryUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeMemoryUsageObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -9368,7 +9368,7 @@ func NewNodeMemoryWorkingSet(
 	if len(opt) == 0 {
 		opt = newNodeMemoryWorkingSetOpts
 	} else {
-		opt = append(opt, newNodeMemoryWorkingSetOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeMemoryWorkingSetOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -9477,7 +9477,7 @@ func NewNodeMemoryWorkingSetObservable(
 	if len(opt) == 0 {
 		opt = newNodeMemoryWorkingSetObservableOpts
 	} else {
-		opt = append(opt, newNodeMemoryWorkingSetObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeMemoryWorkingSetObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -9535,7 +9535,7 @@ func NewNodeNetworkErrors(
 	if len(opt) == 0 {
 		opt = newNodeNetworkErrorsOpts
 	} else {
-		opt = append(opt, newNodeNetworkErrorsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeNetworkErrorsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -9656,7 +9656,7 @@ func NewNodeNetworkErrorsObservable(
 	if len(opt) == 0 {
 		opt = newNodeNetworkErrorsObservableOpts
 	} else {
-		opt = append(opt, newNodeNetworkErrorsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeNetworkErrorsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -9730,7 +9730,7 @@ func NewNodeNetworkIO(
 	if len(opt) == 0 {
 		opt = newNodeNetworkIOOpts
 	} else {
-		opt = append(opt, newNodeNetworkIOOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeNetworkIOOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -9850,7 +9850,7 @@ func NewNodeNetworkIOObservable(
 	if len(opt) == 0 {
 		opt = newNodeNetworkIOObservableOpts
 	} else {
-		opt = append(opt, newNodeNetworkIOObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeNetworkIOObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -9924,7 +9924,7 @@ func NewNodePagingFaults(
 	if len(opt) == 0 {
 		opt = newNodePagingFaultsOpts
 	} else {
-		opt = append(opt, newNodePagingFaultsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodePagingFaultsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -10054,7 +10054,7 @@ func NewNodePagingFaultsObservable(
 	if len(opt) == 0 {
 		opt = newNodePagingFaultsObservableOpts
 	} else {
-		opt = append(opt, newNodePagingFaultsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodePagingFaultsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -10119,7 +10119,7 @@ func NewNodePodAllocatable(
 	if len(opt) == 0 {
 		opt = newNodePodAllocatableOpts
 	} else {
-		opt = append(opt, newNodePodAllocatableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodePodAllocatableOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -10212,7 +10212,7 @@ func NewNodePodAllocatableObservable(
 	if len(opt) == 0 {
 		opt = newNodePodAllocatableObservableOpts
 	} else {
-		opt = append(opt, newNodePodAllocatableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodePodAllocatableObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -10271,7 +10271,7 @@ func NewNodeSystemContainerCPUTime(
 	if len(opt) == 0 {
 		opt = newNodeSystemContainerCPUTimeOpts
 	} else {
-		opt = append(opt, newNodeSystemContainerCPUTimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeSystemContainerCPUTimeOpts...)
 	}
 
 	i, err := m.Float64Counter(
@@ -10378,7 +10378,7 @@ func NewNodeSystemContainerCPUTimeObservable(
 	if len(opt) == 0 {
 		opt = newNodeSystemContainerCPUTimeObservableOpts
 	} else {
-		opt = append(opt, newNodeSystemContainerCPUTimeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeSystemContainerCPUTimeObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableCounter(
@@ -10415,10 +10415,10 @@ func (NodeSystemContainerCPUTimeObservable) Description() string {
 // conforming to the "k8s.node.system_container.cpu.usage" semantic conventions.
 // It represents the node's system container CPU usage, measured in CPUs.
 type NodeSystemContainerCPUUsage struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newNodeSystemContainerCPUUsageOpts = []metric.Int64GaugeOption{
+var newNodeSystemContainerCPUUsageOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Node's system container CPU usage, measured in CPUs."),
 	metric.WithUnit("{cpu}"),
 }
@@ -10427,32 +10427,32 @@ var newNodeSystemContainerCPUUsageOpts = []metric.Int64GaugeOption{
 // instrument.
 func NewNodeSystemContainerCPUUsage(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (NodeSystemContainerCPUUsage, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return NodeSystemContainerCPUUsage{noop.Int64Gauge{}}, nil
+		return NodeSystemContainerCPUUsage{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newNodeSystemContainerCPUUsageOpts
 	} else {
-		opt = append(opt, newNodeSystemContainerCPUUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeSystemContainerCPUUsageOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"k8s.node.system_container.cpu.usage",
 		opt...,
 	)
 	if err != nil {
-		return NodeSystemContainerCPUUsage{noop.Int64Gauge{}}, err
+		return NodeSystemContainerCPUUsage{noop.Float64Gauge{}}, err
 	}
 	return NodeSystemContainerCPUUsage{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m NodeSystemContainerCPUUsage) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m NodeSystemContainerCPUUsage) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -10476,12 +10476,12 @@ func (NodeSystemContainerCPUUsage) Description() string {
 // calculated as the change in cumulative CPU time
 // (k8s.node.system_container.cpu.time) over a measurement interval, divided by
 // the elapsed time: usageCores = (cpuTimeEnd - cpuTimeStart) / elapsedSeconds
-func (m NodeSystemContainerCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m NodeSystemContainerCPUUsage) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -10489,7 +10489,7 @@ func (m NodeSystemContainerCPUUsage) Record(ctx context.Context, val int64, attr
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
@@ -10498,12 +10498,12 @@ func (m NodeSystemContainerCPUUsage) Record(ctx context.Context, val int64, attr
 // calculated as the change in cumulative CPU time
 // (k8s.node.system_container.cpu.time) over a measurement interval, divided by
 // the elapsed time: usageCores = (cpuTimeEnd - cpuTimeStart) / elapsedSeconds
-func (m NodeSystemContainerCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m NodeSystemContainerCPUUsage) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -10511,7 +10511,7 @@ func (m NodeSystemContainerCPUUsage) RecordSet(ctx context.Context, val int64, s
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // NodeSystemContainerCPUUsageObservable is an instrument used to record metric
@@ -10519,10 +10519,10 @@ func (m NodeSystemContainerCPUUsage) RecordSet(ctx context.Context, val int64, s
 // conventions. It represents the node's system container CPU usage, measured in
 // CPUs.
 type NodeSystemContainerCPUUsageObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newNodeSystemContainerCPUUsageObservableOpts = []metric.Int64ObservableGaugeOption{
+var newNodeSystemContainerCPUUsageObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Node's system container CPU usage, measured in CPUs."),
 	metric.WithUnit("{cpu}"),
 }
@@ -10531,32 +10531,32 @@ var newNodeSystemContainerCPUUsageObservableOpts = []metric.Int64ObservableGauge
 // NodeSystemContainerCPUUsageObservable instrument.
 func NewNodeSystemContainerCPUUsageObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (NodeSystemContainerCPUUsageObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return NodeSystemContainerCPUUsageObservable{noop.Int64ObservableGauge{}}, nil
+		return NodeSystemContainerCPUUsageObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newNodeSystemContainerCPUUsageObservableOpts
 	} else {
-		opt = append(opt, newNodeSystemContainerCPUUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeSystemContainerCPUUsageObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"k8s.node.system_container.cpu.usage",
 		opt...,
 	)
 	if err != nil {
-		return NodeSystemContainerCPUUsageObservable{noop.Int64ObservableGauge{}}, err
+		return NodeSystemContainerCPUUsageObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return NodeSystemContainerCPUUsageObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m NodeSystemContainerCPUUsageObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m NodeSystemContainerCPUUsageObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -10600,7 +10600,7 @@ func NewNodeSystemContainerMemoryUsage(
 	if len(opt) == 0 {
 		opt = newNodeSystemContainerMemoryUsageOpts
 	} else {
-		opt = append(opt, newNodeSystemContainerMemoryUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeSystemContainerMemoryUsageOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -10707,7 +10707,7 @@ func NewNodeSystemContainerMemoryUsageObservable(
 	if len(opt) == 0 {
 		opt = newNodeSystemContainerMemoryUsageObservableOpts
 	} else {
-		opt = append(opt, newNodeSystemContainerMemoryUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeSystemContainerMemoryUsageObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -10766,7 +10766,7 @@ func NewNodeSystemContainerMemoryWorkingSet(
 	if len(opt) == 0 {
 		opt = newNodeSystemContainerMemoryWorkingSetOpts
 	} else {
-		opt = append(opt, newNodeSystemContainerMemoryWorkingSetOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeSystemContainerMemoryWorkingSetOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -10873,7 +10873,7 @@ func NewNodeSystemContainerMemoryWorkingSetObservable(
 	if len(opt) == 0 {
 		opt = newNodeSystemContainerMemoryWorkingSetObservableOpts
 	} else {
-		opt = append(opt, newNodeSystemContainerMemoryWorkingSetObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeSystemContainerMemoryWorkingSetObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -10931,7 +10931,7 @@ func NewNodeUptime(
 	if len(opt) == 0 {
 		opt = newNodeUptimeOpts
 	} else {
-		opt = append(opt, newNodeUptimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeUptimeOpts...)
 	}
 
 	i, err := m.Float64Gauge(
@@ -11031,7 +11031,7 @@ func NewNodeUptimeObservable(
 	if len(opt) == 0 {
 		opt = newNodeUptimeObservableOpts
 	} else {
-		opt = append(opt, newNodeUptimeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNodeUptimeObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableGauge(
@@ -11090,7 +11090,7 @@ func NewPersistentvolumeStatusPhase(
 	if len(opt) == 0 {
 		opt = newPersistentvolumeStatusPhaseOpts
 	} else {
-		opt = append(opt, newPersistentvolumeStatusPhaseOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPersistentvolumeStatusPhaseOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -11215,7 +11215,7 @@ func NewPersistentvolumeStatusPhaseObservable(
 	if len(opt) == 0 {
 		opt = newPersistentvolumeStatusPhaseObservableOpts
 	} else {
-		opt = append(opt, newPersistentvolumeStatusPhaseObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPersistentvolumeStatusPhaseObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -11281,7 +11281,7 @@ func NewPersistentvolumeStorageCapacity(
 	if len(opt) == 0 {
 		opt = newPersistentvolumeStorageCapacityOpts
 	} else {
-		opt = append(opt, newPersistentvolumeStorageCapacityOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPersistentvolumeStorageCapacityOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -11385,7 +11385,7 @@ func NewPersistentvolumeStorageCapacityObservable(
 	if len(opt) == 0 {
 		opt = newPersistentvolumeStorageCapacityObservableOpts
 	} else {
-		opt = append(opt, newPersistentvolumeStorageCapacityObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPersistentvolumeStorageCapacityObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -11445,7 +11445,7 @@ func NewPersistentvolumeclaimStatusPhase(
 	if len(opt) == 0 {
 		opt = newPersistentvolumeclaimStatusPhaseOpts
 	} else {
-		opt = append(opt, newPersistentvolumeclaimStatusPhaseOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPersistentvolumeclaimStatusPhaseOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -11572,7 +11572,7 @@ func NewPersistentvolumeclaimStatusPhaseObservable(
 	if len(opt) == 0 {
 		opt = newPersistentvolumeclaimStatusPhaseObservableOpts
 	} else {
-		opt = append(opt, newPersistentvolumeclaimStatusPhaseObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPersistentvolumeclaimStatusPhaseObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -11639,7 +11639,7 @@ func NewPersistentvolumeclaimStorageCapacity(
 	if len(opt) == 0 {
 		opt = newPersistentvolumeclaimStorageCapacityOpts
 	} else {
-		opt = append(opt, newPersistentvolumeclaimStorageCapacityOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPersistentvolumeclaimStorageCapacityOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -11747,7 +11747,7 @@ func NewPersistentvolumeclaimStorageCapacityObservable(
 	if len(opt) == 0 {
 		opt = newPersistentvolumeclaimStorageCapacityObservableOpts
 	} else {
-		opt = append(opt, newPersistentvolumeclaimStorageCapacityObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPersistentvolumeclaimStorageCapacityObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -11806,7 +11806,7 @@ func NewPersistentvolumeclaimStorageRequest(
 	if len(opt) == 0 {
 		opt = newPersistentvolumeclaimStorageRequestOpts
 	} else {
-		opt = append(opt, newPersistentvolumeclaimStorageRequestOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPersistentvolumeclaimStorageRequestOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -11910,7 +11910,7 @@ func NewPersistentvolumeclaimStorageRequestObservable(
 	if len(opt) == 0 {
 		opt = newPersistentvolumeclaimStorageRequestObservableOpts
 	} else {
-		opt = append(opt, newPersistentvolumeclaimStorageRequestObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPersistentvolumeclaimStorageRequestObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -11968,7 +11968,7 @@ func NewPodCPUTime(
 	if len(opt) == 0 {
 		opt = newPodCPUTimeOpts
 	} else {
-		opt = append(opt, newPodCPUTimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodCPUTimeOpts...)
 	}
 
 	i, err := m.Float64Counter(
@@ -12064,7 +12064,7 @@ func NewPodCPUTimeObservable(
 	if len(opt) == 0 {
 		opt = newPodCPUTimeObservableOpts
 	} else {
-		opt = append(opt, newPodCPUTimeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodCPUTimeObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableCounter(
@@ -12101,10 +12101,10 @@ func (PodCPUTimeObservable) Description() string {
 // "k8s.pod.cpu.usage" semantic conventions. It represents the pod's CPU usage,
 // measured in CPUs. Range from 0 to the number of allocatable CPUs.
 type PodCPUUsage struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newPodCPUUsageOpts = []metric.Int64GaugeOption{
+var newPodCPUUsageOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Pod's CPU usage, measured in CPUs. Range from 0 to the number of allocatable CPUs."),
 	metric.WithUnit("{cpu}"),
 }
@@ -12112,32 +12112,32 @@ var newPodCPUUsageOpts = []metric.Int64GaugeOption{
 // NewPodCPUUsage returns a new PodCPUUsage instrument.
 func NewPodCPUUsage(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (PodCPUUsage, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return PodCPUUsage{noop.Int64Gauge{}}, nil
+		return PodCPUUsage{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newPodCPUUsageOpts
 	} else {
-		opt = append(opt, newPodCPUUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodCPUUsageOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"k8s.pod.cpu.usage",
 		opt...,
 	)
 	if err != nil {
-		return PodCPUUsage{noop.Int64Gauge{}}, err
+		return PodCPUUsage{noop.Float64Gauge{}}, err
 	}
 	return PodCPUUsage{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m PodCPUUsage) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m PodCPUUsage) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -12161,12 +12161,12 @@ func (PodCPUUsage) Description() string {
 // the change in cumulative CPU time (k8s.pod.cpu.time) over a measurement
 // interval, divided by the elapsed time: usageCores = (cpuTimeEnd -
 // cpuTimeStart) / elapsedSeconds
-func (m PodCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.KeyValue) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m PodCPUUsage) Record(ctx context.Context, val float64, attrs ...attribute.KeyValue) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -12174,7 +12174,7 @@ func (m PodCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.K
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
@@ -12183,12 +12183,12 @@ func (m PodCPUUsage) Record(ctx context.Context, val int64, attrs ...attribute.K
 // the change in cumulative CPU time (k8s.pod.cpu.time) over a measurement
 // interval, divided by the elapsed time: usageCores = (cpuTimeEnd -
 // cpuTimeStart) / elapsedSeconds
-func (m PodCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m PodCPUUsage) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -12196,17 +12196,17 @@ func (m PodCPUUsage) RecordSet(ctx context.Context, val int64, set attribute.Set
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // PodCPUUsageObservable is an instrument used to record metric values conforming
 // to the "k8s.pod.cpu.usage" semantic conventions. It represents the pod's CPU
 // usage, measured in CPUs. Range from 0 to the number of allocatable CPUs.
 type PodCPUUsageObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newPodCPUUsageObservableOpts = []metric.Int64ObservableGaugeOption{
+var newPodCPUUsageObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Pod's CPU usage, measured in CPUs. Range from 0 to the number of allocatable CPUs."),
 	metric.WithUnit("{cpu}"),
 }
@@ -12214,32 +12214,32 @@ var newPodCPUUsageObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewPodCPUUsageObservable returns a new PodCPUUsageObservable instrument.
 func NewPodCPUUsageObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (PodCPUUsageObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return PodCPUUsageObservable{noop.Int64ObservableGauge{}}, nil
+		return PodCPUUsageObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newPodCPUUsageObservableOpts
 	} else {
-		opt = append(opt, newPodCPUUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodCPUUsageObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"k8s.pod.cpu.usage",
 		opt...,
 	)
 	if err != nil {
-		return PodCPUUsageObservable{noop.Int64ObservableGauge{}}, err
+		return PodCPUUsageObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return PodCPUUsageObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m PodCPUUsageObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m PodCPUUsageObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -12282,7 +12282,7 @@ func NewPodFilesystemAvailable(
 	if len(opt) == 0 {
 		opt = newPodFilesystemAvailableOpts
 	} else {
-		opt = append(opt, newPodFilesystemAvailableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodFilesystemAvailableOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -12391,7 +12391,7 @@ func NewPodFilesystemAvailableObservable(
 	if len(opt) == 0 {
 		opt = newPodFilesystemAvailableObservableOpts
 	} else {
-		opt = append(opt, newPodFilesystemAvailableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodFilesystemAvailableObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -12449,7 +12449,7 @@ func NewPodFilesystemCapacity(
 	if len(opt) == 0 {
 		opt = newPodFilesystemCapacityOpts
 	} else {
-		opt = append(opt, newPodFilesystemCapacityOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodFilesystemCapacityOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -12558,7 +12558,7 @@ func NewPodFilesystemCapacityObservable(
 	if len(opt) == 0 {
 		opt = newPodFilesystemCapacityObservableOpts
 	} else {
-		opt = append(opt, newPodFilesystemCapacityObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodFilesystemCapacityObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -12616,7 +12616,7 @@ func NewPodFilesystemUsage(
 	if len(opt) == 0 {
 		opt = newPodFilesystemUsageOpts
 	} else {
-		opt = append(opt, newPodFilesystemUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodFilesystemUsageOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -12729,7 +12729,7 @@ func NewPodFilesystemUsageObservable(
 	if len(opt) == 0 {
 		opt = newPodFilesystemUsageObservableOpts
 	} else {
-		opt = append(opt, newPodFilesystemUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodFilesystemUsageObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -12787,7 +12787,7 @@ func NewPodMemoryAvailable(
 	if len(opt) == 0 {
 		opt = newPodMemoryAvailableOpts
 	} else {
-		opt = append(opt, newPodMemoryAvailableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodMemoryAvailableOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -12896,7 +12896,7 @@ func NewPodMemoryAvailableObservable(
 	if len(opt) == 0 {
 		opt = newPodMemoryAvailableObservableOpts
 	} else {
-		opt = append(opt, newPodMemoryAvailableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodMemoryAvailableObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -12953,7 +12953,7 @@ func NewPodMemoryRss(
 	if len(opt) == 0 {
 		opt = newPodMemoryRssOpts
 	} else {
-		opt = append(opt, newPodMemoryRssOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodMemoryRssOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -13061,7 +13061,7 @@ func NewPodMemoryRssObservable(
 	if len(opt) == 0 {
 		opt = newPodMemoryRssObservableOpts
 	} else {
-		opt = append(opt, newPodMemoryRssObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodMemoryRssObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -13119,7 +13119,7 @@ func NewPodMemoryUsage(
 	if len(opt) == 0 {
 		opt = newPodMemoryUsageOpts
 	} else {
-		opt = append(opt, newPodMemoryUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodMemoryUsageOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -13227,7 +13227,7 @@ func NewPodMemoryUsageObservable(
 	if len(opt) == 0 {
 		opt = newPodMemoryUsageObservableOpts
 	} else {
-		opt = append(opt, newPodMemoryUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodMemoryUsageObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -13285,7 +13285,7 @@ func NewPodMemoryWorkingSet(
 	if len(opt) == 0 {
 		opt = newPodMemoryWorkingSetOpts
 	} else {
-		opt = append(opt, newPodMemoryWorkingSetOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodMemoryWorkingSetOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -13394,7 +13394,7 @@ func NewPodMemoryWorkingSetObservable(
 	if len(opt) == 0 {
 		opt = newPodMemoryWorkingSetObservableOpts
 	} else {
-		opt = append(opt, newPodMemoryWorkingSetObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodMemoryWorkingSetObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -13452,7 +13452,7 @@ func NewPodNetworkErrors(
 	if len(opt) == 0 {
 		opt = newPodNetworkErrorsOpts
 	} else {
-		opt = append(opt, newPodNetworkErrorsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodNetworkErrorsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -13573,7 +13573,7 @@ func NewPodNetworkErrorsObservable(
 	if len(opt) == 0 {
 		opt = newPodNetworkErrorsObservableOpts
 	} else {
-		opt = append(opt, newPodNetworkErrorsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodNetworkErrorsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -13647,7 +13647,7 @@ func NewPodNetworkIO(
 	if len(opt) == 0 {
 		opt = newPodNetworkIOOpts
 	} else {
-		opt = append(opt, newPodNetworkIOOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodNetworkIOOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -13767,7 +13767,7 @@ func NewPodNetworkIOObservable(
 	if len(opt) == 0 {
 		opt = newPodNetworkIOObservableOpts
 	} else {
-		opt = append(opt, newPodNetworkIOObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodNetworkIOObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -13841,7 +13841,7 @@ func NewPodPagingFaults(
 	if len(opt) == 0 {
 		opt = newPodPagingFaultsOpts
 	} else {
-		opt = append(opt, newPodPagingFaultsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodPagingFaultsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -13971,7 +13971,7 @@ func NewPodPagingFaultsObservable(
 	if len(opt) == 0 {
 		opt = newPodPagingFaultsObservableOpts
 	} else {
-		opt = append(opt, newPodPagingFaultsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodPagingFaultsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -14036,7 +14036,7 @@ func NewPodStatusPhase(
 	if len(opt) == 0 {
 		opt = newPodStatusPhaseOpts
 	} else {
-		opt = append(opt, newPodStatusPhaseOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodStatusPhaseOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -14157,7 +14157,7 @@ func NewPodStatusPhaseObservable(
 	if len(opt) == 0 {
 		opt = newPodStatusPhaseObservableOpts
 	} else {
-		opt = append(opt, newPodStatusPhaseObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodStatusPhaseObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -14224,7 +14224,7 @@ func NewPodStatusReason(
 	if len(opt) == 0 {
 		opt = newPodStatusReasonOpts
 	} else {
-		opt = append(opt, newPodStatusReasonOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodStatusReasonOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -14347,7 +14347,7 @@ func NewPodStatusReasonObservable(
 	if len(opt) == 0 {
 		opt = newPodStatusReasonObservableOpts
 	} else {
-		opt = append(opt, newPodStatusReasonObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodStatusReasonObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -14414,7 +14414,7 @@ func NewPodUptime(
 	if len(opt) == 0 {
 		opt = newPodUptimeOpts
 	} else {
-		opt = append(opt, newPodUptimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodUptimeOpts...)
 	}
 
 	i, err := m.Float64Gauge(
@@ -14514,7 +14514,7 @@ func NewPodUptimeObservable(
 	if len(opt) == 0 {
 		opt = newPodUptimeObservableOpts
 	} else {
-		opt = append(opt, newPodUptimeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodUptimeObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableGauge(
@@ -14572,7 +14572,7 @@ func NewPodVolumeAvailable(
 	if len(opt) == 0 {
 		opt = newPodVolumeAvailableOpts
 	} else {
-		opt = append(opt, newPodVolumeAvailableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeAvailableOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -14707,7 +14707,7 @@ func NewPodVolumeAvailableObservable(
 	if len(opt) == 0 {
 		opt = newPodVolumeAvailableObservableOpts
 	} else {
-		opt = append(opt, newPodVolumeAvailableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeAvailableObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -14777,7 +14777,7 @@ func NewPodVolumeCapacity(
 	if len(opt) == 0 {
 		opt = newPodVolumeCapacityOpts
 	} else {
-		opt = append(opt, newPodVolumeCapacityOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeCapacityOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -14912,7 +14912,7 @@ func NewPodVolumeCapacityObservable(
 	if len(opt) == 0 {
 		opt = newPodVolumeCapacityObservableOpts
 	} else {
-		opt = append(opt, newPodVolumeCapacityObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeCapacityObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -14982,7 +14982,7 @@ func NewPodVolumeInodeCount(
 	if len(opt) == 0 {
 		opt = newPodVolumeInodeCountOpts
 	} else {
-		opt = append(opt, newPodVolumeInodeCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeInodeCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -15117,7 +15117,7 @@ func NewPodVolumeInodeCountObservable(
 	if len(opt) == 0 {
 		opt = newPodVolumeInodeCountObservableOpts
 	} else {
-		opt = append(opt, newPodVolumeInodeCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeInodeCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -15187,7 +15187,7 @@ func NewPodVolumeInodeFree(
 	if len(opt) == 0 {
 		opt = newPodVolumeInodeFreeOpts
 	} else {
-		opt = append(opt, newPodVolumeInodeFreeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeInodeFreeOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -15322,7 +15322,7 @@ func NewPodVolumeInodeFreeObservable(
 	if len(opt) == 0 {
 		opt = newPodVolumeInodeFreeObservableOpts
 	} else {
-		opt = append(opt, newPodVolumeInodeFreeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeInodeFreeObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -15392,7 +15392,7 @@ func NewPodVolumeInodeUsed(
 	if len(opt) == 0 {
 		opt = newPodVolumeInodeUsedOpts
 	} else {
-		opt = append(opt, newPodVolumeInodeUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeInodeUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -15533,7 +15533,7 @@ func NewPodVolumeInodeUsedObservable(
 	if len(opt) == 0 {
 		opt = newPodVolumeInodeUsedObservableOpts
 	} else {
-		opt = append(opt, newPodVolumeInodeUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeInodeUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -15603,7 +15603,7 @@ func NewPodVolumeUsage(
 	if len(opt) == 0 {
 		opt = newPodVolumeUsageOpts
 	} else {
-		opt = append(opt, newPodVolumeUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeUsageOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -15741,7 +15741,7 @@ func NewPodVolumeUsageObservable(
 	if len(opt) == 0 {
 		opt = newPodVolumeUsageObservableOpts
 	} else {
-		opt = append(opt, newPodVolumeUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPodVolumeUsageObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -15812,7 +15812,7 @@ func NewReplicaSetPodAvailable(
 	if len(opt) == 0 {
 		opt = newReplicaSetPodAvailableOpts
 	} else {
-		opt = append(opt, newReplicaSetPodAvailableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newReplicaSetPodAvailableOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -15916,7 +15916,7 @@ func NewReplicaSetPodAvailableObservable(
 	if len(opt) == 0 {
 		opt = newReplicaSetPodAvailableObservableOpts
 	} else {
-		opt = append(opt, newReplicaSetPodAvailableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newReplicaSetPodAvailableObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -15974,7 +15974,7 @@ func NewReplicaSetPodDesired(
 	if len(opt) == 0 {
 		opt = newReplicaSetPodDesiredOpts
 	} else {
-		opt = append(opt, newReplicaSetPodDesiredOpts...)
+		opt = append(opt[:len(opt):len(opt)], newReplicaSetPodDesiredOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -16077,7 +16077,7 @@ func NewReplicaSetPodDesiredObservable(
 	if len(opt) == 0 {
 		opt = newReplicaSetPodDesiredObservableOpts
 	} else {
-		opt = append(opt, newReplicaSetPodDesiredObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newReplicaSetPodDesiredObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -16137,7 +16137,7 @@ func NewReplicationControllerPodAvailable(
 	if len(opt) == 0 {
 		opt = newReplicationControllerPodAvailableOpts
 	} else {
-		opt = append(opt, newReplicationControllerPodAvailableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newReplicationControllerPodAvailableOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -16241,7 +16241,7 @@ func NewReplicationControllerPodAvailableObservable(
 	if len(opt) == 0 {
 		opt = newReplicationControllerPodAvailableObservableOpts
 	} else {
-		opt = append(opt, newReplicationControllerPodAvailableObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newReplicationControllerPodAvailableObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -16301,7 +16301,7 @@ func NewReplicationControllerPodDesired(
 	if len(opt) == 0 {
 		opt = newReplicationControllerPodDesiredOpts
 	} else {
-		opt = append(opt, newReplicationControllerPodDesiredOpts...)
+		opt = append(opt[:len(opt):len(opt)], newReplicationControllerPodDesiredOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -16405,7 +16405,7 @@ func NewReplicationControllerPodDesiredObservable(
 	if len(opt) == 0 {
 		opt = newReplicationControllerPodDesiredObservableOpts
 	} else {
-		opt = append(opt, newReplicationControllerPodDesiredObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newReplicationControllerPodDesiredObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -16444,10 +16444,10 @@ func (ReplicationControllerPodDesiredObservable) Description() string {
 // The value represents the configured quota limit of the resource in the
 // namespace.
 type ResourceQuotaCPULimitHard struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newResourceQuotaCPULimitHardOpts = []metric.Int64UpDownCounterOption{
+var newResourceQuotaCPULimitHardOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("The CPU limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
 	metric.WithUnit("{cpu}"),
 }
@@ -16456,32 +16456,32 @@ var newResourceQuotaCPULimitHardOpts = []metric.Int64UpDownCounterOption{
 // instrument.
 func NewResourceQuotaCPULimitHard(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ResourceQuotaCPULimitHard, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ResourceQuotaCPULimitHard{noop.Int64UpDownCounter{}}, nil
+		return ResourceQuotaCPULimitHard{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newResourceQuotaCPULimitHardOpts
 	} else {
-		opt = append(opt, newResourceQuotaCPULimitHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaCPULimitHardOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"k8s.resourcequota.cpu.limit.hard",
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPULimitHard{noop.Int64UpDownCounter{}}, err
+		return ResourceQuotaCPULimitHard{noop.Float64UpDownCounter{}}, err
 	}
 	return ResourceQuotaCPULimitHard{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ResourceQuotaCPULimitHard) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ResourceQuotaCPULimitHard) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -16505,12 +16505,12 @@ func (ResourceQuotaCPULimitHard) Description() string {
 // [K8s ResourceQuotaStatus].
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
-func (m ResourceQuotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ResourceQuotaCPULimitHard) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -16518,7 +16518,7 @@ func (m ResourceQuotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ..
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -16527,12 +16527,12 @@ func (m ResourceQuotaCPULimitHard) Add(ctx context.Context, incr int64, attrs ..
 // [K8s ResourceQuotaStatus].
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
-func (m ResourceQuotaCPULimitHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ResourceQuotaCPULimitHard) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -16540,7 +16540,7 @@ func (m ResourceQuotaCPULimitHard) AddSet(ctx context.Context, incr int64, set a
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ResourceQuotaCPULimitHardObservable is an instrument used to record metric
@@ -16549,10 +16549,10 @@ func (m ResourceQuotaCPULimitHard) AddSet(ctx context.Context, incr int64, set a
 // The value represents the configured quota limit of the resource in the
 // namespace.
 type ResourceQuotaCPULimitHardObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newResourceQuotaCPULimitHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newResourceQuotaCPULimitHardObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("The CPU limits in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
 	metric.WithUnit("{cpu}"),
 }
@@ -16561,32 +16561,32 @@ var newResourceQuotaCPULimitHardObservableOpts = []metric.Int64ObservableUpDownC
 // ResourceQuotaCPULimitHardObservable instrument.
 func NewResourceQuotaCPULimitHardObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ResourceQuotaCPULimitHardObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ResourceQuotaCPULimitHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ResourceQuotaCPULimitHardObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newResourceQuotaCPULimitHardObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaCPULimitHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaCPULimitHardObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"k8s.resourcequota.cpu.limit.hard",
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPULimitHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ResourceQuotaCPULimitHardObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ResourceQuotaCPULimitHardObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ResourceQuotaCPULimitHardObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ResourceQuotaCPULimitHardObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -16610,10 +16610,10 @@ func (ResourceQuotaCPULimitHardObservable) Description() string {
 // The value represents the current observed total usage of the resource in the
 // namespace.
 type ResourceQuotaCPULimitUsed struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newResourceQuotaCPULimitUsedOpts = []metric.Int64UpDownCounterOption{
+var newResourceQuotaCPULimitUsedOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("The CPU limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
 	metric.WithUnit("{cpu}"),
 }
@@ -16622,32 +16622,32 @@ var newResourceQuotaCPULimitUsedOpts = []metric.Int64UpDownCounterOption{
 // instrument.
 func NewResourceQuotaCPULimitUsed(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ResourceQuotaCPULimitUsed, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ResourceQuotaCPULimitUsed{noop.Int64UpDownCounter{}}, nil
+		return ResourceQuotaCPULimitUsed{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newResourceQuotaCPULimitUsedOpts
 	} else {
-		opt = append(opt, newResourceQuotaCPULimitUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaCPULimitUsedOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"k8s.resourcequota.cpu.limit.used",
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPULimitUsed{noop.Int64UpDownCounter{}}, err
+		return ResourceQuotaCPULimitUsed{noop.Float64UpDownCounter{}}, err
 	}
 	return ResourceQuotaCPULimitUsed{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ResourceQuotaCPULimitUsed) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ResourceQuotaCPULimitUsed) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -16671,12 +16671,12 @@ func (ResourceQuotaCPULimitUsed) Description() string {
 // [K8s ResourceQuotaStatus].
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
-func (m ResourceQuotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ResourceQuotaCPULimitUsed) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -16684,7 +16684,7 @@ func (m ResourceQuotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ..
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -16693,12 +16693,12 @@ func (m ResourceQuotaCPULimitUsed) Add(ctx context.Context, incr int64, attrs ..
 // [K8s ResourceQuotaStatus].
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
-func (m ResourceQuotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ResourceQuotaCPULimitUsed) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -16706,7 +16706,7 @@ func (m ResourceQuotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set a
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ResourceQuotaCPULimitUsedObservable is an instrument used to record metric
@@ -16715,10 +16715,10 @@ func (m ResourceQuotaCPULimitUsed) AddSet(ctx context.Context, incr int64, set a
 // The value represents the current observed total usage of the resource in the
 // namespace.
 type ResourceQuotaCPULimitUsedObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newResourceQuotaCPULimitUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newResourceQuotaCPULimitUsedObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("The CPU limits in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
 	metric.WithUnit("{cpu}"),
 }
@@ -16727,32 +16727,32 @@ var newResourceQuotaCPULimitUsedObservableOpts = []metric.Int64ObservableUpDownC
 // ResourceQuotaCPULimitUsedObservable instrument.
 func NewResourceQuotaCPULimitUsedObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ResourceQuotaCPULimitUsedObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ResourceQuotaCPULimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ResourceQuotaCPULimitUsedObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newResourceQuotaCPULimitUsedObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaCPULimitUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaCPULimitUsedObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"k8s.resourcequota.cpu.limit.used",
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPULimitUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ResourceQuotaCPULimitUsedObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ResourceQuotaCPULimitUsedObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ResourceQuotaCPULimitUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ResourceQuotaCPULimitUsedObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -16776,10 +16776,10 @@ func (ResourceQuotaCPULimitUsedObservable) Description() string {
 // The value represents the configured quota limit of the resource in the
 // namespace.
 type ResourceQuotaCPURequestHard struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newResourceQuotaCPURequestHardOpts = []metric.Int64UpDownCounterOption{
+var newResourceQuotaCPURequestHardOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("The CPU requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
 	metric.WithUnit("{cpu}"),
 }
@@ -16788,32 +16788,32 @@ var newResourceQuotaCPURequestHardOpts = []metric.Int64UpDownCounterOption{
 // instrument.
 func NewResourceQuotaCPURequestHard(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ResourceQuotaCPURequestHard, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ResourceQuotaCPURequestHard{noop.Int64UpDownCounter{}}, nil
+		return ResourceQuotaCPURequestHard{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newResourceQuotaCPURequestHardOpts
 	} else {
-		opt = append(opt, newResourceQuotaCPURequestHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaCPURequestHardOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"k8s.resourcequota.cpu.request.hard",
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPURequestHard{noop.Int64UpDownCounter{}}, err
+		return ResourceQuotaCPURequestHard{noop.Float64UpDownCounter{}}, err
 	}
 	return ResourceQuotaCPURequestHard{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ResourceQuotaCPURequestHard) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ResourceQuotaCPURequestHard) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -16837,12 +16837,12 @@ func (ResourceQuotaCPURequestHard) Description() string {
 // [K8s ResourceQuotaStatus].
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
-func (m ResourceQuotaCPURequestHard) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ResourceQuotaCPURequestHard) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -16850,7 +16850,7 @@ func (m ResourceQuotaCPURequestHard) Add(ctx context.Context, incr int64, attrs 
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -16859,12 +16859,12 @@ func (m ResourceQuotaCPURequestHard) Add(ctx context.Context, incr int64, attrs 
 // [K8s ResourceQuotaStatus].
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
-func (m ResourceQuotaCPURequestHard) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ResourceQuotaCPURequestHard) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -16872,7 +16872,7 @@ func (m ResourceQuotaCPURequestHard) AddSet(ctx context.Context, incr int64, set
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ResourceQuotaCPURequestHardObservable is an instrument used to record metric
@@ -16881,10 +16881,10 @@ func (m ResourceQuotaCPURequestHard) AddSet(ctx context.Context, incr int64, set
 // The value represents the configured quota limit of the resource in the
 // namespace.
 type ResourceQuotaCPURequestHardObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newResourceQuotaCPURequestHardObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newResourceQuotaCPURequestHardObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("The CPU requests in a specific namespace. The value represents the configured quota limit of the resource in the namespace."),
 	metric.WithUnit("{cpu}"),
 }
@@ -16893,32 +16893,32 @@ var newResourceQuotaCPURequestHardObservableOpts = []metric.Int64ObservableUpDow
 // ResourceQuotaCPURequestHardObservable instrument.
 func NewResourceQuotaCPURequestHardObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ResourceQuotaCPURequestHardObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ResourceQuotaCPURequestHardObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ResourceQuotaCPURequestHardObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newResourceQuotaCPURequestHardObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaCPURequestHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaCPURequestHardObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"k8s.resourcequota.cpu.request.hard",
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPURequestHardObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ResourceQuotaCPURequestHardObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ResourceQuotaCPURequestHardObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ResourceQuotaCPURequestHardObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ResourceQuotaCPURequestHardObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -16942,10 +16942,10 @@ func (ResourceQuotaCPURequestHardObservable) Description() string {
 // The value represents the current observed total usage of the resource in the
 // namespace.
 type ResourceQuotaCPURequestUsed struct {
-	metric.Int64UpDownCounter
+	metric.Float64UpDownCounter
 }
 
-var newResourceQuotaCPURequestUsedOpts = []metric.Int64UpDownCounterOption{
+var newResourceQuotaCPURequestUsedOpts = []metric.Float64UpDownCounterOption{
 	metric.WithDescription("The CPU requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
 	metric.WithUnit("{cpu}"),
 }
@@ -16954,32 +16954,32 @@ var newResourceQuotaCPURequestUsedOpts = []metric.Int64UpDownCounterOption{
 // instrument.
 func NewResourceQuotaCPURequestUsed(
 	m metric.Meter,
-	opt ...metric.Int64UpDownCounterOption,
+	opt ...metric.Float64UpDownCounterOption,
 ) (ResourceQuotaCPURequestUsed, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ResourceQuotaCPURequestUsed{noop.Int64UpDownCounter{}}, nil
+		return ResourceQuotaCPURequestUsed{noop.Float64UpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newResourceQuotaCPURequestUsedOpts
 	} else {
-		opt = append(opt, newResourceQuotaCPURequestUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaCPURequestUsedOpts...)
 	}
 
-	i, err := m.Int64UpDownCounter(
+	i, err := m.Float64UpDownCounter(
 		"k8s.resourcequota.cpu.request.used",
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPURequestUsed{noop.Int64UpDownCounter{}}, err
+		return ResourceQuotaCPURequestUsed{noop.Float64UpDownCounter{}}, err
 	}
 	return ResourceQuotaCPURequestUsed{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ResourceQuotaCPURequestUsed) Inst() metric.Int64UpDownCounter {
-	return m.Int64UpDownCounter
+func (m ResourceQuotaCPURequestUsed) Inst() metric.Float64UpDownCounter {
+	return m.Float64UpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -17003,12 +17003,12 @@ func (ResourceQuotaCPURequestUsed) Description() string {
 // [K8s ResourceQuotaStatus].
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
-func (m ResourceQuotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs ...attribute.KeyValue) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ResourceQuotaCPURequestUsed) Add(ctx context.Context, incr float64, attrs ...attribute.KeyValue) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -17016,7 +17016,7 @@ func (m ResourceQuotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs 
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributes(attrs...))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // AddSet adds incr to the existing count for set.
@@ -17025,12 +17025,12 @@ func (m ResourceQuotaCPURequestUsed) Add(ctx context.Context, incr int64, attrs 
 // [K8s ResourceQuotaStatus].
 //
 // [K8s ResourceQuotaStatus]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcequotastatus-v1-core
-func (m ResourceQuotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set attribute.Set) {
-	if !m.Int64UpDownCounter.Enabled(ctx) {
+func (m ResourceQuotaCPURequestUsed) AddSet(ctx context.Context, incr float64, set attribute.Set) {
+	if !m.Float64UpDownCounter.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64UpDownCounter.Add(ctx, incr)
+		m.Float64UpDownCounter.Add(ctx, incr)
 		return
 	}
 
@@ -17038,7 +17038,7 @@ func (m ResourceQuotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set
 	defer metricpool.PutAddOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64UpDownCounter.Add(ctx, incr, *o...)
+	m.Float64UpDownCounter.Add(ctx, incr, *o...)
 }
 
 // ResourceQuotaCPURequestUsedObservable is an instrument used to record metric
@@ -17047,10 +17047,10 @@ func (m ResourceQuotaCPURequestUsed) AddSet(ctx context.Context, incr int64, set
 // The value represents the current observed total usage of the resource in the
 // namespace.
 type ResourceQuotaCPURequestUsedObservable struct {
-	metric.Int64ObservableUpDownCounter
+	metric.Float64ObservableUpDownCounter
 }
 
-var newResourceQuotaCPURequestUsedObservableOpts = []metric.Int64ObservableUpDownCounterOption{
+var newResourceQuotaCPURequestUsedObservableOpts = []metric.Float64ObservableUpDownCounterOption{
 	metric.WithDescription("The CPU requests in a specific namespace. The value represents the current observed total usage of the resource in the namespace."),
 	metric.WithUnit("{cpu}"),
 }
@@ -17059,32 +17059,32 @@ var newResourceQuotaCPURequestUsedObservableOpts = []metric.Int64ObservableUpDow
 // ResourceQuotaCPURequestUsedObservable instrument.
 func NewResourceQuotaCPURequestUsedObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableUpDownCounterOption,
+	opt ...metric.Float64ObservableUpDownCounterOption,
 ) (ResourceQuotaCPURequestUsedObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return ResourceQuotaCPURequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, nil
+		return ResourceQuotaCPURequestUsedObservable{noop.Float64ObservableUpDownCounter{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newResourceQuotaCPURequestUsedObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaCPURequestUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaCPURequestUsedObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableUpDownCounter(
+	i, err := m.Float64ObservableUpDownCounter(
 		"k8s.resourcequota.cpu.request.used",
 		opt...,
 	)
 	if err != nil {
-		return ResourceQuotaCPURequestUsedObservable{noop.Int64ObservableUpDownCounter{}}, err
+		return ResourceQuotaCPURequestUsedObservable{noop.Float64ObservableUpDownCounter{}}, err
 	}
 	return ResourceQuotaCPURequestUsedObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m ResourceQuotaCPURequestUsedObservable) Inst() metric.Int64ObservableUpDownCounter {
-	return m.Int64ObservableUpDownCounter
+func (m ResourceQuotaCPURequestUsedObservable) Inst() metric.Float64ObservableUpDownCounter {
+	return m.Float64ObservableUpDownCounter
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -17131,7 +17131,7 @@ func NewResourceQuotaEphemeralStorageLimitHard(
 	if len(opt) == 0 {
 		opt = newResourceQuotaEphemeralStorageLimitHardOpts
 	} else {
-		opt = append(opt, newResourceQuotaEphemeralStorageLimitHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaEphemeralStorageLimitHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -17237,7 +17237,7 @@ func NewResourceQuotaEphemeralStorageLimitHardObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaEphemeralStorageLimitHardObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaEphemeralStorageLimitHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaEphemeralStorageLimitHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -17299,7 +17299,7 @@ func NewResourceQuotaEphemeralStorageLimitUsed(
 	if len(opt) == 0 {
 		opt = newResourceQuotaEphemeralStorageLimitUsedOpts
 	} else {
-		opt = append(opt, newResourceQuotaEphemeralStorageLimitUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaEphemeralStorageLimitUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -17405,7 +17405,7 @@ func NewResourceQuotaEphemeralStorageLimitUsedObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaEphemeralStorageLimitUsedObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaEphemeralStorageLimitUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaEphemeralStorageLimitUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -17467,7 +17467,7 @@ func NewResourceQuotaEphemeralStorageRequestHard(
 	if len(opt) == 0 {
 		opt = newResourceQuotaEphemeralStorageRequestHardOpts
 	} else {
-		opt = append(opt, newResourceQuotaEphemeralStorageRequestHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaEphemeralStorageRequestHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -17573,7 +17573,7 @@ func NewResourceQuotaEphemeralStorageRequestHardObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaEphemeralStorageRequestHardObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaEphemeralStorageRequestHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaEphemeralStorageRequestHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -17635,7 +17635,7 @@ func NewResourceQuotaEphemeralStorageRequestUsed(
 	if len(opt) == 0 {
 		opt = newResourceQuotaEphemeralStorageRequestUsedOpts
 	} else {
-		opt = append(opt, newResourceQuotaEphemeralStorageRequestUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaEphemeralStorageRequestUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -17741,7 +17741,7 @@ func NewResourceQuotaEphemeralStorageRequestUsedObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaEphemeralStorageRequestUsedObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaEphemeralStorageRequestUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaEphemeralStorageRequestUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -17803,7 +17803,7 @@ func NewResourceQuotaHugepageCountRequestHard(
 	if len(opt) == 0 {
 		opt = newResourceQuotaHugepageCountRequestHardOpts
 	} else {
-		opt = append(opt, newResourceQuotaHugepageCountRequestHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaHugepageCountRequestHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -17927,7 +17927,7 @@ func NewResourceQuotaHugepageCountRequestHardObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaHugepageCountRequestHardObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaHugepageCountRequestHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaHugepageCountRequestHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -17995,7 +17995,7 @@ func NewResourceQuotaHugepageCountRequestUsed(
 	if len(opt) == 0 {
 		opt = newResourceQuotaHugepageCountRequestUsedOpts
 	} else {
-		opt = append(opt, newResourceQuotaHugepageCountRequestUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaHugepageCountRequestUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -18119,7 +18119,7 @@ func NewResourceQuotaHugepageCountRequestUsedObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaHugepageCountRequestUsedObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaHugepageCountRequestUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaHugepageCountRequestUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -18186,7 +18186,7 @@ func NewResourceQuotaMemoryLimitHard(
 	if len(opt) == 0 {
 		opt = newResourceQuotaMemoryLimitHardOpts
 	} else {
-		opt = append(opt, newResourceQuotaMemoryLimitHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaMemoryLimitHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -18291,7 +18291,7 @@ func NewResourceQuotaMemoryLimitHardObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaMemoryLimitHardObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaMemoryLimitHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaMemoryLimitHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -18352,7 +18352,7 @@ func NewResourceQuotaMemoryLimitUsed(
 	if len(opt) == 0 {
 		opt = newResourceQuotaMemoryLimitUsedOpts
 	} else {
-		opt = append(opt, newResourceQuotaMemoryLimitUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaMemoryLimitUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -18457,7 +18457,7 @@ func NewResourceQuotaMemoryLimitUsedObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaMemoryLimitUsedObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaMemoryLimitUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaMemoryLimitUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -18518,7 +18518,7 @@ func NewResourceQuotaMemoryRequestHard(
 	if len(opt) == 0 {
 		opt = newResourceQuotaMemoryRequestHardOpts
 	} else {
-		opt = append(opt, newResourceQuotaMemoryRequestHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaMemoryRequestHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -18624,7 +18624,7 @@ func NewResourceQuotaMemoryRequestHardObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaMemoryRequestHardObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaMemoryRequestHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaMemoryRequestHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -18685,7 +18685,7 @@ func NewResourceQuotaMemoryRequestUsed(
 	if len(opt) == 0 {
 		opt = newResourceQuotaMemoryRequestUsedOpts
 	} else {
-		opt = append(opt, newResourceQuotaMemoryRequestUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaMemoryRequestUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -18791,7 +18791,7 @@ func NewResourceQuotaMemoryRequestUsedObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaMemoryRequestUsedObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaMemoryRequestUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaMemoryRequestUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -18852,7 +18852,7 @@ func NewResourceQuotaObjectCountHard(
 	if len(opt) == 0 {
 		opt = newResourceQuotaObjectCountHardOpts
 	} else {
-		opt = append(opt, newResourceQuotaObjectCountHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaObjectCountHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -18976,7 +18976,7 @@ func NewResourceQuotaObjectCountHardObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaObjectCountHardObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaObjectCountHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaObjectCountHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -19044,7 +19044,7 @@ func NewResourceQuotaObjectCountUsed(
 	if len(opt) == 0 {
 		opt = newResourceQuotaObjectCountUsedOpts
 	} else {
-		opt = append(opt, newResourceQuotaObjectCountUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaObjectCountUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -19168,7 +19168,7 @@ func NewResourceQuotaObjectCountUsedObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaObjectCountUsedObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaObjectCountUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaObjectCountUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -19238,7 +19238,7 @@ func NewResourceQuotaPersistentvolumeclaimCountHard(
 	if len(opt) == 0 {
 		opt = newResourceQuotaPersistentvolumeclaimCountHardOpts
 	} else {
-		opt = append(opt, newResourceQuotaPersistentvolumeclaimCountHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaPersistentvolumeclaimCountHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -19374,7 +19374,7 @@ func NewResourceQuotaPersistentvolumeclaimCountHardObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaPersistentvolumeclaimCountHardObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaPersistentvolumeclaimCountHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaPersistentvolumeclaimCountHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -19446,7 +19446,7 @@ func NewResourceQuotaPersistentvolumeclaimCountUsed(
 	if len(opt) == 0 {
 		opt = newResourceQuotaPersistentvolumeclaimCountUsedOpts
 	} else {
-		opt = append(opt, newResourceQuotaPersistentvolumeclaimCountUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaPersistentvolumeclaimCountUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -19582,7 +19582,7 @@ func NewResourceQuotaPersistentvolumeclaimCountUsedObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaPersistentvolumeclaimCountUsedObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaPersistentvolumeclaimCountUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaPersistentvolumeclaimCountUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -19652,7 +19652,7 @@ func NewResourceQuotaStorageRequestHard(
 	if len(opt) == 0 {
 		opt = newResourceQuotaStorageRequestHardOpts
 	} else {
-		opt = append(opt, newResourceQuotaStorageRequestHardOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaStorageRequestHardOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -19787,7 +19787,7 @@ func NewResourceQuotaStorageRequestHardObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaStorageRequestHardObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaStorageRequestHardObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaStorageRequestHardObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -19857,7 +19857,7 @@ func NewResourceQuotaStorageRequestUsed(
 	if len(opt) == 0 {
 		opt = newResourceQuotaStorageRequestUsedOpts
 	} else {
-		opt = append(opt, newResourceQuotaStorageRequestUsedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaStorageRequestUsedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -19992,7 +19992,7 @@ func NewResourceQuotaStorageRequestUsedObservable(
 	if len(opt) == 0 {
 		opt = newResourceQuotaStorageRequestUsedObservableOpts
 	} else {
-		opt = append(opt, newResourceQuotaStorageRequestUsedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newResourceQuotaStorageRequestUsedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -20059,7 +20059,7 @@ func NewServiceEndpointCount(
 	if len(opt) == 0 {
 		opt = newServiceEndpointCountOpts
 	} else {
-		opt = append(opt, newServiceEndpointCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServiceEndpointCountOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -20246,7 +20246,7 @@ func NewServiceEndpointCountObservable(
 	if len(opt) == 0 {
 		opt = newServiceEndpointCountObservableOpts
 	} else {
-		opt = append(opt, newServiceEndpointCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServiceEndpointCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -20327,7 +20327,7 @@ func NewServiceLoadBalancerIngressCount(
 	if len(opt) == 0 {
 		opt = newServiceLoadBalancerIngressCountOpts
 	} else {
-		opt = append(opt, newServiceLoadBalancerIngressCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServiceLoadBalancerIngressCountOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -20461,7 +20461,7 @@ func NewServiceLoadBalancerIngressCountObservable(
 	if len(opt) == 0 {
 		opt = newServiceLoadBalancerIngressCountObservableOpts
 	} else {
-		opt = append(opt, newServiceLoadBalancerIngressCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServiceLoadBalancerIngressCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -20520,7 +20520,7 @@ func NewStatefulSetPodCurrent(
 	if len(opt) == 0 {
 		opt = newStatefulSetPodCurrentOpts
 	} else {
-		opt = append(opt, newStatefulSetPodCurrentOpts...)
+		opt = append(opt[:len(opt):len(opt)], newStatefulSetPodCurrentOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -20624,7 +20624,7 @@ func NewStatefulSetPodCurrentObservable(
 	if len(opt) == 0 {
 		opt = newStatefulSetPodCurrentObservableOpts
 	} else {
-		opt = append(opt, newStatefulSetPodCurrentObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newStatefulSetPodCurrentObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -20682,7 +20682,7 @@ func NewStatefulSetPodDesired(
 	if len(opt) == 0 {
 		opt = newStatefulSetPodDesiredOpts
 	} else {
-		opt = append(opt, newStatefulSetPodDesiredOpts...)
+		opt = append(opt[:len(opt):len(opt)], newStatefulSetPodDesiredOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -20785,7 +20785,7 @@ func NewStatefulSetPodDesiredObservable(
 	if len(opt) == 0 {
 		opt = newStatefulSetPodDesiredObservableOpts
 	} else {
-		opt = append(opt, newStatefulSetPodDesiredObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newStatefulSetPodDesiredObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -20843,7 +20843,7 @@ func NewStatefulSetPodReady(
 	if len(opt) == 0 {
 		opt = newStatefulSetPodReadyOpts
 	} else {
-		opt = append(opt, newStatefulSetPodReadyOpts...)
+		opt = append(opt[:len(opt):len(opt)], newStatefulSetPodReadyOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -20947,7 +20947,7 @@ func NewStatefulSetPodReadyObservable(
 	if len(opt) == 0 {
 		opt = newStatefulSetPodReadyObservableOpts
 	} else {
-		opt = append(opt, newStatefulSetPodReadyObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newStatefulSetPodReadyObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -21006,7 +21006,7 @@ func NewStatefulSetPodUpdated(
 	if len(opt) == 0 {
 		opt = newStatefulSetPodUpdatedOpts
 	} else {
-		opt = append(opt, newStatefulSetPodUpdatedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newStatefulSetPodUpdatedOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -21110,7 +21110,7 @@ func NewStatefulSetPodUpdatedObservable(
 	if len(opt) == 0 {
 		opt = newStatefulSetPodUpdatedObservableOpts
 	} else {
-		opt = append(opt, newStatefulSetPodUpdatedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newStatefulSetPodUpdatedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(

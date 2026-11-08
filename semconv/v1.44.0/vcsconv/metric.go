@@ -166,7 +166,7 @@ func NewChangeCount(
 	if len(opt) == 0 {
 		opt = newChangeCountOpts
 	} else {
-		opt = append(opt, newChangeCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newChangeCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -310,7 +310,7 @@ func NewChangeCountObservable(
 	if len(opt) == 0 {
 		opt = newChangeCountObservableOpts
 	} else {
-		opt = append(opt, newChangeCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newChangeCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -406,7 +406,7 @@ func NewChangeDuration(
 	if len(opt) == 0 {
 		opt = newChangeDurationOpts
 	} else {
-		opt = append(opt, newChangeDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newChangeDurationOpts...)
 	}
 
 	i, err := m.Float64Gauge(
@@ -557,7 +557,7 @@ func NewChangeDurationObservable(
 	if len(opt) == 0 {
 		opt = newChangeDurationObservableOpts
 	} else {
-		opt = append(opt, newChangeDurationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newChangeDurationObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableGauge(
@@ -663,7 +663,7 @@ func NewChangeTimeToApproval(
 	if len(opt) == 0 {
 		opt = newChangeTimeToApprovalOpts
 	} else {
-		opt = append(opt, newChangeTimeToApprovalOpts...)
+		opt = append(opt[:len(opt):len(opt)], newChangeTimeToApprovalOpts...)
 	}
 
 	i, err := m.Float64Gauge(
@@ -838,7 +838,7 @@ func NewChangeTimeToApprovalObservable(
 	if len(opt) == 0 {
 		opt = newChangeTimeToApprovalObservableOpts
 	} else {
-		opt = append(opt, newChangeTimeToApprovalObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newChangeTimeToApprovalObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableGauge(
@@ -966,7 +966,7 @@ func NewChangeTimeToMerge(
 	if len(opt) == 0 {
 		opt = newChangeTimeToMergeOpts
 	} else {
-		opt = append(opt, newChangeTimeToMergeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newChangeTimeToMergeOpts...)
 	}
 
 	i, err := m.Float64Gauge(
@@ -1141,7 +1141,7 @@ func NewChangeTimeToMergeObservable(
 	if len(opt) == 0 {
 		opt = newChangeTimeToMergeObservableOpts
 	} else {
-		opt = append(opt, newChangeTimeToMergeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newChangeTimeToMergeObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableGauge(
@@ -1268,7 +1268,7 @@ func NewContributorCount(
 	if len(opt) == 0 {
 		opt = newContributorCountOpts
 	} else {
-		opt = append(opt, newContributorCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContributorCountOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -1406,7 +1406,7 @@ func NewContributorCountObservable(
 	if len(opt) == 0 {
 		opt = newContributorCountObservableOpts
 	} else {
-		opt = append(opt, newContributorCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContributorCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -1495,7 +1495,7 @@ func NewRefCount(
 	if len(opt) == 0 {
 		opt = newRefCountOpts
 	} else {
-		opt = append(opt, newRefCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newRefCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1638,7 +1638,7 @@ func NewRefCountObservable(
 	if len(opt) == 0 {
 		opt = newRefCountObservableOpts
 	} else {
-		opt = append(opt, newRefCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newRefCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1736,7 +1736,7 @@ func NewRefLinesDelta(
 	if len(opt) == 0 {
 		opt = newRefLinesDeltaOpts
 	} else {
-		opt = append(opt, newRefLinesDeltaOpts...)
+		opt = append(opt[:len(opt):len(opt)], newRefLinesDeltaOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -1928,7 +1928,7 @@ func NewRefLinesDeltaObservable(
 	if len(opt) == 0 {
 		opt = newRefLinesDeltaObservableOpts
 	} else {
-		opt = append(opt, newRefLinesDeltaObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newRefLinesDeltaObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -2069,7 +2069,7 @@ func NewRefRevisionsDelta(
 	if len(opt) == 0 {
 		opt = newRefRevisionsDeltaOpts
 	} else {
-		opt = append(opt, newRefRevisionsDeltaOpts...)
+		opt = append(opt[:len(opt):len(opt)], newRefRevisionsDeltaOpts...)
 	}
 
 	i, err := m.Int64Gauge(
@@ -2257,7 +2257,7 @@ func NewRefRevisionsDeltaObservable(
 	if len(opt) == 0 {
 		opt = newRefRevisionsDeltaObservableOpts
 	} else {
-		opt = append(opt, newRefRevisionsDeltaObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newRefRevisionsDeltaObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableGauge(
@@ -2398,7 +2398,7 @@ func NewRefTime(
 	if len(opt) == 0 {
 		opt = newRefTimeOpts
 	} else {
-		opt = append(opt, newRefTimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newRefTimeOpts...)
 	}
 
 	i, err := m.Float64Gauge(
@@ -2549,7 +2549,7 @@ func NewRefTimeObservable(
 	if len(opt) == 0 {
 		opt = newRefTimeObservableOpts
 	} else {
-		opt = append(opt, newRefTimeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newRefTimeObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableGauge(
@@ -2656,7 +2656,7 @@ func NewRepositoryCount(
 	if len(opt) == 0 {
 		opt = newRepositoryCountOpts
 	} else {
-		opt = append(opt, newRepositoryCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newRepositoryCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2774,7 +2774,7 @@ func NewRepositoryCountObservable(
 	if len(opt) == 0 {
 		opt = newRepositoryCountObservableOpts
 	} else {
-		opt = append(opt, newRepositoryCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newRepositoryCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
