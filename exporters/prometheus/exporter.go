@@ -234,6 +234,18 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 
 	global.Debug("Prometheus exporter export", "Data", metrics)
 
+	var (
+		success   int64
+		exportErr error
+	)
+	if c.inst != nil {
+		op := c.inst.ExportMetrics(ctx, countDataPoints(metrics))
+		defer func() {
+			op.End(success, exportErr)
+			err = errors.Join(err, exportErr)
+		}()
+	}
+
 	// Initialize (once) targetInfo and disableTargetInfo.
 	func() {
 		c.mu.Lock()
@@ -271,7 +283,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 		})
 		if c.resourceKeyValsErr != nil {
 			otel.Handle(c.resourceKeyValsErr)
-			err = errors.Join(err, fmt.Errorf("failed to createResourceAttributes: %w", c.resourceKeyValsErr))
+			exportErr = errors.Join(
+				exportErr,
+				fmt.Errorf("failed to createResourceAttributes: %w", c.resourceKeyValsErr),
+			)
 			return
 		}
 	}
@@ -283,6 +298,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			c.bridgeErrorOnce.Do(func() {
 				otel.Handle(errBridgeNotSupported)
 			})
+			exportErr = errors.Join(exportErr, errBridgeNotSupported)
 			continue
 		}
 		// resource attributes + (if enabled) scope fields
@@ -303,7 +319,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			kv, e = appendScopeAttrs(kv, scopeMetrics.Scope.Attributes, ln)
 			if e != nil {
 				reportError(ch, nil, e)
-				err = errors.Join(err, fmt.Errorf("failed to translate scope attributes for ScopeMetrics %d: %w", j, e))
+				exportErr = errors.Join(
+					exportErr,
+					fmt.Errorf("failed to translate scope attributes for ScopeMetrics %d: %w", j, e),
+				)
 				continue
 			}
 		}
@@ -315,18 +334,23 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			typ := c.metricType(m)
 			if typ == nil {
 				reportError(ch, nil, errInvalidMetricType)
+				exportErr = errors.Join(exportErr, errInvalidMetricType)
 				continue
 			}
 			name, e := c.getName(m)
 			if e != nil {
 				reportError(ch, nil, e)
-				err = errors.Join(err, fmt.Errorf("failed to getAttrs for ScopeMetrics %d, Metrics %d: %w", j, k, e))
+				exportErr = errors.Join(
+					exportErr,
+					fmt.Errorf("failed to getAttrs for ScopeMetrics %d, Metrics %d: %w", j, k, e),
+				)
 				continue
 			}
 
 			drop, help := c.validateMetrics(name, m.Description, typ)
 			if drop {
 				reportError(ch, nil, errInvalidMetric)
+				exportErr = errors.Join(exportErr, errInvalidMetric)
 				continue
 			}
 
@@ -334,26 +358,63 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 				m.Description = help
 			}
 
+			var n int64
 			switch v := m.Data.(type) {
 			case metricdata.Histogram[int64]:
-				addHistogramMetric(ctx, ch, v, m, name, kv, ln, c.inst)
+				n, e = addHistogramMetric(ch, v, m, name, kv, ln)
 			case metricdata.Histogram[float64]:
-				addHistogramMetric(ctx, ch, v, m, name, kv, ln, c.inst)
+				n, e = addHistogramMetric(ch, v, m, name, kv, ln)
 			case metricdata.ExponentialHistogram[int64]:
-				addExponentialHistogramMetric(ctx, ch, v, m, name, kv, ln, c.inst)
+				n, e = addExponentialHistogramMetric(ch, v, m, name, kv, ln)
 			case metricdata.ExponentialHistogram[float64]:
-				addExponentialHistogramMetric(ctx, ch, v, m, name, kv, ln, c.inst)
+				n, e = addExponentialHistogramMetric(ch, v, m, name, kv, ln)
 			case metricdata.Sum[int64]:
-				addSumMetric(ctx, ch, v, m, name, kv, ln, c.inst)
+				n, e = addSumMetric(ch, v, m, name, kv, ln)
 			case metricdata.Sum[float64]:
-				addSumMetric(ctx, ch, v, m, name, kv, ln, c.inst)
+				n, e = addSumMetric(ch, v, m, name, kv, ln)
 			case metricdata.Gauge[int64]:
-				addGaugeMetric(ctx, ch, v, m, name, kv, ln, c.inst)
+				n, e = addGaugeMetric(ch, v, m, name, kv, ln)
 			case metricdata.Gauge[float64]:
-				addGaugeMetric(ctx, ch, v, m, name, kv, ln, c.inst)
+				n, e = addGaugeMetric(ch, v, m, name, kv, ln)
+			}
+			success += n
+			exportErr = errors.Join(exportErr, e)
+		}
+	}
+}
+
+// countDataPoints counts the total number of data points in a ResourceMetrics.
+func countDataPoints(rm *metricdata.ResourceMetrics) int64 {
+	if rm == nil {
+		return 0
+	}
+
+	var total int64
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			switch data := m.Data.(type) {
+			case metricdata.Gauge[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Gauge[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Sum[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Sum[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Histogram[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Histogram[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.ExponentialHistogram[int64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.ExponentialHistogram[float64]:
+				total += int64(len(data.DataPoints))
+			case metricdata.Summary:
+				total += int64(len(data.DataPoints))
 			}
 		}
 	}
+	return total
 }
 
 // downscaleExponentialBucket re-aggregates bucket counts when downscaling to a coarser resolution.
@@ -410,23 +471,16 @@ func downscaleExponentialBucket(bucket metricdata.ExponentialBucket, scaleDelta 
 }
 
 func addExponentialHistogramMetric[N int64 | float64](
-	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	histogram metricdata.ExponentialHistogram[N],
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
 	labelNamer labelNamer,
-	inst *observ.Instrumentation,
-) {
-	var err error
-	var success int64
-	if inst != nil {
-		op := inst.ExportMetrics(ctx, int64(len(histogram.DataPoints)))
-		defer func() { op.End(success, err) }()
-	}
-
+) (int64, error) {
 	var (
+		err      error
+		success  int64
 		lastDesc *prometheus.Desc
 		lastKeys []string
 	)
@@ -514,26 +568,20 @@ func addExponentialHistogramMetric[N int64 | float64](
 
 		success++
 	}
+	return success, err
 }
 
 func addHistogramMetric[N int64 | float64](
-	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	histogram metricdata.Histogram[N],
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
 	labelNamer labelNamer,
-	inst *observ.Instrumentation,
-) {
-	var err error
-	var success int64
-	if inst != nil {
-		op := inst.ExportMetrics(ctx, int64(len(histogram.DataPoints)))
-		defer func() { op.End(success, err) }()
-	}
-
+) (int64, error) {
 	var (
+		err      error
+		success  int64
 		lastDesc *prometheus.Desc
 		lastKeys []string
 	)
@@ -578,24 +626,21 @@ func addHistogramMetric[N int64 | float64](
 
 		success++
 	}
+	return success, err
 }
 
 func addSumMetric[N int64 | float64](
-	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	sum metricdata.Sum[N],
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
 	labelNamer labelNamer,
-	inst *observ.Instrumentation,
-) {
-	var err error
-	var success int64
-	if inst != nil {
-		op := inst.ExportMetrics(ctx, int64(len(sum.DataPoints)))
-		defer func() { op.End(success, err) }()
-	}
+) (int64, error) {
+	var (
+		err     error
+		success int64
+	)
 
 	valueType := prometheus.CounterValue
 	if !sum.IsMonotonic {
@@ -644,26 +689,20 @@ func addSumMetric[N int64 | float64](
 
 		success++
 	}
+	return success, err
 }
 
 func addGaugeMetric[N int64 | float64](
-	ctx context.Context,
 	ch chan<- prometheus.Metric,
 	gauge metricdata.Gauge[N],
 	m metricdata.Metrics,
 	name string,
 	kv keyVals,
 	labelNamer labelNamer,
-	inst *observ.Instrumentation,
-) {
-	var err error
-	var success int64
-	if inst != nil {
-		op := inst.ExportMetrics(ctx, int64(len(gauge.DataPoints)))
-		defer func() { op.End(success, err) }()
-	}
-
+) (int64, error) {
 	var (
+		err      error
+		success  int64
 		lastDesc *prometheus.Desc
 		lastKeys []string
 	)
@@ -688,6 +727,7 @@ func addGaugeMetric[N int64 | float64](
 
 		success++
 	}
+	return success, err
 }
 
 func getOrReuseDesc(
