@@ -66,6 +66,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Fixed
 
+- Record Prometheus exporter self-observability `otel.sdk.exporter.metric_data_point.inflight` and `otel.sdk.exporter.metric_data_point.exported` metrics per scrape batch instead of per metric family, accounting for metrics dropped during resource, scope, or metric validation in `go.opentelemetry.io/otel/exporters/prometheus`. (#9465)
 - Warn and ignore invalid compression environment values instead of overriding existing settings in
   `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`,
   `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,
