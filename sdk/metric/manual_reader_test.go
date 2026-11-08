@@ -143,6 +143,9 @@ func TestManualReaderCollect(t *testing.T) {
 }
 
 func TestManualReaderInstrumentation(t *testing.T) {
+	const expectedComponentType = "go.opentelemetry.io/otel/sdk/metric.ManualReader"
+	assert.Equal(t, expectedComponentType, manualReaderType)
+
 	// Enable SDK observability.
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
@@ -190,13 +193,11 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	attrs := dp.Attributes.ToSlice()
 	t.Logf("observability attrs: %v", attrs)
 
-	const expectedComponentType = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
-
 	var hasName, hasType bool
 	for _, a := range attrs {
 		switch a.Key {
 		case "otel.component.name":
-			if s := a.Value.AsString(); s != "" && strings.Contains(s, "metric_reader") {
+			if s := a.Value.AsString(); strings.HasPrefix(s, expectedComponentType+"/") {
 				hasName = true
 			}
 		case "otel.component.type":
@@ -205,7 +206,7 @@ func TestManualReaderInstrumentation(t *testing.T) {
 			}
 		}
 	}
-	assert.True(t, hasName, "expected non-empty otel.component.name containing 'metric_reader'")
+	assert.True(t, hasName, "expected otel.component.name with prefix %q", expectedComponentType+"/")
 	assert.True(t, hasType, "expected otel.component.type == %q", expectedComponentType)
 }
 
