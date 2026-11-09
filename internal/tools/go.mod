@@ -1,6 +1,6 @@
 module go.opentelemetry.io/otel/internal/tools
 
-go 1.26.0
+go 1.26.7
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -19,7 +19,7 @@ require (
 require (
 	4d63.com/gocheckcompilerdirectives v1.4.0 // indirect
 	4d63.com/gochecknoglobals v0.2.2 // indirect
-	charm.land/lipgloss/v2 v2.0.6 // indirect
+	charm.land/lipgloss/v2 v2.1.0 // indirect
 	codeberg.org/chavacava/garif v0.2.1 // indirect
 	codeberg.org/polyfloyd/go-errorlint v1.9.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
