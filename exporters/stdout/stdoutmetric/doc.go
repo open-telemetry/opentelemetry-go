@@ -4,7 +4,7 @@
 // Package stdoutmetric provides an exporter for OpenTelemetry metric
 // telemetry.
 //
-// By default, metric attributes use the
+// Attributes use the
 // [OpenTelemetry representation for non-OTLP protocols].
 // Encoders supplied with [WithEncoder] determine their own representation.
 //
