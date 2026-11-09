@@ -37,7 +37,11 @@ func attributeShapes(value float64, want any) []attributeShape {
 		{"homogeneous", attribute.Float64SliceValue([]float64{1.5, value, -2.5}), []any{1.5, want, -2.5}},
 		{
 			"heterogeneous",
-			attribute.SliceValue(attribute.StringValue("text"), attribute.Float64Value(value), attribute.Int64Value(42)),
+			attribute.SliceValue(
+				attribute.StringValue("text"),
+				attribute.Float64Value(value),
+				attribute.Int64Value(42),
+			),
 			[]any{"text", want, float64(42)},
 		},
 		{
@@ -252,11 +256,12 @@ func TestExporterEmptyAttributes(t *testing.T) {
 		} else {
 			assert.JSONEq(t, `{}`, string(got.Resource))
 		}
-		if stub.Attributes == nil {
+		switch {
+		case stub.Attributes == nil:
 			assert.Equal(t, "null", string(got.Attributes))
-		} else if len(stub.Attributes) == 0 {
+		case len(stub.Attributes) == 0:
 			assert.JSONEq(t, `[]`, string(got.Attributes))
-		} else {
+		default:
 			assert.JSONEq(t, `[{"empty":null}]`, string(got.Attributes))
 		}
 		if stub.Events == nil {
@@ -290,8 +295,10 @@ func TestExporterAttributeLists(t *testing.T) {
 			t.Run(tc.name+"/"+strconv.FormatBool(pretty), func(t *testing.T) {
 				stub := tracetest.SpanStub{
 					Attributes: tc.attrs,
-					Events:     []sdktrace.Event{{Name: "event", Attributes: tc.attrs, Time: time.Unix(1, 0), DroppedAttributeCount: 2}},
-					Links:      []sdktrace.Link{{Attributes: tc.attrs, DroppedAttributeCount: 3}},
+					Events: []sdktrace.Event{
+						{Name: "event", Attributes: tc.attrs, Time: time.Unix(1, 0), DroppedAttributeCount: 2},
+					},
+					Links: []sdktrace.Link{{Attributes: tc.attrs, DroppedAttributeCount: 3}},
 				}
 				span := stub.Snapshot()
 				var buf bytes.Buffer
