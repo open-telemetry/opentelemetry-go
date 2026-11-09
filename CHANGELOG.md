@@ -4,13 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html),
+with further details in the [versioning policy](VERSIONING.md).
 
 ## [Unreleased]
 
 ### Added
 
 - Add experimental `MetricFilter` support in `go.opentelemetry.io/otel/sdk/metric/x` for filtering data collected by readers in `go.opentelemetry.io/otel/sdk/metric`. (#8461)
+- Add experimental `WithFinish` support for `Int64UpDownCounter` and `Float64UpDownCounter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9251)
+- Add experimental `WithFinish` support for `Int64Gauge` and `Float64Gauge` LastValue aggregation in `go.opentelemetry.io/otel/sdk/metric/x`.
+  Ignore delayed Finish calls that predate the resolved series lifetime. (#9252)
 - Support the `OTEL_METRIC_EXPORT_MAX_BATCH_SIZE` environment variable in `NewPeriodicReader` in `go.opentelemetry.io/otel/sdk/metric`. The `WithMaxExportBatchSize` option takes precedence. (#9316)
 - Add `go.opentelemetry.io/otel/semconv/v1.44.0` package. The package contains semantic conventions from the `v1.44.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.44.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.43.0`. (#9265)
@@ -21,9 +25,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   including cancellable provider shutdown and parked waits for in-flight measurements,
   in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 - Add experimental support for enabling/disabling `Meter`s per instrumentation scope via `MeterConfigurator`, `MeterConfig`, and `MeterConfiguratorHandle` in `go.opentelemetry.io/otel/sdk/metric/x`. Configuration is set at `MeterProvider` construction via `WithMeterConfigurator` and can be updated live through `MeterConfiguratorHandle.Set`. This gates recording (`Add`/`Record`/`Observe`) only. `MeterProvider`s without it are unaffected. (#8743)
+- Add `WithViewMatchingMode` and `ViewMatchingMode` in `go.opentelemetry.io/otel/sdk/metric/x` to support composable view matching. (#8510)
 
 ### Changed
 
+- Clarify the security-related versioning exception by linking to the OpenTelemetry client specification. (#9436)
 - Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
 - Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
@@ -43,6 +49,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Keep experimental Finish Sum collections within the cardinality limit and preserve valid timestamps when new series are recorded concurrently in `go.opentelemetry.io/otel/sdk/metric`. (#9251)
+- Ignore delayed Finish calls that predate a Sum series lifetime in `go.opentelemetry.io/otel/sdk/metric`. (#9252)
 - Align gRPC endpoint URL handling across `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. Preserve Unix socket targets configured through `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`, or `WithEndpointURL`, resolver targets, and scheme-less URLs with an authority using only the host and port, while retaining the configured transport security for URL options with unknown or empty schemes. (#9331)
 - Skip measurement preparation and recording for disabled observability instruments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#9318)
 - Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
@@ -334,9 +342,15 @@ The next release will require at least [Go 1.26].
 
 ### Changed
 
-- ⚠️ **Breaking Change:** `go.opentelemetry.io/otel/sdk/metric` now applies a default cardinality limit of 2000 to comply with the Metrics SDK specification recommendation.
-  New attribute sets are dropped when the cardinality limit is reached. The measurement of these sets are aggregated into a special attribute set containing `attribute.Bool("otel.metric.overflow", true)`.
-  This can break users who relied on the previous unlimited default.
+- ⚠️ **Breaking Change:** `go.opentelemetry.io/otel/sdk/metric` now applies a default cardinality limit of 2000 to align with the Metrics SDK specification recommendation.
+  Measurements for new attribute sets that exceed the limit are aggregated into a special attribute set containing `attribute.Bool("otel.metric.overflow", true)`, losing their original attribute detail.
+  This can break dashboards and alerts that rely on those attributes, even though measurements are still aggregated.
+  To detect affected metrics, look for data points carrying `otel.metric.overflow=true`, accounting for attribute-name translation by your exporter or backend.
+  Configure an appropriate finite limit with [`WithCardinalityLimit`](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric#WithCardinalityLimit); disabling the limit allows memory usage to grow with the number of distinct attribute sets.
+  A reader's [`WithCardinalityLimitSelector`](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric#WithCardinalityLimitSelector) can override the provider's limit.
+  Reduce unnecessary attribute combinations in instrumentation or through a [View's attribute filter](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/metric#Stream).
+  Validate critical metric dimensions, dashboards, alerts, and application memory usage in a representative environment before rolling out an upgrade.
+  See [Metric cardinality limits in OpenTelemetry: a practical guide](https://opentelemetry.io/blog/2026/cardinality-limits-in-opentelemetry/) for detailed sizing, detection, and monitoring guidance.
   Set `WithCardinalityLimit(0)` or the deprecated `OTEL_GO_X_CARDINALITY_LIMIT=0` environment variable to preserve unlimited cardinality.
   Note that support for `OTEL_GO_X_CARDINALITY_LIMIT` may be removed in a future release. (#8247)
 - `ErrorType` in `go.opentelemetry.io/otel/semconv` now unwraps errors created with `fmt.Errorf` when deriving the `error.type` attribute. (#8133)
