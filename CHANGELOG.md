@@ -32,7 +32,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Changed
 
-- Move `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` to the `stable-v1` module set.
+- Stabilize the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module.
   The exporter's output format may still change, as documented in the [package documentation](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/stdout/stdoutlog). (#9472)
 - Document the concurrency guarantees of the `Exporter` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9444)
 - Clarify the security-related versioning exception by linking to the OpenTelemetry client specification. (#9436)
