@@ -28,6 +28,7 @@ with further details in the [versioning policy](VERSIONING.md).
 
 ### Changed
 
+- Skip map deduplication on each measurement when the attribute set has no `SLICE` or `MAP` value in `go.opentelemetry.io/otel/sdk/metric`. (#9289)
 - Clarify the security-related versioning exception by linking to the OpenTelemetry client specification. (#9436)
 - Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
