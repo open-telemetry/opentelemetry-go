@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"math"
+	"strconv"
 	"testing"
 	"time"
 
@@ -24,9 +25,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func debugValue(typ string, value any) any { return map[string]any{"Type": typ, "Value": value} }
-func debugAttribute(value any) any         { return map[string]any{"Key": "value", "Value": value} }
-
 type attributeShape struct {
 	name  string
 	value attribute.Value
@@ -35,51 +33,29 @@ type attributeShape struct {
 
 func attributeShapes(value float64, want any) []attributeShape {
 	return []attributeShape{
-		{"scalar", attribute.Float64Value(value), debugValue("FLOAT64", want)},
-		{
-			"homogeneous",
-			attribute.Float64SliceValue([]float64{1.5, value, -2.5}),
-			debugValue("FLOAT64SLICE", []any{1.5, want, -2.5}),
-		},
+		{"scalar", attribute.Float64Value(value), want},
+		{"homogeneous", attribute.Float64SliceValue([]float64{1.5, value, -2.5}), []any{1.5, want, -2.5}},
 		{
 			"heterogeneous",
-			attribute.SliceValue(
-				attribute.StringValue("text"),
-				attribute.Float64Value(value),
-				attribute.Int64Value(42),
-			),
-			debugValue(
-				"SLICE",
-				[]any{debugValue("STRING", "text"), debugValue("FLOAT64", want), debugValue("INT64", float64(42))},
-			),
+			attribute.SliceValue(attribute.StringValue("text"), attribute.Float64Value(value), attribute.Int64Value(42)),
+			[]any{"text", want, float64(42)},
 		},
 		{
 			"nested",
-			attribute.MapValue(
-				attribute.KeyValue{
-					Key:   "nested",
-					Value: attribute.SliceValue(attribute.MapValue(attribute.Float64("float", value))),
-				},
-			),
-			debugValue(
-				"MAP",
-				[]any{
-					map[string]any{
-						"Key": "nested",
-						"Value": debugValue(
-							"SLICE",
-							[]any{
-								debugValue(
-									"MAP",
-									[]any{map[string]any{"Key": "float", "Value": debugValue("FLOAT64", want)}},
-								),
-							},
-						),
-					},
-				},
-			),
+			attribute.MapValue(attribute.KeyValue{
+				Key: "nested", Value: attribute.SliceValue(attribute.MapValue(attribute.Float64("float", value))),
+			}),
+			map[string]any{"nested": []any{map[string]any{"float": want}}},
 		},
 	}
+}
+
+func wantAttributes(location string, value any) any {
+	attr := map[string]any{"value": value}
+	if location == "resource" || location == "scope" {
+		return attr
+	}
+	return []any{attr}
 }
 
 func spanWithAttribute(location string, value attribute.Value) tracetest.SpanStub {
@@ -160,7 +136,7 @@ func TestExporterNonFiniteAttributes(t *testing.T) {
 						require.NoError(t, exporter.ExportSpans(t.Context(), []sdktrace.ReadOnlySpan{span}))
 						var got map[string]any
 						require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
-						assert.Equal(t, []any{debugAttribute(shape.want)}, exportedAttributes(t, got, location))
+						assert.Equal(t, wantAttributes(location, shape.want), exportedAttributes(t, got, location))
 						assert.Equal(t, before, shape.value.String(), "the input attribute must remain unchanged")
 						if location == "event" {
 							assert.Equal(
@@ -209,53 +185,150 @@ func TestExporterNonFiniteBatch(t *testing.T) {
 }
 
 func TestExporterFiniteRepresentation(t *testing.T) {
-	attrs := []attribute.KeyValue{
-		attribute.Float64(
-			"finite",
-			1.5,
-		),
-		attribute.Int64("integer", math.MaxInt64),
-		attribute.Float64("negativeZero", math.Copysign(0, -1)),
-		{Key: "empty", Value: attribute.Value{}},
-		{Key: "array", Value: attribute.SliceValue()},
-		{Key: "map", Value: attribute.MapValue()},
-		{Key: "bytes", Value: attribute.ByteSliceValue(nil)},
-	}
 	for _, pretty := range []bool{false, true} {
-		for _, stub := range []tracetest.SpanStub{
-			{},
-			{Attributes: []attribute.KeyValue{}, Events: []sdktrace.Event{}, Links: []sdktrace.Link{}, Resource: resource.Empty()},
-			{InstrumentationScope: instrumentation.Scope{Name: "scope", Attributes: attribute.NewSet()}},
-			{Attributes: attrs, Events: []sdktrace.Event{{Attributes: attrs}}, Links: []sdktrace.Link{{Attributes: attrs}}, Resource: resource.NewSchemaless(attrs...), InstrumentationScope: instrumentation.Scope{Name: "scope", Attributes: attribute.NewSet(attrs...)}},
-		} {
-			var got, want bytes.Buffer
-			opts := []stdouttrace.Option{stdouttrace.WithWriter(&got)}
-			enc := json.NewEncoder(&want)
-			if pretty {
-				opts = append(opts, stdouttrace.WithPrettyPrint())
-				enc.SetIndent("", "\t")
+		for _, location := range []string{"span", "resource", "event", "link", "scope"} {
+			for _, shape := range []attributeShape{
+				{"bool", attribute.BoolValue(true), true},
+				{"boolSlice", attribute.BoolSliceValue([]bool{true, false}), []any{true, false}},
+				{"integer", attribute.Int64Value(math.MaxInt64), json.Number("9223372036854775807")},
+				{"intSlice", attribute.Int64SliceValue([]int64{1, -2}), []any{json.Number("1"), json.Number("-2")}},
+				{"float", attribute.Float64Value(1.5), json.Number("1.5")},
+				{"negativeZero", attribute.Float64Value(math.Copysign(0, -1)), json.Number("-0")},
+				{"string", attribute.StringValue("\"\\\n<>&\x00\xff\u2028\u2029"), "\"\\\n<>&\x00\ufffd\u2028\u2029"},
+				{"stringSlice", attribute.StringSliceValue([]string{"text", "\"\\\n<>&"}), []any{"text", "\"\\\n<>&"}},
+				{"bytes", attribute.ByteSliceValue([]byte{0, 1, 2, 255}), "AAEC/w=="},
+				{"emptyBytes", attribute.ByteSliceValue(nil), ""},
+				{"jsonString", attribute.StringValue(`{"Type":"STRING","Value":[1]}`), `{"Type":"STRING","Value":[1]}`},
+				{"typeKeys", attribute.MapValue(attribute.String("Type", "STRING"), attribute.String("Value", `{"nested":42}`)), map[string]any{"Type": "STRING", "Value": `{"nested":42}`}},
+				{"array", attribute.SliceValue(), []any{}},
+				{"map", attribute.MapValue(), map[string]any{}},
+				{"nestedEmpty", attribute.SliceValue(attribute.Value{}), []any{nil}},
+			} {
+				t.Run(location+"/"+shape.name+"/"+strconv.FormatBool(pretty), func(t *testing.T) {
+					var buf bytes.Buffer
+					opts := []stdouttrace.Option{stdouttrace.WithWriter(&buf)}
+					if pretty {
+						opts = append(opts, stdouttrace.WithPrettyPrint())
+					}
+					exporter, err := stdouttrace.New(opts...)
+					require.NoError(t, err)
+					stub := spanWithAttribute(location, shape.value)
+					require.NoError(t, exporter.ExportSpans(t.Context(), tracetest.SpanStubs{stub}.Snapshots()))
+					decoder := json.NewDecoder(&buf)
+					decoder.UseNumber()
+					var got map[string]any
+					require.NoError(t, decoder.Decode(&got))
+					assert.Equal(t, wantAttributes(location, shape.want), exportedAttributes(t, got, location))
+				})
 			}
-			exporter, err := stdouttrace.New(opts...)
-			require.NoError(t, err)
-			span := stub.Snapshot()
-			expected := tracetest.SpanStubFromReadOnlySpan(span)
-			require.NoError(t, enc.Encode(&expected))
-			require.NoError(t, exporter.ExportSpans(t.Context(), []sdktrace.ReadOnlySpan{span}))
-			assert.Equal(t, want.String(), got.String())
+		}
+	}
+}
 
-			// Force the fallback while retaining all the finite and empty fields.
-			stub.Attributes = append(stub.Attributes, attribute.Float64("nonfinite", math.NaN()))
-			got.Reset()
-			require.NoError(t, exporter.ExportSpans(t.Context(), tracetest.SpanStubs{stub}.Snapshots()))
-			var expectedJSON, actualJSON map[string]any
-			require.NoError(t, json.Unmarshal(want.Bytes(), &expectedJSON))
-			require.NoError(t, json.Unmarshal(got.Bytes(), &actualJSON))
-			attributes, _ := expectedJSON["Attributes"].([]any)
-			expectedJSON["Attributes"] = append(
-				attributes,
-				map[string]any{"Key": "nonfinite", "Value": debugValue("FLOAT64", "NaN")},
-			)
-			assert.Equal(t, expectedJSON, actualJSON)
+func TestExporterEmptyAttributes(t *testing.T) {
+	for _, stub := range []tracetest.SpanStub{
+		{},
+		{Attributes: []attribute.KeyValue{}, Events: []sdktrace.Event{}, Links: []sdktrace.Link{}, Resource: resource.Empty()},
+		{InstrumentationScope: instrumentation.Scope{Name: "scope", Attributes: attribute.NewSet()}},
+		{Attributes: []attribute.KeyValue{{Key: "empty", Value: attribute.Value{}}}},
+	} {
+		var buf bytes.Buffer
+		exporter, err := stdouttrace.New(stdouttrace.WithWriter(&buf))
+		require.NoError(t, err)
+		require.NoError(t, exporter.ExportSpans(t.Context(), tracetest.SpanStubs{stub}.Snapshots()))
+		var got struct {
+			Attributes             json.RawMessage
+			Events                 json.RawMessage
+			Links                  json.RawMessage
+			Resource               json.RawMessage
+			InstrumentationScope   struct{ Attributes json.RawMessage }
+			InstrumentationLibrary struct{ Attributes json.RawMessage }
+		}
+		require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
+		assert.JSONEq(t, `{}`, string(got.InstrumentationScope.Attributes))
+		assert.Equal(t, got.InstrumentationScope.Attributes, got.InstrumentationLibrary.Attributes)
+		if stub.Resource == nil {
+			assert.Equal(t, "null", string(got.Resource))
+		} else {
+			assert.JSONEq(t, `{}`, string(got.Resource))
+		}
+		if stub.Attributes == nil {
+			assert.Equal(t, "null", string(got.Attributes))
+		} else if len(stub.Attributes) == 0 {
+			assert.JSONEq(t, `[]`, string(got.Attributes))
+		} else {
+			assert.JSONEq(t, `[{"empty":null}]`, string(got.Attributes))
+		}
+		if stub.Events == nil {
+			assert.Equal(t, "null", string(got.Events))
+		} else {
+			assert.JSONEq(t, `[]`, string(got.Events))
+		}
+		if stub.Links == nil {
+			assert.Equal(t, "null", string(got.Links))
+		} else {
+			assert.JSONEq(t, `[]`, string(got.Links))
+		}
+	}
+}
+
+func TestExporterAttributeLists(t *testing.T) {
+	for _, pretty := range []bool{false, true} {
+		for _, tc := range []struct {
+			name  string
+			attrs []attribute.KeyValue
+			want  string
+		}{
+			{"nil", nil, `null`},
+			{"empty", []attribute.KeyValue{}, `[]`},
+			{
+				"ordered",
+				[]attribute.KeyValue{attribute.String("z", "first"), attribute.Int64("a", 2), attribute.String("z", "last"), attribute.String("Type", "user type"), attribute.String("Value", `{"nested":42}`)},
+				`[{"z":"first"},{"a":2},{"z":"last"},{"Type":"user type"},{"Value":"{\"nested\":42}"}]`,
+			},
+		} {
+			t.Run(tc.name+"/"+strconv.FormatBool(pretty), func(t *testing.T) {
+				stub := tracetest.SpanStub{
+					Attributes: tc.attrs,
+					Events:     []sdktrace.Event{{Name: "event", Attributes: tc.attrs, Time: time.Unix(1, 0), DroppedAttributeCount: 2}},
+					Links:      []sdktrace.Link{{Attributes: tc.attrs, DroppedAttributeCount: 3}},
+				}
+				span := stub.Snapshot()
+				var buf bytes.Buffer
+				opts := []stdouttrace.Option{stdouttrace.WithWriter(&buf)}
+				if pretty {
+					opts = append(opts, stdouttrace.WithPrettyPrint())
+				}
+				exporter, err := stdouttrace.New(opts...)
+				require.NoError(t, err)
+				require.NoError(t, exporter.ExportSpans(t.Context(), []sdktrace.ReadOnlySpan{span}))
+				var got struct {
+					Attributes json.RawMessage
+					Events     []struct {
+						Name                  string
+						Attributes            json.RawMessage
+						Time                  time.Time
+						DroppedAttributeCount int
+					}
+					Links []struct {
+						Attributes            json.RawMessage
+						DroppedAttributeCount int
+					}
+				}
+				require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
+				assert.JSONEq(t, tc.want, string(got.Attributes))
+				require.Len(t, got.Events, 1)
+				assert.JSONEq(t, tc.want, string(got.Events[0].Attributes))
+				assert.Equal(t, "event", got.Events[0].Name)
+				assert.Equal(t, time.Unix(1, 0).UTC(), got.Events[0].Time)
+				assert.Equal(t, 2, got.Events[0].DroppedAttributeCount)
+				require.Len(t, got.Links, 1)
+				assert.JSONEq(t, tc.want, string(got.Links[0].Attributes))
+				assert.Equal(t, 3, got.Links[0].DroppedAttributeCount)
+				assert.Equal(t, tc.attrs, span.Attributes())
+				assert.Equal(t, tc.attrs, span.Events()[0].Attributes)
+				assert.Equal(t, tc.attrs, span.Links()[0].Attributes)
+			})
 		}
 	}
 }
@@ -310,7 +383,7 @@ func TestExporterNonFiniteSDK(t *testing.T) {
 	var got map[string]any
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
 	for _, location := range []string{"span", "resource", "event", "link", "scope"} {
-		assert.Equal(t, []any{debugAttribute(debugValue("FLOAT64", "NaN"))}, exportedAttributes(t, got, location))
+		assert.Equal(t, wantAttributes(location, "NaN"), exportedAttributes(t, got, location))
 	}
 }
 
