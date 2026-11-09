@@ -365,7 +365,13 @@ func TestJSONSignedZeroNumericFields(t *testing.T) {
 							assert.Equal(t, tc.want, point[field], "metric %d, %s", index, field)
 						}
 						if exemplars, ok := point["Exemplars"].([]any); ok {
-							assert.Equal(t, tc.want, exemplars[0].(map[string]any)["Value"], "metric %d exemplar", index)
+							assert.Equal(
+								t,
+								tc.want,
+								exemplars[0].(map[string]any)["Value"],
+								"metric %d exemplar",
+								index,
+							)
 						}
 						if bounds, ok := point["Bounds"].([]any); ok {
 							assert.Equal(t, tc.want, bounds[0], "metric %d bound", index)

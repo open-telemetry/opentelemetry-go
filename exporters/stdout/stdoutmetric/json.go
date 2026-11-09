@@ -183,7 +183,12 @@ type dataPointJSON[N int64 | float64] struct {
 }
 
 func jsonDataPoint[N int64 | float64](dp metricdata.DataPoint[N]) dataPointJSON[N] {
-	return dataPointJSON[N]{dp, jsonAttributeSet(dp.Attributes), jsonNumber(dp.Value), jsonSlice(dp.Exemplars, jsonExemplar[N])}
+	return dataPointJSON[N]{
+		dp,
+		jsonAttributeSet(dp.Attributes),
+		jsonNumber(dp.Value),
+		jsonSlice(dp.Exemplars, jsonExemplar[N]),
+	}
 }
 
 type exemplarJSON[N int64 | float64] struct {
@@ -218,7 +223,15 @@ func jsonHistogram[N int64 | float64](a metricdata.Histogram[N]) any {
 		metricdata.Histogram[N]
 		DataPoints []histogramDataPointJSON[N]
 	}{a, jsonSlice(a.DataPoints, func(dp metricdata.HistogramDataPoint[N]) histogramDataPointJSON[N] {
-		return histogramDataPointJSON[N]{dp, jsonAttributeSet(dp.Attributes), jsonSlice(dp.Bounds, jsonFloat), jsonExtrema(dp.Min), jsonExtrema(dp.Max), jsonNumber(dp.Sum), jsonSlice(dp.Exemplars, jsonExemplar[N])}
+		return histogramDataPointJSON[N]{
+			dp,
+			jsonAttributeSet(dp.Attributes),
+			jsonSlice(dp.Bounds, jsonFloat),
+			jsonExtrema(dp.Min),
+			jsonExtrema(dp.Max),
+			jsonNumber(dp.Sum),
+			jsonSlice(dp.Exemplars, jsonExemplar[N]),
+		}
 	})}
 }
 
@@ -237,7 +250,15 @@ func jsonExponentialHistogram[N int64 | float64](a metricdata.ExponentialHistogr
 		metricdata.ExponentialHistogram[N]
 		DataPoints []exponentialHistogramDataPointJSON[N]
 	}{a, jsonSlice(a.DataPoints, func(dp metricdata.ExponentialHistogramDataPoint[N]) exponentialHistogramDataPointJSON[N] {
-		return exponentialHistogramDataPointJSON[N]{dp, jsonAttributeSet(dp.Attributes), jsonExtrema(dp.Min), jsonExtrema(dp.Max), jsonNumber(dp.Sum), jsonFloat(dp.ZeroThreshold), jsonSlice(dp.Exemplars, jsonExemplar[N])}
+		return exponentialHistogramDataPointJSON[N]{
+			dp,
+			jsonAttributeSet(dp.Attributes),
+			jsonExtrema(dp.Min),
+			jsonExtrema(dp.Max),
+			jsonNumber(dp.Sum),
+			jsonFloat(dp.ZeroThreshold),
+			jsonSlice(dp.Exemplars, jsonExemplar[N]),
+		}
 	})}
 }
 
@@ -251,9 +272,16 @@ type summaryDataPointJSON struct {
 type quantileValueJSON struct{ Quantile, Value any }
 
 func jsonSummary(a metricdata.Summary) any {
-	return struct{ DataPoints []summaryDataPointJSON }{jsonSlice(a.DataPoints, func(dp metricdata.SummaryDataPoint) summaryDataPointJSON {
-		return summaryDataPointJSON{dp, jsonAttributeSet(dp.Attributes), jsonFloat(dp.Sum), jsonSlice(dp.QuantileValues, func(q metricdata.QuantileValue) quantileValueJSON {
-			return quantileValueJSON{jsonFloat(q.Quantile), jsonFloat(q.Value)}
-		})}
-	})}
+	return struct{ DataPoints []summaryDataPointJSON }{
+		jsonSlice(a.DataPoints, func(dp metricdata.SummaryDataPoint) summaryDataPointJSON {
+			return summaryDataPointJSON{
+				dp,
+				jsonAttributeSet(dp.Attributes),
+				jsonFloat(dp.Sum),
+				jsonSlice(dp.QuantileValues, func(q metricdata.QuantileValue) quantileValueJSON {
+					return quantileValueJSON{jsonFloat(q.Quantile), jsonFloat(q.Value)}
+				}),
+			}
+		}),
+	}
 }
