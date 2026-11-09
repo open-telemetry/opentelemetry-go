@@ -28,6 +28,10 @@ with further details in the [versioning policy](VERSIONING.md).
 
 ### Changed
 
+- Stabilize `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`.
+  Our project stability guarantees now apply to the module's public API.
+  See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
+  The exporter's output format may still change, as documented in the [package documentation](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/stdout/stdoutlog).
 - Clarify the security-related versioning exception by linking to the OpenTelemetry client specification. (#9436)
 - Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
