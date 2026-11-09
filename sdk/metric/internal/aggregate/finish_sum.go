@@ -79,6 +79,10 @@ func (v *finishSumValue[N]) measureAcquired(
 }
 
 func (v *finishSumValue[N]) finish(t time.Time) {
+	// A delayed Finish must not retire a lifetime created after it began.
+	if t.Before(v.start) {
+		return
+	}
 	v.lifecycle.Finish(t)
 }
 
@@ -100,6 +104,10 @@ func (v *finishSumValue[N]) collectDelta(
 	collection, ok := v.lifecycle.BeginDeltaCollection(t)
 	if !ok {
 		return metricdata.DataPoint[N]{}, false, false
+	}
+	// A deferred series can predate the previous collection's boundary.
+	if v.start.Before(start) {
+		start = v.start
 	}
 	dp, retire := v.collect(start, collection)
 	return dp, true, retire
@@ -143,6 +151,7 @@ type FinishSum[N int64 | float64] struct {
 type finishSum[N int64 | float64] struct {
 	collectSem chan struct{}
 	stopped    atomic.Bool
+	points     []*finishSumValue[N]
 
 	values      limitedSyncMap[*finishSumValue[N]]
 	start       time.Time
@@ -254,6 +263,9 @@ func (s *finishSum[N]) collect(
 		return 0
 	}
 
+	// Every included series must start at or before the collection timestamp.
+	snapshot := s.snapshot()
+	defer clear(snapshot)
 	t := now()
 	start := s.start
 	if s.temporality == metricdata.DeltaTemporality {
@@ -262,10 +274,9 @@ func (s *finishSum[N]) collect(
 	sData, _ := (*dest).(metricdata.Sum[N])
 	sData.Temporality = s.temporality
 	sData.IsMonotonic = s.monotonic
-	points := reset(sData.DataPoints, 0, s.values.Len())
+	points := reset(sData.DataPoints, 0, len(snapshot))
 
-	s.values.Range(func(key, raw any) bool {
-		point := raw.(*finishSumValue[N])
+	for _, point := range snapshot {
 		var dp metricdata.DataPoint[N]
 		var emit, retire bool
 		if s.temporality == metricdata.DeltaTemporality {
@@ -274,19 +285,31 @@ func (s *finishSum[N]) collect(
 			dp, emit, retire = point.collectCumulative(t)
 		}
 		if !emit {
-			return true
+			continue
 		}
 		points = append(points, dp)
 
 		if retire {
-			s.values.CompareAndDelete(key.(attribute.Distinct), point)
+			s.values.CompareAndDelete(point.attrs.Equivalent(), point)
 		}
-		return true
-	})
+	}
 
 	sData.DataPoints = points
 	*dest = sData
 	return len(points)
+}
+
+// Snapshot before retiring series so newly reclaimed slots cannot expand this
+// collection beyond the cardinality limit. collectSem protects the scratch slice.
+func (s *finishSum[N]) snapshot() []*finishSumValue[N] {
+	s.values.lenMux.Lock()
+	defer s.values.lenMux.Unlock()
+	s.points = reset(s.points, 0, s.values.len)
+	s.values.Range(func(_, raw any) bool {
+		s.points = append(s.points, raw.(*finishSumValue[N]))
+		return true
+	})
+	return s.points
 }
 
 func (s *finishSum[N]) stop() {
@@ -299,6 +322,7 @@ func (s *finishSum[N]) wait(ctx context.Context) error {
 		return err
 	}
 	defer func() { <-s.collectSem }()
+	s.points = nil
 
 	var err error
 	s.values.Range(func(_, raw any) bool {

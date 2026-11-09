@@ -103,6 +103,11 @@
 // is used instead.
 // The configuration can be overridden by the [WithTimeout] option.
 //
+// OTEL_METRIC_EXPORT_MAX_BATCH_SIZE (default: no limit) - the maximum number
+// of metric data points passed to a single export by a [PeriodicReader].
+// Non-positive or invalid values are ignored, and the default is used instead.
+// The configuration can be overridden by the [WithMaxExportBatchSize] option.
+//
 // OTEL_METRICS_EXEMPLAR_FILTER (default: "trace_based") - the default
 // [go.opentelemetry.io/otel/sdk/metric/exemplar.Filter] used to filter
 // measurements as they are made. Recognized values are "always_on",

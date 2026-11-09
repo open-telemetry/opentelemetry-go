@@ -6,6 +6,7 @@ package aggregate
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -50,6 +51,7 @@ func BenchmarkFinishLastValueLifecycle(b *testing.B) {
 		b.Run(name, func(b *testing.B) {
 			agg := Builder[int64]{}.FinishLastValue()
 			agg.Measure(b.Context(), 1, alice)
+			finishTime := time.Now()
 			distinct := alice.Equivalent()
 			if name == "UnknownFinish" {
 				distinct = bob.Equivalent()
@@ -59,7 +61,7 @@ func BenchmarkFinishLastValueLifecycle(b *testing.B) {
 				if name == "MeasureAndFinish" {
 					agg.Measure(b.Context(), 1, alice)
 				}
-				agg.Finish(distinct, y2k)
+				agg.Finish(distinct, finishTime)
 			}
 		})
 	}

@@ -4,6 +4,7 @@
 package x_test
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 	"time"
@@ -75,6 +76,63 @@ func TestInt64CounterFinish(t *testing.T) {
 	assert.False(t, points[0].Time.Before(before))
 	assert.False(t, points[0].Time.After(after))
 	assert.Empty(t, collectSum(t, reader))
+}
+
+func TestInt64CounterFinishComposableViews(t *testing.T) {
+	for _, finishFirst := range []bool{false, true} {
+		t.Run(fmt.Sprintf("finishFirst=%t", finishFirst), func(t *testing.T) {
+			reader := sdkmetric.NewManualReader()
+			options := []sdkmetric.Option{
+				sdkmetricx.WithFinish(),
+				sdkmetricx.WithViewMatchingMode(sdkmetricx.ViewMatchingModeComposable),
+			}
+			if !finishFirst {
+				slices.Reverse(options)
+			}
+			options = append(options,
+				sdkmetric.WithReader(reader),
+				sdkmetric.WithView(
+					sdkmetric.NewView(
+						sdkmetric.Instrument{Name: "requests"},
+						sdkmetric.Stream{Name: "requests.by_route"},
+					),
+					sdkmetric.NewView(
+						sdkmetric.Instrument{Name: "requests"},
+						sdkmetric.Stream{
+							Description:     "composed requests",
+							AttributeFilter: attribute.NewAllowKeysFilter("route"),
+						},
+					),
+				),
+			)
+			provider := sdkmetric.NewMeterProvider(options...)
+			t.Cleanup(func() { _ = provider.Shutdown(t.Context()) })
+			counter, err := provider.Meter("test").Int64Counter("requests")
+			require.NoError(t, err)
+			finisher, ok := counter.(metricx.Finisher)
+			require.True(t, ok)
+			attrs := []attribute.KeyValue{
+				attribute.String("route", "/orders"),
+				attribute.String("zone", "east"),
+			}
+			counter.Add(t.Context(), 3, metric.WithAttributes(attrs...))
+			finisher.Finish(t.Context(), attrs...)
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+			require.Len(t, rm.ScopeMetrics, 1)
+			require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+			got := rm.ScopeMetrics[0].Metrics[0]
+			assert.Equal(t, "requests.by_route", got.Name)
+			assert.Equal(t, "composed requests", got.Description)
+			sum, ok := got.Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.Len(t, sum.DataPoints, 1)
+			assert.Equal(t, int64(3), sum.DataPoints[0].Value)
+			assert.Equal(t, attribute.NewSet(attrs[0]), sum.DataPoints[0].Attributes)
+			assert.Empty(t, collectSum(t, reader))
+		})
+	}
 }
 
 func TestInt64CounterFinishReadersIndependent(t *testing.T) {
