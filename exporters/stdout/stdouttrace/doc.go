@@ -4,13 +4,11 @@
 // Package stdouttrace contains an OpenTelemetry exporter for tracing
 // telemetry to be written to an output destination as JSON.
 //
-// Attribute values use the OpenTelemetry representation for non-OTLP protocols.
-// Span, event, and link attributes are lists of single-key JSON objects that
-// preserve their original order. Resource and instrumentation scope attributes
-// are JSON objects. Values use native JSON types, including nested arrays and
-// maps; byte slices use Base64 strings and empty values use null. Non-finite
-// floats use the JSON strings "NaN", "Infinity", and "-Infinity".
+// Span attributes use the
+// [OpenTelemetry representation for non-OTLP protocols].
 //
 // See [go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x] for information about
 // the experimental features.
+//
+// [OpenTelemetry representation for non-OTLP protocols]: https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols
 package stdouttrace
