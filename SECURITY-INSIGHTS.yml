@@ -43,8 +43,6 @@ documentation:
 
 distribution-points:
   - pkg:golang/go.opentelemetry.io/otel
-  - pkg:golang/go.opentelemetry.io/otel/bridge/opencensus
-  - pkg:golang/go.opentelemetry.io/otel/bridge/opencensus/test
   - pkg:golang/go.opentelemetry.io/otel/bridge/opentracing
   - pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc
   - pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp

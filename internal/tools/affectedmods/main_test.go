@@ -20,8 +20,6 @@ func TestOwningModule(t *testing.T) {
 		"./sdk/log/logtest",
 		"./sdk/metric/.",
 		"./sdk/metric/internal",
-		"./bridge/opencensus",
-		"./bridge/opencensus/test",
 	}
 	sort.Slice(mods, func(i, j int) bool { return len(mods[i]) > len(mods[j]) })
 
@@ -65,11 +63,6 @@ func TestOwningModule(t *testing.T) {
 			name: "module-name prefix without slash boundary falls through to root",
 			path: "sdk-extra/x.go", modules: mods,
 			want: ".",
-		},
-		{
-			name: "deep nesting under unrelated tree",
-			path: "bridge/opencensus/test/exporter.go", modules: mods,
-			want: "./bridge/opencensus/test",
 		},
 		{
 			name: "split-module catch-all matches files at module root",
