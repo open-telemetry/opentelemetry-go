@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -335,9 +336,17 @@ func TestExponentialHistogramDataPointRecordLimits(t *testing.T) {
 }
 
 func newBucket(startBin int32, counts []uint64) *expoBuckets {
-	b := &expoBuckets{startBin: startBin, counts: make([]atomic.Uint64, len(counts))}
+	if len(counts) == 0 {
+		return &expoBuckets{startBin: startBin}
+	}
+	capSize := nextPowerOf2(int32(len(counts)))
+	b := &expoBuckets{
+		startBin: startBin,
+		length:   int32(len(counts)),
+		counts:   make([]atomic.Uint64, capSize),
+	}
 	for i, v := range counts {
-		b.counts[i].Store(v)
+		b.at(int32(i)).Store(v)
 	}
 	return b
 }
@@ -346,10 +355,10 @@ func assertBuckets(t *testing.T, expectedStart int32, expectedCounts []uint64, a
 	t.Helper()
 	assert.Equal(t, expectedStart, actual.startBin, "%s: startBin", msg)
 	var actualCounts []uint64
-	if len(actual.counts) > 0 {
-		actualCounts = make([]uint64, len(actual.counts))
-		for i := range actual.counts {
-			actualCounts[i] = actual.counts[i].Load()
+	if actual.length > 0 {
+		actualCounts = make([]uint64, actual.length)
+		for i := range actual.length {
+			actualCounts[i] = actual.at(i).Load()
 		}
 	}
 	assert.Equal(t, expectedCounts, actualCounts, "%s: counts", msg)
@@ -642,9 +651,9 @@ func TestExpoHistogramOverflow(t *testing.T) {
 
 func BenchmarkPrepend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		agg := newExpoHistogramDataPoint[float64](alice, 1024, 20, false, false, nil, y2kPlus(0))
+		agg := newExpoHistogramDataPoint[float64](alice, 160, 20, false, false, nil, y2kPlus(0))
 		n := math.MaxFloat64
-		for range 1024 {
+		for range 160 {
 			agg.record(n)
 			n /= 2
 		}
@@ -653,9 +662,9 @@ func BenchmarkPrepend(b *testing.B) {
 
 func BenchmarkAppend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		agg := newExpoHistogramDataPoint[float64](alice, 1024, 20, false, false, nil, y2kPlus(0))
+		agg := newExpoHistogramDataPoint[float64](alice, 160, 20, false, false, nil, y2kPlus(0))
 		n := smallestNonZeroNormalFloat64
-		for range 1024 {
+		for range 160 {
 			agg.record(n)
 			n *= 2
 		}
@@ -1646,8 +1655,8 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 			oVals:    []float64{1000.0},
 			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
 				assert.Equal(t, uint64(2), p.count())
-				assert.LessOrEqual(t, len(p.posBuckets.counts), 4)
-				assert.Empty(t, p.negBuckets.counts)
+				assert.LessOrEqual(t, int(p.posBuckets.length), 4)
+				assert.Zero(t, p.negBuckets.length)
 				assert.InDelta(t, 1001.0, p.sum.load(), 1e-9)
 			},
 		},
@@ -1659,8 +1668,8 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 			oVals:    []float64{-1000.0},
 			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
 				assert.Equal(t, uint64(2), p.count())
-				assert.LessOrEqual(t, len(p.negBuckets.counts), 4)
-				assert.Empty(t, p.posBuckets.counts)
+				assert.LessOrEqual(t, int(p.negBuckets.length), 4)
+				assert.Zero(t, p.posBuckets.length)
 				assert.InDelta(t, -1001.0, p.sum.load(), 1e-9)
 			},
 		},
@@ -1672,8 +1681,8 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 			oVals:    []float64{-10.0},
 			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
 				assert.Equal(t, uint64(2), p.count())
-				assert.NotEmpty(t, p.posBuckets.counts)
-				assert.NotEmpty(t, p.negBuckets.counts)
+				assert.Positive(t, p.posBuckets.length)
+				assert.Positive(t, p.negBuckets.length)
 				assert.InDelta(t, 0.0, p.sum.load(), 1e-9)
 			},
 		},
@@ -1685,8 +1694,8 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 			oVals:    []float64{10000.0, -10000.0},
 			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
 				assert.Equal(t, uint64(4), p.count())
-				assert.LessOrEqual(t, len(p.posBuckets.counts), 4)
-				assert.LessOrEqual(t, len(p.negBuckets.counts), 4)
+				assert.LessOrEqual(t, int(p.posBuckets.length), 4)
+				assert.LessOrEqual(t, int(p.negBuckets.length), 4)
 			},
 		},
 		{
@@ -1720,7 +1729,7 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
 				assert.Equal(t, uint64(2), p.count())
 				assert.GreaterOrEqual(t, p.scale.Load(), int32(expoMinScale))
-				assert.LessOrEqual(t, len(p.posBuckets.counts), 3)
+				assert.LessOrEqual(t, int(p.posBuckets.length), 3)
 			},
 		},
 	}
@@ -1741,22 +1750,236 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 	}
 }
 
-func TestExpoBucketsCapacityReuseAfterClear(t *testing.T) {
-	var b expoBuckets
-	b.record(10)
-	b.record(12)
-	require.NotEmpty(t, b.counts)
-	origCap := cap(b.counts)
-	require.Positive(t, origCap)
+func verifyBucketInvariants(t *testing.T, b *expoBuckets, msg string) {
+	t.Helper()
+	if b.length == 0 {
+		if b.startBin != 0 {
+			t.Fatalf("%s: empty bucket startBin should be 0, got %d", msg, b.startBin)
+		}
+		for i := range b.counts {
+			if v := b.counts[i].Load(); v != 0 {
+				t.Fatalf("%s: empty bucket counts slot %d should be 0, got %d", msg, i, v)
+			}
+		}
+		return
+	}
+	// Verify power-of-2 capacity
+	if len(b.counts) == 0 {
+		t.Fatalf("%s: counts slice should not be empty", msg)
+	}
+	if (len(b.counts) & (len(b.counts) - 1)) != 0 {
+		t.Fatalf("%s: capacity %d is not a power of 2", msg, len(b.counts))
+	}
+	if len(b.counts) < int(b.length) {
+		t.Fatalf("%s: capacity %d < length %d", msg, len(b.counts), b.length)
+	}
+
+	// Check logical slots vs physical unused slots
+	firstSlot := b.index(b.startBin)
+	capMask := len(b.counts) - 1
+	for i := range b.counts {
+		offset := (i - firstSlot) & capMask
+		if offset >= int(b.length) {
+			if v := b.counts[i].Load(); v != 0 {
+				t.Fatalf("%s: unused slot %d should be 0, got %d", msg, i, v)
+			}
+		}
+	}
+}
+
+func TestExpoBucketsCircularWraparound(t *testing.T) {
+	// StartBin = 3 in cap 4 means logical bins 3, 4, 5 map to slots 3, 0, 1
+	b := newBucket(3, []uint64{10, 20, 30})
+	verifyBucketInvariants(t, b, "initial wrapped bucket")
+	assert.Len(t, b.counts, 4)
+	assert.Equal(t, uint64(10), b.counts[3].Load())
+	assert.Equal(t, uint64(20), b.counts[0].Load())
+	assert.Equal(t, uint64(30), b.counts[1].Load())
+	assert.Equal(t, uint64(0), b.counts[2].Load())
+
+	// Record inside existing range
+	b.record(4)
+	assertBuckets(t, 3, []uint64{10, 21, 30}, *b, "after record inside")
+	verifyBucketInvariants(t, b, "after record inside")
+
+	// Append within existing capacity
+	b.record(6) // logical bin 6 maps to slot 2
+	assert.Len(t, b.counts, 4)
+	assertBuckets(t, 3, []uint64{10, 21, 30, 1}, *b, "after append to fill capacity")
+	verifyBucketInvariants(t, b, "after append to fill capacity")
+}
+
+func TestExpoBucketsCapacityGrowthRebucketing(t *testing.T) {
+	// Start with wrapped bucket at cap 4
+	b := newBucket(3, []uint64{10, 20, 30, 40})
+	assert.Len(t, b.counts, 4)
+
+	// Prepend to trigger capacity growth from 4 to 8
+	b.record(2)
+	assert.Len(t, b.counts, 8)
+	assertBuckets(t, 2, []uint64{1, 10, 20, 30, 40}, *b, "after growth prepend")
+	verifyBucketInvariants(t, b, "after growth prepend")
+
+	// Append to trigger capacity growth from 8 to 16
+	b.recordCount(10, 5)
+	assert.Len(t, b.counts, 16)
+	assertBuckets(t, 2, []uint64{1, 10, 20, 30, 40, 0, 0, 0, 5}, *b, "after growth append")
+	verifyBucketInvariants(t, b, "after growth append")
+}
+
+func TestExpoBucketsAlternatingPrependAppend(t *testing.T) {
+	b := new(expoBuckets)
+	b.recordCount(0, 1)
+
+	// Alternate prepending and appending
+	for i := int32(1); i <= 10; i++ {
+		b.recordCount(-i, uint64(i))
+		b.recordCount(i, uint64(i*10))
+		verifyBucketInvariants(t, b, fmt.Sprintf("iteration %d", i))
+	}
+
+	assert.Equal(t, int32(-10), b.startBin)
+	assert.Equal(t, int32(21), b.length)
+	assert.Equal(t, uint64(1+55+550), b.count())
+}
+
+func TestExpoBucketsDownscaleWrapped(t *testing.T) {
+	// Start with wrapped bucket at cap 8
+	// bins: 6, 7, 8, 9 -> slots 6, 7, 0, 1
+	b := newBucket(6, []uint64{1, 2, 3, 4})
+	verifyBucketInvariants(t, b, "initial")
+
+	b.downscale(1)
+	// new bins: 6>>1 = 3, 7>>1 = 3 (1+2=3), 8>>1 = 4 (3), 9>>1 = 4 (4) -> [3, 7] at startBin 3
+	assertBuckets(t, 3, []uint64{3, 7}, *b, "after downscale 1")
+	verifyBucketInvariants(t, b, "after downscale 1")
+
+	// Large downscale
+	b2 := newBucket(-100, []uint64{5, 0, 0, 15})
+	b2.downscale(5)
+	// -100 >> 5 = -4, -97 >> 5 = -4 -> sum 20 at startBin -4
+	assertBuckets(t, -4, []uint64{20}, *b2, "large downscale")
+	verifyBucketInvariants(t, b2, "large downscale")
+}
+
+func TestExpoBucketsMergeWrapped(t *testing.T) {
+	b1 := newBucket(3, []uint64{10, 20}) // wrapped at cap 4: slots 3, 0
+	b2 := newBucket(2, []uint64{5, 15})  // slots 2, 3
+
+	b1.merge(b2)
+	assertBuckets(t, 2, []uint64{5, 25, 20}, *b1, "after merge")
+	verifyBucketInvariants(t, b1, "after merge")
+}
+
+func TestExpoBucketsClearPreservesCapacity(t *testing.T) {
+	b := newBucket(3, []uint64{10, 20, 30, 40})
+	b.record(10) // span [3..10] is length 8 -> cap 8
+	capBefore := len(b.counts)
+	assert.Equal(t, 8, capBefore)
 
 	b.clear()
-	assert.Empty(t, b.counts)
-	assert.Equal(t, origCap, cap(b.counts))
 	assert.Equal(t, int32(0), b.startBin)
+	assert.Equal(t, int32(0), b.length)
+	assert.Len(t, b.counts, capBefore)
+	verifyBucketInvariants(t, b, "after clear")
 
-	// Recording again exercises the len(b.counts) == 0 && cap(b.counts) > 0 capacity reuse path.
-	b.record(15)
-	assert.Len(t, b.counts, 1)
-	assert.Equal(t, uint64(1), b.counts[0].Load())
-	assert.Equal(t, int32(15), b.startBin)
+	// Re-record after clear
+	b.recordCount(5, 42)
+	assert.Equal(t, int32(5), b.startBin)
+	assert.Equal(t, int32(1), b.length)
+	assert.Len(t, b.counts, capBefore)
+	assertBuckets(t, 5, []uint64{42}, *b, "after re-record")
+	verifyBucketInvariants(t, b, "after re-record")
+}
+
+func TestExpoBucketsRecordZeroCount(t *testing.T) {
+	b := new(expoBuckets)
+	b.recordCount(10, 0)
+	assert.Equal(t, int32(0), b.startBin)
+	assert.Equal(t, int32(0), b.length)
+	assert.Empty(t, b.counts)
+
+	b2 := newBucket(5, []uint64{10, 20})
+	b2.recordCount(5, 0)
+	b2.recordCount(100, 0)
+	assertBuckets(t, 5, []uint64{10, 20}, *b2, "zero count records are no-ops")
+}
+
+func TestExpoBucketsProperty(t *testing.T) {
+	rng := rand.New(rand.NewSource(42))
+	for iter := range 1000 {
+		b := new(expoBuckets)
+		ref := make(map[int32]uint64)
+
+		ops := 50
+		for op := range ops {
+			switch rng.Intn(4) {
+			case 0, 1: // recordCount
+				bin := int32(rng.Intn(61) - 30)
+				count := uint64(rng.Intn(10) + 1)
+				b.recordCount(bin, count)
+				ref[bin] += count
+			case 2: // downscale
+				delta := int32(rng.Intn(3) + 1)
+				b.downscale(delta)
+				newRef := make(map[int32]uint64)
+				for k, v := range ref {
+					newRef[k>>delta] += v
+				}
+				ref = newRef
+			case 3: // clear occasionally
+				if rng.Intn(10) == 0 {
+					b.clear()
+					ref = make(map[int32]uint64)
+				}
+			}
+
+			// Verify invariant
+			verifyBucketInvariants(t, b, "property test")
+
+			// Verify equivalence with reference model
+			if len(ref) == 0 {
+				if b.length != 0 {
+					t.Fatalf("iter %d op %d: expected length 0, got %d", iter, op, b.length)
+				}
+				if c := b.count(); c != 0 {
+					t.Fatalf("iter %d op %d: expected count 0, got %d", iter, op, c)
+				}
+			} else {
+				var minBin, maxBin int32 = math.MaxInt32, math.MinInt32
+				var totalCount uint64
+				for k, v := range ref {
+					if v > 0 {
+						if k < minBin {
+							minBin = k
+						}
+						if k > maxBin {
+							maxBin = k
+						}
+						totalCount += v
+					}
+				}
+				if totalCount == 0 {
+					if c := b.count(); c != 0 {
+						t.Fatalf("iter %d op %d: expected count 0, got %d", iter, op, c)
+					}
+				} else {
+					if b.startBin != minBin {
+						t.Fatalf("iter %d op %d: expected startBin %d, got %d", iter, op, minBin, b.startBin)
+					}
+					if expectedLen := maxBin - minBin + 1; b.length != expectedLen {
+						t.Fatalf("iter %d op %d: expected length %d, got %d", iter, op, expectedLen, b.length)
+					}
+					if c := b.count(); c != totalCount {
+						t.Fatalf("iter %d op %d: expected count %d, got %d", iter, op, totalCount, c)
+					}
+					for k := minBin; k <= maxBin; k++ {
+						if expected, actual := ref[k], b.bin(k).Load(); expected != actual {
+							t.Fatalf("iter %d op %d: bin %d expected count %d, got %d", iter, op, k, expected, actual)
+						}
+					}
+				}
+			}
+		}
+	}
 }
