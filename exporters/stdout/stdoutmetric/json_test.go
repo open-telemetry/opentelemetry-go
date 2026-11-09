@@ -63,10 +63,10 @@ func TestNonFiniteAttributes(t *testing.T) {
 				value attribute.Value
 				want  string
 			}{
-				{"scalar", attribute.Float64Value(special.value), `{"Type":"FLOAT64","Value":"` + special.name + `"}`},
-				{"floats", attribute.Float64SliceValue([]float64{1, special.value, 2}), `{"Type":"FLOAT64SLICE","Value":[1,"` + special.name + `",2]}`},
-				{"array", attribute.SliceValue(attribute.StringValue("ok"), attribute.Float64Value(special.value)), `{"Type":"SLICE","Value":[{"Type":"STRING","Value":"ok"},{"Type":"FLOAT64","Value":"` + special.name + `"}]}`},
-				{"nested", attribute.MapValue(attribute.KeyValue{Key: "array", Value: attribute.SliceValue(attribute.MapValue(attribute.Float64("nested", special.value)))}), `{"Type":"MAP","Value":[{"Key":"array","Value":{"Type":"SLICE","Value":[{"Type":"MAP","Value":[{"Key":"nested","Value":{"Type":"FLOAT64","Value":"` + special.name + `"}}]}]}}]}`},
+				{"scalar", attribute.Float64Value(special.value), `"` + special.name + `"`},
+				{"floats", attribute.Float64SliceValue([]float64{1, special.value, 2}), `[1,"` + special.name + `",2]`},
+				{"array", attribute.SliceValue(attribute.StringValue("ok"), attribute.Float64Value(special.value)), `["ok","` + special.name + `"]`},
+				{"nested", attribute.MapValue(attribute.KeyValue{Key: "array", Value: attribute.SliceValue(attribute.MapValue(attribute.Float64("nested", special.value)))}), `{"array":[{"nested":"` + special.name + `"}]}`},
 			} {
 				t.Run(shape.name, func(t *testing.T) {
 					kv := attribute.KeyValue{Key: "problem", Value: shape.value}
@@ -130,7 +130,11 @@ func TestNonFiniteAttributes(t *testing.T) {
 								case "exemplar":
 									gotAttributes = point["Exemplars"].([]any)[0].(map[string]any)["FilteredAttributes"]
 								}
-								wantAttributes := decodeJSON(t, []byte(`[{"Key":"problem","Value":`+shape.want+`}]`))
+								wantJSON := `{"problem":` + shape.want + `}`
+								if location == "exemplar" {
+									wantJSON = `[` + wantJSON + `]`
+								}
+								wantAttributes := decodeJSON(t, []byte(wantJSON))
 								assert.Equal(t, wantAttributes, gotAttributes)
 								var after attribute.Value
 								switch location {
@@ -273,7 +277,31 @@ func replaceFloat(v any, old float64, replacement string) any {
 
 func TestNonFiniteNumericFields(t *testing.T) {
 	const sentinel = 1.23456789
+	// Keep the original metric-data field representation as the control, with
+	// independently specified expectations for the changed attribute fields.
 	control, err := json.Marshal(numericMetrics(sentinel))
+	require.NoError(t, err)
+	var finite map[string]any
+	require.NoError(t, json.Unmarshal(control, &finite))
+	finite["Resource"] = map[string]any{"service": "test"}
+	scope := finite["ScopeMetrics"].([]any)[0].(map[string]any)
+	attrs := map[string]any{"large": float64(math.MaxInt64), "label": "<&>"}
+	scope["Scope"].(map[string]any)["Attributes"] = attrs
+	for _, m := range scope["Metrics"].([]any) {
+		for _, p := range m.(map[string]any)["Data"].(map[string]any)["DataPoints"].([]any) {
+			point := p.(map[string]any)
+			point["Attributes"] = attrs
+			if exemplars, ok := point["Exemplars"].([]any); ok {
+				for _, e := range exemplars {
+					exemplar := e.(map[string]any)
+					if exemplar["FilteredAttributes"] != nil {
+						exemplar["FilteredAttributes"] = []any{map[string]any{"ok": "yes"}}
+					}
+				}
+			}
+		}
+	}
+	control, err = json.Marshal(finite)
 	require.NoError(t, err)
 	for name, value := range map[string]float64{"NaN": math.NaN(), "Infinity": math.Inf(1), "-Infinity": math.Inf(-1)} {
 		t.Run(name, func(t *testing.T) {
@@ -300,100 +328,106 @@ func TestNonFiniteNumericFields(t *testing.T) {
 	}
 }
 
-func TestNonFinitePreservesFiniteShapes(t *testing.T) {
-	const sentinel = 1.23456789
-	fixture := func(marker float64) *metricdata.ResourceMetrics {
-		attrs := []attribute.KeyValue{
-			attribute.Bool("bool", true),
-			attribute.BoolSlice("bools", []bool{true, false}),
-			attribute.Int64Slice(
-				"ints",
-				[]int64{math.MaxInt64},
-			),
-			attribute.StringSlice("strings", []string{"<&>", "quote\""}),
-			attribute.Float64Slice("floats", []float64{1.5, math.Copysign(0, -1)}),
-			{Key: "bytes", Value: attribute.ByteSliceValue([]byte{0, 1, 255})},
-			{
-				Key: "map",
-				Value: attribute.MapValue(
-					attribute.String("duplicate", "first"),
-					attribute.String("duplicate", "second"),
-				),
-			},
-			{
-				Key:   "array",
-				Value: attribute.SliceValue(attribute.StringValue("x"), attribute.Int64Value(3), attribute.Value{}),
-			},
-			{Key: "empty-map", Value: attribute.MapValue()},
-			{Key: "empty-array", Value: attribute.SliceValue()},
-		}
-		rm := &metricdata.ResourceMetrics{
-			Resource: resource.NewSchemaless(attribute.Float64("marker", marker)),
-			ScopeMetrics: []metricdata.ScopeMetrics{{
-				Scope: instrumentation.Scope{Attributes: attribute.NewSet(attrs...)},
-				Metrics: []metricdata.Metrics{
-					{Data: nil},
-					{Data: (*metricdata.Gauge[float64])(nil)},
-					{Data: metricdata.Gauge[int64]{}},
-					{Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{}}},
-					{
-						Data: metricdata.Gauge[int64]{
-							DataPoints: []metricdata.DataPoint[int64]{{}, {Attributes: attribute.NewSet()}},
-						},
-					},
-					{
-						Data: metricdata.Histogram[int64]{
-							DataPoints: []metricdata.HistogramDataPoint[int64]{
-								{
-									Attributes:   attribute.NewSet(),
-									Bounds:       []float64{},
-									BucketCounts: []uint64{},
-									Exemplars:    []metricdata.Exemplar[int64]{},
-								},
-							},
-						},
-					},
-					{
-						Data: metricdata.ExponentialHistogram[int64]{
-							DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
-								{Attributes: attribute.NewSet()},
-							},
-						},
-					},
-					{
-						Data: metricdata.Summary{
-							DataPoints: []metricdata.SummaryDataPoint{
-								{Attributes: attribute.NewSet(), QuantileValues: []metricdata.QuantileValue{}},
-							},
-						},
-					},
-				},
-			}, {Scope: instrumentation.Scope{Attributes: attribute.NewSet()}, Metrics: []metricdata.Metrics{}}, {}},
-		}
-		return rm
+func TestJSONAttributeRepresentation(t *testing.T) {
+	attrs := []attribute.KeyValue{
+		attribute.Bool("bool", true),
+		attribute.String("A", "upper"),
+		attribute.String("a", "lower"),
+		attribute.String("json-string", `{"Type":"STRING","Value":"user"}`),
+		{Key: "envelope-keys", Value: attribute.MapValue(attribute.String("Type", "user"), attribute.String("Value", "payload"))},
+		attribute.BoolSlice("bools", []bool{true, false}),
+		attribute.Int64("int", math.MinInt64),
+		attribute.Int64Slice("ints", []int64{math.MaxInt64}),
+		attribute.Float64("float", 1.5),
+		attribute.Float64Slice("floats", []float64{1.5, math.Copysign(0, -1)}),
+		attribute.String("string", "<&>\\\"\n\xff"),
+		attribute.StringSlice("strings", []string{"<&>", "quote\""}),
+		{Key: "bytes", Value: attribute.ByteSliceValue([]byte{0, 1, 255})},
+		{Key: "empty", Value: attribute.Value{}},
+		{Key: "map", Value: attribute.MapValue(attribute.String("nested", "value"))},
+		{Key: "array", Value: attribute.SliceValue(attribute.StringValue("x"), attribute.Int64Value(3), attribute.Value{})},
+		{Key: "empty-map", Value: attribute.MapValue()},
+		{Key: "empty-array", Value: attribute.SliceValue()},
 	}
-	control, err := json.Marshal(fixture(sentinel))
-	require.NoError(t, err)
-	var want any
-	require.NoError(t, json.Unmarshal(control, &want))
-	want = replaceFloat(want, sentinel, "NaN")
+	const wantAttrs = `{
+		"bool":true,"bools":[true,false],"int":-9223372036854775808,"ints":[9223372036854775807],
+		"A":"upper","a":"lower","json-string":"{\"Type\":\"STRING\",\"Value\":\"user\"}","envelope-keys":{"Type":"user","Value":"payload"},
+		"float":1.5,"floats":[1.5,-0],"string":"<&>\\\"\n\ufffd","strings":["<&>","quote\""],
+		"bytes":"AAH/","empty":null,"map":{"nested":"value"},"array":["x",3,null],"empty-map":{},"empty-array":[]
+	}`
 	outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
-		var got any
-		require.NoError(t, json.Unmarshal(exportJSON(t, fixture(math.NaN()), opts...), &got))
-		assert.Equal(t, want, got)
+		rm := &metricdata.ResourceMetrics{
+			Resource: resource.NewSchemaless(attrs...),
+			ScopeMetrics: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{Name: "scope", Attributes: attribute.NewSet(attrs...)},
+				Metrics: []metricdata.Metrics{{Name: "finite", Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{
+					Attributes: attribute.NewSet(attrs...),
+					Value:      math.MaxInt64,
+					Exemplars: []metricdata.Exemplar[int64]{
+						{FilteredAttributes: []attribute.KeyValue{attribute.String("z", "first"), attribute.String("a", "middle"), attribute.String("z", "last")}},
+						{FilteredAttributes: []attribute.KeyValue{}},
+						{},
+					},
+				}}}}},
+			}},
+		}
+		out := exportJSON(t, rm, opts...)
+		doc := decodeJSON(t, out).(map[string]any)
+		want := decodeJSON(t, []byte(wantAttrs))
+		assert.Equal(t, want, doc["Resource"])
+		scope := doc["ScopeMetrics"].([]any)[0].(map[string]any)
+		assert.Equal(t, want, scope["Scope"].(map[string]any)["Attributes"])
+		point := scope["Metrics"].([]any)[0].(map[string]any)["Data"].(map[string]any)["DataPoints"].([]any)[0].(map[string]any)
+		assert.Equal(t, want, point["Attributes"])
+		assert.Equal(t, json.Number("9223372036854775807"), point["Value"])
+		exemplars := point["Exemplars"].([]any)
+		assert.Equal(t, decodeJSON(t, []byte(`[{"z":"first"},{"a":"middle"},{"z":"last"}]`)), exemplars[0].(map[string]any)["FilteredAttributes"])
+		assert.Equal(t, []any{}, exemplars[1].(map[string]any)["FilteredAttributes"])
+		assert.Nil(t, exemplars[2].(map[string]any)["FilteredAttributes"])
+		assert.NotContains(t, string(out), `"FLOAT64"`)
 	})
 }
 
-func TestJSONFiniteCompatibility(t *testing.T) {
-	for _, rm := range []*metricdata.ResourceMetrics{nil, {}, {ScopeMetrics: []metricdata.ScopeMetrics{}}, numericMetrics(1.25)} {
-		outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
-			var want bytes.Buffer
-			enc := json.NewEncoder(&want)
-			if len(opts) > 0 {
-				enc.SetIndent("", "\t")
-			}
-			require.NoError(t, enc.Encode(rm))
-			assert.Equal(t, want.String(), string(exportJSON(t, rm, opts...)))
+func TestJSONAggregationShapes(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		data metricdata.Aggregation
+		want string
+	}{
+		{"nil", nil, `null`},
+		{"typed-nil", (*metricdata.Gauge[float64])(nil), `null`},
+		{"nil-points", metricdata.Gauge[int64]{}, `{"DataPoints":null}`},
+		{"empty-points", metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{}}, `{"DataPoints":[]}`},
+		{"empty-attributes", metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{}, {Attributes: attribute.NewSet(), Exemplars: []metricdata.Exemplar[int64]{}}}}, `{"DataPoints":[{"Attributes":{},"StartTime":"0001-01-01T00:00:00Z","Time":"0001-01-01T00:00:00Z","Value":0},{"Attributes":{},"StartTime":"0001-01-01T00:00:00Z","Time":"0001-01-01T00:00:00Z","Value":0}]}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
+				rm := &metricdata.ResourceMetrics{ScopeMetrics: []metricdata.ScopeMetrics{{Metrics: []metricdata.Metrics{{Data: tc.data}}}}}
+				doc := decodeJSON(t, exportJSON(t, rm, opts...)).(map[string]any)
+				scope := doc["ScopeMetrics"].([]any)[0].(map[string]any)
+				got := scope["Metrics"].([]any)[0].(map[string]any)["Data"]
+				assert.Equal(t, decodeJSON(t, []byte(tc.want)), got)
+			})
+		})
+	}
+}
+
+func TestJSONEmptyCollections(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		metrics *metricdata.ResourceMetrics
+		want    string
+	}{
+		{"nil", nil, `null`},
+		{"zero", &metricdata.ResourceMetrics{}, `{"Resource":null,"ScopeMetrics":null}`},
+		{"empty-scopes", &metricdata.ResourceMetrics{ScopeMetrics: []metricdata.ScopeMetrics{}}, `{"Resource":null,"ScopeMetrics":[]}`},
+		{"zero-attributes", &metricdata.ResourceMetrics{Resource: resource.Empty(), ScopeMetrics: []metricdata.ScopeMetrics{{}}}, `{"Resource":{},"ScopeMetrics":[{"Scope":{"Name":"","Version":"","SchemaURL":"","Attributes":{}},"Metrics":null}]}`},
+		{"empty-attributes", &metricdata.ResourceMetrics{Resource: resource.NewSchemaless(), ScopeMetrics: []metricdata.ScopeMetrics{{Scope: instrumentation.Scope{Attributes: attribute.NewSet()}, Metrics: []metricdata.Metrics{}}}}, `{"Resource":{},"ScopeMetrics":[{"Scope":{"Name":"","Version":"","SchemaURL":"","Attributes":{}},"Metrics":[]}]}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
+				assert.JSONEq(t, tc.want, string(exportJSON(t, tc.metrics, opts...)))
+			})
 		})
 	}
 }
@@ -490,8 +524,7 @@ func TestJSONErrors(t *testing.T) {
 	exp, err := stdoutmetric.New(stdoutmetric.WithWriter(io.Discard))
 	require.NoError(t, err)
 	assert.ErrorContains(t, exp.Export(t.Context(), rm), "year outside of range")
-	// A normal encoding error discovered after the first non-finite value must
-	// still be returned by the retry.
+	// An invalid timestamp late in the collection must still be reported.
 	rm = numericMetrics(math.NaN())
 	last := len(rm.ScopeMetrics[0].Metrics) - 2
 	rm.ScopeMetrics[0].Metrics[last].Data.(metricdata.Summary).DataPoints[0].Time = badTime

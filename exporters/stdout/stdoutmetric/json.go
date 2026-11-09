@@ -5,7 +5,6 @@ package stdoutmetric
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"math"
 
@@ -14,61 +13,20 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// jsonEncoder preserves the usual encoding path for finite data. A marshal
-// failure writes no bytes, so non-finite floats can be retried with JSON-safe
-// representations without losing the other metrics in the collection.
+// jsonEncoder applies the non-OTLP attribute representation and handles
+// non-finite metric values without changing caller-owned data.
 type jsonEncoder struct{ *json.Encoder }
 
 func newJSONEncoder(w io.Writer) *jsonEncoder {
-	return &jsonEncoder{json.NewEncoder(jsonWriter{w})}
+	return &jsonEncoder{json.NewEncoder(w)}
 }
 
 func (e *jsonEncoder) Encode(v any) error {
-	err := e.Encoder.Encode(v)
-	if err == nil {
-		return nil
+	if rm, ok := v.(*metricdata.ResourceMetrics); ok && rm != nil {
+		v = jsonResourceMetrics(rm)
 	}
-	var writeErr *jsonWriteError
-	if errors.As(err, &writeErr) {
-		return writeErr.err
-	}
-	var unsupported *json.UnsupportedValueError
-	if !errors.As(err, &unsupported) {
-		return err
-	}
-	// Some encoding/json paths leave Value unset. Str also distinguishes
-	// non-finite values from other unsupported values, such as cycles.
-	switch unsupported.Str {
-	case "NaN", "+Inf", "-Inf":
-	default:
-		return err
-	}
-	rm, ok := v.(*metricdata.ResourceMetrics)
-	if !ok || rm == nil {
-		return err
-	}
-	err = e.Encoder.Encode(jsonResourceMetrics(rm))
-	if errors.As(err, &writeErr) {
-		return writeErr.err
-	}
-	return err
+	return e.Encoder.Encode(v)
 }
-
-// Identify writer errors separately from marshal errors, including errors
-// cached by json.Encoder after a failed write.
-type jsonWriter struct{ io.Writer }
-
-func (w jsonWriter) Write(p []byte) (int, error) {
-	n, err := w.Writer.Write(p)
-	if err != nil {
-		return n, &jsonWriteError{err}
-	}
-	return n, nil
-}
-
-type jsonWriteError struct{ err error }
-
-func (e *jsonWriteError) Error() string { return e.err.Error() }
 
 func jsonFloat(f float64) any {
 	switch {
@@ -101,52 +59,23 @@ func jsonSlice[T, U any](in []T, convert func(T) U) []U {
 	return out
 }
 
-type jsonAttribute struct {
-	Key   attribute.Key
-	Value any
-}
-
-func jsonAttributes(kvs []attribute.KeyValue) []jsonAttribute {
-	return jsonSlice(kvs, func(kv attribute.KeyValue) jsonAttribute {
-		return jsonAttribute{Key: kv.Key, Value: jsonAttributeValue(kv.Value)}
+func jsonAttributes(kvs []attribute.KeyValue) []json.RawMessage {
+	return jsonSlice(kvs, func(kv attribute.KeyValue) json.RawMessage {
+		return json.RawMessage(kv.String())
 	})
 }
 
-func jsonAttributeSet(set attribute.Set) any {
-	if set.Len() == 0 {
-		// An initialized empty Set encodes as [], while the zero Set is null.
-		return &set
-	}
-	return jsonAttributes(set.ToSlice())
-}
-
-func jsonAttributeValue(v attribute.Value) any {
-	var value any
-	switch v.Type() {
-	case attribute.FLOAT64:
-		value = jsonFloat(v.AsFloat64())
-	case attribute.FLOAT64SLICE:
-		value = jsonSlice(v.AsFloat64Slice(), jsonFloat)
-	case attribute.SLICE:
-		value = jsonSlice(v.AsSlice(), jsonAttributeValue)
-	case attribute.MAP:
-		value = jsonAttributes(v.AsMap())
-	default:
-		value = v.AsInterface()
-	}
-	return struct {
-		Type  string
-		Value any
-	}{v.Type().String(), value}
+func jsonAttributeSet(set attribute.Set) json.RawMessage {
+	return json.RawMessage(set.String())
 }
 
 func jsonResourceMetrics(rm *metricdata.ResourceMetrics) any {
-	var res any
+	var res json.RawMessage
 	if rm.Resource != nil {
 		res = jsonAttributeSet(*rm.Resource.Set())
 	}
 	return struct {
-		Resource     any
+		Resource     json.RawMessage
 		ScopeMetrics []any
 	}{res, jsonSlice(rm.ScopeMetrics, func(sm metricdata.ScopeMetrics) any {
 		return struct {
@@ -155,7 +84,7 @@ func jsonResourceMetrics(rm *metricdata.ResourceMetrics) any {
 		}{
 			Scope: struct {
 				instrumentation.Scope
-				Attributes any
+				Attributes json.RawMessage
 			}{sm.Scope, jsonAttributeSet(sm.Scope.Attributes)},
 			Metrics: jsonSlice(sm.Metrics, func(m metricdata.Metrics) any {
 				return struct {
@@ -241,7 +170,7 @@ func jsonSum[N int64 | float64](a metricdata.Sum[N]) any {
 func jsonDataPoint[N int64 | float64](dp metricdata.DataPoint[N]) any {
 	return struct {
 		metricdata.DataPoint[N]
-		Attributes any
+		Attributes json.RawMessage
 		Value      any
 		Exemplars  []any `json:",omitempty"`
 	}{dp, jsonAttributeSet(dp.Attributes), jsonNumber(dp.Value), jsonSlice(dp.Exemplars, jsonExemplar[N])}
@@ -250,7 +179,7 @@ func jsonDataPoint[N int64 | float64](dp metricdata.DataPoint[N]) any {
 func jsonExemplar[N int64 | float64](ex metricdata.Exemplar[N]) any {
 	return struct {
 		metricdata.Exemplar[N]
-		FilteredAttributes []jsonAttribute
+		FilteredAttributes []json.RawMessage
 		Value              any
 	}{ex, jsonAttributes(ex.FilteredAttributes), jsonNumber(ex.Value)}
 }
@@ -269,7 +198,7 @@ func jsonHistogram[N int64 | float64](a metricdata.Histogram[N]) any {
 	}{a, jsonSlice(a.DataPoints, func(dp metricdata.HistogramDataPoint[N]) any {
 		return struct {
 			metricdata.HistogramDataPoint[N]
-			Attributes any
+			Attributes json.RawMessage
 			Bounds     []any
 			Min        any
 			Max        any
@@ -286,7 +215,7 @@ func jsonExponentialHistogram[N int64 | float64](a metricdata.ExponentialHistogr
 	}{a, jsonSlice(a.DataPoints, func(dp metricdata.ExponentialHistogramDataPoint[N]) any {
 		return struct {
 			metricdata.ExponentialHistogramDataPoint[N]
-			Attributes    any
+			Attributes    json.RawMessage
 			Min           any
 			Max           any
 			Sum           any
@@ -300,7 +229,7 @@ func jsonSummary(a metricdata.Summary) any {
 	return struct{ DataPoints []any }{jsonSlice(a.DataPoints, func(dp metricdata.SummaryDataPoint) any {
 		return struct {
 			metricdata.SummaryDataPoint
-			Attributes     any
+			Attributes     json.RawMessage
 			Sum            any
 			QuantileValues []any
 		}{dp, jsonAttributeSet(dp.Attributes), jsonFloat(dp.Sum), jsonSlice(dp.QuantileValues, func(q metricdata.QuantileValue) any {
