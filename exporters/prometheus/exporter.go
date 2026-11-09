@@ -378,7 +378,9 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 				n, e = addGaugeMetric(ch, v, m, name, kv, ln)
 			}
 			success += n
-			exportErr = errors.Join(exportErr, e)
+			if e != nil {
+				exportErr = errors.Join(exportErr, e)
+			}
 		}
 	}
 }
