@@ -303,13 +303,15 @@ func TestNonFiniteNumericFields(t *testing.T) {
 	}
 	control, err = json.Marshal(finite)
 	require.NoError(t, err)
-	for name, value := range map[string]float64{"NaN": math.NaN(), "Infinity": math.Inf(1), "-Infinity": math.Inf(-1)} {
+	for name, value := range map[string]float64{"Finite": sentinel, "NaN": math.NaN(), "Infinity": math.Inf(1), "-Infinity": math.Inf(-1)} {
 		t.Run(name, func(t *testing.T) {
 			outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
 				rm := numericMetrics(value)
 				var want, got any
 				require.NoError(t, json.Unmarshal(control, &want))
-				want = replaceFloat(want, sentinel, name)
+				if name != "Finite" {
+					want = replaceFloat(want, sentinel, name)
+				}
 				out := exportJSON(t, rm, opts...)
 				require.NoError(t, json.Unmarshal(out, &got))
 				assert.Equal(t, want, got)
@@ -328,13 +330,70 @@ func TestNonFiniteNumericFields(t *testing.T) {
 	}
 }
 
+func TestJSONSignedZeroNumericFields(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		value float64
+		want  json.Number
+	}{
+		{"positive", 0, "0"},
+		{"negative", math.Copysign(0, -1), "-0"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
+				rm := numericMetrics(tc.value)
+				doc := decodeJSON(t, exportJSON(t, rm, opts...)).(map[string]any)
+				scope := doc["ScopeMetrics"].([]any)[0].(map[string]any)
+				metrics := scope["Metrics"].([]any)
+				for _, aggregation := range []struct {
+					index  int
+					fields []string
+				}{
+					{0, []string{"Value"}},
+					{2, []string{"Value"}},
+					{4, []string{"Min", "Sum"}},
+					{6, []string{"Min", "Max", "Sum", "ZeroThreshold"}},
+					{12, nil},
+					{14, []string{"ZeroThreshold"}},
+					{16, []string{"Sum"}},
+				} {
+					// The fixture includes each aggregation as a value and a pointer.
+					for _, index := range []int{aggregation.index, aggregation.index + 1} {
+						data := metrics[index].(map[string]any)["Data"].(map[string]any)
+						point := data["DataPoints"].([]any)[0].(map[string]any)
+						for _, field := range aggregation.fields {
+							assert.Equal(t, tc.want, point[field], "metric %d, %s", index, field)
+						}
+						if exemplars, ok := point["Exemplars"].([]any); ok {
+							assert.Equal(t, tc.want, exemplars[0].(map[string]any)["Value"], "metric %d exemplar", index)
+						}
+						if bounds, ok := point["Bounds"].([]any); ok {
+							assert.Equal(t, tc.want, bounds[0], "metric %d bound", index)
+						}
+						if quantiles, ok := point["QuantileValues"].([]any); ok {
+							q := quantiles[0].(map[string]any)
+							assert.Equal(t, tc.want, q["Quantile"], "metric %d quantile", index)
+							assert.Equal(t, tc.want, q["Value"], "metric %d quantile value", index)
+						}
+					}
+				}
+				point := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Gauge[float64]).DataPoints[0]
+				assert.Equal(t, math.Float64bits(tc.value), math.Float64bits(point.Value))
+			})
+		})
+	}
+}
+
 func TestJSONAttributeRepresentation(t *testing.T) {
 	attrs := []attribute.KeyValue{
 		attribute.Bool("bool", true),
 		attribute.String("A", "upper"),
 		attribute.String("a", "lower"),
 		attribute.String("json-string", `{"Type":"STRING","Value":"user"}`),
-		{Key: "envelope-keys", Value: attribute.MapValue(attribute.String("Type", "user"), attribute.String("Value", "payload"))},
+		{
+			Key:   "envelope-keys",
+			Value: attribute.MapValue(attribute.String("Type", "user"), attribute.String("Value", "payload")),
+		},
 		attribute.BoolSlice("bools", []bool{true, false}),
 		attribute.Int64("int", math.MinInt64),
 		attribute.Int64Slice("ints", []int64{math.MaxInt64}),
@@ -345,7 +404,10 @@ func TestJSONAttributeRepresentation(t *testing.T) {
 		{Key: "bytes", Value: attribute.ByteSliceValue([]byte{0, 1, 255})},
 		{Key: "empty", Value: attribute.Value{}},
 		{Key: "map", Value: attribute.MapValue(attribute.String("nested", "value"))},
-		{Key: "array", Value: attribute.SliceValue(attribute.StringValue("x"), attribute.Int64Value(3), attribute.Value{})},
+		{
+			Key:   "array",
+			Value: attribute.SliceValue(attribute.StringValue("x"), attribute.Int64Value(3), attribute.Value{}),
+		},
 		{Key: "empty-map", Value: attribute.MapValue()},
 		{Key: "empty-array", Value: attribute.SliceValue()},
 	}
@@ -358,18 +420,28 @@ func TestJSONAttributeRepresentation(t *testing.T) {
 	outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
 		rm := &metricdata.ResourceMetrics{
 			Resource: resource.NewSchemaless(attrs...),
-			ScopeMetrics: []metricdata.ScopeMetrics{{
-				Scope: instrumentation.Scope{Name: "scope", Attributes: attribute.NewSet(attrs...)},
-				Metrics: []metricdata.Metrics{{Name: "finite", Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{
-					Attributes: attribute.NewSet(attrs...),
-					Value:      math.MaxInt64,
-					Exemplars: []metricdata.Exemplar[int64]{
-						{FilteredAttributes: []attribute.KeyValue{attribute.String("z", "first"), attribute.String("a", "middle"), attribute.String("z", "last")}},
-						{FilteredAttributes: []attribute.KeyValue{}},
-						{},
+			ScopeMetrics: []metricdata.ScopeMetrics{
+				{
+					Scope: instrumentation.Scope{Name: "scope", Attributes: attribute.NewSet(attrs...)},
+					Metrics: []metricdata.Metrics{
+						{Name: "finite", Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{
+							Attributes: attribute.NewSet(attrs...),
+							Value:      math.MaxInt64,
+							Exemplars: []metricdata.Exemplar[int64]{
+								{
+									FilteredAttributes: []attribute.KeyValue{
+										attribute.String("z", "first"),
+										attribute.String("a", "middle"),
+										attribute.String("z", "last"),
+									},
+								},
+								{FilteredAttributes: []attribute.KeyValue{}},
+								{},
+							},
+						}}}},
 					},
-				}}}}},
-			}},
+				},
+			},
 		}
 		out := exportJSON(t, rm, opts...)
 		doc := decodeJSON(t, out).(map[string]any)
@@ -381,7 +453,11 @@ func TestJSONAttributeRepresentation(t *testing.T) {
 		assert.Equal(t, want, point["Attributes"])
 		assert.Equal(t, json.Number("9223372036854775807"), point["Value"])
 		exemplars := point["Exemplars"].([]any)
-		assert.Equal(t, decodeJSON(t, []byte(`[{"z":"first"},{"a":"middle"},{"z":"last"}]`)), exemplars[0].(map[string]any)["FilteredAttributes"])
+		assert.Equal(
+			t,
+			decodeJSON(t, []byte(`[{"z":"first"},{"a":"middle"},{"z":"last"}]`)),
+			exemplars[0].(map[string]any)["FilteredAttributes"],
+		)
 		assert.Equal(t, []any{}, exemplars[1].(map[string]any)["FilteredAttributes"])
 		assert.Nil(t, exemplars[2].(map[string]any)["FilteredAttributes"])
 		assert.NotContains(t, string(out), `"FLOAT64"`)
@@ -402,7 +478,9 @@ func TestJSONAggregationShapes(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
-				rm := &metricdata.ResourceMetrics{ScopeMetrics: []metricdata.ScopeMetrics{{Metrics: []metricdata.Metrics{{Data: tc.data}}}}}
+				rm := &metricdata.ResourceMetrics{
+					ScopeMetrics: []metricdata.ScopeMetrics{{Metrics: []metricdata.Metrics{{Data: tc.data}}}},
+				}
 				doc := decodeJSON(t, exportJSON(t, rm, opts...)).(map[string]any)
 				scope := doc["ScopeMetrics"].([]any)[0].(map[string]any)
 				got := scope["Metrics"].([]any)[0].(map[string]any)["Data"]
