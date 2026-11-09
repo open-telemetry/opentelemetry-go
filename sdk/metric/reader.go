@@ -6,6 +6,7 @@ package metric
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -131,7 +132,7 @@ func wrapProduce(
 		if filter == nil {
 			return err
 		}
-		rm.ScopeMetrics = filterScopeMetrics(rm.ScopeMetrics, filter)
+		rm.ScopeMetrics = filterScopeMetrics(rm.ScopeMetrics, filter, filterInPlace)
 		return err
 	}
 }
@@ -146,7 +147,12 @@ func (p *filteringProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetr
 	if p.filter == nil {
 		return sm, err
 	}
-	return filterScopeMetrics(sm, p.filter), err
+	// External producers may share their backing arrays with other readers.
+	sm = slices.Clone(sm)
+	for i := range sm {
+		sm[i].Metrics = slices.Clone(sm[i].Metrics)
+	}
+	return filterScopeMetrics(sm, p.filter, filterSharedData), err
 }
 
 // shutdownProducer produces an ErrReaderShutdown error always.

@@ -80,6 +80,99 @@ func (ts *readerTestSuite) TestMetricFilterExternalProducer() {
 	ts.Equal(testResourceMetricsA(), m)
 }
 
+func (ts *readerTestSuite) TestMetricFilterExternalProducerReusesSlices() {
+	keep := attribute.NewSet(attribute.String("keep", "true"))
+	drop := attribute.NewSet(attribute.String("keep", "false"))
+	makeScopes := func() []metricdata.ScopeMetrics {
+		return []metricdata.ScopeMetrics{
+			{
+				Scope:   instrumentation.Scope{Name: "drop-scope"},
+				Metrics: []metricdata.Metrics{{Name: "drop"}},
+			},
+			{
+				Scope: instrumentation.Scope{Name: "first"},
+				Metrics: []metricdata.Metrics{
+					{Name: "drop"},
+					{Name: "partial", Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: drop, Value: 1},
+						{Attributes: keep, Value: 2},
+						{Attributes: drop, Value: 3},
+					}}},
+					{Name: "accept", Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: keep, Value: 4},
+					}}},
+				},
+			},
+			{
+				Scope: instrumentation.Scope{Name: "second"},
+				Metrics: []metricdata.Metrics{
+					{Name: "drop"},
+					{Name: "accept", Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: keep, Value: 5},
+					}}},
+				},
+			},
+		}
+	}
+	shared := makeScopes()
+	ts.Reader = ts.Factory(
+		WithProducer(testExternalProducer{produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+			return shared, nil
+		}}),
+		testAggregationMetricFilter{
+			testMetric: func(_ instrumentation.Scope, name string, _ uint8, _ string) int {
+				switch name {
+				case "drop":
+					return metricFilterDrop
+				case "partial":
+					return metricFilterAcceptPartial
+				default:
+					return metricFilterAccept
+				}
+			},
+			testAttrs: func(_ instrumentation.Scope, _ string, _ uint8, _ string, attrs attribute.Set) int {
+				if attrs.Equals(&keep) {
+					return metricFilterAttrAccept
+				}
+				return metricFilterAttrDrop
+			},
+		},
+	)
+	ts.Reader.register(testSDKProducer{produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+		*rm = metricdata.ResourceMetrics{}
+		return nil
+	}})
+
+	want := metricdata.ResourceMetrics{ScopeMetrics: []metricdata.ScopeMetrics{
+		{
+			Scope: instrumentation.Scope{Name: "first"},
+			Metrics: []metricdata.Metrics{
+				{Name: "partial", Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{
+					{Attributes: keep, Value: 2},
+				}}},
+				{Name: "accept", Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{
+					{Attributes: keep, Value: 4},
+				}}},
+			},
+		},
+		{
+			Scope: instrumentation.Scope{Name: "second"},
+			Metrics: []metricdata.Metrics{
+				{Name: "accept", Data: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{
+					{Attributes: keep, Value: 5},
+				}}},
+			},
+		},
+	}}
+	ctx := context.Background()
+	for range 2 {
+		var got metricdata.ResourceMetrics
+		ts.Require().NoError(ts.Reader.Collect(ctx, &got))
+		ts.Equal(want, got)
+		ts.Equal(makeScopes(), shared)
+	}
+}
+
 func (ts *readerTestSuite) TestNilProducer() {
 	ts.Reader = ts.Factory(WithProducer(nil))
 	ts.Reader.register(testSDKProducer{})

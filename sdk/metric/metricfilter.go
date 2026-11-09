@@ -4,6 +4,8 @@
 package metric
 
 import (
+	"slices"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -18,6 +20,13 @@ const (
 const (
 	metricFilterAttrAccept = iota
 	metricFilterAttrDrop
+)
+
+type filterStorage uint8
+
+const (
+	filterInPlace filterStorage = iota
+	filterSharedData
 )
 
 // These values must match AggregationKind in sdk/metric/x.
@@ -45,13 +54,50 @@ type metricFilter interface {
 	) int
 }
 
-// filterScopeMetrics filters metrics in-place. The caller's array is
-// reused; no allocation. A scope left with zero metrics after filtering is
-// dropped.
-func filterScopeMetrics(sm []metricdata.ScopeMetrics, filter metricFilter) []metricdata.ScopeMetrics {
+func cloneAggregationForFiltering(data metricdata.Aggregation) metricdata.Aggregation {
+	switch d := data.(type) {
+	case metricdata.Sum[int64]:
+		d.DataPoints = slices.Clone(d.DataPoints)
+		return d
+	case metricdata.Sum[float64]:
+		d.DataPoints = slices.Clone(d.DataPoints)
+		return d
+	case metricdata.Gauge[int64]:
+		d.DataPoints = slices.Clone(d.DataPoints)
+		return d
+	case metricdata.Gauge[float64]:
+		d.DataPoints = slices.Clone(d.DataPoints)
+		return d
+	case metricdata.Histogram[int64]:
+		d.DataPoints = slices.Clone(d.DataPoints)
+		return d
+	case metricdata.Histogram[float64]:
+		d.DataPoints = slices.Clone(d.DataPoints)
+		return d
+	case metricdata.ExponentialHistogram[int64]:
+		d.DataPoints = slices.Clone(d.DataPoints)
+		return d
+	case metricdata.ExponentialHistogram[float64]:
+		d.DataPoints = slices.Clone(d.DataPoints)
+		return d
+	case metricdata.Summary:
+		d.DataPoints = slices.Clone(d.DataPoints)
+		return d
+	default:
+		return data
+	}
+}
+
+// filterScopeMetrics compacts scopes and metrics in-place. Shared data points
+// are copied during partial filtering. Empty scopes are dropped.
+func filterScopeMetrics(
+	sm []metricdata.ScopeMetrics,
+	filter metricFilter,
+	storage filterStorage,
+) []metricdata.ScopeMetrics {
 	i := 0
 	for idx := range sm {
-		sm[idx].Metrics = filterMetrics(sm[idx].Scope, sm[idx].Metrics, filter)
+		sm[idx].Metrics = filterMetrics(sm[idx].Scope, sm[idx].Metrics, filter, storage)
 		if len(sm[idx].Metrics) == 0 {
 			continue
 		}
@@ -68,6 +114,7 @@ func filterMetrics(
 	scope instrumentation.Scope,
 	metrics []metricdata.Metrics,
 	filter metricFilter,
+	storage filterStorage,
 ) []metricdata.Metrics {
 	j := 0
 	for i := range metrics {
@@ -75,6 +122,9 @@ func filterMetrics(
 		switch filter.TestMetric(scope, metrics[i].Name, kind, metrics[i].Unit) {
 		case metricFilterAccept:
 		case metricFilterAcceptPartial:
+			if storage == filterSharedData {
+				metrics[i].Data = cloneAggregationForFiltering(metrics[i].Data)
+			}
 			keep := func(attrs attribute.Set) bool {
 				return filter.TestAttributes(
 					scope,

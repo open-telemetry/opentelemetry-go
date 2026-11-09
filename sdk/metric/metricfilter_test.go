@@ -158,7 +158,7 @@ func TestFilterScopeMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := filterScopeMetrics(tt.scopeMetrics, tt.filter)
+			got := filterScopeMetrics(tt.scopeMetrics, tt.filter, filterInPlace)
 			tt.assert(t, got)
 		})
 	}
@@ -237,7 +237,7 @@ func TestFilterScopeMetricsAcceptPartialAggregations(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := filterScopeMetrics([]metricdata.ScopeMetrics{{
 				Metrics: []metricdata.Metrics{{Name: "metric", Data: tt.data}},
-			}}, filter)
+			}}, filter, filterInPlace)
 			require.Len(t, got, 1)
 			require.Len(t, got[0].Metrics, 1)
 			assert.Equal(t, 1, dataPointCount(got[0].Metrics[0].Data))
