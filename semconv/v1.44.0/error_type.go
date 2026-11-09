@@ -25,8 +25,8 @@ import (
 // the returned attribute has that method's return value. If multiple errors in
 // the chain implement this method, the value from the first match found by
 // [errors.As] is used. Otherwise, the returned attribute has a value derived
-// from the concrete type of err after unwrapping any wrappers created with
-// [fmt.Errorf].
+// from the concrete type of err after unwrapping single-error wrappers created
+// with [fmt.Errorf] or [errors.Join].
 //
 // The key of the returned attribute is [ErrorTypeKey].
 func ErrorType(err error) attribute.KeyValue {
@@ -54,7 +54,7 @@ func errorType(err error) string {
 		// Fallback to reflection if the ErrorType method is not supported or
 		// returns an empty value.
 
-		t := reflect.TypeOf(unwrapFmtWrapped(err))
+		t := reflect.TypeOf(unwrapError(err))
 		pkg, name := t.PkgPath(), t.Name()
 		if pkg != "" && name != "" {
 			s = pkg + "." + name
@@ -69,15 +69,30 @@ func errorType(err error) string {
 	return s
 }
 
-var fmtWrapErrorType = reflect.TypeOf(fmt.Errorf("wrapped: %w", errors.New("err")))
+var (
+	fmtWrapErrorType = reflect.TypeOf(fmt.Errorf("wrapped: %w", errors.New("err")))
+	errorsJoinType   = reflect.TypeOf(errors.Join(errors.New("err")))
+)
 
-func unwrapFmtWrapped(err error) error {
-	for reflect.TypeOf(err) == fmtWrapErrorType {
-		u := errors.Unwrap(err)
-		if u == nil {
-			return err // When the wrapped error is nil, use the concrete type of the wrapper.
+func unwrapError(err error) error {
+	for {
+		switch reflect.TypeOf(err) {
+		case fmtWrapErrorType:
+			u := errors.Unwrap(err)
+			if u == nil {
+				return err // When the wrapped error is nil, use the concrete type of the wrapper.
+			}
+			err = u
+		case errorsJoinType:
+			if u, ok := err.(interface{ Unwrap() []error }); ok {
+				if errs := u.Unwrap(); len(errs) == 1 && errs[0] != nil {
+					err = errs[0]
+					continue
+				}
+			}
+			return err
+		default:
+			return err
 		}
-		err = u
 	}
-	return err
 }
