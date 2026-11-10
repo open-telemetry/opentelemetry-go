@@ -17,8 +17,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/prometheus/internal"
 	"go.opentelemetry.io/otel/exporters/prometheus/internal/x"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 const (
@@ -84,10 +84,9 @@ func ComponentName(id int64) string {
 
 // Instrumentation is experimental instrumentation for the exporter.
 type Instrumentation struct {
-	inflightMetric     metric.Int64UpDownCounter
-	exportedMetric     metric.Int64Counter
-	operationDuration  metric.Float64Histogram
-	collectionDuration metric.Float64Histogram
+	inflightMetric    metric.Int64UpDownCounter
+	exportedMetric    metric.Int64Counter
+	operationDuration metric.Float64Histogram
 
 	attrs  []attribute.KeyValue
 	setOpt metric.MeasurementOption
@@ -142,13 +141,6 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	}
 	i.operationDuration = operationDuration.Inst()
 
-	collectionDuration, e := otelconv.NewSDKMetricReaderCollectionDuration(m)
-	if e != nil {
-		e = fmt.Errorf("failed to create collection duration metric: %w", e)
-		err = errors.Join(err, e)
-	}
-	i.collectionDuration = collectionDuration.Inst()
-
 	return i, err
 }
 
@@ -161,20 +153,6 @@ func (i *Instrumentation) RecordOperationDuration(ctx context.Context) Timer {
 		ctx:   ctx,
 		start: time.Now(),
 		inst:  i,
-		hist:  i.operationDuration,
-	}
-}
-
-// RecordCollectionDuration starts the timing of a collection operation.
-//
-// It returns a [Timer] that tracks the collection duration. The [Timer.Stop]
-// method must be called when the collection completes.
-func (i *Instrumentation) RecordCollectionDuration(ctx context.Context) Timer {
-	return Timer{
-		ctx:   ctx,
-		start: time.Now(),
-		inst:  i,
-		hist:  i.collectionDuration,
 	}
 }
 
@@ -184,14 +162,13 @@ type Timer struct {
 	start time.Time
 
 	inst *Instrumentation
-	hist metric.Float64Histogram
 }
 
 // Stop ends the timing operation and records the elapsed duration.
 //
 // If err is non-nil, an appropriate error type attribute will be included.
 func (t Timer) Stop(err error) {
-	if !t.hist.Enabled(t.ctx) {
+	if !t.inst.operationDuration.Enabled(t.ctx) {
 		return
 	}
 	recordOpt := get[metric.RecordOption](recordOptPool)
@@ -207,7 +184,7 @@ func (t Timer) Stop(err error) {
 		set := attribute.NewSet(*attrs...)
 		*recordOpt = append((*recordOpt)[:0], metric.WithAttributeSet(set))
 	}
-	t.hist.Record(t.ctx, time.Since(t.start).Seconds(), *recordOpt...)
+	t.inst.operationDuration.Record(t.ctx, time.Since(t.start).Seconds(), *recordOpt...)
 }
 
 // ExportMetrics starts the observation of a metric export operation.

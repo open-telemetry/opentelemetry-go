@@ -1,0 +1,98 @@
+// Code generated from semantic convention specification. DO NOT EDIT.
+
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package semconv
+
+import (
+	"errors"
+	"fmt"
+	"reflect"
+
+	"go.opentelemetry.io/otel/attribute"
+)
+
+// ErrorType returns an [attribute.KeyValue] identifying the error type of err.
+//
+// If err is nil, the returned attribute has the default value
+// [ErrorTypeOther].
+//
+// If err or one of the errors in its chain has the method
+//
+//	ErrorType() string
+//
+// the returned attribute has that method's return value. If multiple errors in
+// the chain implement this method, the value from the first match found by
+// [errors.As] is used. Otherwise, the returned attribute has a value derived
+// from the concrete type of err after unwrapping single-error wrappers created
+// with [fmt.Errorf] or [errors.Join].
+//
+// The key of the returned attribute is [ErrorTypeKey].
+func ErrorType(err error) attribute.KeyValue {
+	if err == nil {
+		return ErrorTypeOther
+	}
+
+	return ErrorTypeKey.String(errorType(err))
+}
+
+func errorType(err error) string {
+	var s string
+	if et, ok := err.(interface{ ErrorType() string }); ok {
+		// Fast path: check the top-level error first.
+		s = et.ErrorType()
+	} else {
+		// Fallback: search the error chain for an ErrorType method.
+		var et interface{ ErrorType() string }
+		if errors.As(err, &et) {
+			// Prioritize the ErrorType method if available.
+			s = et.ErrorType()
+		}
+	}
+	if s == "" {
+		// Fallback to reflection if the ErrorType method is not supported or
+		// returns an empty value.
+
+		t := reflect.TypeOf(unwrapError(err))
+		pkg, name := t.PkgPath(), t.Name()
+		if pkg != "" && name != "" {
+			s = pkg + "." + name
+		} else {
+			// The type has no package path or name (predeclared, not-defined,
+			// or alias for a not-defined type).
+			//
+			// This is not guaranteed to be unique, but is a best effort.
+			s = t.String()
+		}
+	}
+	return s
+}
+
+var (
+	fmtWrapErrorType = reflect.TypeOf(fmt.Errorf("wrapped: %w", errors.New("err")))
+	errorsJoinType   = reflect.TypeOf(errors.Join(errors.New("err")))
+)
+
+func unwrapError(err error) error {
+	for {
+		switch reflect.TypeOf(err) {
+		case fmtWrapErrorType:
+			u := errors.Unwrap(err)
+			if u == nil {
+				return err // When the wrapped error is nil, use the concrete type of the wrapper.
+			}
+			err = u
+		case errorsJoinType:
+			if u, ok := err.(interface{ Unwrap() []error }); ok {
+				if errs := u.Unwrap(); len(errs) == 1 && errs[0] != nil {
+					err = errs[0]
+					continue
+				}
+			}
+			return err
+		default:
+			return err
+		}
+	}
+}
