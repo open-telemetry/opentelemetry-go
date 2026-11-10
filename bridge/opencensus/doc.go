@@ -6,6 +6,10 @@
 // traces from OpenCensus into the OpenTelemetry SDK, combining them with
 // metrics and traces from OpenTelemetry instrumentation.
 //
+// Deprecated: Use native OpenTelemetry APIs and SDKs instead.
+// v1.48.0 is the final planned release of this module.
+// See [Migrating from OpenCensus].
+//
 // # Migration Guide
 //
 // For most applications, it would be difficult to migrate an application
@@ -45,4 +49,6 @@
 // There are known limitations to the metric bridge:
 //   - GaugeDistribution-typed metrics are dropped
 //   - Histogram's SumOfSquaredDeviation field is dropped
+//
+// [Migrating from OpenCensus]: https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path
 package opencensus

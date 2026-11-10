@@ -34,6 +34,33 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
+			name:    "WithNilWriter",
+			options: []Option{WithWriter(nil)},
+			expected: config{
+				Writer:      os.Stdout,
+				PrettyPrint: false,
+				Timestamps:  true,
+			},
+		},
+		{
+			name:    "WithWriterThenNilWriter",
+			options: []Option{WithWriter(os.Stderr), WithWriter(nil)},
+			expected: config{
+				Writer:      os.Stderr,
+				PrettyPrint: false,
+				Timestamps:  true,
+			},
+		},
+		{
+			name:    "WithNilWriterThenWriter",
+			options: []Option{WithWriter(nil), WithWriter(os.Stderr)},
+			expected: config{
+				Writer:      os.Stderr,
+				PrettyPrint: false,
+				Timestamps:  true,
+			},
+		},
+		{
 			name:    "WithPrettyPrint",
 			options: []Option{WithPrettyPrint()},
 			expected: config{

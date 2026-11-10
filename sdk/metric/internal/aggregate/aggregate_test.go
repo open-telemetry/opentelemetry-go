@@ -282,3 +282,39 @@ func benchmarkAggregateN[N int64 | float64](b *testing.B, factory func() (Measur
 		}
 	})
 }
+
+func benchmarkCollectCycle[N int64 | float64](factory func() (Measure[N], ComputeAggregation)) func(*testing.B) {
+	counts := []int{1, 10, 100}
+	return func(b *testing.B) {
+		ctx := b.Context()
+		for _, enabled := range []bool{false, true} {
+			b.Run("PerSeriesStartTime="+strconv.FormatBool(enabled), func(b *testing.B) {
+				b.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", strconv.FormatBool(enabled))
+				for _, count := range counts {
+					b.Run(strconv.Itoa(count), func(b *testing.B) {
+						attrs := make([]attribute.Set, count)
+						for i := range attrs {
+							attrs[i] = attribute.NewSet(attribute.Int("value", i))
+						}
+						meas, comp := factory()
+						got := &bmarkRes
+						for range 2 {
+							for _, attr := range attrs {
+								meas(ctx, 1, attr)
+							}
+							comp(got)
+						}
+						b.ReportAllocs()
+						b.ResetTimer()
+						for b.Loop() {
+							for _, attr := range attrs {
+								meas(ctx, 1, attr)
+							}
+							comp(got)
+						}
+					})
+				}
+			})
+		}
+	}
+}

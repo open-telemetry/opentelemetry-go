@@ -148,6 +148,66 @@ func TestParentBasedWithSamplerOptions(t *testing.T) {
 	}
 }
 
+func TestParentBasedWithNilSamplerOptions(t *testing.T) {
+	sampler := ParentBased(AlwaysSample(),
+		WithLocalParentSampled(nil),
+		WithLocalParentNotSampled(nil),
+		WithRemoteParentSampled(nil),
+		WithRemoteParentNotSampled(nil),
+	)
+
+	assert.Equal(t, ParentBased(AlwaysSample()).Description(), sampler.Description())
+	assert.Equal(
+		t,
+		RecordAndSample,
+		sampler.ShouldSample(parentBasedSamplingParameters(t, false, trace.FlagsSampled)).Decision,
+	)
+	assert.Equal(t, Drop, sampler.ShouldSample(parentBasedSamplingParameters(t, false, 0)).Decision)
+	assert.Equal(
+		t,
+		RecordAndSample,
+		sampler.ShouldSample(parentBasedSamplingParameters(t, true, trace.FlagsSampled)).Decision,
+	)
+	assert.Equal(t, Drop, sampler.ShouldSample(parentBasedSamplingParameters(t, true, 0)).Decision)
+}
+
+func TestParentBasedWithNilSamplerOptionsPreservesCustomSamplers(t *testing.T) {
+	opts := []ParentBasedSamplerOption{
+		WithLocalParentSampled(NeverSample()),
+		WithLocalParentNotSampled(AlwaysSample()),
+		WithRemoteParentSampled(NeverSample()),
+		WithRemoteParentNotSampled(AlwaysSample()),
+	}
+	wantDescription := ParentBased(AlwaysSample(), opts...).Description()
+	sampler := ParentBased(AlwaysSample(), append(opts,
+		WithLocalParentSampled(nil),
+		WithLocalParentNotSampled(nil),
+		WithRemoteParentSampled(nil),
+		WithRemoteParentNotSampled(nil),
+	)...)
+
+	assert.Equal(t, wantDescription, sampler.Description())
+	assert.Equal(t, Drop, sampler.ShouldSample(parentBasedSamplingParameters(t, false, trace.FlagsSampled)).Decision)
+	assert.Equal(t, RecordAndSample, sampler.ShouldSample(parentBasedSamplingParameters(t, false, 0)).Decision)
+	assert.Equal(t, Drop, sampler.ShouldSample(parentBasedSamplingParameters(t, true, trace.FlagsSampled)).Decision)
+	assert.Equal(t, RecordAndSample, sampler.ShouldSample(parentBasedSamplingParameters(t, true, 0)).Decision)
+}
+
+func parentBasedSamplingParameters(t *testing.T, remote bool, flags trace.TraceFlags) SamplingParameters {
+	t.Helper()
+	traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+	spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+	config := trace.SpanContextConfig{
+		TraceID:    traceID,
+		SpanID:     spanID,
+		Remote:     remote,
+		TraceFlags: flags,
+	}
+	return SamplingParameters{
+		ParentContext: trace.ContextWithSpanContext(t.Context(), trace.NewSpanContext(config)),
+	}
+}
+
 func TestParentBasedDefaultDescription(t *testing.T) {
 	sampler := ParentBased(AlwaysSample())
 

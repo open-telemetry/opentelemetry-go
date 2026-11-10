@@ -59,3 +59,26 @@ func TestCacheConcurrentSafe(t *testing.T) {
 		assert.Fail(t, "timeout")
 	}
 }
+
+func TestCacheRangeDoesNotHoldLockDuringF(t *testing.T) {
+	c := cache[string, int]{}
+	c.Lookup("a", func() int { return 1 })
+	c.Lookup("b", func() int { return 2 })
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		c.Range(func(k string, _ int) {
+			// f must be free to call other cache methods without deadlocking,
+			// since a caller-supplied f (e.g. a MeterConfigurator) may
+			// transitively call back into the same cache.
+			c.HasKey(k)
+		})
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		assert.Fail(t, "Range deadlocked when f called another cache method")
+	}
+}

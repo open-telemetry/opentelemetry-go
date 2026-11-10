@@ -79,20 +79,19 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 	e.encoderMu.Lock()
 	defer e.encoderMu.Unlock()
 	for i := range stubs {
-		stub := &stubs[i]
-		// Remove timestamps
+		span := spanJSON(&stubs[i])
 		if !e.timestamps {
-			stub.StartTime = zeroTime
-			stub.EndTime = zeroTime
-			for j := range stub.Events {
-				ev := &stub.Events[j]
-				ev.Time = zeroTime
+			span.StartTime = zeroTime
+			span.EndTime = zeroTime
+			// spanJSON owns these event copies, preserving the read-only input.
+			for j := range span.Events {
+				span.Events[j].Time = zeroTime
 			}
 		}
 
-		// Encode span stubs, one by one
-		if e := e.encoder.Encode(stub); e != nil {
-			err = errors.Join(err, fmt.Errorf("failed to encode span %d: %w", i, e))
+		// Encode spans one by one so a marshal failure does not drop later spans.
+		if encodeErr := e.encoder.Encode(span); encodeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to encode span %d: %w", i, encodeErr))
 			continue
 		}
 		success++

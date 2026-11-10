@@ -11,11 +11,11 @@ import (
 	"crypto/x509"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/envconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/grpcendpoint"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
@@ -49,25 +49,45 @@ func getOptionsFromEnv() []GenericOption {
 	opts := []GenericOption{}
 
 	tlsConf := &tls.Config{}
+	// An http or https endpoint scheme takes precedence over the insecure
+	// settings, so those are only applied when the scheme does not decide.
+	var schemeDecidesInsecure bool
+	withInsecureEnv := func(b bool) {
+		if !schemeDecidesInsecure {
+			opts = append(opts, withInsecure(b))
+		}
+	}
 	DefaultEnvOptionsReader.Apply(
 		envconfig.WithURL("ENDPOINT", func(u *url.URL) {
+			insecure, decides := endpointScheme(u)
+			schemeDecidesInsecure = decides
 			opts = append(
 				opts,
-				withEndpointScheme(u),
+				withInsecure(insecure),
 				newSplitOption(func(cfg Config) Config {
 					cfg.Metrics.Endpoint = u.Host
 					// For OTLP/HTTP endpoint URLs without a per-signal
 					// configuration, the passed endpoint is used as a base URL
 					// and the signals are sent to these paths relative to that.
-					cfg.Metrics.URLPath = path.Join(u.Path, DefaultMetricsPath)
+					suffix := DefaultMetricsPath
+					if strings.HasSuffix(u.EscapedPath(), "/") {
+						suffix = strings.TrimPrefix(suffix, "/")
+					}
+					cfg.Metrics.URLPath = u.Path + suffix
+					cfg.Metrics.URLRawPath = u.RawPath
+					if cfg.Metrics.URLRawPath != "" {
+						cfg.Metrics.URLRawPath += suffix
+					}
 					return cfg
 				}, withEndpointForGRPC(u)),
 			)
 		}),
 		envconfig.WithURL("METRICS_ENDPOINT", func(u *url.URL) {
+			insecure, decides := endpointScheme(u)
+			schemeDecidesInsecure = decides
 			opts = append(
 				opts,
-				withEndpointScheme(u),
+				withInsecure(insecure),
 				newSplitOption(func(cfg Config) Config {
 					cfg.Metrics.Endpoint = u.Host
 					// For endpoint URLs for OTLP/HTTP per-signal variables, the
@@ -79,6 +99,7 @@ func getOptionsFromEnv() []GenericOption {
 						path = "/"
 					}
 					cfg.Metrics.URLPath = path
+					cfg.Metrics.URLRawPath = u.RawPath
 					return cfg
 				}, withEndpointForGRPC(u)),
 			)
@@ -95,8 +116,8 @@ func getOptionsFromEnv() []GenericOption {
 			"METRICS_CLIENT_KEY",
 			func(c tls.Certificate) { tlsConf.Certificates = []tls.Certificate{c} },
 		),
-		envconfig.WithBool("INSECURE", func(b bool) { opts = append(opts, withInsecure(b)) }),
-		envconfig.WithBool("METRICS_INSECURE", func(b bool) { opts = append(opts, withInsecure(b)) }),
+		envconfig.WithBool("INSECURE", withInsecureEnv),
+		envconfig.WithBool("METRICS_INSECURE", withInsecureEnv),
 		withTLSConfig(tlsConf, func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
 		envconfig.WithHeaders("HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
 		envconfig.WithHeaders("METRICS_HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
@@ -121,19 +142,8 @@ func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
 	return func(cfg Config) Config {
 		// For OTLP/gRPC endpoints, this is the target to which the
 		// exporter is going to send telemetry.
-		cfg.Metrics.Endpoint = grpcEndpoint(u)
+		cfg.Metrics.Endpoint = grpcendpoint.Target(u)
 		return cfg
-	}
-}
-
-func grpcEndpoint(u *url.URL) string {
-	switch strings.ToLower(u.Scheme) {
-	case "http", "https":
-		return u.Host
-	case "":
-		return path.Join(u.Host, u.Path)
-	default:
-		return u.String()
 	}
 }
 
@@ -151,13 +161,12 @@ func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOpt
 	}
 }
 
-func withEndpointScheme(u *url.URL) GenericOption {
-	switch strings.ToLower(u.Scheme) {
-	case "http", "unix", "unix-abstract":
-		return WithInsecure()
-	default:
-		return WithSecure()
-	}
+// endpointScheme classifies the scheme of an endpoint URL. The returned
+// insecure value is the transport security implied by the scheme, and
+// decides reports whether the scheme determines it, in which case it
+// takes precedence over the insecure environment variables.
+func endpointScheme(u *url.URL) (insecure, decides bool) {
+	return grpcendpoint.Insecure(u)
 }
 
 // revive:disable-next-line:flag-parameter

@@ -1,0 +1,46 @@
+# This action builds the latest released version of each module listed in
+# verify_internal_boundary_compat.sh's TARGETS against the local module
+# source, to catch a break in a cross-module dependency on an internal
+# package (go.opentelemetry.io/otel/internal/baggage or
+# go.opentelemetry.io/otel/internal/global) before it ships. See
+# https://github.com/open-telemetry/opentelemetry-go/issues/9199.
+
+name: Internal boundary compatibility
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "internal/baggage/**"
+      - "internal/global/**"
+      - "baggage/**"
+      - "go.mod"
+      - "verify_internal_boundary_compat.sh"
+      - ".github/workflows/internal-boundary-compat.yml"
+  pull_request:
+    paths:
+      - "internal/baggage/**"
+      - "internal/global/**"
+      - "baggage/**"
+      - "go.mod"
+      - "verify_internal_boundary_compat.sh"
+      - ".github/workflows/internal-boundary-compat.yml"
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  internal-boundary-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # Needed for `git tag --list`.
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Check compatibility with the latest released targets
+        run: ./verify_internal_boundary_compat.sh
