@@ -1221,7 +1221,7 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 
 	if os.Getenv(env) != "1" {
 		cmd := exec.CommandContext(
-			context.Background(),
+			t.Context(),
 			os.Args[0],
 			"-test.run=^TestGlobalInstRegisterCallback$",
 		)
