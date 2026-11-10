@@ -129,7 +129,7 @@ func newConfig(options []Option) config {
 	)
 	c.insecure = c.insecure.Resolve(
 		loadInsecureFromEnvEndpoint(envEndpoint),
-		getenv[bool](envInsecure, convInsecure),
+		loadInsecureFromEnv(envInsecure),
 	)
 	c.tlsCfg = c.tlsCfg.Resolve(
 		loadEnvTLS[*tls.Config](),
@@ -607,6 +607,24 @@ func convInsecure(s string) (bool, error) {
 	}
 
 	return s == "true", nil
+}
+
+// loadInsecureFromEnv resolves the first nonempty Boolean value. Invalid values
+// resolve to false instead of falling back to a lower-priority variable.
+func loadInsecureFromEnv(keys []string) resolver[bool] {
+	return func(s setting[bool]) setting[bool] {
+		if s.Set {
+			return s
+		}
+
+		for _, key := range keys {
+			if os.Getenv(key) != "" {
+				resolved := getenv[bool]([]string{key}, convInsecure)(setting[bool]{})
+				return newSetting(resolved.Value)
+			}
+		}
+		return s
+	}
 }
 
 // loadInsecureFromEnvEndpoint returns a resolver that fetches the insecure
