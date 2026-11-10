@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 const (
@@ -195,36 +195,44 @@ type ExportOp struct {
 // of successfully exported logs will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
 func (e ExportOp) End(err error) {
-	addOpt := get[metric.AddOption](addOpPool)
-	defer put(addOpPool, addOpt)
-	*addOpt = append(*addOpt, e.inst.addOpt)
+	inflightEnabled := e.inst.logInflightMetric.Enabled(e.ctx)
+	exportedEnabled := e.inst.logExportedMetric.Enabled(e.ctx)
 
-	if e.inst.logInflightMetric.Enabled(e.ctx) {
-		e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
+	if inflightEnabled || exportedEnabled {
+		addOpt := get[metric.AddOption](addOpPool)
+		defer put(addOpPool, addOpt)
+		*addOpt = append(*addOpt, e.inst.addOpt)
+
+		if inflightEnabled {
+			e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
+		}
+
+		if exportedEnabled {
+			success := successful(e.nLogs, err)
+			e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
+			if err != nil {
+				// Add the error.type attribute to the attribute set.
+				attrs := get[attribute.KeyValue](attrsPool)
+				defer put(attrsPool, attrs)
+				*attrs = append(*attrs, e.inst.presetAttrs...)
+				*attrs = append(*attrs, semconv.ErrorType(err))
+
+				o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
+
+				// Reset addOpt with new attribute set
+				*addOpt = append((*addOpt)[:0], o)
+
+				e.inst.logExportedMetric.Add(e.ctx, e.nLogs-success, *addOpt...)
+			}
+		}
 	}
-	success := successful(e.nLogs, err)
-	if e.inst.logExportedMetric.Enabled(e.ctx) {
-		e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
+
+	if e.inst.logExportedDurationMetric.Enabled(e.ctx) {
+		recordOpt := get[metric.RecordOption](recordOptPool)
+		defer put(recordOptPool, recordOpt)
+		*recordOpt = append(*recordOpt, e.inst.recordOption(err))
+		e.inst.logExportedDurationMetric.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
 	}
-	if err != nil && e.inst.logExportedMetric.Enabled(e.ctx) {
-		// Add the error.type attribute to the attribute set.
-		attrs := get[attribute.KeyValue](attrsPool)
-		defer put(attrsPool, attrs)
-		*attrs = append(*attrs, e.inst.presetAttrs...)
-		*attrs = append(*attrs, semconv.ErrorType(err))
-
-		o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
-
-		// Reset addOpt with new attribute set
-		*addOpt = append((*addOpt)[:0], o)
-
-		e.inst.logExportedMetric.Add(e.ctx, e.nLogs-success, *addOpt...)
-	}
-
-	recordOpt := get[metric.RecordOption](recordOptPool)
-	defer put(recordOptPool, recordOpt)
-	*recordOpt = append(*recordOpt, e.inst.recordOption(err))
-	e.inst.logExportedDurationMetric.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
 }
 
 func (i *Instrumentation) recordOption(err error) metric.RecordOption {

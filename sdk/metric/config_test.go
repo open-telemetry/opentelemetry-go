@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -256,6 +257,33 @@ func TestWithNilViewPreservesViewOrder(t *testing.T) {
 	assert.Equal(t, "b", stream.Name)
 }
 
+type testViewMatchingModeOption struct {
+	Option
+	mode int
+}
+
+func (testViewMatchingModeOption) Experimental()           {}
+func (o testViewMatchingModeOption) ViewMatchingMode() int { return o.mode }
+
+var _ viewMatchingModeOption = testViewMatchingModeOption{}
+
+func TestWithViewMatchingMode(t *testing.T) {
+	c := newConfig([]Option{testViewMatchingModeOption{mode: 1}})
+	assert.Equal(t, viewMatchingModeComposable, c.viewMatchingMode)
+
+	var handledErr error
+	origHandler := otel.GetErrorHandler()
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		handledErr = err
+	}))
+	t.Cleanup(func() { otel.SetErrorHandler(origHandler) })
+
+	cInvalid := newConfig([]Option{testViewMatchingModeOption{mode: 99}})
+	assert.Equal(t, viewMatchingModeIndependent, cInvalid.viewMatchingMode)
+	require.Error(t, handledErr)
+	assert.Contains(t, handledErr.Error(), "unsupported view matching mode 99")
+}
+
 func TestWithExemplarFilterOff(t *testing.T) {
 	for _, tc := range []struct {
 		desc                   string
@@ -349,51 +377,32 @@ func TestWithExemplarFilterOff(t *testing.T) {
 func TestWithCardinalityLimit(t *testing.T) {
 	cases := []struct {
 		name          string
-		envValue      string
 		options       []Option
 		expectedLimit int
 	}{
 		{
-			name:          "only cardinality limit from option",
-			envValue:      "",
+			name:          "default limit",
+			expectedLimit: defaultCardinalityLimit,
+		},
+		{
+			name:          "cardinality limit from option",
 			options:       []Option{WithCardinalityLimit(1000)},
 			expectedLimit: 1000,
 		},
 		{
-			name:          "cardinality limit from option overrides env",
-			envValue:      "500",
-			options:       []Option{WithCardinalityLimit(1000)},
-			expectedLimit: 1000,
-		},
-		{
-			name:          "cardinality limit from env",
-			envValue:      "1234",
-			options:       []Option{},
-			expectedLimit: 1234,
-		},
-		{
-			name:          "zero cardinality limit from env disables limit",
-			envValue:      "0",
-			options:       []Option{},
+			name:          "zero cardinality limit from option disables limit",
+			options:       []Option{WithCardinalityLimit(0)},
 			expectedLimit: 0,
 		},
 		{
-			name:          "invalid env value uses default",
-			envValue:      "not-a-number",
-			options:       []Option{},
-			expectedLimit: defaultCardinalityLimit,
-		},
-		{
-			name:          "empty env and no option uses default",
-			envValue:      "",
-			options:       []Option{},
-			expectedLimit: defaultCardinalityLimit,
+			name:          "negative cardinality limit from option disables limit",
+			options:       []Option{WithCardinalityLimit(-5)},
+			expectedLimit: -5,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OTEL_GO_X_CARDINALITY_LIMIT", tc.envValue)
 			c := newConfig(tc.options)
 			assert.Equal(t, tc.expectedLimit, c.cardinalityLimit)
 		})
