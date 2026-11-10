@@ -14,6 +14,7 @@ module-sets:
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
       - go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
+      - go.opentelemetry.io/otel/exporters/stdout/stdoutlog
       - go.opentelemetry.io/otel/exporters/stdout/stdoutmetric
       - go.opentelemetry.io/otel/exporters/stdout/stdouttrace
       - go.opentelemetry.io/otel/exporters/zipkin
@@ -36,7 +37,6 @@ module-sets:
       - go.opentelemetry.io/otel/sdk/log/logtest
       - go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc
       - go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp
-      - go.opentelemetry.io/otel/exporters/stdout/stdoutlog
   experimental-traces:
     version: v0.1.0
     modules:

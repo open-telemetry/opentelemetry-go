@@ -9,6 +9,10 @@ with further details in the [versioning policy](VERSIONING.md).
 
 ## [Unreleased]
 
+This release contains the first stable release of the OpenTelemetry Go stdout log exporter.
+Our project stability guarantees now apply to the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module.
+See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
+
 ### Added
 
 - Add experimental `WithFinish` support for `Int64UpDownCounter` and `Float64UpDownCounter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9251)
@@ -28,6 +32,8 @@ with further details in the [versioning policy](VERSIONING.md).
 
 ### Changed
 
+- Stabilize the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module.
+  The exporter's output format may still change, as documented in the [package documentation](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/stdout/stdoutlog). (#9472)
 - `ErrorType` in `go.opentelemetry.io/otel/semconv/v1.44.0` now unwraps single-error `errors.Join` wrappers when deriving the `error.type` attribute. (#9466)
 - `go.opentelemetry.io/otel/sdk/log` now unwraps single-error `errors.Join` wrappers when deriving the `exception.type` attribute from errors on log records. (#9466)
 - Document the concurrency guarantees of the `Exporter` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9444)
