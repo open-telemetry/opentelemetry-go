@@ -1220,7 +1220,8 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	const env = "OTEL_TEST_GLOBAL_INST_REGISTER_CALLBACK"
 
 	if os.Getenv(env) != "1" {
-		cmd := exec.Command(
+		cmd := exec.CommandContext(
+			context.Background(),
 			os.Args[0],
 			"-test.run=^TestGlobalInstRegisterCallback$",
 		)

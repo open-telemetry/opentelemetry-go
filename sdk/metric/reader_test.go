@@ -26,8 +26,6 @@ type readerTestSuite struct {
 
 	Factory func(...ReaderOption) Reader
 	Reader  Reader
-
-	originalLogger logr.Logger
 }
 
 func (ts *readerTestSuite) SetupSuite() {
@@ -39,7 +37,7 @@ func (ts *readerTestSuite) TearDownTest() {
 	_ = ts.Reader.Shutdown(context.Background())
 }
 
-func (ts *readerTestSuite) TearDownSuite() {
+func (*readerTestSuite) TearDownSuite() {
 	otel.SetLogger(logr.Discard())
 }
 
