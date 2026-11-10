@@ -324,6 +324,14 @@ func (b *expoBuckets) recordCount(bin int32, count uint64) {
 	b.bin(bin).Add(count)
 }
 
+func (b *expoBuckets) uploadTo(dest *metricdata.ExponentialBucket) {
+	dest.Offset = b.startBin
+	dest.Counts = reset(dest.Counts, int(b.length), int(b.length))
+	for i := range b.length {
+		dest.Counts[i] = b.at(i).Load()
+	}
+}
+
 func (b *expoBuckets) merge(other *expoBuckets) {
 	if other.length == 0 {
 		return
@@ -333,6 +341,15 @@ func (b *expoBuckets) merge(other *expoBuckets) {
 			b.recordCount(other.startBin+i, c)
 		}
 	}
+}
+
+func (p *expoHistogramDataPoint[N]) mergeScaleDelta(b, other *expoBuckets, bShift, oShift int32) int32 {
+	if b.length == 0 || other.length == 0 {
+		return 0
+	}
+	minBin := min(b.startBin>>bShift, other.startBin>>oShift)
+	maxBin := max(b.endBin()>>bShift, other.endBin()>>oShift)
+	return p.scaleChange(maxBin, minBin, 1)
 }
 
 func (p *expoHistogramDataPoint[N]) merge(other *expoHistogramDataPoint[N]) {
@@ -349,33 +366,10 @@ func (p *expoHistogramDataPoint[N]) merge(other *expoHistogramDataPoint[N]) {
 	pAlignShift := pStartScale - targetScale
 	oAlignShift := oStartScale - targetScale
 
-	var d int32
-	if p.posBuckets.length > 0 && other.posBuckets.length > 0 {
-		pMinBin := p.posBuckets.startBin >> pAlignShift
-		oMinBin := other.posBuckets.startBin >> oAlignShift
-		pMaxBin := p.posBuckets.endBin() >> pAlignShift
-		oMaxBin := other.posBuckets.endBin() >> oAlignShift
-
-		minBin := min(pMinBin, oMinBin)
-		maxBin := max(pMaxBin, oMaxBin)
-		delta := p.scaleChange(maxBin, minBin, 1)
-		if delta > d {
-			d = delta
-		}
-	}
-	if p.negBuckets.length > 0 && other.negBuckets.length > 0 {
-		pMinBin := p.negBuckets.startBin >> pAlignShift
-		oMinBin := other.negBuckets.startBin >> oAlignShift
-		pMaxBin := p.negBuckets.endBin() >> pAlignShift
-		oMaxBin := other.negBuckets.endBin() >> oAlignShift
-
-		minBin := min(pMinBin, oMinBin)
-		maxBin := max(pMaxBin, oMaxBin)
-		delta := p.scaleChange(maxBin, minBin, 1)
-		if delta > d {
-			d = delta
-		}
-	}
+	d := max(
+		p.mergeScaleDelta(&p.posBuckets, &other.posBuckets, pAlignShift, oAlignShift),
+		p.mergeScaleDelta(&p.negBuckets, &other.negBuckets, pAlignShift, oAlignShift),
+	)
 
 	pDownscale := pAlignShift + d
 	if pDownscale > 0 {
@@ -421,25 +415,8 @@ func (p *expoHistogramDataPoint[N]) uploadTo(
 	dest.ZeroCount = p.zeroCount.Load()
 	dest.ZeroThreshold = 0.0
 
-	dest.PositiveBucket.Offset = p.posBuckets.startBin
-	dest.PositiveBucket.Counts = reset(
-		dest.PositiveBucket.Counts,
-		int(p.posBuckets.length),
-		int(p.posBuckets.length),
-	)
-	for j := range p.posBuckets.length {
-		dest.PositiveBucket.Counts[j] = p.posBuckets.at(j).Load()
-	}
-
-	dest.NegativeBucket.Offset = p.negBuckets.startBin
-	dest.NegativeBucket.Counts = reset(
-		dest.NegativeBucket.Counts,
-		int(p.negBuckets.length),
-		int(p.negBuckets.length),
-	)
-	for j := range p.negBuckets.length {
-		dest.NegativeBucket.Counts[j] = p.negBuckets.at(j).Load()
-	}
+	p.posBuckets.uploadTo(&dest.PositiveBucket)
+	p.negBuckets.uploadTo(&dest.NegativeBucket)
 
 	if !p.noSum {
 		dest.Sum = p.sum.load()
