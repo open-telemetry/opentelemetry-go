@@ -1087,7 +1087,7 @@ func TestClientInstrumentation(t *testing.T) {
 						{Attributes: attribute.NewSet(attrs...)},
 						{Attributes: attribute.NewSet(append(
 							attrs,
-							semconv.ErrorType(err),
+							otelconv.SDKExporterMetricDataPointExported{}.AttrErrorType("rejected"),
 						)...)},
 					},
 					Temporality: metricdata.CumulativeTemporality,
@@ -1102,7 +1102,7 @@ func TestClientInstrumentation(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{Attributes: attribute.NewSet(append(
 							attrs,
-							semconv.ErrorType(err),
+							otelconv.SDKExporterOperationDuration{}.AttrErrorType("rejected"),
 							otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(200),
 						)...)},
 					},

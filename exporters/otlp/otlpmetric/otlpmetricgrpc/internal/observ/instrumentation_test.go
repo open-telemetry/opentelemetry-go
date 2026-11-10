@@ -50,8 +50,8 @@ func TestNewInstrumentation_Disabled(t *testing.T) {
 
 	testRm := createTestResourceMetrics()
 	otlpRm, _ := transform.ResourceMetrics(testRm)
-	em.TrackExport(t.Context(), otlpRm).End(nil)
-	em.TrackExport(t.Context(), otlpRm).End(errors.New("test error"))
+	em.TrackExport(t.Context(), otlpRm).End(nil, codes.OK)
+	em.TrackExport(t.Context(), otlpRm).End(errors.New("test error"), codes.Unknown)
 
 	// Verify no metrics were recorded when disabled
 	rm := &metricdata.ResourceMetrics{}
@@ -114,11 +114,13 @@ func TestTrackExport(t *testing.T) {
 	tests := []struct {
 		name        string
 		err         error
+		code        codes.Code
 		wantMetrics func(actualComponentName string) []metricdata.Metrics
 	}{
 		{
 			name: "success",
 			err:  nil,
+			code: codes.OK,
 			wantMetrics: func(actualComponentName string) []metricdata.Metrics {
 				return []metricdata.Metrics{
 					{
@@ -187,6 +189,7 @@ func TestTrackExport(t *testing.T) {
 		{
 			name: "error",
 			err:  errors.New("export failed"),
+			code: codes.Unknown,
 			wantMetrics: func(actualComponentName string) []metricdata.Metrics {
 				return []metricdata.Metrics{
 					{
@@ -208,7 +211,7 @@ func TestTrackExport(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										semconv.ErrorType(errors.New("export failed")),
+										semconv.ErrorTypeKey.String("*errors.errorString"),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
@@ -248,10 +251,10 @@ func TestTrackExport(t *testing.T) {
 							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(
-										semconv.ErrorType(errors.New("export failed")),
+										semconv.ErrorTypeKey.String("*errors.errorString"),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.RPCResponseStatusCode("Unknown"),
+										semconv.RPCResponseStatusCode(codes.Unknown.String()),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -270,6 +273,7 @@ func TestTrackExport(t *testing.T) {
 				RejectedItems: 3,
 				RejectedKind:  "metric data points",
 			},
+			code: codes.OK,
 			wantMetrics: func(actualComponentName string) []metricdata.Metrics {
 				return []metricdata.Metrics{
 					{
@@ -291,11 +295,7 @@ func TestTrackExport(t *testing.T) {
 								},
 								{
 									Attributes: attribute.NewSet(
-										semconv.ErrorType(internal.PartialSuccess{
-											ErrorMessage:  "some points rejected",
-											RejectedItems: 3,
-											RejectedKind:  "metric data points",
-										}),
+										semconv.ErrorTypeKey.String("rejected"),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
 										semconv.ServerAddress("localhost"),
@@ -335,14 +335,10 @@ func TestTrackExport(t *testing.T) {
 							DataPoints: []metricdata.HistogramDataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(
-										semconv.ErrorType(internal.PartialSuccess{
-											ErrorMessage:  "some points rejected",
-											RejectedItems: 3,
-											RejectedKind:  "metric data points",
-										}),
+										semconv.ErrorTypeKey.String("rejected"),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.RPCResponseStatusCode("Unknown"),
+										semconv.RPCResponseStatusCode(codes.OK.String()),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -384,7 +380,7 @@ func TestTrackExport(t *testing.T) {
 
 			otlpRm, err := transform.ResourceMetrics(rm)
 			require.NoError(t, err)
-			em.TrackExport(t.Context(), otlpRm).End(tt.err)
+			em.TrackExport(t.Context(), otlpRm).End(tt.err, tt.code)
 
 			var got metricdata.ResourceMetrics
 			err = reader.Collect(t.Context(), &got)
@@ -628,7 +624,7 @@ func createTestResourceMetrics() *metricdata.ResourceMetrics {
 }
 
 func BenchmarkInstrumentationTrackExport(b *testing.B) {
-	run := func(enabled bool, err error) func(*testing.B) {
+	run := func(enabled bool, err error, code codes.Code) func(*testing.B) {
 		return func(b *testing.B) {
 			testRm := createTestResourceMetrics()
 			otlpRm, _ := transform.ResourceMetrics(testRm)
@@ -658,12 +654,12 @@ func BenchmarkInstrumentationTrackExport(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for b.Loop() {
-				inst.TrackExport(b.Context(), otlpRm).End(err)
+				inst.TrackExport(b.Context(), otlpRm).End(err, code)
 			}
 		}
 	}
 
-	b.Run("EnabledNoError", run(true, nil))
-	b.Run("EnabledError", run(true, errors.New("export failed")))
-	b.Run("Disabled", run(false, nil))
+	b.Run("EnabledNoError", run(true, nil, codes.OK))
+	b.Run("EnabledError", run(true, errors.New("export failed"), codes.Unknown))
+	b.Run("Disabled", run(false, nil, codes.OK))
 }
