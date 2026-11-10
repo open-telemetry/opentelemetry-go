@@ -146,6 +146,16 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	// Enable SDK observability.
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
+	// Set up a global MeterProvider to collect the instrumentation metrics.
+	// The ManualReader's instrumentation emits metrics to the global MeterProvider.
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	instrumentationReader := NewManualReader()
+	instrumentationMP := NewMeterProvider(WithReader(instrumentationReader))
+	otel.SetMeterProvider(instrumentationMP)
+	t.Cleanup(func() { _ = instrumentationMP.Shutdown(t.Context()) })
+
 	// ManualReader under test with a fake producer.
 	manualReader := NewManualReader()
 	t.Cleanup(func() { _ = manualReader.Shutdown(t.Context()) })
@@ -156,23 +166,22 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	require.NoError(t, manualReader.Collect(t.Context(), &got))
 
 	// Collect again so we have something to scan through.
+	var secondCollect metricdata.ResourceMetrics
+	require.NoError(t, manualReader.Collect(t.Context(), &secondCollect))
+
+	// Collect the instrumentation metrics from the global MeterProvider.
 	var rm metricdata.ResourceMetrics
-	require.NoError(t, manualReader.Collect(t.Context(), &rm))
+	require.NoError(t, instrumentationReader.Collect(t.Context(), &rm))
 	require.NotEmpty(t, rm.ScopeMetrics)
 
 	targetName := otelconv.SDKMetricReaderCollectionDuration{}.Name()
 	targetDesc := otelconv.SDKMetricReaderCollectionDuration{}.Description()
 	targetUnit := otelconv.SDKMetricReaderCollectionDuration{}.Unit()
 
-	// Find the SDK reader self-metric anywhere in the collected data.
+	// Find the SDK reader self-metric in the instrumentation metrics.
 	foundMetric := findMetricByName(&rm, targetName)
-
-	// If not found, explain and skip (this metric is emitted via the *global* MP).
-	if foundMetric == nil {
-		t.Skipf("SDK reader self-metric %q not found. It is emitted via the global MeterProvider; "+
-			"this test does not install a global MP.", targetName)
-		return
-	}
+	require.NotNil(t, foundMetric,
+		"SDK reader self-metric %q should be found in instrumentation metrics", targetName)
 
 	// Basic identity checks.
 	assert.Equal(t, targetName, foundMetric.Name)
@@ -196,7 +205,7 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	for _, a := range attrs {
 		switch a.Key {
 		case "otel.component.name":
-			if s := a.Value.AsString(); s != "" && strings.Contains(s, "metric_reader") {
+			if s := a.Value.AsString(); s != "" && strings.Contains(s, "metric.ManualReader") {
 				hasName = true
 			}
 		case "otel.component.type":
@@ -205,7 +214,7 @@ func TestManualReaderInstrumentation(t *testing.T) {
 			}
 		}
 	}
-	assert.True(t, hasName, "expected non-empty otel.component.name containing 'metric_reader'")
+	assert.True(t, hasName, "expected non-empty otel.component.name containing 'metric.ManualReader'")
 	assert.True(t, hasType, "expected otel.component.type == %q", expectedComponentType)
 }
 

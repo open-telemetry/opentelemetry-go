@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"testing"
@@ -1215,6 +1217,20 @@ func (l *logSink) String() string {
 }
 
 func TestGlobalInstRegisterCallback(t *testing.T) {
+	const env = "OTEL_TEST_GLOBAL_INST_REGISTER_CALLBACK"
+
+	if os.Getenv(env) != "1" {
+		cmd := exec.Command(
+			os.Args[0],
+			"-test.run=^TestGlobalInstRegisterCallback$",
+		)
+		cmd.Env = append(os.Environ(), env+"=1")
+
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err, "subprocess output:\n%s", output)
+		return
+	}
+
 	l := newLogSink(t)
 	otel.SetLogger(logr.New(l))
 

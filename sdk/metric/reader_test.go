@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -25,6 +26,8 @@ type readerTestSuite struct {
 
 	Factory func(...ReaderOption) Reader
 	Reader  Reader
+
+	originalLogger logr.Logger
 }
 
 func (ts *readerTestSuite) SetupSuite() {
@@ -34,6 +37,10 @@ func (ts *readerTestSuite) SetupSuite() {
 func (ts *readerTestSuite) TearDownTest() {
 	// Ensure Reader is allowed attempt to clean up.
 	_ = ts.Reader.Shutdown(context.Background())
+}
+
+func (ts *readerTestSuite) TearDownSuite() {
+	otel.SetLogger(logr.Discard())
 }
 
 func (ts *readerTestSuite) TestErrorForNotRegistered() {
