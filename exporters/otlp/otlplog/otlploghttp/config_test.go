@@ -407,6 +407,7 @@ func TestNewConfig(t *testing.T) {
 			want: config{
 				endpoint: newSetting(defaultEndpoint),
 				path:     newSetting(endpointPath{Path: defaultPath}),
+				insecure: newSetting(false),
 				timeout:  newSetting(defaultTimeout),
 				retryCfg: newSetting(defaultRetryCfg),
 			},
