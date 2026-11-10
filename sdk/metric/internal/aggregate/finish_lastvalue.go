@@ -79,6 +79,10 @@ func (v *finishLastValuePoint[N]) measureAcquired(
 }
 
 func (v *finishLastValuePoint[N]) finish(t time.Time) {
+	// A delayed Finish must not retire a lifetime created after it began.
+	if t.Before(v.start) {
+		return
+	}
 	v.lifecycle.Finish(t)
 }
 
@@ -131,6 +135,7 @@ func (v *finishLastValuePoint[N]) shutdown(ctx context.Context) error {
 
 // FinishLastValue contains the operations of a finish-aware LastValue aggregation.
 // Finish accepts a post-filter series identity and the timestamp for its final point.
+// Timestamps before the resolved series lifetime began are ignored.
 //
 // Stop disables subsequent Measure, Finish, and ComputeAggregation calls.
 // Wait calls Stop, retires series observed during cleanup, and clears the map.

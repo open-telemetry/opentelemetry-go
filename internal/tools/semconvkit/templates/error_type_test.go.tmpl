@@ -25,6 +25,11 @@ func TestErrorType(t *testing.T) {
 	check(t, fmtWrapped(wrapped(custom(""))), pkg+".wrappedErr")
 	check(t, fmtWrapped(fmtWrapped(custom(""))), pkg+".ErrCustomType")
 	check(t, fmtWrapped(nil), fmtWrapErrorType.String()) // fmt.Errorf with nil error, use concrete type of the wrapper.
+	check(t, errors.Join(nil, custom("")), pkg+".ErrCustomType")
+	check(t, errors.Join(errors.Join(nil, custom("")), nil), pkg+".ErrCustomType")
+	check(t, fmtWrapped(errors.Join(nil, fmtWrapped(custom("")))), pkg+".ErrCustomType")
+	check(t, errors.Join(custom(""), errors.New("other")), errorsJoinType.String()) // multiple errors, use concrete type of the wrapper.
+	check(t, multiWrapped(custom("")), pkg+".multiWrappedErr")                      // custom Unwrap() []error wrapper stays top-level.
 }
 
 func check(t *testing.T, err error, want string) {
@@ -72,4 +77,20 @@ func (e wrappedErr) Error() string {
 
 func (e wrappedErr) Unwrap() error {
 	return e.err
+}
+
+func multiWrapped(errs ...error) error {
+	return multiWrappedErr{errs: errs}
+}
+
+type multiWrappedErr struct {
+	errs []error
+}
+
+func (multiWrappedErr) Error() string {
+	return "multi-wrapped"
+}
+
+func (e multiWrappedErr) Unwrap() []error {
+	return e.errs
 }
