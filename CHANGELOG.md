@@ -50,6 +50,8 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   See the [bridge version compatibility documentation](bridge/opentracing/README.md#version-compatibility). (#9209)
 - Document the concurrency guarantees of the `Exporter` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9244)
 - Upgrade `github.com/cenkalti/backoff` from `v5` to `v7` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9267)
+- `TracerProvider.Shutdown` and `TracerProvider.UnregisterSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` now wait for in-flight `OnStart`, `OnEnd`, and `ForceFlush` calls to complete before invoking the processor's `Shutdown`.
+  As a result, they must no longer be called directly or indirectly from a `SpanProcessor` method, and `Shutdown` returns `ctx.Err()` without shutting down any processor if `ctx` is done while waiting. (#9070)
 
 ### Deprecated
 
@@ -59,11 +61,6 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - The `go.opentelemetry.io/otel/bridge/opencensus` module and package are deprecated.
   v1.48.0 is the final planned release of this module.
   Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#9221)
-
-### Changed
-
-- `TracerProvider.Shutdown` and `TracerProvider.UnregisterSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` now wait for in-flight `OnStart`, `OnEnd`, and `ForceFlush` calls to complete before invoking the processor's `Shutdown`.
-  As a result, they must no longer be called directly or indirectly from a `SpanProcessor` method, and `Shutdown` returns `ctx.Err()` without shutting down any processor if `ctx` is done while waiting. (#9070)
 
 ### Fixed
 
