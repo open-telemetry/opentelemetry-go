@@ -154,3 +154,39 @@ func TestAttrEncoding(t *testing.T) {
 		}
 	]`)))
 }
+
+func TestAttrEncodingEmptyElement(t *testing.T) {
+	attrs := []Attr{
+		Slice("reports", StringValue("Bob"), Value{}),
+		Map("favorites", Attr{Key: "food"}),
+	}
+
+	t.Run("CamelCase", runJSONEncodingTests(attrs, []byte(`[
+		{
+			"key": "reports",
+			"value": {
+				"arrayValue": {
+					"values": [
+						{
+							"stringValue": "Bob"
+						},
+						{}
+					]
+				}
+			}
+		},
+		{
+			"key": "favorites",
+			"value": {
+				"kvlistValue": {
+					"values": [
+						{
+							"key": "food",
+							"value": {}
+						}
+					]
+				}
+			}
+		}
+	]`)))
+}

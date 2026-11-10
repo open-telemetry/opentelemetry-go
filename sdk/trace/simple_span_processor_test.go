@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 type simpleTestExporter struct {
@@ -213,10 +213,12 @@ func TestSimpleSpanProcessorShutdownHonorsContextCancel(t *testing.T) {
 
 func TestSimpleSpanProcessorObservability(t *testing.T) {
 	tests := []struct {
-		name          string
-		enabled       bool
-		exporter      SpanExporter
-		assertMetrics func(t *testing.T, rm metricdata.ResourceMetrics)
+		name              string
+		enabled           bool
+		exporter          SpanExporter
+		sampler           Sampler
+		shutdownBeforeEnd bool
+		assertMetrics     func(t *testing.T, rm metricdata.ResourceMetrics)
 	}{
 		{
 			name:     "Disabled",
@@ -318,6 +320,32 @@ func TestSimpleSpanProcessorObservability(t *testing.T) {
 				)
 			},
 		},
+		{
+			name:     "Enabled, Unsampled span",
+			enabled:  true,
+			exporter: &simpleTestExporter{},
+			sampler:  RecordingOnly(),
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:              "Enabled, After shutdown",
+			enabled:           true,
+			exporter:          &simpleTestExporter{},
+			shutdownBeforeEnd: true,
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:     "Enabled, Nil exporter",
+			enabled:  true,
+			exporter: nil,
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -335,8 +363,19 @@ func TestSimpleSpanProcessorObservability(t *testing.T) {
 			otel.SetMeterProvider(mp)
 
 			ssp := NewSimpleSpanProcessor(test.exporter)
-			tp := basicTracerProvider(t)
+			sampler := test.sampler
+			if sampler == nil {
+				sampler = AlwaysSample()
+			}
+			tp := NewTracerProvider(WithSampler(sampler))
+			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(t, tp.Shutdown(context.Background()))
+			})
 			tp.RegisterSpanProcessor(ssp)
+			if test.shutdownBeforeEnd {
+				require.NoError(t, ssp.Shutdown(t.Context()))
+			}
 			startSpan(tp, test.name).End()
 
 			var rm metricdata.ResourceMetrics

@@ -26,6 +26,8 @@ The configuration can be overridden by [WithEndpoint], [WithEndpointURL], [WithI
 
 OTEL_EXPORTER_OTLP_INSECURE, OTEL_EXPORTER_OTLP_TRACES_INSECURE (default: "false") -
 setting "true" disables client transport security for the exporter's HTTP connection.
+An http or https scheme in OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+takes precedence over this setting.
 OTEL_EXPORTER_OTLP_TRACES_INSECURE takes precedence over OTEL_EXPORTER_OTLP_INSECURE.
 The configuration can be overridden by [WithInsecure] and [WithTLSClientConfig] options.
 
@@ -68,6 +70,9 @@ the transport protocol the exporter uses. For OTLP/HTTP exporters, it indicates 
 Supported value: "http/protobuf", "http/json".
 OTEL_EXPORTER_OTLP_TRACES_PROTOCOL takes precedence over OTEL_EXPORTER_OTLP_PROTOCOL.
 The configuration can be overridden by [WithEncoding] option.
+
+See [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/x] for
+information about the experimental features.
 
 [W3C Baggage HTTP Header Content Format]: https://www.w3.org/TR/baggage/#header-content
 */

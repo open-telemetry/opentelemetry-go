@@ -4,7 +4,6 @@
 package stdoutmetric
 
 import (
-	"encoding/json"
 	"io"
 	"os"
 
@@ -28,12 +27,12 @@ func newConfig(options ...Option) config {
 	}
 
 	if cfg.encoder == nil {
-		enc := json.NewEncoder(os.Stdout)
+		enc := newJSONEncoder(os.Stdout)
 		cfg.encoder = &encoderHolder{encoder: enc}
 	}
 
 	if cfg.prettyPrint {
-		if e, ok := cfg.encoder.encoder.(*json.Encoder); ok {
+		if e, ok := cfg.encoder.encoder.(interface{ SetIndent(prefix, indent string) }); ok {
 			e.SetIndent("", "\t")
 		}
 	}
@@ -73,13 +72,19 @@ func WithEncoder(encoder Encoder) Option {
 
 // WithWriter sets the export stream destination.
 // Using this option overrides any previously set encoder.
+// If w is nil, this option has no effect.
 func WithWriter(w io.Writer) Option {
-	return WithEncoder(json.NewEncoder(w))
+	if w == nil {
+		return WithEncoder(nil)
+	}
+	return optionFunc(func(c config) config {
+		return WithEncoder(newJSONEncoder(w)).apply(c)
+	})
 }
 
 // WithPrettyPrint prettifies the emitted output.
-// This option only works if the encoder is a *json.Encoder, as is the case
-// when using `WithWriter`.
+// This option works with the default encoder, WithWriter, or any encoder
+// passed to WithEncoder that implements SetIndent(prefix, indent string).
 func WithPrettyPrint() Option {
 	return optionFunc(func(c config) config {
 		c.prettyPrint = true

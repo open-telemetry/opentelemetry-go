@@ -1,5 +1,12 @@
 # OpenTelemetry/OpenTracing Bridge
 
+## Deprecation
+
+The `go.opentelemetry.io/otel/bridge/opentracing` module and its packages are deprecated as of v1.48.0.
+v1.48.0 is the final planned release of this module.
+OpenTracing compatibility requirements have been [deprecated in the OpenTelemetry specification](https://opentelemetry.io/blog/2026/deprecating-opentracing-compatibility/).
+Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenTracing](https://opentelemetry.io/docs/compatibility/migration/opentracing/).
+
 ## Getting started
 
 `go get go.opentelemetry.io/otel/bridge/opentracing`
@@ -24,6 +31,21 @@ func main() {
 
 	/* ... */
 }
+```
+
+## Version compatibility
+
+We introduced a compatibility regression in `go.opentelemetry.io/otel` v1.47.0.
+Applications using this release with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 or earlier fail to compile.
+
+We changed the internal baggage representation without preserving compatibility with previously released bridge versions.
+The v1.47.0 bridge includes the corresponding changes.
+
+To restore compilation, upgrade the bridge to v1.47.0.
+The following command selects matching versions of both modules:
+
+```sh
+go get go.opentelemetry.io/otel@v1.47.0 go.opentelemetry.io/otel/bridge/opentracing@v1.47.0
 ```
 
 ## Interop from trace context from OpenTracing to OpenTelemetry

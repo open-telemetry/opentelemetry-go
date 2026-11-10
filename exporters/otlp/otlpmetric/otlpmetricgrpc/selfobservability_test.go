@@ -25,8 +25,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 func TestSelfObservability(t *testing.T) {
@@ -309,7 +309,8 @@ func TestSelfObservability(t *testing.T) {
 
 			exp, err := New(t.Context(),
 				WithEndpoint(tt.endpoint),
-				WithInsecure())
+				WithInsecure(),
+				WithRetry(RetryConfig{Enabled: false}))
 			require.NoError(t, err)
 			ctx := context.Background() //nolint:usetesting // required to avoid getting a canceled context at cleanup.
 			t.Cleanup(func() {

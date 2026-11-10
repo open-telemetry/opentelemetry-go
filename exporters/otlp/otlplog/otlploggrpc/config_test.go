@@ -84,6 +84,14 @@ func TestNewConfig(t *testing.T) {
 
 	dialOptions := []grpc.DialOption{grpc.WithUserAgent("test-agent")}
 
+	// Keep these placeholder URLs from being treated as documentation links.
+	const (
+		httpEndpointURL    = "http" + "://test:8080/path"
+		httpsEndpointURL   = "https" + "://test:8080/path"
+		httpsEndpointURL2  = "https" + "://test/path"
+		ignoredEndpointURL = "http" + "://ignored:9090/alt"
+	)
+
 	testcases := []struct {
 		name    string
 		options []Option
@@ -104,7 +112,7 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{
 				WithInsecure(),
 				WithEndpoint("test"),
-				WithEndpointURL("http://test:8080/path"),
+				WithEndpointURL(httpEndpointURL),
 				WithReconnectionPeriod(time.Second),
 				WithCompressor("gzip"),
 				WithHeaders(headers),
@@ -134,7 +142,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "WithEndpointURL",
 			options: []Option{
-				WithEndpointURL("http://test:8080/path"),
+				WithEndpointURL(httpEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
@@ -146,7 +154,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "EndpointPrecedence",
 			options: []Option{
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 				WithEndpoint("not-test:9090"),
 				WithInsecure(),
 			},
@@ -162,7 +170,7 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{
 				WithEndpoint("not-test:9090"),
 				WithInsecure(),
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
@@ -177,7 +185,7 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "http://env.endpoint:8080/prefix",
 			},
 			options: []Option{
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
@@ -258,7 +266,7 @@ func TestNewConfig(t *testing.T) {
 				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
 			},
 			options: []Option{
-				WithEndpointURL("https://test:8080/path"),
+				WithEndpointURL(httpsEndpointURL),
 			},
 			want: config{
 				endpoint: newSetting("test:8080"),
@@ -270,7 +278,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "EnvironmentVariablesPrecedence",
 			envars: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":           "http://ignored:9090/alt",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":           ignoredEndpointURL,
 				"OTEL_EXPORTER_OTLP_HEADERS":            "b=B",
 				"OTEL_EXPORTER_OTLP_COMPRESSION":        "none",
 				"OTEL_EXPORTER_OTLP_TIMEOUT":            "30000",
@@ -299,7 +307,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "OptionsPrecedence",
 			envars: map[string]string{
-				"OTEL_EXPORTER_OTLP_ENDPOINT":           "http://ignored:9090/alt",
+				"OTEL_EXPORTER_OTLP_ENDPOINT":           ignoredEndpointURL,
 				"OTEL_EXPORTER_OTLP_HEADERS":            "b=B",
 				"OTEL_EXPORTER_OTLP_COMPRESSION":        "none",
 				"OTEL_EXPORTER_OTLP_TIMEOUT":            "30000",
@@ -317,7 +325,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			options: []Option{
 				WithEndpoint("foo"),
-				WithEndpointURL("https://test/path"),
+				WithEndpointURL(httpsEndpointURL2),
 				WithInsecure(),
 				WithTLSCredentials(credentials.NewTLS(tlsCfg)),
 				WithCompressor("gzip"),
@@ -380,6 +388,45 @@ func TestNewConfig(t *testing.T) {
 			},
 			want: config{
 				endpoint: newSetting("env.endpoint:8080"),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "OptionEndpointURLSchemelessAuthorityWithPath",
+			options: []Option{
+				WithInsecure(),
+				WithEndpointURL("//127.0.0.1:4317/prefix"),
+			},
+			want: config{
+				endpoint: newSetting("127.0.0.1:4317"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "LogEndpointSchemelessAuthorityWithPath",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT": "//127.0.0.1:4317/prefix",
+				"OTEL_EXPORTER_OTLP_LOGS_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("127.0.0.1:4317"),
+				insecure: newSetting(true),
+				retryCfg: newSetting(defaultRetryCfg),
+				timeout:  newSetting(defaultTimeout),
+			},
+		},
+		{
+			name: "OTLPEndpointSchemelessAuthorityWithPath",
+			envars: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "//127.0.0.1:4317/prefix",
+				"OTEL_EXPORTER_OTLP_INSECURE": "true",
+			},
+			want: config{
+				endpoint: newSetting("127.0.0.1:4317"),
+				insecure: newSetting(true),
 				retryCfg: newSetting(defaultRetryCfg),
 				timeout:  newSetting(defaultTimeout),
 			},
@@ -514,6 +561,99 @@ func TestNewConfig(t *testing.T) {
 	}
 }
 
+func TestEndpointURLResolverSecurity(t *testing.T) {
+	for _, target := range []string{"dns:///collector:4317", "//collector:4317/path"} {
+		for _, insecure := range []bool{false, true} {
+			cfg := config{insecure: newSetting(insecure)}
+			cfg = WithEndpointURL(target).applyOption(cfg)
+			assert.Equal(t, newSetting(insecure), cfg.insecure)
+		}
+	}
+}
+
+func TestNewConfigUnixEndpoint(t *testing.T) {
+	// Keep these placeholder URLs from being treated as documentation links.
+	const (
+		httpsGeneral = "https" + "://general:4317"
+		httpsLogs    = "https" + "://logs:4317"
+		httpsOption  = "https" + "://option:4317"
+	)
+	for _, scheme := range []string{"unix", "unix-abstract"} {
+		t.Run(scheme, func(t *testing.T) {
+			target := scheme + ":///otel.sock"
+			testcases := []struct {
+				name     string
+				endpoint string
+				logs     string
+				options  []Option
+				want     string
+				insecure bool
+			}{
+				{
+					name:     "GeneralEnvironment",
+					endpoint: target,
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "LogsEnvironment",
+					logs:     target,
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "WithEndpointURL",
+					options:  []Option{WithEndpointURL(target)},
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "LogsUnixOverridesGeneralHTTPS",
+					endpoint: httpsGeneral,
+					logs:     target,
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "LogsHTTPSOverridesGeneralUnix",
+					endpoint: target,
+					logs:     httpsLogs,
+					want:     "logs:4317",
+					insecure: false,
+				},
+				{
+					name:     "OptionUnixOverridesEnvironmentHTTPS",
+					endpoint: httpsGeneral,
+					logs:     httpsLogs,
+					options:  []Option{WithEndpointURL(target)},
+					want:     target,
+					insecure: true,
+				},
+				{
+					name:     "OptionHTTPSOverridesEnvironmentUnix",
+					endpoint: target,
+					logs:     target,
+					options:  []Option{WithEndpointURL(httpsOption)},
+					want:     "option:4317",
+					insecure: false,
+				},
+			}
+			for _, tc := range testcases {
+				t.Run(tc.name, func(t *testing.T) {
+					t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", tc.endpoint)
+					t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", tc.logs)
+					t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "")
+					t.Setenv("OTEL_EXPORTER_OTLP_LOGS_INSECURE", "")
+
+					cfg := newConfig(tc.options)
+					assert.Equal(t, newSetting(tc.want), cfg.endpoint, "endpoint")
+					assert.Equal(t, newSetting(tc.insecure), cfg.insecure, "insecure")
+				})
+			}
+		})
+	}
+}
+
 func assertTLSConfig(t *testing.T, want, got setting[*tls.Config]) {
 	t.Helper()
 
@@ -618,5 +758,45 @@ func TestConvHeaders(t *testing.T) {
 				assert.NoError(t, err, "expected no error but got one")
 			}
 		})
+	}
+}
+
+func TestConvCompressionIsCaseInsensitive(t *testing.T) {
+	tests := []struct {
+		in      string
+		want    Compression
+		wantErr string
+	}{
+		{in: "gzip", want: GzipCompression},
+		{in: "GZIP", want: GzipCompression},
+		{in: "GZip", want: GzipCompression},
+		{in: "none", want: NoCompression},
+		{in: "NONE", want: NoCompression},
+		{in: "NoNe", want: NoCompression},
+		{in: "", want: NoCompression},
+		{in: "xz", wantErr: "unknown compression: xz"},
+		{in: "GZIP ", wantErr: "unknown compression: GZIP "},
+	}
+	for _, tc := range tests {
+		got, err := convCompression(tc.in)
+		if tc.wantErr != "" {
+			if err == nil {
+				t.Errorf("convCompression(%q) = %v, want error", tc.in, got)
+				continue
+			}
+			// The diagnostic must quote what the caller wrote, not the folded
+			// form, so an operator can find the value they actually set.
+			if err.Error() != tc.wantErr {
+				t.Errorf("convCompression(%q) error = %q, want %q", tc.in, err, tc.wantErr)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("convCompression(%q) unexpected error: %v", tc.in, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("convCompression(%q) = %v, want %v", tc.in, got, tc.want)
+		}
 	}
 }

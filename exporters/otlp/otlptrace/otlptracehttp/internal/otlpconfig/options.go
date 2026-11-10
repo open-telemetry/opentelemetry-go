@@ -59,6 +59,7 @@ type (
 		MaxResponseSize int64
 		Timeout         time.Duration
 		URLPath         string
+		URLRawPath      string
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
@@ -102,7 +103,6 @@ func NewHTTPConfig(opts ...HTTPOption) Config {
 	for _, opt := range opts {
 		cfg = opt.ApplyHTTPOption(cfg)
 	}
-	cfg.Traces.URLPath = cleanPath(cfg.Traces.URLPath, DefaultTracesPath)
 	return cfg
 }
 
@@ -303,9 +303,10 @@ func WithEndpointURL(v string) GenericOption {
 
 		cfg.Traces.Endpoint = u.Host
 		cfg.Traces.URLPath = u.Path
+		cfg.Traces.URLRawPath = u.RawPath
 		if cfg.Traces.URLPath == "" {
-			// For HTTP exporters, a URL without a path targets the root path. Set it explicitly so the default signal
-			// path is not appended by cleanPath. (URLPath is ignored by gRPC exporters.)
+			// For HTTP exporters, a URL without a path targets the root path.
+			// URLPath is ignored by gRPC exporters.
 			cfg.Traces.URLPath = "/"
 		}
 		cfg.Traces.Insecure = u.Scheme != "https"
@@ -324,7 +325,11 @@ func WithCompression(compression Compression) GenericOption {
 
 // WithURLPath configures the URL path the exporter sends requests to.
 func WithURLPath(urlPath string) GenericOption {
-	return newGenericOption(func(cfg Config) Config {
+	return newSplitOption(func(cfg Config) Config {
+		cfg.Traces.URLPath = cleanPath(urlPath, DefaultTracesPath)
+		cfg.Traces.URLRawPath = ""
+		return cfg
+	}, func(cfg Config) Config {
 		cfg.Traces.URLPath = urlPath
 		return cfg
 	})
