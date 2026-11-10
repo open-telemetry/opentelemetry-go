@@ -26,7 +26,11 @@ const (
 )
 
 // expoHistogramDataPoint is a single data point in an exponential histogram.
-// Access to its fields during record, merge, reset, and uploadTo is synchronized by mu.
+// For maxSize > 2, record uses wg for lockless fast-path bucket increments and
+// mu + wg.swapHotAndWait for slow-path slice growth and scale downscaling, while
+// callers drain concurrent record calls via the outer aggregator hotColdWaitGroup
+// before calling merge, reset, or uploadTo.
+// For maxSize <= 2, record, merge, reset, and uploadTo are serialized by mu.
 type expoHistogramDataPoint[N int64 | float64] struct {
 	attrs         attribute.Set
 	res           FilteredExemplarReservoir[N]
@@ -40,6 +44,7 @@ type expoHistogramDataPoint[N int64 | float64] struct {
 	noSum    bool
 
 	mu sync.Mutex
+	wg hotColdWaitGroup
 
 	scale atomic.Int32
 
@@ -88,12 +93,73 @@ func (p *expoHistogramDataPoint[N]) reset(startTime time.Time, maxScale int32) {
 
 // record adds a new measurement to the histogram. It will rescale the buckets if needed.
 func (p *expoHistogramDataPoint[N]) record(v N) {
+	if p.maxSize <= 2 {
+		p.recordLocked(v)
+		return
+	}
+
+	if !p.noMinMax {
+		p.minMax.Update(v)
+	}
+	if !p.noSum {
+		p.sum.add(v)
+	}
+
+	absV := math.Abs(float64(v))
+	if absV == 0.0 {
+		p.zeroCount.Add(1)
+		return
+	}
+
+	bucket := &p.posBuckets
+	if v < 0 {
+		bucket = &p.negBuckets
+	}
+
+	idx := p.wg.start()
+	if idx == 0 {
+		ok := bucket.tryRecord(p.getBin(absV), 1, p.maxSize)
+		p.wg.done(0)
+		if ok {
+			return
+		}
+	} else {
+		p.wg.done(idx)
+	}
+
+	p.recordSlow(absV, bucket)
+}
+
+func (p *expoHistogramDataPoint[N]) recordSlow(absV float64, bucket *expoBuckets) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if bucket.tryRecord(p.getBin(absV), 1, p.maxSize) {
+		return
+	}
+
+	_ = p.wg.swapHotAndWait()
+
+	startBin, length := bucket.loadBounds()
+	bin := p.getBin(absV)
+	if scaleDelta := p.scaleChange(bin, startBin, int(length)); scaleDelta > 0 {
+		p.scale.Add(-scaleDelta)
+		p.posBuckets.downscale(scaleDelta)
+		p.negBuckets.downscale(scaleDelta)
+		bin = p.getBin(absV)
+	}
+	bucket.record(bin)
+
+	_ = p.wg.swapHotAndWait()
+}
+
+func (p *expoHistogramDataPoint[N]) recordLocked(v N) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	absV := math.Abs(float64(v))
 
-	if float64(absV) == 0.0 {
+	if absV == 0.0 {
 		p.zeroCount.Add(1)
 		if !p.noMinMax {
 			p.minMax.Update(v)
@@ -113,7 +179,8 @@ func (p *expoHistogramDataPoint[N]) record(v N) {
 
 	// If the new bin would make the counts larger than maxScale, we need to
 	// downscale current measurements.
-	if scaleDelta := p.scaleChange(bin, bucket.startBin, int(bucket.length)); scaleDelta > 0 {
+	startBin, length := bucket.loadBounds()
+	if scaleDelta := p.scaleChange(bin, startBin, int(length)); scaleDelta > 0 {
 		currentScale := p.scale.Load()
 		if currentScale-scaleDelta < expoMinScale {
 			// With a scale of -10 there is only two buckets for the whole range of float64 values.
@@ -218,14 +285,33 @@ const minBucketCapacity = 1
 
 // expoBuckets is a circular buffer of bucket counts in an exponential histogram.
 //
-// The logical range is [startBin, startBin + length - 1].
+// The logical range is [startBin, startBin + length - 1], packed into bounds.
 // Physical storage is counts []atomic.Uint64 with len(counts) always a power of 2 (or nil when unallocated).
 // Indexing into counts uses bitwise AND mask: int(bin) & (len(counts)-1).
 // Invariant: every slot in counts outside the logical range holds zero.
 type expoBuckets struct {
-	startBin int32
-	length   int32
-	counts   []atomic.Uint64
+	// bounds packs startBin (upper 32 bits) and length (lower 32 bits).
+	bounds atomic.Uint64
+	counts []atomic.Uint64
+}
+
+func packBounds(startBin, length int32) uint64 {
+	//nolint:gosec // intentional bit-packing of signed int32 values
+	return (uint64(uint32(startBin)) << 32) | uint64(uint32(length))
+}
+
+func (b *expoBuckets) loadBounds() (startBin, length int32) {
+	v := b.bounds.Load()
+	//nolint:gosec // intentional bit-unpacking into signed int32 values
+	return int32(uint32(v >> 32)), int32(uint32(v))
+}
+
+func (b *expoBuckets) storeBounds(startBin, length int32) {
+	b.bounds.Store(packBounds(startBin, length))
+}
+
+func (b *expoBuckets) swapBounds(oldStart, oldLen, newStart, newLen int32) bool {
+	return b.bounds.CompareAndSwap(packBounds(oldStart, oldLen), packBounds(newStart, newLen))
 }
 
 // index returns the slot in counts for bin. It requires len(b.counts) > 0.
@@ -233,20 +319,9 @@ func (b *expoBuckets) index(bin int32) int {
 	return int(bin) & (len(b.counts) - 1)
 }
 
-// at returns a pointer to the i-th bucket count (0 <= i < b.length),
-// corresponding to logical bin (b.startBin + i).
-func (b *expoBuckets) at(i int32) *atomic.Uint64 {
-	return &b.counts[b.index(b.startBin+i)]
-}
-
 // bin returns a pointer to the bucket count for the given logical bin.
 func (b *expoBuckets) bin(bin int32) *atomic.Uint64 {
 	return &b.counts[b.index(bin)]
-}
-
-// endBin returns the last logical bin in the bucket range.
-func (b *expoBuckets) endBin() int32 {
-	return b.startBin + b.length - 1
 }
 
 func nextPowerOf2(n int32) int {
@@ -263,11 +338,56 @@ func nextPowerOf2(n int32) int {
 }
 
 func (b *expoBuckets) clear() {
-	for i := range b.length {
-		b.at(i).Store(0)
+	startBin, length := b.loadBounds()
+	for i := range length {
+		b.bin(startBin + i).Store(0)
 	}
-	b.startBin = 0
-	b.length = 0
+	b.storeBounds(0, 0)
+}
+
+// tryRecord attempts to record count into bin without reallocating counts or rescaling.
+// It returns true if the measurement was recorded (either within the current bounds or
+// by atomically expanding bounds within the existing counts capacity and maxSize),
+// and false if counts must be grown or the histogram must be downscaled.
+func (b *expoBuckets) tryRecord(bin int32, count uint64, maxSize int) bool {
+	if count == 0 {
+		return true
+	}
+	if len(b.counts) == 0 {
+		return false
+	}
+	for {
+		startBin, length := b.loadBounds()
+		if length == 0 {
+			if maxSize < 1 {
+				return false
+			}
+			if b.swapBounds(startBin, 0, bin, 1) {
+				b.bin(bin).Add(count)
+				return true
+			}
+			continue
+		}
+
+		endBin := startBin + length - 1
+		if bin >= startBin && bin <= endBin {
+			b.bin(bin).Add(count)
+			return true
+		}
+
+		newStartBin := min(bin, startBin)
+		newEndBin := max(bin, endBin)
+		newLength := int64(newEndBin) - int64(newStartBin) + 1
+		if newLength > int64(len(b.counts)) || newLength > int64(maxSize) {
+			return false
+		}
+
+		//nolint:gosec // newLength <= maxSize fits in int32
+		if b.swapBounds(startBin, length, newStartBin, int32(newLength)) {
+			b.bin(bin).Add(count)
+			return true
+		}
+	}
 }
 
 // record increments the count for the given bin, and expands the buckets if needed.
@@ -280,75 +400,74 @@ func (b *expoBuckets) recordCount(bin int32, count uint64) {
 	if count == 0 {
 		return
 	}
-	if b.length == 0 {
+	startBin, length := b.loadBounds()
+	if length == 0 {
 		if len(b.counts) == 0 {
 			b.counts = make([]atomic.Uint64, minBucketCapacity)
 		}
-		b.startBin = bin
-		b.length = 1
+		b.storeBounds(bin, 1)
 		b.bin(bin).Store(count)
 		return
 	}
 
-	endBin := b.endBin()
-	if bin >= b.startBin && bin <= endBin {
+	endBin := startBin + length - 1
+	if bin >= startBin && bin <= endBin {
 		b.bin(bin).Add(count)
 		return
 	}
 
-	var newStartBin, newEndBin int32
-	if bin < b.startBin {
-		newStartBin = bin
-		newEndBin = endBin
-	} else {
-		newStartBin = b.startBin
-		newEndBin = bin
-	}
+	newStartBin := min(bin, startBin)
+	newEndBin := max(bin, endBin)
 	newLength := newEndBin - newStartBin + 1
 
 	if int(newLength) > len(b.counts) {
 		newCap := nextPowerOf2(newLength)
 		newCounts := make([]atomic.Uint64, newCap)
 		mask := newCap - 1
-		for i := range b.length {
-			if val := b.at(i).Load(); val > 0 {
-				oldBin := b.startBin + i
+		for i := range length {
+			oldBin := startBin + i
+			if val := b.bin(oldBin).Load(); val > 0 {
 				newCounts[int(oldBin)&mask].Store(val)
 			}
 		}
 		b.counts = newCounts
 	}
 
-	b.startBin = newStartBin
-	b.length = newLength
+	b.storeBounds(newStartBin, newLength)
 	b.bin(bin).Add(count)
 }
 
 func (b *expoBuckets) uploadTo(dest *metricdata.ExponentialBucket) {
-	dest.Offset = b.startBin
-	dest.Counts = reset(dest.Counts, int(b.length), int(b.length))
-	for i := range b.length {
-		dest.Counts[i] = b.at(i).Load()
+	startBin, length := b.loadBounds()
+	dest.Offset = startBin
+	dest.Counts = reset(dest.Counts, int(length), int(length))
+	for i := range length {
+		dest.Counts[i] = b.bin(startBin + i).Load()
 	}
 }
 
 func (b *expoBuckets) merge(other *expoBuckets) {
-	if other.length == 0 {
+	otherStart, otherLen := other.loadBounds()
+	if otherLen == 0 {
 		return
 	}
-	for i := range other.length {
-		if c := other.at(i).Load(); c > 0 {
-			b.recordCount(other.startBin+i, c)
+	for i := range otherLen {
+		if c := other.bin(otherStart + i).Load(); c > 0 {
+			b.recordCount(otherStart+i, c)
 		}
 	}
 }
 
 func (p *expoHistogramDataPoint[N]) mergeScaleDelta(b, other *expoBuckets, bShift, oShift int32) int32 {
-	if b.length == 0 || other.length == 0 {
+	bStart, bLen := b.loadBounds()
+	oStart, oLen := other.loadBounds()
+	if bLen == 0 || oLen == 0 {
 		return 0
 	}
-	minBin := min(b.startBin>>bShift, other.startBin>>oShift)
-	maxBin := max(b.endBin()>>bShift, other.endBin()>>oShift)
+	bEnd := bStart + bLen - 1
+	oEnd := oStart + oLen - 1
+	minBin := min(bStart>>bShift, oStart>>oShift)
+	maxBin := max(bEnd>>bShift, oEnd>>oShift)
 	return p.scaleChange(maxBin, minBin, 1)
 }
 
@@ -436,12 +555,14 @@ func (p *expoHistogramDataPoint[N]) uploadTo(
 // downscale shrinks a bucket by a factor of 2^delta. It will sum counts into the
 // correct lower resolution bucket.
 func (b *expoBuckets) downscale(delta int32) {
-	if b.length == 0 || delta < 1 {
+	startBin, length := b.loadBounds()
+	if length == 0 || delta < 1 {
 		return
 	}
 
-	newStartBin := b.startBin >> delta
-	newEndBin := b.endBin() >> delta
+	endBin := startBin + length - 1
+	newStartBin := startBin >> delta
+	newEndBin := endBin >> delta
 	newLength := newEndBin - newStartBin + 1
 
 	// stackScratch is sized to defaultMaxSize/2 + 1 (81), the maximum possible
@@ -455,28 +576,28 @@ func (b *expoBuckets) downscale(delta int32) {
 		scratch = make([]uint64, newLength)
 	}
 
-	for i := range b.length {
-		slot := b.at(i)
+	for i := range length {
+		slot := b.bin(startBin + i)
 		if val := slot.Load(); val > 0 {
-			newBin := (b.startBin + i) >> delta
+			newBin := (startBin + i) >> delta
 			scratch[newBin-newStartBin] += val
 			slot.Store(0)
 		}
 	}
 
-	b.startBin = newStartBin
-	b.length = newLength
+	b.storeBounds(newStartBin, newLength)
 	for i := range newLength {
 		if val := scratch[i]; val > 0 {
-			b.at(i).Store(val)
+			b.bin(newStartBin + i).Store(val)
 		}
 	}
 }
 
 func (b *expoBuckets) count() uint64 {
+	startBin, length := b.loadBounds()
 	var total uint64
-	for i := range b.length {
-		total += b.at(i).Load()
+	for i := range length {
+		total += b.bin(startBin + i).Load()
 	}
 	return total
 }
