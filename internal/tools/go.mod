@@ -86,7 +86,7 @@ require (
 	github.com/firefart/nonamedreturns v1.0.8 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
-	github.com/ghostiam/protogetter v1.0.1 // indirect
+	github.com/ghostiam/protogetter v1.0.2 // indirect
 	github.com/go-critic/go-critic v0.15.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.9.2 // indirect
@@ -100,7 +100,7 @@ require (
 	github.com/go-toolsmith/typep v1.1.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/go-xmlfmt/xmlfmt v1.1.3 // indirect
-	github.com/gobwas/glob v0.2.3 // indirect
+	github.com/gobwas/glob v1.0.0 // indirect
 	github.com/godoc-lint/godoc-lint v0.11.4 // indirect
 	github.com/gofrs/flock v0.13.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
