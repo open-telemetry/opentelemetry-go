@@ -311,13 +311,15 @@ func TestWithMeterConfiguratorNilHandle(t *testing.T) {
 	_, ok := opt.(experimental)
 	assert.True(t, ok, "must implement Experimental() so newConfig skips it")
 
-	// Without the configurator methods, the MeterProvider never selects it.
-	_, ok = opt.(meterConfiguratorOptionExtractor)
-	assert.False(t, ok, "a nil handle must not provide a configurator")
-	_, ok = opt.(meterConfiguratorOnUpdateRegistrar)
-	assert.False(t, ok, "a nil handle must not register for updates")
-	_, ok = opt.(meterConfiguratorUnregistrar)
-	assert.False(t, ok, "a nil handle must not unregister")
+	// The MeterProvider skips an option that does not report enabled.
+	type enabler interface{ MeterConfiguratorEnabled() bool }
+	e, ok := opt.(enabler)
+	require.True(t, ok, "a nil handle must keep the configurator option type")
+	assert.False(t, e.MeterConfiguratorEnabled(), "a nil handle must not enable a configurator")
+
+	e, ok = WithMeterConfigurator(NewMeterConfiguratorHandle()).(enabler)
+	require.True(t, ok)
+	assert.True(t, e.MeterConfiguratorEnabled(), "a non-nil handle must enable a configurator")
 }
 
 func TestMeterConfiguratorHandleSetNilClears(t *testing.T) {

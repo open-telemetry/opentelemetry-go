@@ -5,6 +5,7 @@ package x
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -368,20 +369,30 @@ func TestGatingInstrumentIdentity(t *testing.T) {
 }
 
 func TestGatingNilHandleDoesNotOverride(t *testing.T) {
-	h := NewMeterConfiguratorHandle()
-	gatingSetAll(h, false)
-	rdr := sdkmetric.NewManualReader()
-	mp := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(rdr),
-		WithMeterConfigurator(h),
-		WithMeterConfigurator(nil),
-	)
+	for _, enabled := range []bool{true, false} {
+		for _, nilFirst := range []bool{true, false} {
+			t.Run(fmt.Sprintf("enabled=%t/nilFirst=%t", enabled, nilFirst), func(t *testing.T) {
+				h := NewMeterConfiguratorHandle()
+				gatingSetAll(h, enabled)
+				opts := []sdkmetric.Option{WithMeterConfigurator(h), WithMeterConfigurator(nil)}
+				if nilFirst {
+					opts[0], opts[1] = opts[1], opts[0]
+				}
+				rdr := sdkmetric.NewManualReader()
+				mp := sdkmetric.NewMeterProvider(append(opts, sdkmetric.WithReader(rdr))...)
 
-	c, err := mp.Meter("scope").Int64Counter("counter")
-	require.NoError(t, err)
-	c.Add(t.Context(), 1)
+				c, err := mp.Meter("scope").Int64Counter("counter")
+				require.NoError(t, err)
+				c.Add(t.Context(), 1)
 
-	assert.Zero(t, gatingPoints(t, rdr)["counter"], "a nil handle must not replace an earlier handle")
+				want := 0
+				if enabled {
+					want = 1
+				}
+				assert.Equal(t, want, gatingPoints(t, rdr)["counter"], "a nil handle must not affect another handle")
+			})
+		}
+	}
 }
 
 func TestGatingNilHandleIsStable(t *testing.T) {

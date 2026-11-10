@@ -41,7 +41,7 @@ func TestExperimentalMeterFactoryChecksAllOptions(t *testing.T) {
 	for _, enabled := range [][]bool{{true, false}, {false, true}, {true, true}} {
 		t.Run(fmt.Sprint(enabled), func(t *testing.T) {
 			checked := 0
-			options := []Option{testExperimentalOption{}}
+			var options []Option
 			for _, value := range enabled {
 				options = append(options, testObservedFinishOption{
 					testFinishOption: testFinishOption(value),
