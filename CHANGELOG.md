@@ -9,6 +9,10 @@ with further details in the [versioning policy](VERSIONING.md).
 
 ## [Unreleased]
 
+This release contains the first stable release of the OpenTelemetry Go stdout log exporter.
+Our project stability guarantees now apply to the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module.
+See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
+
 ### Added
 
 - Add experimental `WithFinish` support for `Int64UpDownCounter` and `Float64UpDownCounter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9251)
@@ -28,10 +32,14 @@ with further details in the [versioning policy](VERSIONING.md).
 
 ### Changed
 
+- Stabilize the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module.
+  The exporter's output format may still change, as documented in the [package documentation](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/stdout/stdoutlog). (#9472)
 - `ErrorType` in `go.opentelemetry.io/otel/semconv/v1.44.0` now unwraps single-error `errors.Join` wrappers when deriving the `error.type` attribute. (#9466)
 - `go.opentelemetry.io/otel/sdk/log` now unwraps single-error `errors.Join` wrappers when deriving the `exception.type` attribute from errors on log records. (#9466)
+- Clarify in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` that the exporter is intended for testing and debugging and its output format has no stability or compatibility guarantees. (#9473)
 - Document the concurrency guarantees of the `Exporter` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9444)
 - Clarify the security-related versioning exception by linking to the OpenTelemetry client specification. (#9436)
+- Emit attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9307)
 - Emit attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`.
   The default JSON encoder rejects unsupported aggregation types with an explicit error. (#9308)
 - Support custom encoders implementing `SetIndent` with `WithPrettyPrint` in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#9308)
@@ -61,6 +69,7 @@ with further details in the [versioning policy](VERSIONING.md).
 - Ignore delayed Finish calls that predate a Sum series lifetime in `go.opentelemetry.io/otel/sdk/metric`. (#9252)
 - Align gRPC endpoint URL handling across `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. Preserve Unix socket targets configured through `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`, or `WithEndpointURL`, resolver targets, and scheme-less URLs with an authority using only the host and port, while retaining the configured transport security for URL options with unknown or empty schemes. (#9331)
 - Skip measurement preparation and recording for disabled observability instruments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#9318)
+- Export non-finite floating-point values as strings in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9307)
 - Export non-finite floating-point values as strings in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#9308)
 - Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Interpret OTLP log exporter compression environment variables case-insensitively in
