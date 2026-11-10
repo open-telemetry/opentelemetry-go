@@ -215,9 +215,6 @@ func TestManualReaderInstrumentation(t *testing.T) {
 
 	assert.True(t, hasName, "unexpected otel.component.name format")
 	assert.True(t, hasType, "unexpected otel.component.type")
-
-	assert.True(t, hasName, "unexpected otel.component.name")
-	assert.True(t, hasType, "unexpected otel.component.type")
 }
 
 // findMetricByName searches all scopes/metrics for the given metric name.
