@@ -477,7 +477,15 @@ func TestJSONAggregationShapes(t *testing.T) {
 		want string
 	}{
 		{"nil", nil, `null`},
-		{"typed-nil", (*metricdata.Gauge[float64])(nil), `null`},
+		{"nil-int-gauge", (*metricdata.Gauge[int64])(nil), `null`},
+		{"nil-float-gauge", (*metricdata.Gauge[float64])(nil), `null`},
+		{"nil-int-sum", (*metricdata.Sum[int64])(nil), `null`},
+		{"nil-float-sum", (*metricdata.Sum[float64])(nil), `null`},
+		{"nil-int-histogram", (*metricdata.Histogram[int64])(nil), `null`},
+		{"nil-float-histogram", (*metricdata.Histogram[float64])(nil), `null`},
+		{"nil-int-exponential-histogram", (*metricdata.ExponentialHistogram[int64])(nil), `null`},
+		{"nil-float-exponential-histogram", (*metricdata.ExponentialHistogram[float64])(nil), `null`},
+		{"nil-summary", (*metricdata.Summary)(nil), `null`},
 		{"nil-points", metricdata.Gauge[int64]{}, `{"DataPoints":null}`},
 		{"empty-points", metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{}}, `{"DataPoints":[]}`},
 		{"empty-attributes", metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{}, {Attributes: attribute.NewSet(), Exemplars: []metricdata.Exemplar[int64]{}}}}, `{"DataPoints":[{"Attributes":{},"StartTime":"0001-01-01T00:00:00Z","Time":"0001-01-01T00:00:00Z","Value":0},{"Attributes":{},"StartTime":"0001-01-01T00:00:00Z","Time":"0001-01-01T00:00:00Z","Value":0}]}`},
@@ -491,6 +499,39 @@ func TestJSONAggregationShapes(t *testing.T) {
 				scope := doc["ScopeMetrics"].([]any)[0].(map[string]any)
 				got := scope["Metrics"].([]any)[0].(map[string]any)["Data"]
 				assert.Equal(t, decodeJSON(t, []byte(tc.want)), got)
+			})
+		})
+	}
+}
+
+type unsupportedAggregation struct {
+	metricdata.Aggregation
+	Value float64
+}
+
+func TestJSONUnsupportedAggregation(t *testing.T) {
+	for name, data := range map[string]metricdata.Aggregation{
+		"finite":    unsupportedAggregation{Value: 1},
+		"NaN":       unsupportedAggregation{Value: math.NaN()},
+		"Infinity":  unsupportedAggregation{Value: math.Inf(1)},
+		"-Infinity": unsupportedAggregation{Value: math.Inf(-1)},
+		"typed-nil": (*unsupportedAggregation)(nil),
+	} {
+		t.Run(name, func(t *testing.T) {
+			outputModes(t, func(t *testing.T, opts []stdoutmetric.Option) {
+				var out bytes.Buffer
+				exp, err := stdoutmetric.New(append(opts, stdoutmetric.WithWriter(&out))...)
+				require.NoError(t, err)
+				rm := &metricdata.ResourceMetrics{
+					ScopeMetrics: []metricdata.ScopeMetrics{{Metrics: []metricdata.Metrics{{Data: data}}}},
+				}
+				err = exp.Export(t.Context(), rm)
+				require.ErrorContains(t, err, "unsupported aggregation type")
+				assert.Contains(t, err.Error(), "stdoutmetric_test.unsupportedAggregation")
+				assert.Empty(t, out.String())
+				rm.ScopeMetrics[0].Metrics[0].Data = metricdata.Gauge[int64]{}
+				require.NoError(t, exp.Export(t.Context(), rm))
+				assert.True(t, json.Valid(out.Bytes()))
 			})
 		})
 	}
@@ -577,6 +618,33 @@ func TestNonFiniteCustomEncoder(t *testing.T) {
 	require.NoError(t, err)
 	assert.Error(t, exp.Export(t.Context(), rm))
 	assert.Empty(t, out.String())
+}
+
+type indentEncoder struct{ *json.Encoder }
+
+func TestPrettyPrintCustomEncoder(t *testing.T) {
+	var out bytes.Buffer
+	exp, err := stdoutmetric.New(
+		stdoutmetric.WithEncoder(indentEncoder{Encoder: json.NewEncoder(&out)}),
+		stdoutmetric.WithPrettyPrint(),
+	)
+	require.NoError(t, err)
+	require.NoError(t, exp.Export(t.Context(), new(metricdata.ResourceMetrics)))
+	assert.Equal(t, "{\n\t\"Resource\": null,\n\t\"ScopeMetrics\": null\n}\n", out.String())
+}
+
+func TestWriterOptionReuse(t *testing.T) {
+	var out bytes.Buffer
+	writer := stdoutmetric.WithWriter(&out)
+	compact, err := stdoutmetric.New(writer)
+	require.NoError(t, err)
+	pretty, err := stdoutmetric.New(writer, stdoutmetric.WithPrettyPrint())
+	require.NoError(t, err)
+	require.NoError(t, compact.Export(t.Context(), new(metricdata.ResourceMetrics)))
+	assert.Equal(t, "{\"Resource\":null,\"ScopeMetrics\":null}\n", out.String())
+	out.Reset()
+	require.NoError(t, pretty.Export(t.Context(), new(metricdata.ResourceMetrics)))
+	assert.Equal(t, "{\n\t\"Resource\": null,\n\t\"ScopeMetrics\": null\n}\n", out.String())
 }
 
 type errorWriter struct {

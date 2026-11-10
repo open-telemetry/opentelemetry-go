@@ -4,7 +4,6 @@
 package stdoutmetric
 
 import (
-	"encoding/json"
 	"io"
 	"os"
 
@@ -33,10 +32,7 @@ func newConfig(options ...Option) config {
 	}
 
 	if cfg.prettyPrint {
-		switch e := cfg.encoder.encoder.(type) {
-		case *json.Encoder:
-			e.SetIndent("", "\t")
-		case *jsonEncoder:
+		if e, ok := cfg.encoder.encoder.(interface{ SetIndent(prefix, indent string) }); ok {
 			e.SetIndent("", "\t")
 		}
 	}
@@ -82,14 +78,13 @@ func WithWriter(w io.Writer) Option {
 		return WithEncoder(nil)
 	}
 	return optionFunc(func(c config) config {
-		c.encoder = &encoderHolder{encoder: newJSONEncoder(w)}
-		return c
+		return WithEncoder(newJSONEncoder(w)).apply(c)
 	})
 }
 
 // WithPrettyPrint prettifies the emitted output.
-// This option works with the default encoder, WithWriter, or a *json.Encoder
-// passed to WithEncoder.
+// This option works with the default encoder, WithWriter, or any encoder
+// passed to WithEncoder that implements SetIndent(prefix, indent string).
 func WithPrettyPrint() Option {
 	return optionFunc(func(c config) config {
 		c.prettyPrint = true
