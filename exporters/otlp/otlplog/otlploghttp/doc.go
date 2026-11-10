@@ -39,6 +39,8 @@ The configuration can be overridden by the [WithHeaders] option.
 
 OTEL_EXPORTER_OTLP_TIMEOUT, OTEL_EXPORTER_OTLP_LOGS_TIMEOUT (default: "10000") -
 maximum time in milliseconds the OTLP exporter waits for each batch export.
+Values must be nonnegative integers representable as a [time.Duration].
+Invalid values are reported to the OpenTelemetry error handler and ignored.
 OTEL_EXPORTER_OTLP_LOGS_TIMEOUT takes precedence over OTEL_EXPORTER_OTLP_TIMEOUT.
 The configuration can be overridden by the [WithTimeout] option.
 
