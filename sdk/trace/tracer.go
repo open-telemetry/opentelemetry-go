@@ -59,7 +59,10 @@ func (tr *tracer) Start(
 			// trace.ContextWithSpan.
 			o.setOrigCtx(newCtx)
 		}
-		psc := trace.SpanContextFromContext(ctx)
+		var psc trace.SpanContext
+		if !config.NewRoot() {
+			psc = trace.SpanContextFromContext(ctx)
+		}
 		tr.inst.SpanStarted(newCtx, psc, s)
 	}
 
