@@ -62,6 +62,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Fixed
 
+- Do not record a duplicate `otel.sdk.metric_reader.collection.duration` measurement per scrape in `go.opentelemetry.io/otel/exporters/prometheus` when `OTEL_GO_X_OBSERVABILITY=true`. (#9462)
 - Record `otel.span.parent.origin` as `"none"` on `otel.sdk.span.started` when a span is started with `trace.WithNewRoot` in `go.opentelemetry.io/otel/sdk/trace`. (#9453)
 - Do not record a `queue_full` span drop on `otel.sdk.processor.span.processed` when `BatchSpanProcessor.ForceFlush` is canceled while the queue is full in `go.opentelemetry.io/otel/sdk/trace`. (#9461)
 - Record `otel.sdk.processor.span.processed` in `SimpleSpanProcessor.OnEnd` only when exporting a sampled span in `go.opentelemetry.io/otel/sdk/trace`. (#9460)
