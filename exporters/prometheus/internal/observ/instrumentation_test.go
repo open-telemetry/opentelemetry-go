@@ -56,6 +56,10 @@ func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (map
 	return nil, m.err
 }
 
+func TestComponentName(t *testing.T) {
+	assert.Equal(t, "prometheus_http_text_metric_exporter/0", observ.ComponentName(ID))
+}
+
 func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 	orig := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
@@ -108,7 +112,7 @@ func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetric
 func set(err error) attribute.Set {
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(observ.ComponentName(ID)),
-		semconv.OTelComponentTypeKey.String(observ.ComponentType),
+		semconv.OTelComponentTypePrometheusHTTPTextMetricExporter,
 	}
 	if err != nil {
 		attrs = append(attrs, semconv.ErrorType(err))
