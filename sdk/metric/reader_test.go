@@ -38,6 +38,7 @@ func (ts *readerTestSuite) TearDownTest() {
 }
 
 func (*readerTestSuite) TearDownSuite() {
+	// Prevent the global logger from retaining the suite's testing.T after teardown.
 	otel.SetLogger(logr.Discard())
 }
 

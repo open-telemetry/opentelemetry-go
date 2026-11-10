@@ -6,6 +6,7 @@ package metric
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -165,10 +166,6 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	var got metricdata.ResourceMetrics
 	require.NoError(t, manualReader.Collect(t.Context(), &got))
 
-	// Collect again so we have something to scan through.
-	var secondCollect metricdata.ResourceMetrics
-	require.NoError(t, manualReader.Collect(t.Context(), &secondCollect))
-
 	// Collect the instrumentation metrics from the global MeterProvider.
 	var rm metricdata.ResourceMetrics
 	require.NoError(t, instrumentationReader.Collect(t.Context(), &rm))
@@ -194,28 +191,33 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	assert.Equal(t, metricdata.CumulativeTemporality, hist.Temporality)
 	require.NotEmpty(t, hist.DataPoints)
 
-	// Check base attributes on one datapoint (flexibly).
+	// Check base attributes on one datapoint.
 	dp := hist.DataPoints[0]
 	attrs := dp.Attributes.ToSlice()
-	t.Logf("observability attrs: %v", attrs)
 
-	const expectedComponentType = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
+	const (
+		expectedComponentNamePrefix = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader/"
+		expectedComponentType       = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
+	)
 
 	var hasName, hasType bool
 	for _, a := range attrs {
 		switch a.Key {
 		case "otel.component.name":
-			if s := a.Value.AsString(); s != "" && strings.Contains(s, "metric.ManualReader") {
-				hasName = true
-			}
+			name := a.Value.AsString()
+			instanceID, err := strconv.Atoi(strings.TrimPrefix(name, expectedComponentNamePrefix))
+			hasName = strings.HasPrefix(name, expectedComponentNamePrefix) &&
+				err == nil && instanceID > 0
 		case "otel.component.type":
-			if a.Value.AsString() == expectedComponentType {
-				hasType = true
-			}
+			hasType = a.Value.AsString() == expectedComponentType
 		}
 	}
-	assert.True(t, hasName, "expected non-empty otel.component.name containing 'metric.ManualReader'")
-	assert.True(t, hasType, "expected otel.component.type == %q", expectedComponentType)
+
+	assert.True(t, hasName, "unexpected otel.component.name format")
+	assert.True(t, hasType, "unexpected otel.component.type")
+
+	assert.True(t, hasName, "unexpected otel.component.name")
+	assert.True(t, hasType, "unexpected otel.component.type")
 }
 
 // findMetricByName searches all scopes/metrics for the given metric name.
