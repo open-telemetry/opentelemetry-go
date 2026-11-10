@@ -598,6 +598,17 @@ func convPath(s string) (endpointPath, error) {
 	return p, nil
 }
 
+// convInsecure converts s from a string to a bool without case sensitivity.
+// If s is invalid, it returns an error.
+func convInsecure(s string) (bool, error) {
+	s = strings.ToLower(s)
+	if s != "true" && s != "false" {
+		return false, fmt.Errorf("can't convert %q to bool", s)
+	}
+
+	return s == "true", nil
+}
+
 // loadInsecureFromEnv resolves the first nonempty Boolean value. Invalid values
 // resolve to false instead of falling back to a lower-priority variable.
 func loadInsecureFromEnv(keys []string) resolver[bool] {
@@ -607,14 +618,9 @@ func loadInsecureFromEnv(keys []string) resolver[bool] {
 		}
 
 		for _, key := range keys {
-			if value := os.Getenv(key); value != "" {
-				insecure := strings.EqualFold(value, "true")
-				if !insecure && !strings.EqualFold(value, "false") {
-					otel.Handle(
-						fmt.Errorf("invalid %s value %s: can't convert %q to bool, using false", key, value, value),
-					)
-				}
-				return newSetting(insecure)
+			if os.Getenv(key) != "" {
+				resolved := getenv[bool]([]string{key}, convInsecure)(setting[bool]{})
+				return newSetting(resolved.Value)
 			}
 		}
 		return s
