@@ -65,6 +65,28 @@ func TestInt64ObservableConfiguration(t *testing.T) {
 	))
 }
 
+func TestWithInt64CallbackIgnoresNil(t *testing.T) {
+	nilOption := WithInt64Callback(nil)
+	assert.Empty(t, NewInt64ObservableCounterConfig(nilOption).Callbacks())
+	assert.Empty(t, NewInt64ObservableUpDownCounterConfig(nilOption).Callbacks())
+	assert.Empty(t, NewInt64ObservableGaugeConfig(nilOption).Callbacks())
+
+	callback := WithInt64Callback(func(_ context.Context, observer Int64Observer) error {
+		observer.Observe(43)
+		return nil
+	})
+	checkCallbacks := func(callbacks []Int64Callback) {
+		t.Helper()
+		require.Len(t, callbacks, 1)
+		observer := &int64Observer{}
+		require.NoError(t, callbacks[0](t.Context(), observer))
+		assert.Equal(t, int64(43), observer.got)
+	}
+	checkCallbacks(NewInt64ObservableCounterConfig(callback, nilOption).Callbacks())
+	checkCallbacks(NewInt64ObservableUpDownCounterConfig(callback, nilOption).Callbacks())
+	checkCallbacks(NewInt64ObservableGaugeConfig(callback, nilOption).Callbacks())
+}
+
 type int64ObservableConfig interface {
 	Description() string
 	Unit() string

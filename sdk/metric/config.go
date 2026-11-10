@@ -6,14 +6,21 @@ package metric
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/resource"
+)
+
+type viewMatchingMode int
+
+const (
+	viewMatchingModeIndependent viewMatchingMode = iota
+	viewMatchingModeComposable
 )
 
 // config contains configuration options for a MeterProvider.
@@ -23,6 +30,8 @@ type config struct {
 	views            []View
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
+	experimental     []experimentalOption
+	viewMatchingMode viewMatchingMode
 }
 
 const defaultCardinalityLimit = 2000
@@ -74,21 +83,53 @@ type experimentalOption interface {
 	Experimental()
 }
 
+// viewMatchingModeOption is structurally matched with options from the
+// experimental sdk/metric/x module across module boundaries.
+type viewMatchingModeOption interface {
+	ViewMatchingMode() int
+	Experimental()
+}
+
 // newConfig returns a config configured with options.
 func newConfig(options []Option) config {
 	conf := config{
 		res:              resource.Default(),
 		exemplarFilter:   exemplar.TraceBasedFilter,
-		cardinalityLimit: cardinalityLimitFromEnv(),
+		cardinalityLimit: defaultCardinalityLimit,
 	}
 	for _, o := range meterProviderOptionsFromEnv() {
 		conf = o.apply(conf)
 	}
 	for _, o := range options {
-		if _, ok := o.(experimentalOption); ok {
-			continue
+		switch experimental := o.(type) {
+		case experimentalOption:
+			conf.experimental = append(conf.experimental, experimental)
+			if vOpt, ok := o.(interface {
+				ExperimentalViews() []func(Instrument) (Stream, *bool, bool)
+			}); ok {
+				for _, v := range vOpt.ExperimentalViews() {
+					if v == nil {
+						continue
+					}
+					conf.views = append(conf.views, func(inst Instrument) (Stream, bool) {
+						s, enabled, match := v(inst)
+						s.enabled = enabled
+						return s, match
+					})
+				}
+			}
+			if modeOpt, ok := o.(viewMatchingModeOption); ok {
+				mode := modeOpt.ViewMatchingMode()
+				if mode < int(viewMatchingModeIndependent) || mode > int(viewMatchingModeComposable) {
+					otel.Handle(fmt.Errorf("unsupported view matching mode %d, falling back to independent", mode))
+					conf.viewMatchingMode = viewMatchingModeIndependent
+				} else {
+					conf.viewMatchingMode = viewMatchingMode(mode)
+				}
+			}
+		default:
+			conf = o.apply(conf)
 		}
-		conf = o.apply(conf)
 	}
 	return conf
 }
@@ -141,12 +182,17 @@ func WithReader(r Reader) Option {
 //
 // Views are appended to existing ones in a MeterProvider if this option is
 // used multiple times.
+// Nil views are ignored.
 //
 // By default, if this option is not used, the MeterProvider will use the
 // default view.
 func WithView(views ...View) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.views = append(cfg.views, views...)
+		for _, view := range views {
+			if view != nil {
+				cfg.views = append(cfg.views, view)
+			}
+		}
 		return cfg
 	})
 }
@@ -181,8 +227,6 @@ func WithExemplarFilter(filter exemplar.Filter) Option {
 // This value applies to all instrument kinds, but can be overridden per kind by
 // the reader's cardinality limit selector (see [WithCardinalityLimitSelector]).
 func WithCardinalityLimit(limit int) Option {
-	// For backward compatibility, the environment variable `OTEL_GO_X_CARDINALITY_LIMIT`
-	// can also be used to set this value.
 	return optionFunc(func(cfg config) config {
 		cfg.cardinalityLimit = limit
 		return cfg
@@ -203,18 +247,4 @@ func meterProviderOptionsFromEnv() []Option {
 		opts = append(opts, WithExemplarFilter(exemplar.TraceBasedFilter))
 	}
 	return opts
-}
-
-func cardinalityLimitFromEnv() int {
-	const cardinalityLimitKey = "OTEL_GO_X_CARDINALITY_LIMIT"
-	v := strings.TrimSpace(os.Getenv(cardinalityLimitKey))
-	if v == "" {
-		return defaultCardinalityLimit
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil {
-		otel.Handle(err)
-		return defaultCardinalityLimit
-	}
-	return n
 }

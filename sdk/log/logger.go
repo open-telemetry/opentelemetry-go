@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -230,7 +230,7 @@ func errorType(err error) string {
 		}
 	}
 
-	t := reflect.TypeOf(unwrapFmtWrapped(err))
+	t := reflect.TypeOf(unwrapError(err))
 	if t == nil {
 		return ""
 	}
@@ -250,15 +250,30 @@ func errorType(err error) string {
 	return t.String()
 }
 
-var fmtWrapErrorType = reflect.TypeOf(fmt.Errorf("wrapped: %w", errors.New("err")))
+var (
+	fmtWrapErrorType = reflect.TypeOf(fmt.Errorf("wrapped: %w", errors.New("err")))
+	errorsJoinType   = reflect.TypeOf(errors.Join(errors.New("err")))
+)
 
-func unwrapFmtWrapped(err error) error {
-	for reflect.TypeOf(err) == fmtWrapErrorType {
-		u := errors.Unwrap(err)
-		if u == nil {
-			return err // When the wrapped error is nil, use the concrete type of the wrapper.
+func unwrapError(err error) error {
+	for {
+		switch reflect.TypeOf(err) {
+		case fmtWrapErrorType:
+			u := errors.Unwrap(err)
+			if u == nil {
+				return err // When the wrapped error is nil, use the concrete type of the wrapper.
+			}
+			err = u
+		case errorsJoinType:
+			if u, ok := err.(interface{ Unwrap() []error }); ok {
+				if errs := u.Unwrap(); len(errs) == 1 && errs[0] != nil {
+					err = errs[0]
+					continue
+				}
+			}
+			return err
+		default:
+			return err
 		}
-		err = u
 	}
-	return err
 }

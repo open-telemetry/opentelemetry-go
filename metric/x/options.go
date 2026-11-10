@@ -28,37 +28,24 @@ func WithDefaultAttributes(keys ...attribute.Key) metric.InstrumentOption {
 	return defaultAttributesOption{keys: keys}
 }
 
-type unsafeAttributesOption struct {
-	metric.MeasurementOption
-	kvs []attribute.KeyValue
+type optInOption struct {
+	metric.InstrumentOption
 }
 
 // Experimental prevents the API from panicking when the option is used.
-func (*unsafeAttributesOption) Experimental() {}
+func (optInOption) Experimental() {}
 
-// RawAttributes returns the raw key-values associated with the option.
-func (o *unsafeAttributesOption) RawAttributes() []attribute.KeyValue {
-	return o.kvs
+func (optInOption) OptIn() bool {
+	return true
 }
 
-// Settable implements the x.Settable interface.
-// As with all Settable implementations, Set must not be called concurrently
-// with the usage of the option in an instrument call (e.g., counter.Add)
-// or by other goroutines.
-func (o *unsafeAttributesOption) Set(kvs []attribute.KeyValue) {
-	o.kvs = kvs
-}
-
-// WithUnsafeAttributes returns a metric.MeasurementOption that stores the raw attributes
-// and associates them with a measurement without making a copy.
-// The caller must not modify the attributes slice after passing it to this function.
-// This is a work-in-progress, and does not yet have better performance than metric.WithAttributeSet.
+// WithOptIn returns a [metric.InstrumentOption] that marks an instrument as
+// opt-in (disabled by default).
 //
-// Attributes passed via WithUnsafeAttributes are merged with attributes from standard options
-// (e.g., metric.WithAttributes). If duplicate keys exist, attributes from WithUnsafeAttributes
-// take precedence and will override standard attributes, regardless of the order they are passed.
-func WithUnsafeAttributes(kvs ...attribute.KeyValue) metric.MeasurementOption {
-	return &unsafeAttributesOption{kvs: kvs}
+// The implementation should use the drop aggregation for the instrument by
+// default unless it is explicitly enabled by a View.
+func WithOptIn() metric.InstrumentOption {
+	return optInOption{}
 }
 
 // Settable is an optional interface that Options can implement

@@ -310,6 +310,7 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 }
 
 // WithProcessor associates a Processor with a LoggerProvider.
+// If processor is nil, this option has no effect.
 //
 // By default, if this option is not used, the LoggerProvider will perform no
 // operations; no data will be exported without a processor.
@@ -322,7 +323,9 @@ func WithResource(res *resource.Resource) LoggerProviderOption {
 // synchronously export log records.
 func WithProcessor(processor Processor) LoggerProviderOption {
 	return loggerProviderOptionFunc(func(cfg providerConfig) providerConfig {
-		cfg.processors = append(cfg.processors, processor)
+		if processor != nil {
+			cfg.processors = append(cfg.processors, processor)
+		}
 		return cfg
 	})
 }

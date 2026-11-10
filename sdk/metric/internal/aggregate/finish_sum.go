@@ -5,7 +5,6 @@ package aggregate
 
 import (
 	"context"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -80,6 +79,10 @@ func (v *finishSumValue[N]) measureAcquired(
 }
 
 func (v *finishSumValue[N]) finish(t time.Time) {
+	// A delayed Finish must not retire a lifetime created after it began.
+	if t.Before(v.start) {
+		return
+	}
 	v.lifecycle.Finish(t)
 }
 
@@ -102,6 +105,10 @@ func (v *finishSumValue[N]) collectDelta(
 	if !ok {
 		return metricdata.DataPoint[N]{}, false, false
 	}
+	// A deferred series can predate the previous collection's boundary.
+	if v.start.Before(start) {
+		start = v.start
+	}
 	dp, retire := v.collect(start, collection)
 	return dp, true, retire
 }
@@ -122,22 +129,29 @@ func (v *finishSumValue[N]) collect(
 	return dp, collection.ShouldRetire()
 }
 
-func (v *finishSumValue[N]) shutdown() {
-	v.lifecycle.Retire()
+func (v *finishSumValue[N]) shutdown(ctx context.Context) error {
+	return v.lifecycle.Retire(ctx)
 }
 
 // FinishSum contains the operations of a finish-aware Sum aggregation.
+//
+// Stop disables subsequent Measure, Finish, and ComputeAggregation calls.
+// Wait calls Stop, retires series observed during cleanup, and clears the map.
+// A recording overlapping Stop may complete after Wait returns. If it publishes
+// a series missed by cleanup, it retires that series when recording completes.
+// Wait returns a context error if cleanup is interrupted by cancellation.
 type FinishSum[N int64 | float64] struct {
 	Measure            Measure[N]
 	ComputeAggregation ComputeAggregation
 	Finish             func(attribute.Distinct, time.Time)
-	Shutdown           func()
+	Stop               func()
+	Wait               func(context.Context) error
 }
 
 type finishSum[N int64 | float64] struct {
-	collectMu    sync.Mutex
-	shutdownOnce sync.Once
-	stopped      atomic.Bool
+	collectSem chan struct{}
+	stopped    atomic.Bool
+	points     []*finishSumValue[N]
 
 	values      limitedSyncMap[*finishSumValue[N]]
 	start       time.Time
@@ -159,6 +173,7 @@ func newFinishSum[N int64 | float64](
 		start = now()
 	}
 	return &finishSum[N]{
+		collectSem: make(chan struct{}, 1),
 		values: limitedSyncMap[*finishSumValue[N]]{
 			aggLimit: limit,
 		},
@@ -220,7 +235,7 @@ func (s *finishSum[N]) measure(
 }
 
 func (s *finishSum[N]) retireAndDelete(point *finishSumValue[N]) {
-	point.shutdown()
+	_ = point.shutdown(context.Background())
 	s.values.CompareAndDelete(point.attrs.Equivalent(), point)
 }
 
@@ -242,12 +257,15 @@ func (s *finishSum[N]) finish(
 func (s *finishSum[N]) collect(
 	dest *metricdata.Aggregation, //nolint:gocritic // Required by ComputeAggregation.
 ) int {
-	s.collectMu.Lock()
-	defer s.collectMu.Unlock()
+	s.collectSem <- struct{}{}
+	defer func() { <-s.collectSem }()
 	if s.stopped.Load() {
 		return 0
 	}
 
+	// Every included series must start at or before the collection timestamp.
+	snapshot := s.snapshot()
+	defer clear(snapshot)
 	t := now()
 	start := s.start
 	if s.temporality == metricdata.DeltaTemporality {
@@ -256,10 +274,9 @@ func (s *finishSum[N]) collect(
 	sData, _ := (*dest).(metricdata.Sum[N])
 	sData.Temporality = s.temporality
 	sData.IsMonotonic = s.monotonic
-	points := reset(sData.DataPoints, 0, s.values.Len())
+	points := reset(sData.DataPoints, 0, len(snapshot))
 
-	s.values.Range(func(key, raw any) bool {
-		point := raw.(*finishSumValue[N])
+	for _, point := range snapshot {
 		var dp metricdata.DataPoint[N]
 		var emit, retire bool
 		if s.temporality == metricdata.DeltaTemporality {
@@ -268,32 +285,70 @@ func (s *finishSum[N]) collect(
 			dp, emit, retire = point.collectCumulative(t)
 		}
 		if !emit {
-			return true
+			continue
 		}
 		points = append(points, dp)
 
 		if retire {
-			s.values.CompareAndDelete(key.(attribute.Distinct), point)
+			s.values.CompareAndDelete(point.attrs.Equivalent(), point)
 		}
-		return true
-	})
+	}
 
 	sData.DataPoints = points
 	*dest = sData
 	return len(points)
 }
 
-func (s *finishSum[N]) shutdown() {
-	s.shutdownOnce.Do(func() {
-		s.stopped.Store(true)
-		s.collectMu.Lock()
-		defer s.collectMu.Unlock()
-		s.values.Range(func(_, raw any) bool {
-			raw.(*finishSumValue[N]).shutdown()
-			return true
-		})
-		s.values.Clear()
+// Snapshot before retiring series so newly reclaimed slots cannot expand this
+// collection beyond the cardinality limit. collectSem protects the scratch slice.
+func (s *finishSum[N]) snapshot() []*finishSumValue[N] {
+	s.values.lenMux.Lock()
+	defer s.values.lenMux.Unlock()
+	s.points = reset(s.points, 0, s.values.len)
+	s.values.Range(func(_, raw any) bool {
+		s.points = append(s.points, raw.(*finishSumValue[N]))
+		return true
 	})
+	return s.points
+}
+
+func (s *finishSum[N]) stop() {
+	s.stopped.Store(true)
+}
+
+func (s *finishSum[N]) wait(ctx context.Context) error {
+	s.stop()
+	if err := s.lockCollection(ctx); err != nil {
+		return err
+	}
+	defer func() { <-s.collectSem }()
+	s.points = nil
+
+	var err error
+	s.values.Range(func(_, raw any) bool {
+		err = raw.(*finishSumValue[N]).shutdown(ctx)
+		return err == nil
+	})
+	if err == nil {
+		err = s.values.ClearContext(ctx)
+	}
+	return err
+}
+
+func (s *finishSum[N]) lockCollection(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case s.collectSem <- struct{}{}:
+		if err := ctx.Err(); err != nil {
+			<-s.collectSem
+			return err
+		}
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // FinishSum returns a Sum aggregation with exact-attribute lifecycle support.
@@ -308,6 +363,7 @@ func (b Builder[N]) FinishSum(monotonic bool) FinishSum[N] {
 		Measure:            b.filter(store.measure),
 		ComputeAggregation: store.collect,
 		Finish:             store.finish,
-		Shutdown:           store.shutdown,
+		Stop:               store.stop,
+		Wait:               store.wait,
 	}
 }

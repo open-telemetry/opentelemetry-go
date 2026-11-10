@@ -46,3 +46,12 @@ func ExampleInt64CounterBinder() {
 		counter.Add(r.Context(), 1, opts...)
 	})
 }
+
+func ExampleWithOptIn() {
+	var meter metric.Meter = noop.Meter{}
+
+	_, _ = meter.Int64Counter(
+		"http.server.active_requests",
+		x.WithOptIn(),
+	)
+}

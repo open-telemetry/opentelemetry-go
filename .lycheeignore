@@ -8,7 +8,7 @@ https?:\/\/github\.com\/open-telemetry\/semantic-conventions\/archive\/refs\/tag
 file:///home/runner/work/opentelemetry-go/opentelemetry-go/libraries
 file:///home/runner/work/opentelemetry-go/opentelemetry-go/manual
 http://4.3.2.1:78/user/123
-file:///home/runner/work/opentelemetry-go/opentelemetry-go/exporters/otlp/otlptrace/otlptracegrpc/internal/observ/dns:/:4317
+file://.*/exporters/otlp/otlptrace/otlptracegrpc/internal/observ/dns:/:4317
 # URL works, but it has blocked link checkers.
 https://dl.acm.org/doi/10.1145/198429.198435
 https://pkg.go.dev/google.golang.org/grpc.*internal/resolver
@@ -25,3 +25,24 @@ https?://someendpoint.*
 https?://overrode\.by\.signal\.specific.*
 https?://overrode_by_signal_specific.*
 https?://proxy\.com.*
+
+
+# Placeholder URL used in generated Semantic Conventions examples.
+https?:\/\/www\.foo\.bar.*
+
+# Historical or illustrative URLs in generated Semantic Conventions.
+https?:\/\/github\.com\/open-telemetry\/semantic-conventions\/actions\/runs\/9753949763.*
+https?:\/\/github\.com\/opentelemetry\/open-telemetry-collector-contrib
+https?:\/\/sqs\.us-east-1\.amazonaws\.com\/123456789012\/MyQueue
+https?:\/\/opentelemetry\.io\/schemas\/$
+https://cloud-native.slack.com/archives/C01NPAXACKT
+https://gitlab.com/my-org/my-project/my-projects-project/repo
+https://wiki.osdev.org/CPUID
+https://www.intersystems.com/products/cache/
+https://www.iso.org/iso-8601-date-and-time-format.html
+https://www.merriam-webster.com/dictionary/revision
+https://www.mysql.com/
+https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html
+https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
+https://blogs.oracle.com/linux/post/understanding-linux-kernel-memory-statistics
+https://superuser.com/a/980821

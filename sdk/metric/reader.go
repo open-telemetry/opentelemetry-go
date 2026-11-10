@@ -238,6 +238,7 @@ type ReaderOption interface {
 
 // WithProducer registers producers as an external Producer of metric data
 // for this Reader.
+// If p is nil, this option does nothing.
 func WithProducer(p Producer) ReaderOption {
 	return producerOption{p: p}
 }
@@ -248,13 +249,17 @@ type producerOption struct {
 
 // applyManual returns a manualReaderConfig with option applied.
 func (o producerOption) applyManual(c manualReaderConfig) manualReaderConfig {
-	c.producers = append(c.producers, o.p)
+	if o.p != nil {
+		c.producers = append(c.producers, o.p)
+	}
 	return c
 }
 
 // applyPeriodic returns a periodicReaderConfig with option applied.
 func (o producerOption) applyPeriodic(c periodicReaderConfig) periodicReaderConfig {
-	c.producers = append(c.producers, o.p)
+	if o.p != nil {
+		c.producers = append(c.producers, o.p)
+	}
 	return c
 }
 
@@ -262,6 +267,7 @@ func (o producerOption) applyPeriodic(c periodicReaderConfig) periodicReaderConf
 // use to determine the cardinality limit for an instrument based on its kind.
 // If this option is not used, the reader will use the
 // defaultCardinalityLimitSelector.
+// If selector is nil, this option does nothing.
 //
 // The selector should return (limit, false) to set a positive limit,
 // (0, false) to explicitly specify unlimited, or
@@ -278,12 +284,16 @@ type cardinalityLimitSelectorOption struct {
 
 // applyManual returns a manualReaderConfig with option applied.
 func (o cardinalityLimitSelectorOption) applyManual(c manualReaderConfig) manualReaderConfig {
-	c.cardinalityLimitSelector = o.selector
+	if o.selector != nil {
+		c.cardinalityLimitSelector = o.selector
+	}
 	return c
 }
 
 // applyPeriodic returns a periodicReaderConfig with option applied.
 func (o cardinalityLimitSelectorOption) applyPeriodic(c periodicReaderConfig) periodicReaderConfig {
-	c.cardinalityLimitSelector = o.selector
+	if o.selector != nil {
+		c.cardinalityLimitSelector = o.selector
+	}
 	return c
 }
