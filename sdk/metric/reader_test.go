@@ -31,7 +31,7 @@ type readerTestSuite struct {
 func (ts *readerTestSuite) SetupSuite() {
 	originalLogger := global.GetLogger()
 	ts.T().Cleanup(func() {
-		otel.SetLogger(originalLogger)
+		global.SetLogger(originalLogger)
 	})
 
 	otel.SetLogger(testr.New(ts.T()))

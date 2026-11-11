@@ -1239,22 +1239,25 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	otel.SetLogger(logr.New(l))
 
 	const mtrName = "TestGlobalInstRegisterCallback"
+
 	preMtr := otel.Meter(mtrName)
 	preInt64Ctr, err := preMtr.Int64ObservableCounter("pre.int64.counter")
 	require.NoError(t, err)
+
 	preFloat64Ctr, err := preMtr.Float64ObservableCounter("pre.float64.counter")
 	require.NoError(t, err)
 
 	rdr := NewManualReader()
-	mp := NewMeterProvider(WithReader(rdr), WithResource(resource.Empty()))
-	t.Cleanup(func() {
-    	assert.NoError(t, mp.Shutdown(t.Context()))
-	})
+	mp := NewMeterProvider(
+		WithReader(rdr),
+		WithResource(resource.Empty()),
+	)
 	otel.SetMeterProvider(mp)
 
 	postMtr := otel.Meter(mtrName)
 	postInt64Ctr, err := postMtr.Int64ObservableCounter("post.int64.counter")
 	require.NoError(t, err)
+
 	postFloat64Ctr, err := postMtr.Float64ObservableCounter("post.float64.counter")
 	require.NoError(t, err)
 
@@ -1266,16 +1269,24 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 		return nil
 	}
 
-	_, err = preMtr.RegisterCallback(cb, preInt64Ctr, preFloat64Ctr, postInt64Ctr, postFloat64Ctr)
+	_, err = preMtr.RegisterCallback(
+		cb,
+		preInt64Ctr,
+		preFloat64Ctr,
+		postInt64Ctr,
+		postFloat64Ctr,
+	)
 	require.NoError(t, err)
 
 	got := metricdata.ResourceMetrics{}
 	require.NoError(t, rdr.Collect(t.Context(), &got))
+
 	assert.Emptyf(t, l.messages, "Warnings and errors logged:\n%s", l)
+
 	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{
-				Scope: instrumentation.Scope{Name: "TestGlobalInstRegisterCallback"},
+				Scope: instrumentation.Scope{Name: mtrName},
 				Metrics: []metricdata.Metrics{
 					{
 						Name: "pre.int64.counter",

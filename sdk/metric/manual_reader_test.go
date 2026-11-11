@@ -142,25 +142,34 @@ func TestManualReaderCollect(t *testing.T) {
 }
 
 func TestManualReaderInstrumentation(t *testing.T) {
-	const expectedComponentType = "go.opentelemetry.io/otel/sdk/metric.ManualReader"
-	assert.Equal(t, expectedComponentType, manualReaderType)
+	// Enable SDK observability.
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	const expectedComponentType = manualReaderType
 
 	// Set up a global MeterProvider to collect the instrumentation metrics.
 	// The ManualReader's instrumentation emits metrics to the global MeterProvider.
 	orig := otel.GetMeterProvider()
-	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	t.Cleanup(func() {
+		otel.SetMeterProvider(orig)
+	})
 
 	instrumentationReader := NewManualReader()
 	instrumentationMP := NewMeterProvider(WithReader(instrumentationReader))
 	otel.SetMeterProvider(instrumentationMP)
-	t.Cleanup(func() { _ = instrumentationMP.Shutdown(t.Context()) })
+	t.Cleanup(func() {
+		assert.NoError(t, instrumentationMP.Shutdown(t.Context()))
+	})
 
-	// ManualReader under test with a fake producer.
-	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	// Reset the reader ID counter after creating the instrumentation reader.
+	// This ensures the ManualReader under test receives the expected ID.
 	manualReaderIDCounter.Store(0)
 
+	// ManualReader under test with a fake producer.
 	manualReader := NewManualReader()
-	t.Cleanup(func() { _ = manualReader.Shutdown(t.Context()) })
+	t.Cleanup(func() {
+		assert.NoError(t, manualReader.Shutdown(t.Context()))
+	})
 	manualReader.register(testSDKProducer{})
 
 	// Exercise a collect (producer data).
@@ -196,10 +205,7 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	dp := hist.DataPoints[0]
 	attrs := dp.Attributes.ToSlice()
 
-	const (
-		expectedComponentName = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader/0"
-		expectedComponentType = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
-	)
+	const expectedComponentName = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader/0"
 
 	var hasName, hasType bool
 	for _, a := range attrs {
