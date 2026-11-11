@@ -1218,6 +1218,8 @@ func (l *logSink) String() string {
 
 func TestGlobalInstRegisterCallback(t *testing.T) {
 	// Run in a subprocess to get fresh global MeterProvider and delegate state.
+	// Restoring the global MeterProvider is not sufficient because
+	// delegateMeterOnce cannot be reset after it has executed.
 	const env = "OTEL_TEST_GLOBAL_INST_REGISTER_CALLBACK"
 
 	if os.Getenv(env) != "1" {

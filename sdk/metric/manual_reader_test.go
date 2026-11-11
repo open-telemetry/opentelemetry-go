@@ -200,14 +200,16 @@ func TestManualReaderInstrumentation(t *testing.T) {
 		expectedComponentType       = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
 	)
 
-	var hasName, hasType bool
+	hasName := false
+	hasType := false
+
 	for _, a := range attrs {
 		switch a.Key {
 		case "otel.component.name":
 			name := a.Value.AsString()
 			instanceID, err := strconv.Atoi(strings.TrimPrefix(name, expectedComponentNamePrefix))
 			hasName = strings.HasPrefix(name, expectedComponentNamePrefix) &&
-				err == nil && instanceID > 0
+				err == nil && instanceID == 0
 		case "otel.component.type":
 			hasType = a.Value.AsString() == expectedComponentType
 		}

@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -29,17 +29,17 @@ type readerTestSuite struct {
 }
 
 func (ts *readerTestSuite) SetupSuite() {
+	originalLogger := global.GetLogger()
+	ts.T().Cleanup(func() {
+		otel.SetLogger(originalLogger)
+	})
+
 	otel.SetLogger(testr.New(ts.T()))
 }
 
 func (ts *readerTestSuite) TearDownTest() {
 	// Ensure Reader is allowed attempt to clean up.
 	_ = ts.Reader.Shutdown(context.Background())
-}
-
-func (*readerTestSuite) TearDownSuite() {
-	// Prevent the global logger from retaining the suite's testing.T after teardown.
-	otel.SetLogger(logr.Discard())
 }
 
 func (ts *readerTestSuite) TestErrorForNotRegistered() {
