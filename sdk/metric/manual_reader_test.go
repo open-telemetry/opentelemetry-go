@@ -142,11 +142,6 @@ func TestManualReaderCollect(t *testing.T) {
 }
 
 func TestManualReaderInstrumentation(t *testing.T) {
-	// Enable SDK observability.
-	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-
-	const expectedComponentType = manualReaderType
-
 	// Set up a global MeterProvider to collect the instrumentation metrics.
 	// The ManualReader's instrumentation emits metrics to the global MeterProvider.
 	orig := otel.GetMeterProvider()
@@ -161,11 +156,11 @@ func TestManualReaderInstrumentation(t *testing.T) {
 		assert.NoError(t, instrumentationMP.Shutdown(t.Context()))
 	})
 
-	// Reset the reader ID counter after creating the instrumentation reader.
-	// This ensures the ManualReader under test receives the expected ID.
+	// Enable SDK observability and reset the reader ID counter immediately
+	// before creating the ManualReader under test.
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	manualReaderIDCounter.Store(0)
 
-	// ManualReader under test with a fake producer.
 	manualReader := NewManualReader()
 	t.Cleanup(func() {
 		assert.NoError(t, manualReader.Shutdown(t.Context()))
@@ -185,27 +180,23 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	targetDesc := otelconv.SDKMetricReaderCollectionDuration{}.Description()
 	targetUnit := otelconv.SDKMetricReaderCollectionDuration{}.Unit()
 
-	// Find the SDK reader self-metric in the instrumentation metrics.
 	foundMetric := findMetricByName(&rm, targetName)
 	require.NotNil(t, foundMetric,
 		"SDK reader self-metric %q should be found in instrumentation metrics", targetName)
 
-	// Basic identity checks.
 	assert.Equal(t, targetName, foundMetric.Name)
 	assert.Equal(t, targetDesc, foundMetric.Description)
 	assert.Equal(t, targetUnit, foundMetric.Unit)
 
-	// Must be a histogram with cumulative temporality.
 	hist, ok := foundMetric.Data.(metricdata.Histogram[float64])
 	require.True(t, ok, "expected histogram data")
 	assert.Equal(t, metricdata.CumulativeTemporality, hist.Temporality)
 	require.NotEmpty(t, hist.DataPoints)
 
-	// Check base attributes on one datapoint.
 	dp := hist.DataPoints[0]
 	attrs := dp.Attributes.ToSlice()
 
-	const expectedComponentName = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader/0"
+	const expectedComponentName = manualReaderType + "/0"
 
 	var hasName, hasType bool
 	for _, a := range attrs {
@@ -213,7 +204,7 @@ func TestManualReaderInstrumentation(t *testing.T) {
 		case "otel.component.name":
 			hasName = a.Value.AsString() == expectedComponentName
 		case "otel.component.type":
-			hasType = a.Value.AsString() == expectedComponentType
+			hasType = a.Value.AsString() == manualReaderType
 		}
 	}
 
