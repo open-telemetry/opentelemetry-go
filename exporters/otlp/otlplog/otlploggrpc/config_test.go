@@ -681,6 +681,11 @@ func TestConvDurationRejectsInvalidTimeouts(t *testing.T) {
 }
 
 func TestWithTimeoutNegativeIgnored(t *testing.T) {
+	// Clear inherited timeout env vars so the default-timeout assertion
+	// below is not polluted by whatever the developer or CI may have exported.
+	t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "")
+	t.Setenv("OTEL_EXPORTER_OTLP_LOGS_TIMEOUT", "")
+
 	var diags []error
 	prev := otel.GetErrorHandler()
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) { diags = append(diags, err) }))

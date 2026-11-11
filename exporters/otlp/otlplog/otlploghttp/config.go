@@ -709,10 +709,10 @@ func convDuration(s string) (time.Duration, error) {
 		return 0, err
 	}
 	if d < 0 {
-		return 0, fmt.Errorf("timeout must not be negative: %s", s)
+		return 0, errors.New("timeout must not be negative")
 	}
 	if d > math.MaxInt64/int64(time.Millisecond) {
-		return 0, fmt.Errorf("timeout overflows a time.Duration: %s", s)
+		return 0, errors.New("timeout overflows a time.Duration")
 	}
 
 	// OTel durations are defined in milliseconds.
