@@ -114,36 +114,7 @@ func (ts *readerTestSuite) TestMetricFilterExternalProducerReusesSlices() {
 			},
 		}
 	}
-	shared := makeScopes()
-	ts.Reader = ts.Factory(
-		WithProducer(testExternalProducer{produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
-			return shared, nil
-		}}),
-		testAggregationMetricFilter{
-			testMetric: func(_ instrumentation.Scope, name string, _ uint8, _ string) int {
-				switch name {
-				case "drop":
-					return metricFilterDrop
-				case "partial":
-					return metricFilterAcceptPartial
-				default:
-					return metricFilterAccept
-				}
-			},
-			testAttrs: func(_ instrumentation.Scope, _ string, _ uint8, _ string, attrs attribute.Set) int {
-				if attrs.Equals(&keep) {
-					return metricFilterAttrAccept
-				}
-				return metricFilterAttrDrop
-			},
-		},
-	)
-	ts.Reader.register(testSDKProducer{produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
-		*rm = metricdata.ResourceMetrics{}
-		return nil
-	}})
-
-	want := metricdata.ResourceMetrics{ScopeMetrics: []metricdata.ScopeMetrics{
+	filtered := metricdata.ResourceMetrics{ScopeMetrics: []metricdata.ScopeMetrics{
 		{
 			Scope: instrumentation.Scope{Name: "first"},
 			Metrics: []metricdata.Metrics{
@@ -164,12 +135,59 @@ func (ts *readerTestSuite) TestMetricFilterExternalProducerReusesSlices() {
 			},
 		},
 	}}
-	ctx := context.Background()
-	for range 2 {
-		var got metricdata.ResourceMetrics
-		ts.Require().NoError(ts.Reader.Collect(ctx, &got))
-		ts.Equal(want, got)
-		ts.Equal(makeScopes(), shared)
+	testCases := []struct {
+		name   string
+		filter ReaderOption
+		want   metricdata.ResourceMetrics
+	}{
+		{name: "filtered", filter: testAggregationMetricFilter{
+			testMetric: func(_ instrumentation.Scope, name string, _ uint8, _ string) int {
+				switch name {
+				case "drop":
+					return metricFilterDrop
+				case "partial":
+					return metricFilterAcceptPartial
+				default:
+					return metricFilterAccept
+				}
+			},
+			testAttrs: func(_ instrumentation.Scope, _ string, _ uint8, _ string, attrs attribute.Set) int {
+				if attrs.Equals(&keep) {
+					return metricFilterAttrAccept
+				}
+				return metricFilterAttrDrop
+			},
+		}, want: filtered},
+		{name: "no filter", want: metricdata.ResourceMetrics{ScopeMetrics: makeScopes()}},
+	}
+	for _, tc := range testCases {
+		ts.Run(tc.name, func() {
+			shared := makeScopes()
+			opts := []ReaderOption{WithProducer(testExternalProducer{
+				produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+					return shared, nil
+				},
+			})}
+			if tc.filter != nil {
+				opts = append(opts, tc.filter)
+			}
+			ts.Reader = ts.Factory(opts...)
+			ctx := context.Background()
+			defer func() { _ = ts.Reader.Shutdown(ctx) }()
+			ts.Reader.register(testSDKProducer{
+				produceFunc: func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+					*rm = metricdata.ResourceMetrics{}
+					return nil
+				},
+			})
+
+			for range 2 {
+				var got metricdata.ResourceMetrics
+				ts.Require().NoError(ts.Reader.Collect(ctx, &got))
+				ts.Equal(tc.want, got)
+				ts.Equal(makeScopes(), shared)
+			}
+		})
 	}
 }
 
