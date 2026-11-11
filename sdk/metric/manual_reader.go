@@ -19,7 +19,7 @@ import (
 const (
 	// ManualReaderType uniquely identifies the OpenTelemetry Metric Reader component
 	// being instrumented.
-	manualReaderType = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
+	manualReaderType = "go.opentelemetry.io/otel/sdk/metric.ManualReader"
 )
 
 // ManualReader is a simple Reader that allows an application to

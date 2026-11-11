@@ -818,7 +818,7 @@ func TestClientInstrumentation(t *testing.T) {
 						{Attributes: attribute.NewSet(attrs...), Value: 0},
 						{Attributes: attribute.NewSet(append(
 							attrs,
-							otelconv.SDKExporterSpanExported{}.AttrErrorType("*errors.joinError"),
+							otelconv.SDKExporterSpanExported{}.AttrErrorType("*errors.errorString"),
 						)...), Value: 2},
 					},
 					Temporality: 0x1,
@@ -833,11 +833,116 @@ func TestClientInstrumentation(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{Attributes: attribute.NewSet(append(
 							attrs,
-							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.joinError"),
+							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.errorString"),
 							otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(400),
 						)...)},
 					},
 					Temporality: 0x1,
+				},
+			},
+		},
+	}
+	require.Len(t, got.ScopeMetrics, 1)
+	gotMetrics := got.ScopeMetrics[0].Metrics
+	require.Len(t, gotMetrics, 3)
+
+	metricdatatest.AssertEqual(t, want.Metrics[0], gotMetrics[0], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(t, want.Metrics[1], gotMetrics[1], metricdatatest.IgnoreTimestamp())
+	metricdatatest.AssertEqual(
+		t,
+		want.Metrics[2],
+		gotMetrics[2],
+		metricdatatest.IgnoreTimestamp(),
+		metricdatatest.IgnoreValue(),
+	)
+}
+
+func TestClientInstrumentationPartialSuccess(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	const id = 0
+	counter.SetExporterID(id)
+
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	const n, msg = 2, "partially successful"
+	mc := runMockCollector(t, mockCollectorConfig{
+		Partial: &coltracepb.ExportTracePartialSuccess{
+			RejectedSpans: n,
+			ErrorMessage:  msg,
+		},
+	})
+	t.Cleanup(func() { require.NoError(t, mc.Stop()) })
+
+	driver := otlptracehttp.NewClient(
+		otlptracehttp.WithEndpoint(mc.Endpoint()),
+		otlptracehttp.WithInsecure(),
+	)
+	exporter, err := otlptrace.New(t.Context(), driver)
+	require.NoError(t, err)
+
+	localSpans := tracetest.SpanStubs{{Name: "Span 0"}, {Name: "Span 1"}, {Name: "Span 2"}}.Snapshots()
+	err = exporter.ExportSpans(t.Context(), localSpans)
+	assert.ErrorIs(t, err, internal.TracePartialSuccessError(n, msg))
+
+	require.NoError(t, exporter.Shutdown(t.Context()))
+	var got metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &got))
+
+	attrs := observ.BaseAttrs(id, mc.endpoint)
+
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      observ.ScopeName,
+			Version:   observ.Version,
+			SchemaURL: observ.SchemaURL,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+				Description: otelconv.SDKExporterSpanInflight{}.Description(),
+				Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...), Value: 0},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterSpanExported{}.Name(),
+				Description: otelconv.SDKExporterSpanExported{}.Description(),
+				Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{Attributes: attribute.NewSet(attrs...), Value: 1},
+						{Attributes: attribute.NewSet(append(
+							attrs,
+							otelconv.SDKExporterSpanExported{}.AttrErrorType("rejected"),
+						)...), Value: 2},
+					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			},
+			{
+				Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+				Description: otelconv.SDKExporterOperationDuration{}.Description(),
+				Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{Attributes: attribute.NewSet(append(
+							attrs,
+							otelconv.SDKExporterOperationDuration{}.AttrErrorType("rejected"),
+							otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(200),
+						)...)},
+					},
+					Temporality: metricdata.CumulativeTemporality,
 				},
 			},
 		},
