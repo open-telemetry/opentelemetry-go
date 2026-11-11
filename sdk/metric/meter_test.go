@@ -1247,6 +1247,9 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 
 	rdr := NewManualReader()
 	mp := NewMeterProvider(WithReader(rdr), WithResource(resource.Empty()))
+	t.Cleanup(func() {
+    	assert.NoError(t, mp.Shutdown(t.Context()))
+	})
 	otel.SetMeterProvider(mp)
 
 	postMtr := otel.Meter(mtrName)
@@ -1264,11 +1267,10 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 	}
 
 	_, err = preMtr.RegisterCallback(cb, preInt64Ctr, preFloat64Ctr, postInt64Ctr, postFloat64Ctr)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	got := metricdata.ResourceMetrics{}
-	err = rdr.Collect(t.Context(), &got)
-	assert.NoError(t, err)
+	require.NoError(t, rdr.Collect(t.Context(), &got))
 	assert.Emptyf(t, l.messages, "Warnings and errors logged:\n%s", l)
 	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
 		ScopeMetrics: []metricdata.ScopeMetrics{
