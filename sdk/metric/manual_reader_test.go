@@ -6,8 +6,6 @@ package metric
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -158,6 +156,9 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	t.Cleanup(func() { _ = instrumentationMP.Shutdown(t.Context()) })
 
 	// ManualReader under test with a fake producer.
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	manualReaderIDCounter.Store(0)
+
 	manualReader := NewManualReader()
 	t.Cleanup(func() { _ = manualReader.Shutdown(t.Context()) })
 	manualReader.register(testSDKProducer{})
@@ -196,26 +197,22 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	attrs := dp.Attributes.ToSlice()
 
 	const (
-		expectedComponentNamePrefix = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader/"
-		expectedComponentType       = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
+		expectedComponentName = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader/0"
+		expectedComponentType = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
 	)
 
-	hasName := false
-	hasType := false
+	var hasName, hasType bool
 
 	for _, a := range attrs {
 		switch a.Key {
 		case "otel.component.name":
-			name := a.Value.AsString()
-			instanceID, err := strconv.Atoi(strings.TrimPrefix(name, expectedComponentNamePrefix))
-			hasName = strings.HasPrefix(name, expectedComponentNamePrefix) &&
-				err == nil && instanceID == 0
+			hasName = a.Value.AsString() == expectedComponentName
 		case "otel.component.type":
 			hasType = a.Value.AsString() == expectedComponentType
 		}
 	}
 
-	assert.True(t, hasName, "unexpected otel.component.name format")
+	assert.True(t, hasName, "unexpected otel.component.name")
 	assert.True(t, hasType, "unexpected otel.component.type")
 }
 
