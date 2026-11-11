@@ -196,7 +196,10 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	dp := hist.DataPoints[0]
 	attrs := dp.Attributes.ToSlice()
 
-	const expectedComponentName = manualReaderType + "/0"
+	const (
+		expectedComponentType = "go.opentelemetry.io/otel/sdk/metric.ManualReader"
+		expectedComponentName = expectedComponentType + "/0"
+	)
 
 	var hasName, hasType bool
 	for _, a := range attrs {
@@ -204,7 +207,7 @@ func TestManualReaderInstrumentation(t *testing.T) {
 		case "otel.component.name":
 			hasName = a.Value.AsString() == expectedComponentName
 		case "otel.component.type":
-			hasType = a.Value.AsString() == manualReaderType
+			hasType = a.Value.AsString() == expectedComponentType
 		}
 	}
 
