@@ -142,6 +142,9 @@ func TestManualReaderCollect(t *testing.T) {
 }
 
 func TestManualReaderInstrumentation(t *testing.T) {
+	const expectedComponentType = "go.opentelemetry.io/otel/sdk/metric.ManualReader"
+	assert.Equal(t, expectedComponentType, manualReaderType)
+
 	// Enable SDK observability.
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
@@ -192,27 +195,29 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	assert.Equal(t, metricdata.CumulativeTemporality, hist.Temporality)
 	require.NotEmpty(t, hist.DataPoints)
 
-	// Check base attributes on one datapoint.
+// Check base attributes on one datapoint.
 	dp := hist.DataPoints[0]
 	attrs := dp.Attributes.ToSlice()
 
 	const (
-		expectedComponentName = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader/0"
-		expectedComponentType = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
+		expectedComponentNamePrefix = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader/"
+		expectedComponentType       = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
 	)
 
 	var hasName, hasType bool
-
 	for _, a := range attrs {
 		switch a.Key {
 		case "otel.component.name":
-			hasName = a.Value.AsString() == expectedComponentName
+			name := a.Value.AsString()
+			instanceID, err := strconv.Atoi(strings.TrimPrefix(name, expectedComponentNamePrefix))
+			hasName = strings.HasPrefix(name, expectedComponentNamePrefix) &&
+				err == nil && instanceID == 0
 		case "otel.component.type":
 			hasType = a.Value.AsString() == expectedComponentType
 		}
 	}
 
-	assert.True(t, hasName, "unexpected otel.component.name")
+	assert.True(t, hasName, "unexpected otel.component.name format")
 	assert.True(t, hasType, "unexpected otel.component.type")
 }
 

@@ -7,7 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
 )
 
 func requireErrorString(t *testing.T, expect string, err error) {
@@ -31,4 +34,10 @@ func TestPartialSuccessFormat(t *testing.T) {
 		LogPartialSuccessError(10, "what happened"),
 	)
 	requireErrorString(t, "what happened (15 logs rejected)", LogPartialSuccessError(15, "what happened"))
+}
+
+func TestPartialSuccessErrorType(t *testing.T) {
+	assert.Equal(t, semconv.ErrorTypeKey.String("rejected"), semconv.ErrorType(PartialSuccess{}))
+	assert.Equal(t, semconv.ErrorTypeKey.String("rejected"), semconv.ErrorType(&PartialSuccess{}))
+	assert.Equal(t, semconv.ErrorTypeKey.String("rejected"), semconv.ErrorType(LogPartialSuccessError(5, "bad")))
 }
