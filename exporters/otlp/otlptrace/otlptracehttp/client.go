@@ -197,7 +197,7 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
 		resp, err := c.client.Do(request.Request)
 		if err != nil {
-			if retryableNetworkError(ctx, err) {
+			if retryableNetworkError(err) {
 				return newResponseError(http.Header{}, err)
 			}
 			return err
@@ -513,11 +513,11 @@ func (c *client) contextWithStop(ctx context.Context) (context.Context, context.
 // EOF, connection reset, and connection refused. Those failures are still
 // transient for exporters and must be retried.
 //
-// ctx is the retry context. Its expiry, not a context sentinel in err, decides
-// whether to stop: an http.Client.Timeout error matches
-// context.DeadlineExceeded even while ctx is still live, and is retryable.
-func retryableNetworkError(ctx context.Context, err error) bool {
-	if err == nil || ctx.Err() != nil {
+// Cancellation is left to the retry loop: an http.Client.Timeout error matches
+// context.DeadlineExceeded even while the export context is still live, and is
+// retryable.
+func retryableNetworkError(err error) bool {
+	if err == nil {
 		return false
 	}
 	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {

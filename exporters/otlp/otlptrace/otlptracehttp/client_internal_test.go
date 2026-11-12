@@ -61,18 +61,13 @@ func TestClientMarshalLogDoesNotIncludeEndpointConfig(t *testing.T) {
 }
 
 func TestRetryableNetworkError(t *testing.T) {
-	canceled, cancel := context.WithCancel(t.Context())
-	cancel()
-
 	tests := []struct {
 		name string
-		ctx  context.Context
 		err  error
 		want bool
 	}{
 		{name: "nil"},
 		{name: "canceled sentinel", err: context.Canceled},
-		{name: "canceled retry context", ctx: canceled, err: io.EOF},
 		{
 			// http.Client.Timeout errors match context.DeadlineExceeded.
 			name: "deadline exceeded with live retry context",
@@ -196,11 +191,7 @@ func TestRetryableNetworkError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := tt.ctx
-			if ctx == nil {
-				ctx = t.Context()
-			}
-			assert.Equal(t, tt.want, retryableNetworkError(ctx, tt.err))
+			assert.Equal(t, tt.want, retryableNetworkError(tt.err))
 		})
 	}
 }
@@ -230,7 +221,7 @@ func TestRetryableNetworkErrorRealErrors(t *testing.T) {
 		t.Cleanup(func() { close(release) })
 
 		err := post(t, &http.Client{Timeout: 10 * time.Millisecond}, srv.URL)
-		assert.True(t, retryableNetworkError(t.Context(), err), "err: %v", err)
+		assert.True(t, retryableNetworkError(err), "err: %v", err)
 	})
 
 	t.Run("proxy connection refused", func(t *testing.T) {
@@ -242,7 +233,7 @@ func TestRetryableNetworkErrorRealErrors(t *testing.T) {
 
 		c := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
 		err = post(t, c, "http://example.com/")
-		assert.True(t, retryableNetworkError(t.Context(), err), "err: %v", err)
+		assert.True(t, retryableNetworkError(err), "err: %v", err)
 	})
 
 	t.Run("tls protocol version rejected", func(t *testing.T) {
@@ -256,12 +247,12 @@ func TestRetryableNetworkErrorRealErrors(t *testing.T) {
 		tr.TLSClientConfig.MaxVersion = tls.VersionTLS12
 
 		err := post(t, c, srv.URL)
-		assert.False(t, retryableNetworkError(t.Context(), err), "err: %v", err)
+		assert.False(t, retryableNetworkError(err), "err: %v", err)
 	})
 
 	t.Run("invalid port", func(t *testing.T) {
 		err := post(t, &http.Client{}, "http://127.0.0.1:65536/")
-		assert.False(t, retryableNetworkError(t.Context(), err), "err: %v", err)
+		assert.False(t, retryableNetworkError(err), "err: %v", err)
 	})
 }
 
