@@ -27,8 +27,12 @@ import (
 // other [sdktrace.SpanProcessor] methods on the same processor, so
 // implementations must be safe for concurrent use.
 //
-// OnEnding may be called concurrently with or after [sdktrace.SpanProcessor.Shutdown]
-// during processor unregistration. Implementations must handle this gracefully.
+// Like OnStart, OnEnd, and ForceFlush, OnEnding is not called after
+// [sdktrace.SpanProcessor.Shutdown] starts: the [sdktrace.TracerProvider]
+// stops admitting calls, and waits for those already in progress to return,
+// before shutting the processor down. This applies to both
+// [sdktrace.TracerProvider.Shutdown] and
+// [sdktrace.TracerProvider.UnregisterSpanProcessor].
 //
 // Note: OnEnding alone does not suppress other processors, change
 // TraceFlags.Sampled, or drop a span. Tail-based filtering that needs those
