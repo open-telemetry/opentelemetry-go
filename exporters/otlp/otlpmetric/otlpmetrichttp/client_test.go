@@ -11,11 +11,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -1274,6 +1277,354 @@ func TestRetryAfterUsesSeconds(t *testing.T) {
 	_, throttle := evaluate(err)
 	assert.Equal(t, 10*time.Second, throttle)
 }
+
+func TestTransientDisconnectRetries(t *testing.T) {
+	for _, reset := range []bool{false, true} {
+		name := "EOF"
+		if reset {
+			name = "Reset"
+		}
+		t.Run(name, func(t *testing.T) {
+			var attempts atomic.Int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = io.Copy(io.Discard, r.Body)
+				if attempts.Add(1) == 1 {
+					conn, _, err := w.(http.Hijacker).Hijack()
+					if err != nil {
+						t.Error(err)
+						return
+					}
+					if reset {
+						if tcp, ok := conn.(*net.TCPConn); ok {
+							_ = tcp.SetLinger(0)
+						}
+					}
+					_ = conn.Close()
+					return
+				}
+				w.Header().Set("Content-Type", "application/x-protobuf")
+				w.WriteHeader(http.StatusOK)
+			}))
+			t.Cleanup(srv.Close)
+
+			ctx := t.Context()
+			exp, err := New(
+				ctx,
+				WithEndpointURL(srv.URL),
+				WithRetry(RetryConfig{
+					Enabled:         true,
+					InitialInterval: time.Millisecond,
+					MaxInterval:     time.Millisecond,
+					MaxElapsedTime:  100 * time.Millisecond,
+				}),
+			)
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				require.NoError(t, exp.Shutdown(context.WithoutCancel(t.Context())))
+			})
+
+			require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+			assert.Equal(t, int32(2), attempts.Load())
+		})
+	}
+}
+
+func TestHTTPClientTimeoutRetries(t *testing.T) {
+	var attempts atomic.Int32
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		if attempts.Add(1) == 1 {
+			// Outlive the client timeout so the first attempt fails while the
+			// export context remains live.
+			<-release
+			return
+		}
+		w.Header().Set("Content-Type", "application/x-protobuf")
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+	t.Cleanup(func() { close(release) })
+
+	ctx := t.Context()
+	exp, err := New(
+		ctx,
+		WithEndpointURL(srv.URL),
+		WithHTTPClient(&http.Client{Timeout: 50 * time.Millisecond}),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, exp.Shutdown(context.WithoutCancel(t.Context())))
+	})
+
+	require.NoError(t, exp.Export(ctx, &metricdata.ResourceMetrics{}))
+	assert.Equal(t, int32(2), attempts.Load())
+}
+
+func TestCanceledExportDoesNotRetryEOF(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	var attempts atomic.Int32
+	httpClient := &http.Client{
+		Transport: roundTripperFunc(func(*http.Request) (*http.Response, error) {
+			attempts.Add(1)
+			cancel()
+			return nil, io.EOF
+		}),
+	}
+	exp, err := New(ctx,
+		WithHTTPClient(httpClient),
+		WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, exp.Shutdown(context.WithoutCancel(t.Context())))
+	})
+
+	err = exp.Export(ctx, &metricdata.ResourceMetrics{})
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.ErrorIs(t, err, io.EOF)
+	assert.Equal(t, int32(1), attempts.Load())
+}
+
+func TestRetryableNetworkError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "nil"},
+		{name: "canceled sentinel", err: context.Canceled},
+		{
+			// http.Client.Timeout errors match context.DeadlineExceeded.
+			name: "deadline exceeded",
+			err:  context.DeadlineExceeded,
+			want: true,
+		},
+		{name: "EOF", err: io.EOF, want: true},
+		{name: "unexpected EOF", err: io.ErrUnexpectedEOF, want: true},
+		{
+			name: "url wrapped unexpected EOF",
+			err:  &url.Error{Op: "Post", URL: "https://example.com", Err: io.ErrUnexpectedEOF},
+			want: true,
+		},
+		{
+			name: "connection refused",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED},
+			},
+			want: true,
+		},
+		{
+			name: "proxy connection refused",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{
+					Op:  "proxyconnect",
+					Net: "tcp",
+					Err: &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "proxy TLS alert",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "https://example.com",
+				Err: &net.OpError{
+					Op:  "proxyconnect",
+					Net: "tcp",
+					Err: &net.OpError{Op: "remote error", Err: errors.New("tls: protocol version not supported")},
+				},
+			},
+		},
+		{
+			name: "SOCKS handshake reset",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{
+					Op:  "socks connect",
+					Net: "tcp",
+					Err: &net.OpError{Op: "read", Net: "tcp", Err: syscall.ECONNRESET},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "SOCKS authentication failure",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{
+					Op:  "socks connect",
+					Net: "tcp",
+					Err: errors.New("username/password authentication failed"),
+				},
+			},
+		},
+		{
+			name: "connection reset",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{Op: "read", Net: "tcp", Err: syscall.ECONNRESET},
+			},
+			want: true,
+		},
+		{
+			name: "timeout",
+			err:  &url.Error{Op: "Post", URL: "https://example.com", Err: timeoutError{}},
+			want: true,
+		},
+		{
+			name: "TLS alert",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "https://example.com",
+				Err: &net.OpError{Op: "remote error", Err: errors.New("tls: protocol version not supported")},
+			},
+		},
+		{
+			name: "invalid address",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:65536",
+				Err: &net.OpError{Op: "dial", Net: "tcp", Err: &net.AddrError{Err: "invalid port", Addr: "65536"}},
+			},
+		},
+		{
+			name: "DNS not found",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://collector.invalid",
+				Err: &net.OpError{Op: "dial", Net: "tcp", Err: &net.DNSError{Err: "no such host", IsNotFound: true}},
+			},
+		},
+		{
+			name: "DNS timeout",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://collector.invalid",
+				Err: &net.OpError{Op: "dial", Net: "tcp", Err: &net.DNSError{Err: "i/o timeout", IsTimeout: true}},
+			},
+			want: true,
+		},
+		{
+			name: "temporary DNS failure",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://collector.invalid",
+				Err: &net.OpError{
+					Op:  "dial",
+					Net: "tcp",
+					Err: &net.DNSError{Err: "server misbehaving", IsTemporary: true},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "permanent DNS failure",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://collector.invalid",
+				Err: &net.OpError{Op: "dial", Net: "tcp", Err: &net.DNSError{Err: "invalid DNS response"}},
+			},
+		},
+		{
+			name: "TLS verification error",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "https://example.com",
+				Err: errors.New("tls: failed to verify certificate"),
+			},
+		},
+		{name: "generic permanent error", err: errors.New("boom")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, retryableNetworkError(tt.err))
+		})
+	}
+}
+
+func TestRetryableNetworkErrorRealErrors(t *testing.T) {
+	post := func(t *testing.T, c *http.Client, target string) error {
+		t.Helper()
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, target, http.NoBody)
+		require.NoError(t, err)
+		resp, err := c.Do(req)
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+		require.Error(t, err)
+		return err
+	}
+
+	t.Run("client timeout", func(t *testing.T) {
+		release := make(chan struct{})
+		srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			<-release
+		}))
+		t.Cleanup(srv.Close)
+		t.Cleanup(func() { close(release) })
+
+		err := post(t, &http.Client{Timeout: 10 * time.Millisecond}, srv.URL)
+		assert.True(t, retryableNetworkError(err), "err: %v", err)
+	})
+
+	t.Run("proxy connection refused", func(t *testing.T) {
+		ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		proxyURL := &url.URL{Scheme: "http", Host: ln.Addr().String()}
+		require.NoError(t, ln.Close())
+
+		c := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+		err = post(t, c, "http://example.com/")
+		assert.True(t, retryableNetworkError(err), "err: %v", err)
+	})
+
+	t.Run("TLS protocol version rejected", func(t *testing.T) {
+		srv := httptest.NewUnstartedServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+		srv.TLS = &tls.Config{MinVersion: tls.VersionTLS13}
+		srv.StartTLS()
+		t.Cleanup(srv.Close)
+
+		c := srv.Client()
+		tr := c.Transport.(*http.Transport)
+		tr.TLSClientConfig.MaxVersion = tls.VersionTLS12
+
+		err := post(t, c, srv.URL)
+		assert.False(t, retryableNetworkError(err), "err: %v", err)
+	})
+
+	t.Run("invalid port", func(t *testing.T) {
+		err := post(t, &http.Client{}, "http://127.0.0.1:65536/")
+		assert.False(t, retryableNetworkError(err), "err: %v", err)
+	})
+}
+
+type timeoutError struct{}
+
+func (timeoutError) Error() string   { return "timeout" }
+func (timeoutError) Timeout() bool   { return true }
+func (timeoutError) Temporary() bool { return true }
 
 // TestWithEndpointURLNoPathUsesRootPath verifies that a pathless endpoint URL (scheme and host only, no path component)
 // passed to WithEndpointURL is normalized to the root path ("/") rather than falling back to the default OTLP metrics
