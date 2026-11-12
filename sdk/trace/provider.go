@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/internal/attrnorm"
@@ -46,6 +47,7 @@ type tracerProviderConfig struct {
 
 	// panicRecordingDisabled disables recording exception events from panics.
 	panicRecordingDisabled bool
+	contextFallback        *contextFallback
 }
 
 // MarshalLog is the marshaling function used by the logging system to represent this Provider.
@@ -91,12 +93,19 @@ type TracerProvider struct {
 	spanLimits             SpanLimits
 	resource               *resource.Resource
 	panicRecordingDisabled bool
+	contextFallback        *contextFallback
 }
 
 var _ trace.TracerProvider = &TracerProvider{}
 
 type experimentalOption interface {
 	Experimental()
+}
+
+// contextFallbackOption keeps the experimental API out of the stable module.
+type contextFallbackOption interface {
+	experimentalOption
+	ContextFallback() (trace.SpanContext, baggage.Baggage, int)
 }
 
 // NewTracerProvider returns a new and configured TracerProvider.
@@ -116,6 +125,10 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	o = applyTracerProviderEnvConfigs(o)
 
 	for _, opt := range opts {
+		if fallback, ok := opt.(contextFallbackOption); ok {
+			o.contextFallback = newContextFallback(fallback.ContextFallback())
+			continue
+		}
 		if _, ok := opt.(experimentalOption); ok {
 			continue
 		}
@@ -131,6 +144,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 		spanLimits:             o.spanLimits,
 		resource:               o.resource,
 		panicRecordingDisabled: o.panicRecordingDisabled,
+		contextFallback:        o.contextFallback,
 	}
 	global.Info("TracerProvider created", "config", o)
 

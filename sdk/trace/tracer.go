@@ -34,11 +34,14 @@ func (tr *tracer) Start(
 	name string,
 	options ...trace.SpanStartOption,
 ) (context.Context, trace.Span) {
-	config := trace.NewSpanStartConfig(options...)
+	config := spanStartConfig{SpanConfig: trace.NewSpanStartConfig(options...)}
 
 	if ctx == nil {
 		// Prevent trace.ContextWithSpan from panicking.
 		ctx = context.Background()
+	}
+	if fallback := tr.provider.contextFallback; fallback != nil {
+		ctx = fallback.apply(ctx, &config)
 	}
 
 	// For local spans created by this SDK, track child span count.
@@ -86,7 +89,7 @@ type runtimeTracer interface {
 }
 
 // newSpan returns a new configured span.
-func (tr *tracer) newSpan(ctx context.Context, name string, config *trace.SpanConfig) trace.Span {
+func (tr *tracer) newSpan(ctx context.Context, name string, config *spanStartConfig) trace.Span {
 	// If told explicitly to make this a new root use a zero value SpanContext
 	// as a parent which contains an invalid trace ID and is not remote.
 	var psc trace.SpanContext
@@ -141,7 +144,7 @@ func (tr *tracer) newRecordingSpan(
 	psc, sc trace.SpanContext,
 	name string,
 	sr SamplingResult,
-	config *trace.SpanConfig,
+	config *spanStartConfig,
 ) *recordingSpan {
 	startTime := config.Timestamp()
 	if startTime.IsZero() {
