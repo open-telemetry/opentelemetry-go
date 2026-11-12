@@ -37,7 +37,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Upgrade active semantic convention usage in `go.opentelemetry.io/otel`, its SDKs, exporters, and bridges to v1.45.0.
   Resource detectors and experimental SDK metrics now use the v1.45.0 schema URL; gRPC exporter metrics emit `rpc.status_code` instead of `rpc.response.status_code`.
   Supply single-bucket duration histogram advice for providers that honor it.
-  Historical versioned packages and Zipkin's legacy attribute mappings are preserved.
+  Historical versioned packages and Zipkin's legacy attribute mappings are preserved. (#9492)
 - Stabilize the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module.
   The exporter's output format may still change, as documented in the [package documentation](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/stdout/stdoutlog). (#9472)
 - `ErrorType` in `go.opentelemetry.io/otel/semconv/v1.44.0` now unwraps single-error `errors.Join` wrappers when deriving the `error.type` attribute. (#9466)
@@ -70,7 +70,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Fixed
 
-- Use `otlp_http_json_span_exporter` for `otel.component.type` and the component name prefix when JSON encoding is configured in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`.
+- Use `otlp_http_json_span_exporter` for `otel.component.type` and the component name prefix when JSON encoding is configured in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9492)
 - Use `prometheus_http_text_metric_exporter` for `otel.component.type` in `go.opentelemetry.io/otel/exporters/prometheus`. (#9464)
 - Record `error.type="rejected"` (and `rpc.status_code="OK"` for gRPC) on partial-success rejections in self-observability metrics for `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9454)
 - Remove the duplicated `/metric` package path segment from `otel.component.type` (`go.opentelemetry.io/otel/sdk/metric.ManualReader`) in `go.opentelemetry.io/otel/sdk/metric`. (#9463)
