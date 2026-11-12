@@ -11,9 +11,10 @@ import (
 
 func TestEnvParse(t *testing.T) {
 	testCases := []struct {
-		name string
-		keys []string
-		f    func(int) int
+		name     string
+		keys     []string
+		f        func(int) int
+		positive bool
 	}{
 		{
 			name: "BatchSpanProcessorScheduleDelay",
@@ -28,15 +29,17 @@ func TestEnvParse(t *testing.T) {
 		},
 
 		{
-			name: "BatchSpanProcessorMaxQueueSize",
-			keys: []string{BatchSpanProcessorMaxQueueSizeKey},
-			f:    BatchSpanProcessorMaxQueueSize,
+			name:     "BatchSpanProcessorMaxQueueSize",
+			keys:     []string{BatchSpanProcessorMaxQueueSizeKey},
+			f:        BatchSpanProcessorMaxQueueSize,
+			positive: true,
 		},
 
 		{
-			name: "BatchSpanProcessorMaxExportBatchSize",
-			keys: []string{BatchSpanProcessorMaxExportBatchSizeKey},
-			f:    BatchSpanProcessorMaxExportBatchSize,
+			name:     "BatchSpanProcessorMaxExportBatchSize",
+			keys:     []string{BatchSpanProcessorMaxExportBatchSizeKey},
+			f:        BatchSpanProcessorMaxExportBatchSize,
+			positive: true,
 		},
 
 		{
@@ -98,6 +101,15 @@ func TestEnvParse(t *testing.T) {
 
 					t.Setenv(key, empty)
 					assert.Equal(t, defVal, tc.f(defVal), "empty value")
+
+					t.Setenv(key, "0")
+					if tc.positive {
+						assert.Equal(t, defVal, tc.f(defVal), "zero value")
+						t.Setenv(key, "-1")
+						assert.Equal(t, defVal, tc.f(defVal), "negative value")
+					} else {
+						assert.Equal(t, 0, tc.f(defVal), "zero value")
+					}
 				})
 			}
 		})
