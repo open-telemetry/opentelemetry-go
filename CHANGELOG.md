@@ -15,6 +15,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Added
 
+- Add experimental `MetricFilter` support in `go.opentelemetry.io/otel/sdk/metric/x` for filtering data collected by readers in `go.opentelemetry.io/otel/sdk/metric`. (#8461)
 - Add experimental `WithFinish` support for `Int64UpDownCounter` and `Float64UpDownCounter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9251)
 - Add experimental `WithFinish` support for `Int64Gauge` and `Float64Gauge` LastValue aggregation in `go.opentelemetry.io/otel/sdk/metric/x`.
   Ignore delayed Finish calls that predate the resolved series lifetime. (#9252)
