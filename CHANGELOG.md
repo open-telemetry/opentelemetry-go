@@ -79,6 +79,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Skip measurement preparation and recording for disabled observability instruments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#9318)
 - Export non-finite floating-point values as strings in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9307)
 - Export non-finite floating-point values as strings in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#9308)
+- Retry transient OTLP/HTTP network failures such as timeouts, EOF, connection reset, and connection refused in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9300)
 - Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Interpret OTLP log exporter compression environment variables case-insensitively in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
