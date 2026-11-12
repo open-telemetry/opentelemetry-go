@@ -15,7 +15,7 @@ func TestContext(t *testing.T) {
 	ctx := t.Context()
 	assert.Equal(t, Baggage{}, FromContext(ctx))
 
-	b := Baggage{list: baggage.List{"key": baggage.Item{Value: "val"}}}
+	b := Baggage{list: baggage.List{"key": baggage.NewItemWithProperties("val", nil)}}
 	ctx = ContextWithBaggage(ctx, b)
 	assert.Equal(t, b, FromContext(ctx))
 

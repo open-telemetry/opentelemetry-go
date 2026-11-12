@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -37,6 +39,7 @@ type client struct {
 	maxResponseSize int64
 	requestFunc     retry.RequestFunc
 	httpClient      *http.Client
+	exportTimeout   time.Duration
 
 	inst *observ.Instrumentation
 }
@@ -67,10 +70,14 @@ func newClient(cfg oconf.Config) (*client, error) {
 	}
 
 	httpClient := cfg.Metrics.HTTPClient
+	var exportTimeout time.Duration
 	if httpClient == nil {
+		// WithHTTPClient takes precedence over WithTimeout, so the exporter
+		// timeout is applied only for the client constructed here.
+		exportTimeout = cfg.Metrics.Timeout
 		httpClient = &http.Client{
 			Transport: ourTransport,
-			Timeout:   cfg.Metrics.Timeout,
+			Timeout:   exportTimeout,
 		}
 
 		if cfg.Metrics.TLSCfg != nil || cfg.Metrics.Proxy != nil {
@@ -87,9 +94,10 @@ func newClient(cfg oconf.Config) (*client, error) {
 	}
 
 	u := &url.URL{
-		Scheme: "https",
-		Host:   cfg.Metrics.Endpoint,
-		Path:   cfg.Metrics.URLPath,
+		Scheme:  "https",
+		Host:    cfg.Metrics.Endpoint,
+		Path:    cfg.Metrics.URLPath,
+		RawPath: cfg.Metrics.URLRawPath,
 	}
 	if cfg.Metrics.Insecure {
 		u.Scheme = "http"
@@ -120,6 +128,7 @@ func newClient(cfg oconf.Config) (*client, error) {
 		req:             req,
 		requestFunc:     cfg.RetryConfig.RequestFunc(evaluate),
 		httpClient:      httpClient,
+		exportTimeout:   exportTimeout,
 		inst:            inst,
 	}, err
 }
@@ -165,6 +174,12 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		defer func() { op.End(uploadErr, statusCode) }()
 	}
 
+	if c.exportTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeoutCause(ctx, c.exportTimeout, errors.New("exporter export timeout"))
+		defer cancel()
+	}
+
 	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
 		select {
 		case <-iCtx.Done():
@@ -199,14 +214,14 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
+			if err := internal.CopyHTTPResponseBody(&respData, resp, c.maxResponseSize); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
 				return nil
 			}
 
-			if resp.Header.Get("Content-Type") == "application/x-protobuf" {
+			if isProtobufContentType(resp.Header.Get("Content-Type")) {
 				var respProto colmetricpb.ExportMetricsServiceResponse
 				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
 					return err
@@ -230,7 +245,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
+		if err := internal.CopyHTTPResponseBody(&respData, resp, c.maxResponseSize); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
@@ -251,6 +266,17 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			return fmt.Errorf("failed to send metrics to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
 	}))
+}
+
+// isProtobufContentType reports whether the Content-Type value denotes a
+// protobuf-encoded OTLP payload. Media type tokens are case-insensitive and
+// parameters are ignored, as required by RFC 9110 section 8.3.
+func isProtobufContentType(contentType string) bool {
+	mediatype, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(mediatype, "application/x-protobuf")
 }
 
 var gzPool = sync.Pool{
@@ -347,9 +373,9 @@ func newResponseError(header http.Header, wrapped error) error {
 
 func retryAfterDuration(v string) time.Duration {
 	if t, err := strconv.ParseInt(v, 10, 64); err == nil && t >= 0 {
-		const maxRetryAfterSeconds = int64(1<<63-1) / int64(time.Second)
+		const maxRetryAfterSeconds = math.MaxInt64 / int64(time.Second)
 		if t > maxRetryAfterSeconds {
-			return time.Duration(1<<63 - 1)
+			return time.Duration(math.MaxInt64)
 		}
 		return time.Duration(t) * time.Second
 	}

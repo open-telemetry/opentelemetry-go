@@ -26,6 +26,9 @@ is designed so the following goals can be achieved.
 
         > Warning: methods may be added to this interface in minor releases.
 
+      * Stable SDK components may make security-related changes as permitted by
+        the OpenTelemetry [client versioning policy][security-related changes].
+
     * If a module is version `v2` or higher, the major version of the module
       must be included as a `/vN` at the end of the module paths used in
       `go.mod` files (e.g., `module go.opentelemetry.io/otel/v2`, `require
@@ -72,7 +75,8 @@ is designed so the following goals can be achieved.
   * [Semantic import
     versioning](https://github.com/golang/go/wiki/Modules#semantic-import-versioning)
     will be used.
-    * Versions will comply with [semver 2.0](https://semver.org/spec/v2.0.0.html).
+    * Versions will comply with [semver 2.0](https://semver.org/spec/v2.0.0.html),
+      subject to [security-related changes].
     * If a module is version `v2` or higher, the
       major version of the module must be included as a `/vN` at the end of the
       module paths used in `go.mod` files (e.g., `module
@@ -88,8 +92,8 @@ is designed so the following goals can be achieved.
     * If a module is version `v0` or `v1`, do not include the major version
       in either the module path or the import path.
   * In addition to public APIs, telemetry produced by stable instrumentation
-    will remain stable and backwards compatible. This is to avoid breaking
-    alerts and dashboards.
+    will remain stable and backwards compatible, except as permitted by
+    [security-related changes]. This is to avoid breaking alerts and dashboards.
   * Modules will be used to encapsulate instrumentation, detectors, exporters,
     propagators, and any other independent sets of related components.
     * Experimental modules still under active development will be versioned at
@@ -132,6 +136,8 @@ is designed so the following goals can be achieved.
       stable release except for a stable release of the contrib repository.
 * GitHub releases will be made for all releases.
 * Go modules will be made available at Go package mirrors.
+
+[security-related changes]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/versioning-and-stability.md#security-related-changes
 
 ## Example Versioning Lifecycle
 

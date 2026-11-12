@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -29,9 +30,10 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -69,12 +71,258 @@ func TestGetAttrs(t *testing.T) {
 	require.Equal(t, []string{"[true,false]", "Infinity", `["foo","bar"]`}, values)
 }
 
+func TestGetAttrsSanitizedCollisions(t *testing.T) {
+	t.Run("linear_scan_fast_path", func(t *testing.T) {
+		attrs := attribute.NewSet(
+			attribute.String("A_B", "first"),
+			attribute.String("C-D", "z"),
+			attribute.String("C.D", "b;c"),
+			attribute.String("C/D", "a"),
+		)
+
+		keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Equal(t, []string{"A_B", "C_D"}, keys)
+		require.Equal(t, []string{"first", "z;b;c;a"}, values)
+	})
+
+	t.Run("map_fallback_above_threshold", func(t *testing.T) {
+		kvs := make([]attribute.KeyValue, 0, maxLinearScanAttrs+4)
+		for i := range maxLinearScanAttrs {
+			kvs = append(kvs, attribute.String(fmt.Sprintf("attr_%03d", i), fmt.Sprintf("v%d", i)))
+		}
+		kvs = append(kvs,
+			attribute.String("z-dup", "z"),
+			attribute.String("z.dup", "b;c"),
+			attribute.String("z/dup", "a"),
+		)
+
+		keys, values, err := getAttrs(attribute.NewSet(kvs...), otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Len(t, keys, maxLinearScanAttrs+1)
+		require.Equal(t, "z_dup", keys[len(keys)-1])
+		require.Equal(t, "z;b;c;a", values[len(values)-1])
+	})
+}
+
+func TestAppendScopeAttrsSanitizedCollisions(t *testing.T) {
+	t.Run("linear_scan_fast_path", func(t *testing.T) {
+		attrs := attribute.NewSet(
+			attribute.String("name", "ignored"),
+			attribute.String("schema.url", "ignored"),
+			attribute.String("scope-key", "z"),
+			attribute.String("scope.key", "a"),
+			attribute.String("scope/key", "m"),
+		)
+
+		kv := keyVals{
+			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
+			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
+		}
+		kv, err := appendScopeAttrs(kv, attrs, labelNamer{})
+		require.NoError(t, err)
+		require.Equal(t, []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel, "otel_scope_scope_key"}, kv.keys)
+		require.Equal(t, []string{"my-scope", "v1.0.0", "https://example.com", "z;a;m"}, kv.vals)
+	})
+
+	t.Run("map_fallback_above_threshold", func(t *testing.T) {
+		kvs := make([]attribute.KeyValue, 0, maxLinearScanAttrs+5)
+		kvs = append(kvs,
+			attribute.String("name", "ignored"),
+			attribute.String("schema.url", "ignored"),
+		)
+		for i := range maxLinearScanAttrs {
+			kvs = append(kvs, attribute.String(fmt.Sprintf("scope_attr_%03d", i), fmt.Sprintf("v%d", i)))
+		}
+		kvs = append(kvs,
+			attribute.String("z-scope-dup", "z"),
+			attribute.String("z.scope.dup", "a"),
+			attribute.String("z/scope/dup", "m"),
+		)
+
+		kv := keyVals{
+			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
+			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
+		}
+		kv, err := appendScopeAttrs(kv, attribute.NewSet(kvs...), labelNamer{})
+		require.NoError(t, err)
+		require.Len(t, kv.keys, 3+maxLinearScanAttrs+1)
+		require.Equal(t, "otel_scope_z_scope_dup", kv.keys[len(kv.keys)-1])
+		require.Equal(t, "z;a;m", kv.vals[len(kv.vals)-1])
+	})
+}
+
+func TestSanitizedCollisionKeyOrder(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.String("C/D", "A"),
+		attribute.String("C.D", "Z"),
+		attribute.String("C-D", "M"),
+	)
+
+	keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+	require.NoError(t, err)
+	require.Equal(t, []string{"C_D"}, keys)
+	// Original keys in lexicographical order are "C-D", "C.D", "C/D".
+	require.Equal(t, []string{"M;Z;A"}, values)
+
+	kv, err := appendScopeAttrs(keyVals{}, attrs, labelNamer{})
+	require.NoError(t, err)
+	require.Equal(t, []string{"otel_scope_C_D"}, kv.keys)
+	require.Equal(t, []string{"M;Z;A"}, kv.vals)
+}
+
 func TestAttributesToLabels(t *testing.T) {
 	labels, err := attributesToLabels([]attribute.KeyValue{
 		attribute.Float64Slice("float_slice", []float64{math.NaN(), math.Inf(1)}),
-	}, otlptranslator.LabelNamer{})
+	}, labelNamer{})
 	require.NoError(t, err)
 	require.Equal(t, prometheus.Labels{"float_slice": `["NaN","Infinity"]`}, labels)
+}
+
+func TestLabelNamerBuild(t *testing.T) {
+	t.Run("caches_sanitized_keys", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: false},
+		}
+		ln := c.newLabelNamer()
+		require.NotNil(t, ln.cache)
+
+		got, err := ln.build("http.request.method")
+		require.NoError(t, err)
+		require.Equal(t, "http_request_method", got)
+		require.Equal(t, "http_request_method", ln.cache["http.request.method"])
+
+		allocs := testing.AllocsPerRun(100, func() {
+			got, err = ln.build("http.request.method")
+		})
+		require.NoError(t, err)
+		require.Equal(t, "http_request_method", got)
+		require.Zero(t, allocs)
+	})
+
+	t.Run("does_not_cache_errors", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: false},
+		}
+		ln := c.newLabelNamer()
+
+		_, err := ln.build("")
+		require.Error(t, err)
+		require.Empty(t, ln.cache)
+	})
+
+	t.Run("utf8_allowed_nil_cache", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: true},
+		}
+		ln := c.newLabelNamer()
+		require.Nil(t, ln.cache)
+
+		got, err := ln.build("http.request.method")
+		require.NoError(t, err)
+		require.Equal(t, "http.request.method", got)
+	})
+}
+
+func TestGetOrReuseDesc(t *testing.T) {
+	emptyDesc := prometheus.NewDesc("test_metric", "test help", nil, nil)
+	abDesc := prometheus.NewDesc("test_metric", "test help", []string{"a", "b"}, nil)
+
+	testCases := []struct {
+		name       string
+		keys       []string
+		lastKeys   []string
+		lastDesc   *prometheus.Desc
+		wantReuse  bool
+		wantLabels map[string]string
+		values     []string
+	}{
+		{
+			name:       "initial descriptor with empty keys",
+			keys:       nil,
+			lastKeys:   nil,
+			lastDesc:   nil,
+			wantReuse:  false,
+			wantLabels: map[string]string{},
+		},
+		{
+			name:       "reuse descriptor with empty keys",
+			keys:       []string{},
+			lastKeys:   nil,
+			lastDesc:   emptyDesc,
+			wantReuse:  true,
+			wantLabels: map[string]string{},
+		},
+		{
+			name:       "initial descriptor with non-empty keys",
+			keys:       []string{"a", "b"},
+			lastKeys:   nil,
+			lastDesc:   nil,
+			wantReuse:  false,
+			values:     []string{"v1", "v2"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2"},
+		},
+		{
+			name:       "reuse descriptor for equal ordered keys in distinct slices",
+			keys:       []string{"a", "b"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  true,
+			values:     []string{"v3", "v4"},
+			wantLabels: map[string]string{"a": "v3", "b": "v4"},
+		},
+		{
+			name:       "new descriptor for same-length changed keys",
+			keys:       []string{"a", "c"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v1", "v2"},
+			wantLabels: map[string]string{"a": "v1", "c": "v2"},
+		},
+		{
+			name:       "new descriptor for reordered keys",
+			keys:       []string{"b", "a"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v2", "v1"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2"},
+		},
+		{
+			name:       "new descriptor for different-length keys",
+			keys:       []string{"a", "b", "c"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v1", "v2", "v3"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2", "c": "v3"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			desc, gotKeys := getOrReuseDesc("test_metric", "test help", tc.keys, tc.lastKeys, tc.lastDesc)
+			require.NotNil(t, desc)
+			if tc.wantReuse {
+				assert.Same(t, tc.lastDesc, desc)
+				assert.Equal(t, tc.lastKeys, gotKeys)
+			} else {
+				assert.NotSame(t, tc.lastDesc, desc)
+				assert.Equal(t, tc.keys, gotKeys)
+			}
+
+			pm, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, 1, tc.values...)
+			require.NoError(t, err)
+			var dm dto.Metric
+			require.NoError(t, pm.Write(&dm))
+			gotLabels := make(map[string]string, len(dm.GetLabel()))
+			for _, lp := range dm.GetLabel() {
+				gotLabels[lp.GetName()] = lp.GetValue()
+			}
+			assert.Equal(t, tc.wantLabels, gotLabels)
+		})
+	}
 }
 
 func TestPrometheusExporter(t *testing.T) {
@@ -118,6 +366,20 @@ func TestPrometheusExporter(t *testing.T) {
 			options: []Option{
 				WithNamespace("my.dotted.namespace"),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+			},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var counter *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "my_dotted_namespace_foo_seconds_total" {
+						counter = mf
+						break
+					}
+				}
+				require.NotNil(t, counter)
+				for _, m := range counter.GetMetric() {
+					require.NotNil(t, m.GetCounter().GetCreatedTimestamp())
+					assert.False(t, m.GetCounter().GetCreatedTimestamp().AsTime().IsZero())
+				}
 			},
 		},
 		{
@@ -242,13 +504,26 @@ func TestPrometheusExporter(t *testing.T) {
 				WithNamespace("my.dotted.namespace"),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 			},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var counter *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "my_dotted_namespace_foo_seconds_total" {
+						counter = mf
+						break
+					}
+				}
+				require.NotNil(t, counter)
+				for _, m := range counter.GetMetric() {
+					require.NotNil(t, m.GetCounter().GetCreatedTimestamp())
+					assert.False(t, m.GetCounter().GetCreatedTimestamp().AsTime().IsZero())
+				}
+			},
 		},
 		{
 			name:         "counter with suffixes disabled",
 			expectedFile: "testdata/counter_disabled_suffix.txt",
 			options: []Option{
-				WithoutCounterSuffixes(),
-				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
@@ -343,6 +618,20 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "histogram",
 			expectedFile: "testdata/histogram.txt",
 			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var hist *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "histogram_baz_bytes" {
+						hist = mf
+						break
+					}
+				}
+				require.NotNil(t, hist)
+				for _, m := range hist.GetMetric() {
+					require.NotNil(t, m.GetHistogram().GetCreatedTimestamp())
+					assert.False(t, m.GetHistogram().GetCreatedTimestamp().AsTime().IsZero())
+				}
+			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
 				opt := otelmetric.WithAttributes(
 					attribute.Key("A").String("B"),
@@ -364,7 +653,6 @@ func TestPrometheusExporter(t *testing.T) {
 			name:         "sanitized attributes to labels",
 			expectedFile: "testdata/sanitized_labels.txt",
 			options: []Option{
-				WithoutUnits(),
 				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
 			},
 			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
@@ -374,14 +662,13 @@ func TestPrometheusExporter(t *testing.T) {
 					attribute.Key("A.B").String("Q"),
 
 					// unintended match due to sanitization, values should be concatenated
-					attribute.Key("C.D").String("Y"),
-					attribute.Key("C/D").String("Z"),
+					// in the lexicographical order of the original keys ("C.D" < "C/D")
+					attribute.Key("C.D").String("Z"),
+					attribute.Key("C/D").String("Y"),
 				)
 				counter, err := meter.Float64Counter(
 					"foo",
 					otelmetric.WithDescription("a sanitary counter"),
-					// This unit is not added to
-					otelmetric.WithUnit("By"),
 				)
 				require.NoError(t, err)
 				counter.Add(ctx, 5, opt)
@@ -772,6 +1059,148 @@ func TestPrometheusExporter(t *testing.T) {
 	}
 }
 
+func TestNilReaderOptions(t *testing.T) {
+	exporter, err := New(
+		WithRegisterer(prometheus.NewRegistry()),
+		WithAggregationSelector(nil),
+		WithProducer(nil),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+	counter, err := provider.Meter("test").Int64Counter("counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, exporter.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	assert.Equal(t, "counter", rm.ScopeMetrics[0].Metrics[0].Name)
+	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 1)
+	assert.Equal(t, int64(1), sum.DataPoints[0].Value)
+}
+
+func TestNilReaderOptionsPreservePrevious(t *testing.T) {
+	selectorCalled := false
+	external := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{Name: "external"},
+		Metrics: []metricdata.Metrics{{
+			Name: "external",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints:  []metricdata.DataPoint[int64]{{Value: 2}},
+			},
+		}},
+	}
+	exporter, err := New(
+		WithRegisterer(prometheus.NewRegistry()),
+		WithAggregationSelector(func(kind metric.InstrumentKind) metric.Aggregation {
+			selectorCalled = true
+			return metric.DefaultAggregationSelector(kind)
+		}),
+		WithAggregationSelector(nil),
+		WithProducer(producerFunc(func(context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{external}, nil
+		})),
+		WithProducer(nil),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+	counter, err := provider.Meter("test").Int64Counter("counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, exporter.Collect(t.Context(), &rm))
+	assert.True(t, selectorCalled)
+	require.Len(t, rm.ScopeMetrics, 2)
+	assert.Equal(t, external, rm.ScopeMetrics[1])
+}
+
+func TestCreatedTimestampZeroStartTime(t *testing.T) {
+	startTime := time.Date(2026, 10, 27, 12, 0, 0, 0, time.UTC)
+	external := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{Name: "external"},
+		Metrics: []metricdata.Metrics{
+			{
+				Name: "counter_zero_start",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Value: 5}},
+				},
+			},
+			{
+				Name: "counter_with_start",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Value: 5, StartTime: startTime}},
+				},
+			},
+			{
+				Name: "hist_zero_start",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{{
+						Bounds:       []float64{10},
+						BucketCounts: []uint64{1, 0},
+						Count:        1,
+						Sum:          5,
+					}},
+				},
+			},
+			{
+				Name: "hist_with_start",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{{
+						Bounds:       []float64{10},
+						BucketCounts: []uint64{1, 0},
+						Count:        1,
+						Sum:          5,
+						StartTime:    startTime,
+					}},
+				},
+			},
+		},
+	}
+
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithoutTargetInfo(),
+		WithoutScopeInfo(),
+		WithProducer(producerFunc(func(context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{external}, nil
+		})),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+
+	mfs, err := registry.Gather()
+	require.NoError(t, err)
+
+	byName := make(map[string]*dto.Metric, len(mfs))
+	for _, mf := range mfs {
+		require.Len(t, mf.GetMetric(), 1)
+		byName[mf.GetName()] = mf.GetMetric()[0]
+	}
+
+	assert.Nil(t, byName["counter_zero_start_total"].GetCounter().GetCreatedTimestamp())
+	require.NotNil(t, byName["counter_with_start_total"].GetCounter().GetCreatedTimestamp())
+	assert.Equal(t, startTime, byName["counter_with_start_total"].GetCounter().GetCreatedTimestamp().AsTime())
+
+	assert.Nil(t, byName["hist_zero_start"].GetHistogram().GetCreatedTimestamp())
+	require.NotNil(t, byName["hist_with_start"].GetHistogram().GetCreatedTimestamp())
+	assert.Equal(t, startTime, byName["hist_with_start"].GetHistogram().GetCreatedTimestamp().AsTime())
+}
+
 func TestMultiScopes(t *testing.T) {
 	ctx := t.Context()
 	registry := prometheus.NewRegistry()
@@ -1057,7 +1486,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				assert.NoError(t, err)
 				bazB.Add(ctx, 100, withTypeBar)
 			},
-			options:               []Option{WithoutUnits()},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
 			possibleExpectedFiles: []string{"testdata/conflict_unit_two_counters.txt"},
 		},
 		{
@@ -1075,7 +1504,7 @@ func TestDuplicateMetrics(t *testing.T) {
 				assert.NoError(t, err)
 				barB.Add(ctx, 100, withTypeBar)
 			},
-			options:               []Option{WithoutUnits()},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
 			possibleExpectedFiles: []string{"testdata/conflict_unit_two_updowncounters.txt"},
 		},
 		{
@@ -1093,25 +1522,22 @@ func TestDuplicateMetrics(t *testing.T) {
 				assert.NoError(t, err)
 				barB.Record(ctx, 100, withAB)
 			},
-			options:               []Option{WithoutUnits()},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
 			possibleExpectedFiles: []string{"testdata/conflict_unit_two_histograms.txt"},
 		},
 		{
 			name: "conflict_type_counter_and_updowncounter",
 			recordMetrics: func(ctx context.Context, meterA, _ otelmetric.Meter) {
 				counter, err := meterA.Int64Counter("foo",
-					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter foo"))
 				assert.NoError(t, err)
 				counter.Add(ctx, 100, withTypeFoo)
 
 				gauge, err := meterA.Int64UpDownCounter("foo_total",
-					otelmetric.WithUnit("By"),
 					otelmetric.WithDescription("meter foo"))
 				assert.NoError(t, err)
 				gauge.Add(ctx, 200, withTypeFoo)
 			},
-			options: []Option{WithoutUnits()},
 			possibleExpectedFiles: []string{
 				"testdata/conflict_type_counter_and_updowncounter_1.txt",
 				"testdata/conflict_type_counter_and_updowncounter_2.txt",
@@ -1506,6 +1932,178 @@ func TestExemplars(t *testing.T) {
 	}
 }
 
+func TestExemplarsExceedingLabelLimit(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(resource.Default()),
+		metric.WithView(
+			metric.NewView(
+				metric.Instrument{Name: "foo"},
+				metric.Stream{
+					// Filter out the attribute so it is added as a filtered
+					// attribute to the exemplar instead.
+					AttributeFilter: attribute.NewAllowKeysFilter(),
+				},
+			),
+		),
+	)
+	meter := provider.Meter("meter")
+
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		SpanID:     trace.SpanID{0o1},
+		TraceID:    trace.TraceID{0o1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx = trace.ContextWithSpanContext(ctx, sc)
+
+	counter, err := meter.Float64Counter("foo")
+	require.NoError(t, err)
+	// A single filtered attribute value long enough that, combined with the
+	// trace and span IDs, it exceeds prometheus.ExemplarMaxRunes.
+	counter.Add(ctx, 9, otelmetric.WithAttributes(
+		attribute.String("long", strings.Repeat("a", prometheus.ExemplarMaxRunes)),
+	))
+
+	got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+	defer done()
+	require.NoError(t, err)
+
+	require.Len(t, got, 1)
+	family := got[0]
+	require.Len(t, family.GetMetric(), 1)
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex, "exemplar should still be present with only trace/span ID labels")
+
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
+		labels[label.GetName()] = label.GetValue()
+	}
+	assert.Equal(t, map[string]string{
+		otlptranslator.ExemplarTraceIDKey: "01000000000000000000000000000000",
+		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
+	}, labels, "filtered attributes should be dropped, trace/span ID preserved")
+}
+
+// TestExemplarsLabelLimitKeyCollision verifies that a filtered attribute
+// whose key happens to collide with the trace_id or span_id label is not
+// double-counted against prometheus.ExemplarMaxRunes, which would otherwise
+// cause valid, non-colliding filtered attributes to be dropped unnecessarily.
+func TestExemplarsLabelLimitKeyCollision(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(resource.Default()),
+		metric.WithView(
+			metric.NewView(
+				metric.Instrument{Name: "foo"},
+				metric.Stream{
+					// Filter out the attributes so they are added as filtered
+					// attributes to the exemplar instead.
+					AttributeFilter: attribute.NewAllowKeysFilter(),
+				},
+			),
+		),
+	)
+	meter := provider.Meter("meter")
+
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		SpanID:     trace.SpanID{0o1},
+		TraceID:    trace.TraceID{0o1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx = trace.ContextWithSpanContext(ctx, sc)
+
+	counter, err := meter.Float64Counter("foo")
+	require.NoError(t, err)
+	// Filtered attributes that collide with the trace_id and span_id label
+	// names. Counting these alongside the dedicated trace/span ID labels
+	// would overcount the combined length (135 runes) well past the actual
+	// total (72 runes), and wrongly drop the non-colliding "method" label.
+	counter.Add(ctx, 9, otelmetric.WithAttributes(
+		attribute.String("trace_id", strings.Repeat("a", 32)),
+		attribute.String("span_id", strings.Repeat("b", 16)),
+		attribute.String("method", "GET"),
+	))
+
+	got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+	defer done()
+	require.NoError(t, err)
+
+	require.Len(t, got, 1)
+	family := got[0]
+	require.Len(t, family.GetMetric(), 1)
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex)
+
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
+		labels[label.GetName()] = label.GetValue()
+	}
+	assert.Equal(t, map[string]string{
+		otlptranslator.ExemplarTraceIDKey: "01000000000000000000000000000000",
+		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
+		"method":                          "GET",
+	}, labels, "non-colliding filtered attribute should be preserved, trace/span ID overwritten")
+}
+
+func TestExemplarsWithoutSpanContext(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(resource.Default()),
+		metric.WithExemplarFilter(exemplar.AlwaysOnFilter),
+		metric.WithView(
+			metric.NewView(
+				metric.Instrument{Name: "foo"},
+				metric.Stream{
+					AttributeFilter: attribute.NewAllowKeysFilter(),
+				},
+			),
+		),
+	)
+	meter := provider.Meter("meter")
+
+	counter, err := meter.Float64Counter("foo")
+	require.NoError(t, err)
+	// Record without an active span context; filtered attributes up to
+	// ExemplarMaxRunes should fit because empty trace_id/span_id keys are not added.
+	val := strings.Repeat("a", prometheus.ExemplarMaxRunes-len("filtered"))
+	counter.Add(ctx, 9, otelmetric.WithAttributes(
+		attribute.String("filtered", val),
+	))
+
+	got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+	defer done()
+	require.NoError(t, err)
+
+	require.Len(t, got, 1)
+	family := got[0]
+	require.Len(t, family.GetMetric(), 1)
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex)
+
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
+		labels[label.GetName()] = label.GetValue()
+	}
+	assert.Equal(t, map[string]string{
+		"filtered": val,
+	}, labels, "empty trace_id and span_id labels should not be added")
+}
+
 func TestExponentialHistogramScaleValidation(t *testing.T) {
 	ctx := t.Context()
 
@@ -1587,7 +2185,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 			m,
 			"test_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 		// Expect an invalid metric to be sent that carries the scale error.
@@ -1640,7 +2238,7 @@ func TestInvalidExponentialHistogramScaleReportsObservabilityError(t *testing.T)
 		metricdata.Metrics{Name: "test_histogram"},
 		"test_histogram",
 		keyVals{},
-		otlptranslator.LabelNamer{},
+		labelNamer{},
 		inst,
 	)
 
@@ -1819,7 +2417,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_high_scale_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 
@@ -1883,7 +2481,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_very_high_scale_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 
@@ -1947,7 +2545,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_histogram_with_negative_buckets",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 
@@ -2005,7 +2603,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_int64_exponential_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 
@@ -2708,7 +3306,6 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 
 			// Setup observability metric collection
 			var observReader *metric.ManualReader
-			var observMetricsFunc func() metricdata.ScopeMetrics
 
 			if tc.enableObservability {
 				originalMP := otel.GetMeterProvider()
@@ -2717,21 +3314,6 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 				observReader = metric.NewManualReader()
 				observMP := metric.NewMeterProvider(metric.WithReader(observReader))
 				otel.SetMeterProvider(observMP)
-
-				observMetricsFunc = func() metricdata.ScopeMetrics {
-					var rm metricdata.ResourceMetrics
-					err := observReader.Collect(t.Context(), &rm)
-					require.NoError(t, err)
-
-					// Find the Prometheus exporter observability scope specifically.
-					for _, sm := range rm.ScopeMetrics {
-						if sm.Scope.Name == observ.ScopeName {
-							return sm
-						}
-					}
-					// Exporter scope not found (e.g., if disabled or no scrape yet).
-					return metricdata.ScopeMetrics{}
-				}
 			}
 
 			ctx := t.Context()
@@ -2755,24 +3337,45 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 
 			// Collect and check observability metrics if enabled
 			if tc.enableObservability {
-				observMetrics := observMetricsFunc()
+				var rm metricdata.ResourceMetrics
+				err := observReader.Collect(t.Context(), &rm)
+				require.NoError(t, err)
 
-				// Check that expected observability metrics are present
-				observedMetrics := make(map[string]bool)
-				for _, m := range observMetrics.Metrics {
-					observedMetrics[m.Name] = true
+				// Check that expected observability metrics are present exactly once across all scopes.
+				observedCounts := make(map[string]int)
+				var observMetrics metricdata.ScopeMetrics
+				for _, sm := range rm.ScopeMetrics {
+					if sm.Scope.Name == observ.ScopeName {
+						observMetrics = sm
+					}
+					for _, m := range sm.Metrics {
+						observedCounts[m.Name]++
+						if m.Name == "otel.sdk.metric_reader.collection.duration" {
+							hist, ok := m.Data.(metricdata.Histogram[float64])
+							require.True(t, ok)
+							require.Len(t, hist.DataPoints, 1)
+							assert.Equal(t, uint64(1), hist.DataPoints[0].Count)
+						}
+					}
 				}
 
 				for _, expectedMetric := range tc.expectedObservMetrics {
-					assert.True(
+					assert.Equal(
 						t,
-						observedMetrics[expectedMetric],
-						"Expected observability metric %s not found",
+						1,
+						observedCounts[expectedMetric],
+						"Expected observability metric %s to be recorded once",
 						expectedMetric,
 					)
 				}
+				assert.Len(
+					t,
+					observedCounts,
+					len(tc.expectedObservMetrics),
+					"Expected number of distinct observability metrics",
+				)
 
-				// Verify observability metrics have expected structure
+				// Verify exporter observability scope has expected structure and the 3 exporter metrics.
 				expectedScope := instrumentation.Scope{
 					Name:      observ.ScopeName,
 					Version:   observ.Version,
@@ -2782,8 +3385,8 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 				assert.Len(
 					t,
 					observMetrics.Metrics,
-					len(tc.expectedObservMetrics),
-					"Expected number of observability metrics",
+					3,
+					"Expected number of exporter observability metrics",
 				)
 
 				// Run custom metric checks if provided
@@ -2847,8 +3450,6 @@ func TestExporterSelfInstrumentationErrors(t *testing.T) {
 			collector := &collector{
 				reader:                   reader,
 				disableTargetInfo:        cfg.disableTargetInfo,
-				withoutUnits:             cfg.withoutUnits,
-				withoutCounterSuffixes:   cfg.withoutCounterSuffixes,
 				disableScopeInfo:         cfg.disableScopeInfo,
 				metricFamilies:           make(map[string]*dto.MetricFamily),
 				namespace:                cfg.namespace,

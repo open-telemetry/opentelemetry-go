@@ -8,6 +8,7 @@ package resource
 var (
 	Uname                 = uname
 	GetFirstAvailableFile = getFirstAvailableFile
+	PlatformOSDescription = platformOSDescription
 )
 
 var (

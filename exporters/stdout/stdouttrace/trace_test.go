@@ -28,8 +28,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -105,11 +105,63 @@ func TestExporterExportSpan(t *testing.T) {
 		assert.Equal(t, tt.wantErr, err)
 
 		if tt.wantErr == nil {
-			got := b.String()
-			wantone := expectedJSON(tt.expectNow)
-			assert.Equal(t, wantone+wantone, got)
+			decoder := json.NewDecoder(&b)
+			for range 2 {
+				var got json.RawMessage
+				require.NoError(t, decoder.Decode(&got))
+				assert.JSONEq(t, expectedJSON(tt.expectNow), string(got))
+			}
+			var extra any
+			require.ErrorIs(t, decoder.Decode(&extra), io.EOF)
 		}
 	}
+}
+
+func TestExporterNilWriterPreservesWriter(t *testing.T) {
+	var buf bytes.Buffer
+	exp, err := stdouttrace.New(stdouttrace.WithWriter(&buf), stdouttrace.WithWriter(nil))
+	require.NoError(t, err)
+	require.NoError(t, exp.ExportSpans(t.Context(), tracetest.SpanStubs{{Name: "test"}}.Snapshots()))
+	assert.Contains(t, buf.String(), `"Name":"test"`)
+}
+
+func TestWithoutTimestampsPreservesInput(t *testing.T) {
+	now := time.Now()
+	span := tracetest.SpanStub{
+		StartTime: now,
+		EndTime:   now.Add(time.Second),
+		Events: []tracesdk.Event{
+			{Name: "first", Time: now},
+			{Name: "second", Time: now.Add(time.Millisecond)},
+		},
+	}.Snapshot()
+	spans := []tracesdk.ReadOnlySpan{span}
+	var before, without, after bytes.Buffer
+	withTimestamps, err := stdouttrace.New(stdouttrace.WithWriter(&before))
+	require.NoError(t, err)
+	require.NoError(t, withTimestamps.ExportSpans(t.Context(), spans))
+
+	withoutTimestamps, err := stdouttrace.New(stdouttrace.WithWriter(&without), stdouttrace.WithoutTimestamps())
+	require.NoError(t, err)
+	require.NoError(t, withoutTimestamps.ExportSpans(t.Context(), spans))
+
+	var got struct {
+		StartTime time.Time
+		EndTime   time.Time
+		Events    []tracesdk.Event
+	}
+	require.NoError(t, json.Unmarshal(without.Bytes(), &got))
+	assert.Zero(t, got.StartTime)
+	assert.Zero(t, got.EndTime)
+	require.Len(t, got.Events, 2)
+	for _, event := range got.Events {
+		assert.Zero(t, event.Time)
+	}
+
+	withTimestamps, err = stdouttrace.New(stdouttrace.WithWriter(&after))
+	require.NoError(t, err)
+	require.NoError(t, withTimestamps.ExportSpans(t.Context(), spans))
+	assert.JSONEq(t, before.String(), after.String(), "exporting without timestamps must not modify the input span")
 }
 
 func expectedJSON(now time.Time) string {
@@ -135,18 +187,10 @@ func expectedJSON(now time.Time) string {
 	"EndTime": ` + string(serializedNow) + `,
 	"Attributes": [
 		{
-			"Key": "key",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
+			"key": "value"
 		},
 		{
-			"Key": "double",
-			"Value": {
-				"Type": "FLOAT64",
-				"Value": 123.456
-			}
+			"double": 123.456
 		}
 	],
 	"Events": [
@@ -154,11 +198,7 @@ func expectedJSON(now time.Time) string {
 			"Name": "foo",
 			"Attributes": [
 				{
-					"Key": "key",
-					"Value": {
-						"Type": "STRING",
-						"Value": "value"
-					}
+					"key": "value"
 				}
 			],
 			"DroppedAttributeCount": 0,
@@ -168,11 +208,7 @@ func expectedJSON(now time.Time) string {
 			"Name": "bar",
 			"Attributes": [
 				{
-					"Key": "double",
-					"Value": {
-						"Type": "FLOAT64",
-						"Value": 123.456
-					}
+					"double": 123.456
 				}
 			],
 			"DroppedAttributeCount": 0,
@@ -188,26 +224,20 @@ func expectedJSON(now time.Time) string {
 	"DroppedEvents": 0,
 	"DroppedLinks": 0,
 	"ChildSpanCount": 0,
-	"Resource": [
-		{
-			"Key": "rk1",
-			"Value": {
-				"Type": "STRING",
-				"Value": "rv11"
-			}
-		}
-	],
+	"Resource": {
+		"rk1": "rv11"
+	},
 	"InstrumentationScope": {
 		"Name": "",
 		"Version": "",
 		"SchemaURL": "",
-		"Attributes": null
+		"Attributes": {}
 	},
 	"InstrumentationLibrary": {
 		"Name": "",
 		"Version": "",
 		"SchemaURL": "",
-		"Attributes": null
+		"Attributes": {}
 	}
 }
 `
@@ -244,6 +274,7 @@ func TestObservability(t *testing.T) {
 		require.NoError(t, exporter.ExportSpans(t.Context(), tracetest.SpanStubs{
 			{Name: "/foo"},
 			{Name: "/bar"},
+			{Name: "/nonfinite", Attributes: []attribute.KeyValue{attribute.Float64("value", math.NaN())}},
 		}.Snapshots()))
 	}
 
@@ -309,7 +340,7 @@ func TestObservability(t *testing.T) {
 									semconv.OTelComponentName(observ.ComponentName(0)),
 									semconv.OTelComponentTypeKey.String(observ.ComponentType),
 								),
-								Value: 2,
+								Value: 3,
 							},
 						},
 					},
@@ -366,11 +397,29 @@ func TestObservability(t *testing.T) {
 	}
 }
 
+func BenchmarkExporterWithoutTimestamps(b *testing.B) {
+	spans := tracetest.SpanStubs{{
+		Events: []tracesdk.Event{
+			{Name: "first", Time: time.Now()},
+			{Name: "second", Time: time.Now()},
+		},
+	}}.Snapshots()
+	ex, err := stdouttrace.New(stdouttrace.WithWriter(io.Discard), stdouttrace.WithoutTimestamps())
+	require.NoError(b, err)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err := ex.ExportSpans(b.Context(), spans); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkExporterExportSpans(b *testing.B) {
 	ss := tracetest.SpanStubs{
 		{Name: "/foo"},
 		{
-			Name:       "JSON encoder cannot marshal math.Inf(1)",
+			Name:       "span with a non-finite attribute",
 			Attributes: []attribute.KeyValue{attribute.Float64("", math.Inf(1))},
 		},
 		{Name: "/bar"},

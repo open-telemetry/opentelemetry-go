@@ -9,6 +9,19 @@ params:
     - "v8js"
   excluded_attributes: ["messaging.client_id"]
 templates:
+  - pattern: instrument_test.go.j2
+    filter: .
+    application_mode: single
+    file_name: instrument_test.go
+  - pattern: metric_test.go.j2
+    filter: >
+      semconv_metrics({
+        "exclude_deprecated": true,
+        "exclude_root_namespace": $excluded_namespaces,
+      })
+      | semconv_group_metrics_by_root_namespace
+    application_mode: single
+    file_name: metric_test.go
   - pattern: attribute_group.go.j2
     filter: >
       semconv_grouped_attributes({
@@ -83,6 +96,7 @@ text_maps:
     otel.sdk.processor.span.queue.capacity: Int64ObservableUpDownCounter
     otel.sdk.processor.span.queue.size: Int64ObservableUpDownCounter
     process.cpu.time: Float64ObservableCounter
+    process.memory.utilization: Float64Gauge
     system.memory.usage: Int64ObservableUpDownCounter
     system.memory.utilization: Float64ObservableGauge
     system.network.io: Int64ObservableCounter

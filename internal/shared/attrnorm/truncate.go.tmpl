@@ -339,7 +339,7 @@ func truncate(limit int, s string) string {
 	// This prioritizes performance in the following order based on the most
 	// common expected use cases.
 	//
-	//  - Values shorter than the default limit (128).
+	//  - Values whose byte length does not exceed the limit.
 	//  - Strings with valid encodings that exceed the limit.
 	//  - No limit.
 	//  - Strings with invalid encodings that exceed the limit.
@@ -359,13 +359,26 @@ func truncate(limit int, s string) string {
 			continue
 		}
 
+		// A zero limit also truncates a leading invalid byte or U+FFFD.
+		if limit == 0 {
+			return ""
+		}
+		// Range reports RuneError for both an invalid byte and a valid U+FFFD.
+		// Only a size-1 decoding indicates invalid UTF-8.
 		_, size := utf8.DecodeRuneInString(s[i:])
 		if size == 1 {
-			// Invalid encoding.
+			// Removing this byte makes len(s)-1 an upper bound for a rebuilt
+			// result. Keep the valid prefix before rescanning s[i:].
 			b.Grow(len(s) - 1)
 			_, _ = b.WriteString(s[:i])
 			s = s[i:]
 			break
+		}
+
+		// A valid U+FFFD still consumes one character of the limit.
+		count++
+		if count > limit {
+			return s[:i]
 		}
 	}
 
@@ -374,7 +387,9 @@ func truncate(limit int, s string) string {
 		return s
 	}
 
-	// Truncate while validating UTF-8.
+	// The builder holds the valid prefix before the first invalid byte, and
+	// count includes its runes. Skip malformed bytes without counting them
+	// while copying the remaining valid runes up to the limit.
 	for i := 0; i < len(s) && count < limit; {
 		c := s[i]
 		if c < utf8.RuneSelf {

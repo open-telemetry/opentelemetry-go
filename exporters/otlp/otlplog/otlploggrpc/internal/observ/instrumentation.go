@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -21,8 +20,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 const (
@@ -188,59 +187,66 @@ type ExportOp struct {
 
 // End completes the observation of the operation being observed by a call to
 // [Instrumentation.ExportLogs].
-// Any error that is encountered is provided as err.
+// Any error that is encountered is provided as err, and code is the gRPC status
+// code of the last gRPC request performed in scope of this export call.
 //
 // If err is not nil, all logs will be recorded as failures unless the error is of
 // type [internal.PartialSuccess]. In the case of a PartialSuccess, the number
 // of successfully exported logs will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
-func (e ExportOp) End(err error) {
-	addOpt := get[metric.AddOption](addOpPool)
-	defer put(addOpPool, addOpt)
-	*addOpt = append(*addOpt, e.inst.addOpt)
+func (e ExportOp) End(err error, code codes.Code) {
+	inflightEnabled := e.inst.logInflightMetric.Enabled(e.ctx)
+	exportedEnabled := e.inst.logExportedMetric.Enabled(e.ctx)
 
-	if e.inst.logInflightMetric.Enabled(e.ctx) {
-		e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
+	if inflightEnabled || exportedEnabled {
+		addOpt := get[metric.AddOption](addOpPool)
+		defer put(addOpPool, addOpt)
+		*addOpt = append(*addOpt, e.inst.addOpt)
+
+		if inflightEnabled {
+			e.inst.logInflightMetric.Add(e.ctx, -e.nLogs, *addOpt...)
+		}
+
+		if exportedEnabled {
+			success := successful(e.nLogs, err)
+			e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
+			if err != nil {
+				// Add the error.type attribute to the attribute set.
+				attrs := get[attribute.KeyValue](attrsPool)
+				defer put(attrsPool, attrs)
+				*attrs = append(*attrs, e.inst.presetAttrs...)
+				*attrs = append(*attrs, semconv.ErrorType(err))
+
+				o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
+
+				// Reset addOpt with new attribute set
+				*addOpt = append((*addOpt)[:0], o)
+
+				e.inst.logExportedMetric.Add(e.ctx, e.nLogs-success, *addOpt...)
+			}
+		}
 	}
-	success := successful(e.nLogs, err)
-	if e.inst.logExportedMetric.Enabled(e.ctx) {
-		e.inst.logExportedMetric.Add(e.ctx, success, *addOpt...)
+
+	if e.inst.logExportedDurationMetric.Enabled(e.ctx) {
+		recordOpt := get[metric.RecordOption](recordOptPool)
+		defer put(recordOptPool, recordOpt)
+		*recordOpt = append(*recordOpt, e.inst.recordOption(err, code))
+		e.inst.logExportedDurationMetric.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
 	}
-	if err != nil && e.inst.logExportedMetric.Enabled(e.ctx) {
-		// Add the error.type attribute to the attribute set.
-		attrs := get[attribute.KeyValue](attrsPool)
-		defer put(attrsPool, attrs)
-		*attrs = append(*attrs, e.inst.presetAttrs...)
-		*attrs = append(*attrs, semconv.ErrorType(err))
-
-		o := metric.WithAttributeSet(attribute.NewSet(*attrs...))
-
-		// Reset addOpt with new attribute set
-		*addOpt = append((*addOpt)[:0], o)
-
-		e.inst.logExportedMetric.Add(e.ctx, e.nLogs-success, *addOpt...)
-	}
-
-	recordOpt := get[metric.RecordOption](recordOptPool)
-	defer put(recordOptPool, recordOpt)
-	*recordOpt = append(*recordOpt, e.inst.recordOption(err))
-	e.inst.logExportedDurationMetric.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
 }
 
-func (i *Instrumentation) recordOption(err error) metric.RecordOption {
-	if err == nil {
+func (i *Instrumentation) recordOption(err error, code codes.Code) metric.RecordOption {
+	if err == nil && code == codes.OK {
 		return i.recOpt
 	}
 	attrs := get[attribute.KeyValue](attrsPool)
 	defer put(attrsPool, attrs)
 
 	*attrs = append(*attrs, i.presetAttrs...)
-	code := status.Code(err)
-	*attrs = append(
-		*attrs,
-		semconv.RPCResponseStatusCode(code.String()),
-		semconv.ErrorType(err),
-	)
+	*attrs = append(*attrs, semconv.RPCResponseStatusCode(code.String()))
+	if err != nil {
+		*attrs = append(*attrs, semconv.ErrorType(err))
+	}
 
 	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
 }

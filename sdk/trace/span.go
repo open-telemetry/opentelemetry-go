@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -484,14 +484,12 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	if s.tracer.provider.hasOnEnding.Load() {
 		for _, sp := range sps {
-			if sp.onEnding != nil {
-				sp.onEnding.OnEnding(endingSpan{recordingSpan: s}, s)
-			}
+			sp.onEndingCall(endingSpan{recordingSpan: s}, s)
 		}
 	}
 	snap := s.snapshot()
 	for _, sp := range sps {
-		sp.sp.OnEnd(snap)
+		sp.onEnd(snap)
 	}
 }
 
@@ -866,12 +864,12 @@ func (s *recordingSpan) snapshot() ReadOnlySpan {
 	sd.droppedAttributeCount = s.droppedAttributes
 	if len(s.events.queue) > 0 {
 		sd.events = s.events.copy()
-		sd.droppedEventCount = s.events.droppedCount
 	}
+	sd.droppedEventCount = s.events.droppedCount
 	if len(s.links.queue) > 0 {
 		sd.links = s.links.copy()
-		sd.droppedLinkCount = s.links.droppedCount
 	}
+	sd.droppedLinkCount = s.links.droppedCount
 	return &sd
 }
 

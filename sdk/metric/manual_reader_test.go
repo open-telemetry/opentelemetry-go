@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 func TestManualReader(t *testing.T) {
@@ -82,6 +82,25 @@ func TestManualReaderTemporality(t *testing.T) {
 	}
 }
 
+func TestManualReaderNilTemporalitySelector(t *testing.T) {
+	rdr := NewManualReader(WithTemporalitySelector(nil))
+	assert.Equal(t, metricdata.CumulativeTemporality, rdr.temporality(InstrumentKindCounter))
+
+	rdr = NewManualReader(WithTemporalitySelector(deltaTemporalitySelector), WithTemporalitySelector(nil))
+	assert.Equal(t, metricdata.DeltaTemporality, rdr.temporality(InstrumentKindCounter))
+}
+
+func TestManualReaderNilAggregationSelector(t *testing.T) {
+	rdr := NewManualReader(WithAggregationSelector(nil))
+	assert.Equal(t, DefaultAggregationSelector(InstrumentKindCounter), rdr.aggregation(InstrumentKindCounter))
+
+	rdr = NewManualReader(
+		WithAggregationSelector(func(InstrumentKind) Aggregation { return AggregationDrop{} }),
+		WithAggregationSelector(nil),
+	)
+	assert.Equal(t, AggregationDrop{}, rdr.aggregation(InstrumentKindCounter))
+}
+
 func TestManualReaderCollect(t *testing.T) {
 	expiredCtx, cancel := context.WithDeadline(t.Context(), time.Now().Add(-1))
 	defer cancel()
@@ -124,6 +143,9 @@ func TestManualReaderCollect(t *testing.T) {
 }
 
 func TestManualReaderInstrumentation(t *testing.T) {
+	const expectedComponentType = "go.opentelemetry.io/otel/sdk/metric.ManualReader"
+	assert.Equal(t, expectedComponentType, manualReaderType)
+
 	// Enable SDK observability.
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
@@ -171,13 +193,11 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	attrs := dp.Attributes.ToSlice()
 	t.Logf("observability attrs: %v", attrs)
 
-	const expectedComponentType = "go.opentelemetry.io/otel/sdk/metric/metric.ManualReader"
-
 	var hasName, hasType bool
 	for _, a := range attrs {
 		switch a.Key {
 		case "otel.component.name":
-			if s := a.Value.AsString(); s != "" && strings.Contains(s, "metric_reader") {
+			if s := a.Value.AsString(); strings.HasPrefix(s, expectedComponentType+"/") {
 				hasName = true
 			}
 		case "otel.component.type":
@@ -186,7 +206,7 @@ func TestManualReaderInstrumentation(t *testing.T) {
 			}
 		}
 	}
-	assert.True(t, hasName, "expected non-empty otel.component.name containing 'metric_reader'")
+	assert.True(t, hasName, "expected otel.component.name with prefix %q", expectedComponentType+"/")
 	assert.True(t, hasType, "expected otel.component.type == %q", expectedComponentType)
 }
 

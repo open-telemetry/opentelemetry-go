@@ -11,11 +11,11 @@ import (
 	"crypto/x509"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/envconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/grpcendpoint"
 )
 
 // DefaultEnvOptionsReader is the default environments reader.
@@ -47,25 +47,45 @@ func getOptionsFromEnv() []GenericOption {
 	opts := []GenericOption{}
 
 	tlsConf := &tls.Config{}
+	// An http or https endpoint scheme takes precedence over the insecure
+	// settings, so those are only applied when the scheme does not decide.
+	var schemeDecidesInsecure bool
+	withInsecureEnv := func(b bool) {
+		if !schemeDecidesInsecure {
+			opts = append(opts, withInsecure(b))
+		}
+	}
 	DefaultEnvOptionsReader.Apply(
 		envconfig.WithURL("ENDPOINT", func(u *url.URL) {
+			insecure, decides := endpointScheme(u)
+			schemeDecidesInsecure = decides
 			opts = append(
 				opts,
-				withEndpointScheme(u),
+				withInsecure(insecure),
 				newSplitOption(func(cfg Config) Config {
 					cfg.Traces.Endpoint = u.Host
 					// For OTLP/HTTP endpoint URLs without a per-signal
 					// configuration, the passed endpoint is used as a base URL
 					// and the signals are sent to these paths relative to that.
-					cfg.Traces.URLPath = path.Join(u.Path, DefaultTracesPath)
+					suffix := DefaultTracesPath
+					if strings.HasSuffix(u.EscapedPath(), "/") {
+						suffix = strings.TrimPrefix(suffix, "/")
+					}
+					cfg.Traces.URLPath = u.Path + suffix
+					cfg.Traces.URLRawPath = u.RawPath
+					if cfg.Traces.URLRawPath != "" {
+						cfg.Traces.URLRawPath += suffix
+					}
 					return cfg
 				}, withEndpointForGRPC(u)),
 			)
 		}),
 		envconfig.WithURL("TRACES_ENDPOINT", func(u *url.URL) {
+			insecure, decides := endpointScheme(u)
+			schemeDecidesInsecure = decides
 			opts = append(
 				opts,
-				withEndpointScheme(u),
+				withInsecure(insecure),
 				newSplitOption(func(cfg Config) Config {
 					cfg.Traces.Endpoint = u.Host
 					// For endpoint URLs for OTLP/HTTP per-signal variables, the
@@ -77,6 +97,7 @@ func getOptionsFromEnv() []GenericOption {
 						path = "/"
 					}
 					cfg.Traces.URLPath = path
+					cfg.Traces.URLRawPath = u.RawPath
 					return cfg
 				}, withEndpointForGRPC(u)),
 			)
@@ -94,8 +115,8 @@ func getOptionsFromEnv() []GenericOption {
 			func(c tls.Certificate) { tlsConf.Certificates = []tls.Certificate{c} },
 		),
 		withTLSConfig(tlsConf, func(c *tls.Config) { opts = append(opts, WithTLSClientConfig(c)) }),
-		envconfig.WithBool("INSECURE", func(b bool) { opts = append(opts, withInsecure(b)) }),
-		envconfig.WithBool("TRACES_INSECURE", func(b bool) { opts = append(opts, withInsecure(b)) }),
+		envconfig.WithBool("INSECURE", withInsecureEnv),
+		envconfig.WithBool("TRACES_INSECURE", withInsecureEnv),
 		envconfig.WithHeaders("HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
 		envconfig.WithHeaders("TRACES_HEADERS", func(h map[string]string) { opts = append(opts, WithHeaders(h)) }),
 		WithEnvCompression("COMPRESSION", func(c Compression) { opts = append(opts, WithCompression(c)) }),
@@ -109,25 +130,16 @@ func getOptionsFromEnv() []GenericOption {
 	return opts
 }
 
-func withEndpointScheme(u *url.URL) GenericOption {
-	switch strings.ToLower(u.Scheme) {
-	case "http", "unix":
-		return WithInsecure()
-	default:
-		return WithSecure()
-	}
+// endpointScheme classifies the scheme of an endpoint URL. The returned
+// insecure value is the transport security implied by the scheme, and
+// decides reports whether the scheme determines it, in which case it
+// takes precedence over the insecure environment variables.
+func endpointScheme(u *url.URL) (insecure, decides bool) {
+	return grpcendpoint.Insecure(u)
 }
 
 func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
-	target := u.String()
-	switch strings.ToLower(u.Scheme) {
-	case "http", "https":
-		target = u.Host
-	case "":
-		if u.Host != "" {
-			target = path.Join(u.Host, u.Path)
-		}
-	}
+	target := grpcendpoint.Target(u)
 
 	return func(cfg Config) Config {
 		// For OTLP/gRPC endpoints, this is the target to which the

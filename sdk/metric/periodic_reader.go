@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric/internal/observ"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
 )
 
 // Default periodic reader timing.
@@ -39,6 +39,7 @@ func newPeriodicReaderConfig(options []PeriodicReaderOption) periodicReaderConfi
 	c := periodicReaderConfig{
 		interval:                 envDuration(envInterval, defaultInterval),
 		timeout:                  envDuration(envTimeout, defaultTimeout),
+		maxExportBatchSize:       envPositiveInt(envMaxExportBatchSize),
 		cardinalityLimitSelector: defaultCardinalityLimitSelector,
 	}
 	for _, o := range options {
@@ -102,8 +103,12 @@ func WithInterval(d time.Duration) PeriodicReaderOption {
 // WithMaxExportBatchSize configures the maximum number of metric data points in
 // a batch that are exported at once.
 //
-// If this option is not used or size is less than or equal to zero, no limit is
-// applied.
+// If size is positive, this option overrides the value set by the
+// OTEL_METRIC_EXPORT_MAX_BATCH_SIZE environment variable. Otherwise, this
+// option is ignored.
+//
+// If neither this option nor the environment variable sets a positive size,
+// no limit is applied.
 func WithMaxExportBatchSize(size int) PeriodicReaderOption {
 	return periodicReaderOptionFunc(func(conf periodicReaderConfig) periodicReaderConfig {
 		if size <= 0 {
@@ -199,13 +204,10 @@ type PeriodicReader struct {
 // Compile time check the periodicReader implements Reader and is comparable.
 var _ = map[Reader]struct{}{&PeriodicReader{}: {}}
 
-// newTicker allows testing override.
-var newTicker = time.NewTicker
-
 // run continuously collects and exports metric data at the specified
 // interval. This will run until ctx is canceled or times out.
 func (r *PeriodicReader) run(ctx context.Context, interval time.Duration) {
-	ticker := newTicker(interval)
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
@@ -250,6 +252,17 @@ func (r *PeriodicReader) cardinalityLimit(kind InstrumentKind) (int, bool) {
 	return r.cardinalityLimitSelector(kind)
 }
 
+func cleanResourceMetrics(rm *metricdata.ResourceMetrics, collected []metricdata.ScopeMetrics, sdkLen int) {
+	// Retain the underlying array capacity for the next flush.
+	// pipeline.produce() overwrites ScopeMetrics entries via ReuseSlice,
+	// so clearing is not needed and would break data reuse inside produce.
+
+	// Clear producer-owned entries before reusing the backing array.
+	clear(collected[sdkLen:])
+	rm.ScopeMetrics = collected[:0]
+	rm.Resource = nil
+}
+
 // collectAndExport gather all metric data related to the periodicReader r from
 // the SDK and exports it with r's exporter.
 func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
@@ -258,11 +271,17 @@ func (r *PeriodicReader) collectAndExport(ctx context.Context) error {
 	defer cancel()
 	// TODO (#3047): Use a sync.Pool or persistent pointer instead of allocating rm every Collect.
 	rm := r.rmPool.Get().(*metricdata.ResourceMetrics)
+	var (
+		sdkLen    int
+		collected []metricdata.ScopeMetrics
+	)
 	defer func() {
-		*rm = metricdata.ResourceMetrics{} // erase fields to allow GC to collect them.
+		cleanResourceMetrics(rm, collected, sdkLen)
 		r.rmPool.Put(rm)
 	}()
-	err := r.Collect(ctx, rm)
+	var err error
+	sdkLen, err = r.collect(ctx, r.sdkProducer.Load(), rm)
+	collected = rm.ScopeMetrics
 	if err == nil {
 		if r.batcher.size > 0 {
 			batches := r.batcher.splitResourceMetrics(rm)
@@ -293,11 +312,13 @@ func (r *PeriodicReader) Collect(ctx context.Context, rm *metricdata.ResourceMet
 		return errors.New("periodic reader: *metricdata.ResourceMetrics is nil")
 	}
 	// TODO (#3047): When collect is updated to accept output as param, pass rm.
-	return r.collect(ctx, r.sdkProducer.Load(), rm)
+	_, err := r.collect(ctx, r.sdkProducer.Load(), rm)
+	return err
 }
 
 // collect unwraps p as a produceHolder and returns its produce results.
-func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.ResourceMetrics) error {
+// It also returns the number of ScopeMetrics produced by the SDK (sdkLen).
+func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.ResourceMetrics) (int, error) {
 	var err error
 	if r.inst != nil {
 		cp := r.inst.CollectMetrics(ctx)
@@ -306,7 +327,7 @@ func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.Reso
 
 	if p == nil {
 		err = ErrReaderNotRegistered
-		return err
+		return 0, err
 	}
 
 	ph, ok := p.(produceHolder)
@@ -316,13 +337,14 @@ func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.Reso
 		// happen, return an error instead of panicking so a users code does
 		// not halt in the processes.
 		err = fmt.Errorf("periodic reader: invalid producer: %T", p)
-		return err
+		return 0, err
 	}
 
 	err = ph.produce(ctx, rm)
 	if err != nil {
-		return err
+		return 0, err
 	}
+	sdkLen := len(rm.ScopeMetrics)
 	for _, producer := range r.externalProducers.Load().([]Producer) {
 		externalMetrics, e := producer.Produce(ctx)
 		if e != nil {
@@ -333,7 +355,7 @@ func (r *PeriodicReader) collect(ctx context.Context, p any, rm *metricdata.Reso
 
 	global.Debug("PeriodicReader collection", "Data", rm)
 
-	return err
+	return sdkLen, err
 }
 
 // export exports metric data m using r's exporter.
@@ -402,7 +424,9 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 		if ph != nil { // Reader was registered.
 			// Flush pending telemetry.
 			m := r.rmPool.Get().(*metricdata.ResourceMetrics)
-			err = r.collect(ctx, ph, m)
+			var sdkLen int
+			sdkLen, err = r.collect(ctx, ph, m)
+			collected := m.ScopeMetrics
 			if err == nil {
 				if r.batcher.size > 0 {
 					batches := r.batcher.splitResourceMetrics(m)
@@ -423,6 +447,7 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 					err = r.exporter.Export(ctx, m)
 				}
 			}
+			cleanResourceMetrics(m, collected, sdkLen)
 			r.rmPool.Put(m)
 		}
 

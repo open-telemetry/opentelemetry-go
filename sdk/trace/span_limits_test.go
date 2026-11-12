@@ -188,7 +188,7 @@ func testSpanLimits(t *testing.T, limits SpanLimits) ReadOnlySpan {
 	}
 	_, span := tracer.Start(ctx, "span-name", trace.WithLinks(l, l))
 	span.SetAttributes(
-		attribute.String("string", "abc"),
+		attribute.String("string", "a\uFFFDb"),
 		attribute.StringSlice("stringSlice", []string{"abc", "def"}),
 		attribute.String("euro", "€"), // this is a 3-byte rune
 	)
@@ -207,14 +207,14 @@ func TestSpanLimits(t *testing.T) {
 		// Unlimited.
 		limits.AttributeValueLengthLimit = -1
 		attrs := testSpanLimits(t, limits).Attributes()
-		assert.Contains(t, attrs, attribute.String("string", "abc"))
+		assert.Contains(t, attrs, attribute.String("string", "a\uFFFDb"))
 		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"abc", "def"}))
 		assert.Contains(t, attrs, attribute.String("euro", "€"))
 
 		limits.AttributeValueLengthLimit = 2
 		attrs = testSpanLimits(t, limits).Attributes()
 		// Ensure string and string slice attributes are truncated.
-		assert.Contains(t, attrs, attribute.String("string", "ab"))
+		assert.Contains(t, attrs, attribute.String("string", "a\uFFFD"))
 		assert.Contains(t, attrs, attribute.StringSlice("stringSlice", []string{"ab", "de"}))
 		assert.Contains(t, attrs, attribute.String("euro", "€"))
 
@@ -306,4 +306,47 @@ func TestSpanLimits(t *testing.T) {
 			assert.Empty(t, l.Attributes)
 		}
 	})
+}
+
+func TestSnapshotDroppedCountsWithZeroEventAndLinkLimits(t *testing.T) {
+	// With a zero event/link limit the evicted queues never store
+	// anything, but the dropped counts must still be reported by the
+	// snapshot handed to processors and exporters on span end.
+	limits := NewSpanLimits()
+	limits.EventCountLimit = 0
+	limits.LinkCountLimit = 0
+
+	rec := new(recorder)
+	tp := NewTracerProvider(WithRawSpanLimits(limits), WithSpanProcessor(rec))
+	tracer := tp.Tracer("testSnapshotDroppedCounts")
+
+	ctx := t.Context()
+	_, span := tracer.Start(ctx, "span-name")
+	rws, ok := span.(ReadWriteSpan)
+	require.True(t, ok)
+
+	link := trace.Link{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID: [16]byte{0x01},
+			SpanID:  [8]byte{0x01},
+		}),
+	}
+	span.AddEvent("event 1")
+	span.AddEvent("event 2")
+	span.AddEvent("event 3")
+	rws.AddLink(link)
+	rws.AddLink(link)
+
+	assert.Equal(t, 3, rws.DroppedEvents())
+	assert.Equal(t, 2, rws.DroppedLinks())
+
+	span.End()
+	require.NoError(t, tp.Shutdown(ctx))
+	require.Len(t, *rec, 1)
+
+	snap := (*rec)[0]
+	assert.Empty(t, snap.Events())
+	assert.Empty(t, snap.Links())
+	assert.Equal(t, 3, snap.DroppedEvents())
+	assert.Equal(t, 2, snap.DroppedLinks())
 }

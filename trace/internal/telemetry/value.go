@@ -374,7 +374,9 @@ func (v *Value) MarshalJSON() ([]byte, error) {
 			Values []Value `json:"values"`
 		}{v.asSlice()}})
 	case ValueKindEmpty:
-		return nil, nil
+		// encoding/json rejects an empty result from a Marshaler, and an
+		// AnyValue with no value set is "{}" in OTLP JSON.
+		return []byte("{}"), nil
 	default:
 		return nil, fmt.Errorf("unknown Value kind: %s", v.Kind().String())
 	}

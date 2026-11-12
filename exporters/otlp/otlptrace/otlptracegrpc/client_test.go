@@ -41,7 +41,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 func TestMain(m *testing.M) {
@@ -608,7 +608,7 @@ func TestClientInstrumentation(t *testing.T) {
 						{Attributes: attribute.NewSet(attrs...), Value: 0},
 						{Attributes: attribute.NewSet(append(
 							attrs,
-							otelconv.SDKExporterSpanExported{}.AttrErrorType("*errors.joinError"),
+							otelconv.SDKExporterSpanExported{}.AttrErrorType("rejected"),
 						)...), Value: 2},
 					},
 					Temporality: 0x1,
@@ -623,7 +623,7 @@ func TestClientInstrumentation(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{Attributes: attribute.NewSet(append(
 							attrs,
-							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.joinError"),
+							otelconv.SDKExporterOperationDuration{}.AttrErrorType("rejected"),
 							otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
 								codes.OK.String(),
 							),

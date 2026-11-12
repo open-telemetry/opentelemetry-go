@@ -19,6 +19,21 @@ seasoned OpenTelemetry developer, just starting your journey, or
 simply curious about the work we do, you're more than welcome to
 participate!
 
+## Before Opening an Issue or Pull Request
+
+Before opening an issue or pull request, double-check whether the report or
+proposed change could involve a security vulnerability. This applies to all
+contributors, including AI agents.
+
+Do not open public issues or public pull requests (including draft PRs) for
+known or suspected security vulnerabilities or their fixes. Follow the
+[OpenTelemetry security policy](https://github.com/open-telemetry/.github/blob/main/SECURITY.md)
+and report them privately using
+[Report a vulnerability](https://github.com/open-telemetry/opentelemetry-go/security/advisories/new).
+If you are unsure whether a problem is a security vulnerability, use the private
+reporting process first. Keep vulnerability details, reproductions, and fixes
+private, and follow the maintainers' instructions for coordinated disclosure.
+
 ## Development
 
 You can view and edit the source code by cloning this repository:
@@ -754,8 +769,8 @@ Encapsulate setup in constructor functions, ensuring clear ownership and scope:
 import (
 	"errors"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 type SDKComponent struct {
@@ -1056,7 +1071,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) 
 
 All observability metrics should follow the [OpenTelemetry Semantic Conventions for SDK metrics](https://github.com/open-telemetry/semantic-conventions/blob/1cf2476ae5e518225a766990a28a6d5602bd5a30/docs/otel/sdk-metrics.md).
 
-Use the metric semantic conventions convenience package [otelconv](./semconv/v1.43.0/otelconv/metric.go).
+Use the metric semantic conventions convenience package [otelconv](./semconv/v1.44.0/otelconv/metric.go).
 
 ##### Component Identification
 
@@ -1202,7 +1217,6 @@ For more information about the maintainer role, see the [community repository](h
 
 ### Approvers
 
-- [Flc](https://github.com/flc1125), Independent
 - [Puneet Singh](https://github.com/ps-mir), Independent
 
 For more information about the approver role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#approver).
@@ -1221,6 +1235,7 @@ For more information about the triager role, see the [community repository](http
 - [Cheng-Zhen Yang](https://github.com/scorpionknifes)
 - [Chester Cheung](https://github.com/hanyuancheung)
 - [Evan Torrie](https://github.com/evantorrie)
+- [Flc゛](https://github.com/flc1125)
 - [Gustavo Silva Paiva](https://github.com/paivagustavo)
 - [Josh MacDonald](https://github.com/jmacd)
 - [Liz Fong-Jones](https://github.com/lizthegrey)

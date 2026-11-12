@@ -10,6 +10,7 @@ import (
 	octrace "go.opencensus.io/trace"
 
 	"go.opentelemetry.io/otel/attribute"
+	//nolint:staticcheck // This integration test intentionally exercises the deprecated bridge.
 	ocbridge "go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/bridge/opencensus/internal"
 	"go.opentelemetry.io/otel/codes"

@@ -237,7 +237,7 @@ func TestNewBaggageWithDuplicates(t *testing.T) {
 
 	// Ensure that the last-one-wins by verifying the value.
 	v := fmt.Sprintf("%d", maxMembers)
-	want := Baggage{list: baggage.List{"a": {Value: v}}}
+	want := Baggage{list: baggage.List{"a": baggage.NewItemWithProperties(v, nil)}}
 	assert.Equal(t, want, b)
 }
 
@@ -290,12 +290,21 @@ func TestBaggageParse(t *testing.T) {
 		m[i] = fmt.Sprintf("a%d=", i)
 	}
 	tooManyMembers := strings.Join(m, listDelimiter)
+	const densePropertyCount = 4095
+	denseMetadata := strings.Repeat("a;", densePropertyCount-1) + "a"
+	denseProperties := make([]Property, densePropertyCount)
+	for i := range denseProperties {
+		denseProperties[i] = Property{key: "a"}
+	}
 
 	testcases := []struct {
-		name string
-		in   string
-		want baggage.List
-		err  error
+		name           string
+		in             string
+		want           baggage.List
+		wantString     string
+		wantProperties map[string][]Property
+		err            error
+		errText        string
 	}{
 		{
 			name: "empty value",
@@ -306,75 +315,75 @@ func TestBaggageParse(t *testing.T) {
 			name: "single member empty value no properties",
 			in:   "foo=",
 			want: baggage.List{
-				"foo": {Value: ""},
+				"foo": baggage.NewItemWithProperties("", nil),
 			},
 		},
 		{
 			name: "single member no properties",
 			in:   "foo=1",
 			want: baggage.List{
-				"foo": {Value: "1"},
+				"foo": baggage.NewItemWithProperties("1", nil),
 			},
 		},
 		{
 			name: "single member no properties plus",
 			in:   "foo=1+1",
 			want: baggage.List{
-				"foo": {Value: "1+1"},
+				"foo": baggage.NewItemWithProperties("1+1", nil),
 			},
 		},
 		{
 			name: "single member no properties plus encoded",
 			in:   "foo=1%2B1",
 			want: baggage.List{
-				"foo": {Value: "1+1"},
+				"foo": baggage.NewItemWithProperties("1+1", nil),
 			},
 		},
 		{
 			name: "single member no properties slash",
 			in:   "foo=1/1",
 			want: baggage.List{
-				"foo": {Value: "1/1"},
+				"foo": baggage.NewItemWithProperties("1/1", nil),
 			},
 		},
 		{
 			name: "single member no properties slash encoded",
 			in:   "foo=1%2F1",
 			want: baggage.List{
-				"foo": {Value: "1/1"},
+				"foo": baggage.NewItemWithProperties("1/1", nil),
 			},
 		},
 		{
 			name: "single member no properties equals",
 			in:   "foo=1=1",
 			want: baggage.List{
-				"foo": {Value: "1=1"},
+				"foo": baggage.NewItemWithProperties("1=1", nil),
 			},
 		},
 		{
 			name: "single member no properties equals encoded",
 			in:   "foo=1%3D1",
 			want: baggage.List{
-				"foo": {Value: "1=1"},
+				"foo": baggage.NewItemWithProperties("1=1", nil),
 			},
 		},
 		{
 			name: "single member with spaces",
 			in:   " foo \t= 1\t\t ",
 			want: baggage.List{
-				"foo": {Value: "1"},
+				"foo": baggage.NewItemWithProperties("1", nil),
 			},
 		},
 		{
 			name: "single member empty value with properties",
 			in:   "foo=;state=on;red",
 			want: baggage.List{
+				"foo": baggage.NewItemWithMetadata("", "state=on;red"),
+			},
+			wantProperties: map[string][]Property{
 				"foo": {
-					Value: "",
-					Properties: []baggage.Property{
-						{Key: "state", Value: "on", HasValue: true},
-						{Key: "red"},
-					},
+					{key: "state", value: "on", hasValue: true},
+					{key: "red"},
 				},
 			},
 		},
@@ -382,37 +391,53 @@ func TestBaggageParse(t *testing.T) {
 			name: "single member with properties",
 			in:   "foo=1;state=on;red",
 			want: baggage.List{
+				"foo": baggage.NewItemWithMetadata("1", "state=on;red"),
+			},
+			wantProperties: map[string][]Property{
 				"foo": {
-					Value: "1",
-					Properties: []baggage.Property{
-						{Key: "state", Value: "on", HasValue: true},
-						{Key: "red"},
-					},
+					{key: "state", value: "on", hasValue: true},
+					{key: "red"},
 				},
 			},
+		},
+		{
+			name: "dense properties stored compactly",
+			in:   "k=;" + denseMetadata,
+			want: baggage.List{
+				"k": baggage.NewItemWithMetadata("", denseMetadata),
+			},
+			wantString:     "k=;" + denseMetadata,
+			wantProperties: map[string][]Property{"k": denseProperties},
+		},
+		{
+			name: "empty property tokens are normalized",
+			in:   "k=v;a;;b;",
+			want: baggage.List{
+				"k": baggage.NewItemWithMetadata("v", "a;b"),
+			},
+			wantString:     "k=v;a;b",
+			wantProperties: map[string][]Property{"k": {{key: "a"}, {key: "b"}}},
 		},
 		{
 			name: "single member with value containing equal signs",
 			in:   "foo=0=0=0",
 			want: baggage.List{
-				"foo": {Value: "0=0=0"},
+				"foo": baggage.NewItemWithProperties("0=0=0", nil),
 			},
 		},
 		{
 			name: "two members with properties",
 			in:   "foo=1;state=on;red,bar=2;yellow",
 			want: baggage.List{
+				"foo": baggage.NewItemWithMetadata("1", "state=on;red"),
+				"bar": baggage.NewItemWithMetadata("2", "yellow"),
+			},
+			wantProperties: map[string][]Property{
 				"foo": {
-					Value: "1",
-					Properties: []baggage.Property{
-						{Key: "state", Value: "on", HasValue: true},
-						{Key: "red"},
-					},
+					{key: "state", value: "on", hasValue: true},
+					{key: "red"},
 				},
-				"bar": {
-					Value:      "2",
-					Properties: []baggage.Property{{Key: "yellow"}},
-				},
+				"bar": {{key: "yellow"}},
 			},
 		},
 		{
@@ -420,55 +445,59 @@ func TestBaggageParse(t *testing.T) {
 			name: "duplicate key",
 			in:   "foo=1;state=on;red,foo=2",
 			want: baggage.List{
-				"foo": {Value: "2"},
+				"foo": baggage.NewItemWithProperties("2", nil),
 			},
 		},
 		{
 			name: "= value",
 			in:   "key==",
 			want: baggage.List{
-				"key": {Value: "="},
+				"key": baggage.NewItemWithProperties("=", nil),
 			},
 		},
 		{
 			name: "encoded ASCII string",
 			in:   "key1=val%252%2C",
 			want: baggage.List{
-				"key1": {Value: "val%2,"},
+				"key1": baggage.NewItemWithProperties("val%2,", nil),
 			},
 		},
 		{
 			name: "encoded property",
 			in:   "key1=;bar=val%252%2C",
 			want: baggage.List{
-				"key1": {
-					Properties: []baggage.Property{{Key: "bar", HasValue: true, Value: "val%2,"}},
-				},
+				"key1": baggage.NewItemWithMetadata("", "bar=val%252%2C"),
+			},
+			wantProperties: map[string][]Property{
+				"key1": {{key: "bar", value: "val%2,", hasValue: true}},
 			},
 		},
 		{
 			name: "encoded UTF-8 string",
 			in:   "foo=%C4%85%C5%9B%C4%87",
 			want: baggage.List{
-				"foo": {Value: "ąść"},
+				"foo": baggage.NewItemWithProperties("ąść", nil),
 			},
 		},
 		{
 			name: "encoded UTF-8 string in key",
 			in:   "a=b,%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87",
 			want: baggage.List{
-				"a":                  {Value: "b"},
-				"%C4%85%C5%9B%C4%87": {Value: "ąść"},
+				"a":                  baggage.NewItemWithProperties("b", nil),
+				"%C4%85%C5%9B%C4%87": baggage.NewItemWithProperties("ąść", nil),
 			},
 		},
 		{
 			name: "encoded UTF-8 string in property",
 			in:   "a=b,%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87;%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87",
 			want: baggage.List{
-				"a": {Value: "b"},
-				"%C4%85%C5%9B%C4%87": {Value: "ąść", Properties: []baggage.Property{
-					{Key: "%C4%85%C5%9B%C4%87", HasValue: true, Value: "ąść"},
-				}},
+				"a":                  baggage.NewItemWithProperties("b", nil),
+				"%C4%85%C5%9B%C4%87": baggage.NewItemWithMetadata("ąść", "%C4%85%C5%9B%C4%87=%C4%85%C5%9B%C4%87"),
+			},
+			wantProperties: map[string][]Property{
+				"%C4%85%C5%9B%C4%87": {
+					{key: "%C4%85%C5%9B%C4%87", value: "ąść", hasValue: true},
+				},
 			},
 		},
 		{
@@ -509,21 +538,41 @@ func TestBaggageParse(t *testing.T) {
 			name: "invalid property: no key",
 			in:   "foo=1;=v",
 			err:  errInvalidProperty,
+			errText: fmt.Sprintf(
+				"%s: %q", errInvalidProperty, "=v",
+			),
 		},
 		{
 			name: "invalid property: invalid key",
 			in:   "foo=1;key\\=v",
 			err:  errInvalidProperty,
+			errText: fmt.Sprintf(
+				"%s: %q", errInvalidProperty, "key\\=v",
+			),
 		},
 		{
 			name: "invalid property: invalid value",
 			in:   "foo=1;key=\\",
 			err:  errInvalidProperty,
+			errText: fmt.Sprintf(
+				"%s: %q", errInvalidProperty, "key=\\",
+			),
 		},
 		{
 			name: "invalid property: improper url encoded value",
-			in:   "foo=1;key=val%",
+			in:   "foo=1;valid;key=val%",
 			err:  errInvalidProperty,
+			errText: fmt.Sprintf(
+				"%s: %q", errInvalidProperty, "key=val%",
+			),
+		},
+		{
+			name: "invalid property: whitespace only",
+			in:   "foo=1; \t",
+			err:  errInvalidProperty,
+			errText: fmt.Sprintf(
+				"%s: %q", errInvalidProperty, " \t",
+			),
 		},
 		{
 			name: "invalid baggage string: too large",
@@ -536,7 +585,7 @@ func TestBaggageParse(t *testing.T) {
 			want: func() baggage.List {
 				b := make(baggage.List)
 				for i := range maxMembers {
-					b[fmt.Sprintf("a%d", i)] = baggage.Item{Value: ""}
+					b[fmt.Sprintf("a%d", i)] = baggage.NewItemWithProperties("", nil)
 				}
 				return b
 			}(),
@@ -559,7 +608,7 @@ func TestBaggageParse(t *testing.T) {
 				b := make(baggage.List)
 				val := strings.Repeat("v", 2727)
 				for i := range 3 {
-					b[fmt.Sprintf("k%d", i)] = baggage.Item{Value: val}
+					b[fmt.Sprintf("k%d", i)] = baggage.NewItemWithProperties(val, nil)
 				}
 				return b
 			}(),
@@ -568,12 +617,10 @@ func TestBaggageParse(t *testing.T) {
 			name: "percent-encoded octet sequences do not match the UTF-8 encoding scheme",
 			in:   "k=aa%ffcc;p=d%fff",
 			want: baggage.List{
-				"k": {
-					Value: "aa�cc",
-					Properties: []baggage.Property{
-						{Key: "p", Value: "d�f", HasValue: true},
-					},
-				},
+				"k": baggage.NewItemWithMetadata("aa�cc", "p=d%fff"),
+			},
+			wantProperties: map[string][]Property{
+				"k": {{key: "p", value: "d�f", hasValue: true}},
 			},
 		},
 	}
@@ -582,9 +629,45 @@ func TestBaggageParse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual, err := Parse(tc.in)
 			assert.ErrorIs(t, err, tc.err)
+			if tc.errText != "" {
+				assert.EqualError(t, err, tc.errText)
+			}
 			assert.Equal(t, Baggage{list: tc.want}, actual)
+			if tc.wantString != "" {
+				assert.Equal(t, tc.wantString, actual.String())
+			}
+			for key := range tc.want {
+				assert.Equal(t, tc.wantProperties[key], actual.Member(key).Properties())
+			}
 		})
 	}
+}
+
+func TestBaggageParsePropertyDensityAllocations(t *testing.T) {
+	const (
+		runs               = 100
+		densePropertyCount = 4095
+	)
+	denseMetadata := strings.Repeat("a;", densePropertyCount-1) + "a"
+	valueOnly := "k=" + strings.Repeat("v", maxBytesPerBaggageString-2)
+	denseProperties := "k=;" + denseMetadata
+
+	var result Baggage
+	measure := func(header string) float64 {
+		return testing.AllocsPerRun(runs, func() {
+			var err error
+			result, err = Parse(header)
+			if err != nil {
+				panic(err)
+			}
+		})
+	}
+
+	controlAllocs := measure(valueOnly)
+	denseAllocs := measure(denseProperties)
+	assert.LessOrEqual(t, denseAllocs, controlAllocs+2)
+	assert.Equal(t, denseMetadata, result.list["k"].Metadata())
+	assert.Nil(t, result.list["k"].Properties())
 }
 
 func TestBaggageParseValue(t *testing.T) {
@@ -649,14 +732,14 @@ func TestBaggageString(t *testing.T) {
 			name: "single member empty value no properties",
 			out:  "foo=",
 			baggage: baggage.List{
-				"foo": {Value: ""},
+				"foo": baggage.NewItemWithProperties("", nil),
 			},
 		},
 		{
 			name: "single member no properties",
 			out:  "foo=1",
 			baggage: baggage.List{
-				"foo": {Value: "1"},
+				"foo": baggage.NewItemWithProperties("1", nil),
 			},
 		},
 		{
@@ -670,59 +753,56 @@ func TestBaggageString(t *testing.T) {
 			// characters need to be percent encoded.
 			out: "foo=%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F%20!%22#$%25&'()*+%2C-./0123456789:%3B<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[%5C]^_`abcdefghijklmnopqrstuvwxyz{|}~%7F",
 			baggage: baggage.List{
-				"foo": {Value: func() string {
-					// All US-ASCII characters.
+				"foo": baggage.NewItemWithProperties(func() string {
 					b := [128]byte{}
 					for i := range b {
 						b[i] = byte(i)
 					}
 					return string(b[:])
-				}()},
+				}(), nil),
 			},
 		},
 		{
 			name: "non-ASCII UTF-8 string",
 			out:  "foo=%C4%85%C5%9B%C4%87",
 			baggage: baggage.List{
-				"foo": {Value: "ąść"},
+				"foo": baggage.NewItemWithProperties("ąść", nil),
 			},
 		},
 		{
 			name: "Encoded property value",
 			out:  "foo=;bar=%20",
 			baggage: baggage.List{
-				"foo": {
-					Properties: []baggage.Property{
-						{Key: "bar", Value: " ", HasValue: true},
-					},
-				},
+				"foo": baggage.NewItemWithProperties("", []baggage.Property{
+					{Key: "bar", Value: " ", HasValue: true},
+				}),
 			},
 		},
 		{
 			name: "plus",
 			out:  "foo=1+1",
 			baggage: baggage.List{
-				"foo": {Value: "1+1"},
+				"foo": baggage.NewItemWithProperties("1+1", nil),
 			},
 		},
 		{
 			name: "equal",
 			out:  "foo=1=1",
 			baggage: baggage.List{
-				"foo": {Value: "1=1"},
+				"foo": baggage.NewItemWithProperties("1=1", nil),
 			},
 		},
 		{
 			name: "single member empty value with properties",
 			out:  "foo=;red;state=on",
 			baggage: baggage.List{
-				"foo": {
-					Value: "",
-					Properties: []baggage.Property{
+				"foo": baggage.NewItemWithProperties(
+					"",
+					[]baggage.Property{
 						{Key: "state", Value: "on", HasValue: true},
 						{Key: "red"},
 					},
-				},
+				),
 			},
 		},
 		{
@@ -731,31 +811,28 @@ func TestBaggageString(t *testing.T) {
 			// are set and no encoding is performed.
 			out: "foo=1;red;state=on;z=z=z",
 			baggage: baggage.List{
-				"foo": {
-					Value: "1",
-					Properties: []baggage.Property{
+				"foo": baggage.NewItemWithProperties(
+					"1",
+					[]baggage.Property{
 						{Key: "state", Value: "on", HasValue: true},
 						{Key: "red"},
 						{Key: "z", Value: "z=z", HasValue: true},
 					},
-				},
+				),
 			},
 		},
 		{
 			name: "two members with properties",
 			out:  "bar=2;yellow,foo=1;red;state=on",
 			baggage: baggage.List{
-				"foo": {
-					Value: "1",
-					Properties: []baggage.Property{
+				"foo": baggage.NewItemWithProperties(
+					"1",
+					[]baggage.Property{
 						{Key: "state", Value: "on", HasValue: true},
 						{Key: "red"},
 					},
-				},
-				"bar": {
-					Value:      "2",
-					Properties: []baggage.Property{{Key: "yellow"}},
-				},
+				),
+				"bar": baggage.NewItemWithProperties("2", []baggage.Property{{Key: "yellow"}}),
 			},
 		},
 		{
@@ -764,21 +841,21 @@ func TestBaggageString(t *testing.T) {
 			name: "utf-8 key and value",
 			out:  "foo=B%25%20%F0%9F%92%BC-2;foo-1=B%25%20%F0%9F%92%BC-4;foo-2",
 			baggage: baggage.List{
-				"ąść": {
-					Value: "B% 💼",
-					Properties: []baggage.Property{
+				"ąść": baggage.NewItemWithProperties(
+					"B% 💼",
+					[]baggage.Property{
 						{Key: "ąść-1", Value: "B% 💼-1", HasValue: true},
 						{Key: "ąść-2"},
 					},
-				},
-				"foo": {
-					Value: "B% 💼-2",
-					Properties: []baggage.Property{
+				),
+				"foo": baggage.NewItemWithProperties(
+					"B% 💼-2",
+					[]baggage.Property{
 						{Key: "ąść", Value: "B% 💼-3", HasValue: true},
 						{Key: "foo-1", Value: "B% 💼-4", HasValue: true},
 						{Key: "foo-2"},
 					},
-				},
+				),
 			},
 		},
 	}
@@ -852,7 +929,7 @@ func TestBaggageSetMember(t *testing.T) {
 	b2, err := b1.SetMember(m)
 	assert.NoError(t, err)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
-	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", nil), b2.list[key])
 	assert.Len(t, b1.list, 1)
 	assert.Len(t, b2.list, 1)
 
@@ -860,24 +937,24 @@ func TestBaggageSetMember(t *testing.T) {
 	m.properties = p
 	b3, err := b2.SetMember(m)
 	assert.NoError(t, err)
-	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
-	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", nil), b2.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", []baggage.Property{{Key: "p"}}), b3.list[key])
 	assert.Len(t, b2.list, 1)
 	assert.Len(t, b3.list, 1)
 
 	// The returned baggage needs to be immutable and should use a copy of the
 	// properties slice.
 	p[0] = Property{key: "different"}
-	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", []baggage.Property{{Key: "p"}}), b3.list[key])
 	// Reset for below.
 	p[0] = Property{key: "p"}
 
 	m = Member{key: "another", hasData: true}
 	b4, err := b3.SetMember(m)
 	assert.NoError(t, err)
-	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", []baggage.Property{{Key: "p"}}), b3.list[key])
 	assert.NotContains(t, b3.list, m.key)
-	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b4.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", []baggage.Property{{Key: "p"}}), b4.list[key])
 	assert.Equal(t, baggage.Item{}, b4.list[m.key])
 	assert.Len(t, b3.list, 1)
 	assert.Len(t, b4.list, 2)
@@ -899,7 +976,7 @@ func TestBaggageSetFalseMember(t *testing.T) {
 	b2, err := b1.SetMember(m)
 	assert.Error(t, err)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
-	assert.Equal(t, baggage.Item{Value: ""}, b2.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("", nil), b2.list[key])
 	assert.Empty(t, b1.list)
 	assert.Empty(t, b2.list)
 }
@@ -920,7 +997,7 @@ func TestBaggageSetFalseMembers(t *testing.T) {
 	b2, err := b1.SetMember(m)
 	assert.NoError(t, err)
 	assert.Equal(t, baggage.Item{}, b1.list[key])
-	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", nil), b2.list[key])
 	assert.Len(t, b1.list, 1)
 	assert.Len(t, b2.list, 1)
 
@@ -928,24 +1005,24 @@ func TestBaggageSetFalseMembers(t *testing.T) {
 	m.properties = p
 	b3, err := b2.SetMember(m)
 	assert.NoError(t, err)
-	assert.Equal(t, baggage.Item{Value: "v"}, b2.list[key])
-	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", nil), b2.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", []baggage.Property{{Key: "p"}}), b3.list[key])
 	assert.Len(t, b2.list, 1)
 	assert.Len(t, b3.list, 1)
 
 	// The returned baggage needs to be immutable and should use a copy of the
 	// properties slice.
 	p[0] = Property{key: "different"}
-	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", []baggage.Property{{Key: "p"}}), b3.list[key])
 	// Reset for below.
 	p[0] = Property{key: "p"}
 
 	m = Member{key: "another"}
 	b4, err := b3.SetMember(m)
 	assert.Error(t, err)
-	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b3.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", []baggage.Property{{Key: "p"}}), b3.list[key])
 	assert.NotContains(t, b3.list, m.key)
-	assert.Equal(t, baggage.Item{Value: "v", Properties: []baggage.Property{{Key: "p"}}}, b4.list[key])
+	assert.Equal(t, baggage.NewItemWithProperties("v", []baggage.Property{{Key: "p"}}), b4.list[key])
 	assert.Equal(t, baggage.Item{}, b4.list[m.key])
 	assert.Len(t, b3.list, 1)
 	assert.Len(t, b4.list, 1)
@@ -977,24 +1054,21 @@ func TestBaggageMembers(t *testing.T) {
 	}
 
 	bag := Baggage{list: baggage.List{
-		"foo": {
-			Value: "1",
-			Properties: []baggage.Property{
+		"foo": baggage.NewItemWithProperties(
+			"1",
+			[]baggage.Property{
 				{Key: "state", Value: "on", HasValue: true},
 				{Key: "red"},
 			},
-		},
-		"bar": {
-			Value:      "2",
-			Properties: []baggage.Property{{Key: "yellow"}},
-		},
+		),
+		"bar": baggage.NewItemWithProperties("2", []baggage.Property{{Key: "yellow"}}),
 	}}
 
 	assert.ElementsMatch(t, members, bag.Members())
 }
 
 func TestBaggageMember(t *testing.T) {
-	bag := Baggage{list: baggage.List{"foo": {Value: "1"}}}
+	bag := Baggage{list: baggage.List{"foo": baggage.NewItemWithProperties("1", nil)}}
 	assert.Equal(t, Member{key: "foo", value: "1", hasData: true}, bag.Member("foo"))
 	assert.Equal(t, Member{}, bag.Member("bar"))
 }
@@ -1029,6 +1103,66 @@ func TestMemberProperties(t *testing.T) {
 	// Returned slice needs to be a copy so the original is immutable.
 	got[0] = Property{key: "bar"}
 	assert.NotEqual(t, m.properties, got)
+}
+
+func TestValidateMetadata(t *testing.T) {
+	tests := []struct {
+		name     string
+		metadata string
+		want     bool
+	}{
+		{name: "Empty", want: true},
+		{name: "Tab", metadata: "\t"},
+		{name: "Properties", metadata: "a;b=1;c=%20", want: true},
+		{name: "EmptyPropertiesAcceptedForNormalization", metadata: ";a;;b;", want: true},
+		{name: "PropertyWhitespace", metadata: "key \t = \t value", want: true},
+		{name: "MissingKey", metadata: "=v"},
+		{name: "TruncatedPercentEncoding", metadata: "key=val%"},
+		{name: "InvalidPercentHighNibble", metadata: "key=val%G0"},
+		{name: "InvalidPercentLowNibble", metadata: "key=val%0G"},
+		{name: "NUL", metadata: "\x00"},
+		{name: "Newline", metadata: "\n"},
+		{name: "Quote", metadata: `"`},
+		{name: "Comma", metadata: ","},
+		{name: "Backslash", metadata: `\`},
+		{name: "DEL", metadata: "\x7f"},
+		{name: "NonASCII", metadata: "é"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, valid := validateMetadata(test.metadata)
+			assert.Equal(t, test.want, valid)
+		})
+	}
+}
+
+func TestValidateMetadataNoAllocations(t *testing.T) {
+	tests := []struct {
+		name     string
+		metadata string
+		want     bool
+	}{
+		{name: "Valid", metadata: strings.Repeat("a;", 4095) + "a", want: true},
+		{name: "Invalid", metadata: strings.Repeat("a;", 4095) + "key=val%"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var invalid string
+			var valid bool
+			allocs := testing.AllocsPerRun(100, func() {
+				invalid, valid = validateMetadata(test.metadata)
+			})
+			assert.Equal(t, test.want, valid)
+			if test.want {
+				assert.Empty(t, invalid)
+			} else {
+				assert.NotEmpty(t, invalid)
+			}
+			assert.Zero(t, allocs)
+		})
+	}
 }
 
 func TestMemberValidation(t *testing.T) {
@@ -1162,15 +1296,73 @@ func TestPropertiesValidate(t *testing.T) {
 }
 
 func TestMemberString(t *testing.T) {
-	// normal key value pair
-	member, _ := NewMemberRaw("key", "value")
-	memberStr := member.String()
-	assert.Equal(t, "key=value", memberStr)
+	tests := []struct {
+		name  string
+		wire  string
+		key   string
+		value string
+		props []Property
+		want  string
+	}{
+		{
+			name:  "key value",
+			key:   "key",
+			value: "value",
+			want:  "key=value",
+		},
+		{
+			name:  "encoded value",
+			key:   "key",
+			value: "; ",
+			want:  "key=%3B%20",
+		},
+		{
+			name: "parsed metadata",
+			wire: " k = v ; state = on ;red;empty=;encoded=a%20b;invalid=d%fff",
+			want: "k=v; state = on ;red;empty=;encoded=a%20b;invalid=d%fff",
+		},
+		{
+			name: "empty metadata suffix",
+			wire: "k=v;",
+			want: "k=v",
+		},
+		{
+			name: "empty property tokens",
+			wire: "k=v;;",
+			want: "k=v",
+		},
+		{
+			name: "mixed empty property tokens",
+			wire: "k=v;a;;b",
+			want: "k=v;a;b",
+		},
+		{
+			name: "leading empty property token",
+			wire: "k=v;;a",
+			want: "k=v;a",
+		},
+		{
+			name:  "non-W3C property",
+			key:   "k",
+			value: "v",
+			props: []Property{{key: "B% 💼"}},
+			want:  "k=v;",
+		},
+	}
 
-	// encoded value
-	member, _ = NewMemberRaw("key", "; ")
-	memberStr = member.String()
-	assert.Equal(t, "key=%3B%20", memberStr)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var member Member
+			var err error
+			if test.wire != "" {
+				member, err = parseMember(test.wire)
+			} else {
+				member, err = NewMemberRaw(test.key, test.value, test.props...)
+			}
+			require.NoError(t, err)
+			assert.Equal(t, test.want, member.String())
+		})
+	}
 }
 
 var benchBaggage Baggage
@@ -1188,13 +1380,19 @@ func BenchmarkNew(b *testing.B) {
 	}
 }
 
-var benchMember Member
+func BenchmarkNewMember(b *testing.B) {
+	b.ReportAllocs()
+
+	for b.Loop() {
+		_, _ = NewMember("key", "value")
+	}
+}
 
 func BenchmarkNewMemberRaw(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		benchMember, _ = NewMemberRaw("key", "value")
+		_, _ = NewMemberRaw("key", "value")
 	}
 }
 
@@ -1202,9 +1400,70 @@ func BenchmarkParse(b *testing.B) {
 	b.ReportAllocs()
 
 	for b.Loop() {
-		benchBaggage, _ = Parse(
+		_, _ = Parse(
 			"userId=alice,serverNode = DF28 , isProduction = false,hasProp=stuff;propKey;propWValue=value, invalidUtf8=pr%ffo%ffp%fcValue",
 		)
+	}
+}
+
+var propertyDensityBenchmarks = []struct {
+	name          string
+	header        string
+	propertyCount int
+}{
+	{name: "ValueOnly", header: "k=" + strings.Repeat("v", maxBytesPerBaggageString-2)},
+	{name: "DenseProperties", header: "k=" + strings.Repeat(";a", 4095), propertyCount: 4095},
+	{name: "DenseValueProperties", header: "k=" + strings.Repeat(";a=", 2730), propertyCount: 2730},
+	{name: "DenseEncodedProperties", header: "k=" + strings.Repeat(";a=%20", 1170), propertyCount: 1170},
+}
+
+func BenchmarkParsePropertyDensity(b *testing.B) {
+	for _, test := range propertyDensityBenchmarks {
+		b.Run(test.name, func(b *testing.B) {
+			bag, err := Parse(test.header)
+			require.NoError(b, err)
+			require.Len(b, bag.Member("k").Properties(), test.propertyCount)
+			b.SetBytes(int64(len(test.header)))
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				_, _ = Parse(test.header)
+			}
+		})
+	}
+}
+
+func BenchmarkMemberPropertiesPropertyDensity(b *testing.B) {
+	for _, test := range propertyDensityBenchmarks {
+		b.Run(test.name, func(b *testing.B) {
+			bag, err := Parse(test.header)
+			require.NoError(b, err)
+			member := bag.Member("k")
+			require.Len(b, member.Properties(), test.propertyCount)
+			b.SetBytes(int64(len(test.header)))
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				member.Properties()
+			}
+		})
+	}
+}
+
+func BenchmarkParsePropertiesPropertyDensity(b *testing.B) {
+	for _, test := range propertyDensityBenchmarks {
+		b.Run(test.name, func(b *testing.B) {
+			bag, err := Parse(test.header)
+			require.NoError(b, err)
+			require.Len(b, bag.Member("k").Properties(), test.propertyCount)
+			b.SetBytes(int64(len(test.header)))
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				benchBaggage, _ = Parse(test.header)
+				benchBaggage.Member("k").Properties()
+			}
+		})
 	}
 }
 
