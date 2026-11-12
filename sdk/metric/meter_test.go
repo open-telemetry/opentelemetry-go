@@ -2414,17 +2414,21 @@ func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
 			intHistogram.Record(t.Context(), 3)
 			floatHistogram.Record(t.Context(), 1)
 			floatHistogram.Record(t.Context(), 3)
+			const (
+				wantCount = 2
+				wantSum   = 1 + 3
+			)
 			var rm metricdata.ResourceMetrics
 			require.NoError(t, reader.Collect(t.Context(), &rm))
 			require.Len(t, rm.ScopeMetrics, 1)
 			require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
 			t.Run("Int64Histogram", func(t *testing.T) {
 				assertHistogramBucketPrecedence[int64](t, rm.ScopeMetrics[0].Metrics[0].Data,
-					tt.expectedBucketBoundaries, tt.expectedExponential)
+					tt.expectedBucketBoundaries, tt.expectedExponential, wantCount, wantSum)
 			})
 			t.Run("Float64Histogram", func(t *testing.T) {
 				assertHistogramBucketPrecedence[float64](t, rm.ScopeMetrics[0].Metrics[1].Data,
-					tt.expectedBucketBoundaries, tt.expectedExponential)
+					tt.expectedBucketBoundaries, tt.expectedExponential, wantCount, wantSum)
 			})
 		})
 	}
@@ -2432,13 +2436,14 @@ func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
 
 func assertHistogramBucketPrecedence[N int64 | float64](
 	t *testing.T, data metricdata.Aggregation, boundaries []float64, expectedExponential bool,
+	wantCount uint64, wantSum N,
 ) {
 	t.Helper()
 	if hist, ok := data.(metricdata.ExponentialHistogram[N]); ok {
 		assert.True(t, expectedExponential)
 		require.Len(t, hist.DataPoints, 1)
-		assert.Equal(t, uint64(2), hist.DataPoints[0].Count)
-		assert.Equal(t, N(4), hist.DataPoints[0].Sum)
+		assert.Equal(t, wantCount, hist.DataPoints[0].Count)
+		assert.Equal(t, wantSum, hist.DataPoints[0].Sum)
 		return
 	}
 	assert.False(t, expectedExponential)
@@ -2446,11 +2451,11 @@ func assertHistogramBucketPrecedence[N int64 | float64](
 	require.True(t, ok)
 	require.Len(t, hist.DataPoints, 1)
 	point := hist.DataPoints[0]
-	assert.Equal(t, uint64(2), point.Count)
-	assert.Equal(t, N(4), point.Sum)
+	assert.Equal(t, wantCount, point.Count)
+	assert.Equal(t, wantSum, point.Sum)
 	if len(boundaries) == 0 {
 		assert.Empty(t, point.Bounds)
-		assert.Equal(t, []uint64{2}, point.BucketCounts)
+		assert.Equal(t, []uint64{wantCount}, point.BucketCounts)
 	} else {
 		assert.Equal(t, boundaries, point.Bounds)
 	}
