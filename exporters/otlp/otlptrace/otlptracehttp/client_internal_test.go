@@ -129,6 +129,44 @@ func TestRetryableNetworkError(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "socks destination refused",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{
+					Op:  "socks connect",
+					Net: "tcp",
+					Err: errors.New("unknown error connection refused"),
+				},
+			},
+			want: true,
+		},
+		{
+			name: "socks host unreachable",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{
+					Op:  "socks connect",
+					Net: "tcp",
+					Err: errors.New("unknown error host unreachable"),
+				},
+			},
+			want: true,
+		},
+		{
+			name: "socks connection not allowed",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{
+					Op:  "socks connect",
+					Net: "tcp",
+					Err: errors.New("unknown error connection not allowed by ruleset"),
+				},
+			},
+		},
+		{
 			name: "socks authentication failure",
 			err: &url.Error{
 				Op:  "Post",
@@ -236,6 +274,20 @@ func TestRetryableNetworkErrorRealErrors(t *testing.T) {
 		assert.True(t, retryableNetworkError(err), "err: %v", err)
 	})
 
+	t.Run("socks destination refused", func(t *testing.T) {
+		proxyURL := socksReplyServer(t, 0x05)
+		c := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+		err := post(t, c, "http://127.0.0.1:1/")
+		assert.True(t, retryableNetworkError(err), "err: %v", err)
+	})
+
+	t.Run("socks connection not allowed", func(t *testing.T) {
+		proxyURL := socksReplyServer(t, 0x02)
+		c := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+		err := post(t, c, "http://127.0.0.1:1/")
+		assert.False(t, retryableNetworkError(err), "err: %v", err)
+	})
+
 	t.Run("tls protocol version rejected", func(t *testing.T) {
 		srv := httptest.NewUnstartedServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 		srv.TLS = &tls.Config{MinVersion: tls.VersionTLS13}
@@ -254,6 +306,42 @@ func TestRetryableNetworkErrorRealErrors(t *testing.T) {
 		err := post(t, &http.Client{}, "http://127.0.0.1:65536/")
 		assert.False(t, retryableNetworkError(err), "err: %v", err)
 	})
+}
+
+// socksReplyServer starts a SOCKS5 proxy that accepts one unauthenticated
+// CONNECT request for an IPv4 destination and answers it with reply code rep.
+func socksReplyServer(t *testing.T, rep byte) *url.URL {
+	t.Helper()
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ln.Close() })
+
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		// Greeting: version, method count, methods.
+		hdr := make([]byte, 2)
+		if _, err := io.ReadFull(conn, hdr); err != nil {
+			return
+		}
+		if _, err := io.ReadFull(conn, make([]byte, hdr[1])); err != nil {
+			return
+		}
+		if _, err := conn.Write([]byte{0x05, 0x00}); err != nil {
+			return
+		}
+		// Request: version, command, reserved, IPv4 type, address, port.
+		if _, err := io.ReadFull(conn, make([]byte, 10)); err != nil {
+			return
+		}
+		_, _ = conn.Write([]byte{0x05, rep, 0x00, 0x01, 0, 0, 0, 0, 0, 0})
+	}()
+
+	return &url.URL{Scheme: "socks5", Host: ln.Addr().String()}
 }
 
 type timeoutError struct{}

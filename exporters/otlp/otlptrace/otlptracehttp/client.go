@@ -546,6 +546,9 @@ func retryableNetworkError(err error) bool {
 	// classify the underlying failure instead. SOCKS authentication and
 	// protocol failures are not *net.OpError underneath, so stay permanent.
 	for ok && (opErr.Op == "proxyconnect" || opErr.Op == "socks connect") {
+		if opErr.Op == "socks connect" && socksTransientReply(opErr.Err) {
+			return true
+		}
 		opErr, ok = errors.AsType[*net.OpError](opErr.Err)
 	}
 	if !ok {
@@ -566,4 +569,21 @@ func retryableNetworkError(err error) bool {
 		return false
 	}
 	return true
+}
+
+// socksTransientReply reports whether err is a SOCKS5 proxy reply that the
+// destination was unreachable or refused the connection. These match the
+// direct dial failures retried above. net/http exposes the reply code only as
+// an error message, so the messages are matched exactly.
+func socksTransientReply(err error) bool {
+	if err == nil {
+		return false
+	}
+	switch err.Error() {
+	case "unknown error connection refused",
+		"unknown error network unreachable",
+		"unknown error host unreachable":
+		return true
+	}
+	return false
 }
