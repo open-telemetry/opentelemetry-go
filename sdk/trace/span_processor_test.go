@@ -489,7 +489,7 @@ func TestOnEndingDrainsBeforeProcessorShutdown(t *testing.T) {
 		stop func(*TracerProvider, SpanProcessor)
 	}{
 		{"Shutdown", func(tp *TracerProvider, _ SpanProcessor) {
-			assert.NoError(t, tp.Shutdown(context.Background()))
+			assert.NoError(t, tp.Shutdown(t.Context()))
 		}},
 		{"UnregisterSpanProcessor", func(tp *TracerProvider, sp SpanProcessor) {
 			tp.UnregisterSpanProcessor(sp)
