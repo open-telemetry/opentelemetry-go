@@ -26,13 +26,14 @@ import (
 	"net/url"
 	"sync"
 	"time"
-
+{{ if not (index . "isHTTP") }}
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+{{- end }}
 	"google.golang.org/protobuf/proto"
 
-	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	collpb "{{ or (index . "protoImportPath") "go.opentelemetry.io/proto/otlp" }}/collector/metrics/v1"
+	mpb "{{ or (index . "protoImportPath") "go.opentelemetry.io/proto/otlp" }}/metrics/v1"
 
 	"{{ .oconfImportPath }}"
 )
@@ -76,6 +77,8 @@ func (s *Storage) Dump() []*mpb.ResourceMetrics {
 	data, s.data = s.data, []*mpb.ResourceMetrics{}
 	return data
 }
+
+{{- if not (index . "isHTTP") }}
 
 // GRPCCollector is an OTLP gRPC server that collects all requests it receives.
 type GRPCCollector struct {
@@ -166,6 +169,8 @@ func (c *GRPCCollector) Export(
 	}
 	return &collpb.ExportMetricsServiceResponse{}, nil
 }
+
+{{- end }}
 
 var emptyExportMetricsServiceResponse = func() []byte {
 	body := collpb.ExportMetricsServiceResponse{}

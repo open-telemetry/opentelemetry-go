@@ -17,10 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
-	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	cpb "go.opentelemetry.io/proto/otlp/common/v1"
-	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
+	collpb "{{ or (index . "protoImportPath") "go.opentelemetry.io/proto/otlp" }}/collector/metrics/v1"
+	cpb "{{ or (index . "protoImportPath") "go.opentelemetry.io/proto/otlp" }}/common/v1"
+	mpb "{{ or (index . "protoImportPath") "go.opentelemetry.io/proto/otlp" }}/metrics/v1"
+	rpb "{{ or (index . "protoImportPath") "go.opentelemetry.io/proto/otlp" }}/resource/v1"
 
 	"{{ .internalImportPath }}"
 	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"

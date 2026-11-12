@@ -13,9 +13,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	cpb "go.opentelemetry.io/proto/otlp/common/v1"
-	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
-	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
+	cpb "go.opentelemetry.io/proto/slim/otlp/common/v1"
+	lpb "go.opentelemetry.io/proto/slim/otlp/logs/v1"
+	rpb "go.opentelemetry.io/proto/slim/otlp/resource/v1"
 
 	"go.opentelemetry.io/otel/attribute"
 	api "go.opentelemetry.io/otel/log"
