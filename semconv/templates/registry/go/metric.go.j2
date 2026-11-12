@@ -65,6 +65,8 @@ var (
 {%- for v in variants %}
 
 {{ [ v.name ~ " is an instrument used to record metric values conforming to the \"" ~ metric.metric_name ~ "\" semantic conventions. " ~ h.it_reps(metric.brief)|trim(".") ~ "." ] | comment | trim }}
+//
+// Stability: {{ metric.stability | title }}
 type {{ v.name }} struct {
 	metric.{{ v.inst }}
 }
@@ -78,6 +80,8 @@ var new{{ v.name }}Opts = []metric.{{ v.inst }}Option{
 }
 
 {{ ["New" ~ v.name ~ " returns a new " ~ v.name ~ " instrument."] | comment }}
+//
+// Stability: {{ metric.stability | title }}
 func New{{ v.name }}(
 	m metric.Meter,
 	opt ...metric.{{ v.inst}}Option,
