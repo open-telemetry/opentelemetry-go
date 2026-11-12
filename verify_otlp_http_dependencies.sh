@@ -27,7 +27,7 @@ check_dependencies() {
         go list -deps -test ./... > "$WORK_DIR/packages"
     )
     if grep -E "$FORBIDDEN" "$WORK_DIR/graph" "$WORK_DIR/packages"; then
-        echo "Error: OTLP/HTTP depends on gRPC, gRPC-Gateway, or canonical OTLP protobufs." >&2
+        echo "Error: OTLP/HTTP depends on google.golang.org/grpc, github.com/grpc-ecosystem/grpc-gateway/v2, or go.opentelemetry.io/proto/otlp." >&2
         return 1
     fi
 }
