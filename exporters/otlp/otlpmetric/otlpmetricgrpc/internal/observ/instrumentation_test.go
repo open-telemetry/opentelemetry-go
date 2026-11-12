@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
@@ -174,7 +174,7 @@ func TestTrackExport(t *testing.T) {
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.RPCResponseStatusCode(codes.OK.String()),
+										semconv.RPCStatusCode(codes.OK.String()),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -254,7 +254,7 @@ func TestTrackExport(t *testing.T) {
 										semconv.ErrorTypeKey.String("*errors.errorString"),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.RPCResponseStatusCode(codes.Unknown.String()),
+										semconv.RPCStatusCode(codes.Unknown.String()),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -338,7 +338,7 @@ func TestTrackExport(t *testing.T) {
 										semconv.ErrorTypeKey.String("rejected"),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.RPCResponseStatusCode(codes.OK.String()),
+										semconv.RPCStatusCode(codes.OK.String()),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),

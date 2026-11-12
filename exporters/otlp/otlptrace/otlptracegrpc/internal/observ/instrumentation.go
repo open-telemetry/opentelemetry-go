@@ -18,8 +18,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -44,7 +44,7 @@ var (
 				1 + // server.addr
 				1 + // server.port
 				1 + // error.type
-				1 // rpc.grpc.status_code
+				1 // rpc.status_code
 			s := make([]attribute.KeyValue, 0, n)
 			// Return a pointer to a slice instead of a slice itself
 			// to avoid allocations on every call.
@@ -118,7 +118,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 		recOpt: metric.WithAttributeSet(attribute.NewSet(append(
 			// Default to OK status code.
 			[]attribute.KeyValue{
-				semconv.RPCResponseStatusCode(codes.OK.String()),
+				semconv.RPCStatusCode(codes.OK.String()),
 			},
 			attrs...,
 		)...)),
@@ -147,7 +147,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	}
 	i.exportedSpans = exportedSpans.Inst()
 
-	opDuration, e := otelconv.NewSDKExporterOperationDuration(m)
+	opDuration, e := otelconv.NewSDKExporterOperationDuration(m, metric.WithExplicitBucketBoundaries([]float64{}...))
 	if e != nil {
 		e = fmt.Errorf("failed to create operation duration metric: %w", e)
 		err = errors.Join(err, e)
@@ -290,7 +290,7 @@ func (e ExportOp) End(err error, code codes.Code) {
 // Instrumentation is returned.
 //
 // If err is not nil or code is not codes.OK, a new RecordOption is returned
-// with the base attributes of the Instrumentation plus the rpc.grpc.status_code
+// with the base attributes of the Instrumentation plus the rpc.status_code
 // attribute set to the provided code, and if err is not nil, the error.type
 // attribute set to the type of the error.
 func (i *Instrumentation) recordOption(err error, code codes.Code) metric.RecordOption {
@@ -302,7 +302,7 @@ func (i *Instrumentation) recordOption(err error, code codes.Code) metric.Record
 	defer put(measureAttrsPool, attrs)
 	*attrs = append(*attrs, i.attrs...)
 
-	*attrs = append(*attrs, semconv.RPCResponseStatusCode(code.String()))
+	*attrs = append(*attrs, semconv.RPCStatusCode(code.String()))
 	if err != nil {
 		*attrs = append(*attrs, semconv.ErrorType(err))
 	}

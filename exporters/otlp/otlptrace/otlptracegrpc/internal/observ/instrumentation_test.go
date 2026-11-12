@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -174,7 +174,7 @@ func operationDuration(err error) metricdata.Metrics {
 		c := status.Code(err)
 		return attribute.NewSet(append(
 			[]attribute.KeyValue{
-				semconv.RPCResponseStatusCode(c.String()),
+				semconv.RPCStatusCode(c.String()),
 			},
 			baseAttrs(err)...,
 		)...)

@@ -17,8 +17,8 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 
 	"google.golang.org/grpc/codes"
 
@@ -37,7 +37,7 @@ var (
 				1 /* server.address */ +
 				1 /* server.port */ +
 				1 /* error.type */ +
-				1 /* rpc.grpc.status_code */
+				1 /* rpc.status_code */
 			s := make([]attribute.KeyValue, 0, n)
 			return &s
 		},
@@ -96,7 +96,10 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 		err = errors.Join(err, fmt.Errorf("failed to create inflight metric: %w", instrumentErr))
 	}
 
-	em.duration, instrumentErr = otelconv.NewSDKExporterOperationDuration(meter)
+	em.duration, instrumentErr = otelconv.NewSDKExporterOperationDuration(
+		meter,
+		metric.WithExplicitBucketBoundaries([]float64{}...),
+	)
 	if instrumentErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to create duration metric: %w", instrumentErr))
 	}
@@ -106,7 +109,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	attrSet := attribute.NewSet(em.attrs...)
 	em.addOpt = metric.WithAttributeSet(attrSet)
 	em.recOpt = metric.WithAttributeSet(attribute.NewSet(append(
-		[]attribute.KeyValue{semconv.RPCResponseStatusCode(codes.OK.String())},
+		[]attribute.KeyValue{semconv.RPCStatusCode(codes.OK.String())},
 		em.attrs...,
 	)...))
 
@@ -252,7 +255,7 @@ func (e ExportOp) End(err error, code codes.Code) {
 			}()
 
 			*attrsPtr = append(*attrsPtr, e.inst.attrs...)
-			*attrsPtr = append(*attrsPtr, semconv.RPCResponseStatusCode(code.String()))
+			*attrsPtr = append(*attrsPtr, semconv.RPCStatusCode(code.String()))
 			if err != nil {
 				*attrsPtr = append(*attrsPtr, semconv.ErrorType(err))
 			}

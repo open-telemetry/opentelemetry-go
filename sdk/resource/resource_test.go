@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 var (
@@ -32,7 +32,10 @@ var (
 	kv42 = attribute.String("k4", "")
 )
 
-const v121 = "https://opentelemetry.io/schemas/1.21.0"
+const (
+	v121 = "https://opentelemetry.io/schemas/1.21.0"
+	v145 = "https://opentelemetry.io/schemas/1.45.0"
+)
 
 func TestNewWithAttributes(t *testing.T) {
 	cases := []struct {
@@ -279,6 +282,7 @@ func TestEmpty(t *testing.T) {
 func TestDefault(t *testing.T) {
 	res := resource.Default()
 	require.False(t, res.Equal(resource.Empty()))
+	require.Equal(t, v145, res.SchemaURL())
 	require.True(t, res.Set().HasValue(semconv.ServiceNameKey))
 
 	serviceName, _ := res.Set().Value(semconv.ServiceNameKey)
@@ -289,6 +293,40 @@ func TestDefault(t *testing.T) {
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKLanguageGo)
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKVersion(sdk.Version()))
 	require.Contains(t, res.Attributes(), semconv.TelemetrySDKName("opentelemetry"))
+}
+
+func TestDefaultMergeSchema(t *testing.T) {
+	tests := []struct {
+		name      string
+		schemaURL string
+		wantErr   error
+		wantURL   string
+	}{
+		{
+			name:      "current conventions",
+			schemaURL: v145,
+			wantURL:   v145,
+		},
+		{
+			name:      "previous conventions",
+			schemaURL: "https://opentelemetry.io/schemas/1.44.0",
+			wantErr:   resource.ErrSchemaURLConflict,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configured := resource.NewWithAttributes(tt.schemaURL, semconv.ServiceName("configured"))
+			merged, err := resource.Merge(resource.Default(), configured)
+			if tt.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.ErrorIs(t, err, tt.wantErr)
+			}
+			assert.Equal(t, tt.wantURL, merged.SchemaURL())
+			assert.Contains(t, merged.Attributes(), attribute.String("service.name", "configured"))
+			assert.Contains(t, merged.Attributes(), attribute.String("telemetry.sdk.language", "go"))
+		})
+	}
 }
 
 func TestDefaultWithContext(t *testing.T) {
@@ -302,6 +340,7 @@ func TestEnvironmentWithContext(t *testing.T) {
 	t.Setenv(envVar, "key=value")
 	ctx := t.Context()
 	res := resource.EnvironmentWithContext(ctx)
+	assert.Empty(t, res.SchemaURL())
 	assert.Equal(t, map[string]string{"key": "value"}, toMap(res))
 }
 
@@ -598,6 +637,7 @@ func TestWithHostID(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	require.Equal(t, map[string]string{
 		"host.id": "f2c668b579780554f70f72a063dc0864",
 	}, toMap(res))
@@ -630,6 +670,7 @@ func TestWithOSType(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	require.Equal(t, map[string]string{
 		"os.type": "linux",
 	}, toMap(res))
@@ -647,6 +688,7 @@ func TestWithOSDescription(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	require.Equal(t, map[string]string{
 		"os.description": "Test",
 	}, toMap(res))
@@ -664,6 +706,7 @@ func TestWithOS(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	require.Equal(t, map[string]string{
 		"os.type":        "linux",
 		"os.description": "Test",
@@ -682,6 +725,7 @@ func TestWithProcessPID(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	require.Equal(t, map[string]string{
 		"process.pid": fmt.Sprint(fakePID),
 	}, toMap(res))
@@ -699,6 +743,7 @@ func TestWithProcessExecutableName(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	require.Equal(t, map[string]string{
 		"process.executable.name": fakeExecutableName,
 	}, toMap(res))
@@ -716,6 +761,7 @@ func TestWithProcessExecutablePath(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	require.Equal(t, map[string]string{
 		"process.executable.path": fakeExecutablePath,
 	}, toMap(res))
@@ -733,6 +779,7 @@ func TestWithProcessCommandArgs(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	jsonCommandArgs, _ := json.Marshal(fakeCommandArgs)
 	require.Equal(t, map[string]string{
 		"process.command_args": string(jsonCommandArgs),
@@ -751,6 +798,7 @@ func TestWithProcessOwner(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	require.Equal(t, map[string]string{
 		"process.owner": fakeOwner,
 	}, toMap(res))
@@ -768,6 +816,7 @@ func TestWithProcessRuntimeName(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	require.Equal(t, map[string]string{
 		"process.runtime.name": fakeRuntimeName,
 	}, toMap(res))
@@ -785,6 +834,7 @@ func TestWithProcessRuntimeVersion(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	require.Equal(t, map[string]string{
 		"process.runtime.version": fakeRuntimeVersion,
 	}, toMap(res))
@@ -802,6 +852,7 @@ func TestWithProcessRuntimeDescription(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	require.Equal(t, map[string]string{
 		"process.runtime.description": fakeRuntimeDescription,
 	}, toMap(res))
@@ -819,6 +870,7 @@ func TestWithProcess(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	jsonCommandArgs, _ := json.Marshal(fakeCommandArgs)
 	require.Equal(t, map[string]string{
 		"process.pid":                 fmt.Sprint(fakePID),
@@ -916,6 +968,7 @@ func TestWithContainer(t *testing.T) {
 	)
 
 	assert.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 	assert.Equal(t, map[string]string{
 		string(semconv.ContainerIDKey): fakeContainerID,
 	}, toMap(res))
@@ -928,6 +981,7 @@ func TestWithService(t *testing.T) {
 	)
 
 	assert.NoError(t, err)
+	assert.Equal(t, v145, res.SchemaURL())
 
 	resMap := toMap(res)
 

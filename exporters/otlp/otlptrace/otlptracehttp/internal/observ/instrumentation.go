@@ -20,11 +20,12 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -83,10 +84,17 @@ func put[T any](p *sync.Pool, s *[]T) {
 }
 
 // ComponentName returns the component name for the exporter with the
-// provided ID.
-func ComponentName(id int64) string {
-	t := semconv.OTelComponentTypeOtlpHTTPSpanExporter.Value.AsString()
+// provided ID and protocol.
+func ComponentName(id int64, protocol otlpconfig.Protocol) string {
+	t := componentType(protocol).Value.AsString()
 	return fmt.Sprintf("%s/%d", t, id)
+}
+
+func componentType(protocol otlpconfig.Protocol) attribute.KeyValue {
+	if protocol == otlpconfig.ProtocolHTTPJSON {
+		return semconv.OTelComponentTypeOtlpHTTPJSONSpanExporter
+	}
+	return semconv.OTelComponentTypeOtlpHTTPSpanExporter
 }
 
 // Instrumentation is experimental instrumentation for the exporter.
@@ -101,7 +109,7 @@ type Instrumentation struct {
 }
 
 // NewInstrumentation returns instrumentation for an OTLP over HTTP trace
-// exporter with the provided ID and endpoint. It uses the global
+// exporter with the provided ID, endpoint, and protocol. It uses the global
 // MeterProvider to create the instrumentation.
 //
 // The id should be the unique exporter instance ID. It is used
@@ -110,12 +118,12 @@ type Instrumentation struct {
 // The endpoint is the HTTP endpoint the exporter is exporting to.
 //
 // If the experimental observability is disabled, nil is returned.
-func NewInstrumentation(id int64, endpoint string) (*Instrumentation, error) {
+func NewInstrumentation(id int64, endpoint string, protocol otlpconfig.Protocol) (*Instrumentation, error) {
 	if !x.Observability.Enabled() {
 		return nil, nil
 	}
 
-	attrs := BaseAttrs(id, endpoint)
+	attrs := BaseAttrs(id, endpoint, protocol)
 	i := &Instrumentation{
 		attrs:  attrs,
 		addOpt: metric.WithAttributeSet(attribute.NewSet(attrs...)),
@@ -151,7 +159,7 @@ func NewInstrumentation(id int64, endpoint string) (*Instrumentation, error) {
 	}
 	i.exportedSpans = exportedSpans.Inst()
 
-	opDuration, e := otelconv.NewSDKExporterOperationDuration(m)
+	opDuration, e := otelconv.NewSDKExporterOperationDuration(m, metric.WithExplicitBucketBoundaries([]float64{}...))
 	if e != nil {
 		e = fmt.Errorf("failed to create operation duration metric: %w", e)
 		err = errors.Join(err, e)
@@ -161,23 +169,23 @@ func NewInstrumentation(id int64, endpoint string) (*Instrumentation, error) {
 	return i, err
 }
 
-// BaseAttrs returns the base attributes for the exporter with the provided ID
-// and endpoint.
+// BaseAttrs returns the base attributes for the exporter with the provided ID,
+// endpoint, and protocol.
 //
 // The id should be the unique exporter instance ID. It is used
 // to set the "component.name" attribute.
 //
 // The endpoint is the HTTP endpoint the exporter is exporting to. It should be
 // in the format "host[:port]".
-func BaseAttrs(id int64, endpoint string) []attribute.KeyValue {
+func BaseAttrs(id int64, endpoint string, protocol otlpconfig.Protocol) []attribute.KeyValue {
 	host, port, err := parseEndpoint(endpoint)
 	if err != nil || (host == "" && port < 0) {
 		if err != nil {
 			global.Debug("failed to parse endpoint", "endpoint", endpoint, "error", err)
 		}
 		return []attribute.KeyValue{
-			semconv.OTelComponentName(ComponentName(id)),
-			semconv.OTelComponentTypeOtlpHTTPSpanExporter,
+			semconv.OTelComponentName(ComponentName(id, protocol)),
+			componentType(protocol),
 		}
 	}
 
@@ -185,23 +193,23 @@ func BaseAttrs(id int64, endpoint string) []attribute.KeyValue {
 
 	if port < 0 {
 		return []attribute.KeyValue{
-			semconv.OTelComponentName(ComponentName(id)),
-			semconv.OTelComponentTypeOtlpHTTPSpanExporter,
+			semconv.OTelComponentName(ComponentName(id, protocol)),
+			componentType(protocol),
 			semconv.ServerAddress(host),
 		}
 	}
 
 	if host == "" {
 		return []attribute.KeyValue{
-			semconv.OTelComponentName(ComponentName(id)),
-			semconv.OTelComponentTypeOtlpHTTPSpanExporter,
+			semconv.OTelComponentName(ComponentName(id, protocol)),
+			componentType(protocol),
 			semconv.ServerPort(port),
 		}
 	}
 
 	return []attribute.KeyValue{
-		semconv.OTelComponentName(ComponentName(id)),
-		semconv.OTelComponentTypeOtlpHTTPSpanExporter,
+		semconv.OTelComponentName(ComponentName(id, protocol)),
+		componentType(protocol),
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 	}

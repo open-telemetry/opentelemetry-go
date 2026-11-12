@@ -16,8 +16,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/internal/x"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -102,7 +102,10 @@ func NewInstrumentation(componentType string, id int64) (*Instrumentation, error
 		metric.WithSchemaURL(SchemaURL),
 	)
 
-	colDuration, err := otelconv.NewSDKMetricReaderCollectionDuration(meter)
+	colDuration, err := otelconv.NewSDKMetricReaderCollectionDuration(
+		meter,
+		metric.WithExplicitBucketBoundaries([]float64{}...),
+	)
 	if err != nil {
 		err = fmt.Errorf("failed to create collection duration metric: %w", err)
 	}

@@ -18,14 +18,15 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/observ"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
 	"go.opentelemetry.io/otel/internal/global"
 	mapi "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -45,17 +46,19 @@ var Scope = instrumentation.Scope{
 type errMeterProvider struct {
 	mapi.MeterProvider
 
-	err error
+	err             error
+	histogramConfig *mapi.Float64HistogramConfig
 }
 
 func (m *errMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
-	return &errMeter{err: m.err}
+	return &errMeter{err: m.err, histogramConfig: m.histogramConfig}
 }
 
 type errMeter struct {
 	mapi.Meter
 
-	err error
+	err             error
+	histogramConfig *mapi.Float64HistogramConfig
 }
 
 func (m *errMeter) Int64UpDownCounter(string, ...mapi.Int64UpDownCounterOption) (mapi.Int64UpDownCounter, error) {
@@ -66,8 +69,27 @@ func (m *errMeter) Int64Counter(string, ...mapi.Int64CounterOption) (mapi.Int64C
 	return nil, m.err
 }
 
-func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
+func (m *errMeter) Float64Histogram(_ string, opts ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
+	if m.histogramConfig != nil {
+		*m.histogramConfig = mapi.NewFloat64HistogramConfig(opts...)
+	}
 	return nil, m.err
+}
+
+func TestNewInstrumentationDurationHistogramAdvice(t *testing.T) {
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	var config mapi.Float64HistogramConfig
+	otel.SetMeterProvider(&errMeterProvider{err: assert.AnError, histogramConfig: &config})
+	_, err := observ.NewInstrumentation(ID, Endpoint, otlpconfig.ProtocolHTTPProtobuf)
+	require.ErrorIs(t, err, assert.AnError)
+
+	assert.Equal(t, otelconv.SDKExporterOperationDuration{}.Description(), config.Description())
+	assert.Equal(t, "s", config.Unit())
+	require.NotNil(t, config.ExplicitBucketBoundaries(), "single-bucket advice must be explicit")
+	assert.Empty(t, config.ExplicitBucketBoundaries())
 }
 
 func TestNewInstrumentationObservabilityErrors(t *testing.T) {
@@ -78,7 +100,7 @@ func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
-	_, err := observ.NewInstrumentation(ID, Endpoint)
+	_, err := observ.NewInstrumentation(ID, Endpoint, otlpconfig.ProtocolHTTPProtobuf)
 	require.ErrorIs(t, err, assert.AnError, "new instrument errors")
 
 	assert.ErrorContains(t, err, "inflight metric")
@@ -88,7 +110,7 @@ func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 
 func TestNewInstrumentationObservabilityDisabled(t *testing.T) {
 	// Do not set OTEL_GO_X_OBSERVABILITY.
-	got, err := observ.NewInstrumentation(ID, Endpoint)
+	got, err := observ.NewInstrumentation(ID, Endpoint, otlpconfig.ProtocolHTTPProtobuf)
 	assert.NoError(t, err)
 	assert.Nil(t, got)
 }
@@ -105,7 +127,7 @@ func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetric
 	mp := metric.NewMeterProvider(metric.WithReader(r))
 	otel.SetMeterProvider(mp)
 
-	inst, err := observ.NewInstrumentation(ID, Endpoint)
+	inst, err := observ.NewInstrumentation(ID, Endpoint, otlpconfig.ProtocolHTTPProtobuf)
 	require.NoError(t, err)
 	require.NotNil(t, inst)
 
@@ -120,7 +142,7 @@ func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetric
 
 func baseAttrs(err error) []attribute.KeyValue {
 	attrs := []attribute.KeyValue{
-		semconv.OTelComponentName(observ.ComponentName(ID)),
+		semconv.OTelComponentName(observ.ComponentName(ID, otlpconfig.ProtocolHTTPProtobuf)),
 		semconv.OTelComponentTypeOtlpHTTPSpanExporter,
 		semconv.ServerAddress(ServerAddr),
 		semconv.ServerPort(ServerPort),
@@ -299,9 +321,9 @@ func TestBaseAttrs(t *testing.T) {
 		{endpoint: "ExAmPlE.COM:8080", host: "ExAmPlE.COM", port: 8080},
 	}
 	for _, tt := range tests {
-		got := observ.BaseAttrs(ID, tt.endpoint)
+		got := observ.BaseAttrs(ID, tt.endpoint, otlpconfig.ProtocolHTTPProtobuf)
 		want := []attribute.KeyValue{
-			semconv.OTelComponentName(observ.ComponentName(ID)),
+			semconv.OTelComponentName(observ.ComponentName(ID, otlpconfig.ProtocolHTTPProtobuf)),
 			semconv.OTelComponentTypeOtlpHTTPSpanExporter,
 		}
 
@@ -345,9 +367,9 @@ func TestBaseAttrsError(t *testing.T) {
 		}(global.GetLogger()))
 
 		// Set the logger as global so BaseAttrs can log the error.
-		got := observ.BaseAttrs(ID, endpoint)
+		got := observ.BaseAttrs(ID, endpoint, otlpconfig.ProtocolHTTPProtobuf)
 		want := []attribute.KeyValue{
-			semconv.OTelComponentName(observ.ComponentName(ID)),
+			semconv.OTelComponentName(observ.ComponentName(ID, otlpconfig.ProtocolHTTPProtobuf)),
 			semconv.OTelComponentTypeOtlpHTTPSpanExporter,
 		}
 		assert.Equal(t, want, got)
@@ -361,7 +383,7 @@ func BenchmarkInstrumentationExportSpans(b *testing.B) {
 	setup := func(b *testing.B) *observ.Instrumentation {
 		b.Helper()
 		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-		inst, err := observ.NewInstrumentation(ID, Endpoint)
+		inst, err := observ.NewInstrumentation(ID, Endpoint, otlpconfig.ProtocolHTTPProtobuf)
 		if err != nil {
 			b.Fatalf("failed to create instrumentation: %v", err)
 		}
