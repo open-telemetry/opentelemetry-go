@@ -456,3 +456,79 @@ func TestOnEndingRecordErrorAllowsReentrantErrorFormatting(t *testing.T) {
 		t.Fatal("Span.End deadlocked while OnEnding formatted a reentrant error")
 	}
 }
+
+func TestOnEndingNotCalledAfterShutdown(t *testing.T) {
+	tp := basicTracerProvider(t)
+	p := &onEndingProcessor{testSpanProcessor: testSpanProcessor{name: "p"}}
+	tp.RegisterSpanProcessor(p)
+
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	require.NoError(t, tp.Shutdown(t.Context()))
+	span.End()
+
+	assert.False(t, p.onEndingCalled, "OnEnding must not be called after Shutdown")
+}
+
+func TestOnEndingNotCalledAfterUnregister(t *testing.T) {
+	tp := basicTracerProvider(t)
+	p := &onEndingProcessor{testSpanProcessor: testSpanProcessor{name: "p"}}
+	tp.RegisterSpanProcessor(p)
+
+	_, span := tp.Tracer("t").Start(t.Context(), "s")
+	tp.UnregisterSpanProcessor(p)
+	span.End()
+
+	assert.False(t, p.onEndingCalled, "OnEnding must not be called after UnregisterSpanProcessor")
+}
+
+// TestOnEndingDrainsBeforeProcessorShutdown verifies that processor Shutdown
+// does not start while an OnEnding callback is still running.
+func TestOnEndingDrainsBeforeProcessorShutdown(t *testing.T) {
+	tests := []struct {
+		name string
+		stop func(*TracerProvider, SpanProcessor)
+	}{
+		{"Shutdown", func(tp *TracerProvider, _ SpanProcessor) {
+			assert.NoError(t, tp.Shutdown(context.Background()))
+		}},
+		{"UnregisterSpanProcessor", func(tp *TracerProvider, sp SpanProcessor) {
+			tp.UnregisterSpanProcessor(sp)
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tp := basicTracerProvider(t)
+			p := &blockingOnEndingProcessor{
+				testSpanProcessor: testSpanProcessor{name: "p"},
+				started:           make(chan struct{}),
+				release:           make(chan struct{}),
+			}
+			tp.RegisterSpanProcessor(p)
+			_, span := tp.Tracer("t").Start(t.Context(), "s")
+
+			endDone := make(chan struct{})
+			go func() {
+				span.End()
+				close(endDone)
+			}()
+			<-p.started
+
+			stopDone := make(chan struct{})
+			go func() {
+				tt.stop(tp, p)
+				close(stopDone)
+			}()
+
+			select {
+			case <-stopDone:
+				t.Fatal("processor shut down while OnEnding was in progress")
+			case <-time.After(50 * time.Millisecond):
+			}
+
+			close(p.release)
+			<-endDone
+			<-stopDone
+			assert.Equal(t, 1, p.shutdownCount)
+		})
+	}
+}
