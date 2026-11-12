@@ -10,12 +10,16 @@ import (
 	"context"
 	"errors"
 	"math"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/cenkalti/backoff/v7"
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 func TestWait(t *testing.T) {
@@ -282,4 +286,84 @@ func TestRetryConcurrentSafe(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestRetryLogging(t *testing.T) {
+	var (
+		logMu  sync.Mutex
+		logged []string
+	)
+	logger := funcr.New(func(prefix, args string) {
+		logMu.Lock()
+		defer logMu.Unlock()
+		logged = append(logged, prefix+" "+args)
+	}, funcr.Options{Verbosity: 10})
+
+	origLogger := global.GetLogger()
+	global.SetLogger(logger)
+	t.Cleanup(func() { global.SetLogger(origLogger) })
+
+	t.Run("RecoveredRetryableError", func(t *testing.T) {
+		logMu.Lock()
+		logged = nil
+		logMu.Unlock()
+
+		ev := func(error) (bool, time.Duration) { return true, 0 }
+		reqFunc := Config{
+			Enabled:         true,
+			InitialInterval: time.Nanosecond,
+			MaxInterval:     time.Nanosecond,
+			MaxElapsedTime:  time.Second,
+		}.RequestFunc(ev)
+
+		retryErr := errors.New("transient network issue")
+		var calls int
+		err := reqFunc(t.Context(), func(context.Context) error {
+			calls++
+			if calls == 1 {
+				return retryErr
+			}
+			return nil
+		})
+
+		assert.NoError(t, err)
+		assert.Equal(t, 2, calls)
+
+		logMu.Lock()
+		logs := strings.Join(logged, "\n")
+		logMu.Unlock()
+
+		assert.Contains(t, logs, "retryable error")
+		assert.Contains(t, logs, "transient network issue")
+	})
+
+	t.Run("NonRetryableError", func(t *testing.T) {
+		logMu.Lock()
+		logged = nil
+		logMu.Unlock()
+
+		ev := func(error) (bool, time.Duration) { return false, 0 }
+		reqFunc := Config{
+			Enabled:         true,
+			InitialInterval: time.Nanosecond,
+			MaxInterval:     time.Nanosecond,
+			MaxElapsedTime:  time.Second,
+		}.RequestFunc(ev)
+
+		nonRetryErr := errors.New("permanent failure")
+		var calls int
+		err := reqFunc(t.Context(), func(context.Context) error {
+			calls++
+			return nonRetryErr
+		})
+
+		assert.ErrorIs(t, err, nonRetryErr)
+		assert.Equal(t, 1, calls)
+
+		logMu.Lock()
+		logs := strings.Join(logged, "\n")
+		logMu.Unlock()
+
+		assert.NotContains(t, logs, "retryable error")
+	})
 }
