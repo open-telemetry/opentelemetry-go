@@ -76,9 +76,18 @@ func (s endingSpan) RecordError(err error, opts ...trace.EventOption) {
 	}
 	// err.Error() is caller-controlled and may call back into this span.
 	// Build the event options before acquiring s.mu to avoid deadlock.
-	o := errorEventOptions(err, opts)
+	opts = append(opts, trace.WithAttributes(
+		semconv.ExceptionType(typeStr(err)),
+		semconv.ExceptionMessage(err.Error()),
+	))
+	c := trace.NewEventConfig(opts...)
+	if c.StackTrace() {
+		opts = append(opts, trace.WithAttributes(
+			semconv.ExceptionStacktrace(recordStackTrace()),
+		))
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.addEvent(semconv.ExceptionEventName, o...)
+	s.addEvent(semconv.ExceptionEventName, opts...)
 }

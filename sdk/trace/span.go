@@ -531,24 +531,6 @@ func (s *recordingSpan) RecordError(err error, opts ...trace.EventOption) {
 	s.AddEvent(semconv.ExceptionEventName, opts...)
 }
 
-// errorEventOptions appends exception type/message attributes to opts, and if
-// the options request a stack trace, also appends that attribute.
-func errorEventOptions(err error, opts []trace.EventOption) []trace.EventOption {
-	opts = append(opts, trace.WithAttributes(
-		semconv.ExceptionType(typeStr(err)),
-		semconv.ExceptionMessage(err.Error()),
-	))
-
-	c := trace.NewEventConfig(opts...)
-	if c.StackTrace() {
-		opts = append(opts, trace.WithAttributes(
-			semconv.ExceptionStacktrace(recordStackTrace()),
-		))
-	}
-
-	return opts
-}
-
 func typeStr(i any) string {
 	t := reflect.TypeOf(i)
 	if t.PkgPath() == "" && t.Name() == "" {
