@@ -50,6 +50,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   See the [bridge version compatibility documentation](bridge/opentracing/README.md#version-compatibility). (#9209)
 - Document the concurrency guarantees of the `Exporter` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9244)
 - Upgrade `github.com/cenkalti/backoff` from `v5` to `v7` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9267)
+- Document the environment merge behavior on the `WithResource` option for `go.opentelemetry.io/otel/sdk/log`, `go.opentelemetry.io/otel/sdk/metric`, and `go.opentelemetry.io/otel/sdk/trace`. (#9488)
 
 ### Deprecated
 

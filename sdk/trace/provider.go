@@ -392,6 +392,9 @@ func WithoutPanicRecording() TracerProviderOption {
 // referenced by all the Tracers the TracerProvider creates. It represents the
 // entity producing telemetry.
 //
+// Resource r is merged onto [resource.Environment] according to
+// [resource.Merge], where r takes precedence.
+//
 // If this option is not used, the TracerProvider will use the
 // resource.Default() Resource by default.
 func WithResource(r *resource.Resource) TracerProviderOption {
