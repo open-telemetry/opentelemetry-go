@@ -51,6 +51,8 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   See the [bridge version compatibility documentation](bridge/opentracing/README.md#version-compatibility). (#9209)
 - Document the concurrency guarantees of the `Exporter` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9244)
 - Upgrade `github.com/cenkalti/backoff` from `v5` to `v7` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9267)
+- `TracerProvider.Shutdown` and `TracerProvider.UnregisterSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` now wait for in-flight `OnStart`, `OnEnd`, and `ForceFlush` calls to complete before invoking the processor's `Shutdown`.
+  As a result, they must no longer be called directly or indirectly from a `SpanProcessor` method, and `Shutdown` returns `ctx.Err()` without shutting down any processor if `ctx` is done while waiting. (#9070)
 
 ### Deprecated
 
@@ -108,6 +110,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Fix a data race in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is read concurrently with `Span.SetBaggageItem`. (#9049)
 - Pass the context containing the new span to the auto-instrumentation hook in `go.opentelemetry.io/otel/trace`. (#9029)
 - Encode an empty attribute value nested in a slice or map as `{}` in `go.opentelemetry.io/otel/trace`, so the auto-instrumentation span that carries it is no longer dropped. (#9182)
+- Prevent processor operations from overlapping processor shutdown or being invoked after `TracerProvider` shutdown in `go.opentelemetry.io/otel/sdk/trace`. (#9070)
 - Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP protobuf partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9188)
 - Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9303)
 - Do not report an error through the global error handler when `WithCompressor("none")` is passed to `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` or `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#9056)
