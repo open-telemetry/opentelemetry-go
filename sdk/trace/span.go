@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/embedded"
 )
@@ -471,7 +471,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	snap := s.snapshot()
 	for _, sp := range sps {
-		sp.sp.OnEnd(snap)
+		sp.onEnd(snap)
 	}
 }
 

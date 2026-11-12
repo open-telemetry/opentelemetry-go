@@ -6,6 +6,7 @@ package trace
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 )
 
 // SpanProcessor is a processing pipeline for spans in the trace signal.
@@ -49,13 +50,98 @@ type SpanProcessor interface {
 	// must never be done outside of a new major release.
 }
 
+// stoppedBit marks admission as closed in spanProcessorState.inflight. The
+// remaining bits count the operations currently in flight.
+const stoppedBit = int64(1) << 62
+
 type spanProcessorState struct {
 	sp    SpanProcessor
 	state sync.Once
+
+	// inflight tracks the operations (OnStart, OnEnd, ForceFlush) currently
+	// in flight on sp, so that sp's Shutdown is not invoked until they
+	// complete and no new ones start. It is an atomic counter rather than a
+	// mutex to keep the dispatch hot path cheap under concurrent spans.
+	inflight  atomic.Int64
+	stopOnce  sync.Once
+	drainOnce sync.Once
+	drained   chan struct{}
 }
 
 func newSpanProcessorState(sp SpanProcessor) *spanProcessorState {
-	return &spanProcessorState{sp: sp}
+	return &spanProcessorState{sp: sp, drained: make(chan struct{})}
 }
 
 type spanProcessorStates []*spanProcessorState
+
+// begin reports whether a new operation on sp is admitted. If it returns true,
+// the caller must call end when the operation completes.
+func (s *spanProcessorState) begin() bool {
+	if s.inflight.Add(1)&stoppedBit != 0 {
+		s.end()
+		return false
+	}
+	return true
+}
+
+func (s *spanProcessorState) end() {
+	if s.inflight.Add(-1) == stoppedBit {
+		s.drainOnce.Do(func() { close(s.drained) })
+	}
+}
+
+// stop closes admission of new operations. It does not wait for admitted
+// operations to complete; use wait for that. It is safe to call repeatedly.
+func (s *spanProcessorState) stop() {
+	s.stopOnce.Do(func() {
+		if s.inflight.Add(stoppedBit) == stoppedBit {
+			s.drainOnce.Do(func() { close(s.drained) })
+		}
+	})
+}
+
+// wait blocks until all operations admitted before stop have completed,
+// returning ctx.Err() if ctx is done first. stop must have been called.
+func (s *spanProcessorState) wait(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case <-s.drained:
+	case <-ctx.Done():
+		// Prefer a completed drain when it races with cancellation.
+		select {
+		case <-s.drained:
+		default:
+			return ctx.Err()
+		}
+	}
+	return nil
+}
+
+// onStart, onEnd, and forceFlush invoke the processor method only if
+// admission is open. The admission count is released even if the processor
+// panics so that shutdown cannot be blocked forever.
+func (s *spanProcessorState) onStart(ctx context.Context, rw ReadWriteSpan) {
+	if !s.begin() {
+		return
+	}
+	defer s.end()
+	s.sp.OnStart(ctx, rw)
+}
+
+func (s *spanProcessorState) onEnd(snap ReadOnlySpan) {
+	if !s.begin() {
+		return
+	}
+	defer s.end()
+	s.sp.OnEnd(snap)
+}
+
+func (s *spanProcessorState) forceFlush(ctx context.Context) error {
+	if !s.begin() {
+		return nil
+	}
+	defer s.end()
+	return s.sp.ForceFlush(ctx)
+}

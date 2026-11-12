@@ -47,8 +47,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 var (
@@ -1204,7 +1204,7 @@ func TestClientInstrumentation(t *testing.T) {
 						{Attributes: attribute.NewSet(baseAttrs...), Value: 2},
 						{Attributes: attribute.NewSet(append(
 							baseAttrs,
-							otelconv.SDKExporterLogExported{}.AttrErrorType("*errors.joinError"),
+							otelconv.SDKExporterLogExported{}.AttrErrorType("rejected"),
 						)...), Value: 2},
 					},
 					Temporality: 0x1,
@@ -1219,7 +1219,7 @@ func TestClientInstrumentation(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{Attributes: attribute.NewSet(append(
 							baseAttrs,
-							otelconv.SDKExporterOperationDuration{}.AttrErrorType("*errors.joinError"),
+							otelconv.SDKExporterOperationDuration{}.AttrErrorType("rejected"),
 							otelconv.SDKExporterOperationDuration{}.AttrHTTPResponseStatusCode(200),
 						)...)},
 					},

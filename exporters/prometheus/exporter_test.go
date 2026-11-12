@@ -33,7 +33,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -119,7 +119,7 @@ func TestAppendScopeAttrsSanitizedCollisions(t *testing.T) {
 			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
 			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
 		}
-		kv, err := appendScopeAttrs(kv, attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+		kv, err := appendScopeAttrs(kv, attrs, labelNamer{})
 		require.NoError(t, err)
 		require.Equal(t, []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel, "otel_scope_scope_key"}, kv.keys)
 		require.Equal(t, []string{"my-scope", "v1.0.0", "https://example.com", "z;a;m"}, kv.vals)
@@ -144,7 +144,7 @@ func TestAppendScopeAttrsSanitizedCollisions(t *testing.T) {
 			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
 			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
 		}
-		kv, err := appendScopeAttrs(kv, attribute.NewSet(kvs...), otlptranslator.LabelNamer{UTF8Allowed: false})
+		kv, err := appendScopeAttrs(kv, attribute.NewSet(kvs...), labelNamer{})
 		require.NoError(t, err)
 		require.Len(t, kv.keys, 3+maxLinearScanAttrs+1)
 		require.Equal(t, "otel_scope_z_scope_dup", kv.keys[len(kv.keys)-1])
@@ -165,7 +165,7 @@ func TestSanitizedCollisionKeyOrder(t *testing.T) {
 	// Original keys in lexicographical order are "C-D", "C.D", "C/D".
 	require.Equal(t, []string{"M;Z;A"}, values)
 
-	kv, err := appendScopeAttrs(keyVals{}, attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+	kv, err := appendScopeAttrs(keyVals{}, attrs, labelNamer{})
 	require.NoError(t, err)
 	require.Equal(t, []string{"otel_scope_C_D"}, kv.keys)
 	require.Equal(t, []string{"M;Z;A"}, kv.vals)
@@ -174,9 +174,155 @@ func TestSanitizedCollisionKeyOrder(t *testing.T) {
 func TestAttributesToLabels(t *testing.T) {
 	labels, err := attributesToLabels([]attribute.KeyValue{
 		attribute.Float64Slice("float_slice", []float64{math.NaN(), math.Inf(1)}),
-	}, otlptranslator.LabelNamer{})
+	}, labelNamer{})
 	require.NoError(t, err)
 	require.Equal(t, prometheus.Labels{"float_slice": `["NaN","Infinity"]`}, labels)
+}
+
+func TestLabelNamerBuild(t *testing.T) {
+	t.Run("caches_sanitized_keys", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: false},
+		}
+		ln := c.newLabelNamer()
+		require.NotNil(t, ln.cache)
+
+		got, err := ln.build("http.request.method")
+		require.NoError(t, err)
+		require.Equal(t, "http_request_method", got)
+		require.Equal(t, "http_request_method", ln.cache["http.request.method"])
+
+		allocs := testing.AllocsPerRun(100, func() {
+			got, err = ln.build("http.request.method")
+		})
+		require.NoError(t, err)
+		require.Equal(t, "http_request_method", got)
+		require.Zero(t, allocs)
+	})
+
+	t.Run("does_not_cache_errors", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: false},
+		}
+		ln := c.newLabelNamer()
+
+		_, err := ln.build("")
+		require.Error(t, err)
+		require.Empty(t, ln.cache)
+	})
+
+	t.Run("utf8_allowed_nil_cache", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: true},
+		}
+		ln := c.newLabelNamer()
+		require.Nil(t, ln.cache)
+
+		got, err := ln.build("http.request.method")
+		require.NoError(t, err)
+		require.Equal(t, "http.request.method", got)
+	})
+}
+
+func TestGetOrReuseDesc(t *testing.T) {
+	emptyDesc := prometheus.NewDesc("test_metric", "test help", nil, nil)
+	abDesc := prometheus.NewDesc("test_metric", "test help", []string{"a", "b"}, nil)
+
+	testCases := []struct {
+		name       string
+		keys       []string
+		lastKeys   []string
+		lastDesc   *prometheus.Desc
+		wantReuse  bool
+		wantLabels map[string]string
+		values     []string
+	}{
+		{
+			name:       "initial descriptor with empty keys",
+			keys:       nil,
+			lastKeys:   nil,
+			lastDesc:   nil,
+			wantReuse:  false,
+			wantLabels: map[string]string{},
+		},
+		{
+			name:       "reuse descriptor with empty keys",
+			keys:       []string{},
+			lastKeys:   nil,
+			lastDesc:   emptyDesc,
+			wantReuse:  true,
+			wantLabels: map[string]string{},
+		},
+		{
+			name:       "initial descriptor with non-empty keys",
+			keys:       []string{"a", "b"},
+			lastKeys:   nil,
+			lastDesc:   nil,
+			wantReuse:  false,
+			values:     []string{"v1", "v2"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2"},
+		},
+		{
+			name:       "reuse descriptor for equal ordered keys in distinct slices",
+			keys:       []string{"a", "b"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  true,
+			values:     []string{"v3", "v4"},
+			wantLabels: map[string]string{"a": "v3", "b": "v4"},
+		},
+		{
+			name:       "new descriptor for same-length changed keys",
+			keys:       []string{"a", "c"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v1", "v2"},
+			wantLabels: map[string]string{"a": "v1", "c": "v2"},
+		},
+		{
+			name:       "new descriptor for reordered keys",
+			keys:       []string{"b", "a"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v2", "v1"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2"},
+		},
+		{
+			name:       "new descriptor for different-length keys",
+			keys:       []string{"a", "b", "c"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v1", "v2", "v3"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2", "c": "v3"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			desc, gotKeys := getOrReuseDesc("test_metric", "test help", tc.keys, tc.lastKeys, tc.lastDesc)
+			require.NotNil(t, desc)
+			if tc.wantReuse {
+				assert.Same(t, tc.lastDesc, desc)
+				assert.Equal(t, tc.lastKeys, gotKeys)
+			} else {
+				assert.NotSame(t, tc.lastDesc, desc)
+				assert.Equal(t, tc.keys, gotKeys)
+			}
+
+			pm, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, 1, tc.values...)
+			require.NoError(t, err)
+			var dm dto.Metric
+			require.NoError(t, pm.Write(&dm))
+			gotLabels := make(map[string]string, len(dm.GetLabel()))
+			for _, lp := range dm.GetLabel() {
+				gotLabels[lp.GetName()] = lp.GetValue()
+			}
+			assert.Equal(t, tc.wantLabels, gotLabels)
+		})
+	}
 }
 
 func TestPrometheusExporter(t *testing.T) {
@@ -2039,7 +2185,7 @@ func TestExponentialHistogramScaleValidation(t *testing.T) {
 			m,
 			"test_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 		// Expect an invalid metric to be sent that carries the scale error.
@@ -2092,7 +2238,7 @@ func TestInvalidExponentialHistogramScaleReportsObservabilityError(t *testing.T)
 		metricdata.Metrics{Name: "test_histogram"},
 		"test_histogram",
 		keyVals{},
-		otlptranslator.LabelNamer{},
+		labelNamer{},
 		inst,
 	)
 
@@ -2271,7 +2417,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_high_scale_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 
@@ -2335,7 +2481,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_very_high_scale_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 
@@ -2399,7 +2545,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_histogram_with_negative_buckets",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 
@@ -2457,7 +2603,7 @@ func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
 			m,
 			"test_int64_exponential_histogram",
 			keyVals{},
-			otlptranslator.LabelNamer{},
+			labelNamer{},
 			nil,
 		)
 
@@ -3160,7 +3306,6 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 
 			// Setup observability metric collection
 			var observReader *metric.ManualReader
-			var observMetricsFunc func() metricdata.ScopeMetrics
 
 			if tc.enableObservability {
 				originalMP := otel.GetMeterProvider()
@@ -3169,21 +3314,6 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 				observReader = metric.NewManualReader()
 				observMP := metric.NewMeterProvider(metric.WithReader(observReader))
 				otel.SetMeterProvider(observMP)
-
-				observMetricsFunc = func() metricdata.ScopeMetrics {
-					var rm metricdata.ResourceMetrics
-					err := observReader.Collect(t.Context(), &rm)
-					require.NoError(t, err)
-
-					// Find the Prometheus exporter observability scope specifically.
-					for _, sm := range rm.ScopeMetrics {
-						if sm.Scope.Name == observ.ScopeName {
-							return sm
-						}
-					}
-					// Exporter scope not found (e.g., if disabled or no scrape yet).
-					return metricdata.ScopeMetrics{}
-				}
 			}
 
 			ctx := t.Context()
@@ -3207,24 +3337,45 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 
 			// Collect and check observability metrics if enabled
 			if tc.enableObservability {
-				observMetrics := observMetricsFunc()
+				var rm metricdata.ResourceMetrics
+				err := observReader.Collect(t.Context(), &rm)
+				require.NoError(t, err)
 
-				// Check that expected observability metrics are present
-				observedMetrics := make(map[string]bool)
-				for _, m := range observMetrics.Metrics {
-					observedMetrics[m.Name] = true
+				// Check that expected observability metrics are present exactly once across all scopes.
+				observedCounts := make(map[string]int)
+				var observMetrics metricdata.ScopeMetrics
+				for _, sm := range rm.ScopeMetrics {
+					if sm.Scope.Name == observ.ScopeName {
+						observMetrics = sm
+					}
+					for _, m := range sm.Metrics {
+						observedCounts[m.Name]++
+						if m.Name == "otel.sdk.metric_reader.collection.duration" {
+							hist, ok := m.Data.(metricdata.Histogram[float64])
+							require.True(t, ok)
+							require.Len(t, hist.DataPoints, 1)
+							assert.Equal(t, uint64(1), hist.DataPoints[0].Count)
+						}
+					}
 				}
 
 				for _, expectedMetric := range tc.expectedObservMetrics {
-					assert.True(
+					assert.Equal(
 						t,
-						observedMetrics[expectedMetric],
-						"Expected observability metric %s not found",
+						1,
+						observedCounts[expectedMetric],
+						"Expected observability metric %s to be recorded once",
 						expectedMetric,
 					)
 				}
+				assert.Len(
+					t,
+					observedCounts,
+					len(tc.expectedObservMetrics),
+					"Expected number of distinct observability metrics",
+				)
 
-				// Verify observability metrics have expected structure
+				// Verify exporter observability scope has expected structure and the 3 exporter metrics.
 				expectedScope := instrumentation.Scope{
 					Name:      observ.ScopeName,
 					Version:   observ.Version,
@@ -3234,8 +3385,8 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 				assert.Len(
 					t,
 					observMetrics.Metrics,
-					len(tc.expectedObservMetrics),
-					"Expected number of observability metrics",
+					3,
+					"Expected number of exporter observability metrics",
 				)
 
 				// Run custom metric checks if provided

@@ -1,0 +1,38 @@
+{% import 'instrument.j2' as i -%}
+// Code generated from semantic convention specification. DO NOT EDIT.
+
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package semconv
+
+import "testing"
+
+func TestMetricInstrumentSelection(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name, got, want string
+	}{
+{%- for test in [
+  {"name": "double", "metric": {"metric_name": "test.double", "instrument": "gauge", "unit": "1", "annotations": {"code_generation": {"metric_value_type": "double"}}}, "want": "Float64Gauge"},
+  {"name": "int", "metric": {"metric_name": "test.int", "instrument": "gauge", "unit": "s", "annotations": {"code_generation": {"metric_value_type": "int"}}}, "want": "Int64Gauge"},
+  {"name": "unannotated_integer", "metric": {"metric_name": "test.integer", "instrument": "counter", "unit": "By"}, "want": "Int64Counter"},
+  {"name": "unannotated_seconds", "metric": {"metric_name": "test.seconds", "instrument": "histogram", "unit": "s"}, "want": "Float64Histogram"},
+  {"name": "unannotated_milliseconds", "metric": {"metric_name": "test.milliseconds", "instrument": "histogram", "unit": "ms"}, "want": "Float64Histogram"},
+  {"name": "empty_annotations", "metric": {"metric_name": "test.empty", "instrument": "updowncounter", "unit": "s", "annotations": {}}, "want": "Float64UpDownCounter"},
+  {"name": "empty_code_generation", "metric": {"metric_name": "test.empty_codegen", "instrument": "gauge", "unit": "1", "annotations": {"code_generation": {}}}, "want": "Int64Gauge"},
+  {"name": "float_override", "metric": {"metric_name": "system.cpu.time", "instrument": "gauge", "unit": "By", "annotations": {"code_generation": {"metric_value_type": "int"}}}, "want": "Float64ObservableCounter"},
+  {"name": "int_override", "metric": {"metric_name": "go.memory.used", "instrument": "gauge", "unit": "s", "annotations": {"code_generation": {"metric_value_type": "double"}}}, "want": "Int64ObservableUpDownCounter"},
+] %}
+		{"{{ test.name }}", "{{ i.instrument(test.metric) }}", "{{ test.want }}"},
+{%- endfor %}
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if test.got != test.want {
+				t.Errorf("instrument = %q, want %q", test.got, test.want)
+			}
+		})
+	}
+}{{ "\n" }}
