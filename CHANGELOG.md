@@ -34,10 +34,6 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Changed
 
-- Upgrade active semantic convention usage in `go.opentelemetry.io/otel`, its SDKs, exporters, and bridges to v1.45.0.
-  Resource detectors and experimental SDK metrics now use the v1.45.0 schema URL; gRPC exporter metrics emit `rpc.status_code` instead of `rpc.response.status_code`.
-  Supply single-bucket duration histogram advice for providers that honor it.
-  Historical versioned packages and Zipkin's legacy attribute mappings are preserved. (#9492)
 - Stabilize the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module.
   The exporter's output format may still change, as documented in the [package documentation](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/stdout/stdoutlog). (#9472)
 - `ErrorType` in `go.opentelemetry.io/otel/semconv/v1.44.0` now unwraps single-error `errors.Join` wrappers when deriving the `error.type` attribute. (#9466)
