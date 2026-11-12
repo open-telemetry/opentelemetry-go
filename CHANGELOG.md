@@ -69,10 +69,9 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Replace `go.opentelemetry.io/proto/otlp` with `go.opentelemetry.io/proto/slim/otlp` in
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, removing the
   `google.golang.org/grpc` and `github.com/grpc-ecosystem/grpc-gateway/v2` dependencies.
-  Public exporter APIs, OTLP wire encodings, and ProtoJSON mappings remain compatible.
-  The distinct `opentelemetry.proto.slim.*` protobuf identities and descriptor paths can affect reflection, global registry lookups, service full names, and `google.protobuf.Any` type URLs.
-  Custom integrations requiring canonical identities should explicitly use `go.opentelemetry.io/proto/otlp`.
-  See the [compatibility details in opentelemetry-proto-go#707](https://github.com/open-telemetry/opentelemetry-proto-go/pull/707). (#9499)
+  Public exporter APIs and ordinary OTLP payloads remain compatible.
+  Applications depending on OTLP protobuf reflection identities or external `google.protobuf.Any` type URLs should review the
+  [upstream compatibility notes](https://github.com/open-telemetry/opentelemetry-proto-go/pull/707). (#9499)
 - Use `prometheus_http_text_metric_exporter` for `otel.component.type` in `go.opentelemetry.io/otel/exporters/prometheus`. (#9464)
 - Record `error.type="rejected"` (and `rpc.response.status_code="OK"` for gRPC) on partial-success rejections in self-observability metrics for `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9454)
 - Remove the duplicated `/metric` package path segment from `otel.component.type` (`go.opentelemetry.io/otel/sdk/metric.ManualReader`) in `go.opentelemetry.io/otel/sdk/metric`. (#9463)
