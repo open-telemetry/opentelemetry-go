@@ -66,7 +66,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Fixed
 
-- Remove gRPC and gRPC-Gateway dependencies from `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` by using the slim OTLP protobuf module.
+- Remove gRPC and gRPC-Gateway dependencies from `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp` by using the slim OTLP protobuf module. (#9499)
 - Use `prometheus_http_text_metric_exporter` for `otel.component.type` in `go.opentelemetry.io/otel/exporters/prometheus`. (#9464)
 - Record `error.type="rejected"` (and `rpc.response.status_code="OK"` for gRPC) on partial-success rejections in self-observability metrics for `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9454)
 - Remove the duplicated `/metric` package path segment from `otel.component.type` (`go.opentelemetry.io/otel/sdk/metric.ManualReader`) in `go.opentelemetry.io/otel/sdk/metric`. (#9463)
