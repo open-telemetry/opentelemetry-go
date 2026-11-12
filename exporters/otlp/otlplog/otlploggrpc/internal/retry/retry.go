@@ -14,7 +14,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cenkalti/backoff/v5"
+	"github.com/cenkalti/backoff/v7"
+
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 // DefaultConfig is the recommended default configuration.
@@ -91,6 +93,8 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 			if !retryable {
 				return err
 			}
+
+			global.Debug("retryable error", "error", err)
 
 			// Check if context is canceled before attempting to wait and retry.
 			if ctx.Err() != nil {

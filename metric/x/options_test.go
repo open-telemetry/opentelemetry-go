@@ -1,52 +1,66 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package x
+package x_test
 
 import (
+	"slices"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/x"
 )
 
-func TestWithUnsafeAttributes(t *testing.T) {
-	kvs := []attribute.KeyValue{attribute.String("A", "B")}
-	opt := WithUnsafeAttributes(kvs...)
+func TestWithOptIn(t *testing.T) {
+	opt := x.WithOptIn()
+	if opt == nil {
+		t.Fatal("WithOptIn() returned nil")
+	}
 
-	unsafeOpt, ok := opt.(*unsafeAttributesOption)
+	exp, ok := opt.(interface{ Experimental() })
 	if !ok {
-		t.Fatalf("expected *unsafeAttributesOption")
+		t.Fatal("WithOptIn() does not implement Experimental()")
+	}
+	exp.Experimental()
+
+	optIn, ok := opt.(interface{ OptIn() bool })
+	if !ok {
+		t.Fatal("WithOptIn() does not implement OptIn() bool")
+	}
+	if !optIn.OptIn() {
+		t.Fatal("OptIn() returned false, want true")
 	}
 
-	attrs := unsafeOpt.RawAttributes()
-	if len(attrs) != 1 {
-		t.Errorf("expected 1 attribute, got %d", len(attrs))
-	}
-	if attrs[0].Key != "A" || attrs[0].Value.AsString() != "B" {
-		t.Errorf("expected attribute A='B', got %v", attrs[0])
-	}
+	// Ensure all instrument config constructors accept WithOptIn without panicking.
+	_ = metric.NewInt64CounterConfig(opt)
+	_ = metric.NewInt64UpDownCounterConfig(opt)
+	_ = metric.NewInt64HistogramConfig(opt)
+	_ = metric.NewInt64GaugeConfig(opt)
+	_ = metric.NewInt64ObservableCounterConfig(opt)
+	_ = metric.NewInt64ObservableUpDownCounterConfig(opt)
+	_ = metric.NewInt64ObservableGaugeConfig(opt)
+	_ = metric.NewFloat64CounterConfig(opt)
+	_ = metric.NewFloat64UpDownCounterConfig(opt)
+	_ = metric.NewFloat64HistogramConfig(opt)
+	_ = metric.NewFloat64GaugeConfig(opt)
+	_ = metric.NewFloat64ObservableCounterConfig(opt)
+	_ = metric.NewFloat64ObservableUpDownCounterConfig(opt)
+	_ = metric.NewFloat64ObservableGaugeConfig(opt)
 }
 
-func TestUnsafeAttributesOption_Set(t *testing.T) {
-	opt := WithUnsafeAttributes()
+func TestWithDefaultAttributes(t *testing.T) {
+	k := attribute.Key("k")
+	opt := x.WithDefaultAttributes(k)
+	if opt == nil {
+		t.Fatal("WithDefaultAttributes() returned nil")
+	}
 
-	kvs := []attribute.KeyValue{attribute.String("C", "D")}
-
-	settable, ok := opt.(Settable[[]attribute.KeyValue])
+	allowed, ok := opt.(interface{ AllowedKeys() []attribute.Key })
 	if !ok {
-		t.Fatalf("expected Settable[[]attribute.KeyValue]")
+		t.Fatal("WithDefaultAttributes() does not implement AllowedKeys() []attribute.Key")
 	}
-	settable.Set(kvs)
-
-	unsafeOpt, ok := opt.(*unsafeAttributesOption)
-	if !ok {
-		t.Fatalf("expected *unsafeAttributesOption")
-	}
-	attrs := unsafeOpt.RawAttributes()
-	if len(attrs) != 1 {
-		t.Errorf("expected 1 attribute, got %d", len(attrs))
-	}
-	if attrs[0].Key != "C" || attrs[0].Value.AsString() != "D" {
-		t.Errorf("expected attribute C='D', got %v", attrs[0])
+	if got, want := allowed.AllowedKeys(), []attribute.Key{k}; !slices.Equal(got, want) {
+		t.Fatalf("AllowedKeys() = %v, want %v", got, want)
 	}
 }
