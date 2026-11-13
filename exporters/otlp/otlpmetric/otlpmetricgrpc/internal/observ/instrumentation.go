@@ -98,7 +98,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 
 	em.duration, instrumentErr = otelconv.NewSDKExporterOperationDuration(
 		meter,
-		metric.WithExplicitBucketBoundaries([]float64{}...),
+		metric.WithExplicitBucketBoundaries(),
 	)
 	if instrumentErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to create duration metric: %w", instrumentErr))

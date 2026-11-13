@@ -137,7 +137,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 
 	logOpDurationMetric, e := otelconv.NewSDKExporterOperationDuration(
 		m,
-		metric.WithExplicitBucketBoundaries([]float64{}...),
+		metric.WithExplicitBucketBoundaries(),
 	)
 	if e != nil {
 		e = fmt.Errorf("failed to create log operation duration metric: %w", e)

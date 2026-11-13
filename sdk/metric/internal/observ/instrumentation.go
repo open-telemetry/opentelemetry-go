@@ -104,7 +104,7 @@ func NewInstrumentation(componentType string, id int64) (*Instrumentation, error
 
 	colDuration, err := otelconv.NewSDKMetricReaderCollectionDuration(
 		meter,
-		metric.WithExplicitBucketBoundaries([]float64{}...),
+		metric.WithExplicitBucketBoundaries(),
 	)
 	if err != nil {
 		err = fmt.Errorf("failed to create collection duration metric: %w", err)

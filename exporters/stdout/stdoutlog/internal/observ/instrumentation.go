@@ -132,7 +132,7 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	}
 	inst.exported = exported.Inst()
 
-	duration, e := otelconv.NewSDKExporterOperationDuration(m, metric.WithExplicitBucketBoundaries([]float64{}...))
+	duration, e := otelconv.NewSDKExporterOperationDuration(m, metric.WithExplicitBucketBoundaries())
 	if e != nil {
 		e = fmt.Errorf("failed to create the duration metric: %w", e)
 		err = errors.Join(err, e)
