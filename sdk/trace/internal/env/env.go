@@ -95,6 +95,15 @@ func IntEnvOr(key string, defaultValue int) int {
 	return intValue
 }
 
+func positiveIntEnvOr(key string, defaultValue int) int {
+	value := IntEnvOr(key, defaultValue)
+	if value <= 0 {
+		global.Warn("Got invalid value, positive number expected.", key, value)
+		return defaultValue
+	}
+	return value
+}
+
 // BatchSpanProcessorScheduleDelay returns the environment variable value for
 // the OTEL_BSP_SCHEDULE_DELAY key if it exists, otherwise defaultValue is
 // returned.
@@ -110,17 +119,17 @@ func BatchSpanProcessorExportTimeout(defaultValue int) int {
 }
 
 // BatchSpanProcessorMaxQueueSize returns the environment variable value for
-// the OTEL_BSP_MAX_QUEUE_SIZE key if it exists, otherwise defaultValue is
-// returned.
+// the OTEL_BSP_MAX_QUEUE_SIZE key if it is a positive integer, otherwise
+// defaultValue is returned.
 func BatchSpanProcessorMaxQueueSize(defaultValue int) int {
-	return IntEnvOr(BatchSpanProcessorMaxQueueSizeKey, defaultValue)
+	return positiveIntEnvOr(BatchSpanProcessorMaxQueueSizeKey, defaultValue)
 }
 
 // BatchSpanProcessorMaxExportBatchSize returns the environment variable value for
-// the OTEL_BSP_MAX_EXPORT_BATCH_SIZE key if it exists, otherwise defaultValue
-// is returned.
+// the OTEL_BSP_MAX_EXPORT_BATCH_SIZE key if it is a positive integer, otherwise
+// defaultValue is returned.
 func BatchSpanProcessorMaxExportBatchSize(defaultValue int) int {
-	return IntEnvOr(BatchSpanProcessorMaxExportBatchSizeKey, defaultValue)
+	return positiveIntEnvOr(BatchSpanProcessorMaxExportBatchSizeKey, defaultValue)
 }
 
 // SpanAttributeValueLength returns the environment variable value for the
