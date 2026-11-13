@@ -28,12 +28,25 @@ func newDeltaSum[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *deltaSum[N] {
+	newVal := func(attr attribute.Set) *sumValue[N] {
+		res := r(attr)
+		_, isDrop := res.(*dropRes[N])
+		return &sumValue[N]{
+			res:           res,
+			attrs:         attr,
+			dropExemplars: isDrop,
+			// delta aggregators ignore val.startTime, so we leave it zero to save a clock fetch.
+		}
+	}
+	resetFunc := func(v *sumValue[N]) {
+		v.n.reset()
+	}
 	s := &deltaSum[N]{
 		monotonic: monotonic,
 		start:     now(),
 		newRes:    r,
 	}
-	s.vals.init(limit)
+	s.vals.init(limit, newVal, resetFunc)
 	return s
 }
 
@@ -50,16 +63,7 @@ func (s *deltaSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAtt
 	hotIdx := s.vals.start()
 	defer s.vals.done(hotIdx)
 
-	sv := s.vals.hot(hotIdx).LoadOrStoreAttr(lazy, func(attr attribute.Set) *sumValue[N] {
-		r := s.newRes(attr)
-		_, isDrop := r.(*dropRes[N])
-		return &sumValue[N]{
-			res:           r,
-			attrs:         attr,
-			startTime:     now(),
-			dropExemplars: isDrop,
-		}
-	})
+	sv := s.vals.hot(hotIdx).LoadOrStoreAttr(lazy)
 	sv.n.add(value)
 	if !sv.dropExemplars {
 		sv.res.Offer(ctx, value, lazy)
@@ -87,7 +91,7 @@ func (s *deltaSum[N]) collect(
 	var i int
 	s.vals.Range(readIdx, func(_, value any) bool {
 		val := value.(*sumValue[N])
-		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
@@ -101,7 +105,7 @@ func (s *deltaSum[N]) collect(
 	// The delta collection cycle resets.
 	s.start = t
 
-	sData.DataPoints = dPts
+	sData.DataPoints = dPts[:i]
 	*dest = sData
 
 	return i
@@ -183,7 +187,7 @@ func (s *cumulativeSum[N]) collect(
 			Time:       t,
 			Value:      val.n.load(),
 		}
-		collectExemplars(&newPt.Exemplars, val.res.Collect)
+		collectExemplars[N](&newPt.Exemplars, val.res.Collect)
 		dPts = append(dPts, newPt)
 		// TODO (#3006): This will use an unbounded amount of memory if there
 		// are unbounded number of attribute sets being aggregated. Attribute
@@ -207,8 +211,10 @@ func newPrecomputedSum[N int64 | float64](
 	limit int,
 	r func(attribute.Set) FilteredExemplarReservoir[N],
 ) *precomputedSum[N] {
+	ds := newDeltaSum[N](monotonic, limit, r)
 	return &precomputedSum[N]{
-		deltaSum: newDeltaSum[N](monotonic, limit, r),
+		deltaSum:    ds,
+		lastCollect: ds.start,
 	}
 }
 
@@ -219,6 +225,7 @@ type precomputedSum[N int64 | float64] struct {
 	reported       map[any]N
 	startTimes     map[any]time.Time
 	nextStartTimes map[any]time.Time
+	lastCollect    time.Time
 }
 
 func (s *precomputedSum[N]) delta(
@@ -246,7 +253,7 @@ func (s *precomputedSum[N]) delta(
 		n := val.n.load()
 
 		delta := n - s.reported[key]
-		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.start, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = s.start
 		dPts[i].Time = t
@@ -261,7 +268,7 @@ func (s *precomputedSum[N]) delta(
 	// The delta collection cycle resets.
 	s.start = t
 
-	sData.DataPoints = dPts
+	sData.DataPoints = dPts[:i]
 	*dest = sData
 
 	return i
@@ -305,7 +312,7 @@ func (s *precomputedSum[N]) cumulative(
 			}
 			s.nextStartTimes[key] = startTime
 		}
-		collectExemplars(&dPts[i].Exemplars, val.res.Collect)
+		collectExemplarsAfter[N](&dPts[i].Exemplars, s.lastCollect, val.res.Collect)
 		dPts[i].Attributes = val.attrs
 		dPts[i].StartTime = startTime
 		dPts[i].Time = t
@@ -319,8 +326,9 @@ func (s *precomputedSum[N]) cumulative(
 		s.startTimes, s.nextStartTimes = s.nextStartTimes, s.startTimes
 		s.start = t
 	}
+	s.lastCollect = t
 
-	sData.DataPoints = dPts
+	sData.DataPoints = dPts[:i]
 	*dest = sData
 
 	return i
