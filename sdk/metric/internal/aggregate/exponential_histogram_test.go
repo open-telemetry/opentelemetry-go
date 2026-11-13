@@ -121,8 +121,8 @@ func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
 				dp.record(-v)
 			}
 
-			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.posBuckets, "positive buckets")
-			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.negBuckets, "negative buckets")
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, &dp.posBuckets, "positive buckets")
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, &dp.negBuckets, "negative buckets")
 			assert.Equal(t, tt.expectedScale, dp.scale.Load(), "scale")
 		})
 	}
@@ -301,8 +301,8 @@ func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
 				dp.record(-v)
 			}
 
-			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.posBuckets, "positive buckets")
-			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.negBuckets, "negative buckets")
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, &dp.posBuckets, "positive buckets")
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, &dp.negBuckets, "negative buckets")
 			assert.Equal(t, tt.expectedScale, dp.scale.Load(), "scale")
 			assert.Equal(t, tt.expectedScale, dp.scale.Load())
 		})
@@ -316,49 +316,49 @@ func TestExponentialHistogramDataPointRecordLimits(t *testing.T) {
 	fdp := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false, nil, y2kPlus(0))
 	fdp.record(math.MaxFloat64)
 
-	if fdp.posBuckets.startBin != 1073741823 {
-		t.Errorf("Expected startBin to be 1073741823, got %d", fdp.posBuckets.startBin)
+	if startBin, _ := fdp.posBuckets.loadBounds(); startBin != 1073741823 {
+		t.Errorf("Expected startBin to be 1073741823, got %d", startBin)
 	}
 
 	fdp = newExpoHistogramDataPoint[float64](alice, 4, 20, false, false, nil, y2kPlus(0))
 	fdp.record(math.SmallestNonzeroFloat64)
 
-	if fdp.posBuckets.startBin != -1126170625 {
-		t.Errorf("Expected startBin to be -1126170625, got %d", fdp.posBuckets.startBin)
+	if startBin, _ := fdp.posBuckets.loadBounds(); startBin != -1126170625 {
+		t.Errorf("Expected startBin to be -1126170625, got %d", startBin)
 	}
 
 	idp := newExpoHistogramDataPoint[int64](alice, 4, 20, false, false, nil, y2kPlus(0))
 	idp.record(math.MaxInt64)
 
-	if idp.posBuckets.startBin != 66060287 {
-		t.Errorf("Expected startBin to be 66060287, got %d", idp.posBuckets.startBin)
+	if startBin, _ := idp.posBuckets.loadBounds(); startBin != 66060287 {
+		t.Errorf("Expected startBin to be 66060287, got %d", startBin)
 	}
 }
 
 func newBucket(startBin int32, counts []uint64) *expoBuckets {
+	b := new(expoBuckets)
 	if len(counts) == 0 {
-		return &expoBuckets{startBin: startBin}
+		b.storeBounds(startBin, 0)
+		return b
 	}
 	capSize := nextPowerOf2(int32(len(counts)))
-	b := &expoBuckets{
-		startBin: startBin,
-		length:   int32(len(counts)),
-		counts:   make([]atomic.Uint64, capSize),
-	}
+	b.storeBounds(startBin, int32(len(counts)))
+	b.counts = make([]atomic.Uint64, capSize)
 	for i, v := range counts {
-		b.at(int32(i)).Store(v)
+		b.bin(startBin + int32(i)).Store(v)
 	}
 	return b
 }
 
-func assertBuckets(t *testing.T, expectedStart int32, expectedCounts []uint64, actual expoBuckets, msg string) {
+func assertBuckets(t *testing.T, expectedStart int32, expectedCounts []uint64, actual *expoBuckets, msg string) {
 	t.Helper()
-	assert.Equal(t, expectedStart, actual.startBin, "%s: startBin", msg)
+	startBin, length := actual.loadBounds()
+	assert.Equal(t, expectedStart, startBin, "%s: startBin", msg)
 	var actualCounts []uint64
-	if actual.length > 0 {
-		actualCounts = make([]uint64, actual.length)
-		for i := range actual.length {
-			actualCounts[i] = actual.at(i).Load()
+	if length > 0 {
+		actualCounts = make([]uint64, length)
+		for i := range length {
+			actualCounts[i] = actual.bin(startBin + i).Load()
 		}
 	}
 	assert.Equal(t, expectedCounts, actualCounts, "%s: counts", msg)
@@ -461,7 +461,7 @@ func TestExpoBucketDownscale(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.bucket.downscale(tt.scale)
 
-			assertBuckets(t, tt.wantStart, tt.wantCounts, *tt.bucket, tt.name)
+			assertBuckets(t, tt.wantStart, tt.wantCounts, tt.bucket, tt.name)
 		})
 	}
 }
@@ -507,7 +507,7 @@ func TestExpoBucketRecord(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.bucket.record(tt.bin)
 
-			assertBuckets(t, tt.wantStart, tt.wantCounts, *tt.bucket, tt.name)
+			assertBuckets(t, tt.wantStart, tt.wantCounts, tt.bucket, tt.name)
 		})
 	}
 }
@@ -699,7 +699,11 @@ func TestSubNormal(t *testing.T) {
 	want.minMax.Update(math.SmallestNonzeroFloat64)
 	want.sum.add(3 * math.SmallestNonzeroFloat64)
 	want.scale.Store(20)
-	want.posBuckets = *newBucket(-1126170625, []uint64{3})
+	want.posBuckets.recordCount(-1126170625, 3)
+	// First record takes recordSlow (allocating counts and resetting wg via swapHotAndWait);
+	// the next two records take the lockless fast path (idx == 0).
+	want.wg.startedCountAndHotIdx.Store(2)
+	want.wg.endedCounts[0].Store(2)
 
 	ehdp := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false, nil, y2kPlus(0))
 	ehdp.record(math.SmallestNonzeroFloat64)
@@ -1326,6 +1330,142 @@ func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricda
 
 			assert.Equal(t, refH, h)
 		})
+
+		t.Run("HighContentionSameBucket", func(t *testing.T) {
+			meas, comp := Builder[N]{
+				Temporality:      temporality,
+				Filter:           attrFltr,
+				AggregationLimit: 3,
+			}.ExponentialBucketHistogram(160, 20, false, false)
+
+			ctx := t.Context()
+			var wg sync.WaitGroup
+			const numGoroutines = 10
+			const numRecords = 100
+			wg.Add(numGoroutines)
+			for range numGoroutines {
+				go func() {
+					defer wg.Done()
+					for range numRecords {
+						meas(ctx, 42, alice)
+						meas(ctx, -42, alice)
+					}
+				}()
+			}
+			wg.Wait()
+
+			dest := new(metricdata.Aggregation)
+			comp(dest)
+			h := (*dest).(metricdata.ExponentialHistogram[N])
+			require.Len(t, h.DataPoints, 1)
+			assert.Equal(t, uint64(2*numGoroutines*numRecords), h.DataPoints[0].Count)
+			assert.Equal(t, []uint64{numGoroutines * numRecords}, h.DataPoints[0].PositiveBucket.Counts)
+			assert.Equal(t, []uint64{numGoroutines * numRecords}, h.DataPoints[0].NegativeBucket.Counts)
+		})
+
+		t.Run("ConcurrentInCapacityExpansion", func(t *testing.T) {
+			meas, comp := Builder[N]{
+				Temporality:      temporality,
+				Filter:           attrFltr,
+				AggregationLimit: 3,
+			}.ExponentialBucketHistogram(160, 0, false, false)
+
+			ctx := t.Context()
+			const numGoroutines = 10
+			const numCycles = 2
+			// Step outward from the center bins (shifts 4, 5, 3, 6, 2, 7, 1, 8, 0, 9 -> bins 3, 4, 2, 5, 1, 6, 0, 7, -1, 8)
+			// so bounds expand incrementally across power-of-2 capacity thresholds (1 -> 2 -> 4 -> 8 -> 16).
+			// Running a second cycle after comp() exercises tryRecord's length == 0 CAS path and in-capacity CAS
+			// expansion on pre-warmed counts after delta.reset() (clear()).
+			order := [10]int{4, 5, 3, 6, 2, 7, 1, 8, 0, 9}
+			dest := new(metricdata.Aggregation)
+
+			for cycle := range numCycles {
+				var wg sync.WaitGroup
+				wg.Add(numGoroutines)
+				for i := range numGoroutines {
+					go func(id int) {
+						defer wg.Done()
+						for step := range len(order) {
+							// Alternate pair order across even/odd goroutines to contend on both lower and upper bound expansion.
+							idx := step
+							if id%2 == 1 {
+								idx ^= 1
+							}
+							v := N(int64(1) << order[idx])
+							meas(ctx, v, alice)
+							meas(ctx, -v, alice)
+						}
+					}(i)
+				}
+				wg.Wait()
+
+				comp(dest)
+				h := (*dest).(metricdata.ExponentialHistogram[N])
+				require.Len(t, h.DataPoints, 1)
+				assert.Equal(t, int32(0), h.DataPoints[0].Scale)
+				expectedPerBin := uint64(numGoroutines)
+				if temporality == metricdata.CumulativeTemporality {
+					expectedPerBin = uint64(numGoroutines * (cycle + 1))
+				}
+				assert.Equal(t, expectedPerBin*20, h.DataPoints[0].Count)
+				assert.Len(t, h.DataPoints[0].PositiveBucket.Counts, 10)
+				assert.Len(t, h.DataPoints[0].NegativeBucket.Counts, 10)
+				for _, c := range h.DataPoints[0].PositiveBucket.Counts {
+					assert.Equal(t, expectedPerBin, c)
+				}
+				for _, c := range h.DataPoints[0].NegativeBucket.Counts {
+					assert.Equal(t, expectedPerBin, c)
+				}
+			}
+		})
+
+		t.Run("MaxSize2ConcurrentCollectAndUnderflow", func(t *testing.T) {
+			for _, maxSize := range []int32{1, 2} {
+				t.Run(fmt.Sprintf("maxSize=%d", maxSize), func(t *testing.T) {
+					original := global.GetErrorHandler()
+					global.SetErrorHandler(otel.ErrorHandlerFunc(func(error) {}))
+					t.Cleanup(func() {
+						global.SetErrorHandler(original)
+					})
+
+					meas, comp := Builder[N]{
+						Temporality:      temporality,
+						Filter:           attrFltr,
+						AggregationLimit: 3,
+					}.ExponentialBucketHistogram(maxSize, 20, false, false)
+
+					ctx := t.Context()
+					var wg sync.WaitGroup
+					const numWriters = 6
+					const numRecords = 50
+					wg.Add(numWriters + 1)
+					for i := range numWriters {
+						go func(id int) {
+							defer wg.Done()
+							for j := range numRecords {
+								switch (id + j) % 3 {
+								case 0:
+									meas(ctx, 0, alice)
+								case 1:
+									meas(ctx, 1, alice)
+								case 2:
+									meas(ctx, 1024, alice)
+								}
+							}
+						}(i)
+					}
+					go func() {
+						defer wg.Done()
+						dest := new(metricdata.Aggregation)
+						for range 10 {
+							comp(dest)
+						}
+					}()
+					wg.Wait()
+				})
+			}
+		})
 	}
 }
 
@@ -1655,8 +1795,10 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 			oVals:    []float64{1000.0},
 			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
 				assert.Equal(t, uint64(2), p.count())
-				assert.LessOrEqual(t, int(p.posBuckets.length), 4)
-				assert.Zero(t, p.negBuckets.length)
+				_, posLen := p.posBuckets.loadBounds()
+				_, negLen := p.negBuckets.loadBounds()
+				assert.LessOrEqual(t, int(posLen), 4)
+				assert.Zero(t, negLen)
 				assert.InDelta(t, 1001.0, p.sum.load(), 1e-9)
 			},
 		},
@@ -1668,8 +1810,10 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 			oVals:    []float64{-1000.0},
 			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
 				assert.Equal(t, uint64(2), p.count())
-				assert.LessOrEqual(t, int(p.negBuckets.length), 4)
-				assert.Zero(t, p.posBuckets.length)
+				_, posLen := p.posBuckets.loadBounds()
+				_, negLen := p.negBuckets.loadBounds()
+				assert.LessOrEqual(t, int(negLen), 4)
+				assert.Zero(t, posLen)
 				assert.InDelta(t, -1001.0, p.sum.load(), 1e-9)
 			},
 		},
@@ -1681,8 +1825,10 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 			oVals:    []float64{-10.0},
 			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
 				assert.Equal(t, uint64(2), p.count())
-				assert.Positive(t, p.posBuckets.length)
-				assert.Positive(t, p.negBuckets.length)
+				_, posLen := p.posBuckets.loadBounds()
+				_, negLen := p.negBuckets.loadBounds()
+				assert.Positive(t, posLen)
+				assert.Positive(t, negLen)
 				assert.InDelta(t, 0.0, p.sum.load(), 1e-9)
 			},
 		},
@@ -1694,8 +1840,10 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 			oVals:    []float64{10000.0, -10000.0},
 			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
 				assert.Equal(t, uint64(4), p.count())
-				assert.LessOrEqual(t, int(p.posBuckets.length), 4)
-				assert.LessOrEqual(t, int(p.negBuckets.length), 4)
+				_, posLen := p.posBuckets.loadBounds()
+				_, negLen := p.negBuckets.loadBounds()
+				assert.LessOrEqual(t, int(posLen), 4)
+				assert.LessOrEqual(t, int(negLen), 4)
 			},
 		},
 		{
@@ -1729,7 +1877,8 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
 				assert.Equal(t, uint64(2), p.count())
 				assert.GreaterOrEqual(t, p.scale.Load(), int32(expoMinScale))
-				assert.LessOrEqual(t, int(p.posBuckets.length), 3)
+				_, posLen := p.posBuckets.loadBounds()
+				assert.LessOrEqual(t, int(posLen), 3)
 			},
 		},
 	}
@@ -1752,9 +1901,10 @@ func TestExpoHistogramDataPointMerge(t *testing.T) {
 
 func verifyBucketInvariants(t *testing.T, b *expoBuckets, msg string) {
 	t.Helper()
-	if b.length == 0 {
-		if b.startBin != 0 {
-			t.Fatalf("%s: empty bucket startBin should be 0, got %d", msg, b.startBin)
+	startBin, length := b.loadBounds()
+	if length == 0 {
+		if startBin != 0 {
+			t.Fatalf("%s: empty bucket startBin should be 0, got %d", msg, startBin)
 		}
 		for i := range b.counts {
 			if v := b.counts[i].Load(); v != 0 {
@@ -1770,16 +1920,16 @@ func verifyBucketInvariants(t *testing.T, b *expoBuckets, msg string) {
 	if (len(b.counts) & (len(b.counts) - 1)) != 0 {
 		t.Fatalf("%s: capacity %d is not a power of 2", msg, len(b.counts))
 	}
-	if len(b.counts) < int(b.length) {
-		t.Fatalf("%s: capacity %d < length %d", msg, len(b.counts), b.length)
+	if len(b.counts) < int(length) {
+		t.Fatalf("%s: capacity %d < length %d", msg, len(b.counts), length)
 	}
 
 	// Check logical slots vs physical unused slots
-	firstSlot := b.index(b.startBin)
+	firstSlot := b.index(startBin)
 	capMask := len(b.counts) - 1
 	for i := range b.counts {
 		offset := (i - firstSlot) & capMask
-		if offset >= int(b.length) {
+		if offset >= int(length) {
 			if v := b.counts[i].Load(); v != 0 {
 				t.Fatalf("%s: unused slot %d should be 0, got %d", msg, i, v)
 			}
@@ -1799,13 +1949,13 @@ func TestExpoBucketsCircularWraparound(t *testing.T) {
 
 	// Record inside existing range
 	b.record(4)
-	assertBuckets(t, 3, []uint64{10, 21, 30}, *b, "after record inside")
+	assertBuckets(t, 3, []uint64{10, 21, 30}, b, "after record inside")
 	verifyBucketInvariants(t, b, "after record inside")
 
 	// Append within existing capacity
 	b.record(6) // logical bin 6 maps to slot 2
 	assert.Len(t, b.counts, 4)
-	assertBuckets(t, 3, []uint64{10, 21, 30, 1}, *b, "after append to fill capacity")
+	assertBuckets(t, 3, []uint64{10, 21, 30, 1}, b, "after append to fill capacity")
 	verifyBucketInvariants(t, b, "after append to fill capacity")
 }
 
@@ -1817,13 +1967,13 @@ func TestExpoBucketsCapacityGrowthRebucketing(t *testing.T) {
 	// Prepend to trigger capacity growth from 4 to 8
 	b.record(2)
 	assert.Len(t, b.counts, 8)
-	assertBuckets(t, 2, []uint64{1, 10, 20, 30, 40}, *b, "after growth prepend")
+	assertBuckets(t, 2, []uint64{1, 10, 20, 30, 40}, b, "after growth prepend")
 	verifyBucketInvariants(t, b, "after growth prepend")
 
 	// Append to trigger capacity growth from 8 to 16
 	b.recordCount(10, 5)
 	assert.Len(t, b.counts, 16)
-	assertBuckets(t, 2, []uint64{1, 10, 20, 30, 40, 0, 0, 0, 5}, *b, "after growth append")
+	assertBuckets(t, 2, []uint64{1, 10, 20, 30, 40, 0, 0, 0, 5}, b, "after growth append")
 	verifyBucketInvariants(t, b, "after growth append")
 }
 
@@ -1838,8 +1988,9 @@ func TestExpoBucketsAlternatingPrependAppend(t *testing.T) {
 		verifyBucketInvariants(t, b, fmt.Sprintf("iteration %d", i))
 	}
 
-	assert.Equal(t, int32(-10), b.startBin)
-	assert.Equal(t, int32(21), b.length)
+	startBin, length := b.loadBounds()
+	assert.Equal(t, int32(-10), startBin)
+	assert.Equal(t, int32(21), length)
 	assert.Equal(t, uint64(1+55+550), b.count())
 }
 
@@ -1851,14 +2002,14 @@ func TestExpoBucketsDownscaleWrapped(t *testing.T) {
 
 	b.downscale(1)
 	// new bins: 6>>1 = 3, 7>>1 = 3 (1+2=3), 8>>1 = 4 (3), 9>>1 = 4 (4) -> [3, 7] at startBin 3
-	assertBuckets(t, 3, []uint64{3, 7}, *b, "after downscale 1")
+	assertBuckets(t, 3, []uint64{3, 7}, b, "after downscale 1")
 	verifyBucketInvariants(t, b, "after downscale 1")
 
 	// Large downscale
 	b2 := newBucket(-100, []uint64{5, 0, 0, 15})
 	b2.downscale(5)
 	// -100 >> 5 = -4, -97 >> 5 = -4 -> sum 20 at startBin -4
-	assertBuckets(t, -4, []uint64{20}, *b2, "large downscale")
+	assertBuckets(t, -4, []uint64{20}, b2, "large downscale")
 	verifyBucketInvariants(t, b2, "large downscale")
 }
 
@@ -1867,7 +2018,7 @@ func TestExpoBucketsMergeWrapped(t *testing.T) {
 	b2 := newBucket(2, []uint64{5, 15})  // slots 2, 3
 
 	b1.merge(b2)
-	assertBuckets(t, 2, []uint64{5, 25, 20}, *b1, "after merge")
+	assertBuckets(t, 2, []uint64{5, 25, 20}, b1, "after merge")
 	verifyBucketInvariants(t, b1, "after merge")
 }
 
@@ -1878,31 +2029,80 @@ func TestExpoBucketsClearPreservesCapacity(t *testing.T) {
 	assert.Equal(t, 8, capBefore)
 
 	b.clear()
-	assert.Equal(t, int32(0), b.startBin)
-	assert.Equal(t, int32(0), b.length)
+	startBin, length := b.loadBounds()
+	assert.Equal(t, int32(0), startBin)
+	assert.Equal(t, int32(0), length)
 	assert.Len(t, b.counts, capBefore)
 	verifyBucketInvariants(t, b, "after clear")
 
 	// Re-record after clear
 	b.recordCount(5, 42)
-	assert.Equal(t, int32(5), b.startBin)
-	assert.Equal(t, int32(1), b.length)
+	startBin, length = b.loadBounds()
+	assert.Equal(t, int32(5), startBin)
+	assert.Equal(t, int32(1), length)
 	assert.Len(t, b.counts, capBefore)
-	assertBuckets(t, 5, []uint64{42}, *b, "after re-record")
+	assertBuckets(t, 5, []uint64{42}, b, "after re-record")
 	verifyBucketInvariants(t, b, "after re-record")
 }
 
 func TestExpoBucketsRecordZeroCount(t *testing.T) {
 	b := new(expoBuckets)
 	b.recordCount(10, 0)
-	assert.Equal(t, int32(0), b.startBin)
-	assert.Equal(t, int32(0), b.length)
+	startBin, length := b.loadBounds()
+	assert.Equal(t, int32(0), startBin)
+	assert.Equal(t, int32(0), length)
 	assert.Empty(t, b.counts)
 
 	b2 := newBucket(5, []uint64{10, 20})
 	b2.recordCount(5, 0)
 	b2.recordCount(100, 0)
-	assertBuckets(t, 5, []uint64{10, 20}, *b2, "zero count records are no-ops")
+	assertBuckets(t, 5, []uint64{10, 20}, b2, "zero count records are no-ops")
+}
+
+func TestExpoBucketsTryRecord(t *testing.T) {
+	// Unallocated bucket returns false
+	b := new(expoBuckets)
+	assert.False(t, b.tryRecord(5, 1, 160))
+	assert.True(t, b.tryRecord(5, 0, 160))
+
+	// Allocate capacity 8 via recordCount, then clear
+	b.recordCount(0, 1)
+	b.recordCount(7, 1)
+	require.Len(t, b.counts, 8)
+	b.clear()
+
+	// Empty bucket with maxSize < 1 returns false
+	assert.False(t, b.tryRecord(3, 1, 0))
+
+	// First record after clear succeeds via CAS on empty bounds
+	assert.True(t, b.tryRecord(3, 2, 4))
+	assertBuckets(t, 3, []uint64{2}, b, "first tryRecord after clear")
+	verifyBucketInvariants(t, b, "first tryRecord after clear")
+
+	// In-range record increments without changing bounds
+	assert.True(t, b.tryRecord(3, 5, 4))
+	assertBuckets(t, 3, []uint64{7}, b, "in-range tryRecord")
+
+	// Prepend and append within capacity (8) and maxSize (4)
+	assert.True(t, b.tryRecord(2, 1, 4))
+	assert.True(t, b.tryRecord(5, 3, 4))
+	assertBuckets(t, 2, []uint64{1, 7, 0, 3}, b, "expanded tryRecord")
+	verifyBucketInvariants(t, b, "expanded tryRecord")
+
+	// Exceeding maxSize (4) returns false without mutating bounds
+	assert.False(t, b.tryRecord(6, 1, 4))
+	assertBuckets(t, 2, []uint64{1, 7, 0, 3}, b, "exceed maxSize unchanged")
+
+	// Exceeding allocated capacity (8) even when maxSize (160) allows it returns false
+	assert.False(t, b.tryRecord(10, 1, 160))
+	assertBuckets(t, 2, []uint64{1, 7, 0, 3}, b, "exceed capacity unchanged")
+
+	// Extreme scale-20 bins that would overflow int32 if span were computed in int32:
+	// minBin = -1126170625, maxBin = 1073741823 -> int32(maxBin - minBin + 1) < 0.
+	bExtreme := newBucket(-1126170625, []uint64{1, 0, 0, 0})
+	bExtreme.storeBounds(-1126170625, 1)
+	assert.False(t, bExtreme.tryRecord(1073741823, 1, 160))
+	assertBuckets(t, -1126170625, []uint64{1}, bExtreme, "extreme int32 span overflow guard")
 }
 
 func TestExpoBucketsProperty(t *testing.T) {
@@ -1914,7 +2114,14 @@ func TestExpoBucketsProperty(t *testing.T) {
 		ops := 50
 		for op := range ops {
 			switch rng.Intn(4) {
-			case 0, 1: // recordCount
+			case 0: // tryRecord with recordCount fallback
+				bin := int32(rng.Intn(61) - 30)
+				count := uint64(rng.Intn(10) + 1)
+				if !b.tryRecord(bin, count, defaultMaxSize) {
+					b.recordCount(bin, count)
+				}
+				ref[bin] += count
+			case 1: // recordCount
 				bin := int32(rng.Intn(61) - 30)
 				count := uint64(rng.Intn(10) + 1)
 				b.recordCount(bin, count)
@@ -1938,9 +2145,10 @@ func TestExpoBucketsProperty(t *testing.T) {
 			verifyBucketInvariants(t, b, "property test")
 
 			// Verify equivalence with reference model
+			startBin, length := b.loadBounds()
 			if len(ref) == 0 {
-				if b.length != 0 {
-					t.Fatalf("iter %d op %d: expected length 0, got %d", iter, op, b.length)
+				if length != 0 {
+					t.Fatalf("iter %d op %d: expected length 0, got %d", iter, op, length)
 				}
 				if c := b.count(); c != 0 {
 					t.Fatalf("iter %d op %d: expected count 0, got %d", iter, op, c)
@@ -1964,11 +2172,11 @@ func TestExpoBucketsProperty(t *testing.T) {
 						t.Fatalf("iter %d op %d: expected count 0, got %d", iter, op, c)
 					}
 				} else {
-					if b.startBin != minBin {
-						t.Fatalf("iter %d op %d: expected startBin %d, got %d", iter, op, minBin, b.startBin)
+					if startBin != minBin {
+						t.Fatalf("iter %d op %d: expected startBin %d, got %d", iter, op, minBin, startBin)
 					}
-					if expectedLen := maxBin - minBin + 1; b.length != expectedLen {
-						t.Fatalf("iter %d op %d: expected length %d, got %d", iter, op, expectedLen, b.length)
+					if expectedLen := maxBin - minBin + 1; length != expectedLen {
+						t.Fatalf("iter %d op %d: expected length %d, got %d", iter, op, expectedLen, length)
 					}
 					if c := b.count(); c != totalCount {
 						t.Fatalf("iter %d op %d: expected count %d, got %d", iter, op, totalCount, c)
