@@ -1421,18 +1421,13 @@ func TestRetryableNetworkError(t *testing.T) {
 		},
 		{
 			name: "connection refused",
-			err: &url.Error{
-				Op:  "Post",
-				URL: "http://127.0.0.1:1",
-				Err: &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED},
-			},
+			err:  &url.Error{Op: "Post", Err: &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}},
 			want: true,
 		},
 		{
 			name: "proxy connection refused",
 			err: &url.Error{
-				Op:  "Post",
-				URL: "http://127.0.0.1:1",
+				Op: "Post",
 				Err: &net.OpError{
 					Op:  "proxyconnect",
 					Net: "tcp",
@@ -1456,8 +1451,7 @@ func TestRetryableNetworkError(t *testing.T) {
 		{
 			name: "SOCKS handshake reset",
 			err: &url.Error{
-				Op:  "Post",
-				URL: "http://127.0.0.1:1",
+				Op: "Post",
 				Err: &net.OpError{
 					Op:  "socks connect",
 					Net: "tcp",
@@ -1469,8 +1463,7 @@ func TestRetryableNetworkError(t *testing.T) {
 		{
 			name: "SOCKS authentication failure",
 			err: &url.Error{
-				Op:  "Post",
-				URL: "http://127.0.0.1:1",
+				Op: "Post",
 				Err: &net.OpError{
 					Op:  "socks connect",
 					Net: "tcp",
@@ -1482,7 +1475,6 @@ func TestRetryableNetworkError(t *testing.T) {
 			name: "connection reset",
 			err: &url.Error{
 				Op:  "Post",
-				URL: "http://127.0.0.1:1",
 				Err: &net.OpError{Op: "read", Net: "tcp", Err: syscall.ECONNRESET},
 			},
 			want: true,
@@ -1504,7 +1496,6 @@ func TestRetryableNetworkError(t *testing.T) {
 			name: "invalid address",
 			err: &url.Error{
 				Op:  "Post",
-				URL: "http://127.0.0.1:65536",
 				Err: &net.OpError{Op: "dial", Net: "tcp", Err: &net.AddrError{Err: "invalid port", Addr: "65536"}},
 			},
 		},
@@ -1615,7 +1606,11 @@ func TestRetryableNetworkErrorRealErrors(t *testing.T) {
 	})
 
 	t.Run("invalid port", func(t *testing.T) {
-		err := post(t, &http.Client{}, "http://127.0.0.1:65536/")
+		target := (&url.URL{
+			Scheme: "http",
+			Host:   net.JoinHostPort("127.0.0.1", "65536"),
+		}).String()
+		err := post(t, &http.Client{}, target)
 		assert.False(t, retryableNetworkError(err), "err: %v", err)
 	})
 }
