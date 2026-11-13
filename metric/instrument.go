@@ -200,8 +200,16 @@ func WithUnit(u string) InstrumentOption { return unitOpt(u) }
 
 // WithExplicitBucketBoundaries sets the instrument explicit bucket boundaries.
 //
+// If no boundaries are provided, including a nil slice, a single unbounded bucket
+// is advised.
+//
 // This option is considered "advisory", and may be ignored by API implementations.
-func WithExplicitBucketBoundaries(bounds ...float64) HistogramOption { return bucketOpt(bounds) }
+func WithExplicitBucketBoundaries(bounds ...float64) HistogramOption {
+	if bounds == nil {
+		bounds = []float64{}
+	}
+	return bucketOpt(bounds)
+}
 
 type bucketOpt []float64
 

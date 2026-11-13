@@ -2302,9 +2302,8 @@ func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
 			expectedBucketBoundaries: defaultBuckets,
 		},
 		{
-			desc:                     "nil advice preserves default",
-			histogramOpt:             metric.WithExplicitBucketBoundaries(nil...),
-			expectedBucketBoundaries: defaultBuckets,
+			desc:         "nil advice overrides default",
+			histogramOpt: metric.WithExplicitBucketBoundaries(nil...),
 		},
 		{
 			desc:                     "custom reader aggregation overrides default",
@@ -2312,10 +2311,18 @@ func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
 			expectedBucketBoundaries: readerBuckets,
 		},
 		{
-			desc:                     "nil advice preserves custom reader aggregation",
-			readerOpts:               []ManualReaderOption{customReader},
-			histogramOpt:             metric.WithExplicitBucketBoundaries(nil...),
-			expectedBucketBoundaries: readerBuckets,
+			desc:         "nil advice overrides custom reader aggregation",
+			readerOpts:   []ManualReaderOption{customReader},
+			histogramOpt: metric.WithExplicitBucketBoundaries(nil...),
+		},
+		{
+			desc:         "no argument advice overrides default",
+			histogramOpt: metric.WithExplicitBucketBoundaries(),
+		},
+		{
+			desc:         "no argument advice overrides custom reader aggregation",
+			readerOpts:   []ManualReaderOption{customReader},
+			histogramOpt: metric.WithExplicitBucketBoundaries(),
 		},
 		{
 			desc:         "empty advice overrides default",
@@ -2343,7 +2350,7 @@ func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
 		},
 		{
 			desc:         "view overrides empty advice",
-			histogramOpt: metric.WithExplicitBucketBoundaries([]float64{}...),
+			histogramOpt: metric.WithExplicitBucketBoundaries(),
 			views: []View{NewView(Instrument{Name: "*"}, Stream{
 				Aggregation: AggregationExplicitBucketHistogram{Boundaries: viewBuckets},
 			})},
@@ -2366,12 +2373,12 @@ func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
 		{
 			desc:         "view without aggregation honors empty advice",
 			readerOpts:   []ManualReaderOption{customReader},
-			histogramOpt: metric.WithExplicitBucketBoundaries([]float64{}...),
+			histogramOpt: metric.WithExplicitBucketBoundaries(),
 			views:        []View{NewView(Instrument{Name: "*"}, Stream{Description: "view without aggregation"})},
 		},
 		{
 			desc:         "exponential view overrides empty advice",
-			histogramOpt: metric.WithExplicitBucketBoundaries([]float64{}...),
+			histogramOpt: metric.WithExplicitBucketBoundaries(),
 			views: []View{NewView(Instrument{Name: "*"}, Stream{
 				Aggregation: exponential,
 			})},
@@ -2390,7 +2397,7 @@ func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
 			readerOpts: []ManualReaderOption{WithAggregationSelector(func(InstrumentKind) Aggregation {
 				return exponential
 			})},
-			histogramOpt:        metric.WithExplicitBucketBoundaries([]float64{}...),
+			histogramOpt:        metric.WithExplicitBucketBoundaries(),
 			expectedExponential: true,
 		},
 	} {
