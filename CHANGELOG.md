@@ -81,6 +81,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Export non-finite floating-point values as strings in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#9308)
 - Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Interpret OTLP log exporter compression environment variables case-insensitively in
+
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. `WithCompressor` in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` now interprets its argument
@@ -126,6 +127,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - ⚠️ **Breaking Change:** Let an `http` or `https` scheme in `OTEL_EXPORTER_OTLP_ENDPOINT` or the signal-specific endpoint environment variable take precedence over `OTEL_EXPORTER_OTLP_INSECURE` and the signal-specific insecure environment variable in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9273)
   Previously, `OTEL_EXPORTER_OTLP_INSECURE=true` made these exporters send plaintext to an `https://` endpoint.
 - Preserve `ScopeMetrics` slice capacity in `PeriodicReader`'s `sync.Pool` by resetting slice length instead of overwriting the struct, avoiding per-cycle heap allocations in `go.opentelemetry.io/otel/sdk/metric`. (#8535)
+- Fix the OTLP exporters to resolve the mTLS client certificate and key independently across the generic and signal-specific environment variable tiers, so that a mixed-tier pair (e.g. a signal-specific certificate with the generic key) is no longer silently dropped. An error is reported when only one of the two is configured. This affects `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9431)
 
 ### Removed
 
