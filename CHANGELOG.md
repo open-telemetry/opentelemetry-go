@@ -65,6 +65,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#9221)
 
 ### Fixed
+- Resolve the mTLS client certificate and key environment variables (`OTEL_EXPORTER_OTLP_[LOGS_]CLIENT_CERTIFICATE` and `OTEL_EXPORTER_OTLP_[LOGS_]CLIENT_KEY`) independently in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, so a signal-specific override can be paired with the generic value instead of requiring both files from the same scope. A lone certificate or key with no counterpart, which was previously ignored silently, is now reported through the error handler. (#9255)
 
 - Use `prometheus_http_text_metric_exporter` for `otel.component.type` in `go.opentelemetry.io/otel/exporters/prometheus`. (#9464)
 - Record `error.type="rejected"` (and `rpc.response.status_code="OK"` for gRPC) on partial-success rejections in self-observability metrics for `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9454)
