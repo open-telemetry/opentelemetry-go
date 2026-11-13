@@ -608,9 +608,7 @@ func TestClientInstrumentation(t *testing.T) {
 						{Attributes: attribute.NewSet(attrs...), Value: 0},
 						{Attributes: attribute.NewSet(append(
 							attrs,
-							otelconv.SDKExporterSpanExported{}.AttrErrorType(
-								"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal.PartialSuccess",
-							),
+							otelconv.SDKExporterSpanExported{}.AttrErrorType("rejected"),
 						)...), Value: 2},
 					},
 					Temporality: 0x1,
@@ -625,9 +623,7 @@ func TestClientInstrumentation(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{Attributes: attribute.NewSet(append(
 							attrs,
-							otelconv.SDKExporterOperationDuration{}.AttrErrorType(
-								"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal.PartialSuccess",
-							),
+							otelconv.SDKExporterOperationDuration{}.AttrErrorType("rejected"),
 							otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
 								codes.OK.String(),
 							),
