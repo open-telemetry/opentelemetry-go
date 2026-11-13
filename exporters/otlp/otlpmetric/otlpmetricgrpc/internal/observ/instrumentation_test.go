@@ -16,14 +16,16 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	mapi "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
@@ -31,6 +33,45 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/transform"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/x"
 )
+
+type histogramAdviceMeterProvider struct {
+	mapi.MeterProvider
+	meter mapi.Meter
+}
+
+func (m *histogramAdviceMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
+	return m.meter
+}
+
+type histogramAdviceMeter struct {
+	mapi.Meter
+	config mapi.Float64HistogramConfig
+}
+
+func (m *histogramAdviceMeter) Float64Histogram(
+	_ string,
+	opts ...mapi.Float64HistogramOption,
+) (mapi.Float64Histogram, error) {
+	m.config = mapi.NewFloat64HistogramConfig(opts...)
+	return noop.Float64Histogram{}, nil
+}
+
+func TestNewInstrumentationDurationHistogramAdvice(t *testing.T) {
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	meter := &histogramAdviceMeter{Meter: noop.NewMeterProvider().Meter("")}
+	otel.SetMeterProvider(&histogramAdviceMeterProvider{meter: meter})
+	inst, err := NewInstrumentation(0, "dns:///localhost:4317")
+	require.NoError(t, err)
+	require.NotNil(t, inst)
+
+	assert.Equal(t, otelconv.SDKExporterOperationDuration{}.Description(), meter.config.Description())
+	assert.Equal(t, "s", meter.config.Unit())
+	require.NotNil(t, meter.config.ExplicitBucketBoundaries(), "single-bucket advice must be explicit")
+	assert.Empty(t, meter.config.ExplicitBucketBoundaries())
+}
 
 func TestNewInstrumentation_Disabled(t *testing.T) {
 	// Ensure feature is disabled
@@ -174,7 +215,7 @@ func TestTrackExport(t *testing.T) {
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.RPCResponseStatusCode(codes.OK.String()),
+										semconv.RPCStatusCode(codes.OK.String()),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -254,7 +295,7 @@ func TestTrackExport(t *testing.T) {
 										semconv.ErrorTypeKey.String("*errors.errorString"),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.RPCResponseStatusCode(codes.Unknown.String()),
+										semconv.RPCStatusCode(codes.Unknown.String()),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),
@@ -338,7 +379,7 @@ func TestTrackExport(t *testing.T) {
 										semconv.ErrorTypeKey.String("rejected"),
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.RPCResponseStatusCode(codes.OK.String()),
+										semconv.RPCStatusCode(codes.OK.String()),
 										semconv.ServerAddress("localhost"),
 										semconv.ServerPort(4317),
 									),

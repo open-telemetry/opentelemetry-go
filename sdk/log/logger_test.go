@@ -24,8 +24,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -981,6 +981,50 @@ func TestLoggerObservability(t *testing.T) {
 			metricdatatest.AssertEqual(t, wantMetric, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
 		})
 	}
+}
+
+func TestLoggerObservabilityCountsBeforeFiltering(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	original := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(original) })
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	otel.SetMeterProvider(mp)
+
+	createdCount := func() int64 {
+		var rm metricdata.ResourceMetrics
+		require.NoError(t, reader.Collect(t.Context(), &rm))
+		for _, sm := range rm.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				if m.Name == (otelconv.SDKLogCreated{}).Name() {
+					assert.Equal(t, "https://opentelemetry.io/schemas/1.45.0", sm.Scope.SchemaURL)
+					sum := m.Data.(metricdata.Sum[int64])
+					require.Len(t, sum.DataPoints, 1)
+					return sum.DataPoints[0].Value
+				}
+			}
+		}
+		return 0
+	}
+
+	var processed int64
+	proc := newProcessor("filter")
+	proc.enabledFunc = func(context.Context, EnabledParameters) bool { return false }
+	proc.onEmitFunc = func(context.Context, *Record) error {
+		processed++
+		assert.Equal(t, processed, createdCount(), "count records before a processor can drop them")
+		return nil
+	}
+	l := NewLoggerProvider(WithProcessor(proc)).Logger("logger")
+
+	assert.False(t, l.Enabled(t.Context(), log.EnabledParameters{}))
+	assert.Zero(t, createdCount(), "an Enabled check does not submit a record")
+
+	// Directly emitted records count even when processors filter them out.
+	l.Emit(t.Context(), log.Record{})
+	l.Emit(t.Context(), log.Record{})
+	assert.Equal(t, int64(2), processed)
+	assert.Equal(t, int64(2), createdCount())
 }
 
 func TestNewLoggerObservabilityErrorHandled(t *testing.T) {

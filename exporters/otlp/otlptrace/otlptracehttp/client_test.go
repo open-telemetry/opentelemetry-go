@@ -38,7 +38,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -789,7 +790,7 @@ func TestClientInstrumentation(t *testing.T) {
 	var got metricdata.ResourceMetrics
 	require.NoError(t, reader.Collect(t.Context(), &got))
 
-	attrs := observ.BaseAttrs(id, mc.endpoint)
+	attrs := observ.BaseAttrs(id, mc.endpoint, otlpconfig.ProtocolHTTPProtobuf)
 
 	want := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
@@ -857,6 +858,76 @@ func TestClientInstrumentation(t *testing.T) {
 	)
 }
 
+func TestClientInstrumentationEncoding(t *testing.T) {
+	tests := []struct {
+		name          string
+		options       []otlptracehttp.Option
+		componentType string
+	}{
+		{name: "default", componentType: "otlp_http_span_exporter"},
+		{
+			name:          "protobuf",
+			options:       []otlptracehttp.Option{otlptracehttp.WithEncoding(otlptracehttp.EncodingProtobuf)},
+			componentType: "otlp_http_span_exporter",
+		},
+		{
+			name:          "json",
+			options:       []otlptracehttp.Option{otlptracehttp.WithEncoding(otlptracehttp.EncodingJSON)},
+			componentType: "otlp_http_json_span_exporter",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+			t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+			t.Setenv("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", "http/protobuf")
+			counter.SetExporterID(0)
+
+			original := otel.GetMeterProvider()
+			t.Cleanup(func() { otel.SetMeterProvider(original) })
+			reader := metric.NewManualReader()
+			otel.SetMeterProvider(metric.NewMeterProvider(metric.WithReader(reader)))
+
+			mc := runMockCollector(t, mockCollectorConfig{})
+			t.Cleanup(func() { require.NoError(t, mc.Stop()) })
+			opts := append([]otlptracehttp.Option{
+				otlptracehttp.WithEndpoint(mc.Endpoint()),
+				otlptracehttp.WithInsecure(),
+			}, tt.options...)
+			exporter, err := otlptracehttp.New(t.Context(), opts...)
+			require.NoError(t, err)
+			require.NoError(t, exporter.ExportSpans(t.Context(), otlptracetest.SingleReadOnlySpan()))
+			require.NoError(t, exporter.Shutdown(t.Context()))
+
+			var got metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &got))
+			require.Len(t, got.ScopeMetrics, 1)
+			assert.Equal(t, semconv.SchemaURL, got.ScopeMetrics[0].Scope.SchemaURL)
+			require.Len(t, got.ScopeMetrics[0].Metrics, 3)
+			for _, m := range got.ScopeMetrics[0].Metrics {
+				var attrs attribute.Set
+				switch data := m.Data.(type) {
+				case metricdata.Sum[int64]:
+					require.Len(t, data.DataPoints, 1)
+					attrs = data.DataPoints[0].Attributes
+				case metricdata.Histogram[float64]:
+					require.Len(t, data.DataPoints, 1)
+					attrs = data.DataPoints[0].Attributes
+				default:
+					t.Fatalf("unexpected aggregation %T", m.Data)
+				}
+				value, ok := attrs.Value(semconv.OTelComponentTypeKey)
+				assert.True(t, ok, m.Name)
+				assert.Equal(t, tt.componentType, value.AsString(), m.Name)
+				value, ok = attrs.Value(semconv.OTelComponentNameKey)
+				assert.True(t, ok, m.Name)
+				assert.Equal(t, tt.componentType+"/0", value.AsString(), m.Name)
+				assert.False(t, attrs.HasValue(semconv.ErrorTypeKey), m.Name)
+			}
+		})
+	}
+}
+
 func TestClientInstrumentationPartialSuccess(t *testing.T) {
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 
@@ -894,7 +965,7 @@ func TestClientInstrumentationPartialSuccess(t *testing.T) {
 	var got metricdata.ResourceMetrics
 	require.NoError(t, reader.Collect(t.Context(), &got))
 
-	attrs := observ.BaseAttrs(id, mc.endpoint)
+	attrs := observ.BaseAttrs(id, mc.endpoint, otlpconfig.ProtocolHTTPProtobuf)
 
 	want := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{

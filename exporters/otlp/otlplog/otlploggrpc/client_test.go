@@ -42,8 +42,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 var (
@@ -796,7 +796,7 @@ func TestClientObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+											otelconv.SDKExporterOperationDuration{}.AttrRPCStatusCode(
 												codes.OK.String(),
 											),
 											serverAddrAttrs[0],
@@ -934,7 +934,7 @@ func TestClientObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+											otelconv.SDKExporterOperationDuration{}.AttrRPCStatusCode(
 												codes.OK.String(),
 											),
 											serverAddrAttrs[0],
@@ -1067,7 +1067,7 @@ func TestClientObservability(t *testing.T) {
 											otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 												otelconv.ComponentTypeOtlpGRPCLogExporter,
 											),
-											otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+											otelconv.SDKExporterOperationDuration{}.AttrRPCStatusCode(
 												wantGRPCStatus.String(),
 											),
 											serverAddrAttrs[0],
@@ -1247,7 +1247,7 @@ func TestClientObservabilityWithRetry(t *testing.T) {
 								otelconv.SDKExporterOperationDuration{}.AttrComponentType(
 									otelconv.ComponentTypeOtlpGRPCLogExporter,
 								),
-								otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+								otelconv.SDKExporterOperationDuration{}.AttrRPCStatusCode(
 									codes.OK.String(),
 								),
 								serverAddrAttrs[0],

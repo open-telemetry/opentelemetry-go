@@ -134,7 +134,7 @@ func (c *client) Start(ctx context.Context) error {
 	// enable instrumentation can be set via code.
 	var err error
 	if c.inst == nil {
-		c.inst, err = observ.NewInstrumentation(c.instID, c.cfg.Endpoint)
+		c.inst, err = observ.NewInstrumentation(c.instID, c.cfg.Endpoint, c.cfg.Protocol)
 	}
 
 	// nothing to do
