@@ -209,6 +209,8 @@ func (c Int64HistogramConfig) Unit() string {
 }
 
 // ExplicitBucketBoundaries returns the configured explicit bucket boundaries.
+// It returns nil if [WithExplicitBucketBoundaries] was not provided.
+// A non-nil empty slice advises a single unbounded bucket.
 func (c Int64HistogramConfig) ExplicitBucketBoundaries() []float64 {
 	return c.explicitBucketBoundaries
 }
