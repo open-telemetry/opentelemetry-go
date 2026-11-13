@@ -75,6 +75,7 @@ type TracerProvider struct {
 	mu             sync.Mutex
 	namedTracer    map[instrumentation.Scope]*tracer
 	spanProcessors atomic.Pointer[spanProcessorStates]
+	hasOnEnding    atomic.Bool
 	// unregistering maps processors removed from spanProcessors, whose
 	// UnregisterSpanProcessor call has not finished cleaning them up yet, to
 	// a channel closed when it does. Shutdown waits on these channels so it
@@ -138,6 +139,7 @@ func NewTracerProvider(opts ...TracerProviderOption) *TracerProvider {
 	for _, sp := range o.processors {
 		spss = append(spss, newSpanProcessorState(sp))
 	}
+	tp.hasOnEnding.Store(spss.hasOnEnding())
 	tp.spanProcessors.Store(&spss)
 
 	return tp
@@ -237,6 +239,9 @@ func (p *TracerProvider) RegisterSpanProcessor(sp SpanProcessor) {
 	newSPS := make(spanProcessorStates, 0, len(current)+1)
 	newSPS = append(newSPS, current...)
 	newSPS = append(newSPS, newSpanProcessorState(sp))
+	// Set hasOnEnding before storing the new list so a concurrent Span.End
+	// that observes the new processor also observes the flag.
+	p.hasOnEnding.Store(newSPS.hasOnEnding())
 	p.spanProcessors.Store(&newSPS)
 }
 
@@ -305,6 +310,13 @@ func (p *TracerProvider) removeSpanProcessor(sp SpanProcessor) (*spanProcessorSt
 	spss = append(spss, old[:idx]...)
 	spss = append(spss, old[idx+1:]...)
 	p.spanProcessors.Store(&spss)
+	// Set hasOnEnding after storing the trimmed list. A concurrent Span.End
+	// that already loaded the old list will still call OnEnding because it
+	// iterates sps directly; a Span.End that loads the new list will also
+	// see the updated flag. The narrow window where a Span.End holds the old
+	// list but reads the new flag=false is an acceptable boundary condition
+	// during concurrent unregistration.
+	p.hasOnEnding.Store(spss.hasOnEnding())
 	if p.unregistering == nil {
 		p.unregistering = make(map[*spanProcessorState]chan struct{})
 	}
@@ -394,7 +406,6 @@ func (p *TracerProvider) Shutdown(ctx context.Context) error {
 		})
 		retErr = errors.Join(retErr, err)
 	}
-
 	return retErr
 }
 
@@ -413,6 +424,7 @@ func (p *TracerProvider) beginShutdown() (spanProcessorStates, []<-chan struct{}
 		sps.stop()
 	}
 	p.spanProcessors.Store(&spanProcessorStates{})
+	p.hasOnEnding.Store(false)
 
 	unregistering := make([]<-chan struct{}, 0, len(p.unregistering))
 	for _, done := range p.unregistering {
