@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"testing"
@@ -1215,23 +1217,47 @@ func (l *logSink) String() string {
 }
 
 func TestGlobalInstRegisterCallback(t *testing.T) {
+	// Run in a subprocess to get fresh global MeterProvider and delegate state.
+	// Restoring the global MeterProvider is not sufficient because
+	// delegateMeterOnce cannot be reset after it has executed.
+	const env = "OTEL_TEST_GLOBAL_INST_REGISTER_CALLBACK"
+
+	if os.Getenv(env) != "1" {
+		cmd := exec.CommandContext(
+			t.Context(),
+			os.Args[0],
+			"-test.run=^TestGlobalInstRegisterCallback$",
+		)
+		cmd.Env = append(os.Environ(), env+"=1")
+
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err, "subprocess output:\n%s", output)
+		return
+	}
+
 	l := newLogSink(t)
 	otel.SetLogger(logr.New(l))
 
 	const mtrName = "TestGlobalInstRegisterCallback"
+
 	preMtr := otel.Meter(mtrName)
 	preInt64Ctr, err := preMtr.Int64ObservableCounter("pre.int64.counter")
 	require.NoError(t, err)
+
 	preFloat64Ctr, err := preMtr.Float64ObservableCounter("pre.float64.counter")
 	require.NoError(t, err)
 
 	rdr := NewManualReader()
-	mp := NewMeterProvider(WithReader(rdr), WithResource(resource.Empty()))
+	mp := NewMeterProvider(
+		WithReader(rdr),
+		WithResource(resource.Empty()),
+	)
 	otel.SetMeterProvider(mp)
 
 	postMtr := otel.Meter(mtrName)
 	postInt64Ctr, err := postMtr.Int64ObservableCounter("post.int64.counter")
 	require.NoError(t, err)
+
 	postFloat64Ctr, err := postMtr.Float64ObservableCounter("post.float64.counter")
 	require.NoError(t, err)
 
@@ -1243,17 +1269,24 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 		return nil
 	}
 
-	_, err = preMtr.RegisterCallback(cb, preInt64Ctr, preFloat64Ctr, postInt64Ctr, postFloat64Ctr)
-	assert.NoError(t, err)
+	_, err = preMtr.RegisterCallback(
+		cb,
+		preInt64Ctr,
+		preFloat64Ctr,
+		postInt64Ctr,
+		postFloat64Ctr,
+	)
+	require.NoError(t, err)
 
 	got := metricdata.ResourceMetrics{}
-	err = rdr.Collect(t.Context(), &got)
-	assert.NoError(t, err)
+	require.NoError(t, rdr.Collect(t.Context(), &got))
+
 	assert.Emptyf(t, l.messages, "Warnings and errors logged:\n%s", l)
+
 	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{
-				Scope: instrumentation.Scope{Name: "TestGlobalInstRegisterCallback"},
+				Scope: instrumentation.Scope{Name: mtrName},
 				Metrics: []metricdata.Metrics{
 					{
 						Name: "pre.int64.counter",

@@ -6,7 +6,6 @@ package metric
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -143,71 +142,77 @@ func TestManualReaderCollect(t *testing.T) {
 }
 
 func TestManualReaderInstrumentation(t *testing.T) {
-	const expectedComponentType = "go.opentelemetry.io/otel/sdk/metric.ManualReader"
-	assert.Equal(t, expectedComponentType, manualReaderType)
+	// Set up a global MeterProvider to collect the instrumentation metrics.
+	// The ManualReader's instrumentation emits metrics to the global MeterProvider.
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() {
+		otel.SetMeterProvider(orig)
+	})
 
-	// Enable SDK observability.
+	instrumentationReader := NewManualReader()
+	instrumentationMP := NewMeterProvider(WithReader(instrumentationReader))
+	otel.SetMeterProvider(instrumentationMP)
+	t.Cleanup(func() {
+		assert.NoError(t, instrumentationMP.Shutdown(t.Context()))
+	})
+
+	// Enable SDK observability and reset the reader ID counter immediately
+	// before creating the ManualReader under test.
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	manualReaderIDCounter.Store(0)
 
-	// ManualReader under test with a fake producer.
 	manualReader := NewManualReader()
-	t.Cleanup(func() { _ = manualReader.Shutdown(t.Context()) })
+	t.Cleanup(func() {
+		assert.NoError(t, manualReader.Shutdown(t.Context()))
+	})
 	manualReader.register(testSDKProducer{})
 
 	// Exercise a collect (producer data).
 	var got metricdata.ResourceMetrics
 	require.NoError(t, manualReader.Collect(t.Context(), &got))
 
-	// Collect again so we have something to scan through.
+	// Collect the instrumentation metrics from the global MeterProvider.
 	var rm metricdata.ResourceMetrics
-	require.NoError(t, manualReader.Collect(t.Context(), &rm))
+	require.NoError(t, instrumentationReader.Collect(t.Context(), &rm))
 	require.NotEmpty(t, rm.ScopeMetrics)
 
 	targetName := otelconv.SDKMetricReaderCollectionDuration{}.Name()
 	targetDesc := otelconv.SDKMetricReaderCollectionDuration{}.Description()
 	targetUnit := otelconv.SDKMetricReaderCollectionDuration{}.Unit()
 
-	// Find the SDK reader self-metric anywhere in the collected data.
 	foundMetric := findMetricByName(&rm, targetName)
+	require.NotNil(t, foundMetric,
+		"SDK reader self-metric %q should be found in instrumentation metrics", targetName)
 
-	// If not found, explain and skip (this metric is emitted via the *global* MP).
-	if foundMetric == nil {
-		t.Skipf("SDK reader self-metric %q not found. It is emitted via the global MeterProvider; "+
-			"this test does not install a global MP.", targetName)
-		return
-	}
-
-	// Basic identity checks.
 	assert.Equal(t, targetName, foundMetric.Name)
 	assert.Equal(t, targetDesc, foundMetric.Description)
 	assert.Equal(t, targetUnit, foundMetric.Unit)
 
-	// Must be a histogram with cumulative temporality.
 	hist, ok := foundMetric.Data.(metricdata.Histogram[float64])
 	require.True(t, ok, "expected histogram data")
 	assert.Equal(t, metricdata.CumulativeTemporality, hist.Temporality)
 	require.NotEmpty(t, hist.DataPoints)
 
-	// Check base attributes on one datapoint (flexibly).
 	dp := hist.DataPoints[0]
 	attrs := dp.Attributes.ToSlice()
-	t.Logf("observability attrs: %v", attrs)
+
+	const (
+		expectedComponentType = "go.opentelemetry.io/otel/sdk/metric.ManualReader"
+		expectedComponentName = expectedComponentType + "/0"
+	)
 
 	var hasName, hasType bool
 	for _, a := range attrs {
 		switch a.Key {
 		case "otel.component.name":
-			if s := a.Value.AsString(); strings.HasPrefix(s, expectedComponentType+"/") {
-				hasName = true
-			}
+			hasName = a.Value.AsString() == expectedComponentName
 		case "otel.component.type":
-			if a.Value.AsString() == expectedComponentType {
-				hasType = true
-			}
+			hasType = a.Value.AsString() == expectedComponentType
 		}
 	}
-	assert.True(t, hasName, "expected otel.component.name with prefix %q", expectedComponentType+"/")
-	assert.True(t, hasType, "expected otel.component.type == %q", expectedComponentType)
+
+	assert.True(t, hasName, "unexpected otel.component.name")
+	assert.True(t, hasType, "unexpected otel.component.type")
 }
 
 // findMetricByName searches all scopes/metrics for the given metric name.

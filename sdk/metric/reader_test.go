@@ -15,6 +15,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -28,6 +29,11 @@ type readerTestSuite struct {
 }
 
 func (ts *readerTestSuite) SetupSuite() {
+	originalLogger := global.GetLogger()
+	ts.T().Cleanup(func() {
+		global.SetLogger(originalLogger)
+	})
+
 	otel.SetLogger(testr.New(ts.T()))
 }
 
