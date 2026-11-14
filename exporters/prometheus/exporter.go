@@ -386,6 +386,7 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 }
 
 // countDataPoints counts the total number of data points in a ResourceMetrics.
+// Its type switch must be kept in sync with the one in [collector.Collect] to avoid drift in self-observability inflight count.
 func countDataPoints(rm *metricdata.ResourceMetrics) int64 {
 	if rm == nil {
 		return 0
