@@ -71,6 +71,23 @@ func TestAggregationErr(t *testing.T) {
 			MaxSize:  1,
 			MaxScale: 30,
 		}.err(), errAgg)
+
+		// MaxScale must be >=-10
+		assert.ErrorIs(t, AggregationBase2ExponentialHistogram{
+			MaxSize:  1,
+			MaxScale: -11,
+		}.err(), errAgg)
+
+		assert.NoError(t, AggregationBase2ExponentialHistogram{
+			MaxSize:  1,
+			MaxScale: -10,
+		}.err())
+
+		// The error reports the offending scale, not the size.
+		assert.ErrorContains(t, AggregationBase2ExponentialHistogram{
+			MaxSize:  160,
+			MaxScale: 21,
+		}.err(), "max scale 21 is greater than maximum scale 20")
 	})
 }
 
