@@ -9,9 +9,15 @@ with further details in the [versioning policy](VERSIONING.md).
 
 ## [Unreleased]
 
+This release contains the first stable release of the OpenTelemetry Go stdout log exporter.
+Our project stability guarantees now apply to the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module.
+See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
+
 ### Added
 
 - Add experimental `MetricFilter` support in `go.opentelemetry.io/otel/sdk/metric/x` for filtering data collected by readers in `go.opentelemetry.io/otel/sdk/metric`. (#8461)
+- Add `go.opentelemetry.io/otel/semconv/v1.45.0` and its metric convenience subpackages from OpenTelemetry Semantic Conventions v1.45.0.
+  See the [migration documentation](./semconv/v1.45.0/MIGRATION.md) for upgrading from `go.opentelemetry.io/otel/semconv/v1.44.0`. (#9484)
 - Add experimental `WithFinish` support for `Int64UpDownCounter` and `Float64UpDownCounter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9251)
 - Add experimental `WithFinish` support for `Int64Gauge` and `Float64Gauge` LastValue aggregation in `go.opentelemetry.io/otel/sdk/metric/x`.
   Ignore delayed Finish calls that predate the resolved series lifetime. (#9252)
@@ -29,8 +35,17 @@ with further details in the [versioning policy](VERSIONING.md).
 
 ### Changed
 
+- Stabilize the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module.
+  The exporter's output format may still change, as documented in the [package documentation](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/stdout/stdoutlog). (#9472)
+- `ErrorType` in `go.opentelemetry.io/otel/semconv/v1.44.0` now unwraps single-error `errors.Join` wrappers when deriving the `error.type` attribute. (#9466)
+- `go.opentelemetry.io/otel/sdk/log` now unwraps single-error `errors.Join` wrappers when deriving the `exception.type` attribute from errors on log records. (#9466)
+- Clarify in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace` that the exporter is intended for testing and debugging and its output format has no stability or compatibility guarantees. (#9473)
 - Document the concurrency guarantees of the `Exporter` in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9444)
 - Clarify the security-related versioning exception by linking to the OpenTelemetry client specification. (#9436)
+- Emit attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9307)
+- Emit attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`.
+  The default JSON encoder rejects unsupported aggregation types with an explicit error. (#9308)
+- Support custom encoders implementing `SetIndent` with `WithPrettyPrint` in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#9308)
 - Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
 - Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
@@ -38,6 +53,8 @@ with further details in the [versioning policy](VERSIONING.md).
   See the [bridge version compatibility documentation](bridge/opentracing/README.md#version-compatibility). (#9209)
 - Document the concurrency guarantees of the `Exporter` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9244)
 - Upgrade `github.com/cenkalti/backoff` from `v5` to `v7` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9267)
+- `TracerProvider.Shutdown` and `TracerProvider.UnregisterSpanProcessor` in `go.opentelemetry.io/otel/sdk/trace` now wait for in-flight `OnStart`, `OnEnd`, and `ForceFlush` calls to complete before invoking the processor's `Shutdown`.
+  As a result, they must no longer be called directly or indirectly from a `SpanProcessor` method, and `Shutdown` returns `ctx.Err()` without shutting down any processor if `ctx` is done while waiting. (#9070)
 
 ### Deprecated
 
@@ -50,10 +67,19 @@ with further details in the [versioning policy](VERSIONING.md).
 
 ### Fixed
 
+- Use `prometheus_http_text_metric_exporter` for `otel.component.type` in `go.opentelemetry.io/otel/exporters/prometheus`. (#9464)
+- Record `error.type="rejected"` (and `rpc.response.status_code="OK"` for gRPC) on partial-success rejections in self-observability metrics for `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9454)
+- Remove the duplicated `/metric` package path segment from `otel.component.type` (`go.opentelemetry.io/otel/sdk/metric.ManualReader`) in `go.opentelemetry.io/otel/sdk/metric`. (#9463)
+- Do not record a duplicate `otel.sdk.metric_reader.collection.duration` measurement per scrape in `go.opentelemetry.io/otel/exporters/prometheus` when `OTEL_GO_X_OBSERVABILITY=true`. (#9462)
+- Record `otel.span.parent.origin` as `"none"` on `otel.sdk.span.started` when a span is started with `trace.WithNewRoot` in `go.opentelemetry.io/otel/sdk/trace`. (#9453)
+- Do not record a `queue_full` span drop on `otel.sdk.processor.span.processed` when `BatchSpanProcessor.ForceFlush` is canceled while the queue is full in `go.opentelemetry.io/otel/sdk/trace`. (#9461)
+- Record `otel.sdk.processor.span.processed` in `SimpleSpanProcessor.OnEnd` only when exporting a sampled span in `go.opentelemetry.io/otel/sdk/trace`. (#9460)
 - Keep experimental Finish Sum collections within the cardinality limit and preserve valid timestamps when new series are recorded concurrently in `go.opentelemetry.io/otel/sdk/metric`. (#9251)
 - Ignore delayed Finish calls that predate a Sum series lifetime in `go.opentelemetry.io/otel/sdk/metric`. (#9252)
 - Align gRPC endpoint URL handling across `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. Preserve Unix socket targets configured through `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`, or `WithEndpointURL`, resolver targets, and scheme-less URLs with an authority using only the host and port, while retaining the configured transport security for URL options with unknown or empty schemes. (#9331)
 - Skip measurement preparation and recording for disabled observability instruments in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`. (#9318)
+- Export non-finite floating-point values as strings in `go.opentelemetry.io/otel/exporters/stdout/stdouttrace`. (#9307)
+- Export non-finite floating-point values as strings in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#9308)
 - Export non-finite floating-point values as strings and retain populated instrumentation scope attributes in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Interpret OTLP log exporter compression environment variables case-insensitively in
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` and
@@ -61,6 +87,7 @@ with further details in the [versioning policy](VERSIONING.md).
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` now interprets its argument
   case-insensitively as well, where a differently-cased value previously reported an unknown
   compressor and fell back to no compression. (#9230)
+- Record diagnostics via the internal logger for recovered retryable export failures in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9281)
 - Prevent underflowed measurements from updating sum, min, or max in exponential histograms in `go.opentelemetry.io/otel/sdk/metric`. (#8077)
 - Report the module's registered version from `Version()` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, which also corrects the exporter version sent in the default User-Agent. (#9232)
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
@@ -86,6 +113,7 @@ with further details in the [versioning policy](VERSIONING.md).
 - Fix a data race in `go.opentelemetry.io/otel/bridge/opentracing` when OpenTracing baggage is read concurrently with `Span.SetBaggageItem`. (#9049)
 - Pass the context containing the new span to the auto-instrumentation hook in `go.opentelemetry.io/otel/trace`. (#9029)
 - Encode an empty attribute value nested in a slice or map as `{}` in `go.opentelemetry.io/otel/trace`, so the auto-instrumentation span that carries it is no longer dropped. (#9182)
+- Prevent processor operations from overlapping processor shutdown or being invoked after `TracerProvider` shutdown in `go.opentelemetry.io/otel/sdk/trace`. (#9070)
 - Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP protobuf partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9188)
 - Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9303)
 - Do not report an error through the global error handler when `WithCompressor("none")` is passed to `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` or `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#9056)

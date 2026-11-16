@@ -206,6 +206,64 @@ func TestTracerLocalParent(t *testing.T) {
 	check(t, collect(), sampledLive(0), chainStarted(1, 1))
 }
 
+func TestTracerNewRoot(t *testing.T) {
+	t.Run("LocalParent", func(t *testing.T) {
+		collect := setup(t)
+		tracer := trace.NewTracerProvider().Tracer(t.Name())
+
+		ctx, parent := tracer.Start(t.Context(), "parent")
+		_, newRoot := tracer.Start(ctx, "new-root", tapi.WithNewRoot())
+
+		check(t, collect(), sampledLive(2), sampledStarted(2))
+
+		newRoot.End()
+		parent.End()
+
+		check(t, collect(), sampledLive(0), sampledStarted(2))
+	})
+
+	t.Run("RemoteParent", func(t *testing.T) {
+		collect := setup(t)
+		tracer := trace.NewTracerProvider().Tracer(t.Name())
+
+		ctx := tapi.ContextWithRemoteSpanContext(
+			t.Context(),
+			tapi.NewSpanContext(tapi.SpanContextConfig{
+				TraceID:    tapi.TraceID{0x01},
+				SpanID:     tapi.SpanID{0x01},
+				TraceFlags: tapi.FlagsSampled,
+				Remote:     true,
+			}),
+		)
+
+		_, span := tracer.Start(ctx, "new-root", tapi.WithNewRoot())
+		check(t, collect(), sampledLive(1), sampledStarted(1))
+
+		span.End()
+		check(t, collect(), sampledLive(0), sampledStarted(1))
+	})
+
+	t.Run("NonRecordingWithSampledParent", func(t *testing.T) {
+		collect := setup(t)
+		tracer := trace.NewTracerProvider(
+			trace.WithSampler(trace.ParentBased(trace.NeverSample())),
+		).Tracer(t.Name())
+
+		ctx := tapi.ContextWithRemoteSpanContext(
+			t.Context(),
+			tapi.NewSpanContext(tapi.SpanContextConfig{
+				TraceID:    tapi.TraceID{0x01},
+				SpanID:     tapi.SpanID{0x01},
+				TraceFlags: tapi.FlagsSampled,
+				Remote:     true,
+			}),
+		)
+
+		_, _ = tracer.Start(ctx, "new-root", tapi.WithNewRoot())
+		check(t, collect(), dropStarted(1))
+	})
+}
+
 func TestNewTracerObservabilityDisabled(t *testing.T) {
 	// Do not set OTEL_GO_X_OBSERVABILITY
 	tracer, err := observ.NewTracer()

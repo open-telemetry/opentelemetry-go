@@ -776,7 +776,6 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	})
 	bsp := NewBatchSpanProcessor(
 		me,
-		// Use WithBlocking so we can trigger a queueFull using ForceFlush.
 		WithBlocking(),
 		// Make sure timeout doesn't trigger during the test.
 		WithBatchTimeout(time.Hour),
@@ -798,25 +797,35 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	})
 	// Generate 2 spans to fill the queue.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
-	go func() {
+	var wg sync.WaitGroup
+	wg.Go(func() {
 		// Generate a span which blocks because the queue is full.
 		generateSpan(t, tr, testOption{genNumSpans: 1})
-	}()
+	})
 	assertObsScopeMetrics(t, reader, expectMetrics{
 		queueCapacity:    2,
 		queueSize:        2,
 		successProcessed: 2,
 	})
 
-	// Use ForceFlush to force the span that is blocking on the full queue to be dropped.
+	// Canceling ForceFlush while the queue is full should not record a dropped span.
 	ctx, cancel = context.WithTimeout(t.Context(), 10*time.Millisecond)
 	defer cancel()
-	assert.Error(t, tp.ForceFlush(ctx))
+	assert.ErrorIs(t, tp.ForceFlush(ctx), context.DeadlineExceeded)
 	assertObsScopeMetrics(t, reader, expectMetrics{
-		queueCapacity:      2,
-		queueSize:          2,
-		queueFullProcessed: 1,
-		successProcessed:   2,
+		queueCapacity:    2,
+		queueSize:        2,
+		successProcessed: 2,
+	})
+
+	// Unblock the exporter and verify all queued and blocked spans are processed.
+	assert.NoError(t, me.Shutdown(t.Context()))
+	wg.Wait()
+	assert.NoError(t, tp.ForceFlush(t.Context()))
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:    2,
+		queueSize:        0,
+		successProcessed: 5,
 	})
 }
 

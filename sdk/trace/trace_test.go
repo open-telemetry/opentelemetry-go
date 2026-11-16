@@ -2982,6 +2982,200 @@ func TestObservability(t *testing.T) {
 				)
 			},
 		},
+		{
+			name: "NewRootWithLocalParent",
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				tp := NewTracerProvider()
+				ctx, parentSpan := tp.Tracer("").Start(t.Context(), "ParentSpan")
+				_, newRootSpan := tp.Tracer("").Start(ctx, "NewRootSpan", trace.WithNewRoot())
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      observ.ScopeName,
+						Version:   sdk.Version(),
+						SchemaURL: observ.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKSpanLive{}.Name(),
+							Description: otelconv.SDKSpanLive{}.Description(),
+							Unit:        otelconv.SDKSpanLive{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordAndSample,
+											),
+										),
+										Value: 2,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKSpanStarted{}.Name(),
+							Description: otelconv.SDKSpanStarted{}.Description(),
+							Unit:        otelconv.SDKSpanStarted{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
+												otelconv.SpanParentOriginNone,
+											),
+											otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordAndSample,
+											),
+										),
+										Value: 2,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				got := scopeMetrics()
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
+
+				newRootSpan.End()
+				parentSpan.End()
+
+				want.Metrics[0].Data = metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+									otelconv.SpanSamplingResultRecordAndSample,
+								),
+							),
+							Value: 0,
+						},
+					},
+				}
+
+				got = scopeMetrics()
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
+			},
+		},
+		{
+			name: "NewRootWithRemoteParent",
+			test: func(t *testing.T, scopeMetrics func() metricdata.ScopeMetrics) {
+				tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
+				sid, _ := trace.SpanIDFromHex("0102040810203040")
+				remoteCtx := trace.ContextWithRemoteSpanContext(t.Context(),
+					trace.NewSpanContext(trace.SpanContextConfig{
+						TraceID:    tid,
+						SpanID:     sid,
+						TraceFlags: trace.FlagsSampled,
+						Remote:     true,
+					}))
+
+				tp := NewTracerProvider()
+				_, span := tp.Tracer("").Start(remoteCtx, "NewRootSpan", trace.WithNewRoot())
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      observ.ScopeName,
+						Version:   sdk.Version(),
+						SchemaURL: observ.SchemaURL,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        otelconv.SDKSpanLive{}.Name(),
+							Description: otelconv.SDKSpanLive{}.Description(),
+							Unit:        otelconv.SDKSpanLive{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordAndSample,
+											),
+										),
+										Value: 1,
+									},
+								},
+							},
+						},
+						{
+							Name:        otelconv.SDKSpanStarted{}.Name(),
+							Description: otelconv.SDKSpanStarted{}.Description(),
+							Unit:        otelconv.SDKSpanStarted{}.Unit(),
+							Data: metricdata.Sum[int64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[int64]{
+									{
+										Attributes: attribute.NewSet(
+											otelconv.SDKSpanStarted{}.AttrSpanParentOrigin(
+												otelconv.SpanParentOriginNone,
+											),
+											otelconv.SDKSpanStarted{}.AttrSpanSamplingResult(
+												otelconv.SpanSamplingResultRecordAndSample,
+											),
+										),
+										Value: 1,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				got := scopeMetrics()
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
+
+				span.End()
+
+				want.Metrics[0].Data = metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								otelconv.SDKSpanLive{}.AttrSpanSamplingResult(
+									otelconv.SpanSamplingResultRecordAndSample,
+								),
+							),
+							Value: 0,
+						},
+					},
+				}
+
+				got = scopeMetrics()
+				metricdatatest.AssertEqual(
+					t,
+					want,
+					got,
+					metricdatatest.IgnoreTimestamp(),
+					metricdatatest.IgnoreExemplars(),
+				)
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

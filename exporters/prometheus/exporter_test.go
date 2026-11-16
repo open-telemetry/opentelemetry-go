@@ -3306,7 +3306,6 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 
 			// Setup observability metric collection
 			var observReader *metric.ManualReader
-			var observMetricsFunc func() metricdata.ScopeMetrics
 
 			if tc.enableObservability {
 				originalMP := otel.GetMeterProvider()
@@ -3315,21 +3314,6 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 				observReader = metric.NewManualReader()
 				observMP := metric.NewMeterProvider(metric.WithReader(observReader))
 				otel.SetMeterProvider(observMP)
-
-				observMetricsFunc = func() metricdata.ScopeMetrics {
-					var rm metricdata.ResourceMetrics
-					err := observReader.Collect(t.Context(), &rm)
-					require.NoError(t, err)
-
-					// Find the Prometheus exporter observability scope specifically.
-					for _, sm := range rm.ScopeMetrics {
-						if sm.Scope.Name == observ.ScopeName {
-							return sm
-						}
-					}
-					// Exporter scope not found (e.g., if disabled or no scrape yet).
-					return metricdata.ScopeMetrics{}
-				}
 			}
 
 			ctx := t.Context()
@@ -3353,24 +3337,45 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 
 			// Collect and check observability metrics if enabled
 			if tc.enableObservability {
-				observMetrics := observMetricsFunc()
+				var rm metricdata.ResourceMetrics
+				err := observReader.Collect(t.Context(), &rm)
+				require.NoError(t, err)
 
-				// Check that expected observability metrics are present
-				observedMetrics := make(map[string]bool)
-				for _, m := range observMetrics.Metrics {
-					observedMetrics[m.Name] = true
+				// Check that expected observability metrics are present exactly once across all scopes.
+				observedCounts := make(map[string]int)
+				var observMetrics metricdata.ScopeMetrics
+				for _, sm := range rm.ScopeMetrics {
+					if sm.Scope.Name == observ.ScopeName {
+						observMetrics = sm
+					}
+					for _, m := range sm.Metrics {
+						observedCounts[m.Name]++
+						if m.Name == "otel.sdk.metric_reader.collection.duration" {
+							hist, ok := m.Data.(metricdata.Histogram[float64])
+							require.True(t, ok)
+							require.Len(t, hist.DataPoints, 1)
+							assert.Equal(t, uint64(1), hist.DataPoints[0].Count)
+						}
+					}
 				}
 
 				for _, expectedMetric := range tc.expectedObservMetrics {
-					assert.True(
+					assert.Equal(
 						t,
-						observedMetrics[expectedMetric],
-						"Expected observability metric %s not found",
+						1,
+						observedCounts[expectedMetric],
+						"Expected observability metric %s to be recorded once",
 						expectedMetric,
 					)
 				}
+				assert.Len(
+					t,
+					observedCounts,
+					len(tc.expectedObservMetrics),
+					"Expected number of distinct observability metrics",
+				)
 
-				// Verify observability metrics have expected structure
+				// Verify exporter observability scope has expected structure and the 3 exporter metrics.
 				expectedScope := instrumentation.Scope{
 					Name:      observ.ScopeName,
 					Version:   observ.Version,
@@ -3380,8 +3385,8 @@ func TestExporterSelfInstrumentation(t *testing.T) {
 				assert.Len(
 					t,
 					observMetrics.Metrics,
-					len(tc.expectedObservMetrics),
-					"Expected number of observability metrics",
+					3,
+					"Expected number of exporter observability metrics",
 				)
 
 				// Run custom metric checks if provided

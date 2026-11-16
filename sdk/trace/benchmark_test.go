@@ -450,3 +450,56 @@ func BenchmarkSpanProcessorVerboseLogging(b *testing.B) {
 		}
 	}
 }
+
+type noopSpanProcessor struct{}
+
+func (noopSpanProcessor) OnStart(context.Context, sdktrace.ReadWriteSpan) {}
+func (noopSpanProcessor) OnEnd(sdktrace.ReadOnlySpan)                     {}
+func (noopSpanProcessor) Shutdown(context.Context) error                  { return nil }
+func (noopSpanProcessor) ForceFlush(context.Context) error                { return nil }
+
+func BenchmarkSpanProcessorDispatch(b *testing.B) {
+	for _, n := range []int{1, 4} {
+		opts := make([]sdktrace.TracerProviderOption, 0, n)
+		for range n {
+			opts = append(opts, sdktrace.WithSpanProcessor(noopSpanProcessor{}))
+		}
+
+		b.Run(fmt.Sprintf("Serial/processors=%d", n), func(b *testing.B) {
+			tp := sdktrace.NewTracerProvider(opts...)
+			b.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				_ = tp.Shutdown(context.Background())
+			})
+			tracer := tp.Tracer("bench")
+			ctx := b.Context()
+
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_, span := tracer.Start(ctx, "bench")
+				span.End()
+			}
+		})
+
+		b.Run(fmt.Sprintf("Parallel/processors=%d", n), func(b *testing.B) {
+			tp := sdktrace.NewTracerProvider(opts...)
+			b.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				_ = tp.Shutdown(context.Background())
+			})
+			tracer := tp.Tracer("bench")
+			ctx := b.Context()
+
+			b.ReportAllocs()
+			b.SetParallelism(8)
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					_, span := tracer.Start(ctx, "bench")
+					span.End()
+				}
+			})
+		})
+	}
+}

@@ -105,9 +105,14 @@ func TestExporterExportSpan(t *testing.T) {
 		assert.Equal(t, tt.wantErr, err)
 
 		if tt.wantErr == nil {
-			got := b.String()
-			wantone := expectedJSON(tt.expectNow)
-			assert.Equal(t, wantone+wantone, got)
+			decoder := json.NewDecoder(&b)
+			for range 2 {
+				var got json.RawMessage
+				require.NoError(t, decoder.Decode(&got))
+				assert.JSONEq(t, expectedJSON(tt.expectNow), string(got))
+			}
+			var extra any
+			require.ErrorIs(t, decoder.Decode(&extra), io.EOF)
 		}
 	}
 }
@@ -182,18 +187,10 @@ func expectedJSON(now time.Time) string {
 	"EndTime": ` + string(serializedNow) + `,
 	"Attributes": [
 		{
-			"Key": "key",
-			"Value": {
-				"Type": "STRING",
-				"Value": "value"
-			}
+			"key": "value"
 		},
 		{
-			"Key": "double",
-			"Value": {
-				"Type": "FLOAT64",
-				"Value": 123.456
-			}
+			"double": 123.456
 		}
 	],
 	"Events": [
@@ -201,11 +198,7 @@ func expectedJSON(now time.Time) string {
 			"Name": "foo",
 			"Attributes": [
 				{
-					"Key": "key",
-					"Value": {
-						"Type": "STRING",
-						"Value": "value"
-					}
+					"key": "value"
 				}
 			],
 			"DroppedAttributeCount": 0,
@@ -215,11 +208,7 @@ func expectedJSON(now time.Time) string {
 			"Name": "bar",
 			"Attributes": [
 				{
-					"Key": "double",
-					"Value": {
-						"Type": "FLOAT64",
-						"Value": 123.456
-					}
+					"double": 123.456
 				}
 			],
 			"DroppedAttributeCount": 0,
@@ -235,26 +224,20 @@ func expectedJSON(now time.Time) string {
 	"DroppedEvents": 0,
 	"DroppedLinks": 0,
 	"ChildSpanCount": 0,
-	"Resource": [
-		{
-			"Key": "rk1",
-			"Value": {
-				"Type": "STRING",
-				"Value": "rv11"
-			}
-		}
-	],
+	"Resource": {
+		"rk1": "rv11"
+	},
 	"InstrumentationScope": {
 		"Name": "",
 		"Version": "",
 		"SchemaURL": "",
-		"Attributes": null
+		"Attributes": {}
 	},
 	"InstrumentationLibrary": {
 		"Name": "",
 		"Version": "",
 		"SchemaURL": "",
-		"Attributes": null
+		"Attributes": {}
 	}
 }
 `
@@ -291,6 +274,7 @@ func TestObservability(t *testing.T) {
 		require.NoError(t, exporter.ExportSpans(t.Context(), tracetest.SpanStubs{
 			{Name: "/foo"},
 			{Name: "/bar"},
+			{Name: "/nonfinite", Attributes: []attribute.KeyValue{attribute.Float64("value", math.NaN())}},
 		}.Snapshots()))
 	}
 
@@ -356,7 +340,7 @@ func TestObservability(t *testing.T) {
 									semconv.OTelComponentName(observ.ComponentName(0)),
 									semconv.OTelComponentTypeKey.String(observ.ComponentType),
 								),
-								Value: 2,
+								Value: 3,
 							},
 						},
 					},
@@ -435,7 +419,7 @@ func BenchmarkExporterExportSpans(b *testing.B) {
 	ss := tracetest.SpanStubs{
 		{Name: "/foo"},
 		{
-			Name:       "JSON encoder cannot marshal math.Inf(1)",
+			Name:       "span with a non-finite attribute",
 			Attributes: []attribute.KeyValue{attribute.Float64("", math.Inf(1))},
 		},
 		{Name: "/bar"},

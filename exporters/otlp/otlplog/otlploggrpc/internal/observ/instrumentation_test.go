@@ -258,7 +258,7 @@ func assertMetrics(
 func TestInstrumentationExportLogs(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
-	inst.ExportLogs(t.Context(), n).End(nil)
+	inst.ExportLogs(t.Context(), n).End(nil, codes.OK)
 	assertMetrics(t, collect(), n, n, nil, codes.OK)
 }
 
@@ -268,16 +268,16 @@ func TestInstrumentationExportLogPartialErrors(t *testing.T) {
 	const success = 5
 
 	err := internal.PartialSuccess{RejectedItems: n - success}
-	inst.ExportLogs(t.Context(), n).End(err)
+	inst.ExportLogs(t.Context(), n).End(err, codes.OK)
 
-	assertMetrics(t, collect(), n, success, err, status.Code(err))
+	assertMetrics(t, collect(), n, success, err, codes.OK)
 }
 
 func TestInstrumentationExportLogAllErrors(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
 	const success = 0
-	inst.ExportLogs(t.Context(), n).End(assert.AnError)
+	inst.ExportLogs(t.Context(), n).End(assert.AnError, status.Code(assert.AnError))
 
 	assertMetrics(t, collect(), n, success, assert.AnError, status.Code(assert.AnError))
 }
@@ -286,16 +286,16 @@ func TestInstrumentationExportLogsInvalidPartialErrored(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
 	err := internal.PartialSuccess{RejectedItems: -5}
-	inst.ExportLogs(t.Context(), n).End(err)
+	inst.ExportLogs(t.Context(), n).End(err, codes.OK)
 
 	success := int64(n)
-	assertMetrics(t, collect(), n, success, err, status.Code(err))
+	assertMetrics(t, collect(), n, success, err, codes.OK)
 
 	err.RejectedItems = n + 5
-	inst.ExportLogs(t.Context(), n).End(err)
+	inst.ExportLogs(t.Context(), n).End(err, codes.OK)
 
 	success += 0
-	assertMetrics(t, collect(), n+n, success, err, status.Code(err))
+	assertMetrics(t, collect(), n+n, success, err, codes.OK)
 }
 
 type instrumentSpy struct {
@@ -366,7 +366,7 @@ func TestEndSkipsDisabledInstruments(t *testing.T) {
 						logExportedDurationMetric: duration,
 					}
 					op := ExportOp{inst: inst, ctx: t.Context(), nLogs: 10, start: time.Now()}
-					op.End(result.err)
+					op.End(result.err, codes.OK)
 
 					assert.Equal(t, 1, inflight.enabledCalls)
 					assert.Equal(t, 1, exported.enabledCalls)
@@ -403,19 +403,19 @@ func BenchmarkInstrumentationExportLogs(b *testing.B) {
 		}
 		return inst
 	}
-	run := func(err error) func(*testing.B) {
+	run := func(err error, code codes.Code) func(*testing.B) {
 		return func(b *testing.B) {
 			inst := setup(b)
 			b.ReportAllocs()
 			b.ResetTimer()
 			for b.Loop() {
-				inst.ExportLogs(b.Context(), 10).End(err)
+				inst.ExportLogs(b.Context(), 10).End(err, code)
 			}
 		}
 	}
-	b.Run("NoError", run(nil))
-	b.Run("PartialError", run(&internal.PartialSuccess{RejectedItems: 6}))
-	b.Run("FullError", run(assert.AnError))
+	b.Run("NoError", run(nil, codes.OK))
+	b.Run("PartialError", run(&internal.PartialSuccess{RejectedItems: 6}, codes.OK))
+	b.Run("FullError", run(assert.AnError, codes.Unknown))
 }
 
 func BenchmarkSetPresetAttrs(b *testing.B) {
