@@ -376,9 +376,32 @@ func TestParallelCallbacksShutdownStopsWorkers(t *testing.T) {
 
 			require.NoError(t, tt.shutdown(t.Context(), mp, reader))
 
-			assert.Eventually(t, func() bool {
-				return countGoroutines(t, poolWorkerFunc) == 0
-			}, time.Second, time.Millisecond, "Shutdown must stop all worker goroutines")
+			assertNoWorkers(t)
+		})
+	}
+}
+
+// TestParallelCallbacksRejectedRegistrationStopsWorkers verifies that a pipeline
+// whose reader refuses registration does not leave its workers running.
+func TestParallelCallbacksRejectedRegistrationStopsWorkers(t *testing.T) {
+	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
+
+	readers := map[string]func() metric.Reader{
+		"ManualReader":   func() metric.Reader { return metric.NewManualReader() },
+		"PeriodicReader": func() metric.Reader { return metric.NewPeriodicReader(nopExporter{}) },
+	}
+	for name, newReader := range readers {
+		t.Run(name+"/RegisteredTwice", func(t *testing.T) {
+			reader := newReader()
+			_ = metric.NewMeterProvider(metric.WithReader(reader), metric.WithReader(reader))
+			require.NoError(t, reader.Shutdown(t.Context()))
+			assertNoWorkers(t)
+		})
+		t.Run(name+"/RegisteredAfterShutdown", func(t *testing.T) {
+			reader := newReader()
+			require.NoError(t, reader.Shutdown(t.Context()))
+			_ = metric.NewMeterProvider(metric.WithReader(reader))
+			assertNoWorkers(t)
 		})
 	}
 }
@@ -628,6 +651,13 @@ const (
 	// Matched on the creator so a not-yet-scheduled goroutine is counted too.
 	deferredTeardownFunc = "created by go.opentelemetry.io/otel/sdk/metric.(*pipeline).stop in "
 )
+
+func assertNoWorkers(t *testing.T) {
+	t.Helper()
+	assert.Eventually(t, func() bool {
+		return countGoroutines(t, poolWorkerFunc) == 0
+	}, time.Second, time.Millisecond, "all worker goroutines must be stopped")
+}
 
 // countGoroutines counts goroutine stacks containing fn; unlike a NumGoroutine
 // delta, unrelated goroutines cannot skew it.
