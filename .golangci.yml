@@ -75,6 +75,19 @@ linters:
           deny:
             - pkg: go.opentelemetry.io/otel/exporters/otlp/internal
               desc: Do not use cross-module internal packages.
+        otlphttp:
+          files:
+            - '**/exporters/otlp/otlpmetric/otlpmetrichttp/*.go'
+            - '**/exporters/otlp/otlpmetric/otlpmetrichttp/**/*.go'
+            - '**/exporters/otlp/otlplog/otlploghttp/*.go'
+            - '**/exporters/otlp/otlplog/otlploghttp/**/*.go'
+          deny:
+            - pkg: google.golang.org/grpc
+              desc: Do not use gRPC in HTTP exporters.
+            - pkg: github.com/grpc-ecosystem/grpc-gateway
+              desc: Do not use gRPC-Gateway in HTTP exporters.
+            - pkg: go.opentelemetry.io/proto/otlp
+              desc: Use go.opentelemetry.io/proto/slim/otlp in HTTP exporters.
         otlpmetric-internal:
           files:
             - '!**/exporters/otlp/otlpmetric/internal/*.go'
