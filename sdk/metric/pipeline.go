@@ -215,64 +215,47 @@ func (p *pipeline) runCallbacksSequential(ctx context.Context) error {
 	return err
 }
 
+// runCallbacksParallel relies on produce holding p's lock, and on stop taking
+// that lock before tearing the pool down, so only one batch uses the pool at a
+// time.
 func (p *pipeline) runCallbacksParallel(ctx context.Context, pool *callbackPool) error {
-	// produce holds p's lock for the whole batch and stop takes that lock before
-	// tearing the pool down, so only one produce call ever uses the pool at a
-	// time; that is what makes reusing batch/err/ctx safe. ctx is published to
-	// workers by the channel sends below (send happens-before receive) and so
-	// needs no mutex; mu guards only err, which workers join concurrently.
-	pool.ctx = ctx
-
+	pool.begin(ctx)
 	for _, c := range p.callbacks {
-		pool.batch.Add(1)
-		pool.jobs <- c
+		pool.submit(c)
 	}
 	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
-		pool.batch.Add(1)
-		pool.jobs <- e.Value.(multiCallback)
+		pool.submit(e.Value.(multiCallback))
 	}
-	pool.batch.Wait()
-
-	// Workers are done (batch.Wait returned); release the batch context and take
-	// the joined error so the pool retains neither between collections.
-	pool.ctx = nil
-	return pool.takeErr()
+	return pool.wait()
 }
 
 // stop tears down this pipeline's callback pool on shutdown. It never
 // synchronously waits on an in-flight collection: the sequential default never
 // blocked Shutdown on produce, and enabling the pool must preserve that.
 func (p *pipeline) stop() {
-	// Without a pool there is nothing to tear down. Check without the lock so an
-	// in-flight collection cannot make Shutdown wait on the default path.
-	if p.pool.Load() == nil {
+	pool := p.pool.Swap(nil)
+	if pool == nil {
 		return
 	}
 	// If no collection is running, tear the pool down synchronously so Shutdown
 	// fully completes in the common case.
 	if p.TryLock() {
-		pool := p.pool.Swap(nil)
 		p.Unlock()
-		if pool != nil {
-			pool.stop()
-		}
+		pool.stop()
 		return
 	}
-	// A collection holds the lock, so waiting here would block Shutdown on
-	// produce, which the sequential default never did. Detach the teardown so
-	// Shutdown returns now; the goroutine finishes it once produce releases the
-	// lock. If a callback never returns (e.g. it ignores ctx and blocks) the
-	// goroutine leaks, but the sequential default already leaks the collection
-	// for such a callback, and staying back-compatible, hence non-blocking,
-	// matters more.
-	go func() {
-		p.Lock()
-		pool := p.pool.Swap(nil)
-		p.Unlock()
-		if pool != nil {
-			pool.stop()
-		}
-	}()
+	// A collection holds the lock; detach so Shutdown does not wait on it. A
+	// callback that never returns leaks only this goroutine, as sequential mode
+	// already leaks its collection.
+	go p.stopAfterCollect(pool)
+}
+
+// stopAfterCollect stops pool once the collection releases the lock; stopping
+// mid-batch would block produce on a job send.
+func (p *pipeline) stopAfterCollect(pool *callbackPool) {
+	p.Lock()
+	defer p.Unlock()
+	pool.stop()
 }
 
 // callbackPool is a fixed set of long-lived worker goroutines that execute
@@ -283,16 +266,15 @@ type callbackPool struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
-	// batch, err, and ctx coordinate one produce call's callbacks and are reused
-	// across produce calls to avoid per-call allocation. This is safe because
-	// produce holds the pipeline lock for the whole batch, so only one produce
-	// call ever uses them at a time. mu guards err, which workers join into
-	// concurrently. ctx is published to workers by the job-channel send (send
-	// happens-before receive) and so needs no mutex.
-	batch sync.WaitGroup
-	mu    sync.Mutex
-	err   error
-	ctx   context.Context
+	// Per-batch state, reused to avoid allocations; the pipeline lock gives one
+	// produce call exclusive use. mu guards err, panicVal, and goexited; ctx is
+	// published by the job send, which happens-before the worker's receive.
+	batch    sync.WaitGroup
+	mu       sync.Mutex
+	err      error
+	panicVal any
+	goexited bool
+	ctx      context.Context
 }
 
 // newCallbackPool starts worker goroutines that block waiting for jobs until
@@ -310,33 +292,82 @@ func newCallbackPool(workers int) *callbackPool {
 // method so tests can count live workers by a stable symbol in a goroutine
 // profile; a closure's ordinal name would break as closures are added or moved.
 func (p *callbackPool) worker(ctx context.Context) {
+	stopped := false
+	// A callback calling runtime.Goexit unwinds this goroutine; replace it so
+	// the pool never runs out of workers. Adding to wg here is safe: this
+	// goroutine's own Done has not run yet.
+	defer func() {
+		if !stopped {
+			p.wg.Go(func() { p.worker(ctx) })
+		}
+	}()
 	for {
 		select {
 		case cb := <-p.jobs:
 			p.runJob(cb)
 		case <-ctx.Done():
+			stopped = true
 			return
 		}
 	}
 }
 
+// begin starts a batch whose callbacks receive ctx. ctx is published to workers
+// by the job send in submit, which happens-before the worker's receive.
+func (p *callbackPool) begin(ctx context.Context) {
+	p.ctx = ctx
+}
+
+func (p *callbackPool) submit(cb func(context.Context) error) {
+	p.batch.Add(1)
+	p.jobs <- cb
+}
+
 func (p *callbackPool) runJob(cb func(context.Context) error) {
 	defer p.batch.Done()
-	if e := cb(p.ctx); e != nil {
+	returned := false
+	// An unrecovered worker panic would crash the host; record it, or a
+	// runtime.Goexit, so produce re-raises it.
+	defer func() {
+		r := recover()
+		if returned {
+			return
+		}
+		p.mu.Lock()
+		if r == nil {
+			p.goexited = true
+		} else if p.panicVal == nil {
+			p.panicVal = r
+		}
+		p.mu.Unlock()
+	}()
+	e := cb(p.ctx)
+	returned = true
+	if e != nil {
 		p.mu.Lock()
 		p.err = errors.Join(p.err, e)
 		p.mu.Unlock()
 	}
 }
 
-// takeErr returns the joined error of the just-completed batch and clears it so
-// the next batch starts clean and the pool does not retain it. Call only after
-// batch.Wait has returned, when no worker is touching err.
-func (p *callbackPool) takeErr() error {
+// wait blocks until every submitted callback has returned, then clears the
+// batch state so the pool retains nothing between collections. A callback panic
+// or runtime.Goexit is re-raised on the caller's goroutine, matching sequential
+// mode.
+func (p *callbackPool) wait() error {
+	p.batch.Wait()
+
 	p.mu.Lock()
-	defer p.mu.Unlock()
-	err := p.err
-	p.err = nil
+	panicVal, goexited, err := p.panicVal, p.goexited, p.err
+	p.ctx, p.panicVal, p.goexited, p.err = nil, nil, false, nil
+	p.mu.Unlock()
+
+	if panicVal != nil {
+		panic(panicVal)
+	}
+	if goexited {
+		runtime.Goexit()
+	}
 	return err
 }
 

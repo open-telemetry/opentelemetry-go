@@ -236,14 +236,95 @@ func TestParallelCallbacksMoreCallbacksThanWorkers(t *testing.T) {
 	assert.Len(t, rm.ScopeMetrics[0].Metrics, n)
 }
 
-// countPoolWorkers counts running callback-pool workers by symbol in a
-// goroutine profile, which unrelated GC, timer, and test-runner goroutines
-// cannot skew like a NumGoroutine() delta.
-func countPoolWorkers(t *testing.T) int {
-	t.Helper()
-	var buf bytes.Buffer
-	require.NoError(t, pprof.Lookup("goroutine").WriteTo(&buf, 2))
-	return strings.Count(buf.String(), "(*callbackPool).worker")
+// TestCallbackPanicRecoverableByCaller ensures the Collect caller can recover a
+// callback panic in both modes and later collections still succeed.
+func TestCallbackPanicRecoverableByCaller(t *testing.T) {
+	for _, parallel := range []bool{false, true} {
+		name := "Sequential"
+		value := "false"
+		if parallel {
+			name, value = "Parallel", "true"
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", value)
+
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+			t.Cleanup(func() { _ = mp.Shutdown(t.Context()) })
+			m := mp.Meter("test")
+
+			const panicVal = "callback panic"
+			var calls atomic.Int64
+			_, err := m.Int64ObservableCounter("ctr",
+				mapi.WithInt64Callback(func(_ context.Context, o mapi.Int64Observer) error {
+					if calls.Add(1) == 1 {
+						panic(panicVal)
+					}
+					o.Observe(1)
+					return nil
+				}))
+			require.NoError(t, err)
+
+			var rm metricdata.ResourceMetrics
+			assert.PanicsWithValue(t, panicVal, func() { _ = reader.Collect(t.Context(), &rm) })
+
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+			require.Len(t, rm.ScopeMetrics, 1)
+			assert.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+		})
+	}
+}
+
+// TestCallbackGoexitEndsCollectingGoroutine ensures runtime.Goexit in a
+// callback ends the goroutine calling Collect in both modes, and that later
+// collections still run; in parallel mode the exited worker must be replaced.
+func TestCallbackGoexitEndsCollectingGoroutine(t *testing.T) {
+	for _, parallel := range []bool{false, true} {
+		name := "Sequential"
+		value := "false"
+		if parallel {
+			name, value = "Parallel", "true"
+		}
+		t.Run(name, func(t *testing.T) {
+			defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(1))
+			t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", value)
+
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+			t.Cleanup(func() { _ = mp.Shutdown(t.Context()) })
+
+			var calls atomic.Int64
+			_, err := mp.Meter("test").Int64ObservableCounter("ctr",
+				mapi.WithInt64Callback(func(_ context.Context, o mapi.Int64Observer) error {
+					if calls.Add(1) == 1 {
+						runtime.Goexit()
+					}
+					o.Observe(1)
+					return nil
+				}))
+			require.NoError(t, err)
+
+			collectReturned := func() bool {
+				done := make(chan bool, 1)
+				go func() {
+					returned := false
+					defer func() { done <- returned }()
+					var rm metricdata.ResourceMetrics
+					_ = reader.Collect(t.Context(), &rm)
+					returned = true
+				}()
+				select {
+				case r := <-done:
+					return r
+				case <-time.After(3 * time.Second):
+					t.Fatal("collection hung")
+					return false
+				}
+			}
+			assert.False(t, collectReturned(), "Goexit must end the collecting goroutine")
+			assert.True(t, collectReturned(), "later collections must still run")
+		})
+	}
 }
 
 // TestParallelCallbacksShutdownStopsWorkers verifies that enabling the feature
@@ -267,7 +348,7 @@ func TestParallelCallbacksShutdownStopsWorkers(t *testing.T) {
 
 	// The collection ran a callback, so at least one worker has started. The exact
 	// count is not asserted; it depends on GOMAXPROCS and scheduling.
-	require.NotZero(t, countPoolWorkers(t),
+	require.NotZero(t, countGoroutines(t, poolWorkerFunc),
 		"enabling the feature should start worker goroutines")
 
 	require.NoError(t, mp.Shutdown(t.Context()))
@@ -276,7 +357,7 @@ func TestParallelCallbacksShutdownStopsWorkers(t *testing.T) {
 	// absorb the lag between a worker returning and leaving the profile.
 	var live int
 	for range 100 {
-		live = countPoolWorkers(t)
+		live = countGoroutines(t, poolWorkerFunc)
 		if live == 0 {
 			break
 		}
@@ -335,6 +416,86 @@ func TestParallelCallbacksReentrantShutdown(t *testing.T) {
 		case <-time.After(3 * time.Second):
 			t.Fatal("reentrant Shutdown from a callback deadlocked")
 		}
+	}
+}
+
+// TestParallelCallbacksRepeatedShutdownDuringCollect ensures Shutdown calls
+// during a stuck collection start only one teardown goroutine, and that the
+// teardown waits for the in-flight batch, which has more callbacks than workers.
+func TestParallelCallbacksRepeatedShutdownDuringCollect(t *testing.T) {
+	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(1))
+	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	m := mp.Meter("test")
+
+	const n = 8
+	var once sync.Once
+	inCallback := make(chan struct{})
+	release := make(chan struct{})
+	for i := range n {
+		_, err := m.Int64ObservableCounter(fmt.Sprintf("ctr%d", i),
+			mapi.WithInt64Callback(func(_ context.Context, o mapi.Int64Observer) error {
+				once.Do(func() { close(inCallback) })
+				<-release
+				o.Observe(1)
+				return nil
+			}))
+		require.NoError(t, err)
+	}
+
+	var rm metricdata.ResourceMetrics
+	collectDone := make(chan error, 1)
+	go func() { collectDone <- reader.Collect(t.Context(), &rm) }()
+	<-inCallback
+
+	for range 10 {
+		_ = mp.Shutdown(t.Context())
+	}
+	assert.Equal(t, 1, countGoroutines(t, deferredTeardownFunc))
+
+	close(release)
+	select {
+	case err := <-collectDone:
+		require.NoError(t, err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("teardown stopped workers mid-batch; collection never finished")
+	}
+	require.Len(t, rm.ScopeMetrics, 1)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, n)
+}
+
+// TestCallbacksReceiveCollectContext ensures callbacks get the context passed
+// to Collect in both modes.
+func TestCallbacksReceiveCollectContext(t *testing.T) {
+	for _, parallel := range []bool{false, true} {
+		name := "Sequential"
+		value := "false"
+		if parallel {
+			name, value = "Parallel", "true"
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", value)
+
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+			t.Cleanup(func() { _ = mp.Shutdown(t.Context()) })
+
+			type ctxKey struct{}
+			var got any
+			_, err := mp.Meter("test").Int64ObservableCounter("ctr",
+				mapi.WithInt64Callback(func(ctx context.Context, _ mapi.Int64Observer) error {
+					got = ctx.Value(ctxKey{})
+					return nil
+				}))
+			require.NoError(t, err)
+
+			ctx := context.WithValue(t.Context(), ctxKey{}, "collect")
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(ctx, &rm))
+			assert.Equal(t, "collect", got)
+		})
 	}
 }
 
@@ -443,4 +604,19 @@ func benchCollectCallbacks(b *testing.B, n int) {
 			b.Fatal(err)
 		}
 	}
+}
+
+const (
+	poolWorkerFunc = "(*callbackPool).worker"
+	// Matched on the creator so a not-yet-scheduled goroutine is counted too.
+	deferredTeardownFunc = "created by go.opentelemetry.io/otel/sdk/metric.(*pipeline).stop in "
+)
+
+// countGoroutines counts goroutine stacks containing fn; unlike a NumGoroutine
+// delta, unrelated goroutines cannot skew it.
+func countGoroutines(t *testing.T, fn string) int {
+	t.Helper()
+	var buf bytes.Buffer
+	require.NoError(t, pprof.Lookup("goroutine").WriteTo(&buf, 2))
+	return strings.Count(buf.String(), fn)
 }
