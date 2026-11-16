@@ -230,6 +230,7 @@ func (r *PeriodicReader) run(ctx context.Context, interval time.Duration) {
 func (r *PeriodicReader) register(p sdkProducer) {
 	// Only register once. If producer is already set, do nothing.
 	if !r.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce, stop: p.stop}) {
+		p.stop()
 		msg := "did not register periodic reader"
 		global.Error(errDuplicateRegister, msg)
 	}
