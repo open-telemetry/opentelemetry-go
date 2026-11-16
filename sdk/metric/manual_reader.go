@@ -74,6 +74,7 @@ func nextManualReaderID() int64 {
 func (mr *ManualReader) register(p sdkProducer) {
 	// Only register once. If producer is already set, do nothing.
 	if !mr.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce, stop: p.stop}) {
+		p.stop()
 		msg := "did not register manual reader"
 		global.Error(errDuplicateRegister, msg)
 	}
