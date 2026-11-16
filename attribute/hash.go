@@ -114,6 +114,12 @@ func hashString(h xxhash.Hash, s string) xxhash.Hash {
 	return h.Uint64(uint64(len(s))).String(s)
 }
 
+// hashValue hashes v with h as the base.
+//
+// Slice and map values are prefixed with their element count. Without it the
+// end of a nested collection is not marked in the digest, so a map holding
+// b=1 followed by the attribute c=2 would hash the same as a map holding both
+// b=1 and c=2.
 func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 	switch v.Type() {
 	case BOOL:
@@ -133,17 +139,22 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.Uint64(boolSliceID)
 		switch vals := v.slice.(type) {
 		case [0]bool:
+			h = h.Uint64(0)
 		case [1]bool:
+			h = h.Uint64(1)
 			h = h.Bool(vals[0])
 		case [2]bool:
+			h = h.Uint64(2)
 			h = h.Bool(vals[0])
 			h = h.Bool(vals[1])
 		case [3]bool:
+			h = h.Uint64(3)
 			h = h.Bool(vals[0])
 			h = h.Bool(vals[1])
 			h = h.Bool(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Int64(int64(rv.Len()))
 			for i := 0; i < rv.Len(); i++ {
 				h = h.Bool(rv.Index(i).Bool())
 			}
@@ -152,17 +163,22 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.Uint64(int64SliceID)
 		switch vals := v.slice.(type) {
 		case [0]int64:
+			h = h.Uint64(0)
 		case [1]int64:
+			h = h.Uint64(1)
 			h = h.Int64(vals[0])
 		case [2]int64:
+			h = h.Uint64(2)
 			h = h.Int64(vals[0])
 			h = h.Int64(vals[1])
 		case [3]int64:
+			h = h.Uint64(3)
 			h = h.Int64(vals[0])
 			h = h.Int64(vals[1])
 			h = h.Int64(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Int64(int64(rv.Len()))
 			for i := 0; i < rv.Len(); i++ {
 				h = h.Int64(rv.Index(i).Int())
 			}
@@ -171,17 +187,22 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.Uint64(float64SliceID)
 		switch vals := v.slice.(type) {
 		case [0]float64:
+			h = h.Uint64(0)
 		case [1]float64:
+			h = h.Uint64(1)
 			h = h.Float64(vals[0])
 		case [2]float64:
+			h = h.Uint64(2)
 			h = h.Float64(vals[0])
 			h = h.Float64(vals[1])
 		case [3]float64:
+			h = h.Uint64(3)
 			h = h.Float64(vals[0])
 			h = h.Float64(vals[1])
 			h = h.Float64(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Int64(int64(rv.Len()))
 			for i := 0; i < rv.Len(); i++ {
 				h = h.Float64(rv.Index(i).Float())
 			}
@@ -190,17 +211,22 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.Uint64(stringSliceID)
 		switch vals := v.slice.(type) {
 		case [0]string:
+			h = h.Uint64(0)
 		case [1]string:
+			h = h.Uint64(1)
 			h = hashString(h, vals[0])
 		case [2]string:
+			h = h.Uint64(2)
 			h = hashString(h, vals[0])
 			h = hashString(h, vals[1])
 		case [3]string:
+			h = h.Uint64(3)
 			h = hashString(h, vals[0])
 			h = hashString(h, vals[1])
 			h = hashString(h, vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Int64(int64(rv.Len()))
 			for i := 0; i < rv.Len(); i++ {
 				h = hashString(h, rv.Index(i).String())
 			}
@@ -212,22 +238,28 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.Uint64(sliceID)
 		switch vals := v.slice.(type) {
 		case [0]Value:
+			h = h.Uint64(0)
 			// No values to hash, but the type identifier is still hashed above.
 		case [1]Value:
+			h = h.Uint64(1)
 			h = hashValue(h, vals[0])
 		case [2]Value:
+			h = h.Uint64(2)
 			h = hashValue(h, vals[0])
 			h = hashValue(h, vals[1])
 		case [3]Value:
+			h = h.Uint64(3)
 			h = hashValue(h, vals[0])
 			h = hashValue(h, vals[1])
 			h = hashValue(h, vals[2])
 		case [4]Value:
+			h = h.Uint64(4)
 			h = hashValue(h, vals[0])
 			h = hashValue(h, vals[1])
 			h = hashValue(h, vals[2])
 			h = hashValue(h, vals[3])
 		case [5]Value:
+			h = h.Uint64(5)
 			h = hashValue(h, vals[0])
 			h = hashValue(h, vals[1])
 			h = hashValue(h, vals[2])
@@ -235,6 +267,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 			h = hashValue(h, vals[4])
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Int64(int64(rv.Len()))
 			for i := 0; i < rv.Len(); i++ {
 				h = hashValue(h, rv.Index(i).Interface().(Value))
 			}
@@ -243,16 +276,20 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.Uint64(mapID)
 		switch vals := v.slice.(type) {
 		case [0]KeyValue:
+			h = h.Uint64(0)
 			// No values to hash, but the type identifier is still hashed above.
 		case [1]KeyValue:
+			h = h.Uint64(1)
 			h = hashString(h, string(vals[0].Key))
 			h = hashValue(h, vals[0].Value)
 		case [2]KeyValue:
+			h = h.Uint64(2)
 			h = hashString(h, string(vals[0].Key))
 			h = hashValue(h, vals[0].Value)
 			h = hashString(h, string(vals[1].Key))
 			h = hashValue(h, vals[1].Value)
 		case [3]KeyValue:
+			h = h.Uint64(3)
 			h = hashString(h, string(vals[0].Key))
 			h = hashValue(h, vals[0].Value)
 			h = hashString(h, string(vals[1].Key))
@@ -260,6 +297,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 			h = hashString(h, string(vals[2].Key))
 			h = hashValue(h, vals[2].Value)
 		case [4]KeyValue:
+			h = h.Uint64(4)
 			h = hashString(h, string(vals[0].Key))
 			h = hashValue(h, vals[0].Value)
 			h = hashString(h, string(vals[1].Key))
@@ -269,6 +307,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 			h = hashString(h, string(vals[3].Key))
 			h = hashValue(h, vals[3].Value)
 		case [5]KeyValue:
+			h = h.Uint64(5)
 			h = hashString(h, string(vals[0].Key))
 			h = hashValue(h, vals[0].Value)
 			h = hashString(h, string(vals[1].Key))
@@ -281,6 +320,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 			h = hashValue(h, vals[4].Value)
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Int64(int64(rv.Len()))
 			for i := 0; i < rv.Len(); i++ {
 				kv := rv.Index(i).Interface().(KeyValue)
 				h = hashString(h, string(kv.Key))

@@ -758,3 +758,48 @@ func TestHashStringBoundaries(t *testing.T) {
 		})
 	}
 }
+
+func TestHashCollectionBoundaries(t *testing.T) {
+	tests := []struct {
+		name string
+		a, b []KeyValue
+	}{
+		{
+			name: "map followed by attribute",
+			a:    []KeyValue{Map("a", Int("b", 1)), Int("c", 2)},
+			b:    []KeyValue{Map("a", Int("b", 1), Int("c", 2))},
+		},
+		{
+			name: "nested slice followed by value",
+			a:    []KeyValue{Slice("k", SliceValue(IntValue(1)), IntValue(2))},
+			b:    []KeyValue{Slice("k", SliceValue(IntValue(1), IntValue(2)))},
+		},
+		{
+			name: "nested map followed by key",
+			a:    []KeyValue{Map("m", Map("a", Int("b", 1)), Int("c", 2))},
+			b:    []KeyValue{Map("m", Map("a", Int("b", 1), Int("c", 2)))},
+		},
+		{
+			name: "long slices",
+			a: []KeyValue{Slice("k",
+				SliceValue(IntValue(1), IntValue(2), IntValue(3), IntValue(4), IntValue(5), IntValue(6)),
+				IntValue(7),
+			)},
+			b: []KeyValue{Slice("k",
+				SliceValue(IntValue(1), IntValue(2), IntValue(3), IntValue(4), IntValue(5), IntValue(6), IntValue(7)),
+			)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if hashKVs(tt.a) == hashKVs(tt.b) {
+				t.Error("distinct attributes hash to the same value")
+			}
+			setA, setB := NewSet(tt.a...), NewSet(tt.b...)
+			if setA.Equivalent() == setB.Equivalent() {
+				t.Error("distinct sets have the same Equivalent")
+			}
+		})
+	}
+}
