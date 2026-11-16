@@ -327,43 +327,66 @@ func TestCallbackGoexitEndsCollectingGoroutine(t *testing.T) {
 	}
 }
 
-// TestParallelCallbacksShutdownStopsWorkers verifies that enabling the feature
-// starts callback-pool workers and that Shutdown tears them all down, counting
-// workers by their symbol in a goroutine profile.
+// TestParallelCallbacksShutdownStopsWorkers verifies that shutting down either
+// the provider or only its reader tears down all callback-pool workers.
 func TestParallelCallbacksShutdownStopsWorkers(t *testing.T) {
 	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
 
-	reader := metric.NewManualReader()
-	mp := metric.NewMeterProvider(metric.WithReader(reader))
-
-	m := mp.Meter("test")
-	_, err := m.Int64ObservableCounter("ctr",
-		mapi.WithInt64Callback(func(_ context.Context, o mapi.Int64Observer) error {
-			o.Observe(1)
-			return nil
-		}))
-	require.NoError(t, err)
-	var rm metricdata.ResourceMetrics
-	require.NoError(t, reader.Collect(t.Context(), &rm))
-
-	// The collection ran a callback, so at least one worker has started. The exact
-	// count is not asserted; it depends on GOMAXPROCS and scheduling.
-	require.NotZero(t, countGoroutines(t, poolWorkerFunc),
-		"enabling the feature should start worker goroutines")
-
-	require.NoError(t, mp.Shutdown(t.Context()))
-
-	// Shutdown joins the workers, so all have returned. Retry briefly only to
-	// absorb the lag between a worker returning and leaving the profile.
-	var live int
-	for range 100 {
-		live = countGoroutines(t, poolWorkerFunc)
-		if live == 0 {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
+	tests := []struct {
+		name      string
+		newReader func() metric.Reader
+		shutdown  func(context.Context, *metric.MeterProvider, metric.Reader) error
+	}{
+		{
+			name:      "MeterProvider",
+			newReader: func() metric.Reader { return metric.NewManualReader() },
+			shutdown: func(ctx context.Context, mp *metric.MeterProvider, _ metric.Reader) error {
+				return mp.Shutdown(ctx)
+			},
+		},
+		{
+			name:      "ManualReader",
+			newReader: func() metric.Reader { return metric.NewManualReader() },
+			shutdown: func(ctx context.Context, _ *metric.MeterProvider, r metric.Reader) error {
+				return r.Shutdown(ctx)
+			},
+		},
+		{
+			name:      "PeriodicReader",
+			newReader: func() metric.Reader { return metric.NewPeriodicReader(nopExporter{}) },
+			shutdown: func(ctx context.Context, _ *metric.MeterProvider, r metric.Reader) error {
+				return r.Shutdown(ctx)
+			},
+		},
 	}
-	assert.Zero(t, live, "Shutdown must stop all worker goroutines")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := tt.newReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+			_, err := mp.Meter("test").Int64ObservableCounter("ctr",
+				mapi.WithInt64Callback(func(_ context.Context, o mapi.Int64Observer) error {
+					o.Observe(1)
+					return nil
+				}))
+			require.NoError(t, err)
+			require.NotZero(t, countGoroutines(t, poolWorkerFunc),
+				"enabling the feature should start worker goroutines")
+
+			require.NoError(t, tt.shutdown(t.Context(), mp, reader))
+
+			// Retry only to absorb the lag between a worker returning and
+			// leaving the profile.
+			var live int
+			for range 100 {
+				live = countGoroutines(t, poolWorkerFunc)
+				if live == 0 {
+					break
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+			assert.Zero(t, live, "Shutdown must stop all worker goroutines")
+		})
+	}
 }
 
 // TestParallelCallbacksShutdownIdempotent ensures shutting the provider down is idempotent.
@@ -620,3 +643,17 @@ func countGoroutines(t *testing.T, fn string) int {
 	require.NoError(t, pprof.Lookup("goroutine").WriteTo(&buf, 2))
 	return strings.Count(buf.String(), fn)
 }
+
+type nopExporter struct{}
+
+func (nopExporter) Temporality(k metric.InstrumentKind) metricdata.Temporality {
+	return metric.DefaultTemporalitySelector(k)
+}
+
+func (nopExporter) Aggregation(k metric.InstrumentKind) metric.Aggregation {
+	return metric.DefaultAggregationSelector(k)
+}
+
+func (nopExporter) Export(context.Context, *metricdata.ResourceMetrics) error { return nil }
+func (nopExporter) ForceFlush(context.Context) error                          { return nil }
+func (nopExporter) Shutdown(context.Context) error                            { return nil }

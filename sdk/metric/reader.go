@@ -101,6 +101,10 @@ type sdkProducer interface {
 	//
 	// This method is safe to call concurrently.
 	produce(context.Context, *metricdata.ResourceMetrics) error
+
+	// stop releases resources held for producing. It must not block on an
+	// in-flight produce and must be safe to call more than once.
+	stop()
 }
 
 // Producer produces metrics for a Reader from an external source.
@@ -120,6 +124,14 @@ type Producer interface {
 // type.
 type produceHolder struct {
 	produce func(context.Context, *metricdata.ResourceMetrics) error
+	stop    func()
+}
+
+// stopProducer stops the producer held by v, if any.
+func stopProducer(v any) {
+	if ph, ok := v.(produceHolder); ok && ph.stop != nil {
+		ph.stop()
+	}
 }
 
 // shutdownProducer produces an ErrReaderShutdown error always.

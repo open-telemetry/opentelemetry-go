@@ -229,7 +229,7 @@ func (r *PeriodicReader) run(ctx context.Context, interval time.Duration) {
 // register registers p as the producer of this reader.
 func (r *PeriodicReader) register(p sdkProducer) {
 	// Only register once. If producer is already set, do nothing.
-	if !r.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
+	if !r.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce, stop: p.stop}) {
 		msg := "did not register periodic reader"
 		global.Error(errDuplicateRegister, msg)
 	}
@@ -422,6 +422,8 @@ func (r *PeriodicReader) Shutdown(ctx context.Context) error {
 		})
 
 		if ph != nil { // Reader was registered.
+			// Deferred so a panicking final collection still frees the pool.
+			defer stopProducer(ph)
 			// Flush pending telemetry.
 			m := r.rmPool.Get().(*metricdata.ResourceMetrics)
 			var sdkLen int

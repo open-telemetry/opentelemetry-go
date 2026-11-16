@@ -256,9 +256,8 @@ func (mp *MeterProvider) Shutdown(ctx context.Context) error {
 	if mp.shutdown != nil {
 		err = mp.shutdown(ctx)
 	}
-	// Tear down each pipeline's callback pool. stop never blocks on an in-flight
-	// collection, preserving the default behavior where Shutdown does not wait on
-	// produce.
+	// Readers stop their pools on Shutdown; this also covers wrappers that
+	// override Shutdown without delegating. stop is idempotent and nonblocking.
 	for _, p := range mp.pipes {
 		p.stop()
 	}
