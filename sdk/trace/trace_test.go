@@ -1688,6 +1688,39 @@ func TestAttributeValueDepthLimit(t *testing.T) {
 	assert.Equal(t, attribute.NewSet(depthLimitWantAttr("scope")), got.InstrumentationScope().Attributes)
 }
 
+func TestAttributeValueLengthLimitEventAndLinkAttributes(t *testing.T) {
+	linkSC := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{1},
+		SpanID:  trace.SpanID{1},
+	})
+	attr := attribute.String("k", "abcdef")
+	want := []attribute.KeyValue{attribute.String("k", "abc")}
+
+	te := NewTestExporter()
+	limits := NewSpanLimits()
+	limits.AttributeValueLengthLimit = 3
+	tp := NewTracerProvider(WithSyncer(te), WithRawSpanLimits(limits))
+
+	_, span := tp.Tracer("scope").Start(
+		t.Context(),
+		"span0",
+		trace.WithLinks(trace.Link{SpanContext: linkSC, Attributes: []attribute.KeyValue{attr}}),
+	)
+	span.AddEvent("event", trace.WithAttributes(attr))
+	span.AddLink(trace.Link{SpanContext: linkSC, Attributes: []attribute.KeyValue{attr}})
+
+	got, err := endSpan(te, span)
+	require.NoError(t, err)
+
+	require.Len(t, got.Events(), 1)
+	assert.Equal(t, want, got.Events()[0].Attributes)
+	require.Len(t, got.Links(), 2)
+	assert.Equal(t, want, got.Links()[0].Attributes)
+	assert.Equal(t, want, got.Links()[1].Attributes)
+	// The caller's attribute must not be modified.
+	assert.Equal(t, "abcdef", attr.Value.AsString())
+}
+
 func TestAttributeValueDepthLimitOverCapacityUpdate(t *testing.T) {
 	te := NewTestExporter()
 	limits := NewSpanLimits()
