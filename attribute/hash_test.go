@@ -713,3 +713,48 @@ func BenchmarkHasher(b *testing.B) {
 		_ = h.Distinct()
 	}
 }
+
+func TestHashStringBoundaries(t *testing.T) {
+	tests := []struct {
+		name string
+		a, b []KeyValue
+	}{
+		{
+			name: "string slice element boundary",
+			a:    []KeyValue{StringSlice("k", []string{"ab", "c"})},
+			b:    []KeyValue{StringSlice("k", []string{"a", "bc"})},
+		},
+		{
+			name: "string slice element count",
+			a:    []KeyValue{StringSlice("k", []string{"a", "b"})},
+			b:    []KeyValue{StringSlice("k", []string{"ab"})},
+		},
+		{
+			name: "string slice empty element",
+			a:    []KeyValue{StringSlice("k", []string{"a", ""})},
+			b:    []KeyValue{StringSlice("k", []string{"a"})},
+		},
+		{
+			name: "string value and next key boundary",
+			a:    []KeyValue{String("a", "x"), Int64("bc", 1)},
+			b:    []KeyValue{String("a", "xb"), Int64("c", 1)},
+		},
+		{
+			name: "map key and value boundary",
+			a:    []KeyValue{Map("m", String("a", "x"), Int64("bc", 1))},
+			b:    []KeyValue{Map("m", String("a", "xb"), Int64("c", 1))},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if hashKVs(tt.a) == hashKVs(tt.b) {
+				t.Error("distinct attributes hash to the same value")
+			}
+			setA, setB := NewSet(tt.a...), NewSet(tt.b...)
+			if setA.Equivalent() == setB.Equivalent() {
+				t.Error("distinct sets have the same Equivalent")
+			}
+		})
+	}
+}
