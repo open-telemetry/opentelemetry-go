@@ -11,15 +11,15 @@ require (
 	go.opentelemetry.io/build-tools/crosslink v0.30.0
 	go.opentelemetry.io/build-tools/gotmpl v0.30.0
 	go.opentelemetry.io/build-tools/multimod v0.30.0
-	golang.org/x/exp v0.0.0-20261112162710-dab199d8bf38
-	golang.org/x/tools v0.52.1-0.20261111171530-d4453b555d58
+	golang.org/x/exp v0.0.0-20261113113407-e3970619a1a4
+	golang.org/x/tools v0.52.1-0.20261113204035-cba9b8046c90
 	golang.org/x/vuln v1.9.0
 )
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.4.0 // indirect
 	4d63.com/gochecknoglobals v0.2.2 // indirect
-	charm.land/lipgloss/v2 v2.0.6 // indirect
+	charm.land/lipgloss/v2 v2.1.1 // indirect
 	codeberg.org/chavacava/garif v0.2.1 // indirect
 	codeberg.org/polyfloyd/go-errorlint v1.9.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
@@ -231,7 +231,7 @@ require (
 	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.6 // indirect
 	golang.org/x/crypto v0.59.0 // indirect
-	golang.org/x/exp/typeparams v0.0.0-20261112162710-dab199d8bf38 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20261113113407-e3970619a1a4 // indirect
 	golang.org/x/mod v0.43.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
