@@ -369,22 +369,16 @@ func TestParallelCallbacksShutdownStopsWorkers(t *testing.T) {
 					return nil
 				}))
 			require.NoError(t, err)
-			require.NotZero(t, countGoroutines(t, poolWorkerFunc),
-				"enabling the feature should start worker goroutines")
+			// Eventually: a worker not yet scheduled has no worker frame.
+			require.Eventually(t, func() bool {
+				return countGoroutines(t, poolWorkerFunc) > 0
+			}, time.Second, time.Millisecond, "enabling the feature should start worker goroutines")
 
 			require.NoError(t, tt.shutdown(t.Context(), mp, reader))
 
-			// Retry only to absorb the lag between a worker returning and
-			// leaving the profile.
-			var live int
-			for range 100 {
-				live = countGoroutines(t, poolWorkerFunc)
-				if live == 0 {
-					break
-				}
-				time.Sleep(10 * time.Millisecond)
-			}
-			assert.Zero(t, live, "Shutdown must stop all worker goroutines")
+			assert.Eventually(t, func() bool {
+				return countGoroutines(t, poolWorkerFunc) == 0
+			}, time.Second, time.Millisecond, "Shutdown must stop all worker goroutines")
 		})
 	}
 }
