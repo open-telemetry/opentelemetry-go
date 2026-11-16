@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -213,14 +214,14 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 
 			// Read the partial success message, if any.
 			var respData bytes.Buffer
-			if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
+			if err := internal.CopyHTTPResponseBody(&respData, resp, c.maxResponseSize); err != nil {
 				return err
 			}
 			if respData.Len() == 0 {
 				return nil
 			}
 
-			if resp.Header.Get("Content-Type") == "application/x-protobuf" {
+			if isProtobufContentType(resp.Header.Get("Content-Type")) {
 				var respProto colmetricpb.ExportMetricsServiceResponse
 				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
 					return err
@@ -244,7 +245,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		// message to be returned. It will help in
 		// debugging the actual issue.
 		var respData bytes.Buffer
-		if err := internal.CopyResponseBody(&respData, resp.Body, c.maxResponseSize); err != nil {
+		if err := internal.CopyHTTPResponseBody(&respData, resp, c.maxResponseSize); err != nil {
 			return err
 		}
 		respStr := strings.TrimSpace(respData.String())
@@ -265,6 +266,17 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			return fmt.Errorf("failed to send metrics to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
 	}))
+}
+
+// isProtobufContentType reports whether the Content-Type value denotes a
+// protobuf-encoded OTLP payload. Media type tokens are case-insensitive and
+// parameters are ignored, as required by RFC 9110 section 8.3.
+func isProtobufContentType(contentType string) bool {
+	mediatype, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(mediatype, "application/x-protobuf")
 }
 
 var gzPool = sync.Pool{

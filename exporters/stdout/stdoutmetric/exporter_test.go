@@ -26,8 +26,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 func testEncoderOption() stdoutmetric.Option {
@@ -171,6 +171,34 @@ func TestExportWithOptions(t *testing.T) {
 			assert.Equal(t, tt.expectedData, b.String())
 		})
 	}
+}
+
+func TestWithoutTimestampsDoesNotMutateInput(t *testing.T) {
+	start := time.Unix(1, 0).UTC()
+	end := time.Unix(2, 0).UTC()
+	rm := &metricdata.ResourceMetrics{
+		ScopeMetrics: []metricdata.ScopeMetrics{{
+			Metrics: []metricdata.Metrics{{
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{{
+						StartTime: start,
+						Time:      end,
+						Value:     1,
+					}},
+				},
+			}},
+		}},
+	}
+	exp, err := stdoutmetric.New(
+		stdoutmetric.WithWriter(io.Discard),
+		stdoutmetric.WithoutTimestamps(),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, exp.Export(t.Context(), rm))
+	got := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Gauge[int64]).DataPoints[0]
+	assert.Equal(t, start, got.StartTime)
+	assert.Equal(t, end, got.Time)
 }
 
 func TestExporterNilWriterPreservesWriter(t *testing.T) {

@@ -58,7 +58,8 @@ jobs:
         with:
           fail: true
           failIfEmpty: false
-          args: --max-concurrency 5 --cache --max-cache-age 1d --cache-exclude-status 300..=599 ${{needs.changedfiles.outputs.files}}
+          args: --exclude-path '^\.lycheeignore$' --max-concurrency 5 --cache --max-cache-age 1d --cache-exclude-status 300..=599 ${{needs.changedfiles.outputs.files}}
+
 
       - name: Save lychee cache
         if: always()

@@ -18,8 +18,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 )
 
 const ID = 0
@@ -56,6 +56,10 @@ func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (map
 	return nil, m.err
 }
 
+func TestComponentName(t *testing.T) {
+	assert.Equal(t, "prometheus_http_text_metric_exporter/0", observ.ComponentName(ID))
+}
+
 func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 	orig := otel.GetMeterProvider()
 	t.Cleanup(func() { otel.SetMeterProvider(orig) })
@@ -70,7 +74,6 @@ func TestNewInstrumentationObservabilityErrors(t *testing.T) {
 	assert.ErrorContains(t, err, "inflight metric")
 	assert.ErrorContains(t, err, "exported metric")
 	assert.ErrorContains(t, err, "operation duration metric")
-	assert.ErrorContains(t, err, "collection duration metric")
 }
 
 func TestNewInstrumentationObservabilityDisabled(t *testing.T) {
@@ -109,7 +112,7 @@ func setup(t *testing.T) (*observ.Instrumentation, func() metricdata.ScopeMetric
 func set(err error) attribute.Set {
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(observ.ComponentName(ID)),
-		semconv.OTelComponentTypeKey.String(observ.ComponentType),
+		semconv.OTelComponentTypePrometheusHTTPTextMetricExporter,
 	}
 	if err != nil {
 		attrs = append(attrs, semconv.ErrorType(err))
@@ -167,20 +170,6 @@ func operationDuration(err error) metricdata.Metrics {
 	}
 }
 
-func collectionDuration(err error) metricdata.Metrics {
-	return metricdata.Metrics{
-		Name:        otelconv.SDKMetricReaderCollectionDuration{}.Name(),
-		Description: otelconv.SDKMetricReaderCollectionDuration{}.Description(),
-		Unit:        otelconv.SDKMetricReaderCollectionDuration{}.Unit(),
-		Data: metricdata.Histogram[float64]{
-			Temporality: metricdata.CumulativeTemporality,
-			DataPoints: []metricdata.HistogramDataPoint[float64]{
-				{Attributes: set(err)},
-			},
-		},
-	}
-}
-
 func assertExportMetricsMetrics(t *testing.T, got metricdata.ScopeMetrics, total, success int64, err error) {
 	t.Helper()
 
@@ -199,19 +188,6 @@ func assertExportMetricsMetrics(t *testing.T, got metricdata.ScopeMetrics, total
 
 	want = operationDuration(err)
 	metricdatatest.AssertEqual(t, want, m[2], o, metricdatatest.IgnoreValue())
-}
-
-func assertCollectionOnly(t *testing.T, got metricdata.ScopeMetrics, err error) {
-	t.Helper()
-
-	assert.Equal(t, Scope, got.Scope, "unexpected scope")
-
-	m := got.Metrics
-	require.Len(t, m, 1, "expected only collectionDuration metric")
-
-	o := metricdatatest.IgnoreTimestamp()
-	want := collectionDuration(err)
-	metricdatatest.AssertEqual(t, want, m[0], o, metricdatatest.IgnoreValue())
 }
 
 func TestInstrumentationExportMetricsSuccess(t *testing.T) {
@@ -257,23 +233,6 @@ func TestInstrumentationExportMetricsPartialErrored(t *testing.T) {
 	assertExportMetricsMetrics(t, collect(), n, success, err)
 }
 
-func TestRecordCollectionDurationSuccess(t *testing.T) {
-	inst, collect := setup(t)
-
-	inst.RecordCollectionDuration(t.Context()).Stop(nil)
-
-	assertCollectionOnly(t, collect(), nil)
-}
-
-func TestRecordCollectionDurationError(t *testing.T) {
-	inst, collect := setup(t)
-
-	wantErr := assert.AnError
-	inst.RecordCollectionDuration(t.Context()).Stop(wantErr)
-
-	assertCollectionOnly(t, collect(), wantErr)
-}
-
 func setupBench(b *testing.B) *observ.Instrumentation {
 	b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
 	inst, err := observ.NewInstrumentation(ID)
@@ -315,24 +274,6 @@ func BenchmarkInstrumentationRecordOperationDuration(b *testing.B) {
 			b.ResetTimer()
 			for b.Loop() {
 				inst.RecordOperationDuration(ctx).Stop(err)
-			}
-		}
-	}
-
-	err := errors.New("benchmark error")
-	b.Run("NoError", run(nil))
-	b.Run("Error", run(err))
-}
-
-func BenchmarkInstrumentationRecordCollectionDuration(b *testing.B) {
-	run := func(err error) func(*testing.B) {
-		inst := setupBench(b)
-		return func(b *testing.B) {
-			ctx := b.Context()
-			b.ReportAllocs()
-			b.ResetTimer()
-			for b.Loop() {
-				inst.RecordCollectionDuration(ctx).Stop(err)
 			}
 		}
 	}

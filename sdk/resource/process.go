@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
 )
 
 type (

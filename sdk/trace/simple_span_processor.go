@@ -67,16 +67,15 @@ func (ssp *simpleSpanProcessor) OnEnd(s ReadOnlySpan) {
 	ssp.exporterMu.Lock()
 	defer ssp.exporterMu.Unlock()
 
-	if ssp.inst != nil {
-		// Add the span to the context to ensure the metric is recorded
-		// with the correct span context. Record the span as processed before
-		// invoking the exporter so the count is unaffected by the export
-		// outcome.
-		ctx := trace.ContextWithSpanContext(context.Background(), s.SpanContext())
-		ssp.inst.SpanProcessed(ctx)
-	}
-
 	if ssp.exporter != nil && s.SpanContext().TraceFlags().IsSampled() {
+		if ssp.inst != nil {
+			// Add the span to the context to ensure the metric is recorded
+			// with the correct span context. Record the span as processed before
+			// invoking the exporter so the count is unaffected by the export
+			// outcome.
+			ctx := trace.ContextWithSpanContext(context.Background(), s.SpanContext())
+			ssp.inst.SpanProcessed(ctx)
+		}
 		if err := ssp.exporter.ExportSpans(context.Background(), []ReadOnlySpan{s}); err != nil {
 			otel.Handle(err)
 		}

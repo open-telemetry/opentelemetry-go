@@ -46,6 +46,9 @@ func New(options ...Option) (*Exporter, error) {
 
 // Export exports log records to the writer. It returns [log.ErrExporterShutdown]
 // if called after Shutdown.
+//
+// Export must not be called concurrently with another Export call on the same
+// Exporter. It may be called concurrently with Shutdown and ForceFlush.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error) {
 	enc := e.encoder.Load()
 	if e.stopped.Load() {
@@ -82,6 +85,11 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) (err error)
 
 // Shutdown shuts down the Exporter. Calls to Export after Shutdown return
 // [log.ErrExporterShutdown].
+//
+// Calling Shutdown more than once is safe: subsequent calls do nothing and
+// return nil.
+//
+// This method is safe to call concurrently.
 func (e *Exporter) Shutdown(context.Context) error {
 	// Store stopped first so Export cannot observe a cleared encoder while the
 	// Exporter still appears active.
@@ -91,6 +99,8 @@ func (e *Exporter) Shutdown(context.Context) error {
 }
 
 // ForceFlush performs no action.
+//
+// This method is safe to call concurrently.
 func (*Exporter) ForceFlush(context.Context) error {
 	return nil
 }

@@ -7,10 +7,29 @@
 package internal
 
 import (
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"strings"
 )
+
+// CopyHTTPResponseBody copies the decoded response body, enforcing maxSize on
+// the decompressed bytes. The caller remains responsible for closing resp.Body.
+func CopyHTTPResponseBody(dst io.Writer, resp *http.Response, maxSize int64) error {
+	var src io.Reader = resp.Body
+	// The transport removes Content-Encoding when it decompresses a response.
+	if strings.EqualFold(strings.TrimSpace(resp.Header.Get("Content-Encoding")), "gzip") {
+		reader, err := gzip.NewReader(src)
+		if err != nil {
+			return err
+		}
+		defer reader.Close()
+		src = reader
+	}
+	return CopyResponseBody(dst, src, maxSize)
+}
 
 // CopyResponseBody copies at most maxSize bytes from src to dst. It returns
 // an error if src contains more than maxSize bytes.

@@ -39,8 +39,10 @@ func (r *Registry) Register(stop func(), wait func(context.Context) error) {
 	r.mu.Unlock()
 }
 
-// Shutdown stops all registered resources and waits for their admitted work to
-// complete. It returns when all waits complete or ctx is canceled.
+// Shutdown stops all registered resources, then calls their wait functions with
+// ctx. Each resource defines which in-progress operations its wait function
+// waits for. Recording calls overlapping shutdown may complete after Shutdown
+// returns.
 func (r *Registry) Shutdown(ctx context.Context) error {
 	r.mu.Lock()
 	if r.stopped {

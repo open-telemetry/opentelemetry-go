@@ -1,0 +1,96 @@
+// Code generated from semantic convention specification. DO NOT EDIT.
+
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package semconv
+
+import (
+	"errors"
+	"fmt"
+	"testing"
+)
+
+const pkg = "go.opentelemetry.io/otel/semconv/v1.44.0"
+
+func TestErrorType(t *testing.T) {
+	check(t, nil, ErrorTypeOther.Value.AsString())
+	check(t, errors.New("msg"), "*errors.errorString")
+	check(t, custom("aborted"), "aborted")
+	check(t, errors.Join(custom("left"), custom("right")), "left") // first errors.As match is used.
+	check(t, custom(""), pkg+".ErrCustomType")                     // empty ErrorType, use concrete type.
+	check(t, wrapped(custom("wrapped-aborted")), "wrapped-aborted")
+	check(t, wrapped(custom("")), pkg+".wrappedErr") // empty ErrorType in chain, use concrete top-level type.
+	check(t, fmtWrapped(custom("")), pkg+".ErrCustomType")
+	check(t, fmtWrapped(wrapped(custom(""))), pkg+".wrappedErr")
+	check(t, fmtWrapped(fmtWrapped(custom(""))), pkg+".ErrCustomType")
+	check(t, fmtWrapped(nil), fmtWrapErrorType.String()) // fmt.Errorf with nil error, use concrete type of the wrapper.
+	check(t, errors.Join(nil, custom("")), pkg+".ErrCustomType")
+	check(t, errors.Join(errors.Join(nil, custom("")), nil), pkg+".ErrCustomType")
+	check(t, fmtWrapped(errors.Join(nil, fmtWrapped(custom("")))), pkg+".ErrCustomType")
+	check(t, errors.Join(custom(""), errors.New("other")), errorsJoinType.String()) // multiple errors, use concrete type of the wrapper.
+	check(t, multiWrapped(custom("")), pkg+".multiWrappedErr")                      // custom Unwrap() []error wrapper stays top-level.
+}
+
+func check(t *testing.T, err error, want string) {
+	t.Helper()
+	got := ErrorType(err)
+	if got.Key != ErrorTypeKey {
+		t.Errorf("ErrorType(%v) key = %v, want %v", err, got.Key, ErrorTypeKey)
+	}
+	if got.Value.AsString() != want {
+		t.Errorf("ErrorType(%v) value = %v, want %v", err, got.Value.AsString(), want)
+	}
+}
+
+func custom(typ string) error {
+	return ErrCustomType{Type: typ}
+}
+
+func wrapped(err error) error {
+	return wrappedErr{err: err}
+}
+
+func fmtWrapped(err error) error {
+	return fmt.Errorf("wrapped: %w", err)
+}
+
+type ErrCustomType struct {
+	Type string
+}
+
+func (e ErrCustomType) Error() string {
+	return "custom: " + e.Type
+}
+
+func (e ErrCustomType) ErrorType() string {
+	return e.Type
+}
+
+type wrappedErr struct {
+	err error
+}
+
+func (e wrappedErr) Error() string {
+	return "wrapped: " + e.err.Error()
+}
+
+func (e wrappedErr) Unwrap() error {
+	return e.err
+}
+
+func multiWrapped(errs ...error) error {
+	return multiWrappedErr{errs: errs}
+}
+
+type multiWrappedErr struct {
+	errs []error
+}
+
+func (multiWrappedErr) Error() string {
+	return "multi-wrapped"
+}
+
+func (e multiWrappedErr) Unwrap() []error {
+	return e.errs
+}

@@ -24,8 +24,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -663,6 +663,26 @@ func TestErrorType(t *testing.T) {
 		err := fmt.Errorf("wrapped: %w", nil)
 		assert.Equal(t, fmtWrapErrorType.String(), errorType(err))
 	})
+
+	t.Run("SingleErrorsJoinFallsBackToWrappedType", func(t *testing.T) {
+		err := errors.Join(nil, &errWithType{msg: "boom", typ: ""})
+		assert.Equal(t, "*log.errWithType", errorType(err))
+	})
+
+	t.Run("InterleavedJoinAndFmtWrappedFallsBackToWrappedType", func(t *testing.T) {
+		err := fmt.Errorf("outer: %w", errors.Join(nil, fmt.Errorf("inner: %w", &errWithType{msg: "boom", typ: ""})))
+		assert.Equal(t, "*log.errWithType", errorType(err))
+	})
+
+	t.Run("MultiErrorsJoinStaysWrapperType", func(t *testing.T) {
+		err := errors.Join(&errWithType{msg: "boom", typ: ""}, errors.New("other"))
+		assert.Equal(t, errorsJoinType.String(), errorType(err))
+	})
+
+	t.Run("CustomMultiWrapperStaysTopLevel", func(t *testing.T) {
+		err := multiWrappedErr{errs: []error{&errWithType{msg: "boom", typ: ""}}}
+		assert.Equal(t, "go.opentelemetry.io/otel/sdk/log.multiWrappedErr", errorType(err))
+	})
 }
 
 type errWithType struct {
@@ -689,6 +709,14 @@ type wrappedErr struct {
 func (e wrappedErr) Error() string { return "wrapped: " + e.err.Error() }
 
 func (e wrappedErr) Unwrap() error { return e.err }
+
+type multiWrappedErr struct {
+	errs []error
+}
+
+func (multiWrappedErr) Error() string { return "multi-wrapped" }
+
+func (e multiWrappedErr) Unwrap() []error { return e.errs }
 
 type derivationError struct{}
 

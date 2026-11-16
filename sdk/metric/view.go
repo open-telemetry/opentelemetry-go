@@ -106,6 +106,7 @@ func NewView(criteria Instrument, mask Stream) View {
 				Aggregation:                       agg,
 				AttributeFilter:                   mask.AttributeFilter,
 				ExemplarReservoirProviderSelector: mask.ExemplarReservoirProviderSelector,
+				enabled:                           mask.enabled,
 			}, true
 		}
 		return Stream{}, false

@@ -4,6 +4,7 @@
 package metric
 
 import (
+	"maps"
 	"sync"
 )
 
@@ -50,6 +51,27 @@ func (c *cache[K, V]) HasKey(key K) bool {
 	defer c.Unlock()
 	_, ok := c.data[key]
 	return ok
+}
+
+// Range calls f for every key-value pair currently in the cache.
+//
+// Range is safe to call concurrently, but that safety covers the cache
+// only, not f: the cache stays consistent no matter how many goroutines
+// call Range, Lookup, or HasKey at once, but f itself gets no such
+// guarantee. Range holds the cache lock only long enough to snapshot the
+// cache contents, not for the duration of the iteration, so f is free to
+// call other cache methods, including this one, without deadlocking.
+// Overlapping Range calls invoke f concurrently and unlocked; making that
+// safe is the caller's responsibility.
+func (c *cache[K, V]) Range(f func(K, V)) {
+	c.Lock()
+	data := make(map[K]V, len(c.data))
+	maps.Copy(data, c.data)
+	c.Unlock()
+
+	for k, v := range data {
+		f(k, v)
+	}
 }
 
 // cacheWithErr is a locking storage used to quickly return already computed values and an error.

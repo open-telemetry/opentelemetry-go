@@ -58,6 +58,8 @@ var transformResourceLogs = transform.ResourceLogs
 //
 // This method returns [log.ErrExporterShutdown] if called after Shutdown.
 // This method returns an error if the method is canceled by the passed context.
+//
+// This method is safe to call concurrently.
 func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 	if e.stopped.Load() {
 		return log.ErrExporterShutdown
@@ -79,6 +81,11 @@ func (e *Exporter) Export(ctx context.Context, records []log.Record) error {
 
 // Shutdown shuts down the Exporter. Calls to Export after Shutdown return
 // [log.ErrExporterShutdown]. Calls to ForceFlush perform no operation.
+//
+// Calling Shutdown more than once is safe: subsequent calls do nothing and
+// return nil.
+//
+// This method is safe to call concurrently.
 func (e *Exporter) Shutdown(ctx context.Context) error {
 	if e.stopped.Swap(true) {
 		return nil
@@ -93,6 +100,8 @@ func (e *Exporter) Shutdown(ctx context.Context) error {
 }
 
 // ForceFlush does nothing. The Exporter holds no state.
+//
+// This method is safe to call concurrently.
 func (*Exporter) ForceFlush(context.Context) error {
 	return nil
 }

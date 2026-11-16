@@ -278,23 +278,8 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 // decompresses a response itself, so a body it already decoded is left
 // alone. The size limit applies to the bytes returned.
 func (c *httpClient) readResponse(resp *http.Response) ([]byte, error) {
-	src := io.Reader(resp.Body)
-	var gz *gzip.Reader
-	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
-		var err error
-		gz, err = gzip.NewReader(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-		src = gz
-	}
-
 	var respData bytes.Buffer
-	err := internal.CopyResponseBody(&respData, src, c.maxResponseSize)
-	if gz != nil {
-		err = errors.Join(err, gz.Close())
-	}
-	if err != nil {
+	if err := internal.CopyHTTPResponseBody(&respData, resp, c.maxResponseSize); err != nil {
 		return nil, err
 	}
 	return respData.Bytes(), nil

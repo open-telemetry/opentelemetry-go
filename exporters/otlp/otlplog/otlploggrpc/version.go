@@ -3,7 +3,9 @@
 
 package otlploggrpc
 
+import "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
+
 // Version is the current release version of the OpenTelemetry OTLP over gRPC logs exporter in use.
 func Version() string {
-	return "0.14.0"
+	return internal.Version
 }

@@ -726,3 +726,43 @@ func TestConvHeaders(t *testing.T) {
 		})
 	}
 }
+
+func TestConvCompressionIsCaseInsensitive(t *testing.T) {
+	tests := []struct {
+		in      string
+		want    Compression
+		wantErr string
+	}{
+		{in: "gzip", want: GzipCompression},
+		{in: "GZIP", want: GzipCompression},
+		{in: "GZip", want: GzipCompression},
+		{in: "none", want: NoCompression},
+		{in: "NONE", want: NoCompression},
+		{in: "NoNe", want: NoCompression},
+		{in: "", want: NoCompression},
+		{in: "xz", wantErr: "unknown compression: xz"},
+		{in: "GZIP ", wantErr: "unknown compression: GZIP "},
+	}
+	for _, tc := range tests {
+		got, err := convCompression(tc.in)
+		if tc.wantErr != "" {
+			if err == nil {
+				t.Errorf("convCompression(%q) = %v, want error", tc.in, got)
+				continue
+			}
+			// The diagnostic must quote what the caller wrote, not the folded
+			// form, so an operator can find the value they actually set.
+			if err.Error() != tc.wantErr {
+				t.Errorf("convCompression(%q) error = %q, want %q", tc.in, err, tc.wantErr)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("convCompression(%q) unexpected error: %v", tc.in, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("convCompression(%q) = %v, want %v", tc.in, got, tc.want)
+		}
+	}
+}

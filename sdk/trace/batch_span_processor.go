@@ -408,9 +408,6 @@ func (bsp *batchSpanProcessor) enqueueBlockOnQueueFull(ctx context.Context, sd R
 	case bsp.queue <- sd:
 		return true
 	case <-ctx.Done():
-		if bsp.inst != nil {
-			bsp.inst.ProcessedQueueFull(ctx, 1)
-		}
 		return false
 	}
 }

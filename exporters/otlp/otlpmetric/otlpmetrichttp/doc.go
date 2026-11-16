@@ -26,6 +26,8 @@ The configuration can be overridden by [WithEndpoint], [WithEndpointURL], [WithI
 
 OTEL_EXPORTER_OTLP_INSECURE, OTEL_EXPORTER_OTLP_METRICS_INSECURE (default: "false") -
 setting "true" disables client transport security for the exporter's HTTP connection.
+An http or https scheme in OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+takes precedence over this setting.
 OTEL_EXPORTER_OTLP_METRICS_INSECURE takes precedence over OTEL_EXPORTER_OTLP_INSECURE.
 The configuration can be overridden by [WithInsecure] and [WithTLSClientConfig] options.
 
