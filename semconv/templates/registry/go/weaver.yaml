@@ -9,6 +9,15 @@ params:
     - "v8js"
   excluded_attributes: ["messaging.client_id"]
 templates:
+  - pattern: README.md.j2
+    filter: >
+      semconv_metrics({
+        "exclude_deprecated": true,
+        "exclude_root_namespace": $excluded_namespaces,
+      })
+      | semconv_group_metrics_by_root_namespace
+    application_mode: each
+    file_name: "{{ctx.root_namespace | camel_case | lower }}conv/README.md"
   - pattern: instrument_test.go.j2
     filter: .
     application_mode: single
@@ -103,8 +112,8 @@ text_maps:
   custom_bucket_boundaries:
     http.client.request.duration: "[]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}"
     http.server.request.duration: "[]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}"
-    rpc.client.call.duration: "[]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}"
-    rpc.server.call.duration: "[]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}"
+    rpc.client.call.duration: "[]float64{0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60}"
+    rpc.server.call.duration: "[]float64{0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60}"
 acronyms:
   - ACL
   - AI

@@ -22,10 +22,6 @@ import (
 )
 
 const (
-	// ComponentType uniquely identifies the OpenTelemetry Exporter component
-	// being instrumented.
-	ComponentType = "go.opentelemetry.io/otel/exporters/prometheus/prometheus.Exporter"
-
 	// ScopeName is the unique name of the meter used for instrumentation.
 	ScopeName = "go.opentelemetry.io/otel/exporters/prometheus/internal/observ"
 
@@ -79,7 +75,8 @@ func put[T any](p *sync.Pool, s *[]T) {
 // ComponentName returns the component name for the exporter with the
 // provided ID.
 func ComponentName(id int64) string {
-	return fmt.Sprintf("%s/%d", ComponentType, id)
+	t := semconv.OTelComponentTypePrometheusHTTPTextMetricExporter.Value.AsString()
+	return fmt.Sprintf("%s/%d", t, id)
 }
 
 // Instrumentation is experimental instrumentation for the exporter.
@@ -104,7 +101,7 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	i := &Instrumentation{
 		attrs: []attribute.KeyValue{
 			semconv.OTelComponentName(ComponentName(id)),
-			semconv.OTelComponentTypeKey.String(ComponentType),
+			semconv.OTelComponentTypePrometheusHTTPTextMetricExporter,
 		},
 	}
 

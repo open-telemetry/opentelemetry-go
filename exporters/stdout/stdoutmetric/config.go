@@ -61,6 +61,7 @@ func (o optionFunc) apply(c config) config {
 
 // WithEncoder sets the exporter to use encoder to encode all the metric
 // data-types to an output.
+// If encoder is nil, this option has no effect.
 func WithEncoder(encoder Encoder) Option {
 	return optionFunc(func(c config) config {
 		if encoder != nil {
