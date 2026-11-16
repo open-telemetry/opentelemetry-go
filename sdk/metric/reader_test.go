@@ -173,6 +173,43 @@ func (ts *readerTestSuite) TestMetricFilterExternalProducerReusesSlices() {
 	}
 }
 
+func TestNilMetricFilterPassThrough(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("SDK producer", func(t *testing.T) {
+		for _, produceErr := range []error{nil, assert.AnError} {
+			want := testResourceMetricsA()
+			produce := wrapProduce(func(_ context.Context, rm *metricdata.ResourceMetrics) error {
+				*rm = want
+				return produceErr
+			}, nil)
+
+			var got metricdata.ResourceMetrics
+			err := produce(ctx, &got)
+			assert.Equal(t, want, got)
+			assert.Equal(t, produceErr, err)
+		}
+	})
+
+	t.Run("external producer", func(t *testing.T) {
+		for _, produceErr := range []error{nil, assert.AnError} {
+			want := []metricdata.ScopeMetrics{testScopeMetricsB()}
+			producer := filteringProducer{inner: testExternalProducer{
+				produceFunc: func(context.Context) ([]metricdata.ScopeMetrics, error) {
+					return want, produceErr
+				},
+			}}
+
+			got, err := producer.Produce(ctx)
+			assert.Equal(t, want, got)
+			if assert.Len(t, got, len(want)) {
+				assert.Same(t, &want[0], &got[0])
+			}
+			assert.Equal(t, produceErr, err)
+		}
+	})
+}
+
 func (ts *readerTestSuite) TestNilProducer() {
 	ts.Reader = ts.Factory(WithProducer(nil))
 	ts.Reader.register(testSDKProducer{})
