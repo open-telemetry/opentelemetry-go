@@ -1,19 +1,21 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package baggage
+package baggage_test
 
 import (
 	"fmt"
+
+	"go.opentelemetry.io/otel/baggage"
 )
 
 func ExampleBaggage_SetMember() {
-	orig, err := Parse("tenant=old")
+	orig, err := baggage.Parse("tenant=old")
 	if err != nil {
 		panic(err)
 	}
 
-	m, err := NewMember("tenant", "new")
+	m, err := baggage.NewMember("tenant", "new")
 	if err != nil {
 		panic(err)
 	}
@@ -25,7 +27,7 @@ func ExampleBaggage_SetMember() {
 
 	fmt.Println(orig)
 	fmt.Println(updated)
-	//Output:
+	// Output:
 	// tenant=old
 	// tenant=new
 }
