@@ -151,6 +151,9 @@ func (o optionFunc) apply(conf config) config {
 // represents the entity producing telemetry and is associated with all Meters
 // the MeterProvider will create.
 //
+// Resource res is merged onto [resource.Environment] according to
+// [resource.Merge], where res takes precedence.
+//
 // By default, if this Option is not used, the default Resource from the
 // go.opentelemetry.io/otel/sdk/resource package will be used.
 func WithResource(res *resource.Resource) Option {
