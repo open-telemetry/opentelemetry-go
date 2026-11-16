@@ -180,67 +180,122 @@ func TestFilterScopeMetricsAcceptPartialAggregations(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		data metricdata.Aggregation
+		name    string
+		newData func() metricdata.Aggregation
+		want    metricdata.Aggregation
 	}{
 		{
-			"Sum int64",
-			metricdata.Sum[int64]{DataPoints: []metricdata.DataPoint[int64]{{Attributes: keep}, {Attributes: drop}}},
+			name: "Sum int64",
+			newData: func() metricdata.Aggregation {
+				return metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{{Attributes: drop}, {Attributes: keep}},
+				}
+			},
+			want: metricdata.Sum[int64]{DataPoints: []metricdata.DataPoint[int64]{{Attributes: keep}}},
 		},
 		{
-			"Sum float64",
-			metricdata.Sum[float64]{
-				DataPoints: []metricdata.DataPoint[float64]{{Attributes: keep}, {Attributes: drop}},
+			name: "Sum float64",
+			newData: func() metricdata.Aggregation {
+				return metricdata.Sum[float64]{
+					DataPoints: []metricdata.DataPoint[float64]{{Attributes: drop}, {Attributes: keep}},
+				}
+			},
+			want: metricdata.Sum[float64]{DataPoints: []metricdata.DataPoint[float64]{{Attributes: keep}}},
+		},
+		{
+			name: "Gauge int64",
+			newData: func() metricdata.Aggregation {
+				return metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{{Attributes: drop}, {Attributes: keep}},
+				}
+			},
+			want: metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{Attributes: keep}}},
+		},
+		{
+			name: "Gauge float64",
+			newData: func() metricdata.Aggregation {
+				return metricdata.Gauge[float64]{
+					DataPoints: []metricdata.DataPoint[float64]{{Attributes: drop}, {Attributes: keep}},
+				}
+			},
+			want: metricdata.Gauge[float64]{DataPoints: []metricdata.DataPoint[float64]{{Attributes: keep}}},
+		},
+		{
+			name: "Histogram int64",
+			newData: func() metricdata.Aggregation {
+				return metricdata.Histogram[int64]{
+					DataPoints: []metricdata.HistogramDataPoint[int64]{{Attributes: drop}, {Attributes: keep}},
+				}
+			},
+			want: metricdata.Histogram[int64]{DataPoints: []metricdata.HistogramDataPoint[int64]{{Attributes: keep}}},
+		},
+		{
+			name: "Histogram float64",
+			newData: func() metricdata.Aggregation {
+				return metricdata.Histogram[float64]{
+					DataPoints: []metricdata.HistogramDataPoint[float64]{{Attributes: drop}, {Attributes: keep}},
+				}
+			},
+			want: metricdata.Histogram[float64]{
+				DataPoints: []metricdata.HistogramDataPoint[float64]{{Attributes: keep}},
 			},
 		},
 		{
-			"Gauge int64",
-			metricdata.Gauge[int64]{DataPoints: []metricdata.DataPoint[int64]{{Attributes: keep}, {Attributes: drop}}},
-		},
-		{
-			"Gauge float64",
-			metricdata.Gauge[float64]{
-				DataPoints: []metricdata.DataPoint[float64]{{Attributes: keep}, {Attributes: drop}},
+			name: "ExponentialHistogram int64",
+			newData: func() metricdata.Aggregation {
+				return metricdata.ExponentialHistogram[int64]{
+					DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{
+						{Attributes: drop},
+						{Attributes: keep},
+					},
+				}
+			},
+			want: metricdata.ExponentialHistogram[int64]{
+				DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{{Attributes: keep}},
 			},
 		},
 		{
-			"Histogram int64",
-			metricdata.Histogram[int64]{
-				DataPoints: []metricdata.HistogramDataPoint[int64]{{Attributes: keep}, {Attributes: drop}},
+			name: "ExponentialHistogram float64",
+			newData: func() metricdata.Aggregation {
+				return metricdata.ExponentialHistogram[float64]{
+					DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+						{Attributes: drop},
+						{Attributes: keep},
+					},
+				}
+			},
+			want: metricdata.ExponentialHistogram[float64]{
+				DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{{Attributes: keep}},
 			},
 		},
 		{
-			"Histogram float64",
-			metricdata.Histogram[float64]{
-				DataPoints: []metricdata.HistogramDataPoint[float64]{{Attributes: keep}, {Attributes: drop}},
+			name: "Summary",
+			newData: func() metricdata.Aggregation {
+				return metricdata.Summary{
+					DataPoints: []metricdata.SummaryDataPoint{{Attributes: drop}, {Attributes: keep}},
+				}
 			},
-		},
-		{
-			"ExponentialHistogram int64",
-			metricdata.ExponentialHistogram[int64]{
-				DataPoints: []metricdata.ExponentialHistogramDataPoint[int64]{{Attributes: keep}, {Attributes: drop}},
-			},
-		},
-		{
-			"ExponentialHistogram float64",
-			metricdata.ExponentialHistogram[float64]{
-				DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{{Attributes: keep}, {Attributes: drop}},
-			},
-		},
-		{
-			"Summary",
-			metricdata.Summary{DataPoints: []metricdata.SummaryDataPoint{{Attributes: keep}, {Attributes: drop}}},
+			want: metricdata.Summary{DataPoints: []metricdata.SummaryDataPoint{{Attributes: keep}}},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			shared := tt.newData()
 			got := filterScopeMetrics([]metricdata.ScopeMetrics{{
-				Metrics: []metricdata.Metrics{{Name: "metric", Data: tt.data}},
+				Metrics: []metricdata.Metrics{{Name: "metric", Data: shared}},
+			}}, filter, filterSharedData)
+			require.Len(t, got, 1)
+			require.Len(t, got[0].Metrics, 1)
+			assert.Equal(t, tt.want, got[0].Metrics[0].Data)
+			assert.Equal(t, tt.newData(), shared)
+
+			got = filterScopeMetrics([]metricdata.ScopeMetrics{{
+				Metrics: []metricdata.Metrics{{Name: "metric", Data: tt.newData()}},
 			}}, filter, filterInPlace)
 			require.Len(t, got, 1)
 			require.Len(t, got[0].Metrics, 1)
-			assert.Equal(t, 1, dataPointCount(got[0].Metrics[0].Data))
+			assert.Equal(t, tt.want, got[0].Metrics[0].Data)
 		})
 	}
 }
