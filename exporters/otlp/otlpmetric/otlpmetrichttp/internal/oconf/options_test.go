@@ -10,13 +10,16 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/envconfig"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -595,6 +598,47 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 
+		{
+			name: "Test Environment Invalid Compression",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":         "bogus",
+				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, NoCompression, c.Metrics.Compression)
+			},
+		},
+		{
+			name: "Test Environment Invalid Compression Override",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":         "gzip",
+				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "bogus",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, GzipCompression, c.Metrics.Compression)
+			},
+		},
+		{
+			name: "Test Environment Explicit None Compression Override",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":         "gzip",
+				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "none",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, NoCompression, c.Metrics.Compression)
+			},
+		},
+		{
+			name: "Test Environment Case Insensitive None Compression Override",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":         "gzip",
+				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "NoNe",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, NoCompression, c.Metrics.Compression)
+			},
+		},
+
 		// Timeout Tests
 		{
 			name: "Test With Timeout",
@@ -899,4 +943,23 @@ func TestCleanPath(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWithEnvCompressionInvalidValue(t *testing.T) {
+	var output strings.Builder
+	origLogger := global.GetLogger()
+	t.Cleanup(func() { global.SetLogger(origLogger) })
+	global.SetLogger(funcr.New(func(_, message string) {
+		output.WriteString(message)
+	}, funcr.Options{Verbosity: 1}))
+
+	reader := envconfig.EnvOptionsReader{
+		Namespace: "OTEL_EXPORTER_OTLP",
+		GetEnv:    func(string) string { return "BoGuS" },
+	}
+	called := false
+	reader.Apply(WithEnvCompression("COMPRESSION", func(Compression) { called = true }))
+	assert.False(t, called, "invalid values must not override existing configuration")
+	assert.Contains(t, output.String(), "OTEL_EXPORTER_OTLP_COMPRESSION")
+	assert.Contains(t, output.String(), "BoGuS")
 }

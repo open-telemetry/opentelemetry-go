@@ -152,8 +152,14 @@ func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOpt
 	return func(e *envconfig.EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
 			cp := NoCompression
-			if strings.EqualFold(v, "gzip") {
+			switch {
+			case strings.EqualFold(v, "gzip"):
 				cp = GzipCompression
+			case strings.EqualFold(v, "none"):
+				cp = NoCompression
+			default:
+				global.Warn(e.Namespace+"_"+n+" is set to an invalid value, ignoring.", "value", v)
+				return
 			}
 
 			fn(cp)
