@@ -666,13 +666,14 @@ func convHeaders(s string) (map[string]string, error) {
 			continue
 		}
 
-		// Only decode the value.
-		escVal, e := url.PathUnescape(rawVal)
+		// Trim raw format whitespace before decoding so percent-encoded
+		// whitespace is preserved as data.
+		escVal, e := url.PathUnescape(strings.TrimSpace(rawVal))
 		if e != nil {
 			err = errors.Join(err, fmt.Errorf("invalid header value: %s", rawVal))
 			continue
 		}
-		val := strings.TrimSpace(escVal)
+		val := escVal
 
 		out[key] = val
 	}
