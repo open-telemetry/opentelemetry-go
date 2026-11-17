@@ -1,5 +1,23 @@
 {% import 'helpers.j2' as h -%}
 {% import 'instrument.j2' as i -%}
+{%- macro sample_value(attr, pkg="", root_namespace="", attribute_value=false) -%}
+{%- if attr.type is mapping -%}
+{%- if not attribute_value -%}{{ pkg }}.{{ h.to_go_name(attr.name, root_namespace) }}Attr({%- endif -%}
+{{ attr.type.members[0].value | tojson }}
+{%- if not attribute_value -%}){%- endif -%}
+{%- elif attr.type == "string" -%}"value"
+{%- elif attr.type == "int" -%}7
+{%- elif attr.type == "double" -%}1.5
+{%- elif attr.type == "boolean" -%}true
+{%- elif attr.type == "string[]" -%}{{ '[]string{' if attribute_value else '' }}"value"{{ '}' if attribute_value else '' }}
+{%- elif attr.type == "int[]" -%}{{ '[]int{' if attribute_value else '' }}7{{ '}' if attribute_value else '' }}
+{%- elif attr.type == "double[]" -%}{{ '[]float64{' if attribute_value else '' }}1.5{{ '}' if attribute_value else '' }}
+{%- elif attr.type == "boolean[]" -%}{{ '[]bool{' if attribute_value else '' }}true{{ '}' if attribute_value else '' }}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro sample_attribute(attr) -%}
+attribute.{{ h.attr_type(attr) | map_text("attribute_type_method") }}("{{ attr.name }}", {{ sample_value(attr, attribute_value=true) }})
+{%- endmacro -%}
 // Code generated from semantic convention specification. DO NOT EDIT.
 
 // Copyright The OpenTelemetry Authors
@@ -8,10 +26,12 @@
 package semconv_test
 
 import (
+	"context"
 	"reflect"
 	"slices"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 {%- for group in ctx %}
@@ -30,13 +50,13 @@ func TestMetricConstructorOptions(t *testing.T) {
 {%- for metric in group.metrics %}
 {%- set name = h.to_go_name(metric.metric_name, group.root_namespace) %}
 {%- set inst = i.instrument(metric) %}
-{%- set variants = [name] %}
+{%- set variants = [{"name": name, "inst": inst}] %}
 {%- if "Observable" is not in inst and metric.instrument != "histogram" %}
-  {%- set variants = variants + [name ~ "Observable"] %}
+  {%- set variants = variants + [{"name": name ~ "Observable", "inst": inst | replace("64", "64Observable")}] %}
 {%- endif %}
 {%- set boundaries = metric.metric_name | map_text("custom_bucket_boundaries", "nil") %}
 {%- for variant in variants %}
-		{"{{ pkg }}/{{ variant }}", constructorTest({{ pkg }}.New{{ variant }}, "{{ metric.metric_name }}", {{ i.desc(metric) | tojson }}, "{{ metric.unit }}", {{ "true" if metric.instrument == "histogram" else "false" }}, {{ boundaries }})},
+		{"{{ pkg }}/{{ variant.name }}", constructorTest({{ pkg }}.New{{ variant.name }}, "{{ variant.inst }}Config", "{{ metric.metric_name }}", {{ i.desc(metric) | tojson }}, "{{ metric.unit }}", {{ "true" if metric.instrument == "histogram" else "false" }}, {{ boundaries }})},
 {%- endfor %}
 {%- endfor %}
 {%- endfor %}
@@ -46,9 +66,12 @@ func TestMetricConstructorOptions(t *testing.T) {
 	}
 }
 
-func constructorTest[O, I any](
+func constructorTest[O any, I interface {
+	Name() string
+	Unit() string
+}](
 	newInstrument func(metric.Meter, ...O) (I, error),
-	name, description, unit string,
+	kind, name, description, unit string,
 	histogram bool,
 	advice []float64,
 ) func(*testing.T) {
@@ -78,7 +101,8 @@ func constructorTest[O, I any](
 					}
 					before = slices.Clone(storage)
 				}
-				if _, err := newInstrument(m, options...); err != nil {
+				instrument, err := newInstrument(m, options...)
+				if err != nil {
 					t.Fatal(err)
 				}
 				if !reflect.DeepEqual(storage, before) {
@@ -86,6 +110,15 @@ func constructorTest[O, I any](
 				}
 				if m.config == nil {
 					t.Fatal("constructor did not create an instrument")
+				}
+				if got := reflect.TypeOf(m.config).Name(); got != kind {
+					t.Errorf("instrument config = %s, want %s", got, kind)
+				}
+				if got := instrument.Name(); got != name {
+					t.Errorf("instrument name = %q, want %q", got, name)
+				}
+				if got := instrument.Unit(); got != unit {
+					t.Errorf("instrument unit = %q, want %q", got, unit)
 				}
 				if m.name != name {
 					t.Errorf("name = %q, want %q", m.name, name)
@@ -126,6 +159,123 @@ func (m *constructorMeter) {{ inst }}(name string, options ...metric.{{ inst }}O
 	m.name = name
 	m.config = metric.New{{ inst }}Config(options...)
 	return m.Meter.{{ inst }}(name, options...)
+}
+{%- endfor %}
+{%- endfor %}{{ "\n" }}
+
+
+func TestMetricMeasurements(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		run func(*testing.T)
+	}{
+{#- Exercise shared Add/Record branches without generating a test for every metric. -#}
+{%- set selected = namespace(shapes=[]) %}
+{%- for group in ctx %}
+{%- set pkg = group.root_namespace | camel_case | lower ~ "conv" %}
+{%- for metric in group.metrics %}
+{%- set inst = i.instrument(metric) %}
+{%- if "Observable" is not in inst %}
+{%- set required = metric.attributes | required | attribute_sort %}
+{%- if metric.attributes is none or metric.attributes | length == 0 %}
+{%- set shape = "empty" %}
+{%- elif required | length == 0 %}
+{%- set shape = "optional" %}
+{%- else %}
+{%- set shape = "enum" if required | selectattr("type", "mapping") | list | length > 0 else "scalar" %}
+{%- endif %}
+{%- if (inst ~ shape) not in selected.shapes %}
+{%- set selected.shapes = selected.shapes + [inst ~ shape] %}
+{%- set name = h.to_go_name(metric.metric_name, group.root_namespace) %}
+{%- set method = "Add" if metric.instrument in ["counter", "updowncounter"] else "Record" %}
+{%- set optional = namespace(attrs=[], shapes=[]) %}
+{%- for attr in metric.attributes | not_required | attribute_sort %}
+{%- set attr_shape = "enum" if attr.type is mapping else attr.type %}
+{%- if attr_shape in ["enum", "string", "int"] and attr_shape not in optional.shapes %}
+{%- set optional.shapes = optional.shapes + [attr_shape] %}
+{%- set optional.attrs = optional.attrs + [attr] %}
+{%- endif %}
+{%- endfor %}
+		{"{{ pkg }}/{{ name }}", func(t *testing.T) {
+			capture := &{{ inst }}Capture{}
+			instrument := {{ pkg }}.{{ name }}{ {{ inst }}: capture }
+			measurementTest(t, &capture.measurementCapture, func(ctx context.Context, value {{ i.value_type(metric) | lower }}, attrs ...attribute.KeyValue) {
+				instrument.{{ method }}(ctx, value, {% for attr in required %}{{ sample_value(attr, pkg, group.root_namespace) }}, {% endfor %}attrs...)
+			}, []attribute.KeyValue{
+{%- for attr in required %}
+				{{ sample_attribute(attr) }},
+{%- endfor %}
+			}, []attribute.KeyValue{
+{%- for attr in optional.attrs %}
+				instrument.Attr{{ h.to_go_name(attr.name, group.root_namespace) }}({{ sample_value(attr, pkg, group.root_namespace) }}),
+{%- endfor %}
+			}, []attribute.KeyValue{
+{%- for attr in optional.attrs %}
+				{{ sample_attribute(attr) }},
+{%- endfor %}
+			}, {{ "0.125, 1.5" if i.value_type(metric) == "Float64" else "7" }})
+		}},
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+	}
+	for _, test := range tests {
+		t.Run(test.name, test.run)
+	}
+}
+
+func measurementTest[V int64 | float64](
+	t *testing.T,
+	capture *measurementCapture[V],
+	measure func(context.Context, V, ...attribute.KeyValue),
+	required, optional, wantOptional []attribute.KeyValue,
+	values ...V,
+) {
+	t.Helper()
+	t.Parallel()
+	optional = append(optional, attribute.String("extra", "value"))
+	wantOptional = append(wantOptional, attribute.String("extra", "value"))
+	for _, value := range values {
+		for _, withOptional := range []bool{false, true} {
+			var attrs []attribute.KeyValue
+			wantAttrs := slices.Clone(required)
+			if withOptional {
+				attrs = optional
+				wantAttrs = append(wantAttrs, wantOptional...)
+			}
+			*capture = measurementCapture[V]{}
+			measure(t.Context(), value, attrs...)
+			want := attribute.NewSet(wantAttrs...)
+			if capture.calls != 1 || capture.value != value || !capture.attrs.Equals(&want) {
+				t.Errorf("measurement with optional attributes %t = %d calls, value %v, attributes %v; want 1 call, value %v, attributes %v", withOptional, capture.calls, capture.value, capture.attrs, value, want)
+			}
+		}
+	}
+}
+
+type measurementCapture[V int64 | float64] struct {
+	calls int
+	value V
+	attrs attribute.Set
+}
+{%- for value in ["Int64", "Float64"] %}
+{%- for kind in ["Counter", "UpDownCounter", "Histogram", "Gauge"] %}
+{%- set inst = value ~ kind %}
+{%- set method = "Add" if kind in ["Counter", "UpDownCounter"] else "Record" %}
+
+type {{ inst }}Capture struct {
+	noop.{{ inst }}
+	measurementCapture[{{ value | lower }}]
+}
+
+func (*{{ inst }}Capture) Enabled(context.Context) bool { return true }
+
+func (c *{{ inst }}Capture) {{ method }}(_ context.Context, value {{ value | lower }}, options ...metric.{{ method }}Option) {
+	c.calls++
+	c.value = value
+	c.attrs = metric.New{{ method }}Config(options).Attributes()
 }
 {%- endfor %}
 {%- endfor %}{{ "\n" }}

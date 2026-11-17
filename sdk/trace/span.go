@@ -471,7 +471,7 @@ func (s *recordingSpan) End(options ...trace.SpanEndOption) {
 	}
 	snap := s.snapshot()
 	for _, sp := range sps {
-		sp.sp.OnEnd(snap)
+		sp.onEnd(snap)
 	}
 }
 
