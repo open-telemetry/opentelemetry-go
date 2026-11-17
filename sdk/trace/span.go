@@ -393,6 +393,41 @@ func normAttr(attr attribute.KeyValue, depthLimit, lengthLimit int) attribute.Ke
 	return attrnorm.Truncate(lengthLimit, attr)
 }
 
+// normAttrs applies the same value normalization as normAttr to every
+// attribute in kvs. Top-level keys are not deduplicated.
+//
+// The caller's slice is never modified. When no value changes, kvs is
+// returned so the unlimited and already-within-limit paths do not allocate.
+func normAttrs(kvs []attribute.KeyValue, depthLimit, lengthLimit int) []attribute.KeyValue {
+	if len(kvs) == 0 || lengthLimit < 0 {
+		// A negative length limit is unlimited, so only nested map
+		// deduplication and depth normalization run.
+		attrs, _, _ := attrnorm.KeyValuesDedupLimitDepth(kvs, depthLimit)
+		return attrs
+	}
+
+	var normalized []attribute.KeyValue
+	for i, kv := range kvs {
+		next := normAttr(kv, depthLimit, lengthLimit)
+		if normalized != nil {
+			normalized[i] = next
+			continue
+		}
+		// Composite attribute values are stored as arrays, so this
+		// comparison does not panic.
+		if next == kv {
+			continue
+		}
+		normalized = make([]attribute.KeyValue, len(kvs))
+		copy(normalized, kvs[:i])
+		normalized[i] = next
+	}
+	if normalized == nil {
+		return kvs
+	}
+	return normalized
+}
+
 // End ends the span. This method does nothing if the span is already ended or
 // is not being recorded.
 //
@@ -549,9 +584,10 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
-	attrs, _, _ := attrnorm.KeyValuesDedupLimitDepth(
+	attrs := normAttrs(
 		c.Attributes(),
 		s.tracer.provider.spanLimits.AttributeValueDepthLimit,
+		s.tracer.provider.spanLimits.AttributeValueLengthLimit,
 	)
 	e := Event{Name: name, Attributes: attrs, Time: c.Timestamp()}
 
@@ -732,9 +768,10 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		return
 	}
 
-	attrs, _, _ := attrnorm.KeyValuesDedupLimitDepth(
+	attrs := normAttrs(
 		link.Attributes,
 		s.tracer.provider.spanLimits.AttributeValueDepthLimit,
+		s.tracer.provider.spanLimits.AttributeValueLengthLimit,
 	)
 	l := Link{SpanContext: link.SpanContext, Attributes: attrs}
 
