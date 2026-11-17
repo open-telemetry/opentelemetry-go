@@ -180,7 +180,10 @@ var errExpoHist = fmt.Errorf("%w: exponential histogram", errAgg)
 // err returns an error for any misconfigured Aggregation.
 func (e AggregationBase2ExponentialHistogram) err() error {
 	if e.MaxScale > expoMaxScale {
-		return fmt.Errorf("%w: max size %d is greater than maximum scale %d", errExpoHist, e.MaxSize, expoMaxScale)
+		return fmt.Errorf("%w: max scale %d is greater than maximum scale %d", errExpoHist, e.MaxScale, expoMaxScale)
+	}
+	if e.MaxScale < expoMinScale {
+		return fmt.Errorf("%w: max scale %d is less than minimum scale %d", errExpoHist, e.MaxScale, expoMinScale)
 	}
 	if e.MaxSize <= 0 {
 		return fmt.Errorf("%w: max size %d is less than or equal to zero", errExpoHist, e.MaxSize)
