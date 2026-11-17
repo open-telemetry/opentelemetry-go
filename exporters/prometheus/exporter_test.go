@@ -3946,6 +3946,24 @@ func TestExporterSelfInstrumentationDroppedMetrics(t *testing.T) {
 			wantSuccess: 1,
 			wantFailed:  2,
 		},
+		{
+			name: "target_info attribute translation failure records operation error without failed data points",
+			setup: func(t *testing.T, reg *prometheus.Registry) {
+				exp, err := New(
+					WithRegisterer(reg),
+					WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+				)
+				require.NoError(t, err)
+				res := resource.NewSchemaless(attribute.Key("$%^&").String("bad"))
+				mp := metric.NewMeterProvider(metric.WithReader(exp), metric.WithResource(res))
+				c, err := mp.Meter("test").Int64Counter("valid_counter")
+				require.NoError(t, err)
+				c.Add(t.Context(), 1, otelmetric.WithAttributes(attribute.String("k", "v1")))
+				c.Add(t.Context(), 2, otelmetric.WithAttributes(attribute.String("k", "v2")))
+			},
+			wantSuccess: 2,
+			wantFailed:  0,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4014,8 +4032,12 @@ func TestExporterSelfInstrumentationDroppedMetrics(t *testing.T) {
 
 			assert.Zero(t, gotInflight, "inflight should return to 0 after scrape")
 			assert.Equal(t, tc.wantSuccess, gotSuccess, "unexpected exported success count")
-			assert.Equal(t, tc.wantFailed, gotFailed, "unexpected exported failed count")
-			assert.True(t, hasExportErrAttr, "expected error.type attribute on failed exported metric")
+			if tc.wantFailed > 0 {
+				assert.Equal(t, tc.wantFailed, gotFailed, "unexpected exported failed count")
+				assert.True(t, hasExportErrAttr, "expected error.type attribute on failed exported metric")
+			} else {
+				assert.False(t, hasExportErrAttr, "unexpected error.type attribute on exported metric")
+			}
 			assert.True(t, hasOperationErr, "expected error.type attribute on operation.duration metric")
 		})
 	}

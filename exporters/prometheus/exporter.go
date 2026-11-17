@@ -263,6 +263,8 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 			)
 			if e != nil {
 				// If the target info metric is invalid, disable sending it.
+				// Join into err (for operation.duration) rather than exportErr because
+				// target_info is not counted in countDataPoints and ScopeMetrics still export.
 				c.disableTargetInfo = true
 				otel.Handle(e)
 				err = errors.Join(err, fmt.Errorf("failed to createInfoMetric: %w", e))
