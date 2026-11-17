@@ -154,7 +154,7 @@ func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
 func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOptionsReader) {
 	return func(e *envconfig.EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
-			cp := NoCompression
+			var cp Compression
 			switch {
 			case strings.EqualFold(v, "gzip"):
 				cp = GzipCompression
