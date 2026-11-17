@@ -1020,4 +1020,7 @@ func TestWithEnvCompressionInvalidValue(t *testing.T) {
 	assert.False(t, called, "invalid values must not override existing configuration")
 	assert.Contains(t, output.String(), "OTEL_EXPORTER_OTLP_COMPRESSION")
 	assert.Contains(t, output.String(), "BoGuS")
+	assert.Contains(t, output.String(), "Supported values:")
+	assert.Contains(t, output.String(), "gzip")
+	assert.Contains(t, output.String(), "none")
 }
