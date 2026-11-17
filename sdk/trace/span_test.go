@@ -6,6 +6,8 @@ package trace
 import (
 	"errors"
 	"fmt"
+	"math"
+	"strings"
 	"sync"
 	"testing"
 
@@ -14,6 +16,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -435,4 +438,252 @@ func BenchmarkRecordingSpanRecordError(b *testing.B) {
 			wg.Wait()
 		})
 	}
+}
+
+func nanFloat64SliceAttr() attribute.KeyValue {
+	return attribute.Float64Slice("nan_slice", []float64{math.NaN(), 1.5})
+}
+
+func assertNaNFloat64Slice(t *testing.T, kv attribute.KeyValue, rest ...float64) {
+	t.Helper()
+	assertNaNFloat64SliceValue(t, kv.Value, rest...)
+}
+
+func assertNaNFloat64SliceValue(t *testing.T, v attribute.Value, rest ...float64) {
+	t.Helper()
+	got := v.AsFloat64Slice()
+	require.Len(t, got, 1+len(rest))
+	assert.Truef(t, math.IsNaN(got[0]), "got %v", got)
+	for i, want := range rest {
+		assert.Equal(t, want, got[i+1])
+	}
+}
+
+func assertNormAttrsUnchanged(t *testing.T, kvs []attribute.KeyValue, depthLimit, lengthLimit int) {
+	t.Helper()
+	require.NotEmpty(t, kvs)
+
+	var out []attribute.KeyValue
+	allocs := testing.AllocsPerRun(1000, func() {
+		out = normAttrs(kvs, depthLimit, lengthLimit)
+	})
+	assert.Zero(t, allocs)
+	require.Len(t, out, len(kvs))
+	assert.Same(t, &kvs[0], &out[0], "normAttrs copied an unchanged attribute list")
+}
+
+func TestNormAttrsNaNFloat64SliceDoesNotAllocate(t *testing.T) {
+	const lengthLimit = 16
+	depthLimit := DefaultAttributeValueDepthLimit
+
+	t.Run("TopLevel", func(t *testing.T) {
+		kvs := []attribute.KeyValue{nanFloat64SliceAttr()}
+		_, changed := normAttr(kvs[0], depthLimit, lengthLimit)
+		assert.False(t, changed)
+		assertNormAttrsUnchanged(t, kvs, depthLimit, lengthLimit)
+		assertNaNFloat64Slice(t, kvs[0], 1.5)
+	})
+
+	t.Run("WideSlice", func(t *testing.T) {
+		kvs := []attribute.KeyValue{
+			attribute.Float64Slice("nan_slice", []float64{math.NaN(), 1, 2, 3, 4, 5}),
+		}
+		assertNormAttrsUnchanged(t, kvs, depthLimit, lengthLimit)
+		assertNaNFloat64Slice(t, kvs[0], 1, 2, 3, 4, 5)
+	})
+
+	t.Run("WithPrimitiveArrays", func(t *testing.T) {
+		kvs := []attribute.KeyValue{
+			attribute.Bool("ok", true),
+			nanFloat64SliceAttr(),
+			attribute.Int64Slice("ints", []int64{1, 2, 3, 4, 5, 6}),
+			attribute.BoolSlice("flags", []bool{true, false, true, false}),
+		}
+		assertNormAttrsUnchanged(t, kvs, depthLimit, lengthLimit)
+		assertNaNFloat64Slice(t, kvs[1], 1.5)
+	})
+}
+
+func TestNormAttrsNestedNaNFloat64SliceDoesNotAllocate(t *testing.T) {
+	const lengthLimit = 16
+	depthLimit := DefaultAttributeValueDepthLimit
+	nan := attribute.Float64SliceValue([]float64{math.NaN()})
+
+	tests := []struct {
+		name string
+		kv   attribute.KeyValue
+	}{
+		{
+			name: "Slice",
+			kv:   attribute.Slice("nested", nan),
+		},
+		{
+			name: "Map",
+			kv:   attribute.Map("nested", attribute.Float64Slice("nan", []float64{math.NaN()})),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kvs := []attribute.KeyValue{tt.kv}
+			_, changed := normAttr(tt.kv, depthLimit, lengthLimit)
+			assert.False(t, changed)
+			assertNormAttrsUnchanged(t, kvs, depthLimit, lengthLimit)
+
+			switch tt.kv.Value.Type() {
+			case attribute.SLICE:
+				elems := kvs[0].Value.AsSlice()
+				require.Len(t, elems, 1)
+				assertNaNFloat64SliceValue(t, elems[0])
+			case attribute.MAP:
+				entries := kvs[0].Value.AsMap()
+				require.Len(t, entries, 1)
+				assertNaNFloat64SliceValue(t, entries[0].Value)
+			}
+		})
+	}
+}
+
+func TestNormAttrsNaNFloat64SliceCopyOnWrite(t *testing.T) {
+	const lengthLimit = 16
+	long := strings.Repeat("a", lengthLimit+4)
+
+	t.Run("OverLimitString", func(t *testing.T) {
+		kvs := []attribute.KeyValue{
+			nanFloat64SliceAttr(),
+			attribute.String("long", long),
+		}
+		_, nanChanged := normAttr(kvs[0], DefaultAttributeValueDepthLimit, lengthLimit)
+		assert.False(t, nanChanged)
+		_, changed := normAttr(kvs[1], DefaultAttributeValueDepthLimit, lengthLimit)
+		assert.True(t, changed)
+
+		caller := append([]attribute.KeyValue(nil), kvs...)
+		out := normAttrs(kvs, DefaultAttributeValueDepthLimit, lengthLimit)
+
+		require.Len(t, out, len(kvs))
+		assert.NotSame(t, &kvs[0], &out[0])
+		assertNaNFloat64Slice(t, out[0], 1.5)
+		assert.Equal(t, strings.Repeat("a", lengthLimit), out[1].Value.AsString())
+		assertNaNFloat64Slice(t, kvs[0], 1.5)
+		assert.Equal(t, long, kvs[1].Value.AsString())
+		assert.Equal(t, caller[1], kvs[1])
+	})
+
+	t.Run("DuplicateMapKeys", func(t *testing.T) {
+		kvs := []attribute.KeyValue{
+			nanFloat64SliceAttr(),
+			attribute.Map("dups",
+				attribute.Float64Slice("nan", []float64{math.NaN()}),
+				attribute.String("k", "abcdef"),
+				attribute.String("k", "zzzzzz"),
+			),
+		}
+		_, nanChanged := normAttr(kvs[0], DefaultAttributeValueDepthLimit, lengthLimit)
+		assert.False(t, nanChanged)
+		_, changed := normAttr(kvs[1], DefaultAttributeValueDepthLimit, lengthLimit)
+		assert.True(t, changed)
+
+		out := normAttrs(kvs, DefaultAttributeValueDepthLimit, lengthLimit)
+
+		require.Len(t, out, len(kvs))
+		assert.NotSame(t, &kvs[0], &out[0])
+		assertNaNFloat64Slice(t, out[0], 1.5)
+		gotMap := out[1].Value.AsMap()
+		require.Len(t, gotMap, 2)
+		assert.Equal(t, attribute.String("k", "zzzzzz"), gotMap[0])
+		assertNaNFloat64SliceValue(t, gotMap[1].Value)
+
+		callerMap := kvs[1].Value.AsMap()
+		require.Len(t, callerMap, 3)
+		assert.Equal(t, "abcdef", callerMap[0].Value.AsString())
+		assert.Equal(t, "zzzzzz", callerMap[1].Value.AsString())
+		assertNaNFloat64SliceValue(t, callerMap[2].Value)
+	})
+
+	t.Run("DepthLimit", func(t *testing.T) {
+		kvs := []attribute.KeyValue{
+			nanFloat64SliceAttr(),
+			attribute.Map("nested",
+				attribute.String("keep", "short"),
+				attribute.Map("child", attribute.String("leaf", long)),
+			),
+		}
+		_, nanChanged := normAttr(kvs[0], 1, lengthLimit)
+		assert.False(t, nanChanged)
+		_, changed := normAttr(kvs[1], 1, lengthLimit)
+		assert.True(t, changed)
+
+		out := normAttrs(kvs, 1, lengthLimit)
+
+		require.Len(t, out, len(kvs))
+		assert.NotSame(t, &kvs[0], &out[0])
+		assertNaNFloat64Slice(t, out[0], 1.5)
+		assert.Equal(t, []attribute.KeyValue{
+			{Key: "child"},
+			attribute.String("keep", "short"),
+		}, out[1].Value.AsMap())
+
+		callerMap := kvs[1].Value.AsMap()
+		require.Len(t, callerMap, 2)
+		assert.Equal(t, attribute.Key("child"), callerMap[0].Key)
+		child := callerMap[0].Value.AsMap()
+		require.Len(t, child, 1)
+		assert.Equal(t, long, child[0].Value.AsString())
+		assert.Equal(t, "short", callerMap[1].Value.AsString())
+	})
+}
+
+func TestNaNFloat64SliceEventAndLinkAttributes(t *testing.T) {
+	limits := NewSpanLimits()
+	limits.AttributeValueLengthLimit = 16
+
+	rec := new(recorder)
+	tp := NewTracerProvider(WithRawSpanLimits(limits), WithSpanProcessor(rec))
+	tracer := tp.Tracer(t.Name())
+	ctx := t.Context()
+	sc := testLinkSpanContext()
+
+	linkAttrs := []attribute.KeyValue{nanFloat64SliceAttr()}
+	_, span := tracer.Start(ctx, "span", trace.WithLinks(trace.Link{
+		SpanContext: sc,
+		Attributes:  linkAttrs,
+	}))
+	rs := span.(*recordingSpan)
+	require.Len(t, rs.links.queue, 1)
+	assert.Same(t, &linkAttrs[0], &rs.links.queue[0].Attributes[0])
+	assertNaNFloat64Slice(t, rs.links.queue[0].Attributes[0], 1.5)
+
+	eventAttrs := []attribute.KeyValue{nanFloat64SliceAttr()}
+	span.AddEvent("event", trace.WithAttributes(eventAttrs...))
+	require.Len(t, rs.events.queue, 1)
+	assertNaNFloat64Slice(t, rs.events.queue[0].Attributes[0], 1.5)
+	assertNaNFloat64Slice(t, eventAttrs[0], 1.5)
+
+	addLinkAttrs := []attribute.KeyValue{nanFloat64SliceAttr()}
+	span.AddLink(trace.Link{SpanContext: sc, Attributes: addLinkAttrs})
+	require.Len(t, rs.links.queue, 2)
+	assert.Same(t, &addLinkAttrs[0], &rs.links.queue[1].Attributes[0])
+	assertNaNFloat64Slice(t, addLinkAttrs[0], 1.5)
+
+	recordAttrs := []attribute.KeyValue{nanFloat64SliceAttr()}
+	span.RecordError(errors.New("nan-msg"), trace.WithAttributes(recordAttrs...))
+	require.Len(t, rs.events.queue, 2)
+	recorded := rs.events.queue[1].Attributes
+	require.GreaterOrEqual(t, len(recorded), 3)
+	assertNaNFloat64Slice(t, recorded[0], 1.5)
+	assert.Equal(t, semconv.ExceptionTypeKey, recorded[1].Key)
+	assert.LessOrEqual(t, len(recorded[1].Value.AsString()), limits.AttributeValueLengthLimit)
+	assert.Equal(t, semconv.ExceptionMessage("nan-msg"), recorded[2])
+	assertNaNFloat64Slice(t, recordAttrs[0], 1.5)
+
+	span.End()
+	require.NoError(t, tp.Shutdown(ctx))
+	require.Len(t, *rec, 1)
+	got := (*rec)[0]
+	require.Len(t, got.Links(), 2)
+	assertNaNFloat64Slice(t, got.Links()[0].Attributes[0], 1.5)
+	assertNaNFloat64Slice(t, got.Links()[1].Attributes[0], 1.5)
+	require.Len(t, got.Events(), 2)
+	assertNaNFloat64Slice(t, got.Events()[0].Attributes[0], 1.5)
+	assertNaNFloat64Slice(t, got.Events()[1].Attributes[0], 1.5)
 }

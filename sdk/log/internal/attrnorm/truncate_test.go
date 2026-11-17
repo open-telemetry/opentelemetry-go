@@ -9,10 +9,12 @@ package attrnorm
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -407,7 +409,8 @@ func TestTruncateAttr(t *testing.T) {
 	for _, test := range tests {
 		name := fmt.Sprintf("%s->%s(limit:%d)", test.attr.Key, test.attr.Value.String(), test.limit)
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, test.want, Truncate(test.limit, test.attr))
+			got, _ := Truncate(test.limit, test.attr)
+			assert.Equal(t, test.want, got)
 		})
 	}
 }
@@ -544,10 +547,12 @@ func TestTruncateNoopAllocationFree(t *testing.T) {
 		t.Run(test.name+"/KeyValue", func(t *testing.T) {
 			input := attribute.KeyValue{Key: "key", Value: test.value}
 			var got attribute.KeyValue
+			var changed bool
 			allocs := testing.AllocsPerRun(1000, func() {
-				got = Truncate(16, input)
+				got, changed = Truncate(16, input)
 			})
 			assert.Zero(t, allocs)
+			assert.False(t, changed)
 			assert.Equal(t, input, got)
 		})
 	}
@@ -850,6 +855,52 @@ func TestTruncateString(t *testing.T) {
 	}
 }
 
+func TestTruncateNaNFloat64SliceUnchanged(t *testing.T) {
+	const limit = 16
+	tests := []attribute.KeyValue{
+		attribute.Float64Slice("nan", []float64{math.NaN(), 1.5}),
+		attribute.Slice("nested", attribute.Float64SliceValue([]float64{math.NaN()})),
+		attribute.Map("nested", attribute.Float64Slice("nan", []float64{math.NaN()})),
+		attribute.BoolSlice("flags", []bool{true, false, true, false}),
+		attribute.Int64Slice("ints", []int64{1, 2, 3, 4, 5, 6}),
+	}
+	for _, attr := range tests {
+		t.Run(attr.Value.Type().String(), func(t *testing.T) {
+			var got attribute.KeyValue
+			var changed bool
+			allocs := testing.AllocsPerRun(1000, func() {
+				got, changed = Truncate(limit, attr)
+			})
+			assert.Zero(t, allocs)
+			assert.False(t, changed)
+			assert.Equal(t, attr.Key, got.Key)
+			assert.Equal(t, attr.Value.Type(), got.Value.Type())
+		})
+	}
+
+	long := attribute.String("s", "toolong")
+	got, changed := Truncate(3, long)
+	assert.True(t, changed)
+	assert.Equal(t, attribute.String("s", "too"), got)
+
+	fitted := attribute.String("s", "ok")
+	got, changed = Truncate(limit, fitted)
+	assert.False(t, changed)
+	assert.Equal(t, fitted, got)
+
+	mixed := attribute.Slice(
+		"mixed",
+		attribute.Float64SliceValue([]float64{math.NaN()}),
+		attribute.StringValue("toolong"),
+	)
+	got, changed = Truncate(3, mixed)
+	assert.True(t, changed)
+	elems := got.Value.AsSlice()
+	require.Len(t, elems, 2)
+	assert.True(t, math.IsNaN(elems[0].AsFloat64Slice()[0]))
+	assert.Equal(t, "too", elems[1].AsString())
+}
+
 func BenchmarkTruncateAttr(b *testing.B) {
 	const key = "key"
 
@@ -863,7 +914,7 @@ func BenchmarkTruncateAttr(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				var out attribute.KeyValue
 				for pb.Next() {
-					out = Truncate(limit, attr)
+					out, _ = Truncate(limit, attr)
 				}
 				_ = out
 			})

@@ -278,7 +278,7 @@ func (s *recordingSpan) SetAttributes(attributes ...attribute.KeyValue) {
 			s.addDroppedAttr(1)
 			continue
 		}
-		a = normAttr(
+		a, _ = normAttr(
 			a,
 			s.tracer.provider.spanLimits.AttributeValueDepthLimit,
 			s.tracer.provider.spanLimits.AttributeValueLengthLimit,
@@ -356,7 +356,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 
 		if idx, ok := exists[a.Key]; ok {
 			// Perform all updates before dropping, even when at capacity.
-			a = normAttr(
+			a, _ = normAttr(
 				a,
 				s.tracer.provider.spanLimits.AttributeValueDepthLimit,
 				s.tracer.provider.spanLimits.AttributeValueLengthLimit,
@@ -370,7 +370,7 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 			// updates are checked and performed.
 			s.addDroppedAttr(1)
 		} else {
-			a = normAttr(
+			a, _ = normAttr(
 				a,
 				s.tracer.provider.spanLimits.AttributeValueDepthLimit,
 				s.tracer.provider.spanLimits.AttributeValueLengthLimit,
@@ -381,16 +381,25 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 	}
 }
 
-func normAttr(attr attribute.KeyValue, depthLimit, lengthLimit int) attribute.KeyValue {
+func normAttr(attr attribute.KeyValue, depthLimit, lengthLimit int) (attribute.KeyValue, bool) {
+	changed := false
 	switch attr.Value.Type() {
 	case attribute.SLICE, attribute.MAP:
 		if depthLimit < 0 {
-			attr, _ = attrnorm.KeyValueDedup(attr)
+			var deduplicated bool
+			attr, deduplicated = attrnorm.KeyValueDedup(attr)
+			changed = deduplicated
 		} else {
-			attr, _, _ = attrnorm.KeyValueDedupLimitDepth(attr, depthLimit)
+			// Depth limiting and deduplication are independent. Either one
+			// replaces the value, including when truncation later leaves the
+			// surviving value as it is.
+			var depthLimited, deduplicated bool
+			attr, depthLimited, deduplicated = attrnorm.KeyValueDedupLimitDepth(attr, depthLimit)
+			changed = depthLimited || deduplicated
 		}
 	}
-	return attrnorm.Truncate(lengthLimit, attr)
+	attr, truncated := attrnorm.Truncate(lengthLimit, attr)
+	return attr, changed || truncated
 }
 
 // normAttrs applies the same value normalization as normAttr to every
@@ -398,6 +407,9 @@ func normAttr(attr attribute.KeyValue, depthLimit, lengthLimit int) attribute.Ke
 //
 // The caller's slice is never modified. When no value changes, kvs is
 // returned so the unlimited and already-within-limit paths do not allocate.
+// Callers use the change flag from normalization. Comparing the values would
+// walk numeric and boolean arrays, and it would treat an unchanged float64
+// slice that contains a NaN as different.
 func normAttrs(kvs []attribute.KeyValue, depthLimit, lengthLimit int) []attribute.KeyValue {
 	if len(kvs) == 0 || lengthLimit < 0 {
 		// A negative length limit is unlimited, so only nested map
@@ -408,14 +420,12 @@ func normAttrs(kvs []attribute.KeyValue, depthLimit, lengthLimit int) []attribut
 
 	var normalized []attribute.KeyValue
 	for i, kv := range kvs {
-		next := normAttr(kv, depthLimit, lengthLimit)
+		next, changed := normAttr(kv, depthLimit, lengthLimit)
 		if normalized != nil {
 			normalized[i] = next
 			continue
 		}
-		// Composite attribute values are stored as arrays, so this
-		// comparison does not panic.
-		if next == kv {
+		if !changed {
 			continue
 		}
 		normalized = make([]attribute.KeyValue, len(kvs))
