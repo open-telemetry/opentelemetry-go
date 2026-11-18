@@ -10,12 +10,15 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/envconfig"
+	"go.opentelemetry.io/otel/internal/global"
 )
 
 const (
@@ -589,9 +592,27 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test Environment Compression Case Insensitive",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION": "GZIP",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, GzipCompression, c.Traces.Compression)
+			},
+		},
+		{
 			name: "Test Environment Signal Specific Compression",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION": "gzip",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, GzipCompression, c.Traces.Compression)
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Compression Case Insensitive",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION": "GZip",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.Equal(t, GzipCompression, c.Traces.Compression)
@@ -713,6 +734,47 @@ func TestConfigs(t *testing.T) {
 				} else {
 					assert.Equal(t, ProtocolHTTPProtobuf, c.Traces.Protocol)
 				}
+			},
+		},
+
+		{
+			name: "Test Environment Invalid Compression",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":        "bogus",
+				"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION": "",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, NoCompression, c.Traces.Compression)
+			},
+		},
+		{
+			name: "Test Environment Invalid Compression Override",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":        "gzip",
+				"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION": "bogus",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, GzipCompression, c.Traces.Compression)
+			},
+		},
+		{
+			name: "Test Environment Explicit None Compression Override",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":        "gzip",
+				"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION": "none",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, NoCompression, c.Traces.Compression)
+			},
+		},
+		{
+			name: "Test Environment Case Insensitive None Compression Override",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":        "gzip",
+				"OTEL_EXPORTER_OTLP_TRACES_COMPRESSION": "NoNe",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, NoCompression, c.Traces.Compression)
 			},
 		},
 
@@ -935,4 +997,26 @@ func TestCleanPath(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWithEnvCompressionInvalidValue(t *testing.T) {
+	var output strings.Builder
+	origLogger := global.GetLogger()
+	t.Cleanup(func() { global.SetLogger(origLogger) })
+	global.SetLogger(funcr.New(func(_, message string) {
+		output.WriteString(message)
+	}, funcr.Options{Verbosity: 1}))
+
+	reader := envconfig.EnvOptionsReader{
+		Namespace: "OTEL_EXPORTER_OTLP",
+		GetEnv:    func(string) string { return "BoGuS" },
+	}
+	called := false
+	reader.Apply(WithEnvCompression("COMPRESSION", func(Compression) { called = true }))
+	assert.False(t, called, "invalid values must not override existing configuration")
+	assert.Contains(t, output.String(), "OTEL_EXPORTER_OTLP_COMPRESSION")
+	assert.Contains(t, output.String(), "BoGuS")
+	assert.Contains(t, output.String(), "Supported values:")
+	assert.Contains(t, output.String(), "gzip")
+	assert.Contains(t, output.String(), "none")
 }
