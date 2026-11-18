@@ -47,6 +47,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Support custom encoders implementing `SetIndent` with `WithPrettyPrint` in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#9308)
 - Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
+- Improve the performance of sum, last-value, and explicit-bucket histogram measurements immediately after collection in `go.opentelemetry.io/otel/sdk/metric` for delta temporality by lazily clearing storage. (#8276)
 - Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
   Include instructions for upgrading the bridge to v1.47.0.
   See the [bridge version compatibility documentation](bridge/opentracing/README.md#version-compatibility). (#9209)
@@ -69,6 +70,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Honor explicitly empty histogram bucket-boundary advice in `go.opentelemetry.io/otel/sdk/metric`, producing a single bucket while preserving count and sum.
   Calling `WithExplicitBucketBoundaries` in `go.opentelemetry.io/otel/metric` with no arguments or a nil slice now explicitly advises a single unbounded bucket.
   Omitting the option preserves the reader's boundaries. (#9495)
+- Record Prometheus exporter self-observability `otel.sdk.exporter.metric_data_point.inflight` and `otel.sdk.exporter.metric_data_point.exported` metrics per scrape batch instead of per metric family, accounting for metrics dropped during resource, scope, or metric validation in `go.opentelemetry.io/otel/exporters/prometheus`. (#9465)
 - Warn and ignore invalid compression environment values instead of overriding existing settings in
   `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`,
   `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,
