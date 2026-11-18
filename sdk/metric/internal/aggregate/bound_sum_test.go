@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,9 +26,36 @@ type testPinVal struct {
 	attrs attribute.Set
 }
 
+func assertDeltaEntrySmaller[N int64 | float64](t *testing.T) {
+	t.Helper()
+	resFunc := func(attribute.Set) FilteredExemplarReservoir[N] {
+		return &dropRes[N]{}
+	}
+	ds := newBoundDeltaSum[N](false, 0, resFunc)
+	cs := newBoundCumulativeSum[N](false, 0, resFunc)
+	lazy := newLazyFilteredAttributes(alice, nil)
+
+	deltaEntry := ds.vals.pin(lazy, ds.initValue)[0]
+	cumEntry := cs.values.pin(lazy, cs.initValue)
+	require.NotNil(t, deltaEntry)
+	require.NotNil(t, cumEntry)
+
+	assert.Less(t, unsafe.Sizeof(*deltaEntry), unsafe.Sizeof(*cumEntry))
+	assert.Less(
+		t,
+		unsafe.Sizeof(*deltaEntry)-unsafe.Sizeof(deltaEntry.val),
+		unsafe.Sizeof(sync.Once{}),
+	)
+}
+
+func TestBoundEntryDeltaSmallerThanCumulative(t *testing.T) {
+	t.Run("Int64", assertDeltaEntrySmaller[int64])
+	t.Run("Float64", assertDeltaEntrySmaller[float64])
+}
+
 func TestBoundLimitedSyncMapPin(t *testing.T) {
-	newVal := func(attr attribute.Set) testPinVal {
-		return testPinVal{attrs: attr}
+	initVal := func(v *testPinVal, attr attribute.Set) {
+		v.attrs = attr
 	}
 
 	newMap := func(limit int) boundLimitedSyncMap[testPinVal] {
@@ -41,13 +69,13 @@ func TestBoundLimitedSyncMapPin(t *testing.T) {
 		attr1 := attribute.NewSet(attribute.String("k", "1"))
 		lazy1 := newLazyFilteredAttributes(attr1, nil)
 
-		e1 := m.pin(lazy1, newVal)
+		e1 := m.pin(lazy1, initVal)
 		assert.True(t, e1.bound)
 		assert.False(t, e1.measured.Load())
 		assert.Equal(t, 1, m.Len(), "bound series is resident in map")
 
 		// Duplicate pin returns identical entry.
-		e1Dup := m.pin(lazy1, newVal)
+		e1Dup := m.pin(lazy1, initVal)
 		assert.Same(t, e1, e1Dup)
 		assert.Equal(t, 1, m.Len())
 
@@ -63,11 +91,11 @@ func TestBoundLimitedSyncMapPin(t *testing.T) {
 		attr1 := attribute.NewSet(attribute.String("k", "1"))
 		lazy1 := newLazyFilteredAttributes(attr1, nil)
 
-		vUnbound := m.LoadOrStoreAttr(lazy1, newVal)
+		vUnbound := m.LoadOrStoreAttr(lazy1, initVal)
 		assert.False(t, vUnbound.bound)
 		assert.Equal(t, 1, m.Len())
 
-		eBound := m.pin(lazy1, newVal)
+		eBound := m.pin(lazy1, initVal)
 		assert.True(t, eBound.bound)
 		assert.Same(t, vUnbound, eBound, "pin must promote existing unbound entry in-place")
 		assert.Equal(t, 1, m.Len())
@@ -78,10 +106,10 @@ func TestBoundLimitedSyncMapPin(t *testing.T) {
 		attr1 := attribute.NewSet(attribute.String("k", "1"))
 		lazy1 := newLazyFilteredAttributes(attr1, nil)
 
-		eBound := m.pin(lazy1, newVal)
+		eBound := m.pin(lazy1, initVal)
 		assert.Equal(t, 1, m.Len())
 
-		vUnbound := m.LoadOrStoreAttr(lazy1, newVal)
+		vUnbound := m.LoadOrStoreAttr(lazy1, initVal)
 		assert.Same(t, eBound, vUnbound, "unbound LoadOrStoreAttr must reuse pinned entry")
 		assert.Equal(t, 1, m.Len())
 	})
@@ -99,18 +127,18 @@ func TestBoundLimitedSyncMapPin(t *testing.T) {
 		lazy4 := newLazyFilteredAttributes(attr4, nil)
 
 		// Pin 1 concrete series (reserves 1 of 2 concrete slots).
-		e1 := m.pin(lazy1, newVal)
+		e1 := m.pin(lazy1, initVal)
 		assert.Equal(t, attr1, e1.val.attrs)
 
 		// Record 1 unbound concrete series (uses 2nd concrete slot) and 1 unbound overflow series.
-		v2 := m.LoadOrStoreAttr(lazy2, newVal)
-		v3 := m.LoadOrStoreAttr(lazy3, newVal)
+		v2 := m.LoadOrStoreAttr(lazy2, initVal)
+		v3 := m.LoadOrStoreAttr(lazy3, initVal)
 		assert.Equal(t, attr2, v2.val.attrs)
 		assert.Equal(t, overflowSet, v3.val.attrs)
 
 		// An unbound measurement for the pre-bound concrete series (attr1)
 		// after overflow has already occurred must still resolve to e1 (not overflowSet).
-		v1Unbound := m.LoadOrStoreAttr(lazy1, newVal)
+		v1Unbound := m.LoadOrStoreAttr(lazy1, initVal)
 		assert.Same(t, e1, v1Unbound)
 		assert.Equal(t, 3, m.Len())
 
@@ -121,14 +149,14 @@ func TestBoundLimitedSyncMapPin(t *testing.T) {
 		assert.Equal(t, 1, m.Len())
 
 		// In the next cycle, attr4 should get the 1 available concrete slot, while attr3 overflows.
-		v4 := m.LoadOrStoreAttr(lazy4, newVal)
-		v3Next := m.LoadOrStoreAttr(lazy3, newVal)
+		v4 := m.LoadOrStoreAttr(lazy4, initVal)
+		v3Next := m.LoadOrStoreAttr(lazy3, initVal)
 		assert.Equal(t, attr4, v4.val.attrs)
 		assert.Equal(t, overflowSet, v3Next.val.attrs)
 
 		// Even after overflow in the second cycle, an unbound measurement for attr1
 		// must still resolve to e1 rather than routing to overflowSet.
-		v1Next := m.LoadOrStoreAttr(lazy1, newVal)
+		v1Next := m.LoadOrStoreAttr(lazy1, initVal)
 		assert.Same(t, e1, v1Next)
 	})
 
@@ -143,21 +171,21 @@ func TestBoundLimitedSyncMapPin(t *testing.T) {
 		lazy4 := newLazyFilteredAttributes(attr4, nil)
 
 		// Pin literal overflowSet before limit (uses 1 of 2 concrete slots).
-		eOver := m.pin(lazyOverflow, newVal)
+		eOver := m.pin(lazyOverflow, initVal)
 		assert.False(t, m.boundOverflow)
 
 		// Use 2nd concrete slot.
-		v2 := m.LoadOrStoreAttr(lazy2, newVal)
+		v2 := m.LoadOrStoreAttr(lazy2, initVal)
 		assert.Equal(t, attr2, v2.val.attrs)
 
 		// 3rd series overflows into existing eOver without freeing a concrete slot.
-		v3 := m.LoadOrStoreAttr(lazy3, newVal)
+		v3 := m.LoadOrStoreAttr(lazy3, initVal)
 		assert.Same(t, eOver, v3)
 
 		// 4th series must also overflow into eOver (not allocate a new concrete slot).
-		v4 := m.LoadOrStoreAttr(lazy4, newVal)
+		v4 := m.LoadOrStoreAttr(lazy4, initVal)
 		assert.Same(t, eOver, v4)
-		e4 := m.pin(lazy4, newVal)
+		e4 := m.pin(lazy4, initVal)
 		assert.Same(t, eOver, e4)
 	})
 
@@ -172,24 +200,24 @@ func TestBoundLimitedSyncMapPin(t *testing.T) {
 		lazy3 := newLazyFilteredAttributes(attr3, nil)
 
 		// Pin 1 concrete series and record literal overflowSet unbound (filling 2 concrete slots).
-		_ = m.pin(lazy1, newVal)
-		vOver := m.LoadOrStoreAttr(lazyOverflow, newVal)
+		_ = m.pin(lazy1, initVal)
+		vOver := m.LoadOrStoreAttr(lazyOverflow, initVal)
 
 		// Pinning attr2 at limit must promote vOver as the overflow entry.
-		e2 := m.pin(lazy2, newVal)
+		e2 := m.pin(lazy2, initVal)
 		assert.Same(t, vOver, e2)
 		assert.True(t, m.boundOverflow)
 
 		// After Clear(), the 2nd concrete slot is available again for attr3.
 		m.Clear()
-		v3 := m.LoadOrStoreAttr(lazy3, newVal)
+		v3 := m.LoadOrStoreAttr(lazy3, initVal)
 		assert.Equal(t, attr3, v3.val.attrs)
 	})
 }
 
 func TestBoundHotColdMapPin(t *testing.T) {
-	newVal := func(attr attribute.Set) testPinVal {
-		return testPinVal{attrs: attr}
+	initVal := func(v *testPinVal, attr attribute.Set) {
+		v.attrs = attr
 	}
 
 	var m boundHotColdMap[testPinVal]
@@ -204,13 +232,13 @@ func TestBoundHotColdMapPin(t *testing.T) {
 
 	// Record unbound attr1 and attr2 in the current hot buffer (filling all 2 concrete slots in hot).
 	h := m.start()
-	u1 := m.hot(h).LoadOrStoreAttr(lazy1, newVal)
+	u1 := m.hot(h).LoadOrStoreAttr(lazy1, initVal)
 	u1.measured.Store(true)
-	_ = m.hot(h).LoadOrStoreAttr(lazy2, newVal)
+	_ = m.hot(h).LoadOrStoreAttr(lazy2, initVal)
 	m.done(h)
 
 	// Pinning attr1 promotes u1 in the hot buffer and creates a fresh pinned entry in the cold buffer.
-	entries1 := m.pin(lazy1, newVal)
+	entries1 := m.pin(lazy1, initVal)
 	assert.Equal(t, attr1, entries1[0].val.attrs)
 	assert.Same(t, u1, entries1[h])
 	assert.NotSame(t, entries1[0], entries1[1])
@@ -218,7 +246,7 @@ func TestBoundHotColdMapPin(t *testing.T) {
 	assert.False(t, entries1[1-h].measured.Load())
 
 	// Pinning attr3 while hot has 2 concrete slots occupied must overflow in BOTH buffers.
-	entries3 := m.pin(lazy3, newVal)
+	entries3 := m.pin(lazy3, initVal)
 	assert.Equal(t, overflowSet, entries3[0].val.attrs)
 	assert.Equal(t, overflowSet, entries3[1].val.attrs)
 
@@ -227,7 +255,7 @@ func TestBoundHotColdMapPin(t *testing.T) {
 	readIdx := m.swapHotAndWait()
 	staleU2, ok := m.hotColdValMap[readIdx].Load(attr2.Equivalent())
 	require.True(t, ok)
-	entries2 := m.pin(lazy2, newVal)
+	entries2 := m.pin(lazy2, initVal)
 	assert.NotSame(t, staleU2, entries2[readIdx], "pin must not alias un-cleared cold buffer entry")
 	m.Clear(readIdx)
 }

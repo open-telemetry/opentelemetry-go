@@ -19,7 +19,6 @@ import (
 // one measurement in the current collection cycle.
 type boundEntry[V any] struct {
 	val      V
-	once     sync.Once
 	measured atomic.Bool
 	bound    bool
 }
@@ -46,7 +45,7 @@ func (m *boundLimitedSyncMap[V]) atLimitLocked() bool {
 
 func (m *boundLimitedSyncMap[V]) LoadOrStoreAttr(
 	lazy lazyFilteredAttributes,
-	newValue func(attribute.Set) V,
+	initValue func(*V, attribute.Set),
 ) *boundEntry[V] {
 	distinct := lazy.Distinct()
 	if actual, loaded := m.Load(distinct); loaded {
@@ -78,7 +77,8 @@ func (m *boundLimitedSyncMap[V]) LoadOrStoreAttr(
 		fltrAttr = lazy.Set()
 	}
 
-	e := &boundEntry[V]{val: newValue(fltrAttr)}
+	e := &boundEntry[V]{}
+	initValue(&e.val, fltrAttr)
 	actual, loaded := m.LoadOrStore(distinct, e)
 	if !loaded {
 		m.len++
@@ -94,7 +94,7 @@ func (m *boundLimitedSyncMap[V]) pinColdLocked( // nolint:revive // Intentional 
 	d attribute.Distinct,
 	attrs attribute.Set,
 	overflow bool,
-	newValue func(attribute.Set) V,
+	initValue func(*V, attribute.Set),
 ) *boundEntry[V] {
 	if actual, loaded := m.Load(d); loaded {
 		if e := actual.(*boundEntry[V]); e.bound {
@@ -103,7 +103,8 @@ func (m *boundLimitedSyncMap[V]) pinColdLocked( // nolint:revive // Intentional 
 	} else {
 		m.len++
 	}
-	e := &boundEntry[V]{val: newValue(attrs), bound: true}
+	e := &boundEntry[V]{bound: true}
+	initValue(&e.val, attrs)
 	m.Store(d, e)
 	if overflow {
 		m.boundOverflow = true
@@ -115,7 +116,7 @@ func (m *boundLimitedSyncMap[V]) pinColdLocked( // nolint:revive // Intentional 
 
 func (m *boundLimitedSyncMap[V]) pinLocked(
 	lazy lazyFilteredAttributes,
-	newValue func(attribute.Set) V,
+	initValue func(*V, attribute.Set),
 ) (*boundEntry[V], attribute.Distinct, attribute.Set, bool) {
 	d := lazy.Distinct()
 	if actual, loaded := m.Load(d); loaded {
@@ -146,19 +147,19 @@ func (m *boundLimitedSyncMap[V]) pinLocked(
 			m.overflow.Store(true)
 			return e, d, overflowSet, overflow
 		}
-		return m.pinColdLocked(d, overflowSet, true, newValue), d, overflowSet, true
+		return m.pinColdLocked(d, overflowSet, true, initValue), d, overflowSet, true
 	}
 	attrs := lazy.Set()
-	return m.pinColdLocked(d, attrs, false, newValue), d, attrs, false
+	return m.pinColdLocked(d, attrs, false, initValue), d, attrs, false
 }
 
 func (m *boundLimitedSyncMap[V]) pin(
 	lazy lazyFilteredAttributes,
-	newValue func(attribute.Set) V,
+	initValue func(*V, attribute.Set),
 ) *boundEntry[V] {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
-	e, _, _, _ := m.pinLocked(lazy, newValue)
+	e, _, _, _ := m.pinLocked(lazy, initValue)
 	return e
 }
 
@@ -204,7 +205,7 @@ func (m *boundHotColdMap[V]) Clear(readIdx coldIdx) {
 
 func (m *boundHotColdMap[V]) pin(
 	lazy lazyFilteredAttributes,
-	newValue func(attribute.Set) V,
+	initValue func(*V, attribute.Set),
 ) [2]*boundEntry[V] {
 	m.pinMux.Lock()
 	defer m.pinMux.Unlock()
@@ -213,11 +214,11 @@ func (m *boundHotColdMap[V]) pin(
 	defer m.done(h)
 
 	m.hotColdValMap[h].lenMux.Lock()
-	eHot, d, attrs, overflow := m.hotColdValMap[h].pinLocked(lazy, newValue)
+	eHot, d, attrs, overflow := m.hotColdValMap[h].pinLocked(lazy, initValue)
 	m.hotColdValMap[h].lenMux.Unlock()
 
 	m.hotColdValMap[1-h].lenMux.Lock()
-	eCold := m.hotColdValMap[1-h].pinColdLocked(d, attrs, overflow, newValue)
+	eCold := m.hotColdValMap[1-h].pinColdLocked(d, attrs, overflow, initValue)
 	m.hotColdValMap[1-h].lenMux.Unlock()
 
 	var entries [2]*boundEntry[V]
@@ -226,17 +227,16 @@ func (m *boundHotColdMap[V]) pin(
 	return entries
 }
 
-func newBoundSumValue[N int64 | float64](
+func initBoundSumValue[N int64 | float64](
+	v *sumValue[N],
 	attr attribute.Set,
 	newRes func(attribute.Set) FilteredExemplarReservoir[N],
-) sumValue[N] {
+) {
 	r := newRes(attr)
 	_, isDrop := r.(*dropRes[N])
-	return sumValue[N]{
-		res:           r,
-		attrs:         attr,
-		dropExemplars: isDrop,
-	}
+	v.res = r
+	v.attrs = attr
+	v.dropExemplars = isDrop
 }
 
 // BoundSum contains the operations of a bound-aware Sum aggregation.
@@ -272,15 +272,15 @@ func newBoundDeltaSum[N int64 | float64](
 	return s
 }
 
-func (s *boundDeltaSum[N]) newValue(attr attribute.Set) sumValue[N] {
-	return newBoundSumValue(attr, s.newRes)
+func (s *boundDeltaSum[N]) initValue(v *sumValue[N], attr attribute.Set) {
+	initBoundSumValue(v, attr, s.newRes)
 }
 
 func (s *boundDeltaSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAttributes) {
 	hotIdx := s.vals.start()
 	defer s.vals.done(hotIdx)
 
-	e := s.vals.hot(hotIdx).LoadOrStoreAttr(lazy, s.newValue)
+	e := s.vals.hot(hotIdx).LoadOrStoreAttr(lazy, s.initValue)
 	e.val.n.add(value)
 	if !e.measured.Load() {
 		e.measured.Store(true)
@@ -291,7 +291,7 @@ func (s *boundDeltaSum[N]) measure(ctx context.Context, value N, lazy lazyFilter
 }
 
 func (s *boundDeltaSum[N]) bind(lazy lazyFilteredAttributes) BoundMeasure[N] {
-	entries := s.vals.pin(lazy, s.newValue)
+	entries := s.vals.pin(lazy, s.initValue)
 	if entries[0].val.dropExemplars && entries[1].val.dropExemplars {
 		return func(_ context.Context, val N) {
 			hotIdx := s.vals.start()
@@ -371,11 +371,16 @@ func (s *boundDeltaSum[N]) collect(
 	return i
 }
 
+type boundCumulativeSumValue[N int64 | float64] struct {
+	sumValue[N]
+	once sync.Once
+}
+
 type boundCumulativeSum[N int64 | float64] struct {
 	monotonic bool
 	start     time.Time
 
-	values boundLimitedSyncMap[sumValue[N]]
+	values boundLimitedSyncMap[boundCumulativeSumValue[N]]
 	newRes func(attribute.Set) FilteredExemplarReservoir[N]
 }
 
@@ -387,26 +392,26 @@ func newBoundCumulativeSum[N int64 | float64](
 	return &boundCumulativeSum[N]{
 		monotonic: monotonic,
 		start:     now(),
-		values: boundLimitedSyncMap[sumValue[N]]{
-			limitedSyncMap: limitedSyncMap[*boundEntry[sumValue[N]]]{aggLimit: limit},
+		values: boundLimitedSyncMap[boundCumulativeSumValue[N]]{
+			limitedSyncMap: limitedSyncMap[*boundEntry[boundCumulativeSumValue[N]]]{aggLimit: limit},
 		},
 		newRes: r,
 	}
 }
 
-func (s *boundCumulativeSum[N]) newValue(attr attribute.Set) sumValue[N] {
-	return newBoundSumValue(attr, s.newRes)
+func (s *boundCumulativeSum[N]) initValue(v *boundCumulativeSumValue[N], attr attribute.Set) {
+	initBoundSumValue(&v.sumValue, attr, s.newRes)
 }
 
-func markCumulativeMeasured[N int64 | float64](e *boundEntry[sumValue[N]]) {
-	e.once.Do(func() {
+func markCumulativeMeasured[N int64 | float64](e *boundEntry[boundCumulativeSumValue[N]]) {
+	e.val.once.Do(func() {
 		e.val.startTime = now()
 		e.measured.Store(true)
 	})
 }
 
 func (s *boundCumulativeSum[N]) measure(ctx context.Context, value N, lazy lazyFilteredAttributes) {
-	e := s.values.LoadOrStoreAttr(lazy, s.newValue)
+	e := s.values.LoadOrStoreAttr(lazy, s.initValue)
 	e.val.n.add(value)
 	if !e.measured.Load() {
 		markCumulativeMeasured(e)
@@ -417,7 +422,7 @@ func (s *boundCumulativeSum[N]) measure(ctx context.Context, value N, lazy lazyF
 }
 
 func (s *boundCumulativeSum[N]) bind(lazy lazyFilteredAttributes) BoundMeasure[N] {
-	e := s.values.pin(lazy, s.newValue)
+	e := s.values.pin(lazy, s.initValue)
 	if e.val.dropExemplars {
 		return func(_ context.Context, val N) {
 			e.val.n.add(val)
@@ -450,7 +455,7 @@ func (s *boundCumulativeSum[N]) collect(
 
 	var i int
 	s.values.Range(func(_, value any) bool {
-		e := value.(*boundEntry[sumValue[N]])
+		e := value.(*boundEntry[boundCumulativeSumValue[N]])
 		if !e.measured.Load() {
 			return true
 		}
