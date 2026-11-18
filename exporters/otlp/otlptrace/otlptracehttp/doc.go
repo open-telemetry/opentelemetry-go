@@ -46,7 +46,8 @@ The configuration can be overridden by [WithTimeout] option.
 
 OTEL_EXPORTER_OTLP_COMPRESSION, OTEL_EXPORTER_OTLP_TRACES_COMPRESSION (default: none) -
 the compression strategy the exporter uses to compress the HTTP body.
-Supported value: "gzip".
+Supported values: "gzip" and "none" (case-insensitive).
+Invalid values are warned about and ignored.
 OTEL_EXPORTER_OTLP_TRACES_COMPRESSION takes precedence over OTEL_EXPORTER_OTLP_COMPRESSION.
 The configuration can be overridden by [WithCompression] option.
 

@@ -127,17 +127,14 @@ All pull requests are squashed to a single commit upon merge to `main`.
 
 A PR is considered **ready to merge** when:
 
-* It has received two qualified approvals[^1].
-
-  This is not enforced through automation, but needs to be validated by the
-  maintainer merging.
-  * At least one of the qualified approvals needs to be from an
-    [Approver]/[Maintainer] affiliated with a different company than the author
-    of the PR.
-  * PRs introducing changes that have already been discussed and consensus
-    reached only need one qualified approval. The discussion and resolution
-    needs to be linked to the PR.
-  * Trivial changes[^2] only need one qualified approval.
+* It has received two qualified approvals[^1] if it modifies `.go` files
+  (`**/*.go`), or one qualified approval if it only modifies non-`.go` files
+  (such as dependency updates and Markdown documentation). This is enforced by
+  repository rulesets.
+  * When two approvals are required, at least one of the qualified approvals
+    needs to be from an [Approver]/[Maintainer] affiliated with a different
+    company than the author of the PR. This is not enforced through automation,
+    and needs to be validated by the maintainer merging.
 
 * All feedback has been addressed.
   * All PR comments and suggestions are resolved.
@@ -163,8 +160,7 @@ A PR is considered **ready to merge** when:
 
 * It has been open for review for at least one working day. This gives people
   reasonable time to review.
-  * Trivial changes[^2] do not have to wait for one day and may be merged with
-    a single [Maintainer]'s approval.
+  * Trivial changes[^2] do not have to wait for one day.
 
 * All required GitHub workflows have succeeded.
 * Urgent fix can take exception as long as it has been actively communicated
@@ -173,7 +169,8 @@ A PR is considered **ready to merge** when:
 Any [Maintainer] can merge the PR once the above criteria have been met.
 
 [^1]: A qualified approval is a GitHub Pull Request review with "Approve"
-  status from an OpenTelemetry Go [Approver] or [Maintainer].
+  status from an OpenTelemetry Go [Approver] or [Maintainer]
+  (`@open-telemetry/go-approvers`).
 [^2]: Trivial changes include: typo corrections, cosmetic non-substantive
   changes, documentation corrections or updates, dependency updates, etc.
 

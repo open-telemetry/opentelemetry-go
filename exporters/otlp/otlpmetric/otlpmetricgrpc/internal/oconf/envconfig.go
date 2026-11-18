@@ -151,9 +151,19 @@ func withEndpointForGRPC(u *url.URL) func(cfg Config) Config {
 func WithEnvCompression(n string, fn func(Compression)) func(e *envconfig.EnvOptionsReader) {
 	return func(e *envconfig.EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
-			cp := NoCompression
-			if strings.EqualFold(v, "gzip") {
+			var cp Compression
+			switch {
+			case strings.EqualFold(v, "gzip"):
 				cp = GzipCompression
+			case strings.EqualFold(v, "none"):
+				cp = NoCompression
+			default:
+				global.Warn(
+					e.Namespace+"_"+n+" is set to an invalid value, ignoring. Supported values: \"gzip\", \"none\".",
+					"value",
+					v,
+				)
+				return
 			}
 
 			fn(cp)

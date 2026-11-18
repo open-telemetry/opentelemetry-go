@@ -31,3 +31,16 @@ func ExampleBaggage_SetMember() {
 	// tenant=old
 	// tenant=new
 }
+
+func ExampleNewMemberRaw() {
+	m, err := baggage.NewMemberRaw("greeting", "hello, world")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(m.Value())
+	fmt.Println(m.String())
+	// Output:
+	// hello, world
+	// greeting=hello%2C%20world
+}
