@@ -232,7 +232,7 @@ func KeyValuesDedupLimitDepth(
 // Top-level key uniqueness remains attribute.Set's responsibility; this only
 // normalizes map attribute values.
 func SetDedup(set attribute.Set) (attribute.Set, bool) {
-	if !setMayHaveComposite(&set) {
+	if !hasSliceOrMap(&set) {
 		return set, false
 	}
 	length := set.Len()
@@ -801,66 +801,71 @@ func arrayAt[T any](storage any, elem reflect.Type, i int) T {
 	return array.Index(i).Interface().(T)
 }
 
-// rawSet mirrors attribute.Set. It is used only to read the immutable backing
-// array without calling Set.Get for every attribute.
+// rawSet has the same fields as attribute.Set, so we can read its array directly.
+// If attribute.Set ever changes, TestSetMirrorLayout fails.
 type rawSet struct {
 	hash uint64
 	data any
 }
 
-// setMayHaveComposite reports false only when set is known to hold no SLICE or
-// MAP value, so [SetDedup] cannot change it.
-func setMayHaveComposite(set *attribute.Set) bool {
-	switch kvs := (*rawSet)(unsafe.Pointer(set)).data.(type) { //nolint:gosec // Read-only mirror of attribute.Set.
+// maxInlineSetSize is the largest set size that hasSliceOrMap handles.
+// Go needs one switch case per array type, so add or remove cases to change it.
+const maxInlineSetSize = 20
+
+// hasSliceOrMap reports whether set may hold a SLICE or MAP value. It can return
+// true for a set that holds none, never false for one that does.
+func hasSliceOrMap(set *attribute.Set) bool {
+	// Each size needs its own case because the array type includes its length.
+	switch kvs := (*rawSet)(unsafe.Pointer(set)).data.(type) { //nolint:gosec // Reads the private data field of attribute.Set.
 	case nil, [0]attribute.KeyValue:
 		return false
 	case [1]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [2]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [3]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [4]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [5]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [6]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [7]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [8]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [9]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [10]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [11]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [12]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [13]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [14]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [15]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [16]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [17]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [18]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [19]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	case [20]attribute.KeyValue:
-		return anyComposite(kvs[:])
+		return anySliceOrMap(kvs[:])
 	default:
 		// Rarer large sets keep the full SetDedup path.
 		return true
 	}
 }
 
-func anyComposite(kvs []attribute.KeyValue) bool {
+func anySliceOrMap(kvs []attribute.KeyValue) bool {
 	for i := range kvs {
 		if t := kvs[i].Value.Type(); t == attribute.SLICE || t == attribute.MAP {
 			return true

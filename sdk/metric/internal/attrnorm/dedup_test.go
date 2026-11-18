@@ -373,37 +373,41 @@ func TestInvalidArrayStorage(t *testing.T) {
 	}
 }
 
-func TestSetMayHaveComposite(t *testing.T) {
+func TestHasSliceOrMap(t *testing.T) {
 	dup := attribute.Map("m", attribute.String("k", "first"), attribute.String("k", "second"))
-	if setMayHaveComposite(&attribute.Set{}) {
-		t.Error("zero-value set reported as possibly composite")
+	if hasSliceOrMap(&attribute.Set{}) {
+		t.Error("zero-value set reported as possibly holding a slice or map")
 	}
-	for size := range 22 {
+	for size := range maxInlineSetSize + 2 {
 		scalars := make([]attribute.KeyValue, 0, size)
 		for i := range size {
 			scalars = append(scalars, attribute.Int(fmt.Sprintf("k%02d", i), i))
 		}
 		set := attribute.NewSet(scalars...)
-		if setMayHaveComposite(&set) && size <= 20 {
-			t.Errorf("size %d: scalar-only set reported as possibly composite", size)
+		got := hasSliceOrMap(&set)
+		if got && size <= maxInlineSetSize {
+			t.Errorf("size %d: scalar-only set reported as possibly holding a slice or map", size)
+		}
+		if !got && size > maxInlineSetSize {
+			t.Errorf("size %d: set above the limit must take the full SetDedup path", size)
 		}
 
 		if size == 0 {
 			continue
 		}
 		for _, at := range []int{0, size - 1} {
-			// Keep the key so sorting in NewSet leaves the composite at index at.
+			// NewSet sorts by key. Changing only the value keeps this attribute in place.
 			kvs := slices.Clone(scalars)
 			kvs[at].Value = attribute.SliceValue(dup.Value)
 			withSlice := attribute.NewSet(kvs...)
-			if !setMayHaveComposite(&withSlice) {
+			if !hasSliceOrMap(&withSlice) {
 				t.Errorf("size %d, index %d: SLICE value not detected", size, at)
 			}
 
 			kvs = slices.Clone(scalars)
 			kvs[at].Value = dup.Value
 			withMap := attribute.NewSet(kvs...)
-			if !setMayHaveComposite(&withMap) {
+			if !hasSliceOrMap(&withMap) {
 				t.Errorf("size %d, index %d: MAP value not detected", size, at)
 			}
 			if _, changed := SetDedup(withMap); !changed {
@@ -419,7 +423,7 @@ func TestSetMirrorLayout(t *testing.T) {
 		t.Fatalf("attribute.Set size = %d, rawSet size = %d", got, want)
 	}
 	set = attribute.NewSet(attribute.String("a", "b"))
-	if _, ok := (*rawSet)(unsafe.Pointer(&set)).data.([1]attribute.KeyValue); !ok { //nolint:gosec // Layout check.
+	if _, ok := (*rawSet)(unsafe.Pointer(&set)).data.([1]attribute.KeyValue); !ok { //nolint:gosec // Checks that rawSet matches attribute.Set.
 		t.Fatal("rawSet does not mirror attribute.Set storage")
 	}
 }
