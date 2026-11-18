@@ -1696,6 +1696,11 @@ func TestAttributeValueLengthLimitEventAndLinkAttributes(t *testing.T) {
 	attr := attribute.String("k", "abcdef")
 	want := []attribute.KeyValue{attribute.String("k", "abc")}
 
+	// Retain the caller-owned slices to check they are not modified.
+	eventAttrs := []attribute.KeyValue{attr}
+	startLinkAttrs := []attribute.KeyValue{attr}
+	addLinkAttrs := []attribute.KeyValue{attr}
+
 	te := NewTestExporter()
 	limits := NewSpanLimits()
 	limits.AttributeValueLengthLimit = 3
@@ -1704,10 +1709,10 @@ func TestAttributeValueLengthLimitEventAndLinkAttributes(t *testing.T) {
 	_, span := tp.Tracer("scope").Start(
 		t.Context(),
 		"span0",
-		trace.WithLinks(trace.Link{SpanContext: linkSC, Attributes: []attribute.KeyValue{attr}}),
+		trace.WithLinks(trace.Link{SpanContext: linkSC, Attributes: startLinkAttrs}),
 	)
-	span.AddEvent("event", trace.WithAttributes(attr))
-	span.AddLink(trace.Link{SpanContext: linkSC, Attributes: []attribute.KeyValue{attr}})
+	span.AddEvent("event", trace.WithAttributes(eventAttrs...))
+	span.AddLink(trace.Link{SpanContext: linkSC, Attributes: addLinkAttrs})
 
 	got, err := endSpan(te, span)
 	require.NoError(t, err)
@@ -1717,8 +1722,11 @@ func TestAttributeValueLengthLimitEventAndLinkAttributes(t *testing.T) {
 	require.Len(t, got.Links(), 2)
 	assert.Equal(t, want, got.Links()[0].Attributes)
 	assert.Equal(t, want, got.Links()[1].Attributes)
-	// The caller's attribute must not be modified.
-	assert.Equal(t, "abcdef", attr.Value.AsString())
+	// The caller's attribute slices must not be modified.
+	orig := []attribute.KeyValue{attr}
+	assert.Equal(t, orig, eventAttrs)
+	assert.Equal(t, orig, startLinkAttrs)
+	assert.Equal(t, orig, addLinkAttrs)
 }
 
 func TestAttributeValueDepthLimitOverCapacityUpdate(t *testing.T) {
