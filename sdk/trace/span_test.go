@@ -459,17 +459,33 @@ func assertNaNFloat64SliceValue(t *testing.T, v attribute.Value, rest ...float64
 	}
 }
 
-func assertNormAttrsUnchanged(t *testing.T, kvs []attribute.KeyValue, depthLimit, lengthLimit int) {
+func assertNormAttrsUnchanged(t *testing.T, kvs []attribute.KeyValue) {
 	t.Helper()
 	require.NotEmpty(t, kvs)
 
-	var out []attribute.KeyValue
-	allocs := testing.AllocsPerRun(1000, func() {
-		out = normAttrs(kvs, depthLimit, lengthLimit)
-	})
-	assert.Zero(t, allocs)
-	require.Len(t, out, len(kvs))
-	assert.Same(t, &kvs[0], &out[0], "normAttrs copied an unchanged attribute list")
+	// A negative length limit skips truncation, and a negative depth limit
+	// skips depth limiting. Unchanged NaN float64 slices must not allocate
+	// on those paths or on the default limits.
+	depthLimits := []int{DefaultAttributeValueDepthLimit, -1}
+	lengthLimits := []int{DefaultAttributeValueLengthLimit, 16}
+	for _, depthLimit := range depthLimits {
+		for _, lengthLimit := range lengthLimits {
+			var out []attribute.KeyValue
+			allocs := testing.AllocsPerRun(1000, func() {
+				out = normAttrs(kvs, depthLimit, lengthLimit)
+			})
+			assert.Zero(t, allocs, "depthLimit %d, lengthLimit %d", depthLimit, lengthLimit)
+			require.Len(t, out, len(kvs))
+			assert.Same(
+				t,
+				&kvs[0],
+				&out[0],
+				"normAttrs copied an unchanged attribute list (depthLimit %d, lengthLimit %d)",
+				depthLimit,
+				lengthLimit,
+			)
+		}
+	}
 }
 
 func TestNormAttrsNaNFloat64SliceDoesNotAllocate(t *testing.T) {
@@ -480,7 +496,7 @@ func TestNormAttrsNaNFloat64SliceDoesNotAllocate(t *testing.T) {
 		kvs := []attribute.KeyValue{nanFloat64SliceAttr()}
 		_, changed := normAttr(kvs[0], depthLimit, lengthLimit)
 		assert.False(t, changed)
-		assertNormAttrsUnchanged(t, kvs, depthLimit, lengthLimit)
+		assertNormAttrsUnchanged(t, kvs)
 		assertNaNFloat64Slice(t, kvs[0], 1.5)
 	})
 
@@ -488,7 +504,7 @@ func TestNormAttrsNaNFloat64SliceDoesNotAllocate(t *testing.T) {
 		kvs := []attribute.KeyValue{
 			attribute.Float64Slice("nan_slice", []float64{math.NaN(), 1, 2, 3, 4, 5}),
 		}
-		assertNormAttrsUnchanged(t, kvs, depthLimit, lengthLimit)
+		assertNormAttrsUnchanged(t, kvs)
 		assertNaNFloat64Slice(t, kvs[0], 1, 2, 3, 4, 5)
 	})
 
@@ -499,7 +515,7 @@ func TestNormAttrsNaNFloat64SliceDoesNotAllocate(t *testing.T) {
 			attribute.Int64Slice("ints", []int64{1, 2, 3, 4, 5, 6}),
 			attribute.BoolSlice("flags", []bool{true, false, true, false}),
 		}
-		assertNormAttrsUnchanged(t, kvs, depthLimit, lengthLimit)
+		assertNormAttrsUnchanged(t, kvs)
 		assertNaNFloat64Slice(t, kvs[1], 1.5)
 	})
 }
@@ -527,7 +543,7 @@ func TestNormAttrsNestedNaNFloat64SliceDoesNotAllocate(t *testing.T) {
 			kvs := []attribute.KeyValue{tt.kv}
 			_, changed := normAttr(tt.kv, depthLimit, lengthLimit)
 			assert.False(t, changed)
-			assertNormAttrsUnchanged(t, kvs, depthLimit, lengthLimit)
+			assertNormAttrsUnchanged(t, kvs)
 
 			switch tt.kv.Value.Type() {
 			case attribute.SLICE:
