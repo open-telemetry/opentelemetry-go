@@ -1,0 +1,6 @@
+.git
+.cache
+.tools
+venv
+go.work
+go.work.sum

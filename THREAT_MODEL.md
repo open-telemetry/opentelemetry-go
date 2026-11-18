@@ -30,6 +30,9 @@ override below.
   in `*_test.go` files. Fuzz tests include those in `trace/trace_fuzz_test.go`.
 - Run `make test` to test all modules. See [CONTRIBUTING.md](CONTRIBUTING.md) for
   development and verification instructions.
+- See [.oss-scanner/README.md](.oss-scanner/README.md) for the prepared offline
+  environment. The image includes the shared security policy at
+  `/opt/oss-scanner/SECURITY.md`; this threat model's overrides still apply.
 
 ## How you rate severity
 
