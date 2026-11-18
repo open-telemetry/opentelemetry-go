@@ -8,8 +8,9 @@ override below.
 
 ## What this project does and where untrusted input enters
 
-- OpenTelemetry Go provides APIs, SDKs, and exporters for traces, metrics, and
-  logs in Go applications.
+- OpenTelemetry Go provides libraries for recording, processing, and exporting
+  telemetry (traces, metrics, and logs) in Go applications, and for propagating
+  trace context and baggage between services.
 - Untrusted input can enter through telemetry data supplied by instrumented
   applications, including attributes and log bodies, and through trace context
   and baggage extracted from incoming requests.
