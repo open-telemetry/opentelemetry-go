@@ -46,6 +46,7 @@ vulnerabilities:
   client.
 
 This explicitly overrides the two authenticated-client exclusions in the
-Security Policy's security model. Authentication does not put these attacks out
-of scope. The policy's remaining guidance, including its availability assessment
-and private reporting process, continues to apply.
+[Security Policy's security model](https://github.com/open-telemetry/.github/blob/main/SECURITY.md#security-model).
+Authentication does not put these attacks out of scope. The policy's remaining
+guidance, including its availability assessment and private reporting process,
+continues to apply.
