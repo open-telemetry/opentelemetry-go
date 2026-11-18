@@ -226,6 +226,45 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 	}
 }
 
+func TestNewBatchSpanProcessorInvalidEnvSizes(t *testing.T) {
+	for _, test := range []struct {
+		name, queue, batch string
+		options            []BatchSpanProcessorOption
+		wantQueue          int
+		wantBatch          int
+	}{
+		{name: "negative queue", queue: "-1", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "zero queue", queue: "0", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "negative batch", batch: "-1", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "zero batch", batch: "0", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "both invalid", queue: "-1", batch: "0", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "fallback batch fits queue", queue: "2", batch: "-1", wantQueue: 2, wantBatch: 2},
+		{name: "valid batch with fallback queue", queue: "-1", batch: "1024", wantQueue: DefaultMaxQueueSize, wantBatch: 1024},
+		{name: "smallest valid sizes", queue: "1", batch: "1", wantQueue: 1, wantBatch: 1},
+		{
+			name: "options take precedence", queue: "-1", batch: "-1",
+			options:   []BatchSpanProcessorOption{WithMaxQueueSize(7), WithMaxExportBatchSize(3)},
+			wantQueue: 7, wantBatch: 3,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv(env.BatchSpanProcessorMaxQueueSizeKey, test.queue)
+			t.Setenv(env.BatchSpanProcessorMaxExportBatchSizeKey, test.batch)
+			var processor SpanProcessor
+			require.NotPanics(t, func() {
+				processor = NewBatchSpanProcessor(&testBatchExporter{}, test.options...)
+			})
+			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(t, processor.Shutdown(context.Background()))
+			})
+			bsp := processor.(*batchSpanProcessor)
+			assert.Equal(t, test.wantQueue, bsp.o.MaxQueueSize)
+			assert.Equal(t, test.wantBatch, bsp.o.MaxExportBatchSize)
+		})
+	}
+}
+
 func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
 	options := []testOption{
 		{

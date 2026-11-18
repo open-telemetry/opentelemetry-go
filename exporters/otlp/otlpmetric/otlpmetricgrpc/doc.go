@@ -41,7 +41,8 @@ The configuration can be overridden by [WithTimeout] option.
 
 OTEL_EXPORTER_OTLP_COMPRESSION, OTEL_EXPORTER_OTLP_METRICS_COMPRESSION (default: none) -
 the gRPC compressor the exporter uses.
-Supported value: "gzip".
+Supported values: "gzip" and "none" (case-insensitive).
+Invalid values are warned about and ignored.
 OTEL_EXPORTER_OTLP_METRICS_COMPRESSION takes precedence over OTEL_EXPORTER_OTLP_COMPRESSION.
 The configuration can be overridden by [WithCompressor], [WithGRPCConn] options.
 

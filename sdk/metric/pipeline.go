@@ -940,7 +940,7 @@ func (r resolver[N]) Aggregators(
 
 // HistogramAggregators returns the histogram Aggregators that must be updated by the instrument
 // defined by key. If boundaries were provided on instrument instantiation, those take precedence
-// over boundaries provided by the reader.
+// over boundaries provided by the reader. A non-nil empty slice requests a single bucket.
 func (r resolver[N]) HistogramAggregators(
 	id Instrument,
 	allowedKeys []attribute.Key,
@@ -952,7 +952,7 @@ func (r resolver[N]) HistogramAggregators(
 	var err error
 	for _, i := range r.inserters {
 		agg := i.readerDefaultAggregation(id.Kind)
-		if histAgg, ok := agg.(AggregationExplicitBucketHistogram); ok && len(boundaries) > 0 {
+		if histAgg, ok := agg.(AggregationExplicitBucketHistogram); ok && boundaries != nil {
 			histAgg.Boundaries = boundaries
 			agg = histAgg
 		}

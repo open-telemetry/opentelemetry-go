@@ -51,6 +51,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Support custom encoders implementing `SetIndent` with `WithPrettyPrint` in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#9308)
 - Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
+- Improve the performance of sum, last-value, and explicit-bucket histogram measurements immediately after collection in `go.opentelemetry.io/otel/sdk/metric` for delta temporality by lazily clearing storage. (#8276)
 - Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
   Include instructions for upgrading the bridge to v1.47.0.
   See the [bridge version compatibility documentation](bridge/opentracing/README.md#version-compatibility). (#9209)
@@ -71,6 +72,16 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 ### Fixed
 
 - Use `otlp_http_json_span_exporter` for `otel.component.type` and the component name prefix when JSON encoding is configured in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9492)
+- Honor explicitly empty histogram bucket-boundary advice in `go.opentelemetry.io/otel/sdk/metric`, producing a single bucket while preserving count and sum.
+  Calling `WithExplicitBucketBoundaries` in `go.opentelemetry.io/otel/metric` with no arguments or a nil slice now explicitly advises a single unbounded bucket.
+  Omitting the option preserves the reader's boundaries. (#9495)
+- Record Prometheus exporter self-observability `otel.sdk.exporter.metric_data_point.inflight` and `otel.sdk.exporter.metric_data_point.exported` metrics per scrape batch instead of per metric family, accounting for metrics dropped during resource, scope, or metric validation in `go.opentelemetry.io/otel/exporters/prometheus`. (#9465)
+- Warn and ignore invalid compression environment values instead of overriding existing settings in
+  `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`,
+  `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`,
+  `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and
+  `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9516)
+- Ignore non-positive batch span processor environment sizes in `go.opentelemetry.io/otel/sdk/trace` and fall back to the defaults. (#9490)
 - Use `prometheus_http_text_metric_exporter` for `otel.component.type` in `go.opentelemetry.io/otel/exporters/prometheus`. (#9464)
 - Record `error.type="rejected"` (and `rpc.status_code="OK"` for gRPC) on partial-success rejections in self-observability metrics for `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9454)
 - Remove the duplicated `/metric` package path segment from `otel.component.type` (`go.opentelemetry.io/otel/sdk/metric.ManualReader`) in `go.opentelemetry.io/otel/sdk/metric`. (#9463)
@@ -91,6 +102,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc` now interprets its argument
   case-insensitively as well, where a differently-cased value previously reported an unknown
   compressor and fell back to no compression. (#9230)
+- Record diagnostics via the internal logger for recovered retryable export failures in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9281)
 - Prevent underflowed measurements from updating sum, min, or max in exponential histograms in `go.opentelemetry.io/otel/sdk/metric`. (#8077)
 - Report the module's registered version from `Version()` in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`, which also corrects the exporter version sent in the default User-Agent. (#9232)
 - Preserve caller-provided metric data when removing timestamps from output in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#8843)
@@ -120,6 +132,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP protobuf partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`. (#9188)
 - Match the response `Content-Type` media type case-insensitively and ignore parameters when reading OTLP/HTTP partial-success responses in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9303)
 - Do not report an error through the global error handler when `WithCompressor("none")` is passed to `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` or `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`. (#9056)
+- Interpret `OTEL_EXPORTER_OTLP_COMPRESSION`, `OTEL_EXPORTER_OTLP_METRICS_COMPRESSION`, and `OTEL_EXPORTER_OTLP_TRACES_COMPRESSION` case-insensitively in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9268)
 - Decode gzip responses with explicitly configured `Accept-Encoding` headers in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`, enforcing response limits after decompression. (#9203)
 - Preserve exemplar trace and span IDs in `go.opentelemetry.io/otel/exporters/prometheus` by dropping filtered attribute labels instead of the whole exemplar when the combined exemplar labels would exceed the prometheus client-go limit. (#9031)
 - Do not emit the `target_info` metric in `go.opentelemetry.io/otel/exporters/prometheus` when the OpenTelemetry `Resource` is empty. (#9296)
