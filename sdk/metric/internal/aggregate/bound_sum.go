@@ -90,34 +90,15 @@ func (m *boundLimitedSyncMap[V]) LoadOrStoreAttr(
 	return actual.(*boundEntry[V])
 }
 
-func (m *boundLimitedSyncMap[V]) pinColdLocked( // nolint:revive // Intentional internal control flag
-	d attribute.Distinct,
-	attrs attribute.Set,
-	overflow bool,
-	initValue func(*V, attribute.Set),
-) *boundEntry[V] {
-	if actual, loaded := m.Load(d); loaded {
-		if e := actual.(*boundEntry[V]); e.bound {
-			return e
-		}
-	} else {
-		m.len++
-	}
-	e := &boundEntry[V]{bound: true}
-	initValue(&e.val, attrs)
-	m.Store(d, e)
-	if overflow {
-		m.boundOverflow = true
-		m.hasOverflowEntry = true
-		m.overflow.Store(m.atLimitLocked())
-	}
-	return e
+type pinPlan[V any] struct {
+	existing        *boundEntry[V]
+	d               attribute.Distinct
+	attrs           attribute.Set
+	overflow        bool
+	setOverflowFlag bool
 }
 
-func (m *boundLimitedSyncMap[V]) pinLocked(
-	lazy lazyFilteredAttributes,
-	initValue func(*V, attribute.Set),
-) (*boundEntry[V], attribute.Distinct, attribute.Set, bool) {
+func (m *boundLimitedSyncMap[V]) preparePinLocked(lazy lazyFilteredAttributes) pinPlan[V] {
 	d := lazy.Distinct()
 	if actual, loaded := m.Load(d); loaded {
 		e := actual.(*boundEntry[V])
@@ -126,31 +107,57 @@ func (m *boundLimitedSyncMap[V]) pinLocked(
 		if !overflow {
 			attrs = lazy.Set()
 		}
-		if !e.bound {
-			e.bound = true
-			if overflow {
-				m.boundOverflow = true
-			}
+		return pinPlan[V]{
+			existing: e,
+			d:        d,
+			attrs:    attrs,
+			overflow: overflow,
 		}
-		return e, d, attrs, overflow
 	}
 	if m.atLimitLocked() {
 		d = overflowSet.Equivalent()
 		if actual, loaded := m.Load(d); loaded {
 			e := actual.(*boundEntry[V])
-			overflow := m.boundOverflow
-			if !e.bound {
-				e.bound = true
-				m.boundOverflow = true
-				overflow = true
+			return pinPlan[V]{
+				existing:        e,
+				d:               d,
+				attrs:           overflowSet,
+				overflow:        m.boundOverflow || !e.bound,
+				setOverflowFlag: true,
 			}
-			m.overflow.Store(true)
-			return e, d, overflowSet, overflow
 		}
-		return m.pinColdLocked(d, overflowSet, true, initValue), d, overflowSet, true
+		return pinPlan[V]{
+			d:        d,
+			attrs:    overflowSet,
+			overflow: true,
+		}
 	}
-	attrs := lazy.Set()
-	return m.pinColdLocked(d, attrs, false, initValue), d, attrs, false
+	return pinPlan[V]{
+		d:     d,
+		attrs: lazy.Set(),
+	}
+}
+
+func (m *boundLimitedSyncMap[V]) commitPinLocked(plan pinPlan[V], e *boundEntry[V]) {
+	if plan.existing != nil {
+		if !e.bound {
+			e.bound = true
+			if plan.overflow {
+				m.boundOverflow = true
+			}
+		}
+		if plan.setOverflowFlag {
+			m.overflow.Store(true)
+		}
+		return
+	}
+	m.Store(plan.d, e)
+	m.len++
+	if plan.overflow {
+		m.boundOverflow = true
+		m.hasOverflowEntry = true
+		m.overflow.Store(m.atLimitLocked())
+	}
 }
 
 func (m *boundLimitedSyncMap[V]) pin(
@@ -159,7 +166,13 @@ func (m *boundLimitedSyncMap[V]) pin(
 ) *boundEntry[V] {
 	m.lenMux.Lock()
 	defer m.lenMux.Unlock()
-	e, _, _, _ := m.pinLocked(lazy, initValue)
+	plan := m.preparePinLocked(lazy)
+	e := plan.existing
+	if e == nil {
+		e = &boundEntry[V]{bound: true}
+		initValue(&e.val, plan.attrs)
+	}
+	m.commitPinLocked(plan, e)
 	return e
 }
 
@@ -213,13 +226,54 @@ func (m *boundHotColdMap[V]) pin(
 	h := m.start()
 	defer m.done(h)
 
-	m.hotColdValMap[h].lenMux.Lock()
-	eHot, d, attrs, overflow := m.hotColdValMap[h].pinLocked(lazy, initValue)
-	m.hotColdValMap[h].lenMux.Unlock()
+	// Lock both buffers in canonical index order (0 then 1) so no partial
+	// state is published if initValue (ReservoirFunc) panics on either buffer.
+	// Deadlock-free because pinMux serializes pin(), and all other callers
+	// hold at most one buffer's lenMux.
+	m.hotColdValMap[0].lenMux.Lock()
+	defer m.hotColdValMap[0].lenMux.Unlock()
+	m.hotColdValMap[1].lenMux.Lock()
+	defer m.hotColdValMap[1].lenMux.Unlock()
 
-	m.hotColdValMap[1-h].lenMux.Lock()
-	eCold := m.hotColdValMap[1-h].pinColdLocked(d, attrs, overflow, initValue)
-	m.hotColdValMap[1-h].lenMux.Unlock()
+	hot := &m.hotColdValMap[h]
+	cold := &m.hotColdValMap[1-h]
+
+	planHot := hot.preparePinLocked(lazy)
+	var eColdExisting *boundEntry[V]
+	coldActual, coldLoaded := cold.Load(planHot.d)
+	if coldLoaded {
+		if e := coldActual.(*boundEntry[V]); e.bound {
+			eColdExisting = e
+		}
+	}
+
+	// Phase 1: run initValue (external ReservoirFunc) before mutating either
+	// buffer, preserving hot-then-cold call order. If either call panics,
+	// both maps remain untouched.
+	eHot := planHot.existing
+	if eHot == nil {
+		eHot = &boundEntry[V]{bound: true}
+		initValue(&eHot.val, planHot.attrs)
+	}
+	eCold := eColdExisting
+	if eCold == nil {
+		eCold = &boundEntry[V]{bound: true}
+		initValue(&eCold.val, planHot.attrs)
+	}
+
+	// Phase 2: commit both buffers atomically (no panicking operations).
+	hot.commitPinLocked(planHot, eHot)
+	if eColdExisting == nil {
+		cold.Store(planHot.d, eCold)
+		if !coldLoaded {
+			cold.len++
+		}
+	}
+	if planHot.overflow {
+		cold.boundOverflow = true
+		cold.hasOverflowEntry = true
+		cold.overflow.Store(cold.atLimitLocked())
+	}
 
 	var entries [2]*boundEntry[V]
 	entries[h] = eHot

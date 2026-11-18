@@ -681,6 +681,212 @@ func TestBoundDeltaSumOfferPanicDoesNotHangCollect(t *testing.T) {
 	})
 }
 
+func TestBoundSumReservoirPanicSafety(t *testing.T) {
+	fltrCarol := attribute.NewSet(userCarol)
+	collectWithTimeout := func(t *testing.T, out ComputeAggregation) metricdata.Sum[int64] {
+		t.Helper()
+		done := make(chan int, 1)
+		var dest metricdata.Aggregation
+		go func() {
+			done <- out(&dest)
+		}()
+		select {
+		case <-done:
+			s, ok := dest.(metricdata.Sum[int64])
+			require.True(t, ok)
+			return s
+		case <-time.After(5 * time.Second):
+			t.Fatal("ComputeAggregation hung after ReservoirFunc panic")
+			return metricdata.Sum[int64]{}
+		}
+	}
+
+	t.Run("CumulativeDoesNotLeakCardinalitySlot", func(t *testing.T) {
+		var shouldPanic atomic.Bool
+		shouldPanic.Store(true)
+		agg := Builder[int64]{
+			Temporality:      metricdata.CumulativeTemporality,
+			Filter:           attrFltr,
+			AggregationLimit: 3, // 2 concrete + 1 overflow
+			ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+				if shouldPanic.Load() {
+					panic("reservoir panic")
+				}
+				return &dropRes[int64]{}
+			},
+		}.BoundSum(true)
+
+		// Two panicking Bind calls must not consume any cardinality slots.
+		assert.PanicsWithValue(t, "reservoir panic", func() { agg.Bind(alice) })
+		assert.PanicsWithValue(t, "reservoir panic", func() { agg.Bind(bob) })
+
+		shouldPanic.Store(false)
+		bmAlice := agg.Bind(alice)
+		bmBob := agg.Bind(bob)
+		bmAlice(t.Context(), 1)
+		bmBob(t.Context(), 2)
+
+		s := collectWithTimeout(t, agg.ComputeAggregation)
+		require.Len(t, s.DataPoints, 2)
+		attrs := []attribute.Set{s.DataPoints[0].Attributes, s.DataPoints[1].Attributes}
+		assert.ElementsMatch(t, []attribute.Set{fltrAlice, fltrBob}, attrs)
+	})
+
+	t.Run("DeltaHotBufferPanicReleasesLockAndSlot", func(t *testing.T) {
+		var shouldPanic atomic.Bool
+		shouldPanic.Store(true)
+		agg := Builder[int64]{
+			Temporality:      metricdata.DeltaTemporality,
+			Filter:           attrFltr,
+			AggregationLimit: 3, // 2 concrete + 1 overflow
+			ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+				if shouldPanic.Load() {
+					panic("reservoir panic")
+				}
+				return &dropRes[int64]{}
+			},
+		}.BoundSum(true)
+
+		// Panic on buf[0] (hot).
+		assert.PanicsWithValue(t, "reservoir panic", func() { agg.Bind(alice) })
+
+		// Collect twice so hot swaps buf[0] -> buf[1] -> buf[0], verifying both
+		// lenMux is unlocked and buf[0]'s cardinality slots are directly tested.
+		assert.Empty(t, collectWithTimeout(t, agg.ComputeAggregation).DataPoints)
+		assert.Empty(t, collectWithTimeout(t, agg.ComputeAggregation).DataPoints)
+
+		shouldPanic.Store(false)
+		bmAlice := agg.Bind(alice)
+		bmBob := agg.Bind(bob)
+		bmAlice(t.Context(), 1)
+		bmBob(t.Context(), 2)
+
+		s := collectWithTimeout(t, agg.ComputeAggregation)
+		require.Len(t, s.DataPoints, 2)
+		attrs := []attribute.Set{s.DataPoints[0].Attributes, s.DataPoints[1].Attributes}
+		assert.ElementsMatch(t, []attribute.Set{fltrAlice, fltrBob}, attrs)
+	})
+
+	t.Run("DeltaColdBufferPanicIsAtomicAndPreservesLimit", func(t *testing.T) {
+		t.Run("BeforeSwapNoPrematureOverflow", func(t *testing.T) {
+			var calls atomic.Int32
+			agg := Builder[int64]{
+				Temporality:      metricdata.DeltaTemporality,
+				Filter:           attrFltr,
+				AggregationLimit: 3, // 2 concrete + 1 overflow
+				ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+					if calls.Add(1) == 2 {
+						panic("cold reservoir panic")
+					}
+					return &dropRes[int64]{}
+				},
+			}.BoundSum(true)
+
+			// 1st call (buf[0]) succeeds, 2nd call (buf[1]) panics: neither buffer may commit.
+			assert.PanicsWithValue(t, "cold reservoir panic", func() { agg.Bind(alice) })
+
+			// Both concrete slots on buf[0] must remain free (no partial pin of alice).
+			bmBob := agg.Bind(bob)
+			bmCarol := agg.Bind(carol)
+			bmBob(t.Context(), 1)
+			bmCarol(t.Context(), 2)
+
+			s := collectWithTimeout(t, agg.ComputeAggregation)
+			require.Len(t, s.DataPoints, 2)
+			attrs := []attribute.Set{s.DataPoints[0].Attributes, s.DataPoints[1].Attributes}
+			assert.ElementsMatch(t, []attribute.Set{fltrBob, fltrCarol}, attrs)
+		})
+
+		t.Run("AfterSwapNoLimitViolationOrColdSlotLeak", func(t *testing.T) {
+			var calls atomic.Int32
+			agg := Builder[int64]{
+				Temporality:      metricdata.DeltaTemporality,
+				Filter:           attrFltr,
+				AggregationLimit: 3, // 2 concrete + 1 overflow
+				ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+					if calls.Add(1) == 2 {
+						panic("cold reservoir panic")
+					}
+					return &dropRes[int64]{}
+				},
+			}.BoundSum(true)
+
+			assert.PanicsWithValue(t, "cold reservoir panic", func() { agg.Bind(alice) })
+
+			// Swap hot to buf[1] (the buffer where initValue panicked).
+			assert.Empty(t, collectWithTimeout(t, agg.ComputeAggregation).DataPoints)
+
+			// Bind bob & carol on buf[1]: verifies no buf[1].len leak (both concrete).
+			bmBob := agg.Bind(bob)
+			bmCarol := agg.Bind(carol)
+			bmBob(t.Context(), 1)
+			bmCarol(t.Context(), 2)
+			s := collectWithTimeout(t, agg.ComputeAggregation)
+			require.Len(t, s.DataPoints, 2)
+			attrs := []attribute.Set{s.DataPoints[0].Attributes, s.DataPoints[1].Attributes}
+			assert.ElementsMatch(t, []attribute.Set{fltrBob, fltrCarol}, attrs)
+
+			// Now hot is back on buf[0]. Recording alice (unbound), bob, carol, and dave
+			// must emit at most AggregationLimit (3) points: bob, carol, and overflow.
+			agg.Measure(t.Context(), 10, alice)
+			bmBob(t.Context(), 1)
+			bmCarol(t.Context(), 2)
+			agg.Measure(t.Context(), 20, dave)
+
+			s = collectWithTimeout(t, agg.ComputeAggregation)
+			require.Len(t, s.DataPoints, 3)
+			attrs = []attribute.Set{
+				s.DataPoints[0].Attributes,
+				s.DataPoints[1].Attributes,
+				s.DataPoints[2].Attributes,
+			}
+			assert.ElementsMatch(t, []attribute.Set{fltrBob, fltrCarol, overflowSet}, attrs)
+		})
+	})
+
+	t.Run("DeltaUnboundPromotionColdPanicDoesNotPinHot", func(t *testing.T) {
+		var shouldPanic atomic.Bool
+		agg := Builder[int64]{
+			Temporality:      metricdata.DeltaTemporality,
+			Filter:           attrFltr,
+			AggregationLimit: 3, // 2 concrete + 1 overflow
+			ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+				if shouldPanic.Load() {
+					panic("reservoir panic")
+				}
+				return &dropRes[int64]{}
+			},
+		}.BoundSum(true)
+
+		// Record unbound alice in buf[0] (hot).
+		agg.Measure(t.Context(), 5, alice)
+
+		// Enable unconditional panic: Bind(alice) finds alice in buf[0] without calling
+		// ReservoirFunc, then panics on buf[1]. alice must stay unbound in buf[0].
+		shouldPanic.Store(true)
+		assert.PanicsWithValue(t, "reservoir panic", func() { agg.Bind(alice) })
+
+		// Collect buf[0]: emits alice (value 5) and must evict it since it stayed unbound.
+		s := collectWithTimeout(t, agg.ComputeAggregation)
+		require.Len(t, s.DataPoints, 1)
+		assert.Equal(t, fltrAlice, s.DataPoints[0].Attributes)
+		assert.Equal(t, int64(5), s.DataPoints[0].Value)
+
+		// Swap back to buf[0] and confirm both concrete slots are available (alice evicted).
+		assert.Empty(t, collectWithTimeout(t, agg.ComputeAggregation).DataPoints)
+		shouldPanic.Store(false)
+		bmBob := agg.Bind(bob)
+		bmCarol := agg.Bind(carol)
+		bmBob(t.Context(), 1)
+		bmCarol(t.Context(), 2)
+
+		s = collectWithTimeout(t, agg.ComputeAggregation)
+		require.Len(t, s.DataPoints, 2)
+		attrs := []attribute.Set{s.DataPoints[0].Attributes, s.DataPoints[1].Attributes}
+		assert.ElementsMatch(t, []attribute.Set{fltrBob, fltrCarol}, attrs)
+	})
+}
+
 func TestBoundCumulativeSumDelayedFirstMeasurement(t *testing.T) {
 	c := new(clock)
 	t.Cleanup(c.Register())
