@@ -159,7 +159,7 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	// Enable SDK observability and reset the reader ID counter immediately
 	// before creating the ManualReader under test.
 	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
-	manualReaderIDCounter.Store(0)
+	readerID := manualReaderIDCounter.Load()
 
 	manualReader := NewManualReader()
 	t.Cleanup(func() {
@@ -196,10 +196,9 @@ func TestManualReaderInstrumentation(t *testing.T) {
 	dp := hist.DataPoints[0]
 	attrs := dp.Attributes.ToSlice()
 
-	const (
-		expectedComponentType = "go.opentelemetry.io/otel/sdk/metric.ManualReader"
-		expectedComponentName = expectedComponentType + "/0"
-	)
+	const expectedComponentType = "go.opentelemetry.io/otel/sdk/metric.ManualReader"
+
+	expectedComponentName := fmt.Sprintf("%s/%d", expectedComponentType, readerID)
 
 	var hasName, hasType bool
 	for _, a := range attrs {
