@@ -300,11 +300,14 @@ func (s *boundDeltaSum[N]) bind(lazy lazyFilteredAttributes) BoundMeasure[N] {
 			if !e.measured.Load() {
 				e.measured.Store(true)
 			}
+			// Direct done call: nothing above invokes external code or can panic,
+			// avoiding deferwrap overhead on this hot path.
 			s.vals.done(hotIdx)
 		}
 	}
 	return func(ctx context.Context, val N) {
 		hotIdx := s.vals.start()
+		defer s.vals.done(hotIdx)
 		e := entries[hotIdx]
 		e.val.n.add(val)
 		if !e.measured.Load() {
@@ -313,7 +316,6 @@ func (s *boundDeltaSum[N]) bind(lazy lazyFilteredAttributes) BoundMeasure[N] {
 		if !e.val.dropExemplars {
 			e.val.res.Offer(ctx, val, lazy)
 		}
-		s.vals.done(hotIdx)
 	}
 }
 

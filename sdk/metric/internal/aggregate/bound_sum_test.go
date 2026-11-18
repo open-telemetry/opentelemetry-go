@@ -4,9 +4,12 @@
 package aggregate
 
 import (
+	"context"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -536,6 +539,118 @@ func TestBoundSumExemplarDroppedAttributes(t *testing.T) {
 			assert.Equal(t, []attribute.KeyValue{adminTrue}, s.DataPoints[0].Exemplars[0].FilteredAttributes)
 		})
 	}
+}
+
+func TestBoundDeltaSumOfferPanicDoesNotHangCollect(t *testing.T) {
+	collectWithTimeout := func(t *testing.T, out ComputeAggregation) metricdata.Sum[int64] {
+		t.Helper()
+		done := make(chan int, 1)
+		var dest metricdata.Aggregation
+		go func() {
+			done <- out(&dest)
+		}()
+		select {
+		case n := <-done:
+			require.Equal(t, 1, n)
+			s, ok := dest.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.Len(t, s.DataPoints, 1)
+			return s
+		case <-time.After(5 * time.Second):
+			t.Fatal("ComputeAggregation hung after panic in Offer")
+			return metricdata.Sum[int64]{}
+		}
+	}
+
+	t.Run("BoundAndUnboundSubsequentCycles", func(t *testing.T) {
+		for _, tc := range []struct {
+			name  string
+			setup func(agg BoundSum[int64]) func(ctx context.Context, v int64)
+		}{
+			{
+				name: "Bound",
+				setup: func(agg BoundSum[int64]) func(ctx context.Context, v int64) {
+					return agg.Bind(alice)
+				},
+			},
+			{
+				name: "Unbound",
+				setup: func(agg BoundSum[int64]) func(ctx context.Context, v int64) {
+					return func(ctx context.Context, v int64) {
+						agg.Measure(ctx, v, alice)
+					}
+				},
+			},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				var shouldPanic atomic.Bool
+				shouldPanic.Store(true)
+				panicFilter := func(context.Context) bool {
+					if shouldPanic.Load() {
+						panic("offer panic")
+					}
+					return false
+				}
+				agg := Builder[int64]{
+					Temporality: metricdata.DeltaTemporality,
+					Filter:      attrFltr,
+					ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+						return NewFilteredExemplarReservoir[int64](
+							panicFilter,
+							exemplar.NewFixedSizeReservoir(1),
+						)
+					},
+				}.BoundSum(true)
+
+				record := tc.setup(agg)
+				assert.PanicsWithValue(t, "offer panic", func() {
+					record(t.Context(), 5)
+				})
+
+				s := collectWithTimeout(t, agg.ComputeAggregation)
+				assert.Equal(t, int64(5), s.DataPoints[0].Value)
+
+				// Subsequent non-panicking cycle on the swapped buffer must also stay balanced.
+				shouldPanic.Store(false)
+				record(t.Context(), 7)
+				s = collectWithTimeout(t, agg.ComputeAggregation)
+				assert.Equal(t, int64(7), s.DataPoints[0].Value)
+			})
+		}
+	})
+
+	t.Run("MixedDropExemplarsBuffers", func(t *testing.T) {
+		var calls atomic.Int32
+		panicFilter := func(context.Context) bool {
+			panic("offer panic")
+		}
+		agg := Builder[int64]{
+			Temporality: metricdata.DeltaTemporality,
+			Filter:      attrFltr,
+			ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+				if calls.Add(1) == 1 {
+					return &dropRes[int64]{}
+				}
+				return NewFilteredExemplarReservoir[int64](
+					panicFilter,
+					exemplar.NewFixedSizeReservoir(1),
+				)
+			},
+		}.BoundSum(true)
+
+		bm := agg.Bind(alice)
+		// Cycle 1 uses buffer 0 (dropRes): does not panic.
+		bm(t.Context(), 3)
+		s := collectWithTimeout(t, agg.ComputeAggregation)
+		assert.Equal(t, int64(3), s.DataPoints[0].Value)
+
+		// Cycle 2 uses buffer 1 (panicking reservoir): must still release wait group via defer.
+		assert.PanicsWithValue(t, "offer panic", func() {
+			bm(t.Context(), 9)
+		})
+		s = collectWithTimeout(t, agg.ComputeAggregation)
+		assert.Equal(t, int64(9), s.DataPoints[0].Value)
+	})
 }
 
 func TestBoundCumulativeSumDelayedFirstMeasurement(t *testing.T) {
