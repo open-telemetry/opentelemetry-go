@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package profiledata // import "go.opentelemetry.io/otel/sdk/profile/profiledata"
+package profiledata
 
 import (
 	"time"

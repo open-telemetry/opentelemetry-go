@@ -6,4 +6,4 @@
 // The data model mirrors the OpenTelemetry Profiles specification
 // (https://opentelemetry.io/docs/specs/otel/profiles/data-format/) in idiomatic
 // Go without depending on protobuf types.
-package profiledata // import "go.opentelemetry.io/otel/sdk/profile/profiledata"
+package profiledata
