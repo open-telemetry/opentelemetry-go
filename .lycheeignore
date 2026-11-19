@@ -1,5 +1,6 @@
 http://localhost
 https://localhost
+http://127.0.0.1
 http://jaeger-collector
 https://github.com/open-telemetry/opentelemetry-go/milestone/
 https://github.com/open-telemetry/opentelemetry-go/projects

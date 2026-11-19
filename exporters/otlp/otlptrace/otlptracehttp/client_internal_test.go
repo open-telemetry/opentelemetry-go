@@ -217,7 +217,7 @@ func TestRetryableNetworkError(t *testing.T) {
 			name: "invalid address",
 			err: &url.Error{
 				Op:  "Post",
-				URL: "http://127.0.0.1:65536",
+				URL: "http://127.0.0.1",
 				Err: &net.OpError{Op: "dial", Net: "tcp", Err: &net.AddrError{Err: "invalid port", Addr: "65536"}},
 			},
 		},
@@ -316,7 +316,9 @@ func TestRetryableNetworkErrorRealErrors(t *testing.T) {
 	})
 
 	t.Run("invalid port", func(t *testing.T) {
-		err := post(t, &http.Client{}, "http://127.0.0.1:65536/")
+		// Built at runtime: the link checker rejects the invalid port as a
+		// malformed URL literal.
+		err := post(t, &http.Client{}, "http://"+net.JoinHostPort("127.0.0.1", "65536")+"/")
 		assert.False(t, retryableNetworkError(err), "err: %v", err)
 	})
 }
