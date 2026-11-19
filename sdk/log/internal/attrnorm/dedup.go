@@ -801,8 +801,8 @@ func arrayAt[T any](storage any, elem reflect.Type, i int) T {
 	return array.Index(i).Interface().(T)
 }
 
-// rawSet has the same fields as attribute.Set, so we can read its array directly.
-// If attribute.Set ever changes, TestSetMirrorLayout fails.
+// rawSet has the same fields as attribute.Set. computeDataFixed stops at 10, but
+// larger sets match too: reflect.ArrayOf returns the same [N]KeyValue type.
 type rawSet struct {
 	hash uint64
 	data any

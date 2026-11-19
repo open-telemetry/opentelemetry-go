@@ -1016,4 +1016,13 @@ func TestSetMirrorLayout(t *testing.T) {
 	if _, ok := (*rawSet)(unsafe.Pointer(&set)).data.([1]attribute.KeyValue); !ok { //nolint:gosec // Checks that rawSet matches attribute.Set.
 		t.Fatal("rawSet does not mirror attribute.Set storage")
 	}
+
+	kvs := make([]attribute.KeyValue, maxInlineSetSize)
+	for i := range kvs {
+		kvs[i] = attribute.Int(fmt.Sprintf("k%02d", i), i)
+	}
+	set = attribute.NewSet(kvs...)
+	if _, ok := (*rawSet)(unsafe.Pointer(&set)).data.([maxInlineSetSize]attribute.KeyValue); !ok { //nolint:gosec // Checks that rawSet matches attribute.Set.
+		t.Fatal("rawSet does not mirror attribute.Set storage for the largest inline size")
+	}
 }
