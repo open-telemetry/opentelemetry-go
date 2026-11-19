@@ -12,8 +12,8 @@ import (
 
 func ExampleContextWithRemoteSpanContext() {
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID: trace.TraceID{0x001},
-		SpanID:  trace.SpanID{0x001},
+		TraceID: trace.TraceID{0x01},
+		SpanID:  trace.SpanID{0x01},
 	})
 	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
 
