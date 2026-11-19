@@ -1,0 +1,44 @@
+module go.opentelemetry.io/otel/exporters/otlp/otlpprofile/otlpprofilehttp
+
+go 1.26.0
+
+require (
+	github.com/cenkalti/backoff/v7 v7.0.3
+	github.com/go-logr/logr v1.4.4
+	github.com/stretchr/testify v1.12.1
+	go.opentelemetry.io/otel v1.47.0
+	go.opentelemetry.io/otel/sdk v1.47.0
+	go.opentelemetry.io/otel/sdk/profile v0.0.0
+	go.opentelemetry.io/otel/trace v1.47.0
+	go.opentelemetry.io/proto/slim/otlp v1.11.1
+	go.opentelemetry.io/proto/slim/otlp/collector/profiles/v1development v0.4.1
+	go.opentelemetry.io/proto/slim/otlp/profiles/v1development v0.4.1
+	google.golang.org/protobuf v1.36.12
+)
+
+require (
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/otel/log v1.47.0 // indirect
+	go.opentelemetry.io/otel/metric v1.47.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	golang.org/x/sys v0.50.0 // indirect
+)
+
+replace go.opentelemetry.io/otel => ../../../..
+
+replace go.opentelemetry.io/otel/sdk => ../../../../sdk
+
+replace go.opentelemetry.io/otel/sdk/profile => ../../../../sdk/profile
+
+replace go.opentelemetry.io/otel/trace => ../../../../trace
+
+replace go.opentelemetry.io/otel/metric => ../../../../metric
+
+replace go.opentelemetry.io/otel/sdk/metric => ../../../../sdk/metric
+
+replace go.opentelemetry.io/otel/metric/x => ../../../../metric/x
+
+replace go.opentelemetry.io/otel/log => ../../../../log

@@ -45,6 +45,7 @@ module-sets:
     version: v0.0.0
     modules:
       - go.opentelemetry.io/otel/sdk/profile
+      - go.opentelemetry.io/otel/exporters/otlp/otlpprofile/otlpprofilehttp
   experimental-schema:
     version: v0.0.19
     modules:
@@ -83,3 +84,6 @@ modules:
   go.opentelemetry.io/otel/sdk/profile:
     version-refs:
       - ./version.go
+  go.opentelemetry.io/otel/exporters/otlp/otlpprofile/otlpprofilehttp:
+    version-refs:
+      - ./internal/version.go

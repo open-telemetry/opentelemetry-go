@@ -50,3 +50,5 @@ https://superuser.com/a/980821
 # Unreleased experimental profiling modules (remove once released).
 https://pkg.go.dev/go.opentelemetry.io/otel/sdk/profile
 https://pkg.go.dev/go.opentelemetry.io/otel/sdk/profile/profiledata
+https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpprofile
+https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpprofile/otlpprofilehttp
