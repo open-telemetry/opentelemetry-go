@@ -18,12 +18,13 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/observ"
 	mapi "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -66,6 +67,45 @@ func (m *errMeter) Int64Counter(string, ...mapi.Int64CounterOption) (mapi.Int64C
 
 func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
 	return nil, m.err
+}
+
+type histogramMeterProvider struct {
+	noop.MeterProvider
+	histogramConfig *mapi.Float64HistogramConfig
+}
+
+func (m *histogramMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
+	return &histogramMeter{histogramConfig: m.histogramConfig}
+}
+
+type histogramMeter struct {
+	noop.Meter
+	histogramConfig *mapi.Float64HistogramConfig
+}
+
+func (m *histogramMeter) Float64Histogram(
+	_ string,
+	opts ...mapi.Float64HistogramOption,
+) (mapi.Float64Histogram, error) {
+	*m.histogramConfig = mapi.NewFloat64HistogramConfig(opts...)
+	return noop.Float64Histogram{}, nil
+}
+
+func TestNewInstrumentationDurationHistogramAdvice(t *testing.T) {
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	var config mapi.Float64HistogramConfig
+	otel.SetMeterProvider(&histogramMeterProvider{histogramConfig: &config})
+	inst, err := observ.NewInstrumentation(ID, Target)
+	require.NoError(t, err)
+	require.NotNil(t, inst)
+
+	assert.Equal(t, otelconv.SDKExporterOperationDuration{}.Description(), config.Description())
+	assert.Equal(t, "s", config.Unit())
+	require.NotNil(t, config.ExplicitBucketBoundaries(), "single-bucket advice must be explicit")
+	assert.Empty(t, config.ExplicitBucketBoundaries())
 }
 
 func TestNewInstrumentationObservabilityErrors(t *testing.T) {
@@ -174,7 +214,7 @@ func operationDuration(err error) metricdata.Metrics {
 		c := status.Code(err)
 		return attribute.NewSet(append(
 			[]attribute.KeyValue{
-				semconv.RPCResponseStatusCode(c.String()),
+				semconv.RPCStatusCode(c.String()),
 			},
 			baseAttrs(err)...,
 		)...)
