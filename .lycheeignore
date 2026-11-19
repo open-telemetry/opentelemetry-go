@@ -52,3 +52,4 @@ https://pkg.go.dev/go.opentelemetry.io/otel/sdk/profile
 https://pkg.go.dev/go.opentelemetry.io/otel/sdk/profile/profiledata
 https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpprofile
 https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpprofile/otlpprofilehttp
+https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlpprofile/otlpprofilegrpc

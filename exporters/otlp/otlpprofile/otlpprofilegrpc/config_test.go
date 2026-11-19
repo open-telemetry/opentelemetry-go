@@ -1,0 +1,186 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package otlpprofilegrpc
+
+import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+)
+
+func TestConfigDefaultsAndEnvVars(t *testing.T) {
+	t.Run("defaults", func(t *testing.T) {
+		cfg := newConfig(nil)
+		assert.Equal(t, "localhost:4317", cfg.endpoint.Value)
+		assert.False(t, cfg.insecure.Value)
+		assert.Equal(t, NoCompression, cfg.compression.Value)
+		assert.Equal(t, 10*time.Second, cfg.timeout.Value)
+		assert.Equal(t, 64*1024*1024, cfg.maxRequestSize.Value)
+	})
+
+	t.Run("general_and_signal_env_precedence", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://env.endpoint:4317")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT", "https://overrode.by.signal.specific:9443")
+		t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "a=1")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_HEADERS", "b=2,c=v%203")
+		t.Setenv("OTEL_EXPORTER_OTLP_COMPRESSION", "none")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_COMPRESSION", "GZIP")
+		t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "1000")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_TIMEOUT", "4500")
+
+		cfg := newConfig(nil)
+		assert.Equal(t, "overrode.by.signal.specific:9443", cfg.endpoint.Value)
+		assert.False(t, cfg.insecure.Value)
+		assert.Equal(t, GzipCompression, cfg.compression.Value)
+		assert.Equal(t, 4500*time.Millisecond, cfg.timeout.Value)
+		assert.Equal(t, map[string]string{"b": "2", "c": "v 3"}, cfg.headers.Value)
+	})
+
+	t.Run("insecure_env_when_no_endpoint_scheme", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "false")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_INSECURE", "true")
+		cfg := newConfig(nil)
+		assert.True(t, cfg.insecure.Value)
+	})
+
+	t.Run("options_override_env", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT", "https://env.endpoint:4317")
+		creds := insecure.NewCredentials()
+		cfg := newConfig([]Option{
+			WithEndpointURL("http://someendpoint:5317"),
+			WithCompressor("gzip"),
+			WithHeaders(map[string]string{"x-key": "val"}),
+			WithTimeout(2 * time.Second),
+			WithMaxRequestSize(4096),
+			WithReconnectionPeriod(3 * time.Second),
+			WithServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
+			WithTLSCredentials(creds),
+			WithDialOption(grpc.WithAuthority("override.example")),
+		})
+		assert.Equal(t, "someendpoint:5317", cfg.endpoint.Value)
+		assert.True(t, cfg.insecure.Value)
+		assert.Equal(t, GzipCompression, cfg.compression.Value)
+		assert.Equal(t, map[string]string{"x-key": "val"}, cfg.headers.Value)
+		assert.Equal(t, 2*time.Second, cfg.timeout.Value)
+		assert.Equal(t, 4096, cfg.maxRequestSize.Value)
+		assert.Equal(t, 3*time.Second, cfg.reconnectionPeriod.Value)
+		assert.JSONEq(t, `{"loadBalancingPolicy":"round_robin"}`, cfg.serviceConfig.Value)
+		assert.Equal(t, creds, cfg.gRPCCredentials.Value)
+		assert.Len(t, cfg.dialOptions.Value, 1)
+
+		dialOpts := newGRPCDialOptions(cfg)
+		assert.NotEmpty(t, dialOpts)
+	})
+
+	t.Run("invalid_env_and_option_values_fall_back", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_COMPRESSION", "brotli")
+		t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "notanint")
+		t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "notabool")
+		t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "://bad")
+		t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "invalid,bad key=1,ok=val")
+
+		cfg := newConfig([]Option{
+			WithEndpointURL("://bad"),
+			WithCompressor("unknown"),
+		})
+		assert.Equal(t, "localhost:4317", cfg.endpoint.Value)
+		assert.Equal(t, NoCompression, cfg.compression.Value)
+		assert.Equal(t, 10*time.Second, cfg.timeout.Value)
+		assert.False(t, cfg.insecure.Value)
+		assert.Nil(t, cfg.headers.Value)
+	})
+
+	t.Run("env_tls_certificates", func(t *testing.T) {
+		certPath, keyPath := writeTestCertAndKey(t)
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_CERTIFICATE", certPath)
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_CLIENT_CERTIFICATE", certPath)
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_CLIENT_KEY", keyPath)
+
+		cfg := newConfig(nil)
+		require.NotNil(t, cfg.tlsCfg.Value)
+		assert.NotNil(t, cfg.tlsCfg.Value.RootCAs)
+		assert.Len(t, cfg.tlsCfg.Value.Certificates, 1)
+		assert.NotEmpty(t, newGRPCDialOptions(cfg))
+	})
+
+	t.Run("env_tls_errors_ignored_gracefully", func(t *testing.T) {
+		badFile := filepath.Join(t.TempDir(), "bad.pem")
+		require.NoError(t, os.WriteFile(badFile, []byte("not-a-pem"), 0o600))
+		t.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", badFile)
+		t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", badFile)
+		t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", badFile)
+
+		cfg := newConfig(nil)
+		assert.Nil(t, cfg.tlsCfg.Value)
+	})
+}
+
+func TestClientHelpers(t *testing.T) {
+	noop := newNoopClient()
+	assert.NoError(t, noop.UploadProfiles(t.Context(), nil))
+	assert.NoError(t, noop.Shutdown(t.Context()))
+
+	c := &client{
+		metadata: metadata.Pairs("x-custom", "1", profilesDevelopmentVersionKey, profilesDevelopmentVersion),
+	}
+	parent := metadata.NewOutgoingContext(t.Context(), metadata.Pairs(
+		"x-parent", "2",
+		profilesDevelopmentVersionKey, "999",
+	))
+	ctx, cancel := c.exportContext(parent)
+	defer cancel()
+
+	outMD, ok := metadata.FromOutgoingContext(ctx)
+	require.True(t, ok)
+	assert.Equal(t, []string{"2"}, outMD.Get("x-parent"))
+	assert.Equal(t, []string{"1"}, outMD.Get("x-custom"))
+	assert.Equal(t, []string{profilesDevelopmentVersion}, outMD.Get(profilesDevelopmentVersionKey))
+
+	cfg := newConfig([]Option{WithTLSCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS13}))})
+	assert.NotEmpty(t, newGRPCDialOptions(cfg))
+}
+
+func writeTestCertAndKey(t *testing.T) (certPath, keyPath string) {
+	t.Helper()
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "localhost"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		IsCA:         true,
+		KeyUsage:     x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &priv.PublicKey, priv)
+	require.NoError(t, err)
+	keyDER, err := x509.MarshalECPrivateKey(priv)
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	certPath = filepath.Join(dir, "cert.pem")
+	keyPath = filepath.Join(dir, "key.pem")
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+	require.NoError(t, os.WriteFile(certPath, certPEM, 0o600))
+	require.NoError(t, os.WriteFile(keyPath, keyPEM, 0o600))
+	return certPath, keyPath
+}

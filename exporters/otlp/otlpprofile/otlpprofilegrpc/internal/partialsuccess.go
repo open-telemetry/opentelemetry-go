@@ -1,0 +1,47 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package internal
+
+import "fmt"
+
+// PartialSuccess represents an OTLP partial-success response. Use
+// `errors.Is(err, PartialSuccess{})` to test whether an error belongs to this
+// category.
+type PartialSuccess struct {
+	ErrorMessage  string
+	RejectedItems int64
+	RejectedKind  string
+}
+
+var _ error = PartialSuccess{}
+
+// Error implements the error interface.
+func (ps PartialSuccess) Error() string {
+	msg := ps.ErrorMessage
+	if msg == "" {
+		msg = "empty message"
+	}
+	return fmt.Sprintf("OTLP partial success: %s (%d %s rejected)", msg, ps.RejectedItems, ps.RejectedKind)
+}
+
+// Is supports matching with errors.Is.
+func (PartialSuccess) Is(err error) bool {
+	_, ok := err.(PartialSuccess)
+	return ok
+}
+
+// ErrorType returns the semantic convention error.type value for partial-success rejections.
+func (PartialSuccess) ErrorType() string {
+	return "rejected"
+}
+
+// ProfilePartialSuccessError returns an error describing a partial-success
+// response for the profiles signal.
+func ProfilePartialSuccessError(itemsRejected int64, errorMessage string) error {
+	return PartialSuccess{
+		ErrorMessage:  errorMessage,
+		RejectedItems: itemsRejected,
+		RejectedKind:  "profiles",
+	}
+}

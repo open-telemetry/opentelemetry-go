@@ -15,6 +15,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Added
 
+- Add experimental `go.opentelemetry.io/otel/exporters/otlp/otlpprofile/otlpprofilegrpc` OTLP/gRPC profile exporter using `go.opentelemetry.io/proto/otlp/collector/profiles/v1development`. (#9547)
 - Add experimental `go.opentelemetry.io/otel/exporters/otlp/otlpprofile/otlpprofilehttp` OTLP/HTTP profile exporter using `go.opentelemetry.io/proto/slim/otlp/collector/profiles/v1development`. (#9546)
 - Add experimental `go.opentelemetry.io/otel/sdk/profile` module providing `ProfilerProvider`, `ManualReader`, `PeriodicReader`, `RuntimeProducer` (heap, allocs, goroutine, mutex, block, and CPU profiles), and `go.opentelemetry.io/otel/sdk/profile/profiledata`. (#9545)
 - Add `go.opentelemetry.io/otel/semconv/v1.45.0` and its metric convenience subpackages from OpenTelemetry Semantic Conventions v1.45.0.
