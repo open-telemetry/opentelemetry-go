@@ -193,6 +193,19 @@ func TestRetryableNetworkError(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "temporary",
+			err:  &url.Error{Op: "Post", URL: "https://example.com", Err: temporaryError{}},
+			want: true,
+		},
+		{
+			name: "socks connect without cause",
+			err: &url.Error{
+				Op:  "Post",
+				URL: "http://127.0.0.1:1",
+				Err: &net.OpError{Op: "socks connect", Net: "tcp"},
+			},
+		},
+		{
 			name: "tls alert",
 			err: &url.Error{
 				Op:  "Post",
@@ -349,3 +362,9 @@ type timeoutError struct{}
 func (timeoutError) Error() string   { return "timeout" }
 func (timeoutError) Timeout() bool   { return true }
 func (timeoutError) Temporary() bool { return true }
+
+type temporaryError struct{}
+
+func (temporaryError) Error() string   { return "temporary" }
+func (temporaryError) Timeout() bool   { return false }
+func (temporaryError) Temporary() bool { return true }
