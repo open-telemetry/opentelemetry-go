@@ -46,3 +46,6 @@ https://www.sap.com/products/technology-platform/hana/what-is-sap-hana.html
 https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/schedule_and_quota_apis/clusterresourcequota-quota-openshift-io-v1#status-total
 https://blogs.oracle.com/linux/post/understanding-linux-kernel-memory-statistics
 https://superuser.com/a/980821
+# Fake hosts used as OTLP endpoint fixtures in Go tests; they are never resolvable.
+https?://test[:/]
+https?://ignored[:/]
