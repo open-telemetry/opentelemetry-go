@@ -65,7 +65,7 @@ require (
 	github.com/charithe/durationcheck v0.0.11 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20261023060817-a45b7c86333f // indirect
-	github.com/charmbracelet/x/ansi v0.11.9 // indirect
+	github.com/charmbracelet/x/ansi v0.11.10 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
