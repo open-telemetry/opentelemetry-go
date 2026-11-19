@@ -399,52 +399,184 @@ func TestWithClientCert(t *testing.T) {
 	cert, err := tls.X509KeyPair([]byte(WeakCertificate), []byte(WeakKey))
 	assert.NoError(t, err)
 
-	reader := EnvOptionsReader{
-		GetEnv: func(n string) string {
-			switch n {
-			case "CLIENT_CERTIFICATE":
-				return "/path/tls.crt"
-			case "CLIENT_KEY":
-				return "/path/tls.key"
-			}
-			return ""
-		},
-		ReadFile: func(n string) ([]byte, error) {
-			switch n {
-			case "/path/tls.crt":
-				return []byte(WeakCertificate), nil
-			case "/path/tls.key":
-				return []byte(WeakKey), nil
-			}
-			return []byte{}, nil
-		},
+	weakFiles := func(n string) ([]byte, error) {
+		switch n {
+		case "/generic/tls.crt", "/signal/tls.crt":
+			return []byte(WeakCertificate), nil
+		case "/generic/tls.key", "/signal/tls.key":
+			return []byte(WeakKey), nil
+		}
+		return []byte{}, nil
+	}
+
+	newReader := func(env map[string]string, readFile func(string) ([]byte, error)) EnvOptionsReader {
+		return EnvOptionsReader{
+			GetEnv:   func(n string) string { return env[n] },
+			ReadFile: readFile,
+		}
 	}
 
 	var option testOption
-	reader.Apply(
-		WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) {
-			option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
-		}),
-	)
-	assert.Equal(t, cert, option.TestTLS.Certificates[0])
+	apply := func(r EnvOptionsReader) *tls.Config {
+		r.Apply(
+			WithClientCert(
+				[]string{"METRICS_CLIENT_CERTIFICATE", "CLIENT_CERTIFICATE"},
+				[]string{"METRICS_CLIENT_KEY", "CLIENT_KEY"},
+				func(c tls.Certificate) {
+					option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
+				},
+			),
+		)
+		cfg := option.TestTLS
+		option.TestTLS = nil
+		return cfg
+	}
 
-	reader.ReadFile = func(string) ([]byte, error) { return nil, errors.New("oops") }
-	option.TestTLS = nil
-	reader.Apply(
-		WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) {
-			option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
-		}),
-	)
-	assert.Nil(t, option.TestTLS)
+	// Only the generic tier is configured.
+	cfg := apply(newReader(map[string]string{
+		"CLIENT_CERTIFICATE": "/generic/tls.crt",
+		"CLIENT_KEY":         "/generic/tls.key",
+	}, weakFiles))
+	if assert.NotNil(t, cfg) {
+		assert.Equal(t, cert, cfg.Certificates[0])
+	}
 
-	reader.GetEnv = func(string) string { return "" }
-	option.TestTLS = nil
-	reader.Apply(
-		WithClientCert("CLIENT_CERTIFICATE", "CLIENT_KEY", func(c tls.Certificate) {
-			option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
-		}),
-	)
-	assert.Nil(t, option.TestTLS)
+	// Only the signal-specific tier is configured.
+	cfg = apply(newReader(map[string]string{
+		"METRICS_CLIENT_CERTIFICATE": "/signal/tls.crt",
+		"METRICS_CLIENT_KEY":         "/signal/tls.key",
+	}, weakFiles))
+	if assert.NotNil(t, cfg) {
+		assert.Equal(t, cert, cfg.Certificates[0])
+	}
+
+	// Both tiers are configured: the signal-specific variables take precedence.
+	var read []string
+	r := newReader(map[string]string{
+		"CLIENT_CERTIFICATE":         "/generic/tls.crt",
+		"CLIENT_KEY":                 "/generic/tls.key",
+		"METRICS_CLIENT_CERTIFICATE": "/signal/tls.crt",
+		"METRICS_CLIENT_KEY":         "/signal/tls.key",
+	}, func(n string) ([]byte, error) {
+		read = append(read, n)
+		return weakFiles(n)
+	})
+	cfg = apply(r)
+	if assert.NotNil(t, cfg) {
+		assert.Equal(t, cert, cfg.Certificates[0])
+	}
+	assert.Equal(t, []string{"/signal/tls.crt", "/signal/tls.key"}, read)
+
+	// Mixed tiers: the certificate and key are resolved independently.
+	cfg = apply(newReader(map[string]string{
+		"METRICS_CLIENT_CERTIFICATE": "/signal/tls.crt",
+		"CLIENT_KEY":                 "/generic/tls.key",
+	}, weakFiles))
+	if assert.NotNil(t, cfg) {
+		assert.Equal(t, cert, cfg.Certificates[0])
+	}
+
+	// Only a client certificate is configured: nothing is applied.
+	cfg = apply(newReader(map[string]string{
+		"METRICS_CLIENT_CERTIFICATE": "/signal/tls.crt",
+	}, weakFiles))
+	assert.Nil(t, cfg)
+
+	// Only a client key is configured: nothing is applied.
+	cfg = apply(newReader(map[string]string{
+		"METRICS_CLIENT_KEY": "/signal/tls.key",
+	}, weakFiles))
+	assert.Nil(t, cfg)
+
+	// Mismatched cert and key files: nothing is applied.
+	cfg = apply(newReader(map[string]string{
+		"CLIENT_CERTIFICATE": "/generic/tls.crt",
+		"CLIENT_KEY":         "/generic/tls.crt",
+	}, weakFiles))
+	assert.Nil(t, cfg)
+
+	// Read failures: nothing is applied.
+	cfg = apply(newReader(map[string]string{
+		"CLIENT_CERTIFICATE": "/generic/tls.crt",
+		"CLIENT_KEY":         "/generic/tls.key",
+	}, func(string) ([]byte, error) {
+		return nil, errors.New("oops")
+	}))
+	assert.Nil(t, cfg)
+
+	// No environment variables are configured: nothing is applied.
+	assert.Nil(t, apply(newReader(nil, weakFiles)))
+}
+
+func TestWithClientCertMixedTier(t *testing.T) {
+	cert, err := tls.X509KeyPair([]byte(WeakCertificate), []byte(WeakKey))
+	assert.NoError(t, err)
+
+	readFile := func(n string) ([]byte, error) {
+		switch n {
+		case "/generic/tls.crt", "/signal/tls.crt":
+			return []byte(WeakCertificate), nil
+		case "/generic/tls.key", "/signal/tls.key":
+			return []byte(WeakKey), nil
+		}
+		return []byte{}, nil
+	}
+
+	var option testOption
+	// apply starts every scenario from a clean state and fails when the
+	// resolver does not hand a certificate to the callback. Without both
+	// guards a resolver that silently prefers the generic tier can skip the
+	// callback and still pass by reusing the previous scenario certificate.
+	apply := func(env map[string]string) *tls.Config {
+		option.TestTLS = nil
+		callbackInvoked := false
+		r := EnvOptionsReader{
+			GetEnv:   func(n string) string { return env[n] },
+			ReadFile: readFile,
+		}
+		r.Apply(
+			WithClientCert(
+				[]string{"METRICS_CLIENT_CERTIFICATE", "CLIENT_CERTIFICATE"},
+				[]string{"METRICS_CLIENT_KEY", "CLIENT_KEY"},
+				func(c tls.Certificate) {
+					callbackInvoked = true
+					option = testOption{TestTLS: &tls.Config{Certificates: []tls.Certificate{c}}}
+				},
+			),
+		)
+		if !assert.True(t, callbackInvoked, "WithClientCert callback was not invoked") {
+			return nil
+		}
+		cfg := option.TestTLS
+		if !assert.NotNil(t, cfg, "WithClientCert callback did not provide a TLS config") {
+			return nil
+		}
+		option.TestTLS = nil
+		return cfg
+	}
+
+	// Resolve a generic-only tier first, so the mixed-tier scenario below
+	// would inherit this certificate if its resolver skipped the callback.
+	cfg := apply(map[string]string{
+		"CLIENT_CERTIFICATE": "/generic/tls.crt",
+		"CLIENT_KEY":         "/generic/tls.key",
+	})
+	if assert.NotNil(t, cfg) {
+		if assert.Len(t, cfg.Certificates, 1) {
+			assert.Equal(t, cert, cfg.Certificates[0])
+		}
+	}
+
+	// Mixed tiers: signal-specific certificate with the generic key.
+	cfg = apply(map[string]string{
+		"METRICS_CLIENT_CERTIFICATE": "/signal/tls.crt",
+		"CLIENT_KEY":                 "/generic/tls.key",
+	})
+	if assert.NotNil(t, cfg) {
+		if assert.Len(t, cfg.Certificates, 1) {
+			assert.Equal(t, cert, cfg.Certificates[0])
+		}
+	}
 }
 
 func TestStringToHeader(t *testing.T) {

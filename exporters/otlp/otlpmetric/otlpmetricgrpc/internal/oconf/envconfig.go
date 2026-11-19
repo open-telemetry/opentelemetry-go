@@ -107,13 +107,8 @@ func getOptionsFromEnv() []GenericOption {
 		envconfig.WithCertPool("CERTIFICATE", func(p *x509.CertPool) { tlsConf.RootCAs = p }),
 		envconfig.WithCertPool("METRICS_CERTIFICATE", func(p *x509.CertPool) { tlsConf.RootCAs = p }),
 		envconfig.WithClientCert(
-			"CLIENT_CERTIFICATE",
-			"CLIENT_KEY",
-			func(c tls.Certificate) { tlsConf.Certificates = []tls.Certificate{c} },
-		),
-		envconfig.WithClientCert(
-			"METRICS_CLIENT_CERTIFICATE",
-			"METRICS_CLIENT_KEY",
+			[]string{"METRICS_CLIENT_CERTIFICATE", "CLIENT_CERTIFICATE"},
+			[]string{"METRICS_CLIENT_KEY", "CLIENT_KEY"},
 			func(c tls.Certificate) { tlsConf.Certificates = []tls.Certificate{c} },
 		),
 		envconfig.WithBool("INSECURE", withInsecureEnv),
