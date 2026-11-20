@@ -886,24 +886,30 @@ func TestQueue(t *testing.T) {
 	t.Run("Enqueue", func(t *testing.T) {
 		const size = 2
 		q := newQueue(size)
-		enqueue := func(r Record) int {
-			n, accepted := q.Enqueue(r)
+		enqueue := func(r Record) (int, bool) {
+			n, accepted, dropped := q.Enqueue(r)
 			assert.True(t, accepted)
-			return n
+			return n, dropped
 		}
 
 		var notR Record
 		notR.SetBody(attribute.IntValue(10))
 
-		assert.Equal(t, 1, enqueue(notR), "incomplete batch")
+		n, dropped := enqueue(notR)
+		assert.Equal(t, 1, n, "incomplete batch")
+		assert.False(t, dropped, "incomplete batch dropped")
 		assert.Equal(t, 1, q.len, "length")
 		assert.Equal(t, size, q.cap, "capacity")
 
-		assert.Equal(t, 2, enqueue(r), "complete batch")
+		n, dropped = enqueue(r)
+		assert.Equal(t, 2, n, "complete batch")
+		assert.False(t, dropped, "complete batch dropped")
 		assert.Equal(t, 2, q.len, "length")
 		assert.Equal(t, size, q.cap, "capacity")
 
-		assert.Equal(t, 2, enqueue(r), "overflow batch")
+		n, dropped = enqueue(r)
+		assert.Equal(t, 2, n, "overflow batch")
+		assert.True(t, dropped, "overflow batch dropped")
 		assert.Equal(t, 2, q.len, "length")
 		assert.Equal(t, size, q.cap, "capacity")
 
@@ -913,12 +919,12 @@ func TestQueue(t *testing.T) {
 	t.Run("Dropped", func(t *testing.T) {
 		q := newQueue(1)
 
-		_, _ = q.Enqueue(r)
-		_, _ = q.Enqueue(r)
+		_, _, _ = q.Enqueue(r)
+		_, _, _ = q.Enqueue(r)
 		assert.Equal(t, uint64(1), q.Dropped(), "fist")
 
-		_, _ = q.Enqueue(r)
-		_, _ = q.Enqueue(r)
+		_, _, _ = q.Enqueue(r)
+		_, _, _ = q.Enqueue(r)
 		assert.Equal(t, uint64(2), q.Dropped(), "second")
 	})
 
@@ -957,13 +963,15 @@ func TestQueue(t *testing.T) {
 
 	t.Run("Close", func(t *testing.T) {
 		q := newQueue(1)
-		_, accepted := q.Enqueue(r)
+		_, accepted, dropped := q.Enqueue(r)
 		require.True(t, accepted)
+		assert.False(t, dropped)
 
 		q.Close()
 		assert.Equal(t, []Record{r}, q.Flush())
-		_, accepted = q.Enqueue(r)
+		_, accepted, dropped = q.Enqueue(r)
 		assert.False(t, accepted)
+		assert.False(t, dropped)
 		assert.Empty(t, q.Flush())
 	})
 
@@ -987,7 +995,7 @@ func TestQueue(t *testing.T) {
 		for range goRoutines {
 			go func() {
 				defer wg.Done()
-				_, _ = b.Enqueue(Record{})
+				_, _, _ = b.Enqueue(Record{})
 				flushed <- b.Flush()
 			}()
 		}
@@ -1012,7 +1020,7 @@ func TestQueueCloseConcurrentSafe(t *testing.T) {
 			<-start
 			var r Record
 			r.SetBody(attribute.IntValue(i))
-			if _, ok := q.Enqueue(r); ok {
+			if _, ok, _ := q.Enqueue(r); ok {
 				accepted <- int64(i)
 			}
 		})
@@ -1038,8 +1046,9 @@ func TestQueueCloseConcurrentSafe(t *testing.T) {
 	}
 	assert.ElementsMatch(t, want, got)
 	assert.Zero(t, q.Len())
-	_, ok := q.Enqueue(Record{})
+	_, ok, dropped := q.Enqueue(Record{})
 	assert.False(t, ok)
+	assert.False(t, dropped)
 }
 
 type blockingExporter struct {
@@ -1201,7 +1210,10 @@ func TestBatchProcessorMetrics(t *testing.T) {
 		t, reader,
 		blpQCap(1),
 		blpQSize(1),
-		blpProcessed(blpDPt(blpSet(), 1)),
+		blpProcessed(
+			blpDPt(blpSet(), 1),
+			blpDPt(blpSet(observ.ErrQueueFull), 2),
+		),
 	)
 
 	releaseExporter()
@@ -1270,7 +1282,10 @@ func TestBatchProcessorShutdownRecordsQueueFullMetrics(t *testing.T) {
 		t, reader,
 		blpQCap(1),
 		blpQSize(1),
-		blpProcessed(blpDPt(blpSet(), 1)),
+		blpProcessed(
+			blpDPt(blpSet(), 1),
+			blpDPt(blpSet(observ.ErrQueueFull), 2),
+		),
 	)
 
 	shutdownErr := make(chan error, 1)
