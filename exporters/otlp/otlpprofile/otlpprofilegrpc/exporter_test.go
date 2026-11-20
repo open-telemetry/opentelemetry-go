@@ -180,14 +180,43 @@ func TestExporterEndToEndWithRuntimeProducer(t *testing.T) {
 
 func TestExporterPartialSuccessRetriesAndLimits(t *testing.T) {
 	t.Run("partial_success", func(t *testing.T) {
+		var step atomic.Int32
 		mockSrv := &mockProfilesServer{
 			handler: func(context.Context, *colprofilepb.ExportProfilesServiceRequest) (*colprofilepb.ExportProfilesServiceResponse, error) {
-				return &colprofilepb.ExportProfilesServiceResponse{
-					PartialSuccess: &colprofilepb.ExportProfilesPartialSuccess{
-						RejectedProfiles: 1,
-						ErrorMessage:     "rejected profile",
-					},
-				}, nil
+				switch step.Add(1) {
+				case 1:
+					return &colprofilepb.ExportProfilesServiceResponse{
+						PartialSuccess: &colprofilepb.ExportProfilesPartialSuccess{
+							RejectedProfiles: 1,
+							ErrorMessage:     "rejected profile",
+						},
+					}, nil
+				case 2:
+					return &colprofilepb.ExportProfilesServiceResponse{
+						PartialSuccess: &colprofilepb.ExportProfilesPartialSuccess{},
+					}, nil
+				case 3:
+					return &colprofilepb.ExportProfilesServiceResponse{
+						PartialSuccess: &colprofilepb.ExportProfilesPartialSuccess{
+							RejectedProfiles: 2,
+						},
+					}, nil
+				case 4:
+					return &colprofilepb.ExportProfilesServiceResponse{
+						PartialSuccess: &colprofilepb.ExportProfilesPartialSuccess{
+							ErrorMessage: "warning only",
+						},
+					}, nil
+				case 5:
+					return nil, status.Error(codes.Unavailable, "retry once")
+				default:
+					return &colprofilepb.ExportProfilesServiceResponse{
+						PartialSuccess: &colprofilepb.ExportProfilesPartialSuccess{
+							RejectedProfiles: 3,
+							ErrorMessage:     "after retry",
+						},
+					}, nil
+				}
 			},
 		}
 		addr := startMockServer(t, mockSrv)
@@ -196,6 +225,12 @@ func TestExporterPartialSuccessRetriesAndLimits(t *testing.T) {
 			t.Context(),
 			otlpprofilegrpc.WithEndpoint(addr),
 			otlpprofilegrpc.WithInsecure(),
+			otlpprofilegrpc.WithRetry(otlpprofilegrpc.RetryConfig{
+				Enabled:         true,
+				InitialInterval: time.Millisecond,
+				MaxInterval:     5 * time.Millisecond,
+				MaxElapsedTime:  time.Second,
+			}),
 		)
 		require.NoError(t, err)
 		t.Cleanup(func() {
@@ -205,7 +240,21 @@ func TestExporterPartialSuccessRetriesAndLimits(t *testing.T) {
 
 		err = exp.Export(t.Context(), sampleResourceProfiles())
 		require.ErrorIs(t, err, internal.PartialSuccess{})
-		assert.Contains(t, err.Error(), "rejected profile")
+		assert.ErrorContains(t, err, "rejected profile")
+
+		assert.NoError(t, exp.Export(t.Context(), sampleResourceProfiles()))
+
+		err = exp.Export(t.Context(), sampleResourceProfiles())
+		require.ErrorIs(t, err, internal.PartialSuccess{})
+		assert.ErrorContains(t, err, "empty message")
+
+		err = exp.Export(t.Context(), sampleResourceProfiles())
+		require.ErrorIs(t, err, internal.PartialSuccess{})
+		assert.ErrorContains(t, err, "warning only")
+
+		err = exp.Export(t.Context(), sampleResourceProfiles())
+		require.ErrorIs(t, err, internal.PartialSuccess{})
+		assert.ErrorContains(t, err, "after retry")
 	})
 
 	t.Run("retries_unavailable_and_resource_exhausted_with_retry_info", func(t *testing.T) {

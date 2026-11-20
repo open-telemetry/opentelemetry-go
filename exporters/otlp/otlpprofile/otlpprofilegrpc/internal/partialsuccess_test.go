@@ -16,4 +16,12 @@ func TestProfilePartialSuccessError(t *testing.T) {
 	assert.Equal(t, "OTLP partial success: rejected (4 profiles rejected)", err.Error())
 	assert.Equal(t, "rejected", PartialSuccess{}.ErrorType())
 	assert.False(t, PartialSuccess{}.Is(errors.New("other")))
+
+	emptyMsgErr := ProfilePartialSuccessError(2, "")
+	assert.ErrorIs(t, emptyMsgErr, PartialSuccess{})
+	assert.Equal(t, "OTLP partial success: empty message (2 profiles rejected)", emptyMsgErr.Error())
+
+	zeroRejectedErr := ProfilePartialSuccessError(0, "warning only")
+	assert.ErrorIs(t, zeroRejectedErr, PartialSuccess{})
+	assert.Equal(t, "OTLP partial success: warning only (0 profiles rejected)", zeroRejectedErr.Error())
 }
