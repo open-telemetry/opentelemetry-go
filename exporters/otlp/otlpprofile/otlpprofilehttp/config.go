@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -505,9 +506,15 @@ func convCompression(s string) (Compression, error) {
 }
 
 func convDuration(s string) (time.Duration, error) {
-	d, err := strconv.Atoi(s)
+	d, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return 0, err
+	}
+	if d < 0 {
+		return 0, errors.New("negative duration")
+	}
+	if d > math.MaxInt64/int64(time.Millisecond) {
+		return 0, errors.New("duration overflows time.Duration")
 	}
 	return time.Duration(d) * time.Millisecond, nil
 }
