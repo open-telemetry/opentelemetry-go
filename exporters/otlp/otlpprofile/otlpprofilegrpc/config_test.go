@@ -37,6 +37,128 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 		assert.Equal(t, 64*1024*1024, cfg.maxRequestSize.Value)
 	})
 
+	t.Run("general_env_fallback_without_signal_vars", func(t *testing.T) {
+		certPath, keyPath := writeTestCertAndKey(t)
+		t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "https://general.endpoint:4317")
+		t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "x-gen=1,x-space=a%20b")
+		t.Setenv("OTEL_EXPORTER_OTLP_COMPRESSION", "gzip")
+		t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "2500")
+		t.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", certPath)
+		t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", certPath)
+		t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", keyPath)
+
+		cfg := newConfig(nil)
+		assert.Equal(t, "general.endpoint:4317", cfg.endpoint.Value)
+		assert.False(t, cfg.insecure.Value)
+		assert.Equal(t, map[string]string{"x-gen": "1", "x-space": "a b"}, cfg.headers.Value)
+		assert.Equal(t, gzipCompression, cfg.compression.Value)
+		assert.Equal(t, 2500*time.Millisecond, cfg.timeout.Value)
+		require.NotNil(t, cfg.tlsCfg.Value)
+		assert.NotNil(t, cfg.tlsCfg.Value.RootCAs)
+		assert.Len(t, cfg.tlsCfg.Value.Certificates, 1)
+	})
+
+	t.Run("general_env_insecure_without_signal_var", func(t *testing.T) {
+		t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "true")
+		cfg := newConfig(nil)
+		assert.True(t, cfg.insecure.Value)
+	})
+
+	t.Run("invalid_signal_env_falls_back_to_general_env", func(t *testing.T) {
+		errs := captureOTelErrors(t)
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT", "://bad")
+		t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://fallback.endpoint:4317")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_COMPRESSION", "invalid")
+		t.Setenv("OTEL_EXPORTER_OTLP_COMPRESSION", "gzip")
+
+		cfg := newConfig(nil)
+		assert.Equal(t, "fallback.endpoint:4317", cfg.endpoint.Value)
+		assert.True(t, cfg.insecure.Value)
+		assert.Equal(t, gzipCompression, cfg.compression.Value)
+		assert.Len(t, *errs, 2)
+	})
+
+	t.Run("endpoint_and_insecure_precedence_matrix", func(t *testing.T) {
+		cases := []struct {
+			name         string
+			env          map[string]string
+			opts         []Option
+			wantEndpoint string
+			wantInsecure bool
+		}{
+			{
+				name:         "WithEndpointURL_https_overrides_WithInsecure",
+				opts:         []Option{WithInsecure(), WithEndpointURL("https://secure.example:4317")},
+				wantEndpoint: "secure.example:4317",
+				wantInsecure: false,
+			},
+			{
+				name:         "WithInsecure_overrides_WithEndpointURL_https",
+				opts:         []Option{WithEndpointURL("https://secure.example:4317"), WithInsecure()},
+				wantEndpoint: "secure.example:4317",
+				wantInsecure: true,
+			},
+			{
+				name: "WithEndpointURL_https_overrides_http_env_and_insecure_env",
+				env: map[string]string{
+					"OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT": "http://env.example:4317",
+					"OTEL_EXPORTER_OTLP_PROFILES_INSECURE": "true",
+				},
+				opts:         []Option{WithEndpointURL("https://opt.example:4317")},
+				wantEndpoint: "opt.example:4317",
+				wantInsecure: false,
+			},
+			{
+				name:         "WithEndpoint_overrides_WithEndpointURL_host",
+				opts:         []Option{WithEndpointURL("http://first.example:4317"), WithEndpoint("second.example:9090")},
+				wantEndpoint: "second.example:9090",
+				wantInsecure: true,
+			},
+			{
+				name:         "schemeless_WithEndpointURL_preserves_WithInsecure",
+				opts:         []Option{WithInsecure(), WithEndpointURL("//127.0.0.1:4317/prefix")},
+				wantEndpoint: "127.0.0.1:4317",
+				wantInsecure: true,
+			},
+			{
+				name:         "schemeless_WithEndpointURL_honors_env_insecure",
+				env:          map[string]string{"OTEL_EXPORTER_OTLP_PROFILES_INSECURE": "true"},
+				opts:         []Option{WithEndpointURL("//127.0.0.1:4317/prefix")},
+				wantEndpoint: "127.0.0.1:4317",
+				wantInsecure: true,
+			},
+			{
+				name:         "unix_endpoint_url_implies_insecure",
+				opts:         []Option{WithEndpointURL("unix:///var/run/otel.sock")},
+				wantEndpoint: "unix:///var/run/otel.sock",
+				wantInsecure: true,
+			},
+			{
+				name:         "unix_abstract_env_implies_insecure",
+				env:          map[string]string{"OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT": "unix-abstract:otel-sock"},
+				wantEndpoint: "unix-abstract:otel-sock",
+				wantInsecure: true,
+			},
+			{
+				name:         "general_unix_env_implies_insecure",
+				env:          map[string]string{"OTEL_EXPORTER_OTLP_ENDPOINT": "unix:///tmp/otel.sock"},
+				wantEndpoint: "unix:///tmp/otel.sock",
+				wantInsecure: true,
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				for k, v := range tc.env {
+					t.Setenv(k, v)
+				}
+				cfg := newConfig(tc.opts)
+				assert.Equal(t, tc.wantEndpoint, cfg.endpoint.Value)
+				assert.Equal(t, tc.wantInsecure, cfg.insecure.Value)
+			})
+		}
+	})
+
 	t.Run("general_and_signal_env_precedence", func(t *testing.T) {
 		t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://env.endpoint:4317")
 		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT", "https://overrode.by.signal.specific:9443")
