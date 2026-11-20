@@ -52,7 +52,7 @@ func newNoopClient() *client {
 
 var errInsecureEndpointWithTLS = errors.New("insecure HTTP endpoint cannot use TLS client configuration")
 
-func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
+func newHTTPClient(cfg config) (*client, error) {
 	if cfg.insecure.Value && cfg.tlsCfg.Value != nil {
 		return nil, errInsecureEndpointWithTLS
 	}
@@ -90,7 +90,7 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 	if cfg.insecure.Value {
 		u.Scheme = "http"
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
 		return nil, err
 	}

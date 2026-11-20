@@ -23,9 +23,9 @@ type Exporter struct {
 var _ profile.Exporter = (*Exporter)(nil)
 
 // New returns a new [Exporter].
-func New(ctx context.Context, options ...Option) (*Exporter, error) {
+func New(_ context.Context, options ...Option) (*Exporter, error) {
 	cfg := newConfig(options)
-	c, err := newHTTPClient(ctx, cfg)
+	c, err := newHTTPClient(cfg)
 	if err != nil {
 		return nil, err
 	}
