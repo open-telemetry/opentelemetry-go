@@ -1,0 +1,900 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package metricdatatest
+
+import (
+	"bytes"
+	"fmt"
+	"reflect"
+	"slices"
+	"strings"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+)
+
+// equalResourceMetrics returns reasons ResourceMetrics are not equal. If they
+// are equal, the returned reasons will be empty.
+//
+// The ScopeMetrics each ResourceMetrics contains are compared based on
+// containing the same ScopeMetrics, not the order they are stored in.
+func equalResourceMetrics(a, b metricdata.ResourceMetrics, cfg config) (reasons []string) {
+	if !a.Resource.Equal(b.Resource) {
+		reasons = append(reasons, notEqualStr("Resources", a.Resource, b.Resource))
+	}
+
+	r := diffSlices(
+		a.ScopeMetrics,
+		b.ScopeMetrics,
+		func(sm metricdata.ScopeMetrics) string {
+			return fmt.Sprintf("Scope %q", sm.Scope.Name)
+		},
+		func(a, b metricdata.ScopeMetrics) []string {
+			return equalScopeMetrics(a, b, cfg)
+		},
+	)
+	if r != "" {
+		reasons = append(reasons, "ResourceMetrics ScopeMetrics not equal:\n"+r)
+	}
+	return reasons
+}
+
+// equalScopeMetrics returns reasons ScopeMetrics are not equal. If they are
+// equal, the returned reasons will be empty.
+//
+// The Metrics each ScopeMetrics contains are compared based on containing the
+// same Metrics, not the order they are stored in.
+func equalScopeMetrics(a, b metricdata.ScopeMetrics, cfg config) (reasons []string) {
+	if a.Scope != b.Scope {
+		reasons = append(reasons, notEqualStr("Scope", a.Scope, b.Scope))
+	}
+
+	r := diffSlices(
+		a.Metrics,
+		b.Metrics,
+		func(m metricdata.Metrics) string {
+			return fmt.Sprintf("Metric %q", m.Name)
+		},
+		func(a, b metricdata.Metrics) []string {
+			return equalMetrics(a, b, cfg)
+		},
+	)
+	if r != "" {
+		reasons = append(reasons, "ScopeMetrics Metrics not equal:\n"+r)
+	}
+	return reasons
+}
+
+// equalMetrics returns reasons Metrics are not equal. If they are equal, the
+// returned reasons will be empty.
+func equalMetrics(a, b metricdata.Metrics, cfg config) (reasons []string) {
+	if a.Name != b.Name {
+		reasons = append(reasons, notEqualStr("Name", a.Name, b.Name))
+	}
+	if a.Description != b.Description {
+		reasons = append(reasons, notEqualStr("Description", a.Description, b.Description))
+	}
+	if a.Unit != b.Unit {
+		reasons = append(reasons, notEqualStr("Unit", a.Unit, b.Unit))
+	}
+
+	r := equalAggregations(a.Data, b.Data, cfg)
+	if len(r) > 0 {
+		reasons = append(reasons, "Metrics Data not equal:")
+		reasons = append(reasons, r...)
+	}
+	return reasons
+}
+
+// equalAggregations returns reasons a and b are not equal. If they are equal,
+// the returned reasons will be empty.
+func equalAggregations(a, b metricdata.Aggregation, cfg config) (reasons []string) {
+	if a == nil || b == nil {
+		if a != b {
+			return []string{notEqualStr("Aggregation", a, b)}
+		}
+		return reasons
+	}
+
+	if reflect.TypeOf(a) != reflect.TypeOf(b) {
+		return []string{fmt.Sprintf("Aggregation types not equal:\nexpected: %T\nactual: %T", a, b)}
+	}
+
+	switch v := a.(type) {
+	case metricdata.Gauge[int64]:
+		r := equalGauges(v, b.(metricdata.Gauge[int64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "Gauge[int64] not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.Gauge[float64]:
+		r := equalGauges(v, b.(metricdata.Gauge[float64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "Gauge[float64] not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.Sum[int64]:
+		r := equalSums(v, b.(metricdata.Sum[int64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "Sum[int64] not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.Sum[float64]:
+		r := equalSums(v, b.(metricdata.Sum[float64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "Sum[float64] not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.Histogram[int64]:
+		r := equalHistograms(v, b.(metricdata.Histogram[int64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "Histogram not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.Histogram[float64]:
+		r := equalHistograms(v, b.(metricdata.Histogram[float64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "Histogram not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.ExponentialHistogram[int64]:
+		r := equalExponentialHistograms(v, b.(metricdata.ExponentialHistogram[int64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "ExponentialHistogram not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.ExponentialHistogram[float64]:
+		r := equalExponentialHistograms(v, b.(metricdata.ExponentialHistogram[float64]), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "ExponentialHistogram not equal:")
+			reasons = append(reasons, r...)
+		}
+	case metricdata.Summary:
+		r := equalSummary(v, b.(metricdata.Summary), cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, "Summary not equal:")
+			reasons = append(reasons, r...)
+		}
+	default:
+		reasons = append(reasons, fmt.Sprintf("Aggregation of unknown types %T", a))
+	}
+	return reasons
+}
+
+// equalGauges returns reasons Gauges are not equal. If they are equal, the
+// returned reasons will be empty.
+//
+// The DataPoints each Gauge contains are compared based on containing the
+// same DataPoints, not the order they are stored in.
+func equalGauges[N int64 | float64](a, b metricdata.Gauge[N], cfg config) (reasons []string) {
+	r := diffSlices(
+		a.DataPoints,
+		b.DataPoints,
+		func(dp metricdata.DataPoint[N]) string {
+			return "DataPoint " + dp.Attributes.String()
+		},
+		func(a, b metricdata.DataPoint[N]) []string {
+			return equalDataPoints(a, b, cfg)
+		},
+	)
+	if r != "" {
+		reasons = append(reasons, "Gauge DataPoints not equal:\n"+r)
+	}
+	return reasons
+}
+
+// equalSums returns reasons Sums are not equal. If they are equal, the
+// returned reasons will be empty.
+//
+// The DataPoints each Sum contains are compared based on containing the same
+// DataPoints, not the order they are stored in.
+func equalSums[N int64 | float64](a, b metricdata.Sum[N], cfg config) (reasons []string) {
+	if a.Temporality != b.Temporality {
+		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
+	}
+	if a.IsMonotonic != b.IsMonotonic {
+		reasons = append(reasons, notEqualStr("IsMonotonic", a.IsMonotonic, b.IsMonotonic))
+	}
+
+	r := diffSlices(
+		a.DataPoints,
+		b.DataPoints,
+		func(dp metricdata.DataPoint[N]) string {
+			return "DataPoint " + dp.Attributes.String()
+		},
+		func(a, b metricdata.DataPoint[N]) []string {
+			return equalDataPoints(a, b, cfg)
+		},
+	)
+	if r != "" {
+		reasons = append(reasons, "Sum DataPoints not equal:\n"+r)
+	}
+	return reasons
+}
+
+// equalHistograms returns reasons Histograms are not equal. If they are
+// equal, the returned reasons will be empty.
+//
+// The DataPoints each Histogram contains are compared based on containing the
+// same HistogramDataPoint, not the order they are stored in.
+func equalHistograms[N int64 | float64](a, b metricdata.Histogram[N], cfg config) (reasons []string) {
+	if a.Temporality != b.Temporality {
+		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
+	}
+
+	r := diffSlices(
+		a.DataPoints,
+		b.DataPoints,
+		func(dp metricdata.HistogramDataPoint[N]) string {
+			return "HistogramDataPoint " + dp.Attributes.String()
+		},
+		func(a, b metricdata.HistogramDataPoint[N]) []string {
+			return equalHistogramDataPoints(a, b, cfg)
+		},
+	)
+	if r != "" {
+		reasons = append(reasons, "Histogram DataPoints not equal:\n"+r)
+	}
+	return reasons
+}
+
+// equalDataPoints returns reasons DataPoints are not equal. If they are
+// equal, the returned reasons will be empty.
+func equalDataPoints[N int64 | float64](
+	a, b metricdata.DataPoint[N],
+	cfg config,
+) (reasons []string) { // nolint: revive // Intentional internal control flag
+	if !a.Attributes.Equals(&b.Attributes) {
+		reasons = append(reasons, notEqualStr(
+			"Attributes",
+			a.Attributes.String(),
+			b.Attributes.String(),
+		))
+	}
+
+	if !cfg.ignoreTimestamp {
+		if !a.StartTime.Equal(b.StartTime) {
+			reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
+		}
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
+	}
+
+	if !cfg.ignoreValue {
+		if a.Value != b.Value {
+			reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+		}
+	}
+
+	if !cfg.ignoreExemplars {
+		r := diffSlices(
+			a.Exemplars,
+			b.Exemplars,
+			func(_ metricdata.Exemplar[N]) string {
+				return "Exemplar"
+			},
+			func(a, b metricdata.Exemplar[N]) []string {
+				return equalExemplars(a, b, cfg)
+			},
+		)
+		if r != "" {
+			reasons = append(reasons, "Exemplars not equal:\n"+r)
+		}
+	}
+	return reasons
+}
+
+// equalHistogramDataPoints returns reasons HistogramDataPoints are not equal.
+// If they are equal, the returned reasons will be empty.
+func equalHistogramDataPoints[N int64 | float64](
+	a, b metricdata.HistogramDataPoint[N],
+	cfg config,
+) (reasons []string) { // nolint: revive // Intentional internal control flag
+	if !a.Attributes.Equals(&b.Attributes) {
+		reasons = append(reasons, notEqualStr(
+			"Attributes",
+			a.Attributes.String(),
+			b.Attributes.String(),
+		))
+	}
+	if !cfg.ignoreTimestamp {
+		if !a.StartTime.Equal(b.StartTime) {
+			reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
+		}
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
+	}
+	if !cfg.ignoreValue {
+		if a.Count != b.Count {
+			reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
+		}
+		if !slices.Equal(a.Bounds, b.Bounds) {
+			reasons = append(reasons, notEqualStr("Bounds", a.Bounds, b.Bounds))
+		}
+		if !slices.Equal(a.BucketCounts, b.BucketCounts) {
+			reasons = append(reasons, notEqualStr("BucketCounts", a.BucketCounts, b.BucketCounts))
+		}
+		if !eqExtrema(a.Min, b.Min) {
+			reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
+		}
+		if !eqExtrema(a.Max, b.Max) {
+			reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
+		}
+		if a.Sum != b.Sum {
+			reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+		}
+	}
+	if !cfg.ignoreExemplars {
+		r := diffSlices(
+			a.Exemplars,
+			b.Exemplars,
+			func(_ metricdata.Exemplar[N]) string {
+				return "Exemplar"
+			},
+			func(a, b metricdata.Exemplar[N]) []string {
+				return equalExemplars(a, b, cfg)
+			},
+		)
+		if r != "" {
+			reasons = append(reasons, "Exemplars not equal:\n"+r)
+		}
+	}
+	return reasons
+}
+
+// equalExponentialHistograms returns reasons exponential Histograms are not equal. If they are
+// equal, the returned reasons will be empty.
+//
+// The DataPoints each Histogram contains are compared based on containing the
+// same HistogramDataPoint, not the order they are stored in.
+func equalExponentialHistograms[N int64 | float64](
+	a, b metricdata.ExponentialHistogram[N],
+	cfg config,
+) (reasons []string) {
+	if a.Temporality != b.Temporality {
+		reasons = append(reasons, notEqualStr("Temporality", a.Temporality, b.Temporality))
+	}
+
+	r := diffSlices(
+		a.DataPoints,
+		b.DataPoints,
+		func(dp metricdata.ExponentialHistogramDataPoint[N]) string {
+			return "ExponentialHistogramDataPoint " + dp.Attributes.String()
+		},
+		func(a, b metricdata.ExponentialHistogramDataPoint[N]) []string {
+			return equalExponentialHistogramDataPoints(a, b, cfg)
+		},
+	)
+	if r != "" {
+		reasons = append(reasons, "Histogram DataPoints not equal:\n"+r)
+	}
+	return reasons
+}
+
+// equalExponentialHistogramDataPoints returns reasons HistogramDataPoints are not equal.
+// If they are equal, the returned reasons will be empty.
+func equalExponentialHistogramDataPoints[N int64 | float64](
+	a, b metricdata.ExponentialHistogramDataPoint[N],
+	cfg config,
+) (reasons []string) { // nolint: revive // Intentional internal control flag
+	if !a.Attributes.Equals(&b.Attributes) {
+		reasons = append(reasons, notEqualStr(
+			"Attributes",
+			a.Attributes.String(),
+			b.Attributes.String(),
+		))
+	}
+	if !cfg.ignoreTimestamp {
+		if !a.StartTime.Equal(b.StartTime) {
+			reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
+		}
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
+	}
+	if !cfg.ignoreValue {
+		if a.Count != b.Count {
+			reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
+		}
+		if !eqExtrema(a.Min, b.Min) {
+			reasons = append(reasons, notEqualStr("Min", a.Min, b.Min))
+		}
+		if !eqExtrema(a.Max, b.Max) {
+			reasons = append(reasons, notEqualStr("Max", a.Max, b.Max))
+		}
+		if a.Sum != b.Sum {
+			reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+		}
+
+		if a.Scale != b.Scale {
+			reasons = append(reasons, notEqualStr("Scale", a.Scale, b.Scale))
+		}
+		if a.ZeroCount != b.ZeroCount {
+			reasons = append(reasons, notEqualStr("ZeroCount", a.ZeroCount, b.ZeroCount))
+		}
+
+		r := equalExponentialBuckets(a.PositiveBucket, b.PositiveBucket, cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, r...)
+		}
+		r = equalExponentialBuckets(a.NegativeBucket, b.NegativeBucket, cfg)
+		if len(r) > 0 {
+			reasons = append(reasons, r...)
+		}
+	}
+	if !cfg.ignoreExemplars {
+		r := diffSlices(
+			a.Exemplars,
+			b.Exemplars,
+			func(_ metricdata.Exemplar[N]) string {
+				return "Exemplar"
+			},
+			func(a, b metricdata.Exemplar[N]) []string {
+				return equalExemplars(a, b, cfg)
+			},
+		)
+		if r != "" {
+			reasons = append(reasons, "Exemplars not equal:\n"+r)
+		}
+	}
+	return reasons
+}
+
+func equalExponentialBuckets(a, b metricdata.ExponentialBucket, _ config) (reasons []string) {
+	if a.Offset != b.Offset {
+		reasons = append(reasons, notEqualStr("Offset", a.Offset, b.Offset))
+	}
+	if !slices.Equal(a.Counts, b.Counts) {
+		reasons = append(reasons, notEqualStr("Counts", a.Counts, b.Counts))
+	}
+	return reasons
+}
+
+func equalSummary(a, b metricdata.Summary, cfg config) (reasons []string) {
+	r := diffSlices(
+		a.DataPoints,
+		b.DataPoints,
+		func(dp metricdata.SummaryDataPoint) string {
+			return "SummaryDataPoint " + dp.Attributes.String()
+		},
+		func(a, b metricdata.SummaryDataPoint) []string {
+			return equalSummaryDataPoint(a, b, cfg)
+		},
+	)
+	if r != "" {
+		reasons = append(reasons, "Summary DataPoints not equal:\n"+r)
+	}
+	return reasons
+}
+
+func equalSummaryDataPoint(a, b metricdata.SummaryDataPoint, cfg config) (reasons []string) {
+	if !a.Attributes.Equals(&b.Attributes) {
+		reasons = append(reasons, notEqualStr(
+			"Attributes",
+			a.Attributes.String(),
+			b.Attributes.String(),
+		))
+	}
+	if !cfg.ignoreTimestamp {
+		if !a.StartTime.Equal(b.StartTime) {
+			reasons = append(reasons, notEqualStr("StartTime", a.StartTime.UnixNano(), b.StartTime.UnixNano()))
+		}
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
+	}
+	if !cfg.ignoreValue {
+		if a.Count != b.Count {
+			reasons = append(reasons, notEqualStr("Count", a.Count, b.Count))
+		}
+		if a.Sum != b.Sum {
+			reasons = append(reasons, notEqualStr("Sum", a.Sum, b.Sum))
+		}
+		r := diffSlices(
+			a.QuantileValues,
+			b.QuantileValues,
+			func(qv metricdata.QuantileValue) string {
+				return fmt.Sprintf("QuantileValue %v", qv.Quantile)
+			},
+			func(a, b metricdata.QuantileValue) []string {
+				return equalQuantileValue(a, b, cfg)
+			},
+		)
+		if r != "" {
+			reasons = append(reasons, r)
+		}
+	}
+	return reasons
+}
+
+func equalQuantileValue(a, b metricdata.QuantileValue, _ config) (reasons []string) {
+	if a.Quantile != b.Quantile {
+		reasons = append(reasons, notEqualStr("Quantile", a.Quantile, b.Quantile))
+	}
+	if a.Value != b.Value {
+		reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+	}
+	return reasons
+}
+
+func notEqualStr(prefix string, expected, actual any) string {
+	return fmt.Sprintf("%s not equal:\nexpected: %v\nactual: %v", prefix, expected, actual)
+}
+
+func equalExtrema[N int64 | float64](a, b metricdata.Extrema[N], _ config) (reasons []string) {
+	if !eqExtrema(a, b) {
+		reasons = append(reasons, notEqualStr("Extrema", a, b))
+	}
+	return reasons
+}
+
+func eqExtrema[N int64 | float64](a, b metricdata.Extrema[N]) bool {
+	aV, aOk := a.Value()
+	bV, bOk := b.Value()
+
+	if !aOk || !bOk {
+		return aOk == bOk
+	}
+	return aV == bV
+}
+
+func equalKeyValue(a, b attribute.KeyValue) bool {
+	if a.Key != b.Key {
+		return false
+	}
+	if a.Value.Type() != b.Value.Type() {
+		return false
+	}
+	switch a.Value.Type() {
+	case attribute.BOOL:
+		if a.Value.AsBool() != b.Value.AsBool() {
+			return false
+		}
+	case attribute.INT64:
+		if a.Value.AsInt64() != b.Value.AsInt64() {
+			return false
+		}
+	case attribute.FLOAT64:
+		if a.Value.AsFloat64() != b.Value.AsFloat64() {
+			return false
+		}
+	case attribute.STRING:
+		if a.Value.AsString() != b.Value.AsString() {
+			return false
+		}
+	case attribute.BOOLSLICE:
+		if ok := slices.Equal(a.Value.AsBoolSlice(), b.Value.AsBoolSlice()); !ok {
+			return false
+		}
+	case attribute.INT64SLICE:
+		if ok := slices.Equal(a.Value.AsInt64Slice(), b.Value.AsInt64Slice()); !ok {
+			return false
+		}
+	case attribute.FLOAT64SLICE:
+		if ok := slices.Equal(a.Value.AsFloat64Slice(), b.Value.AsFloat64Slice()); !ok {
+			return false
+		}
+	case attribute.STRINGSLICE:
+		if ok := slices.Equal(a.Value.AsStringSlice(), b.Value.AsStringSlice()); !ok {
+			return false
+		}
+	case attribute.BYTESLICE:
+		if ok := slices.Equal(a.Value.AsByteSlice(), b.Value.AsByteSlice()); !ok {
+			return false
+		}
+	case attribute.SLICE:
+		if ok := slices.Equal(a.Value.AsSlice(), b.Value.AsSlice()); !ok {
+			return false
+		}
+	case attribute.MAP:
+		if ok := slices.EqualFunc(a.Value.AsMap(), b.Value.AsMap(), equalKeyValue); !ok {
+			return false
+		}
+	case attribute.EMPTY:
+	default:
+		// We control all types passed to this, panic to signal developers
+		// early they changed things in an incompatible way.
+		panic(fmt.Sprintf("unknown attribute value type: %s", a.Value.Type()))
+	}
+	return true
+}
+
+func equalExemplars[N int64 | float64](a, b metricdata.Exemplar[N], cfg config) (reasons []string) {
+	if !slices.EqualFunc(a.FilteredAttributes, b.FilteredAttributes, equalKeyValue) {
+		reasons = append(reasons, notEqualStr("FilteredAttributes", a.FilteredAttributes, b.FilteredAttributes))
+	}
+	if !cfg.ignoreTimestamp {
+		if !a.Time.Equal(b.Time) {
+			reasons = append(reasons, notEqualStr("Time", a.Time.UnixNano(), b.Time.UnixNano()))
+		}
+	}
+	if !cfg.ignoreValue {
+		if a.Value != b.Value {
+			reasons = append(reasons, notEqualStr("Value", a.Value, b.Value))
+		}
+	}
+	if !slices.Equal(a.SpanID, b.SpanID) {
+		reasons = append(reasons, notEqualStr("SpanID", a.SpanID, b.SpanID))
+	}
+	if !slices.Equal(a.TraceID, b.TraceID) {
+		reasons = append(reasons, notEqualStr("TraceID", a.TraceID, b.TraceID))
+	}
+	return reasons
+}
+
+func diffSlices[T any](a, b []T, formatContext func(T) string, compare func(T, T) []string) string {
+	visited := make([]bool, len(b))
+	var extraA []T
+	var extraB []T
+
+	for i := range a {
+		found := false
+		for j := range b {
+			if visited[j] {
+				continue
+			}
+			if len(compare(a[i], b[j])) == 0 {
+				visited[j] = true
+				found = true
+				break
+			}
+		}
+		if !found {
+			extraA = append(extraA, a[i])
+		}
+	}
+
+	for j := range b {
+		if visited[j] {
+			continue
+		}
+		extraB = append(extraB, b[j])
+	}
+
+	if len(extraA) == 0 && len(extraB) == 0 {
+		return ""
+	}
+
+	var msg bytes.Buffer
+	minLen := min(len(extraB), len(extraA))
+
+	for i := range minLen {
+		reasons := compare(extraA[i], extraB[i])
+		_, _ = msg.WriteString(formatContext(extraA[i]) + ":\n")
+		for _, reason := range reasons {
+			// Indent reasons
+			lines := strings.SplitSeq(reason, "\n")
+			for line := range lines {
+				if line != "" {
+					_, _ = msg.WriteString("\t" + line + "\n")
+				}
+			}
+		}
+	}
+
+	formatter := func(v T) string {
+		return fmt.Sprintf("%#v", v)
+	}
+	if len(extraA) > minLen {
+		_, _ = msg.WriteString("missing expected values:\n")
+		for i := minLen; i < len(extraA); i++ {
+			_, _ = msg.WriteString(formatter(extraA[i]) + "\n")
+		}
+	}
+	if len(extraB) > minLen {
+		_, _ = msg.WriteString("unexpected additional values:\n")
+		for i := minLen; i < len(extraB); i++ {
+			_, _ = msg.WriteString(formatter(extraB[i]) + "\n")
+		}
+	}
+
+	return msg.String()
+}
+
+func missingAttrStr(name string) string {
+	return "missing attribute " + name
+}
+
+func hasAttributesExemplars[T int64 | float64](
+	exemplar metricdata.Exemplar[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
+	s := attribute.NewSet(exemplar.FilteredAttributes...)
+	for _, attr := range attrs {
+		val, ok := s.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.String(), val.String()))
+		}
+	}
+	return reasons
+}
+
+func hasAttributesDataPoints[T int64 | float64](
+	dp metricdata.DataPoint[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
+	for _, attr := range attrs {
+		val, ok := dp.Attributes.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.String(), val.String()))
+		}
+	}
+	return reasons
+}
+
+func hasAttributesGauge[T int64 | float64](gauge metricdata.Gauge[T], attrs ...attribute.KeyValue) (reasons []string) {
+	for n, dp := range gauge.DataPoints {
+		reas := hasAttributesDataPoints(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("gauge datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesSum[T int64 | float64](sum metricdata.Sum[T], attrs ...attribute.KeyValue) (reasons []string) {
+	for n, dp := range sum.DataPoints {
+		reas := hasAttributesDataPoints(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("sum datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesHistogramDataPoints[T int64 | float64](
+	dp metricdata.HistogramDataPoint[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
+	for _, attr := range attrs {
+		val, ok := dp.Attributes.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.String(), val.String()))
+		}
+	}
+	return reasons
+}
+
+func hasAttributesHistogram[T int64 | float64](
+	histogram metricdata.Histogram[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
+	for n, dp := range histogram.DataPoints {
+		reas := hasAttributesHistogramDataPoints(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("histogram datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesExponentialHistogramDataPoints[T int64 | float64](
+	dp metricdata.ExponentialHistogramDataPoint[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
+	for _, attr := range attrs {
+		val, ok := dp.Attributes.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.String(), val.String()))
+		}
+	}
+	return reasons
+}
+
+func hasAttributesExponentialHistogram[T int64 | float64](
+	histogram metricdata.ExponentialHistogram[T],
+	attrs ...attribute.KeyValue,
+) (reasons []string) {
+	for n, dp := range histogram.DataPoints {
+		reas := hasAttributesExponentialHistogramDataPoints(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("histogram datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesAggregation(agg metricdata.Aggregation, attrs ...attribute.KeyValue) (reasons []string) {
+	switch agg := agg.(type) {
+	case metricdata.Gauge[int64]:
+		reasons = hasAttributesGauge(agg, attrs...)
+	case metricdata.Gauge[float64]:
+		reasons = hasAttributesGauge(agg, attrs...)
+	case metricdata.Sum[int64]:
+		reasons = hasAttributesSum(agg, attrs...)
+	case metricdata.Sum[float64]:
+		reasons = hasAttributesSum(agg, attrs...)
+	case metricdata.Histogram[int64]:
+		reasons = hasAttributesHistogram(agg, attrs...)
+	case metricdata.Histogram[float64]:
+		reasons = hasAttributesHistogram(agg, attrs...)
+	case metricdata.ExponentialHistogram[int64]:
+		reasons = hasAttributesExponentialHistogram(agg, attrs...)
+	case metricdata.ExponentialHistogram[float64]:
+		reasons = hasAttributesExponentialHistogram(agg, attrs...)
+	case metricdata.Summary:
+		reasons = hasAttributesSummary(agg, attrs...)
+	default:
+		reasons = []string{fmt.Sprintf("unknown aggregation %T", agg)}
+	}
+	return reasons
+}
+
+func hasAttributesMetrics(metrics metricdata.Metrics, attrs ...attribute.KeyValue) (reasons []string) {
+	reas := hasAttributesAggregation(metrics.Data, attrs...)
+	if len(reas) > 0 {
+		reasons = append(reasons, fmt.Sprintf("Metric %s:\n", metrics.Name))
+		reasons = append(reasons, reas...)
+	}
+	return reasons
+}
+
+func hasAttributesScopeMetrics(sm metricdata.ScopeMetrics, attrs ...attribute.KeyValue) (reasons []string) {
+	for n, metrics := range sm.Metrics {
+		reas := hasAttributesMetrics(metrics, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("ScopeMetrics %s Metrics %d:\n", sm.Scope.Name, n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesResourceMetrics(rm metricdata.ResourceMetrics, attrs ...attribute.KeyValue) (reasons []string) {
+	for n, sm := range rm.ScopeMetrics {
+		reas := hasAttributesScopeMetrics(sm, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("ResourceMetrics ScopeMetrics %d:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesSummary(summary metricdata.Summary, attrs ...attribute.KeyValue) (reasons []string) {
+	for n, dp := range summary.DataPoints {
+		reas := hasAttributesSummaryDataPoint(dp, attrs...)
+		if len(reas) > 0 {
+			reasons = append(reasons, fmt.Sprintf("summary datapoint %d attributes:\n", n))
+			reasons = append(reasons, reas...)
+		}
+	}
+	return reasons
+}
+
+func hasAttributesSummaryDataPoint(dp metricdata.SummaryDataPoint, attrs ...attribute.KeyValue) (reasons []string) {
+	for _, attr := range attrs {
+		val, ok := dp.Attributes.Value(attr.Key)
+		if !ok {
+			reasons = append(reasons, missingAttrStr(string(attr.Key)))
+			continue
+		}
+		if val != attr.Value {
+			reasons = append(reasons, notEqualStr(string(attr.Key), attr.Value.String(), val.String()))
+		}
+	}
+	return reasons
+}

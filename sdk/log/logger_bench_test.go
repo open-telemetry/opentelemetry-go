@@ -1,0 +1,165 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package log
+
+import (
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/log/internal/observ"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+)
+
+func BenchmarkLoggerEmit(b *testing.B) {
+	logger := newTestLogger(b)
+
+	r := log.Record{}
+	r.SetTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
+	r.SetObservedTimestamp(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC))
+	r.SetBody(attribute.StringValue("testing body value"))
+	r.SetSeverity(log.SeverityInfo)
+	r.SetSeverityText("testing text")
+
+	r.AddAttributes(
+		attribute.String("k1", "str"),
+		attribute.Float64("k2", 1.0),
+		attribute.Int("k3", 2),
+		attribute.Bool("k4", true),
+		attribute.ByteSlice("k5", []byte{1}),
+	)
+
+	r10 := r
+	r10.AddAttributes(
+		attribute.String("k6", "str"),
+		attribute.Float64("k7", 1.0),
+		attribute.Int("k8", 2),
+		attribute.Bool("k9", true),
+		attribute.ByteSlice("k10", []byte{1}),
+	)
+
+	require.Equal(b, 5, r.AttributesLen())
+	require.Equal(b, 10, r10.AttributesLen())
+
+	b.Run("5 attributes", func(b *testing.B) {
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				logger.Emit(b.Context(), r)
+			}
+		})
+	})
+
+	b.Run("10 attributes", func(b *testing.B) {
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				logger.Emit(b.Context(), r10)
+			}
+		})
+	})
+}
+
+func BenchmarkLoggerEmitObservability(b *testing.B) {
+	r := log.Record{}
+
+	orig := otel.GetMeterProvider()
+	b.Cleanup(func() { otel.SetMeterProvider(orig) })
+	reader := metric.NewManualReader()
+	dropBLPMetrics := metric.NewView(
+		metric.Instrument{
+			Scope: instrumentation.Scope{Name: observ.ScopeName},
+		},
+		metric.Stream{Aggregation: metric.AggregationDrop{}},
+	)
+	mp := metric.NewMeterProvider(metric.WithReader(reader), metric.WithView(dropBLPMetrics))
+	otel.SetMeterProvider(mp)
+
+	run := func(logger *logger) func(b *testing.B) {
+		return func(b *testing.B) {
+			b.ResetTimer()
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					logger.Emit(b.Context(), r)
+				}
+			})
+		}
+	}
+
+	lp := NewLoggerProvider()
+	scope := instrumentation.Scope{}
+
+	b.Run("Disabled", run(newLogger(lp, scope)))
+
+	b.Run("Enabled", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+		run(newLogger(lp, scope))(b)
+	})
+
+	var rm metricdata.ResourceMetrics
+	err := reader.Collect(b.Context(), &rm)
+	require.NoError(b, err)
+	require.Len(b, rm.ScopeMetrics, 1)
+}
+
+func BenchmarkLoggerEnabled(b *testing.B) {
+	logger := newTestLogger(b)
+	ctx := b.Context()
+	param := log.EnabledParameters{Severity: log.SeverityDebug}
+	var enabled bool
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		enabled = logger.Enabled(ctx, param)
+	}
+
+	_ = enabled
+}
+
+func BenchmarkLoggerSetErrAndEmit(b *testing.B) {
+	logger := newTestLogger(b)
+	err := errors.New("boom")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		r := log.Record{}
+		r.SetErr(err)
+		logger.Emit(b.Context(), r)
+	}
+}
+
+func BenchmarkLoggerSetExceptionAttributesAndEmit(b *testing.B) {
+	logger := newTestLogger(b)
+	err := errors.New("boom")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		r := log.Record{}
+		r.AddAttributes(attribute.String(string(semconv.ExceptionMessageKey), err.Error()))
+		r.AddAttributes(attribute.String(string(semconv.ExceptionTypeKey), errorType(err)))
+		logger.Emit(b.Context(), r)
+	}
+}
+
+func newTestLogger(t testing.TB) log.Logger {
+	provider := NewLoggerProvider(
+		WithProcessor(newFltrProcessor("0", false)),
+		WithProcessor(newFltrProcessor("1", true)),
+	)
+	return provider.Logger(t.Name())
+}

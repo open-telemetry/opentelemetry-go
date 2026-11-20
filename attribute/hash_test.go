@@ -1,0 +1,715 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package attribute
+
+import (
+	"cmp"
+	"fmt"
+	"math"
+	"reflect"
+	"slices"
+	"strings"
+	"testing"
+
+	"go.opentelemetry.io/otel/attribute/internal/xxhash"
+)
+
+type keyVal struct {
+	name string
+	kv   func(string) KeyValue
+}
+
+// keyVals is all the KeyValue generators that are used for testing. This is
+// not []KeyValue so different keys can be used with the test Values.
+var keyVals = []keyVal{
+	{name: "BoolTrue", kv: func(k string) KeyValue { return Bool(k, true) }},
+	{name: "BoolFalse", kv: func(k string) KeyValue { return Bool(k, false) }},
+	{name: "BoolSliceLen0", kv: func(k string) KeyValue { return BoolSlice(k, []bool{}) }},
+	{name: "BoolSliceLen1", kv: func(k string) KeyValue { return BoolSlice(k, []bool{true}) }},
+	{name: "BoolSliceLen2", kv: func(k string) KeyValue { return BoolSlice(k, []bool{false, true}) }},
+	{name: "BoolSliceLen3", kv: func(k string) KeyValue { return BoolSlice(k, []bool{true, true, false}) }},
+	{
+		name: "BoolSliceLen5",
+		kv:   func(k string) KeyValue { return BoolSlice(k, []bool{true, false, true, true, false}) },
+	},
+	{name: "IntNegative", kv: func(k string) KeyValue { return Int(k, -1278) }},
+	{name: "IntZero", kv: func(k string) KeyValue { return Int(k, 0) }}, // Should be different than false above.
+	{name: "IntSliceLen5", kv: func(k string) KeyValue { return IntSlice(k, []int{3, 23, 21, -8, 0}) }},
+	{name: "IntSliceLen1", kv: func(k string) KeyValue { return IntSlice(k, []int{1}) }},
+	{
+		name: "Int64One",
+		kv:   func(k string) KeyValue { return Int64(k, 1) },
+	}, // Should be different from true and []int{1}.
+	{name: "Int64", kv: func(k string) KeyValue { return Int64(k, 29369) }},
+	{name: "Int64SliceLen4", kv: func(k string) KeyValue { return Int64Slice(k, []int64{3826, -38, -29, -1}) }},
+	{name: "Int64SliceWithZero", kv: func(k string) KeyValue { return Int64Slice(k, []int64{8, -328, 29, 0}) }},
+	{name: "Int64SliceLen0", kv: func(k string) KeyValue { return Int64Slice(k, []int64{}) }},
+	{name: "Int64SliceLen2", kv: func(k string) KeyValue { return Int64Slice(k, []int64{7, -7}) }},
+	{name: "Int64SliceLen3", kv: func(k string) KeyValue { return Int64Slice(k, []int64{11, -22, 33}) }},
+	{name: "Float64", kv: func(k string) KeyValue { return Float64(k, -0.3812381) }},
+	{name: "Float64Large", kv: func(k string) KeyValue { return Float64(k, 1e32) }},
+	{
+		name: "Float64SliceLen4",
+		kv:   func(k string) KeyValue { return Float64Slice(k, []float64{0.1, -3.8, -29., 0.3321}) },
+	},
+	{
+		name: "Float64SliceLarge",
+		kv:   func(k string) KeyValue { return Float64Slice(k, []float64{-13e8, -32.8, 4., 1e28}) },
+	},
+	{name: "Float64SliceLen0", kv: func(k string) KeyValue { return Float64Slice(k, []float64{}) }},
+	{name: "Float64SliceLen1", kv: func(k string) KeyValue { return Float64Slice(k, []float64{3.14}) }},
+	{name: "Float64SliceLen2", kv: func(k string) KeyValue { return Float64Slice(k, []float64{0.15, -2.5}) }},
+	{name: "Float64SliceLen3", kv: func(k string) KeyValue { return Float64Slice(k, []float64{1.5, -2.5, 3.5}) }},
+	{name: "StringFoo", kv: func(k string) KeyValue { return String(k, "foo") }},
+	{name: "StringBar", kv: func(k string) KeyValue { return String(k, "bar") }},
+	{name: "StringSliceLen0", kv: func(k string) KeyValue { return StringSlice(k, []string{}) }},
+	{name: "StringSliceLen2", kv: func(k string) KeyValue { return StringSlice(k, []string{"alpha", "beta"}) }},
+	{name: "StringSliceLen3", kv: func(k string) KeyValue { return StringSlice(k, []string{"foo", "bar", "baz"}) }},
+	{name: "StringSliceLooksLikeIntSlice", kv: func(k string) KeyValue { return StringSlice(k, []string{"[]i1"}) }},
+	{
+		name: "StringSliceLen5",
+		kv:   func(k string) KeyValue { return StringSlice(k, []string{"a", "bb", "ccc", "dddd", "eeeee"}) },
+	},
+	{name: "ByteSliceFoo", kv: func(k string) KeyValue { return ByteSlice(k, []byte("foo")) }},
+	{name: "ByteSliceLooksLikeIntSlice", kv: func(k string) KeyValue { return ByteSlice(k, []byte("[]i1")) }},
+	{name: "SliceLen0", kv: func(k string) KeyValue { return Slice(k) }},
+	{name: "SliceLen1", kv: func(k string) KeyValue { return Slice(k, BoolValue(true)) }},
+	{name: "SliceLen2", kv: func(k string) KeyValue { return Slice(k, BoolValue(true), IntValue(42)) }},
+	{name: "SliceLen3", kv: func(k string) KeyValue {
+		return Slice(
+			k,
+			StringValue("triad"),
+			IntValue(3),
+			BoolValue(false),
+		)
+	}},
+	{name: "SliceLen4", kv: func(k string) KeyValue {
+		return Slice(
+			k,
+			StringValue("quad"),
+			IntValue(4),
+			BoolValue(false),
+			Float64Value(4.25),
+		)
+	}},
+	{name: "SliceLen5", kv: func(k string) KeyValue {
+		return Slice(
+			k,
+			StringValue("penta"),
+			IntValue(5),
+			BoolValue(true),
+			Float64Value(5.5),
+			ByteSliceValue([]byte("five")),
+		)
+	}},
+	{name: "SliceNested", kv: func(k string) KeyValue {
+		return Slice(
+			k,
+			StringValue("nested"),
+			SliceValue(Float64Value(math.Inf(1)), ByteSliceValue([]byte("bin"))),
+			BoolValue(true),
+			IntValue(6),
+			StringValue("tail"),
+			StringSliceValue([]string{"fallback"}),
+		)
+	}},
+	{name: "MapLen0", kv: func(k string) KeyValue { return Map(k) }},
+	{name: "MapLen2", kv: func(k string) KeyValue {
+		return Map(
+			k,
+			String("b", "two"),
+			Int("a", 1),
+		)
+	}},
+	{name: "MapNested", kv: func(k string) KeyValue {
+		return Map(
+			k,
+			String("nested", "map"),
+			Map("child", Float64("f", math.Inf(1)), ByteSlice("bin", []byte("bin"))),
+			Slice("slice", BoolValue(true), StringValue("tail")),
+		)
+	}},
+	{name: "EmptyValue", kv: func(k string) KeyValue { return KeyValue{Key: Key(k)} }},
+}
+
+func TestHashKVs(t *testing.T) {
+	type testcase struct {
+		num  int
+		hash uint64
+		kvs  []KeyValue
+	}
+
+	keys := []string{"k0", "k1"}
+
+	// Track hashes as we generate them so collision detection stays linear.
+	i := 0
+	seen := make(map[uint64]testcase)
+	assertUniqueHash := func(kvs []KeyValue) {
+		hash := hashKVs(kvs)
+		tc := testcase{num: i, hash: hash, kvs: kvs}
+		i++
+
+		if prev, ok := seen[hash]; ok {
+			t.Errorf("hashes equal: (%d: %d)%s == (%d: %d)%s",
+				prev.num, prev.hash, slice(prev.kvs), tc.num, tc.hash, slice(tc.kvs))
+			return
+		}
+
+		seen[hash] = tc
+	}
+
+	// Test empty slice.
+	assertUniqueHash(nil)
+
+	// Test all combinations of 1, 2, and 3 attributes with different keys and values.
+	for _, key := range keys {
+		for i := range keyVals {
+			kvs := []KeyValue{keyVals[i].kv(key)}
+			assertUniqueHash(kvs)
+
+			for j := range keyVals {
+				kvs := []KeyValue{
+					keyVals[i].kv(key),
+					keyVals[j].kv(key),
+				}
+				assertUniqueHash(kvs)
+
+				for k := range keyVals {
+					kvs := []KeyValue{
+						keyVals[i].kv(key),
+						keyVals[j].kv(key),
+						keyVals[k].kv(key),
+					}
+					assertUniqueHash(kvs)
+				}
+			}
+		}
+	}
+}
+
+func TestHashValueMapOrdering(t *testing.T) {
+	tests := []struct {
+		name string
+		kvs  []KeyValue
+	}{
+		{
+			name: "Len4",
+			kvs: []KeyValue{
+				String("d", "4"),
+				String("a", "1"),
+				String("c", "3"),
+				String("b", "2"),
+			},
+		},
+		{
+			name: "Len5",
+			kvs: []KeyValue{
+				String("e", "5"),
+				String("a", "1"),
+				String("d", "4"),
+				String("b", "2"),
+				String("c", "3"),
+			},
+		},
+		{
+			name: "Reflect",
+			kvs: []KeyValue{
+				String("f", "6"),
+				String("a", "1"),
+				String("e", "5"),
+				String("b", "2"),
+				String("d", "4"),
+				String("c", "3"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reversed := slices.Clone(tt.kvs)
+			slices.Reverse(reversed)
+
+			h1 := xxhash.New()
+			h1 = hashValue(h1, MapValue(tt.kvs...))
+			got := h1.Sum64()
+			h2 := xxhash.New()
+			h2 = hashValue(h2, MapValue(reversed...))
+			want := h2.Sum64()
+			if got != want {
+				t.Fatalf("hashValue(MapValue(%v)) = %d, want %d", tt.kvs, got, want)
+			}
+		})
+	}
+}
+
+// TestHasherMatchesSetEquivalent pins the invariant that a Hasher written in
+// ascending key order produces the same Distinct as the equivalent Set. Hasher
+// and Set hashing share their initialization, per-attribute mixing, and final
+// framing, so this holds structurally today. The test guards against a future
+// change that splits those paths apart.
+func TestHasherMatchesSetEquivalent(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
+		h := NewHasher()
+		set := NewSet()
+		if got, want := h.Distinct(), set.Equivalent(); got != want {
+			t.Errorf("Hasher.Distinct() = %v, NewSet().Equivalent() = %v", got, want)
+		}
+	})
+
+	for _, gen := range keyVals {
+		t.Run(gen.name, func(t *testing.T) {
+			kv := gen.kv("k")
+			h := NewHasher()
+			h.Write(kv)
+			set := NewSet(kv)
+			if got, want := h.Distinct(), set.Equivalent(); got != want {
+				t.Errorf("Hasher.Distinct() = %v, NewSet(%v).Equivalent() = %v", got, kv, want)
+			}
+		})
+	}
+
+	t.Run("All", func(t *testing.T) {
+		// Distinct keys in ascending order, which is the precondition Write
+		// documents and the order NewSet sorts into.
+		attrs := make([]KeyValue, len(keyVals))
+		for i, gen := range keyVals {
+			attrs[i] = gen.kv(fmt.Sprintf("k%03d", i))
+		}
+		h := NewHasher()
+		for _, kv := range attrs {
+			h.Write(kv)
+		}
+		set := NewSet(attrs...)
+		if got, want := h.Distinct(), set.Equivalent(); got != want {
+			t.Errorf("Hasher.Distinct() = %v, NewSet(...).Equivalent() = %v", got, want)
+		}
+	})
+}
+
+func TestHasherReset(t *testing.T) {
+	h := NewHasher()
+	h.Write(String("a", "1"))
+	h.Write(String("b", "2"))
+	distinctBefore := h.Distinct()
+
+	h.Reset()
+	if got, want := h.Distinct(), emptySet.Equivalent(); got != want {
+		t.Errorf("h.Distinct() after Reset = %v, want %v", got, want)
+	}
+
+	h.Write(String("a", "1"))
+	h.Write(String("b", "2"))
+	if got, want := h.Distinct(), distinctBefore; got != want {
+		t.Errorf("h.Distinct() after re-write = %v, want %v", got, want)
+	}
+}
+
+func slice(kvs []KeyValue) string {
+	if len(kvs) == 0 {
+		return "[]"
+	}
+
+	var b strings.Builder
+	_, _ = b.WriteRune('[')
+	_, _ = b.WriteString(string(kvs[0].Key))
+	_, _ = b.WriteRune(':')
+	_, _ = b.WriteString(kvs[0].Value.String())
+	for _, kv := range kvs[1:] {
+		_, _ = b.WriteRune(',')
+		_, _ = b.WriteString(string(kv.Key))
+		_, _ = b.WriteRune(':')
+		_, _ = b.WriteString(kv.Value.String())
+	}
+	_, _ = b.WriteRune(']')
+	return b.String()
+}
+
+func BenchmarkHashKVs(b *testing.B) {
+	attrs := make([]KeyValue, len(keyVals))
+	for i := range keyVals {
+		attrs[i] = keyVals[i].kv("k")
+	}
+
+	benches := []struct {
+		name string
+		kvs  []KeyValue
+	}{
+		{
+			name: "All",
+			kvs:  attrs,
+		},
+	}
+	for _, gen := range keyVals {
+		benches = append(benches, struct {
+			name string
+			kvs  []KeyValue
+		}{
+			name: gen.name,
+			kvs:  []KeyValue{gen.kv("k")},
+		})
+	}
+
+	for _, bench := range benches {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				hashKVs(bench.kvs)
+			}
+		})
+	}
+}
+
+func BenchmarkHashValueSlice(b *testing.B) {
+	benches := []struct {
+		name string
+		v    Value
+	}{
+		{
+			name: "Len2",
+			v: SliceValue(
+				BoolValue(true),
+				StringValue("two"),
+			),
+		},
+		{
+			name: "Len5",
+			v: SliceValue(
+				BoolValue(true),
+				IntValue(2),
+				StringValue("three"),
+				Float64Value(4.5),
+				ByteSliceValue([]byte("five")),
+			),
+		},
+		{
+			name: "Len8Nested",
+			v: SliceValue(
+				BoolValue(true),
+				IntValue(2),
+				StringValue("three"),
+				Float64Value(4.5),
+				ByteSliceValue([]byte("five")),
+				SliceValue(StringValue("nested"), Int64Value(6)),
+				BoolSliceValue([]bool{true, false, true}),
+				StringSliceValue([]string{"seven", "eight"}),
+			),
+		},
+	}
+
+	for _, bench := range benches {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				h := xxhash.New()
+				h = hashValue(h, bench.v)
+				_ = h.Sum64()
+			}
+		})
+	}
+}
+
+func BenchmarkHashValueMap(b *testing.B) {
+	benches := []struct {
+		name string
+		v    Value
+	}{
+		{
+			name: "Len2",
+			v: MapValue(
+				Bool("two", true),
+				String("one", "one"),
+			),
+		},
+		{
+			name: "Len5",
+			v: MapValue(
+				Bool("one", true),
+				Int("two", 2),
+				String("three", "three"),
+				Float64("four", 4.5),
+				ByteSlice("five", []byte("five")),
+			),
+		},
+		{
+			name: "Len8Nested",
+			v: MapValue(
+				Bool("one", true),
+				Int("two", 2),
+				String("three", "three"),
+				Float64("four", 4.5),
+				ByteSlice("five", []byte("five")),
+				Map("six", String("nested", "map"), Int64("value", 6)),
+				Slice("seven", StringValue("nested"), BoolValue(true)),
+				StringSlice("eight", []string{"seven", "eight"}),
+			),
+		},
+	}
+
+	for _, bench := range benches {
+		b.Run(bench.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				h := xxhash.New()
+				h = hashValue(h, bench.v)
+				_ = h.Sum64()
+			}
+		})
+	}
+}
+
+func FuzzHashKVs(f *testing.F) {
+	// Add seed inputs to ensure coverage of edge cases.
+	f.Add("", "", "", "", "", "", 0, int64(0), 0.0, false, uint8(0))
+	f.Add("key", "value", "🌍", "test", "bool", "float", -1, int64(-1), -1.0, true, uint8(1))
+	f.Add("duplicate", "duplicate", "duplicate", "duplicate", "duplicate", "NaN",
+		0, int64(0), math.Inf(1), false, uint8(2))
+
+	f.Fuzz(func(t *testing.T, k1, k2, k3, k4, k5, s string, i int, i64 int64, fVal float64, b bool, sliceType uint8) {
+		// Test variable number of attributes (0-11).
+		numAttrs := len(k1) % 12 // Use key length to determine number of attributes.
+		if numAttrs == 0 && k1 == "" {
+			// Test empty set.
+			h := hashKVs(nil)
+			if h == 0 {
+				t.Error("hash of empty slice should not be zero")
+			}
+			return
+		}
+
+		var kvs []KeyValue
+
+		// Add basic types.
+		if numAttrs > 0 {
+			kvs = append(kvs, String(k1, s))
+		}
+		if numAttrs > 1 {
+			kvs = append(kvs, Int(k2, i))
+		}
+		if numAttrs > 2 {
+			kvs = append(kvs, Int64(k3, i64))
+		}
+		if numAttrs > 3 {
+			kvs = append(kvs, Float64(k4, fVal))
+		}
+		if numAttrs > 4 {
+			kvs = append(kvs, Bool(k5, b))
+		}
+
+		// Add slice and composite types based on sliceType parameter.
+		if numAttrs > 5 {
+			switch sliceType % 7 {
+			case 0:
+				// Test BoolSlice with variable length.
+				bools := make([]bool, len(s)%5) // 0-4 elements
+				for i := range bools {
+					bools[i] = (i+len(k1))%2 == 0
+				}
+				kvs = append(kvs, BoolSlice("boolslice", bools))
+			case 1:
+				// Test IntSlice with variable length.
+				ints := make([]int, len(s)%6) // 0-5 elements
+				for i := range ints {
+					ints[i] = i + len(k2)
+				}
+				kvs = append(kvs, IntSlice("intslice", ints))
+			case 2:
+				// Test Int64Slice with variable length.
+				int64s := make([]int64, len(s)%4) // 0-3 elements
+				for i := range int64s {
+					int64s[i] = int64(i) + i64
+				}
+				kvs = append(kvs, Int64Slice("int64slice", int64s))
+			case 3:
+				// Test Float64Slice with variable length and special values.
+				float64s := make([]float64, len(s)%5) // 0-4 elements
+				for i := range float64s {
+					switch i % 4 {
+					case 0:
+						float64s[i] = fVal
+					case 1:
+						float64s[i] = math.Inf(1) // +Inf
+					case 2:
+						float64s[i] = math.Inf(-1) // -Inf
+					case 3:
+						float64s[i] = math.NaN() // NaN
+					}
+				}
+				kvs = append(kvs, Float64Slice("float64slice", float64s))
+			case 4:
+				// Test ByteSlice with variable length.
+				bytes := make([]byte, len(s)%5)
+				for i := range bytes {
+					bytes[i] = byte(i + len(k1))
+				}
+				kvs = append(kvs, ByteSlice("bytes", bytes))
+			case 5:
+				values := make([]Value, len(s)%4) // 0-3 elements
+				for i := range values {
+					switch i % 4 {
+					case 0:
+						values[i] = BoolValue((i+len(k1))%2 == 0)
+					case 1:
+						values[i] = IntValue(i + len(k2))
+					case 2:
+						values[i] = StringValue(fmt.Sprintf("item_%d", i))
+					case 3:
+						values[i] = SliceValue(Float64Value(fVal), ByteSliceValue([]byte("bin")))
+					}
+				}
+				kvs = append(kvs, Slice("slice", values...))
+			case 6:
+				values := make([]KeyValue, len(s)%4) // 0-3 elements
+				for i := range values {
+					key := fmt.Sprintf("item_%d", i)
+					switch i % 4 {
+					case 0:
+						values[i] = Bool(key, (i+len(k1))%2 == 0)
+					case 1:
+						values[i] = Int(key, i+len(k2))
+					case 2:
+						values[i] = String(key, fmt.Sprintf("item_%d", i))
+					case 3:
+						values[i] = Map(key, Float64("float", fVal), ByteSlice("bin", []byte("bin")))
+					}
+				}
+				kvs = append(kvs, Map("map", values...))
+			}
+		}
+
+		// Add StringSlice.
+		if numAttrs > 6 {
+			strings := make([]string, len(k1)%4) // 0-3 elements
+			for i := range strings {
+				strings[i] = fmt.Sprintf("%s_%d", s, i)
+			}
+			kvs = append(kvs, StringSlice("stringslice", strings))
+		}
+
+		// Test duplicate keys (should be handled by Set construction).
+		if numAttrs > 7 && k1 != "" {
+			kvs = append(kvs, String(k1, "duplicate_key_value"))
+		}
+
+		// Add more attributes with Unicode keys.
+		if numAttrs > 8 {
+			kvs = append(kvs, String("🔑", "unicode_key"))
+		}
+		if numAttrs > 9 {
+			kvs = append(kvs, String("empty", ""))
+		}
+
+		// Add empty value.
+		if numAttrs > 10 {
+			kvs = append(kvs, KeyValue{Key: Key("empty_value")})
+		}
+
+		// Sort to ensure consistent ordering (as Set would do).
+		slices.SortFunc(kvs, func(a, b KeyValue) int {
+			return cmp.Compare(string(a.Key), string(b.Key))
+		})
+
+		// Remove duplicates (as Set will do).
+		if len(kvs) > 1 {
+			j := 0
+			for i := 1; i < len(kvs); i++ {
+				if kvs[j].Key != kvs[i].Key {
+					j++
+					kvs[j] = kvs[i]
+				} else {
+					// Keep the later value for duplicate keys.
+					kvs[j] = kvs[i]
+				}
+			}
+			kvs = kvs[:j+1]
+		}
+
+		// Hash the key-value pairs.
+		h1 := hashKVs(kvs)
+		h2 := hashKVs(kvs) // Should be deterministic
+
+		if h1 != h2 {
+			t.Errorf("hash is not deterministic: %d != %d for kvs=%v", h1, h2, kvs)
+		}
+
+		if h1 == 0 && len(kvs) > 0 {
+			t.Errorf("hash should not be zero for non-empty input: kvs=%v", kvs)
+		}
+
+		// Test that different inputs produce different hashes (most of the time).
+		// This is a probabilistic test - collisions are possible but rare.
+		if len(kvs) > 0 {
+			// Modify one value slightly.
+			modifiedKvs := make([]KeyValue, len(kvs))
+			copy(modifiedKvs, kvs)
+			if len(modifiedKvs) > 0 {
+				switch modifiedKvs[0].Value.Type() {
+				case STRING:
+					modifiedKvs[0] = String(string(modifiedKvs[0].Key), modifiedKvs[0].Value.AsString()+"_modified")
+				case INT64:
+					modifiedKvs[0] = Int64(string(modifiedKvs[0].Key), modifiedKvs[0].Value.AsInt64()+1)
+				case BOOL:
+					modifiedKvs[0] = Bool(string(modifiedKvs[0].Key), !modifiedKvs[0].Value.AsBool())
+				case FLOAT64:
+					val := modifiedKvs[0].Value.AsFloat64()
+					modifiedKvs[0] = Float64(string(modifiedKvs[0].Key), math.Float64frombits(math.Float64bits(val)^1))
+				case SLICE:
+					origSlice := modifiedKvs[0].Value.AsSlice()
+					if len(origSlice) > 0 {
+						newSlice := slices.Clone(origSlice)
+						switch newSlice[0].Type() {
+						case INT64:
+							newSlice[0] = Int64Value(newSlice[0].AsInt64() + 1)
+						case BOOL:
+							newSlice[0] = BoolValue(!newSlice[0].AsBool())
+						case STRING:
+							newSlice[0] = StringValue(newSlice[0].AsString() + "_mod")
+						default:
+							newSlice[0] = StringValue("modified")
+						}
+						modifiedKvs[0] = Slice(string(modifiedKvs[0].Key), newSlice...)
+					} else {
+						modifiedKvs[0] = Slice(string(modifiedKvs[0].Key), StringValue("modified"))
+					}
+				case MAP:
+					origMap := modifiedKvs[0].Value.AsMap()
+					if len(origMap) > 0 {
+						newMap := slices.Clone(origMap)
+						newMap[0] = String(string(newMap[0].Key), "modified")
+						modifiedKvs[0] = Map(string(modifiedKvs[0].Key), newMap...)
+					} else {
+						modifiedKvs[0] = Map(string(modifiedKvs[0].Key), String("modified", "modified"))
+					}
+				case EMPTY:
+					modifiedKvs[0] = String(string(modifiedKvs[0].Key), "not_empty")
+				default:
+					modifiedKvs[0] = String(string(modifiedKvs[0].Key), "modified")
+				}
+
+				h3 := hashKVs(modifiedKvs)
+				// Note: We don't assert h1 != h3 because hash collisions are theoretically possible
+				// but we can log suspicious cases for manual review.
+				if h1 == h3 && !reflect.DeepEqual(kvs, modifiedKvs) {
+					t.Logf("Potential hash collision detected: hash=%d", h1)
+				}
+			}
+		}
+	})
+}
+
+func BenchmarkHasher(b *testing.B) {
+	kvs := []KeyValue{
+		String("A", "alpha"),
+		Int64("B", 42),
+		Bool("C", true),
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		h := NewHasher()
+		for _, kv := range kvs {
+			h.Write(kv)
+		}
+		_ = h.Distinct()
+	}
+}

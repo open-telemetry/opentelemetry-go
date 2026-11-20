@@ -1,0 +1,10 @@
+file_format: 1.1.0
+schema_url: https://opentelemetry.io/schemas/1.1.0
+
+versions:
+  1.1.0:
+    all:
+      changes:
+        - rename_attributes:
+            k8s.cluster.name: kubernetes.cluster.name
+  1.0.0:

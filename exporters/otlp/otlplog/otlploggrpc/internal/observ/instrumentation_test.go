@@ -1,0 +1,467 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package observ
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
+	mapi "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
+)
+
+const (
+	ID     = 0
+	TARGET = "localhost:8080"
+)
+
+type errMeterProvider struct {
+	mapi.MeterProvider
+
+	err error
+}
+
+func (m *errMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
+	return &errMeter{err: m.err}
+}
+
+type errMeter struct {
+	mapi.Meter
+
+	err error
+}
+
+func (m *errMeter) Int64UpDownCounter(string, ...mapi.Int64UpDownCounterOption) (mapi.Int64UpDownCounter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Int64Counter(string, ...mapi.Int64CounterOption) (mapi.Int64Counter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
+	return nil, m.err
+}
+
+type histogramMeterProvider struct {
+	noop.MeterProvider
+	histogramConfig *mapi.Float64HistogramConfig
+}
+
+func (m *histogramMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
+	return &histogramMeter{histogramConfig: m.histogramConfig}
+}
+
+type histogramMeter struct {
+	noop.Meter
+	histogramConfig *mapi.Float64HistogramConfig
+}
+
+func (m *histogramMeter) Float64Histogram(
+	_ string,
+	opts ...mapi.Float64HistogramOption,
+) (mapi.Float64Histogram, error) {
+	*m.histogramConfig = mapi.NewFloat64HistogramConfig(opts...)
+	return noop.Float64Histogram{}, nil
+}
+
+func TestNewInstrumentationDurationHistogramAdvice(t *testing.T) {
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	var config mapi.Float64HistogramConfig
+	otel.SetMeterProvider(&histogramMeterProvider{histogramConfig: &config})
+	inst, err := NewInstrumentation(ID, TARGET)
+	require.NoError(t, err)
+	require.NotNil(t, inst)
+
+	assert.Equal(t, otelconv.SDKExporterOperationDuration{}.Description(), config.Description())
+	assert.Equal(t, "s", config.Unit())
+	require.NotNil(t, config.ExplicitBucketBoundaries(), "single-bucket advice must be explicit")
+	assert.Empty(t, config.ExplicitBucketBoundaries())
+}
+
+func TestNewExporterMetrics(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	t.Run("No Error", func(t *testing.T) {
+		em, err := NewInstrumentation(ID, "dns:///example.com:42")
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []attribute.KeyValue{
+			semconv.OTelComponentName(GetComponentName(ID)),
+			semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCLogExporter)),
+			semconv.ServerAddress("example.com"),
+			semconv.ServerPort(42),
+		}, em.presetAttrs)
+
+		assert.NotNil(t, em.logInflightMetric, "logInflightMetric should be created")
+		assert.NotNil(t, em.logExportedMetric, "logExportedMetric should be created")
+		assert.NotNil(t, em.logExportedDurationMetric, "logExportedDurationMetric should be created")
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		orig := otel.GetMeterProvider()
+		t.Cleanup(func() { otel.SetMeterProvider(orig) })
+		mp := &errMeterProvider{err: assert.AnError}
+		otel.SetMeterProvider(mp)
+
+		_, err := NewInstrumentation(ID, "dns:///:8080")
+		require.ErrorIs(t, err, assert.AnError, "new instrument errors")
+
+		assert.ErrorContains(t, err, "inflight metric")
+		assert.ErrorContains(t, err, "log exported metric")
+		assert.ErrorContains(t, err, "operation duration metric")
+	})
+}
+
+func TestServerAddrAttrs(t *testing.T) {
+	testcases := []struct {
+		name   string
+		target string
+		want   []attribute.KeyValue
+	}{
+		{
+			name:   "Unix socket",
+			target: "unix:///tmp/grpc.sock",
+			want:   []attribute.KeyValue{semconv.ServerAddress("/tmp/grpc.sock")},
+		},
+		{
+			name:   "DNS with port",
+			target: "dns:///localhost:8080",
+			want:   []attribute.KeyValue{semconv.ServerAddress("localhost"), semconv.ServerPort(8080)},
+		},
+		{
+			name:   "Dns with endpoint host:port",
+			target: "dns://8.8.8.8/example.com:4",
+			want:   []attribute.KeyValue{semconv.ServerAddress("example.com"), semconv.ServerPort(4)},
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			attrs := ServerAddrAttrs(tc.target)
+			assert.Equal(t, tc.want, attrs)
+		})
+	}
+}
+
+func set(err error) attribute.Set {
+	attrs := []attribute.KeyValue{
+		semconv.OTelComponentName(GetComponentName(ID)),
+		semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCLogExporter)),
+	}
+	attrs = append(attrs, ServerAddrAttrs(TARGET)...)
+	if err != nil {
+		attrs = append(attrs, semconv.ErrorType(err))
+	}
+	return attribute.NewSet(attrs...)
+}
+
+func logInflightMetrics() metricdata.Metrics {
+	m := otelconv.SDKExporterLogInflight{}
+	return metricdata.Metrics{
+		Name:        m.Name(),
+		Description: m.Description(),
+		Unit:        m.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints: []metricdata.DataPoint[int64]{
+				{Attributes: set(nil), Value: 0},
+			},
+		},
+	}
+}
+
+func logExportedMetrics(success, total int64, err error) metricdata.Metrics {
+	dp := []metricdata.DataPoint[int64]{
+		{Attributes: set(nil), Value: success},
+	}
+
+	if err != nil {
+		dp = append(dp, metricdata.DataPoint[int64]{
+			Attributes: set(err),
+			Value:      total - success,
+		})
+	}
+
+	m := otelconv.SDKExporterLogExported{}
+	return metricdata.Metrics{
+		Name:        m.Name(),
+		Description: m.Description(),
+		Unit:        m.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints:  dp,
+		},
+	}
+}
+
+func logOperationDurationMetrics(err error, code codes.Code) metricdata.Metrics {
+	attrs := []attribute.KeyValue{
+		semconv.OTelComponentName(GetComponentName(ID)),
+		semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCLogExporter)),
+		semconv.RPCStatusCode(code.String()),
+	}
+	attrs = append(attrs, ServerAddrAttrs(TARGET)...)
+	if err != nil {
+		attrs = append(attrs, semconv.ErrorType(err))
+	}
+
+	m := otelconv.SDKExporterOperationDuration{}
+	return metricdata.Metrics{
+		Name:        m.Name(),
+		Description: m.Description(),
+		Unit:        m.Unit(),
+		Data: metricdata.Histogram[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints: []metricdata.HistogramDataPoint[float64]{
+				{Attributes: attribute.NewSet(attrs...)},
+			},
+		},
+	}
+}
+
+func setup(t *testing.T) (*Instrumentation, func() metricdata.ScopeMetrics) {
+	t.Helper()
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	original := otel.GetMeterProvider()
+	t.Cleanup(func() {
+		otel.SetMeterProvider(original)
+	})
+
+	r := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+	otel.SetMeterProvider(mp)
+
+	inst, err := NewInstrumentation(ID, TARGET)
+	require.NoError(t, err)
+	require.NotNil(t, inst)
+
+	return inst, func() metricdata.ScopeMetrics {
+		var rm metricdata.ResourceMetrics
+		require.NoError(t, r.Collect(t.Context(), &rm))
+		require.Len(t, rm.ScopeMetrics, 1)
+		return rm.ScopeMetrics[0]
+	}
+}
+
+var Scope = instrumentation.Scope{
+	Name:      ScopeName,
+	Version:   Version,
+	SchemaURL: semconv.SchemaURL,
+}
+
+func assertMetrics(
+	t *testing.T,
+	got metricdata.ScopeMetrics,
+	spans int64,
+	success int64,
+	err error,
+	code codes.Code,
+) {
+	t.Helper()
+
+	assert.Equal(t, Scope, got.Scope, "unexpected scope")
+
+	m := got.Metrics
+	require.Len(t, m, 3, "expected 3 metrics")
+
+	o := metricdatatest.IgnoreTimestamp()
+	want := logInflightMetrics()
+	metricdatatest.AssertEqual(t, want, m[0], o)
+
+	want = logExportedMetrics(success, spans, err)
+	metricdatatest.AssertEqual(t, want, m[1], o)
+
+	want = logOperationDurationMetrics(err, code)
+	metricdatatest.AssertEqual(t, want, m[2], metricdatatest.IgnoreValue(), o)
+}
+
+func TestInstrumentationExportLogs(t *testing.T) {
+	inst, collect := setup(t)
+	const n = 10
+	inst.ExportLogs(t.Context(), n).End(nil, codes.OK)
+	assertMetrics(t, collect(), n, n, nil, codes.OK)
+}
+
+func TestInstrumentationExportLogPartialErrors(t *testing.T) {
+	inst, collect := setup(t)
+	const n = 10
+	const success = 5
+
+	err := internal.PartialSuccess{RejectedItems: n - success}
+	inst.ExportLogs(t.Context(), n).End(err, codes.OK)
+
+	assertMetrics(t, collect(), n, success, err, codes.OK)
+}
+
+func TestInstrumentationExportLogAllErrors(t *testing.T) {
+	inst, collect := setup(t)
+	const n = 10
+	const success = 0
+	inst.ExportLogs(t.Context(), n).End(assert.AnError, status.Code(assert.AnError))
+
+	assertMetrics(t, collect(), n, success, assert.AnError, status.Code(assert.AnError))
+}
+
+func TestInstrumentationExportLogsInvalidPartialErrored(t *testing.T) {
+	inst, collect := setup(t)
+	const n = 10
+	err := internal.PartialSuccess{RejectedItems: -5}
+	inst.ExportLogs(t.Context(), n).End(err, codes.OK)
+
+	success := int64(n)
+	assertMetrics(t, collect(), n, success, err, codes.OK)
+
+	err.RejectedItems = n + 5
+	inst.ExportLogs(t.Context(), n).End(err, codes.OK)
+
+	success += 0
+	assertMetrics(t, collect(), n+n, success, err, codes.OK)
+}
+
+type instrumentSpy struct {
+	enabled      bool
+	enabledCalls int
+	calls        int
+}
+
+func (s *instrumentSpy) Enabled(context.Context) bool {
+	s.enabledCalls++
+	return s.enabled
+}
+
+type upDownCounterSpy struct {
+	embedded.Int64UpDownCounter
+	instrumentSpy
+}
+
+func (c *upDownCounterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.calls++ }
+
+type counterSpy struct {
+	embedded.Int64Counter
+	instrumentSpy
+}
+
+func (c *counterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.calls++ }
+
+type histogramSpy struct {
+	embedded.Float64Histogram
+	instrumentSpy
+}
+
+func (h *histogramSpy) Record(context.Context, float64, ...mapi.RecordOption) { h.calls++ }
+
+func TestEndSkipsDisabledInstruments(t *testing.T) {
+	tests := []struct {
+		name     string
+		inflight bool
+		exported bool
+		duration bool
+	}{
+		{name: "all disabled"},
+		{name: "inflight only", inflight: true},
+		{name: "exported only", exported: true},
+		{name: "duration only", duration: true},
+		{name: "inflight disabled", exported: true, duration: true},
+		{name: "exported disabled", inflight: true, duration: true},
+		{name: "duration disabled", inflight: true, exported: true},
+		{name: "all enabled", inflight: true, exported: true, duration: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, result := range []struct {
+				name string
+				err  error
+			}{
+				{name: "success"},
+				{name: "partial failure", err: internal.PartialSuccess{RejectedItems: 5}},
+				{name: "failure", err: assert.AnError},
+			} {
+				t.Run(result.name, func(t *testing.T) {
+					inflight := &upDownCounterSpy{instrumentSpy: instrumentSpy{enabled: tt.inflight}}
+					exported := &counterSpy{instrumentSpy: instrumentSpy{enabled: tt.exported}}
+					duration := &histogramSpy{instrumentSpy: instrumentSpy{enabled: tt.duration}}
+					inst := &Instrumentation{
+						logInflightMetric:         inflight,
+						logExportedMetric:         exported,
+						logExportedDurationMetric: duration,
+					}
+					op := ExportOp{inst: inst, ctx: t.Context(), nLogs: 10, start: time.Now()}
+					op.End(result.err, codes.OK)
+
+					assert.Equal(t, 1, inflight.enabledCalls)
+					assert.Equal(t, 1, exported.enabledCalls)
+					assert.Equal(t, 1, duration.enabledCalls)
+					var wantInflight, wantExported, wantDuration int
+					if tt.inflight {
+						wantInflight = 1
+					}
+					if tt.exported {
+						wantExported = 1
+						if result.err != nil {
+							wantExported++
+						}
+					}
+					if tt.duration {
+						wantDuration = 1
+					}
+					assert.Equal(t, wantInflight, inflight.calls)
+					assert.Equal(t, wantExported, exported.calls)
+					assert.Equal(t, wantDuration, duration.calls)
+				})
+			}
+		})
+	}
+}
+
+func BenchmarkInstrumentationExportLogs(b *testing.B) {
+	setup := func(tb *testing.B) *Instrumentation {
+		tb.Helper()
+		tb.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		inst, err := NewInstrumentation(ID, TARGET)
+		if err != nil {
+			tb.Fatalf("failed to create instrumentation: %v", err)
+		}
+		return inst
+	}
+	run := func(err error, code codes.Code) func(*testing.B) {
+		return func(b *testing.B) {
+			inst := setup(b)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				inst.ExportLogs(b.Context(), 10).End(err, code)
+			}
+		}
+	}
+	b.Run("NoError", run(nil, codes.OK))
+	b.Run("PartialError", run(&internal.PartialSuccess{RejectedItems: 6}, codes.OK))
+	b.Run("FullError", run(assert.AnError, codes.Unknown))
+}
+
+func BenchmarkSetPresetAttrs(b *testing.B) {
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := range b.N {
+		getPresetAttrs(int64(i), "dns:///192.168.1.1:8080")
+	}
+}

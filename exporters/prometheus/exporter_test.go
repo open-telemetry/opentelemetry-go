@@ -1,0 +1,4135 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package prometheus
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"math"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/otlptranslator"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/prometheus/internal/observ"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/trace"
+)
+
+// producerFunc adapts a function to implement metric.Producer.
+type producerFunc func(context.Context) ([]metricdata.ScopeMetrics, error)
+
+func (f producerFunc) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) { return f(ctx) }
+
+// Helper: scrape with ContinueOnError and return body + status.
+func scrapeWithContinueOnError(ctx context.Context, reg *prometheus.Registry) (int, string) {
+	h := promhttp.HandlerFor(
+		reg,
+		promhttp.HandlerOpts{
+			ErrorHandling: promhttp.ContinueOnError,
+		},
+	)
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/metrics", http.NoBody)
+	h.ServeHTTP(rr, req)
+
+	return rr.Code, rr.Body.String()
+}
+
+func TestGetAttrs(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.BoolSlice("bools", []bool{true, false}),
+		attribute.Float64("float", math.Inf(1)),
+		attribute.StringSlice("strings", []string{"foo", "bar"}),
+	)
+
+	keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: true})
+	require.NoError(t, err)
+	require.Equal(t, []string{"bools", "float", "strings"}, keys)
+	require.Equal(t, []string{"[true,false]", "Infinity", `["foo","bar"]`}, values)
+}
+
+func TestGetAttrsSanitizedCollisions(t *testing.T) {
+	t.Run("linear_scan_fast_path", func(t *testing.T) {
+		attrs := attribute.NewSet(
+			attribute.String("A_B", "first"),
+			attribute.String("C-D", "z"),
+			attribute.String("C.D", "b;c"),
+			attribute.String("C/D", "a"),
+		)
+
+		keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Equal(t, []string{"A_B", "C_D"}, keys)
+		require.Equal(t, []string{"first", "z;b;c;a"}, values)
+	})
+
+	t.Run("map_fallback_above_threshold", func(t *testing.T) {
+		kvs := make([]attribute.KeyValue, 0, maxLinearScanAttrs+4)
+		for i := range maxLinearScanAttrs {
+			kvs = append(kvs, attribute.String(fmt.Sprintf("attr_%03d", i), fmt.Sprintf("v%d", i)))
+		}
+		kvs = append(kvs,
+			attribute.String("z-dup", "z"),
+			attribute.String("z.dup", "b;c"),
+			attribute.String("z/dup", "a"),
+		)
+
+		keys, values, err := getAttrs(attribute.NewSet(kvs...), otlptranslator.LabelNamer{UTF8Allowed: false})
+		require.NoError(t, err)
+		require.Len(t, keys, maxLinearScanAttrs+1)
+		require.Equal(t, "z_dup", keys[len(keys)-1])
+		require.Equal(t, "z;b;c;a", values[len(values)-1])
+	})
+}
+
+func TestAppendScopeAttrsSanitizedCollisions(t *testing.T) {
+	t.Run("linear_scan_fast_path", func(t *testing.T) {
+		attrs := attribute.NewSet(
+			attribute.String("name", "ignored"),
+			attribute.String("schema.url", "ignored"),
+			attribute.String("scope-key", "z"),
+			attribute.String("scope.key", "a"),
+			attribute.String("scope/key", "m"),
+		)
+
+		kv := keyVals{
+			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
+			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
+		}
+		kv, err := appendScopeAttrs(kv, attrs, labelNamer{})
+		require.NoError(t, err)
+		require.Equal(t, []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel, "otel_scope_scope_key"}, kv.keys)
+		require.Equal(t, []string{"my-scope", "v1.0.0", "https://example.com", "z;a;m"}, kv.vals)
+	})
+
+	t.Run("map_fallback_above_threshold", func(t *testing.T) {
+		kvs := make([]attribute.KeyValue, 0, maxLinearScanAttrs+5)
+		kvs = append(kvs,
+			attribute.String("name", "ignored"),
+			attribute.String("schema.url", "ignored"),
+		)
+		for i := range maxLinearScanAttrs {
+			kvs = append(kvs, attribute.String(fmt.Sprintf("scope_attr_%03d", i), fmt.Sprintf("v%d", i)))
+		}
+		kvs = append(kvs,
+			attribute.String("z-scope-dup", "z"),
+			attribute.String("z.scope.dup", "a"),
+			attribute.String("z/scope/dup", "m"),
+		)
+
+		kv := keyVals{
+			keys: []string{scopeNameLabel, scopeVersionLabel, scopeSchemaLabel},
+			vals: []string{"my-scope", "v1.0.0", "https://example.com"},
+		}
+		kv, err := appendScopeAttrs(kv, attribute.NewSet(kvs...), labelNamer{})
+		require.NoError(t, err)
+		require.Len(t, kv.keys, 3+maxLinearScanAttrs+1)
+		require.Equal(t, "otel_scope_z_scope_dup", kv.keys[len(kv.keys)-1])
+		require.Equal(t, "z;a;m", kv.vals[len(kv.vals)-1])
+	})
+}
+
+func TestSanitizedCollisionKeyOrder(t *testing.T) {
+	attrs := attribute.NewSet(
+		attribute.String("C/D", "A"),
+		attribute.String("C.D", "Z"),
+		attribute.String("C-D", "M"),
+	)
+
+	keys, values, err := getAttrs(attrs, otlptranslator.LabelNamer{UTF8Allowed: false})
+	require.NoError(t, err)
+	require.Equal(t, []string{"C_D"}, keys)
+	// Original keys in lexicographical order are "C-D", "C.D", "C/D".
+	require.Equal(t, []string{"M;Z;A"}, values)
+
+	kv, err := appendScopeAttrs(keyVals{}, attrs, labelNamer{})
+	require.NoError(t, err)
+	require.Equal(t, []string{"otel_scope_C_D"}, kv.keys)
+	require.Equal(t, []string{"M;Z;A"}, kv.vals)
+}
+
+func TestAttributesToLabels(t *testing.T) {
+	labels, err := attributesToLabels([]attribute.KeyValue{
+		attribute.Float64Slice("float_slice", []float64{math.NaN(), math.Inf(1)}),
+	}, labelNamer{})
+	require.NoError(t, err)
+	require.Equal(t, prometheus.Labels{"float_slice": `["NaN","Infinity"]`}, labels)
+}
+
+func TestLabelNamerBuild(t *testing.T) {
+	t.Run("caches_sanitized_keys", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: false},
+		}
+		ln := c.newLabelNamer()
+		require.NotNil(t, ln.cache)
+
+		got, err := ln.build("http.request.method")
+		require.NoError(t, err)
+		require.Equal(t, "http_request_method", got)
+		require.Equal(t, "http_request_method", ln.cache["http.request.method"])
+
+		allocs := testing.AllocsPerRun(100, func() {
+			got, err = ln.build("http.request.method")
+		})
+		require.NoError(t, err)
+		require.Equal(t, "http_request_method", got)
+		require.Zero(t, allocs)
+	})
+
+	t.Run("does_not_cache_errors", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: false},
+		}
+		ln := c.newLabelNamer()
+
+		_, err := ln.build("")
+		require.Error(t, err)
+		require.Empty(t, ln.cache)
+	})
+
+	t.Run("utf8_allowed_nil_cache", func(t *testing.T) {
+		c := &collector{
+			labelNamer: otlptranslator.LabelNamer{UTF8Allowed: true},
+		}
+		ln := c.newLabelNamer()
+		require.Nil(t, ln.cache)
+
+		got, err := ln.build("http.request.method")
+		require.NoError(t, err)
+		require.Equal(t, "http.request.method", got)
+	})
+}
+
+func TestGetOrReuseDesc(t *testing.T) {
+	emptyDesc := prometheus.NewDesc("test_metric", "test help", nil, nil)
+	abDesc := prometheus.NewDesc("test_metric", "test help", []string{"a", "b"}, nil)
+
+	testCases := []struct {
+		name       string
+		keys       []string
+		lastKeys   []string
+		lastDesc   *prometheus.Desc
+		wantReuse  bool
+		wantLabels map[string]string
+		values     []string
+	}{
+		{
+			name:       "initial descriptor with empty keys",
+			keys:       nil,
+			lastKeys:   nil,
+			lastDesc:   nil,
+			wantReuse:  false,
+			wantLabels: map[string]string{},
+		},
+		{
+			name:       "reuse descriptor with empty keys",
+			keys:       []string{},
+			lastKeys:   nil,
+			lastDesc:   emptyDesc,
+			wantReuse:  true,
+			wantLabels: map[string]string{},
+		},
+		{
+			name:       "initial descriptor with non-empty keys",
+			keys:       []string{"a", "b"},
+			lastKeys:   nil,
+			lastDesc:   nil,
+			wantReuse:  false,
+			values:     []string{"v1", "v2"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2"},
+		},
+		{
+			name:       "reuse descriptor for equal ordered keys in distinct slices",
+			keys:       []string{"a", "b"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  true,
+			values:     []string{"v3", "v4"},
+			wantLabels: map[string]string{"a": "v3", "b": "v4"},
+		},
+		{
+			name:       "new descriptor for same-length changed keys",
+			keys:       []string{"a", "c"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v1", "v2"},
+			wantLabels: map[string]string{"a": "v1", "c": "v2"},
+		},
+		{
+			name:       "new descriptor for reordered keys",
+			keys:       []string{"b", "a"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v2", "v1"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2"},
+		},
+		{
+			name:       "new descriptor for different-length keys",
+			keys:       []string{"a", "b", "c"},
+			lastKeys:   []string{"a", "b"},
+			lastDesc:   abDesc,
+			wantReuse:  false,
+			values:     []string{"v1", "v2", "v3"},
+			wantLabels: map[string]string{"a": "v1", "b": "v2", "c": "v3"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			desc, gotKeys := getOrReuseDesc("test_metric", "test help", tc.keys, tc.lastKeys, tc.lastDesc)
+			require.NotNil(t, desc)
+			if tc.wantReuse {
+				assert.Same(t, tc.lastDesc, desc)
+				assert.Equal(t, tc.lastKeys, gotKeys)
+			} else {
+				assert.NotSame(t, tc.lastDesc, desc)
+				assert.Equal(t, tc.keys, gotKeys)
+			}
+
+			pm, err := prometheus.NewConstMetric(desc, prometheus.GaugeValue, 1, tc.values...)
+			require.NoError(t, err)
+			var dm dto.Metric
+			require.NoError(t, pm.Write(&dm))
+			gotLabels := make(map[string]string, len(dm.GetLabel()))
+			for _, lp := range dm.GetLabel() {
+				gotLabels[lp.GetName()] = lp.GetValue()
+			}
+			assert.Equal(t, tc.wantLabels, gotLabels)
+		})
+	}
+}
+
+func TestPrometheusExporter(t *testing.T) {
+	testCases := []struct {
+		name                string
+		emptyResource       bool
+		customResourceAttrs []attribute.KeyValue
+		recordMetrics       func(ctx context.Context, meter otelmetric.Meter)
+		options             []Option
+		expectedFile        string
+		checkMetricFamilies func(t testing.TB, dtos []*dto.MetricFamily)
+	}{
+		{
+			name:         "counter",
+			expectedFile: "testdata/counter.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+			options: []Option{
+				WithNamespace("my.dotted.namespace"),
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+			},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var counter *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "my_dotted_namespace_foo_seconds_total" {
+						counter = mf
+						break
+					}
+				}
+				require.NotNil(t, counter)
+				for _, m := range counter.GetMetric() {
+					require.NotNil(t, m.GetCounter().GetCreatedTimestamp())
+					assert.False(t, m.GetCounter().GetCreatedTimestamp().AsTime().IsZero())
+				}
+			},
+		},
+		{
+			name:         "counter that already has the unit suffix",
+			expectedFile: "testdata/counter_noutf8_with_unit_suffix.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo.seconds",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+			options: []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes)},
+		},
+		{
+			name:         "counter with custom unit not tracked by ucum standards",
+			expectedFile: "testdata/counter_with_custom_unit_suffix.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo.dotted",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("madeup"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+			options: []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+		},
+		{
+			name:         "counter with bracketed unit",
+			expectedFile: "testdata/counter_no_unit.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("{spans}"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+			options: []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+		},
+		{
+			name:         "counter that already has a total suffix",
+			expectedFile: "testdata/counter.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo.total",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+			options: []Option{
+				WithNamespace("my.dotted.namespace"),
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+			},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var counter *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "my_dotted_namespace_foo_seconds_total" {
+						counter = mf
+						break
+					}
+				}
+				require.NotNil(t, counter)
+				for _, m := range counter.GetMetric() {
+					require.NotNil(t, m.GetCounter().GetCreatedTimestamp())
+					assert.False(t, m.GetCounter().GetCreatedTimestamp().AsTime().IsZero())
+				}
+			},
+		},
+		{
+			name:         "counter with suffixes disabled",
+			expectedFile: "testdata/counter_disabled_suffix.txt",
+			options: []Option{
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo",
+					otelmetric.WithDescription("a simple counter without a total suffix"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+		},
+		{
+			name:         "gauge",
+			expectedFile: "testdata/gauge.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				)
+				gauge, err := meter.Float64Gauge(
+					"bar",
+					otelmetric.WithDescription("a fun little gauge"),
+					otelmetric.WithUnit("1"),
+				)
+				require.NoError(t, err)
+				gauge.Record(ctx, .75, opt)
+			},
+		},
+		{
+			name:         "exponential histogram",
+			expectedFile: "testdata/exponential_histogram.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var hist *dto.MetricFamily
+
+				for _, mf := range mfs {
+					if *mf.Name == `exponential_histogram_baz_bytes` {
+						hist = mf
+						break
+					}
+				}
+
+				if hist == nil {
+					t.Fatal("expected to find histogram")
+				}
+
+				m := hist.GetMetric()[0].Histogram
+
+				require.Equal(t, 236.0, *m.SampleSum)
+				require.Equal(t, uint64(4), *m.SampleCount)
+				require.Equal(t, []int64{1, -1, 1, -1, 2}, m.PositiveDelta)
+				require.Equal(t, uint32(5), *m.PositiveSpan[0].Length)
+				require.Equal(t, int32(3), *m.PositiveSpan[0].Offset)
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				// NOTE(GiedriusS): there is no text format for exponential (native)
+				// histograms so we don't expect any output.
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				)
+				histogram, err := meter.Float64Histogram(
+					"exponential_histogram_baz",
+					otelmetric.WithDescription("a very nice histogram"),
+					otelmetric.WithUnit("By"),
+				)
+				require.NoError(t, err)
+				histogram.Record(ctx, 23, opt)
+				histogram.Record(ctx, 7, opt)
+				histogram.Record(ctx, 101, opt)
+				histogram.Record(ctx, 105, opt)
+			},
+		},
+		{
+			name:         "histogram",
+			expectedFile: "testdata/histogram.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				var hist *dto.MetricFamily
+				for _, mf := range mfs {
+					if mf.GetName() == "histogram_baz_bytes" {
+						hist = mf
+						break
+					}
+				}
+				require.NotNil(t, hist)
+				for _, m := range hist.GetMetric() {
+					require.NotNil(t, m.GetHistogram().GetCreatedTimestamp())
+					assert.False(t, m.GetHistogram().GetCreatedTimestamp().AsTime().IsZero())
+				}
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				)
+				histogram, err := meter.Float64Histogram(
+					"histogram_baz",
+					otelmetric.WithDescription("a very nice histogram"),
+					otelmetric.WithUnit("By"),
+				)
+				require.NoError(t, err)
+				histogram.Record(ctx, 23, opt)
+				histogram.Record(ctx, 7, opt)
+				histogram.Record(ctx, 101, opt)
+				histogram.Record(ctx, 105, opt)
+			},
+		},
+		{
+			name:         "sanitized attributes to labels",
+			expectedFile: "testdata/sanitized_labels.txt",
+			options: []Option{
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					// exact match, value should be overwritten
+					attribute.Key("A.B").String("X"),
+					attribute.Key("A.B").String("Q"),
+
+					// unintended match due to sanitization, values should be concatenated
+					// in the lexicographical order of the original keys ("C.D" < "C/D")
+					attribute.Key("C.D").String("Z"),
+					attribute.Key("C/D").String("Y"),
+				)
+				counter, err := meter.Float64Counter(
+					"foo",
+					otelmetric.WithDescription("a sanitary counter"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+			},
+		},
+		{
+			name:         "invalid instruments are renamed",
+			expectedFile: "testdata/sanitized_names.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				)
+				// Valid.
+				gauge, err := meter.Float64UpDownCounter("bar", otelmetric.WithDescription("a fun little gauge"))
+				require.NoError(t, err)
+				gauge.Add(ctx, 100, opt)
+				gauge.Add(ctx, -25, opt)
+
+				// Invalid, will be renamed.
+				gauge, err = meter.Float64UpDownCounter(
+					"invalid.gauge.name",
+					otelmetric.WithDescription("a gauge with an invalid name"),
+				)
+				require.NoError(t, err)
+				gauge.Add(ctx, 100, opt)
+
+				counter, err := meter.Float64Counter(
+					"0invalid.counter.name",
+					otelmetric.WithDescription("a counter with an invalid name"),
+				)
+				require.ErrorIs(t, err, metric.ErrInstrumentName)
+				counter.Add(ctx, 100, opt)
+
+				histogram, err := meter.Float64Histogram(
+					"invalid.hist.name",
+					otelmetric.WithDescription("a histogram with an invalid name"),
+				)
+				require.NoError(t, err)
+				histogram.Record(ctx, 23, opt)
+			},
+		},
+		{
+			name:          "empty resource",
+			emptyResource: true,
+			expectedFile:  "testdata/empty_resource.txt",
+			options:       []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+			},
+		},
+		{
+			name: "custom resource",
+			customResourceAttrs: []attribute.KeyValue{
+				attribute.Key("A").String("B"),
+				attribute.Key("C").String("D"),
+			},
+			expectedFile: "testdata/custom_resource.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+			},
+		},
+		{
+			name: "without target_info",
+			options: []Option{
+				WithoutTargetInfo(),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
+			expectedFile: "testdata/without_target_info.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+			},
+		},
+		{
+			name: "without scope_info",
+			options: []Option{
+				WithoutScopeInfo(),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
+			expectedFile: "testdata/without_scope_info.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				)
+				gauge, err := meter.Int64Gauge(
+					"bar",
+					otelmetric.WithDescription("a fun little gauge"),
+					otelmetric.WithUnit("1"),
+				)
+				require.NoError(t, err)
+				gauge.Record(ctx, 1, opt)
+			},
+		},
+		{
+			name: "without scope_info and target_info",
+			options: []Option{
+				WithoutScopeInfo(),
+				WithoutTargetInfo(),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
+			expectedFile: "testdata/without_scope_and_target_info.txt",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+				)
+				counter, err := meter.Int64Counter(
+					"bar",
+					otelmetric.WithDescription("a fun little counter"),
+					otelmetric.WithUnit("By"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 2, opt)
+				counter.Add(ctx, 1, opt)
+			},
+		},
+		{
+			name:         "with namespace",
+			expectedFile: "testdata/with_namespace.txt",
+			options: []Option{
+				WithNamespace("test"),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+			},
+		},
+		{
+			name:         "with resource attributes filter",
+			expectedFile: "testdata/with_resource_attributes_filter.txt",
+			options: []Option{
+				WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.1, opt)
+				counter.Add(ctx, 9.8, opt)
+			},
+		},
+		{
+			name:         "with some resource attributes filter",
+			expectedFile: "testdata/with_allow_resource_attributes_filter.txt",
+			options: []Option{
+				WithResourceAsConstantLabels(attribute.NewAllowKeysFilter("service.name")),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64Counter("foo", otelmetric.WithDescription("a simple counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 5.9, opt)
+				counter.Add(ctx, 5.3, opt)
+			},
+		},
+		{
+			name:         "counter utf-8",
+			expectedFile: "testdata/counter_utf8.txt",
+			options: []Option{
+				WithNamespace("my.dotted.namespace"),
+				WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A.G").String("B"),
+					attribute.Key("C.H").String("D"),
+					attribute.Key("E.I").Bool(true),
+					attribute.Key("F.J").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo.things",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A.G").String("D"),
+					attribute.Key("C.H").String("B"),
+					attribute.Key("E.I").Bool(true),
+					attribute.Key("F.J").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+		},
+		{
+			name:         "counter utf-8 notranslation",
+			expectedFile: "testdata/counter_utf8_notranslation.txt",
+			options: []Option{
+				WithNamespace("my.dotted.namespace"),
+				WithTranslationStrategy(otlptranslator.NoTranslation),
+			},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A.G").String("B"),
+					attribute.Key("C.H").String("D"),
+					attribute.Key("E.I").Bool(true),
+					attribute.Key("F.J").Int(42),
+				)
+				counter, err := meter.Float64Counter(
+					"foo.things",
+					otelmetric.WithDescription("a simple counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A.G").String("D"),
+					attribute.Key("C.H").String("B"),
+					attribute.Key("E.I").Bool(true),
+					attribute.Key("F.J").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+		},
+		{
+			name:         "non-monotonic sum does not add exemplars",
+			expectedFile: "testdata/non_monotonic_sum_does_not_add_exemplars.txt",
+			options:      []Option{WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes)},
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				sc := trace.NewSpanContext(trace.SpanContextConfig{
+					SpanID:     trace.SpanID{0o1},
+					TraceID:    trace.TraceID{0o1},
+					TraceFlags: trace.FlagsSampled,
+				})
+				ctx = trace.ContextWithSpanContext(ctx, sc)
+				opt := otelmetric.WithAttributes(
+					attribute.Key("A").String("B"),
+					attribute.Key("C").String("D"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter, err := meter.Float64UpDownCounter(
+					"foo",
+					otelmetric.WithDescription("a simple up down counter"),
+					otelmetric.WithUnit("s"),
+				)
+				require.NoError(t, err)
+				counter.Add(ctx, 5, opt)
+				counter.Add(ctx, 10.3, opt)
+				counter.Add(ctx, 9, opt)
+				counter.Add(ctx, -1, opt)
+
+				attrs2 := attribute.NewSet(
+					attribute.Key("A").String("D"),
+					attribute.Key("C").String("B"),
+					attribute.Key("E").Bool(true),
+					attribute.Key("F").Int(42),
+				)
+				counter.Add(ctx, 5, otelmetric.WithAttributeSet(attrs2))
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+			registry := prometheus.NewRegistry()
+			opts := append(tc.options, WithRegisterer(registry))
+			exporter, err := New(opts...)
+			require.NoError(t, err)
+
+			var res *resource.Resource
+			if tc.emptyResource {
+				res = resource.Empty()
+			} else {
+				res, err = resource.New(
+					ctx,
+					// always specify service.name because the default depends on the running OS
+					resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+					// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
+					resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+					resource.WithAttributes(tc.customResourceAttrs...),
+				)
+				require.NoError(t, err)
+
+				res, err = resource.Merge(resource.Default(), res)
+				require.NoError(t, err)
+			}
+
+			provider := metric.NewMeterProvider(
+				metric.WithResource(res),
+				metric.WithReader(exporter),
+				metric.WithView(
+					metric.NewView(
+						metric.Instrument{Name: "histogram_*"},
+						metric.Stream{Aggregation: metric.AggregationExplicitBucketHistogram{
+							Boundaries: []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 1000},
+						}},
+					),
+					metric.NewView(
+						metric.Instrument{Name: "exponential_histogram_*"},
+						metric.Stream{Aggregation: metric.AggregationBase2ExponentialHistogram{
+							MaxSize: 10,
+						}},
+					),
+				),
+			)
+			meter := provider.Meter(
+				"testmeter",
+				otelmetric.WithInstrumentationVersion("v0.1.0"),
+				otelmetric.WithInstrumentationAttributes(attribute.String("fizz", "buzz")),
+			)
+
+			tc.recordMetrics(ctx, meter)
+
+			file, err := os.Open(tc.expectedFile)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, file.Close()) })
+
+			err = testutil.GatherAndCompare(registry, file)
+			require.NoError(t, err)
+
+			if tc.checkMetricFamilies == nil {
+				return
+			}
+
+			mfs, err := registry.Gather()
+			require.NoError(t, err)
+
+			tc.checkMetricFamilies(t, mfs)
+		})
+	}
+}
+
+func TestNilReaderOptions(t *testing.T) {
+	exporter, err := New(
+		WithRegisterer(prometheus.NewRegistry()),
+		WithAggregationSelector(nil),
+		WithProducer(nil),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+	counter, err := provider.Meter("test").Int64Counter("counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, exporter.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	assert.Equal(t, "counter", rm.ScopeMetrics[0].Metrics[0].Name)
+	sum, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+	require.True(t, ok)
+	require.Len(t, sum.DataPoints, 1)
+	assert.Equal(t, int64(1), sum.DataPoints[0].Value)
+}
+
+func TestNilReaderOptionsPreservePrevious(t *testing.T) {
+	selectorCalled := false
+	external := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{Name: "external"},
+		Metrics: []metricdata.Metrics{{
+			Name: "external",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints:  []metricdata.DataPoint[int64]{{Value: 2}},
+			},
+		}},
+	}
+	exporter, err := New(
+		WithRegisterer(prometheus.NewRegistry()),
+		WithAggregationSelector(func(kind metric.InstrumentKind) metric.Aggregation {
+			selectorCalled = true
+			return metric.DefaultAggregationSelector(kind)
+		}),
+		WithAggregationSelector(nil),
+		WithProducer(producerFunc(func(context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{external}, nil
+		})),
+		WithProducer(nil),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+	counter, err := provider.Meter("test").Int64Counter("counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, exporter.Collect(t.Context(), &rm))
+	assert.True(t, selectorCalled)
+	require.Len(t, rm.ScopeMetrics, 2)
+	assert.Equal(t, external, rm.ScopeMetrics[1])
+}
+
+func TestCreatedTimestampZeroStartTime(t *testing.T) {
+	startTime := time.Date(2026, 10, 27, 12, 0, 0, 0, time.UTC)
+	external := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{Name: "external"},
+		Metrics: []metricdata.Metrics{
+			{
+				Name: "counter_zero_start",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Value: 5}},
+				},
+			},
+			{
+				Name: "counter_with_start",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints:  []metricdata.DataPoint[int64]{{Value: 5, StartTime: startTime}},
+				},
+			},
+			{
+				Name: "hist_zero_start",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{{
+						Bounds:       []float64{10},
+						BucketCounts: []uint64{1, 0},
+						Count:        1,
+						Sum:          5,
+					}},
+				},
+			},
+			{
+				Name: "hist_with_start",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{{
+						Bounds:       []float64{10},
+						BucketCounts: []uint64{1, 0},
+						Count:        1,
+						Sum:          5,
+						StartTime:    startTime,
+					}},
+				},
+			},
+		},
+	}
+
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithoutTargetInfo(),
+		WithoutScopeInfo(),
+		WithProducer(producerFunc(func(context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{external}, nil
+		})),
+	)
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+
+	mfs, err := registry.Gather()
+	require.NoError(t, err)
+
+	byName := make(map[string]*dto.Metric, len(mfs))
+	for _, mf := range mfs {
+		require.Len(t, mf.GetMetric(), 1)
+		byName[mf.GetName()] = mf.GetMetric()[0]
+	}
+
+	assert.Nil(t, byName["counter_zero_start_total"].GetCounter().GetCreatedTimestamp())
+	require.NotNil(t, byName["counter_with_start_total"].GetCounter().GetCreatedTimestamp())
+	assert.Equal(t, startTime, byName["counter_with_start_total"].GetCounter().GetCreatedTimestamp().AsTime())
+
+	assert.Nil(t, byName["hist_zero_start"].GetHistogram().GetCreatedTimestamp())
+	require.NotNil(t, byName["hist_with_start"].GetHistogram().GetCreatedTimestamp())
+	assert.Equal(t, startTime, byName["hist_with_start"].GetHistogram().GetCreatedTimestamp().AsTime())
+}
+
+func TestMultiScopes(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+		WithRegisterer(registry),
+	)
+	require.NoError(t, err)
+
+	res, err := resource.New(
+		ctx,
+		// always specify service.name because the default depends on the running OS
+		resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+		// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
+		resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+	)
+	require.NoError(t, err)
+	res, err = resource.Merge(resource.Default(), res)
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(res),
+	)
+
+	fooCounter, err := provider.Meter("meterfoo", otelmetric.WithInstrumentationVersion("v0.1.0")).
+		Int64Counter(
+			"foo",
+			otelmetric.WithUnit("s"),
+			otelmetric.WithDescription("meter foo counter"),
+		)
+	assert.NoError(t, err)
+	fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String("type", "foo")))
+
+	barCounter, err := provider.Meter("meterbar", otelmetric.WithInstrumentationVersion("v0.1.0")).
+		Int64Counter(
+			"bar",
+			otelmetric.WithUnit("s"),
+			otelmetric.WithDescription("meter bar counter"),
+		)
+	assert.NoError(t, err)
+	barCounter.Add(ctx, 200, otelmetric.WithAttributes(attribute.String("type", "bar")))
+
+	file, err := os.Open("testdata/multi_scopes.txt")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, file.Close()) })
+
+	err = testutil.GatherAndCompare(registry, file)
+	require.NoError(t, err)
+}
+
+func TestScopeAttributeConflictsDropped(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithoutTargetInfo(),
+		WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+	)
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter(
+		"scope-name",
+		otelmetric.WithInstrumentationVersion("scope-version"),
+		otelmetric.WithSchemaURL("https://example.com/schema"),
+		otelmetric.WithInstrumentationAttributes(
+			attribute.String("name", "dropped-name"),
+			attribute.String("version", "dropped-version"),
+			attribute.String("schema_url", "dropped-schema-url"),
+			attribute.String("schema.url", "dropped-translated-schema-url"),
+			attribute.String("custom.scope", "kept"),
+		),
+	)
+
+	counter, err := meter.Int64Counter("scope_conflict")
+	require.NoError(t, err)
+	counter.Add(ctx, 1)
+
+	got, err := registry.Gather()
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Len(t, got[0].Metric, 1)
+
+	labels := map[string]string{}
+	for _, label := range got[0].Metric[0].Label {
+		labels[label.GetName()] = label.GetValue()
+	}
+
+	assert.Equal(t, map[string]string{
+		"otel_scope_custom_scope": "kept",
+		"otel_scope_name":         "scope-name",
+		"otel_scope_schema_url":   "https://example.com/schema",
+		"otel_scope_version":      "scope-version",
+	}, labels)
+}
+
+func TestBridgeScopeIgnored(t *testing.T) {
+	var handledError error
+	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
+	otel.SetErrorHandler(eh)
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+		WithRegisterer(registry),
+	)
+	require.NoError(t, err)
+
+	res, err := resource.New(
+		ctx,
+		// always specify service.name because the default depends on the running OS
+		resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+		// Overwrite the semconv.TelemetrySDKVersionKey value so we don't need to update every version
+		resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+	)
+	require.NoError(t, err)
+	res, err = resource.Merge(resource.Default(), res)
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(res),
+	)
+
+	fooCounter, err := provider.Meter(bridgeScopeName, otelmetric.WithInstrumentationVersion("v0.1.0")).
+		Int64Counter(
+			"foo",
+			otelmetric.WithUnit("s"),
+			otelmetric.WithDescription("meter foo counter"),
+		)
+	assert.NoError(t, err)
+	fooCounter.Add(ctx, 100, otelmetric.WithAttributes(attribute.String("type", "foo")))
+
+	file, err := os.Open("testdata/just_target_info.txt")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, file.Close()) })
+
+	err = testutil.GatherAndCompare(registry, file)
+	require.NoError(t, err)
+
+	require.ErrorIs(t, handledError, errBridgeNotSupported)
+}
+
+func TestDuplicateMetrics(t *testing.T) {
+	ab := attribute.NewSet(attribute.String("A", "B"))
+	withAB := otelmetric.WithAttributeSet(ab)
+	typeBar := attribute.NewSet(attribute.String("type", "bar"))
+	withTypeBar := otelmetric.WithAttributeSet(typeBar)
+	typeFoo := attribute.NewSet(attribute.String("type", "foo"))
+	withTypeFoo := otelmetric.WithAttributeSet(typeFoo)
+	testCases := []struct {
+		name                  string
+		customResourceAttrs   []attribute.KeyValue
+		recordMetrics         func(ctx context.Context, meterA, meterB otelmetric.Meter)
+		options               []Option
+		possibleExpectedFiles []string
+		expectGatherError     bool
+	}{
+		{
+			name: "no_conflict_two_counters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				fooA, err := meterA.Int64Counter("foo",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter counter foo"))
+				assert.NoError(t, err)
+				fooA.Add(ctx, 100, withAB)
+
+				fooB, err := meterB.Int64Counter("foo",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter counter foo"))
+				assert.NoError(t, err)
+				fooB.Add(ctx, 100, withAB)
+			},
+			possibleExpectedFiles: []string{"testdata/no_conflict_two_counters.txt"},
+		},
+		{
+			name: "no_conflict_two_updowncounters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				fooA, err := meterA.Int64UpDownCounter("foo",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter gauge foo"))
+				assert.NoError(t, err)
+				fooA.Add(ctx, 100, withAB)
+
+				fooB, err := meterB.Int64UpDownCounter("foo",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter gauge foo"))
+				assert.NoError(t, err)
+				fooB.Add(ctx, 100, withAB)
+			},
+			possibleExpectedFiles: []string{"testdata/no_conflict_two_updowncounters.txt"},
+		},
+		{
+			name: "no_conflict_two_histograms",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				fooA, err := meterA.Int64Histogram("foo",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter histogram foo"))
+				assert.NoError(t, err)
+				fooA.Record(ctx, 100, withAB)
+
+				fooB, err := meterB.Int64Histogram("foo",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter histogram foo"))
+				assert.NoError(t, err)
+				fooB.Record(ctx, 100, withAB)
+			},
+			possibleExpectedFiles: []string{"testdata/no_conflict_two_histograms.txt"},
+		},
+		{
+			name: "conflict_help_two_counters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				barA, err := meterA.Int64Counter("bar",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter a bar"))
+				assert.NoError(t, err)
+				barA.Add(ctx, 100, withTypeBar)
+
+				barB, err := meterB.Int64Counter("bar",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter b bar"))
+				assert.NoError(t, err)
+				barB.Add(ctx, 100, withTypeBar)
+			},
+			possibleExpectedFiles: []string{
+				"testdata/conflict_help_two_counters_1.txt",
+				"testdata/conflict_help_two_counters_2.txt",
+			},
+		},
+		{
+			name: "conflict_help_two_updowncounters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				barA, err := meterA.Int64UpDownCounter("bar",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter a bar"))
+				assert.NoError(t, err)
+				barA.Add(ctx, 100, withTypeBar)
+
+				barB, err := meterB.Int64UpDownCounter("bar",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter b bar"))
+				assert.NoError(t, err)
+				barB.Add(ctx, 100, withTypeBar)
+			},
+			possibleExpectedFiles: []string{
+				"testdata/conflict_help_two_updowncounters_1.txt",
+				"testdata/conflict_help_two_updowncounters_2.txt",
+			},
+		},
+		{
+			name: "conflict_help_two_histograms",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				barA, err := meterA.Int64Histogram("bar",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter a bar"))
+				assert.NoError(t, err)
+				barA.Record(ctx, 100, withAB)
+
+				barB, err := meterB.Int64Histogram("bar",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter b bar"))
+				assert.NoError(t, err)
+				barB.Record(ctx, 100, withAB)
+			},
+			possibleExpectedFiles: []string{
+				"testdata/conflict_help_two_histograms_1.txt",
+				"testdata/conflict_help_two_histograms_2.txt",
+			},
+		},
+		{
+			name: "conflict_unit_two_counters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				bazA, err := meterA.Int64Counter("bar",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter bar"))
+				assert.NoError(t, err)
+				bazA.Add(ctx, 100, withTypeBar)
+
+				bazB, err := meterB.Int64Counter("bar",
+					otelmetric.WithUnit("s"),
+					otelmetric.WithDescription("meter bar"))
+				assert.NoError(t, err)
+				bazB.Add(ctx, 100, withTypeBar)
+			},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
+			possibleExpectedFiles: []string{"testdata/conflict_unit_two_counters.txt"},
+		},
+		{
+			name: "conflict_unit_two_updowncounters",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				barA, err := meterA.Int64UpDownCounter("bar",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter gauge bar"))
+				assert.NoError(t, err)
+				barA.Add(ctx, 100, withTypeBar)
+
+				barB, err := meterB.Int64UpDownCounter("bar",
+					otelmetric.WithUnit("s"),
+					otelmetric.WithDescription("meter gauge bar"))
+				assert.NoError(t, err)
+				barB.Add(ctx, 100, withTypeBar)
+			},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
+			possibleExpectedFiles: []string{"testdata/conflict_unit_two_updowncounters.txt"},
+		},
+		{
+			name: "conflict_unit_two_histograms",
+			recordMetrics: func(ctx context.Context, meterA, meterB otelmetric.Meter) {
+				barA, err := meterA.Int64Histogram("bar",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter histogram bar"))
+				assert.NoError(t, err)
+				barA.Record(ctx, 100, withAB)
+
+				barB, err := meterB.Int64Histogram("bar",
+					otelmetric.WithUnit("s"),
+					otelmetric.WithDescription("meter histogram bar"))
+				assert.NoError(t, err)
+				barB.Record(ctx, 100, withAB)
+			},
+			options:               []Option{WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes)},
+			possibleExpectedFiles: []string{"testdata/conflict_unit_two_histograms.txt"},
+		},
+		{
+			name: "conflict_type_counter_and_updowncounter",
+			recordMetrics: func(ctx context.Context, meterA, _ otelmetric.Meter) {
+				counter, err := meterA.Int64Counter("foo",
+					otelmetric.WithDescription("meter foo"))
+				assert.NoError(t, err)
+				counter.Add(ctx, 100, withTypeFoo)
+
+				gauge, err := meterA.Int64UpDownCounter("foo_total",
+					otelmetric.WithDescription("meter foo"))
+				assert.NoError(t, err)
+				gauge.Add(ctx, 200, withTypeFoo)
+			},
+			possibleExpectedFiles: []string{
+				"testdata/conflict_type_counter_and_updowncounter_1.txt",
+				"testdata/conflict_type_counter_and_updowncounter_2.txt",
+			},
+			expectGatherError: true,
+		},
+		{
+			name: "conflict_type_histogram_and_updowncounter",
+			recordMetrics: func(ctx context.Context, meterA, _ otelmetric.Meter) {
+				fooA, err := meterA.Int64UpDownCounter("foo",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter gauge foo"))
+				assert.NoError(t, err)
+				fooA.Add(ctx, 100, withAB)
+
+				fooHistogramA, err := meterA.Int64Histogram("foo",
+					otelmetric.WithUnit("By"),
+					otelmetric.WithDescription("meter histogram foo"))
+				assert.NoError(t, err)
+				fooHistogramA.Record(ctx, 100, withAB)
+			},
+			possibleExpectedFiles: []string{
+				"testdata/conflict_type_histogram_and_updowncounter_1.txt",
+				"testdata/conflict_type_histogram_and_updowncounter_2.txt",
+			},
+			expectGatherError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// initialize registry exporter
+			ctx := t.Context()
+			registry := prometheus.NewRegistry()
+			// This test does not set the Translation Strategy, so it defaults to
+			// UnderscoreEscapingWithSuffixes.
+			opts := append(
+				[]Option{
+					WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+				},
+				tc.options...,
+			)
+			exporter, err := New(append(opts, WithRegisterer(registry))...)
+			require.NoError(t, err)
+
+			// initialize resource
+			res, err := resource.New(
+				ctx,
+				resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+				resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+			)
+			require.NoError(t, err)
+			res, err = resource.Merge(resource.Default(), res)
+			require.NoError(t, err)
+
+			// initialize provider
+			provider := metric.NewMeterProvider(
+				metric.WithReader(exporter),
+				metric.WithResource(res),
+			)
+
+			// initialize two meter a, b
+			meterA := provider.Meter("ma", otelmetric.WithInstrumentationVersion("v0.1.0"))
+			meterB := provider.Meter("mb", otelmetric.WithInstrumentationVersion("v0.1.0"))
+
+			tc.recordMetrics(ctx, meterA, meterB)
+
+			if tc.expectGatherError {
+				// With improved error handling, conflicting instrument types emit an invalid metric.
+				// Gathering should surface an error instead of silently dropping.
+				_, err := registry.Gather()
+				require.Error(t, err)
+
+				// 2) Also assert what users will see if they opt into ContinueOnError.
+				// Compare the HTTP body to an expected file that contains only the valid series
+				// (e.g., "target_info" and any non-conflicting families).
+				status, body := scrapeWithContinueOnError(t.Context(), registry)
+				require.Equal(t, http.StatusOK, status)
+
+				matched := false
+				for _, filename := range tc.possibleExpectedFiles {
+					want, ferr := os.ReadFile(filename)
+					require.NoError(t, ferr)
+					if body == string(want) {
+						matched = true
+						break
+					}
+				}
+				require.Truef(t, matched, "expected export not produced under ContinueOnError; got:\n%s", body)
+			} else {
+				match := false
+				for _, filename := range tc.possibleExpectedFiles {
+					file, ferr := os.Open(filename)
+					require.NoError(t, ferr)
+					t.Cleanup(func() { require.NoError(t, file.Close()) })
+
+					err = testutil.GatherAndCompare(registry, file)
+					if err == nil {
+						match = true
+						break
+					}
+				}
+				require.Truef(t, match, "expected export not produced: %v", err)
+			}
+		})
+	}
+}
+
+func TestCollectorConcurrentSafe(t *testing.T) {
+	// This tests makes sure that the implemented
+	// https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#Collector
+	// is concurrent safe.
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry))
+	require.NoError(t, err)
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter("testmeter")
+	cnt, err := meter.Int64Counter("foo")
+	require.NoError(t, err)
+	cnt.Add(ctx, 100)
+
+	var wg sync.WaitGroup
+	concurrencyLevel := 10
+	for range concurrencyLevel {
+		wg.Go(func() {
+			_, err := registry.Gather() // this calls collector.Collect
+			assert.NoError(t, err)
+		})
+	}
+
+	wg.Wait()
+}
+
+func TestCollectorWithResourceAsConstantLabelsConcurrentSafe(t *testing.T) {
+	// This test makes sure resource label initialization is concurrent safe
+	// when using WithResourceAsConstantLabels.
+	ctx := t.Context()
+
+	registry := prometheus.NewRegistry()
+	exporter, err := New(
+		WithRegisterer(registry),
+		WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
+	)
+	require.NoError(t, err)
+
+	res, err := resource.New(ctx, resource.WithAttributes(semconv.ServiceName("prometheus_test")))
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(res),
+	)
+	t.Cleanup(func() {
+		assert.NoError(t, provider.Shutdown(ctx))
+	})
+
+	meter := provider.Meter("testmeter")
+	cnt, err := meter.Int64Counter("foo")
+	require.NoError(t, err)
+	cnt.Add(ctx, 100)
+
+	var wg sync.WaitGroup
+	const concurrencyLevel = 10
+	for range concurrencyLevel {
+		wg.Go(func() {
+			_, err := registry.Gather() // this calls collector.Collect
+			assert.NoError(t, err)
+		})
+	}
+	wg.Wait()
+}
+
+func TestShutdownExporter(t *testing.T) {
+	var handledError error
+	eh := otel.ErrorHandlerFunc(func(e error) { handledError = errors.Join(handledError, e) })
+	otel.SetErrorHandler(eh)
+
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+
+	for range 3 {
+		exporter, err := New(WithRegisterer(registry))
+		require.NoError(t, err)
+		provider := metric.NewMeterProvider(
+			metric.WithResource(resource.Default()),
+			metric.WithReader(exporter),
+		)
+		meter := provider.Meter("testmeter")
+		cnt, err := meter.Int64Counter("foo")
+		require.NoError(t, err)
+		cnt.Add(ctx, 100)
+
+		// verify that metrics added to a previously shutdown MeterProvider
+		// do not conflict with metrics added in this loop.
+		_, err = registry.Gather()
+		require.NoError(t, err)
+
+		// Shutdown should cause future prometheus Gather() calls to no longer
+		// include metrics from this loop's MeterProvider.
+		err = provider.Shutdown(ctx)
+		require.NoError(t, err)
+	}
+	// ensure we aren't unnecessarily logging errors from the shutdown MeterProvider
+	require.NoError(t, handledError)
+}
+
+func TestExemplars(t *testing.T) {
+	attrsOpt := otelmetric.WithAttributes(
+		attribute.Key("A.1").String("B"),
+		attribute.Key("C.2").String("D"),
+		attribute.Key("E.3").Bool(true),
+		attribute.Key("F.4").Int(42),
+	)
+	expectedNonEscapedLabels := map[string]string{
+		otlptranslator.ExemplarTraceIDKey: "01000000000000000000000000000000",
+		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
+		"A.1":                             "B",
+		"C.2":                             "D",
+		"E.3":                             "true",
+		"F.4":                             "42",
+	}
+	expectedEscapedLabels := map[string]string{
+		otlptranslator.ExemplarTraceIDKey: "01000000000000000000000000000000",
+		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
+		"A_1":                             "B",
+		"C_2":                             "D",
+		"E_3":                             "true",
+		"F_4":                             "42",
+	}
+	for _, tc := range []struct {
+		name                  string
+		recordMetrics         func(ctx context.Context, meter otelmetric.Meter)
+		expectedExemplarValue float64
+		expectedLabels        map[string]string
+		strategy              otlptranslator.TranslationStrategyOption
+	}{
+		{
+			name: "escaped counter",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				counter, err := meter.Float64Counter("foo")
+				require.NoError(t, err)
+				counter.Add(ctx, 9, attrsOpt)
+			},
+			expectedExemplarValue: 9,
+			expectedLabels:        expectedEscapedLabels,
+			strategy:              otlptranslator.UnderscoreEscapingWithSuffixes,
+		},
+		{
+			name: "escaped histogram",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				hist, err := meter.Int64Histogram("foo")
+				require.NoError(t, err)
+				hist.Record(ctx, 9, attrsOpt)
+			},
+			expectedExemplarValue: 9,
+			expectedLabels:        expectedEscapedLabels,
+			strategy:              otlptranslator.UnderscoreEscapingWithSuffixes,
+		},
+		{
+			name: "non-escaped counter",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				counter, err := meter.Float64Counter("foo")
+				require.NoError(t, err)
+				counter.Add(ctx, 9, attrsOpt)
+			},
+			expectedExemplarValue: 9,
+			expectedLabels:        expectedNonEscapedLabels,
+			strategy:              otlptranslator.NoTranslation,
+		},
+		{
+			name: "non-escaped histogram",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				hist, err := meter.Int64Histogram("foo")
+				require.NoError(t, err)
+				hist.Record(ctx, 9, attrsOpt)
+			},
+			expectedExemplarValue: 9,
+			expectedLabels:        expectedNonEscapedLabels,
+			strategy:              otlptranslator.NoTranslation,
+		},
+		{
+			name: "exponential histogram",
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				hist, err := meter.Int64Histogram("exponential_histogram")
+				require.NoError(t, err)
+				hist.Record(ctx, 9, attrsOpt)
+			},
+			expectedExemplarValue: 9,
+			expectedLabels:        expectedNonEscapedLabels,
+			strategy:              otlptranslator.NoTranslation,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// initialize registry exporter
+			ctx := t.Context()
+			registry := prometheus.NewRegistry()
+			exporter, err := New(
+				WithRegisterer(registry),
+				WithoutTargetInfo(),
+				WithoutScopeInfo(),
+				WithTranslationStrategy(tc.strategy),
+			)
+			require.NoError(t, err)
+
+			// initialize resource
+			res, err := resource.New(
+				ctx,
+				resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+				resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+			)
+			require.NoError(t, err)
+			res, err = resource.Merge(resource.Default(), res)
+			require.NoError(t, err)
+
+			// initialize provider and meter
+			provider := metric.NewMeterProvider(
+				metric.WithReader(exporter),
+				metric.WithResource(res),
+				metric.WithView(
+					metric.NewView(
+						metric.Instrument{Name: "foo"},
+						metric.Stream{
+							// filter out all attributes so they are added as filtered
+							// attributes to the exemplar
+							AttributeFilter: attribute.NewAllowKeysFilter(),
+						},
+					),
+				),
+				metric.WithView(
+					metric.NewView(
+						metric.Instrument{Name: "exponential_histogram"},
+						metric.Stream{
+							Aggregation: metric.AggregationBase2ExponentialHistogram{
+								MaxSize: 20,
+							},
+							AttributeFilter: attribute.NewAllowKeysFilter(),
+						},
+					),
+				),
+			)
+			meter := provider.Meter("meter", otelmetric.WithInstrumentationVersion("v0.1.0"))
+
+			// Add a sampled span context so that measurements get exemplars added
+			sc := trace.NewSpanContext(trace.SpanContextConfig{
+				SpanID:     trace.SpanID{0o1},
+				TraceID:    trace.TraceID{0o1},
+				TraceFlags: trace.FlagsSampled,
+			})
+			ctx = trace.ContextWithSpanContext(ctx, sc)
+			// Record a single observation with the exemplar
+			tc.recordMetrics(ctx, meter)
+
+			// Verify that the exemplar is present in the proto version of the
+			// prometheus metrics.
+			got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+			defer done()
+			require.NoError(t, err)
+
+			require.Len(t, got, 1)
+			family := got[0]
+			require.Len(t, family.GetMetric(), 1)
+			metric := family.GetMetric()[0]
+			var exemplar *dto.Exemplar
+			switch family.GetType() {
+			case dto.MetricType_COUNTER:
+				exemplar = metric.GetCounter().GetExemplar()
+			case dto.MetricType_HISTOGRAM:
+				h := metric.GetHistogram()
+				for _, b := range h.GetBucket() {
+					if b.GetExemplar() != nil {
+						exemplar = b.GetExemplar()
+						continue
+					}
+				}
+				if h.GetZeroThreshold() != 0 || h.GetZeroCount() != 0 ||
+					len(h.PositiveSpan) != 0 || len(h.NegativeSpan) != 0 {
+					require.NotNil(t, h.Exemplars)
+					exemplar = h.Exemplars[0]
+				}
+			}
+			require.NotNil(t, exemplar)
+			require.Equal(t, tc.expectedExemplarValue, exemplar.GetValue())
+			require.Len(t, exemplar.GetLabel(), len(tc.expectedLabels))
+
+			for _, label := range exemplar.GetLabel() {
+				val, ok := tc.expectedLabels[label.GetName()]
+				require.True(t, ok)
+				require.Equal(t, label.GetValue(), val)
+			}
+		})
+	}
+}
+
+func TestExemplarsExceedingLabelLimit(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(resource.Default()),
+		metric.WithView(
+			metric.NewView(
+				metric.Instrument{Name: "foo"},
+				metric.Stream{
+					// Filter out the attribute so it is added as a filtered
+					// attribute to the exemplar instead.
+					AttributeFilter: attribute.NewAllowKeysFilter(),
+				},
+			),
+		),
+	)
+	meter := provider.Meter("meter")
+
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		SpanID:     trace.SpanID{0o1},
+		TraceID:    trace.TraceID{0o1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx = trace.ContextWithSpanContext(ctx, sc)
+
+	counter, err := meter.Float64Counter("foo")
+	require.NoError(t, err)
+	// A single filtered attribute value long enough that, combined with the
+	// trace and span IDs, it exceeds prometheus.ExemplarMaxRunes.
+	counter.Add(ctx, 9, otelmetric.WithAttributes(
+		attribute.String("long", strings.Repeat("a", prometheus.ExemplarMaxRunes)),
+	))
+
+	got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+	defer done()
+	require.NoError(t, err)
+
+	require.Len(t, got, 1)
+	family := got[0]
+	require.Len(t, family.GetMetric(), 1)
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex, "exemplar should still be present with only trace/span ID labels")
+
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
+		labels[label.GetName()] = label.GetValue()
+	}
+	assert.Equal(t, map[string]string{
+		otlptranslator.ExemplarTraceIDKey: "01000000000000000000000000000000",
+		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
+	}, labels, "filtered attributes should be dropped, trace/span ID preserved")
+}
+
+// TestExemplarsLabelLimitKeyCollision verifies that a filtered attribute
+// whose key happens to collide with the trace_id or span_id label is not
+// double-counted against prometheus.ExemplarMaxRunes, which would otherwise
+// cause valid, non-colliding filtered attributes to be dropped unnecessarily.
+func TestExemplarsLabelLimitKeyCollision(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(resource.Default()),
+		metric.WithView(
+			metric.NewView(
+				metric.Instrument{Name: "foo"},
+				metric.Stream{
+					// Filter out the attributes so they are added as filtered
+					// attributes to the exemplar instead.
+					AttributeFilter: attribute.NewAllowKeysFilter(),
+				},
+			),
+		),
+	)
+	meter := provider.Meter("meter")
+
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		SpanID:     trace.SpanID{0o1},
+		TraceID:    trace.TraceID{0o1},
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx = trace.ContextWithSpanContext(ctx, sc)
+
+	counter, err := meter.Float64Counter("foo")
+	require.NoError(t, err)
+	// Filtered attributes that collide with the trace_id and span_id label
+	// names. Counting these alongside the dedicated trace/span ID labels
+	// would overcount the combined length (135 runes) well past the actual
+	// total (72 runes), and wrongly drop the non-colliding "method" label.
+	counter.Add(ctx, 9, otelmetric.WithAttributes(
+		attribute.String("trace_id", strings.Repeat("a", 32)),
+		attribute.String("span_id", strings.Repeat("b", 16)),
+		attribute.String("method", "GET"),
+	))
+
+	got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+	defer done()
+	require.NoError(t, err)
+
+	require.Len(t, got, 1)
+	family := got[0]
+	require.Len(t, family.GetMetric(), 1)
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex)
+
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
+		labels[label.GetName()] = label.GetValue()
+	}
+	assert.Equal(t, map[string]string{
+		otlptranslator.ExemplarTraceIDKey: "01000000000000000000000000000000",
+		otlptranslator.ExemplarSpanIDKey:  "0100000000000000",
+		"method":                          "GET",
+	}, labels, "non-colliding filtered attribute should be preserved, trace/span ID overwritten")
+}
+
+func TestExemplarsWithoutSpanContext(t *testing.T) {
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+	exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(
+		metric.WithReader(exporter),
+		metric.WithResource(resource.Default()),
+		metric.WithExemplarFilter(exemplar.AlwaysOnFilter),
+		metric.WithView(
+			metric.NewView(
+				metric.Instrument{Name: "foo"},
+				metric.Stream{
+					AttributeFilter: attribute.NewAllowKeysFilter(),
+				},
+			),
+		),
+	)
+	meter := provider.Meter("meter")
+
+	counter, err := meter.Float64Counter("foo")
+	require.NoError(t, err)
+	// Record without an active span context; filtered attributes up to
+	// ExemplarMaxRunes should fit because empty trace_id/span_id keys are not added.
+	val := strings.Repeat("a", prometheus.ExemplarMaxRunes-len("filtered"))
+	counter.Add(ctx, 9, otelmetric.WithAttributes(
+		attribute.String("filtered", val),
+	))
+
+	got, done, err := prometheus.ToTransactionalGatherer(registry).Gather()
+	defer done()
+	require.NoError(t, err)
+
+	require.Len(t, got, 1)
+	family := got[0]
+	require.Len(t, family.GetMetric(), 1)
+	ex := family.GetMetric()[0].GetCounter().GetExemplar()
+	require.NotNil(t, ex)
+
+	labels := make(map[string]string, len(ex.GetLabel()))
+	for _, label := range ex.GetLabel() {
+		labels[label.GetName()] = label.GetValue()
+	}
+	assert.Equal(t, map[string]string{
+		"filtered": val,
+	}, labels, "empty trace_id and span_id labels should not be added")
+}
+
+func TestExponentialHistogramScaleValidation(t *testing.T) {
+	ctx := t.Context()
+
+	t.Run("normal_exponential_histogram_works", func(t *testing.T) {
+		registry := prometheus.NewRegistry()
+		exporter, err := New(WithRegisterer(registry), WithoutTargetInfo(), WithoutScopeInfo())
+		require.NoError(t, err)
+
+		provider := metric.NewMeterProvider(
+			metric.WithReader(exporter),
+			metric.WithResource(resource.Default()),
+		)
+		defer func() {
+			err := provider.Shutdown(ctx)
+			require.NoError(t, err)
+		}()
+
+		// Create a histogram with a valid scale
+		meter := provider.Meter("test")
+		hist, err := meter.Float64Histogram(
+			"test_exponential_histogram",
+			otelmetric.WithDescription("test histogram"),
+		)
+		require.NoError(t, err)
+		hist.Record(ctx, 1.0)
+		hist.Record(ctx, 10.0)
+		hist.Record(ctx, 100.0)
+
+		metricFamilies, err := registry.Gather()
+		require.NoError(t, err)
+		assert.NotEmpty(t, metricFamilies)
+	})
+
+	t.Run("error_handling_for_invalid_scales", func(t *testing.T) {
+		var capturedError error
+		originalHandler := otel.GetErrorHandler()
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			capturedError = err
+		}))
+		defer otel.SetErrorHandler(originalHandler)
+
+		now := time.Now()
+		invalidScaleData := metricdata.ExponentialHistogramDataPoint[float64]{
+			Attributes:    attribute.NewSet(),
+			StartTime:     now,
+			Time:          now,
+			Count:         1,
+			Sum:           10.0,
+			Scale:         -5, // Invalid scale below -4
+			ZeroCount:     0,
+			ZeroThreshold: 0.0,
+			PositiveBucket: metricdata.ExponentialBucket{
+				Offset: 1,
+				Counts: []uint64{1},
+			},
+			NegativeBucket: metricdata.ExponentialBucket{
+				Offset: 1,
+				Counts: []uint64{},
+			},
+		}
+
+		ch := make(chan prometheus.Metric, 10)
+		defer close(ch)
+
+		histogram := metricdata.ExponentialHistogram[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints:  []metricdata.ExponentialHistogramDataPoint[float64]{invalidScaleData},
+		}
+
+		m := metricdata.Metrics{
+			Name:        "test_histogram",
+			Description: "test",
+		}
+
+		n, err := addExponentialHistogramMetric(
+			ch,
+			histogram,
+			m,
+			"test_histogram",
+			keyVals{},
+			labelNamer{},
+		)
+		assert.Zero(t, n)
+		require.ErrorIs(t, err, errEHScaleBelowMin)
+		// Expect an invalid metric to be sent that carries the scale error.
+		var pm prometheus.Metric
+		select {
+		case pm = <-ch:
+		default:
+			t.Fatalf("expected an invalid metric to be emitted for invalid scale, but channel was empty")
+		}
+		var dtoMetric dto.Metric
+		werr := pm.Write(&dtoMetric)
+		require.ErrorIs(t, werr, errEHScaleBelowMin)
+		// The exporter reports via invalid metric, not the global otel error handler.
+		assert.NoError(t, capturedError)
+	})
+}
+
+func TestInvalidExponentialHistogramScaleReportsObservabilityError(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	originalMP := otel.GetMeterProvider()
+	defer otel.SetMeterProvider(originalMP)
+
+	reader := metric.NewManualReader()
+	otel.SetMeterProvider(metric.NewMeterProvider(metric.WithReader(reader)))
+
+	now := time.Now()
+	histogram := metricdata.ExponentialHistogram[float64]{
+		DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+			{
+				Attributes: attribute.NewSet(),
+				StartTime:  now,
+				Time:       now,
+				Count:      1,
+				Scale:      -5,
+				PositiveBucket: metricdata.ExponentialBucket{
+					Counts: []uint64{1},
+				},
+			},
+		},
+	}
+
+	reg := prometheus.NewRegistry()
+	exp, err := New(
+		WithRegisterer(reg),
+		WithoutTargetInfo(),
+		WithProducer(producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{
+				{
+					Metrics: []metricdata.Metrics{
+						{
+							Name: "test_histogram",
+							Data: histogram,
+						},
+					},
+				},
+			}, nil
+		})),
+	)
+	require.NoError(t, err)
+	_ = metric.NewMeterProvider(metric.WithReader(exp))
+
+	_, err = reg.Gather()
+	require.ErrorIs(t, err, errEHScaleBelowMin)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	var values []int64
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name != observ.ScopeName {
+			continue
+		}
+		for _, m := range sm.Metrics {
+			if m.Name != "otel.sdk.exporter.metric_data_point.exported" {
+				continue
+			}
+			sum, ok := m.Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+			for _, dp := range sum.DataPoints {
+				values = append(values, dp.Value)
+			}
+		}
+	}
+
+	require.ElementsMatch(t, []int64{0, 1}, values)
+}
+
+func TestDownscaleExponentialBucket(t *testing.T) {
+	tests := []struct {
+		name       string
+		bucket     metricdata.ExponentialBucket
+		scaleDelta int32
+		want       metricdata.ExponentialBucket
+	}{
+		{
+			name:       "Empty bucket",
+			bucket:     metricdata.ExponentialBucket{},
+			scaleDelta: 3,
+			want:       metricdata.ExponentialBucket{},
+		},
+		{
+			name: "1 size bucket",
+			bucket: metricdata.ExponentialBucket{
+				Offset: 50,
+				Counts: []uint64{7},
+			},
+			scaleDelta: 4,
+			want: metricdata.ExponentialBucket{
+				Offset: 3,
+				Counts: []uint64{7},
+			},
+		},
+		{
+			name: "zero scale delta",
+			bucket: metricdata.ExponentialBucket{
+				Offset: 50,
+				Counts: []uint64{7, 5},
+			},
+			scaleDelta: 0,
+			want: metricdata.ExponentialBucket{
+				Offset: 50,
+				Counts: []uint64{7, 5},
+			},
+		},
+		{
+			name: "aligned bucket scale 1",
+			bucket: metricdata.ExponentialBucket{
+				Offset: 0,
+				Counts: []uint64{1, 2, 3, 4, 5, 6},
+			},
+			scaleDelta: 1,
+			want: metricdata.ExponentialBucket{
+				Offset: 0,
+				Counts: []uint64{3, 7, 11},
+			},
+		},
+		{
+			name: "aligned bucket scale 2",
+			bucket: metricdata.ExponentialBucket{
+				Offset: 0,
+				Counts: []uint64{1, 2, 3, 4, 5, 6},
+			},
+			scaleDelta: 2,
+			want: metricdata.ExponentialBucket{
+				Offset: 0,
+				Counts: []uint64{10, 11},
+			},
+		},
+		{
+			name: "unaligned bucket scale 1",
+			bucket: metricdata.ExponentialBucket{
+				Offset: 5,
+				Counts: []uint64{1, 2, 3, 4, 5, 6},
+			}, // This is equivalent to [0,0,0,0,0,1,2,3,4,5,6]
+			scaleDelta: 1,
+			want: metricdata.ExponentialBucket{
+				Offset: 2,
+				Counts: []uint64{1, 5, 9, 6},
+			}, // This is equivalent to [0,0,1,5,9,6]
+		},
+		{
+			name: "negative startBin",
+			bucket: metricdata.ExponentialBucket{
+				Offset: -1,
+				Counts: []uint64{1, 0, 3},
+			},
+			scaleDelta: 1,
+			want: metricdata.ExponentialBucket{
+				Offset: -1,
+				Counts: []uint64{1, 3},
+			},
+		},
+		{
+			name: "negative startBin 2",
+			bucket: metricdata.ExponentialBucket{
+				Offset: -4,
+				Counts: []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			},
+			scaleDelta: 1,
+			want: metricdata.ExponentialBucket{
+				Offset: -2,
+				Counts: []uint64{3, 7, 11, 15, 19},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := downscaleExponentialBucket(tt.bucket, tt.scaleDelta)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestExponentialHistogramHighScaleDownscaling(t *testing.T) {
+	t.Run("scale_10_downscales_to_8", func(t *testing.T) {
+		// Test that scale 10 gets properly downscaled to 8 with correct bucket re-aggregation
+		ch := make(chan prometheus.Metric, 10)
+		defer close(ch)
+
+		now := time.Now()
+
+		// Create an exponential histogram data point with scale 10
+		dataPoint := metricdata.ExponentialHistogramDataPoint[float64]{
+			Attributes:    attribute.NewSet(),
+			StartTime:     now,
+			Time:          now,
+			Count:         8,
+			Sum:           55.0,
+			Scale:         10, // This should be downscaled to 8
+			ZeroCount:     0,
+			ZeroThreshold: 0.0,
+			PositiveBucket: metricdata.ExponentialBucket{
+				Offset: 0,
+				Counts: []uint64{1, 1, 1, 1, 1, 1, 1, 1}, // 8 buckets with 1 count each
+			},
+			NegativeBucket: metricdata.ExponentialBucket{
+				Offset: 0,
+				Counts: []uint64{},
+			},
+		}
+
+		histogram := metricdata.ExponentialHistogram[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints:  []metricdata.ExponentialHistogramDataPoint[float64]{dataPoint},
+		}
+
+		m := metricdata.Metrics{
+			Name:        "test_high_scale_histogram",
+			Description: "test histogram with high scale",
+		}
+
+		// This should not produce any errors and should properly downscale buckets
+		n, err := addExponentialHistogramMetric(
+			ch,
+			histogram,
+			m,
+			"test_high_scale_histogram",
+			keyVals{},
+			labelNamer{},
+		)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), n)
+
+		// Verify a metric was produced
+		select {
+		case metric := <-ch:
+			// Check that the metric was created successfully
+			require.NotNil(t, metric)
+
+			// The scale should have been clamped to 8, and buckets should be re-aggregated
+			// With scale 10 -> 8, we have a scaleDelta of 2, meaning 2^2 = 4 buckets merge into 1
+			// Original: 8 buckets with 1 count each at scale 10
+			// After downscaling: 2 buckets with 4 counts each at scale 8
+		default:
+			t.Error("Expected a metric to be produced")
+		}
+	})
+
+	t.Run("scale_12_downscales_to_8", func(t *testing.T) {
+		// Test that scale 12 gets properly downscaled to 8 with correct bucket re-aggregation
+		ch := make(chan prometheus.Metric, 10)
+		defer close(ch)
+
+		now := time.Now()
+
+		// Create an exponential histogram data point with scale 12
+		dataPoint := metricdata.ExponentialHistogramDataPoint[float64]{
+			Attributes:    attribute.NewSet(),
+			StartTime:     now,
+			Time:          now,
+			Count:         16,
+			Sum:           120.0,
+			Scale:         12, // This should be downscaled to 8
+			ZeroCount:     0,
+			ZeroThreshold: 0.0,
+			PositiveBucket: metricdata.ExponentialBucket{
+				Offset: 0,
+				Counts: []uint64{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // 16 buckets with 1 count each
+			},
+			NegativeBucket: metricdata.ExponentialBucket{
+				Offset: 0,
+				Counts: []uint64{},
+			},
+		}
+
+		histogram := metricdata.ExponentialHistogram[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints:  []metricdata.ExponentialHistogramDataPoint[float64]{dataPoint},
+		}
+
+		m := metricdata.Metrics{
+			Name:        "test_very_high_scale_histogram",
+			Description: "test histogram with very high scale",
+		}
+
+		// This should not produce any errors and should properly downscale buckets
+		n, err := addExponentialHistogramMetric(
+			ch,
+			histogram,
+			m,
+			"test_very_high_scale_histogram",
+			keyVals{},
+			labelNamer{},
+		)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), n)
+
+		// Verify a metric was produced
+		select {
+		case metric := <-ch:
+			// Check that the metric was created successfully
+			require.NotNil(t, metric)
+
+			// The scale should have been clamped to 8, and buckets should be re-aggregated
+			// With scale 12 -> 8, we have a scaleDelta of 4, meaning 2^4 = 16 buckets merge into 1
+			// Original: 16 buckets with 1 count each at scale 12
+			// After downscaling: 1 bucket with 16 counts at scale 8
+		default:
+			t.Error("Expected a metric to be produced")
+		}
+	})
+
+	t.Run("exponential_histogram_with_negative_buckets", func(t *testing.T) {
+		// Test that exponential histograms with negative buckets are handled correctly
+		ch := make(chan prometheus.Metric, 10)
+		defer close(ch)
+
+		now := time.Now()
+
+		// Create an exponential histogram data point with both positive and negative buckets
+		dataPoint := metricdata.ExponentialHistogramDataPoint[float64]{
+			Attributes:    attribute.NewSet(),
+			StartTime:     now,
+			Time:          now,
+			Count:         6,
+			Sum:           25.0,
+			Scale:         2,
+			ZeroCount:     0,
+			ZeroThreshold: 0.0,
+			PositiveBucket: metricdata.ExponentialBucket{
+				Offset: 1,
+				Counts: []uint64{1, 2}, // 2 positive buckets
+			},
+			NegativeBucket: metricdata.ExponentialBucket{
+				Offset: 1,
+				Counts: []uint64{2, 1}, // 2 negative buckets
+			},
+		}
+
+		histogram := metricdata.ExponentialHistogram[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints:  []metricdata.ExponentialHistogramDataPoint[float64]{dataPoint},
+		}
+
+		m := metricdata.Metrics{
+			Name:        "test_histogram_with_negative_buckets",
+			Description: "test histogram with negative buckets",
+		}
+
+		// This should handle negative buckets correctly
+		n, err := addExponentialHistogramMetric(
+			ch,
+			histogram,
+			m,
+			"test_histogram_with_negative_buckets",
+			keyVals{},
+			labelNamer{},
+		)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), n)
+
+		// Verify a metric was produced
+		select {
+		case metric := <-ch:
+			require.NotNil(t, metric)
+		default:
+			t.Error("Expected a metric to be produced")
+		}
+	})
+
+	t.Run("exponential_histogram_int64_type", func(t *testing.T) {
+		// Test that int64 exponential histograms are handled correctly
+		ch := make(chan prometheus.Metric, 10)
+		defer close(ch)
+
+		now := time.Now()
+
+		// Create an exponential histogram data point with int64 type
+		dataPoint := metricdata.ExponentialHistogramDataPoint[int64]{
+			Attributes:    attribute.NewSet(),
+			StartTime:     now,
+			Time:          now,
+			Count:         4,
+			Sum:           20,
+			Scale:         3,
+			ZeroCount:     0,
+			ZeroThreshold: 0.0,
+			PositiveBucket: metricdata.ExponentialBucket{
+				Offset: 0,
+				Counts: []uint64{1, 1, 1, 1}, // 4 buckets with 1 count each
+			},
+			NegativeBucket: metricdata.ExponentialBucket{
+				Offset: 0,
+				Counts: []uint64{},
+			},
+		}
+
+		histogram := metricdata.ExponentialHistogram[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints:  []metricdata.ExponentialHistogramDataPoint[int64]{dataPoint},
+		}
+
+		m := metricdata.Metrics{
+			Name:        "test_int64_exponential_histogram",
+			Description: "test int64 exponential histogram",
+		}
+
+		// This should handle int64 exponential histograms correctly
+		n, err := addExponentialHistogramMetric(
+			ch,
+			histogram,
+			m,
+			"test_int64_exponential_histogram",
+			keyVals{},
+			labelNamer{},
+		)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), n)
+
+		// Verify a metric was produced
+		select {
+		case metric := <-ch:
+			require.NotNil(t, metric)
+		default:
+			t.Error("Expected a metric to be produced")
+		}
+	})
+}
+
+func TestDownscaleExponentialBucketEdgeCases(t *testing.T) {
+	t.Run("min_idx_larger_than_current", func(t *testing.T) {
+		// Test case where we find a minIdx that's smaller than the current
+		bucket := metricdata.ExponentialBucket{
+			Offset: 10, // Start at offset 10
+			Counts: []uint64{1, 0, 0, 0, 1},
+		}
+
+		// Scale delta of 3 will cause downscaling: original indices 10->1, 14->1
+		result := downscaleExponentialBucket(bucket, 3)
+
+		// Both original buckets 10 and 14 should map to the same downscaled bucket at index 1
+		expected := metricdata.ExponentialBucket{
+			Offset: 1,
+			Counts: []uint64{2}, // Both counts combined
+		}
+
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("empty_downscaled_counts", func(t *testing.T) {
+		// Create a scenario that results in empty downscaled counts
+		bucket := metricdata.ExponentialBucket{
+			Offset: math.MaxInt32 - 5, // Very large offset that won't cause overflow in this case
+			Counts: []uint64{1, 1, 1, 1, 1},
+		}
+
+		// This should work normally and downscale the buckets
+		result := downscaleExponentialBucket(bucket, 1)
+
+		// Should return bucket with downscaled values
+		expected := metricdata.ExponentialBucket{
+			Offset: 1073741821,        // ((MaxInt32-5) + 0) >> 1 = 1073741821
+			Counts: []uint64{2, 2, 1}, // Buckets get combined during downscaling
+		}
+
+		assert.Equal(t, expected, result)
+	})
+}
+
+// TestEscapingErrorHandling increases test coverage by exercising some error
+// conditions.
+func TestEscapingErrorHandling(t *testing.T) {
+	// Helper to create a producer that emits a Summary (unsupported) metric.
+	makeSummaryProducer := func() metric.Producer {
+		return producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{
+				{
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "summary_metric",
+							Description: "unsupported summary",
+							Data:        metricdata.Summary{},
+						},
+					},
+				},
+			}, nil
+		})
+	}
+	// Helper to create a producer that emits a metric with an invalid name, to
+	// force getName() to fail and exercise reportError at that branch.
+	makeBadNameProducer := func() metric.Producer {
+		return producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{
+				{
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "$%^&", // intentionally invalid; translation should fail normalization
+							Description: "bad name for translation",
+							// Any supported type is fine; getName runs before add* functions.
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{Value: 1},
+								},
+							},
+						},
+					},
+				},
+			}, nil
+		})
+	}
+	// Helper to create a producer that emits an ExponentialHistogram with a bad
+	// label, to exercise addExponentialHistogramMetric getAttrs error path.
+	makeBadEHProducer := func() metric.Producer {
+		return producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{
+				{
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "exp_hist_metric",
+							Description: "bad label",
+							Data: metricdata.ExponentialHistogram[float64]{
+								DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+									{
+										Attributes:    attribute.NewSet(attribute.Key("$%^&").String("B")),
+										Scale:         0,
+										Count:         1,
+										ZeroThreshold: 0,
+									},
+								},
+							},
+						},
+					},
+				},
+			}, nil
+		})
+	}
+	// Helper to create a producer that emits an ExponentialHistogram with
+	// inconsistent bucket counts vs total Count to trigger constructor error in addExponentialHistogramMetric.
+	makeBadEHCountProducer := func() metric.Producer {
+		return producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+			return []metricdata.ScopeMetrics{
+				{
+					Metrics: []metricdata.Metrics{
+						{
+							Name: "exp_hist_metric_bad",
+							Data: metricdata.ExponentialHistogram[float64]{
+								DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+									{
+										Scale:         0,
+										Count:         0,
+										ZeroThreshold: 0,
+										PositiveBucket: metricdata.ExponentialBucket{
+											Offset: 0,
+											Counts: []uint64{1},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}, nil
+		})
+	}
+
+	testCases := []struct {
+		name                    string
+		namespace               string
+		counterName             string
+		customScopeAttrs        []attribute.KeyValue
+		customResourceAttrs     []attribute.KeyValue
+		labelName               string
+		producer                metric.Producer
+		skipInstrument          bool
+		record                  func(ctx context.Context, meter otelmetric.Meter) error
+		expectNewErr            string
+		expectMetricErr         string
+		expectGatherErrContains string
+		expectGatherErrIs       error
+		checkMetricFamilies     func(t testing.TB, dtos []*dto.MetricFamily)
+	}{
+		{
+			name:        "simple happy path",
+			counterName: "foo",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.Len(t, mfs, 2)
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						continue
+					}
+					require.Equal(t, "foo_seconds_total", mf.GetName())
+				}
+			},
+		},
+		{
+			name:         "bad namespace",
+			namespace:    "$%^&",
+			counterName:  "foo",
+			expectNewErr: `normalization for label name "$%^&" resulted in invalid name "_"`,
+		},
+		{
+			name: "bad translated metric name via producer",
+			// Use a producer to emit a metric with an invalid name to trigger getName error.
+			producer:       makeBadNameProducer(),
+			skipInstrument: true,
+			// Error message comes from normalization in the translator; match on a stable substring.
+			expectGatherErrContains: "normalization",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				// target_info should still be exported.
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
+		},
+		{
+			name:        "good namespace, names should be escaped",
+			namespace:   "my-strange-namespace",
+			counterName: "foo",
+			labelName:   "bar",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						continue
+					}
+					require.Contains(t, mf.GetName(), "my_strange_namespace")
+					require.NotContains(t, mf.GetName(), "my-strange-namespace")
+				}
+			},
+		},
+		{
+			name:        "bad resource attribute",
+			counterName: "foo",
+			customResourceAttrs: []attribute.KeyValue{
+				attribute.Key("$%^&").String("B"),
+			},
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.Empty(t, mfs)
+			},
+		},
+		{
+			name:        "bad scope metric attribute",
+			counterName: "foo",
+			customScopeAttrs: []attribute.KeyValue{
+				attribute.Key("$%^&").String("B"),
+			},
+			// With improved error handling, invalid scope label names result in an invalid metric
+			// and Gather returns an error containing the normalization failure.
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "_"`,
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				// target_info should still be exported; metric with bad scope label dropped.
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
+		},
+		{
+			name:            "bad translated metric name",
+			counterName:     "$%^&",
+			expectMetricErr: `invalid instrument name: $%^&: must start with a letter`,
+		},
+		{
+			// label names are not translated and therefore not checked until
+			// collection time; with improved error handling, we emit an invalid metric and
+			// surface the error during Gather.
+			name:                    "bad translated label name",
+			counterName:             "foo",
+			labelName:               "$%^&",
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "_"`,
+		},
+		{
+			name: "unsupported data type via producer",
+			// Use a producer to emit a Summary data point; no SDK instruments.
+			producer:          makeSummaryProducer(),
+			skipInstrument:    true,
+			expectGatherErrIs: errInvalidMetricType,
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
+		},
+		{
+			name:                    "bad exponential histogram label name via producer",
+			producer:                makeBadEHProducer(),
+			skipInstrument:          true,
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "_"`,
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
+		},
+		{
+			name:                    "exponential histogram constructor error via producer (count mismatch)",
+			producer:                makeBadEHCountProducer(),
+			skipInstrument:          true,
+			expectGatherErrContains: "count",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
+		},
+		{
+			name: "sum constructor error via duplicate label name",
+			record: func(ctx context.Context, meter otelmetric.Meter) error {
+				c, err := meter.Int64Counter("sum_metric_dup")
+				if err != nil {
+					return err
+				}
+				// Duplicate variable label name with scope label to make Desc invalid.
+				c.Add(ctx, 1, otelmetric.WithAttributes(attribute.String(scopeNameLabel, "x")))
+				return nil
+			},
+			expectGatherErrContains: "duplicate label",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
+		},
+		{
+			name: "gauge constructor error via duplicate label name",
+			record: func(ctx context.Context, meter otelmetric.Meter) error {
+				g, err := meter.Float64Gauge("gauge_metric_dup")
+				if err != nil {
+					return err
+				}
+				g.Record(ctx, 1.0, otelmetric.WithAttributes(attribute.String(scopeNameLabel, "x")))
+				return nil
+			},
+			expectGatherErrContains: "duplicate label",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
+		},
+		{
+			name: "histogram constructor error via duplicate label name",
+			record: func(ctx context.Context, meter otelmetric.Meter) error {
+				h, err := meter.Float64Histogram("hist_metric_dup")
+				if err != nil {
+					return err
+				}
+				h.Record(ctx, 1.23, otelmetric.WithAttributes(attribute.String(scopeNameLabel, "x")))
+				return nil
+			},
+			expectGatherErrContains: "duplicate label",
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
+		},
+		{
+			name: "bad gauge label name",
+			record: func(ctx context.Context, meter otelmetric.Meter) error {
+				g, err := meter.Float64Gauge("gauge_metric")
+				if err != nil {
+					return err
+				}
+				g.Record(ctx, 1, otelmetric.WithAttributes(attribute.Key("$%^&").String("B")))
+				return nil
+			},
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "_"`,
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
+		},
+		{
+			name: "bad histogram label name",
+			record: func(ctx context.Context, meter otelmetric.Meter) error {
+				h, err := meter.Float64Histogram("hist_metric")
+				if err != nil {
+					return err
+				}
+				h.Record(ctx, 1.23, otelmetric.WithAttributes(attribute.Key("$%^&").String("B")))
+				return nil
+			},
+			expectGatherErrContains: `normalization for label name "$%^&" resulted in invalid name "_"`,
+			checkMetricFamilies: func(t testing.TB, mfs []*dto.MetricFamily) {
+				require.NotEmpty(t, mfs)
+				other := 0
+				seenTarget := false
+				for _, mf := range mfs {
+					if mf.GetName() == "target_info" {
+						seenTarget = true
+						continue
+					}
+					other++
+				}
+				require.True(t, seenTarget)
+				require.Equal(t, 0, other)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+			registry := prometheus.NewRegistry()
+
+			sc := trace.NewSpanContext(trace.SpanContextConfig{
+				SpanID:     trace.SpanID{0o1},
+				TraceID:    trace.TraceID{0o1},
+				TraceFlags: trace.FlagsSampled,
+			})
+			ctx = trace.ContextWithSpanContext(ctx, sc)
+
+			opts := []Option{
+				WithRegisterer(registry),
+				WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+				WithNamespace(tc.namespace),
+				WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
+			}
+			if tc.producer != nil {
+				opts = append(opts, WithProducer(tc.producer))
+			}
+			exporter, err := New(opts...)
+			if tc.expectNewErr != "" {
+				require.ErrorContains(t, err, tc.expectNewErr)
+				return
+			}
+			require.NoError(t, err)
+			if !tc.skipInstrument {
+				res, err := resource.New(
+					ctx,
+					resource.WithAttributes(semconv.ServiceName("prometheus_test")),
+					resource.WithAttributes(semconv.TelemetrySDKVersion("latest")),
+					resource.WithAttributes(tc.customResourceAttrs...),
+				)
+				require.NoError(t, err)
+				provider := metric.NewMeterProvider(
+					metric.WithReader(exporter),
+					metric.WithResource(res),
+				)
+				meter := provider.Meter(
+					"meterfoo",
+					otelmetric.WithInstrumentationVersion("v0.1.0"),
+					otelmetric.WithInstrumentationAttributes(tc.customScopeAttrs...),
+				)
+				if tc.record != nil {
+					err := tc.record(ctx, meter)
+					require.NoError(t, err)
+				} else {
+					fooCounter, err := meter.Int64Counter(
+						tc.counterName,
+						otelmetric.WithUnit("s"),
+						otelmetric.WithDescription(fmt.Sprintf(`meter %q counter`, tc.counterName)),
+					)
+					if tc.expectMetricErr != "" {
+						require.ErrorContains(t, err, tc.expectMetricErr)
+						return
+					}
+					require.NoError(t, err)
+					var addOpts []otelmetric.AddOption
+					if tc.labelName != "" {
+						addOpts = append(addOpts, otelmetric.WithAttributes(attribute.String(tc.labelName, "foo")))
+					}
+					fooCounter.Add(ctx, 100, addOpts...)
+				}
+			} else {
+				// When skipping instruments, still register the reader so Collect will run.
+				_ = metric.NewMeterProvider(metric.WithReader(exporter))
+			}
+			got, err := registry.Gather()
+			if tc.expectGatherErrContains != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.expectGatherErrContains)
+				return
+			}
+			if tc.expectGatherErrIs != nil {
+				require.ErrorIs(t, err, tc.expectGatherErrIs)
+				return
+			}
+			require.NoError(t, err)
+			if tc.checkMetricFamilies != nil {
+				tc.checkMetricFamilies(t, got)
+			}
+		})
+	}
+}
+
+func TestExporterSelfInstrumentation(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		enableObservability   bool
+		recordMetrics         func(ctx context.Context, meter otelmetric.Meter)
+		expectedObservMetrics []string
+		expectedMainMetrics   int
+		checkMetrics          func(t *testing.T, mainMetrics []*dto.MetricFamily, observMetrics metricdata.ScopeMetrics)
+	}{
+		{
+			name:                "self instrumentation disabled",
+			enableObservability: false,
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				counter, err := meter.Int64Counter("test_counter")
+				require.NoError(t, err)
+				counter.Add(ctx, 1)
+			},
+			expectedObservMetrics: []string{}, // No observability metrics expected
+			expectedMainMetrics:   2,          // test counter + target_info
+		},
+		{
+			name:                "self instrumentation enabled with counter",
+			enableObservability: true,
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				counter, err := meter.Int64Counter("test_counter", otelmetric.WithDescription("test counter"))
+				require.NoError(t, err)
+				counter.Add(ctx, 1, otelmetric.WithAttributes(attribute.String("key", "value")))
+			},
+			expectedObservMetrics: []string{
+				"otel.sdk.exporter.metric_data_point.inflight",
+				"otel.sdk.exporter.metric_data_point.exported",
+				"otel.sdk.exporter.operation.duration",
+				"otel.sdk.metric_reader.collection.duration",
+			},
+			expectedMainMetrics: 2, // test counter + target_info
+			checkMetrics: func(t *testing.T, _ []*dto.MetricFamily, observMetrics metricdata.ScopeMetrics) {
+				// Check that exported metrics include success count
+				for _, m := range observMetrics.Metrics {
+					if m.Name == "otel.sdk.exporter.metric_data_point.exported" {
+						sum, ok := m.Data.(metricdata.Sum[int64])
+						require.True(t, ok)
+						require.Len(t, sum.DataPoints, 1)
+						require.Equal(t, int64(1), sum.DataPoints[0].Value)
+					}
+				}
+			},
+		},
+		{
+			name:                "self instrumentation enabled with gauge",
+			enableObservability: true,
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				gauge, err := meter.Float64Gauge("test_gauge", otelmetric.WithDescription("test gauge"))
+				require.NoError(t, err)
+				gauge.Record(ctx, 42.5, otelmetric.WithAttributes(attribute.String("key", "value")))
+			},
+			expectedObservMetrics: []string{
+				"otel.sdk.exporter.metric_data_point.inflight",
+				"otel.sdk.exporter.metric_data_point.exported",
+				"otel.sdk.exporter.operation.duration",
+				"otel.sdk.metric_reader.collection.duration",
+			},
+			expectedMainMetrics: 2,
+		},
+		{
+			name:                "self instrumentation enabled with histogram",
+			enableObservability: true,
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				histogram, err := meter.Float64Histogram("test_histogram", otelmetric.WithDescription("test histogram"))
+				require.NoError(t, err)
+				histogram.Record(ctx, 1.5, otelmetric.WithAttributes(attribute.String("key", "value")))
+				histogram.Record(ctx, 2.5, otelmetric.WithAttributes(attribute.String("key", "value")))
+			},
+			expectedObservMetrics: []string{
+				"otel.sdk.exporter.metric_data_point.inflight",
+				"otel.sdk.exporter.metric_data_point.exported",
+				"otel.sdk.exporter.operation.duration",
+				"otel.sdk.metric_reader.collection.duration",
+			},
+			expectedMainMetrics: 2,
+		},
+		{
+			name:                "self instrumentation with multiple metrics",
+			enableObservability: true,
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				counter, err := meter.Int64Counter("test_counter")
+				require.NoError(t, err)
+				counter.Add(ctx, 5, otelmetric.WithAttributes(attribute.String("type", "requests")))
+				counter.Add(ctx, 3, otelmetric.WithAttributes(attribute.String("type", "errors")))
+
+				gauge, err := meter.Float64Gauge("test_gauge")
+				require.NoError(t, err)
+				gauge.Record(ctx, 100.0, otelmetric.WithAttributes(attribute.String("status", "active")))
+
+				histogram, err := meter.Float64Histogram("test_histogram")
+				require.NoError(t, err)
+				histogram.Record(ctx, 0.1)
+				histogram.Record(ctx, 0.2)
+				histogram.Record(ctx, 0.3)
+			},
+			expectedObservMetrics: []string{
+				"otel.sdk.exporter.metric_data_point.inflight",
+				"otel.sdk.exporter.metric_data_point.exported",
+				"otel.sdk.exporter.operation.duration",
+				"otel.sdk.metric_reader.collection.duration",
+			},
+			expectedMainMetrics: 4, // 3 test metrics + target_info
+			checkMetrics: func(t *testing.T, _ []*dto.MetricFamily, observMetrics metricdata.ScopeMetrics) {
+				// Check that exported metrics track multiple data points
+				for _, m := range observMetrics.Metrics {
+					if m.Name == "otel.sdk.exporter.metric_data_point.exported" {
+						sum, ok := m.Data.(metricdata.Sum[int64])
+						require.True(t, ok)
+						require.Len(t, sum.DataPoints, 1)
+						// Counter: 2 data points, Gauge: 1 data point, Histogram: 1 data point = 4 total
+						require.Equal(t, int64(4), sum.DataPoints[0].Value)
+					}
+				}
+			},
+		},
+		{
+			name:                "self instrumentation enabled with up-down counter",
+			enableObservability: true,
+			recordMetrics: func(ctx context.Context, meter otelmetric.Meter) {
+				upDownCounter, err := meter.Int64UpDownCounter(
+					"test_updown_counter",
+					otelmetric.WithDescription("test up-down counter"),
+				)
+				require.NoError(t, err)
+				upDownCounter.Add(ctx, 10, otelmetric.WithAttributes(attribute.String("direction", "up")))
+				upDownCounter.Add(ctx, -5, otelmetric.WithAttributes(attribute.String("direction", "down")))
+			},
+			expectedObservMetrics: []string{
+				"otel.sdk.exporter.metric_data_point.inflight",
+				"otel.sdk.exporter.metric_data_point.exported",
+				"otel.sdk.exporter.operation.duration",
+				"otel.sdk.metric_reader.collection.duration",
+			},
+			expectedMainMetrics: 2,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.enableObservability {
+				t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+			} else {
+				t.Setenv("OTEL_GO_X_OBSERVABILITY", "")
+			}
+
+			// Setup observability metric collection
+			var observReader *metric.ManualReader
+
+			if tc.enableObservability {
+				originalMP := otel.GetMeterProvider()
+				defer otel.SetMeterProvider(originalMP)
+
+				observReader = metric.NewManualReader()
+				observMP := metric.NewMeterProvider(metric.WithReader(observReader))
+				otel.SetMeterProvider(observMP)
+			}
+
+			ctx := t.Context()
+			registry := prometheus.NewRegistry()
+
+			exporter, err := New(WithRegisterer(registry))
+			require.NoError(t, err)
+
+			provider := metric.NewMeterProvider(metric.WithReader(exporter))
+			meter := provider.Meter("test", otelmetric.WithInstrumentationVersion("v1.0.0"))
+
+			// Record the test metrics
+			tc.recordMetrics(ctx, meter)
+
+			// Collect main metrics
+			mainMetrics, err := registry.Gather()
+			require.NoError(t, err)
+
+			// Verify the number of main metric families
+			assert.Len(t, mainMetrics, tc.expectedMainMetrics)
+
+			// Collect and check observability metrics if enabled
+			if tc.enableObservability {
+				var rm metricdata.ResourceMetrics
+				err := observReader.Collect(t.Context(), &rm)
+				require.NoError(t, err)
+
+				// Check that expected observability metrics are present exactly once across all scopes.
+				observedCounts := make(map[string]int)
+				var observMetrics metricdata.ScopeMetrics
+				for _, sm := range rm.ScopeMetrics {
+					if sm.Scope.Name == observ.ScopeName {
+						observMetrics = sm
+					}
+					for _, m := range sm.Metrics {
+						observedCounts[m.Name]++
+						if m.Name == "otel.sdk.metric_reader.collection.duration" {
+							hist, ok := m.Data.(metricdata.Histogram[float64])
+							require.True(t, ok)
+							require.Len(t, hist.DataPoints, 1)
+							assert.Equal(t, uint64(1), hist.DataPoints[0].Count)
+						}
+					}
+				}
+
+				for _, expectedMetric := range tc.expectedObservMetrics {
+					assert.Equal(
+						t,
+						1,
+						observedCounts[expectedMetric],
+						"Expected observability metric %s to be recorded once",
+						expectedMetric,
+					)
+				}
+				assert.Len(
+					t,
+					observedCounts,
+					len(tc.expectedObservMetrics),
+					"Expected number of distinct observability metrics",
+				)
+
+				// Verify exporter observability scope has expected structure and the 3 exporter metrics.
+				expectedScope := instrumentation.Scope{
+					Name:      observ.ScopeName,
+					Version:   observ.Version,
+					SchemaURL: observ.SchemaURL,
+				}
+				assert.Equal(t, expectedScope, observMetrics.Scope, "Expected observability scope")
+				assert.Len(
+					t,
+					observMetrics.Metrics,
+					3,
+					"Expected number of exporter observability metrics",
+				)
+
+				// Run custom metric checks if provided
+				if tc.checkMetrics != nil {
+					tc.checkMetrics(t, mainMetrics, observMetrics)
+				}
+			}
+		})
+	}
+}
+
+func TestExporterSelfInstrumentationErrors(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		setupError           func() (metric.Reader, func())
+		expectedMinMetrics   int // Minimum expected metrics in error scenarios
+		checkErrorAttributes func(t *testing.T, observMetrics metricdata.ScopeMetrics)
+	}{
+		{
+			name: "reader shutdown error",
+			setupError: func() (metric.Reader, func()) {
+				reader := metric.NewManualReader()
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				return reader, func() { _ = reader.Shutdown(context.Background()) }
+			},
+			expectedMinMetrics: 1, // At least some metrics should be present
+		},
+		{
+			name: "reader not registered error",
+			setupError: func() (metric.Reader, func()) {
+				reader := metric.NewManualReader()
+				// Don't register the reader with a provider
+				return reader, func() {}
+			},
+			expectedMinMetrics: 1, // At least some metrics should be present
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Enable observability
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+			// Setup observability metric collection
+			originalMP := otel.GetMeterProvider()
+			defer otel.SetMeterProvider(originalMP)
+
+			observReader := metric.NewManualReader()
+			observMP := metric.NewMeterProvider(metric.WithReader(observReader))
+			otel.SetMeterProvider(observMP)
+
+			registry := prometheus.NewRegistry()
+
+			reader, cleanup := tc.setupError()
+			defer cleanup()
+
+			// Create exporter with the error-prone reader
+			cfg := newConfig()
+			cfg.registerer = registry
+
+			collector := &collector{
+				reader:                   reader,
+				disableTargetInfo:        cfg.disableTargetInfo,
+				disableScopeInfo:         cfg.disableScopeInfo,
+				metricFamilies:           make(map[string]*dto.MetricFamily),
+				namespace:                cfg.namespace,
+				resourceAttributesFilter: cfg.resourceAttributesFilter,
+				metricNamer:              otlptranslator.NewMetricNamer(cfg.namespace, cfg.translationStrategy),
+			}
+
+			var err error
+			collector.inst, err = observ.NewInstrumentation(0)
+			require.NoError(t, err)
+
+			err = registry.Register(collector)
+			require.NoError(t, err)
+
+			// Trigger collection which should encounter the error
+			_, err = registry.Gather()
+			require.NoError(t, err)
+
+			// Collect observability metrics
+			var observMetrics metricdata.ResourceMetrics
+			err = observReader.Collect(t.Context(), &observMetrics)
+			require.NoError(t, err)
+
+			if len(observMetrics.ScopeMetrics) > 0 {
+				// Verify observability metrics are still present (at least some)
+				scopeMetrics := observMetrics.ScopeMetrics[0]
+				foundObservMetrics := 0
+				for _, m := range scopeMetrics.Metrics {
+					switch m.Name {
+					case "otel.sdk.exporter.metric_data_point.inflight",
+						"otel.sdk.exporter.metric_data_point.exported",
+						"otel.sdk.exporter.operation.duration",
+						"otel.sdk.metric_reader.collection.duration":
+						foundObservMetrics++
+					}
+				}
+				assert.GreaterOrEqual(
+					t,
+					foundObservMetrics,
+					tc.expectedMinMetrics,
+					"Should have at least some observability metrics even with errors",
+				)
+
+				if tc.checkErrorAttributes != nil {
+					tc.checkErrorAttributes(t, scopeMetrics)
+				}
+			}
+		})
+	}
+}
+
+func TestExporterSelfInstrumentationConcurrency(t *testing.T) {
+	// Enable observability
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Setup observability metric collection
+	originalMP := otel.GetMeterProvider()
+	defer otel.SetMeterProvider(originalMP)
+
+	observReader := metric.NewManualReader()
+	observMP := metric.NewMeterProvider(metric.WithReader(observReader))
+	otel.SetMeterProvider(observMP)
+
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+
+	exporter, err := New(WithRegisterer(registry))
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter("concurrent_test", otelmetric.WithInstrumentationVersion("v1.0.0"))
+
+	counter, err := meter.Int64Counter("concurrent_counter")
+	require.NoError(t, err)
+
+	// Run concurrent operations
+	const numGoroutines = 10
+	const numOperations = 100
+	var wg sync.WaitGroup
+
+	for i := range numGoroutines {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := range numOperations {
+				counter.Add(ctx, 1, otelmetric.WithAttributes(attribute.Int("goroutine", id)))
+
+				// Occasionally trigger collection
+				if j%10 == 0 {
+					_, _ = registry.Gather()
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Final collection
+	_, err = registry.Gather()
+	require.NoError(t, err)
+
+	// Collect observability metrics
+	var observMetrics metricdata.ResourceMetrics
+	err = observReader.Collect(t.Context(), &observMetrics)
+	require.NoError(t, err)
+
+	if len(observMetrics.ScopeMetrics) > 0 {
+		scopeMetrics := observMetrics.ScopeMetrics[0]
+		// Verify observability metrics are present and have reasonable values
+		for _, m := range scopeMetrics.Metrics {
+			switch m.Name {
+			case "otel.sdk.exporter.metric_data_point.exported":
+				sum, ok := m.Data.(metricdata.Sum[int64])
+				require.True(t, ok)
+				require.NotEmpty(t, sum.DataPoints)
+				// Should have exported many data points
+				assert.Positive(t, sum.DataPoints[0].Value)
+			case "otel.sdk.exporter.operation.duration":
+				hist, ok := m.Data.(metricdata.Histogram[float64])
+				require.True(t, ok)
+				require.NotEmpty(t, hist.DataPoints)
+				// Should have recorded operation durations
+				assert.Positive(t, hist.DataPoints[0].Count)
+			case "otel.sdk.metric_reader.collection.duration":
+				hist, ok := m.Data.(metricdata.Histogram[float64])
+				require.True(t, ok)
+				require.NotEmpty(t, hist.DataPoints)
+				// Should have recorded collection durations
+				assert.Positive(t, hist.DataPoints[0].Count)
+			}
+		}
+	}
+}
+
+func TestExporterSelfInstrumentationExemplarHandling(t *testing.T) {
+	// Enable observability
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Setup observability metric collection
+	originalMP := otel.GetMeterProvider()
+	defer otel.SetMeterProvider(originalMP)
+
+	observReader := metric.NewManualReader()
+	observMP := metric.NewMeterProvider(metric.WithReader(observReader))
+	otel.SetMeterProvider(observMP)
+
+	ctx := t.Context()
+	registry := prometheus.NewRegistry()
+
+	exporter, err := New(WithRegisterer(registry))
+	require.NoError(t, err)
+
+	provider := metric.NewMeterProvider(metric.WithReader(exporter))
+	meter := provider.Meter("exemplar_test", otelmetric.WithInstrumentationVersion("v1.0.0"))
+
+	// Create trace context for exemplars
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    [16]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+		SpanID:     [8]byte{1, 2, 3, 4, 5, 6, 7, 8},
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx = trace.ContextWithSpanContext(ctx, sc)
+
+	histogram, err := meter.Float64Histogram("test_histogram_with_exemplars")
+	require.NoError(t, err)
+
+	// Record values that should generate exemplars
+	histogram.Record(ctx, 1.0, otelmetric.WithAttributes(attribute.String("key", "value1")))
+	histogram.Record(ctx, 2.0, otelmetric.WithAttributes(attribute.String("key", "value2")))
+
+	// Collect metrics
+	got, err := registry.Gather()
+	require.NoError(t, err)
+
+	// Verify that metrics are collected without errors even when exemplars are present
+	foundTestHistogram := false
+
+	for _, mf := range got {
+		if *mf.Name == "test_histogram_with_exemplars" {
+			foundTestHistogram = true
+			assert.Equal(t, dto.MetricType_HISTOGRAM, *mf.Type)
+		}
+	}
+
+	assert.True(t, foundTestHistogram, "Test histogram should be present")
+
+	// Collect observability metrics
+	var observMetrics metricdata.ResourceMetrics
+	err = observReader.Collect(t.Context(), &observMetrics)
+	require.NoError(t, err)
+
+	if len(observMetrics.ScopeMetrics) > 0 {
+		expectedMetrics := map[string]bool{
+			"otel.sdk.exporter.metric_data_point.inflight": false,
+			"otel.sdk.exporter.metric_data_point.exported": false,
+			"otel.sdk.exporter.operation.duration":         false,
+			"otel.sdk.metric_reader.collection.duration":   false,
+		}
+
+		// Check all scope metrics, not just the first one
+		for _, scopeMetrics := range observMetrics.ScopeMetrics {
+			for _, m := range scopeMetrics.Metrics {
+				if _, exists := expectedMetrics[m.Name]; exists {
+					expectedMetrics[m.Name] = true
+				}
+			}
+		}
+
+		foundObservabilityMetrics := 0
+		for _, found := range expectedMetrics {
+			if found {
+				foundObservabilityMetrics++
+			}
+		}
+		assert.Equal(t, 4, foundObservabilityMetrics, "All observability metrics should be present")
+	}
+}
+
+func TestExporterSelfInstrumentationInitErrors(t *testing.T) {
+	// Test when NewInstrumentation returns an error
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	// Set up a meter provider that will cause NewInstrumentation to fail
+	original := otel.GetMeterProvider()
+	defer otel.SetMeterProvider(original)
+
+	errMP := &errMeterProvider{err: assert.AnError}
+	otel.SetMeterProvider(errMP)
+
+	registry := prometheus.NewRegistry()
+
+	// This should fail during exporter creation due to instrumentation init error
+	_, err := New(WithRegisterer(registry))
+	require.ErrorIs(t, err, assert.AnError, "Expected NewInstrumentation error to be propagated")
+}
+
+// Helper types for testing NewInstrumentation errors.
+type errMeterProvider struct {
+	otelmetric.MeterProvider
+	err error
+}
+
+func (m *errMeterProvider) Meter(string, ...otelmetric.MeterOption) otelmetric.Meter {
+	return &errMeter{err: m.err}
+}
+
+type errMeter struct {
+	otelmetric.Meter
+	err error
+}
+
+func (m *errMeter) Int64UpDownCounter(
+	string,
+	...otelmetric.Int64UpDownCounterOption,
+) (otelmetric.Int64UpDownCounter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Int64Counter(string, ...otelmetric.Int64CounterOption) (otelmetric.Int64Counter, error) {
+	return nil, m.err
+}
+
+func (m *errMeter) Float64Histogram(string, ...otelmetric.Float64HistogramOption) (otelmetric.Float64Histogram, error) {
+	return nil, m.err
+}
+
+func TestCountDataPoints(t *testing.T) {
+	assert.Zero(t, countDataPoints(nil))
+	assert.Zero(t, countDataPoints(&metricdata.ResourceMetrics{}))
+
+	rm := &metricdata.ResourceMetrics{
+		ScopeMetrics: []metricdata.ScopeMetrics{
+			{
+				Metrics: []metricdata.Metrics{
+					{Data: metricdata.Gauge[int64]{DataPoints: make([]metricdata.DataPoint[int64], 1)}},
+					{Data: metricdata.Gauge[float64]{DataPoints: make([]metricdata.DataPoint[float64], 2)}},
+					{Data: metricdata.Sum[int64]{DataPoints: make([]metricdata.DataPoint[int64], 3)}},
+					{Data: metricdata.Sum[float64]{DataPoints: make([]metricdata.DataPoint[float64], 4)}},
+					{Data: metricdata.Histogram[int64]{DataPoints: make([]metricdata.HistogramDataPoint[int64], 5)}},
+				},
+			},
+			{
+				Metrics: []metricdata.Metrics{
+					{
+						Data: metricdata.Histogram[float64]{
+							DataPoints: make([]metricdata.HistogramDataPoint[float64], 6),
+						},
+					},
+					{
+						Data: metricdata.ExponentialHistogram[int64]{
+							DataPoints: make([]metricdata.ExponentialHistogramDataPoint[int64], 7),
+						},
+					},
+					{
+						Data: metricdata.ExponentialHistogram[float64]{
+							DataPoints: make([]metricdata.ExponentialHistogramDataPoint[float64], 8),
+						},
+					},
+					{Data: metricdata.Summary{DataPoints: make([]metricdata.SummaryDataPoint, 9)}},
+				},
+			},
+		},
+	}
+	assert.Equal(t, int64(45), countDataPoints(rm))
+}
+
+func TestExporterSelfInstrumentationDroppedMetrics(t *testing.T) {
+	testCases := []struct {
+		name        string
+		setup       func(t *testing.T, reg *prometheus.Registry)
+		wantSuccess int64
+		wantFailed  int64
+		wantErrType string
+	}{
+		{
+			name: "resource attribute translation failure drops all batch data points",
+			setup: func(t *testing.T, reg *prometheus.Registry) {
+				exp, err := New(
+					WithRegisterer(reg),
+					WithoutTargetInfo(),
+					WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+					WithResourceAsConstantLabels(attribute.NewAllowKeysFilter("$%^&")),
+				)
+				require.NoError(t, err)
+				res := resource.NewSchemaless(attribute.Key("$%^&").String("bad"))
+				mp := metric.NewMeterProvider(metric.WithReader(exp), metric.WithResource(res))
+				c, err := mp.Meter("test").Int64Counter("valid_counter")
+				require.NoError(t, err)
+				c.Add(t.Context(), 1, otelmetric.WithAttributes(attribute.String("k", "v1")))
+				c.Add(t.Context(), 2, otelmetric.WithAttributes(attribute.String("k", "v2")))
+			},
+			wantSuccess: 0,
+			wantFailed:  2,
+		},
+		{
+			name: "scope attribute translation failure drops scope data points",
+			setup: func(t *testing.T, reg *prometheus.Registry) {
+				exp, err := New(
+					WithRegisterer(reg),
+					WithoutTargetInfo(),
+					WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+				)
+				require.NoError(t, err)
+				mp := metric.NewMeterProvider(metric.WithReader(exp))
+
+				badMeter := mp.Meter(
+					"bad_scope",
+					otelmetric.WithInstrumentationAttributes(attribute.Key("$%^&").String("bad")),
+				)
+				badCounter, err := badMeter.Int64Counter("dropped_counter")
+				require.NoError(t, err)
+				badCounter.Add(t.Context(), 1, otelmetric.WithAttributes(attribute.String("k", "v1")))
+				badCounter.Add(t.Context(), 2, otelmetric.WithAttributes(attribute.String("k", "v2")))
+
+				goodMeter := mp.Meter("good_scope")
+				goodCounter, err := goodMeter.Int64Counter("good_counter")
+				require.NoError(t, err)
+				goodCounter.Add(t.Context(), 3)
+			},
+			wantSuccess: 1,
+			wantFailed:  2,
+		},
+		{
+			name: "unsupported metric type Summary drops metric family data points",
+			setup: func(t *testing.T, reg *prometheus.Registry) {
+				exp, err := New(
+					WithRegisterer(reg),
+					WithoutTargetInfo(),
+					WithProducer(producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+						return []metricdata.ScopeMetrics{
+							{
+								Metrics: []metricdata.Metrics{
+									{
+										Name: "unsupported_summary",
+										Data: metricdata.Summary{
+											DataPoints: make([]metricdata.SummaryDataPoint, 2),
+										},
+									},
+								},
+							},
+						}, nil
+					})),
+				)
+				require.NoError(t, err)
+				mp := metric.NewMeterProvider(metric.WithReader(exp))
+				c, err := mp.Meter("test").Int64Counter("valid_counter")
+				require.NoError(t, err)
+				c.Add(t.Context(), 1)
+			},
+			wantSuccess: 1,
+			wantFailed:  2,
+		},
+		{
+			name: "metric name translation failure drops metric family data points",
+			setup: func(t *testing.T, reg *prometheus.Registry) {
+				exp, err := New(
+					WithRegisterer(reg),
+					WithoutTargetInfo(),
+					WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+					WithProducer(producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+						return []metricdata.ScopeMetrics{
+							{
+								Metrics: []metricdata.Metrics{
+									{
+										Name: "$%^&",
+										Data: metricdata.Gauge[float64]{
+											DataPoints: []metricdata.DataPoint[float64]{
+												{Value: 1},
+												{Value: 2},
+											},
+										},
+									},
+								},
+							},
+						}, nil
+					})),
+				)
+				require.NoError(t, err)
+				mp := metric.NewMeterProvider(metric.WithReader(exp))
+				c, err := mp.Meter("test").Int64Counter("valid_counter")
+				require.NoError(t, err)
+				c.Add(t.Context(), 1)
+			},
+			wantSuccess: 1,
+			wantFailed:  2,
+		},
+		{
+			name: "conflicting metric family type drop counts dropped data points",
+			setup: func(t *testing.T, reg *prometheus.Registry) {
+				exp, err := New(
+					WithRegisterer(reg),
+					WithoutTargetInfo(),
+					WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes),
+					WithProducer(producerFunc(func(_ context.Context) ([]metricdata.ScopeMetrics, error) {
+						return []metricdata.ScopeMetrics{
+							{
+								Metrics: []metricdata.Metrics{
+									{
+										Name: "conflict_metric",
+										Data: metricdata.Sum[int64]{
+											IsMonotonic: true,
+											Temporality: metricdata.CumulativeTemporality,
+											DataPoints:  []metricdata.DataPoint[int64]{{Value: 1}},
+										},
+									},
+									{
+										Name: "conflict_metric",
+										Data: metricdata.Gauge[int64]{
+											DataPoints: []metricdata.DataPoint[int64]{
+												{Attributes: attribute.NewSet(attribute.String("k", "v1")), Value: 2},
+												{Attributes: attribute.NewSet(attribute.String("k", "v2")), Value: 3},
+											},
+										},
+									},
+								},
+							},
+						}, nil
+					})),
+				)
+				require.NoError(t, err)
+				_ = metric.NewMeterProvider(metric.WithReader(exp))
+			},
+			wantSuccess: 1,
+			wantFailed:  2,
+		},
+		{
+			name: "bridge scope metrics drop counts dropped data points",
+			setup: func(t *testing.T, reg *prometheus.Registry) {
+				exp, err := New(
+					WithRegisterer(reg),
+					WithoutTargetInfo(),
+				)
+				require.NoError(t, err)
+				mp := metric.NewMeterProvider(metric.WithReader(exp))
+
+				bridgeCounter, err := mp.Meter(bridgeScopeName).Int64Counter("bridge_counter")
+				require.NoError(t, err)
+				bridgeCounter.Add(t.Context(), 1, otelmetric.WithAttributes(attribute.String("k", "v1")))
+				bridgeCounter.Add(t.Context(), 2, otelmetric.WithAttributes(attribute.String("k", "v2")))
+
+				validCounter, err := mp.Meter("valid_scope").Int64Counter("valid_counter")
+				require.NoError(t, err)
+				validCounter.Add(t.Context(), 3)
+			},
+			wantSuccess: 1,
+			wantFailed:  2,
+		},
+		{
+			name: "target_info attribute translation failure records operation error without failed data points",
+			setup: func(t *testing.T, reg *prometheus.Registry) {
+				exp, err := New(
+					WithRegisterer(reg),
+					WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithSuffixes),
+				)
+				require.NoError(t, err)
+				res := resource.NewSchemaless(attribute.Key("$%^&").String("bad"))
+				mp := metric.NewMeterProvider(metric.WithReader(exp), metric.WithResource(res))
+				c, err := mp.Meter("test").Int64Counter("valid_counter")
+				require.NoError(t, err)
+				c.Add(t.Context(), 1, otelmetric.WithAttributes(attribute.String("k", "v1")))
+				c.Add(t.Context(), 2, otelmetric.WithAttributes(attribute.String("k", "v2")))
+			},
+			wantSuccess: 2,
+			wantFailed:  0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+			origMP := otel.GetMeterProvider()
+			t.Cleanup(func() { otel.SetMeterProvider(origMP) })
+
+			origEH := otel.GetErrorHandler()
+			t.Cleanup(func() { otel.SetErrorHandler(origEH) })
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(error) {}))
+
+			observReader := metric.NewManualReader()
+			otel.SetMeterProvider(metric.NewMeterProvider(metric.WithReader(observReader)))
+
+			reg := prometheus.NewRegistry()
+			tc.setup(t, reg)
+
+			_, _ = reg.Gather()
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, observReader.Collect(t.Context(), &rm))
+
+			var observSM metricdata.ScopeMetrics
+			for _, sm := range rm.ScopeMetrics {
+				if sm.Scope.Name == observ.ScopeName {
+					observSM = sm
+					break
+				}
+			}
+			require.Equal(t, observ.ScopeName, observSM.Scope.Name)
+
+			var (
+				gotInflight      int64 = -1
+				gotSuccess       int64 = -1
+				gotFailed        int64 = -1
+				hasOperationErr  bool
+				hasExportErrAttr bool
+			)
+			for _, m := range observSM.Metrics {
+				switch m.Name {
+				case "otel.sdk.exporter.metric_data_point.inflight":
+					sum, ok := m.Data.(metricdata.Sum[int64])
+					require.True(t, ok)
+					require.Len(t, sum.DataPoints, 1)
+					gotInflight = sum.DataPoints[0].Value
+				case "otel.sdk.exporter.metric_data_point.exported":
+					sum, ok := m.Data.(metricdata.Sum[int64])
+					require.True(t, ok)
+					for _, dp := range sum.DataPoints {
+						if _, ok := dp.Attributes.Value(semconv.ErrorTypeKey); ok {
+							hasExportErrAttr = true
+							gotFailed = dp.Value
+						} else {
+							gotSuccess = dp.Value
+						}
+					}
+				case "otel.sdk.exporter.operation.duration":
+					hist, ok := m.Data.(metricdata.Histogram[float64])
+					require.True(t, ok)
+					require.Len(t, hist.DataPoints, 1)
+					_, hasOperationErr = hist.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
+				}
+			}
+
+			assert.Zero(t, gotInflight, "inflight should return to 0 after scrape")
+			assert.Equal(t, tc.wantSuccess, gotSuccess, "unexpected exported success count")
+			if tc.wantFailed > 0 {
+				assert.Equal(t, tc.wantFailed, gotFailed, "unexpected exported failed count")
+				assert.True(t, hasExportErrAttr, "expected error.type attribute on failed exported metric")
+			} else {
+				assert.False(t, hasExportErrAttr, "unexpected error.type attribute on exported metric")
+			}
+			assert.True(t, hasOperationErr, "expected error.type attribute on operation.duration metric")
+		})
+	}
+}
+
+func TestExporterSelfInstrumentationBatchInflight(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	origMP := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(origMP) })
+
+	observReader := metric.NewManualReader()
+	otel.SetMeterProvider(metric.NewMeterProvider(metric.WithReader(observReader)))
+
+	reg := prometheus.NewRegistry()
+	exp, err := New(WithRegisterer(reg), WithoutTargetInfo())
+	require.NoError(t, err)
+
+	mp := metric.NewMeterProvider(metric.WithReader(exp))
+	meter := mp.Meter("batch_inflight_test")
+
+	counter, err := meter.Int64Counter("batch_counter")
+	require.NoError(t, err)
+	counter.Add(t.Context(), 1, otelmetric.WithAttributes(attribute.String("k", "v1")))
+	counter.Add(t.Context(), 2, otelmetric.WithAttributes(attribute.String("k", "v2")))
+
+	gauge, err := meter.Float64Gauge("batch_gauge")
+	require.NoError(t, err)
+	gauge.Record(t.Context(), 10, otelmetric.WithAttributes(attribute.String("k", "v1")))
+	gauge.Record(t.Context(), 20, otelmetric.WithAttributes(attribute.String("k", "v2")))
+	gauge.Record(t.Context(), 30, otelmetric.WithAttributes(attribute.String("k", "v3")))
+
+	// Unbuffered channel so Collect blocks after sending the first data point
+	// while the remaining 4 data points across both metric families are still in flight.
+	ch := make(chan prometheus.Metric)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		reg.Collect(ch)
+	}()
+
+	// Receive the first metric to ensure Collect has started exporting the batch.
+	<-ch
+
+	var midRM metricdata.ResourceMetrics
+	require.NoError(t, observReader.Collect(t.Context(), &midRM))
+
+	var midInflight int64 = -1
+	for _, sm := range midRM.ScopeMetrics {
+		if sm.Scope.Name != observ.ScopeName {
+			continue
+		}
+		for _, m := range sm.Metrics {
+			if m.Name == "otel.sdk.exporter.metric_data_point.inflight" {
+				sum, ok := m.Data.(metricdata.Sum[int64])
+				require.True(t, ok)
+				require.Len(t, sum.DataPoints, 1)
+				midInflight = sum.DataPoints[0].Value
+			}
+		}
+	}
+	assert.Equal(t, int64(5), midInflight, "inflight should reflect all 5 data points in the scrape batch")
+
+	// Drain remaining 4 metrics and wait for Collect to finish.
+	for range 4 {
+		<-ch
+	}
+	<-done
+
+	var endRM metricdata.ResourceMetrics
+	require.NoError(t, observReader.Collect(t.Context(), &endRM))
+
+	var endInflight, endExported int64 = -1, -1
+	for _, sm := range endRM.ScopeMetrics {
+		if sm.Scope.Name != observ.ScopeName {
+			continue
+		}
+		for _, m := range sm.Metrics {
+			switch m.Name {
+			case "otel.sdk.exporter.metric_data_point.inflight":
+				sum, ok := m.Data.(metricdata.Sum[int64])
+				require.True(t, ok)
+				require.Len(t, sum.DataPoints, 1)
+				endInflight = sum.DataPoints[0].Value
+			case "otel.sdk.exporter.metric_data_point.exported":
+				sum, ok := m.Data.(metricdata.Sum[int64])
+				require.True(t, ok)
+				require.Len(t, sum.DataPoints, 1)
+				endExported = sum.DataPoints[0].Value
+			}
+		}
+	}
+	assert.Zero(t, endInflight, "inflight should return to 0 after scrape completes")
+	assert.Equal(t, int64(5), endExported, "exported should record all 5 data points")
+}

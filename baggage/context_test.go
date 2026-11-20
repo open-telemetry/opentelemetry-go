@@ -1,0 +1,24 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package baggage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/internal/baggage"
+)
+
+func TestContext(t *testing.T) {
+	ctx := t.Context()
+	assert.Equal(t, Baggage{}, FromContext(ctx))
+
+	b := Baggage{list: baggage.List{"key": baggage.NewItemWithProperties("val", nil)}}
+	ctx = ContextWithBaggage(ctx, b)
+	assert.Equal(t, b, FromContext(ctx))
+
+	ctx = ContextWithoutBaggage(ctx)
+	assert.Equal(t, Baggage{}, FromContext(ctx))
+}

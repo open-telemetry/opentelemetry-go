@@ -1,0 +1,259 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package metric
+
+import (
+	"context"
+	"errors"
+	"sync/atomic"
+
+	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
+)
+
+// meterConfiguratorSnapshotFunc snapshots the currently installed configurator
+// and the version it was set under. Callers evaluating multiple scopes against
+// the same snapshot should call it once and reuse the returned per-scope
+// function and version, rather than calling it again per scope.
+type meterConfiguratorSnapshotFunc func() (func(instrumentation.Scope) any, uint64)
+
+type meterConfigReader interface{ Enabled() bool }
+
+type meterConfiguratorOption interface {
+	Experimental()
+	MeterConfiguratorSnapshot() func() (func(instrumentation.Scope) any, uint64)
+	RegisterOnUpdate(func()) bool
+	Unregister()
+}
+
+type meterFactory func(instrumentation.Scope, pipelines) metric.Meter
+
+func defaultMeterFactory(s instrumentation.Scope, p pipelines) metric.Meter {
+	return newMeter(s, p)
+}
+
+// MeterProvider handles the creation and coordination of Meters. All Meters
+// created by a MeterProvider will be associated with the same Resource, have
+// the same Views applied to them, and have their produced metric telemetry
+// passed to the configured Readers.
+type MeterProvider struct {
+	embedded.MeterProvider
+
+	pipes  pipelines
+	meters cache[instrumentation.Scope, metric.Meter]
+	// configurator is only written in NewMeterProvider before mp is returned to
+	// any caller (reset to nil if its handle claim was rejected), and never
+	// reassigned after.
+	configurator meterConfiguratorSnapshotFunc
+	// configuratorUnregister retires configurator's MeterConfiguratorHandle
+	// during Shutdown. It's nil if:
+	//  - no configurator was wired, or
+	//  - its RegisterOnUpdate call did not claim the handle. Same single-write-before-return
+	//    rule as configurator above.
+	configuratorUnregister func()
+
+	meterFactory         meterFactory
+	forceFlush, shutdown func(context.Context) error
+	stopped              atomic.Bool
+}
+
+// Compile-time check MeterProvider implements metric.MeterProvider.
+var _ metric.MeterProvider = (*MeterProvider)(nil)
+
+// NewMeterProvider returns a new and configured MeterProvider.
+//
+// By default, the returned MeterProvider is configured with the default
+// Resource and no Readers. Readers cannot be added after a MeterProvider is
+// created. This means the returned MeterProvider, one created with no
+// Readers, will perform no operations.
+func NewMeterProvider(options ...Option) *MeterProvider {
+	conf := newConfig(options)
+	flush, sdown := conf.readerSignals()
+	factory, experimentalShutdown := newExperimentalMeterFactory(conf.experimental)
+	if experimentalShutdown != nil {
+		readerShutdown := sdown
+		sdown = func(ctx context.Context) error {
+			return errors.Join(readerShutdown(ctx), experimentalShutdown(ctx))
+		}
+	}
+
+	mp := &MeterProvider{
+		pipes: newPipelines(
+			conf.res,
+			conf.readers,
+			conf.views,
+			conf.exemplarFilter,
+			conf.cardinalityLimit,
+			conf.viewMatchingMode,
+		),
+		meterFactory: factory,
+		forceFlush:   flush,
+		shutdown:     sdown,
+	}
+
+	var mco meterConfiguratorOption
+	for _, o := range options {
+		if m, ok := o.(meterConfiguratorOption); ok {
+			mco = m
+		}
+	}
+	if mco != nil {
+		mp.configurator = mco.MeterConfiguratorSnapshot()
+		claimed := mco.RegisterOnUpdate(func() {
+			fn, version := mp.configurator()
+			mp.meters.Range(func(s instrumentation.Scope, m metric.Meter) {
+				// Shutdown does not wait for the walk, so stop calling the
+				// configurator for a provider that is shut down.
+				if mp.stopped.Load() {
+					return
+				}
+				gm, ok := m.(*configuratorMeter)
+				if !ok {
+					return
+				}
+				if cr, ok := fn(s).(meterConfigReader); ok {
+					gm.setEnabledIfNewer(version, cr.Enabled())
+				}
+			})
+		})
+		if claimed {
+			mp.configuratorUnregister = mco.Unregister
+		} else {
+			// A provider whose claim was rejected ignores the handle entirely,
+			// so its new meters don't read a configurator its cache walk never
+			// applies. Its callback was never stored, so nothing else reads
+			// this field concurrently.
+			mp.configurator = nil
+		}
+	}
+
+	// Log after creation so all readers show correctly they are registered.
+	global.Info(
+		"MeterProvider created",
+		"Resource", conf.res,
+		"Readers", conf.readers,
+		"Views", len(conf.views),
+	)
+	return mp
+}
+
+// Meter returns a Meter with the given name and configured with options.
+//
+// The name should be the name of the instrumentation scope creating
+// telemetry. This name may be the same as the instrumented code only if that
+// code provides built-in instrumentation.
+//
+// Calls to the Meter method after Shutdown has been called will return Meters
+// that perform no operations.
+//
+// This method is safe to call concurrently.
+func (mp *MeterProvider) Meter(name string, options ...metric.MeterOption) metric.Meter {
+	if name == "" {
+		global.Warn("Invalid Meter name.", "name", name)
+	}
+
+	if mp.stopped.Load() {
+		return noop.Meter{}
+	}
+
+	c := metric.NewMeterConfig(options...)
+	attrs, _ := attrnorm.SetDedup(c.InstrumentationAttributes())
+	s := instrumentation.Scope{
+		Name:       name,
+		Version:    c.InstrumentationVersion(),
+		SchemaURL:  c.SchemaURL(),
+		Attributes: attrs,
+	}
+
+	global.Info(
+		"Meter created",
+		"Name", s.Name,
+		"Version", s.Version,
+		"SchemaURL", s.SchemaURL,
+		"Attributes", s.Attributes,
+	)
+
+	factory := mp.meterFactory
+	if factory == nil {
+		factory = defaultMeterFactory
+	}
+
+	m := mp.meters.Lookup(s, func() metric.Meter {
+		if mp.configurator != nil {
+			return newConfiguratorMeter(newMeter(s, mp.pipes))
+		}
+		return factory(s, mp.pipes)
+	})
+	// Apply the configurator outside the cache lock, so a slow configurator
+	// only delays callers for this scope. initOnce makes concurrent callers
+	// for the scope wait until it is applied, so none can record before the
+	// initial configuration. The meter is already cached, so a concurrent Set
+	// walk also reaches it; the versioned store keeps the newest decision.
+	if cm, ok := m.(*configuratorMeter); ok {
+		cm.initOnce.Do(func() {
+			fn, version := mp.configurator()
+			if cr, ok := fn(s).(meterConfigReader); ok {
+				cm.setEnabledIfNewer(version, cr.Enabled())
+			}
+		})
+	}
+	return m
+}
+
+// ForceFlush flushes all pending telemetry.
+//
+// This method honors the deadline or cancellation of ctx. An appropriate
+// error will be returned in these situations. There is no guaranteed that all
+// telemetry be flushed or all resources have been released in these
+// situations.
+//
+// ForceFlush calls ForceFlush(context.Context) error
+// on all Readers that implements this method.
+//
+// This method is safe to call concurrently.
+func (mp *MeterProvider) ForceFlush(ctx context.Context) error {
+	if mp.forceFlush != nil {
+		return mp.forceFlush(ctx)
+	}
+	return nil
+}
+
+// Shutdown shuts down the MeterProvider flushing all pending telemetry and
+// releasing any held computational resources.
+//
+// This call is idempotent. The first call will perform all flush and
+// releasing operations. Subsequent calls will perform no action and will
+// return an error stating this.
+//
+// Measurements made by instruments from meters this MeterProvider created
+// will not be exported after Shutdown is called.
+//
+// This method honors the deadline or cancellation of ctx. An appropriate
+// error will be returned in these situations. There is no guaranteed that all
+// telemetry be flushed or all resources have been released in these
+// situations.
+//
+// This method is safe to call concurrently.
+func (mp *MeterProvider) Shutdown(ctx context.Context) error {
+	// Even though it may seem like there is a synchronization issue between the
+	// call to `Store` and checking `shutdown`, the Go concurrency model ensures
+	// that is not the case, as all the atomic operations executed in a program
+	// behave as though executed in some sequentially consistent order. This
+	// definition provides the same semantics as C++'s sequentially consistent
+	// atomics and Java's volatile variables.
+	// See https://go.dev/ref/mem#atomic and https://pkg.go.dev/sync/atomic.
+
+	mp.stopped.Store(true)
+	if mp.configuratorUnregister != nil {
+		mp.configuratorUnregister()
+	}
+	if mp.shutdown != nil {
+		return mp.shutdown(ctx)
+	}
+	return nil
+}

@@ -1,0 +1,1001 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package trace
+
+import (
+	"context"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"runtime"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/sdk/trace/internal/env"
+	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
+	"go.opentelemetry.io/otel/trace"
+)
+
+const componentID = 0
+
+type testBatchExporter struct {
+	mu            sync.Mutex
+	spans         []ReadOnlySpan
+	sizes         []int
+	batchCount    int
+	shutdownCount int
+	errors        []error
+	droppedCount  int
+	idx           int
+	err           error
+}
+
+func (t *testBatchExporter) ExportSpans(ctx context.Context, spans []ReadOnlySpan) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if t.idx < len(t.errors) {
+		t.droppedCount += len(spans)
+		err := t.errors[t.idx]
+		t.idx++
+		return err
+	}
+
+	select {
+	case <-ctx.Done():
+		t.err = ctx.Err()
+		return ctx.Err()
+	default:
+	}
+
+	t.spans = append(t.spans, spans...)
+	t.sizes = append(t.sizes, len(spans))
+	t.batchCount++
+	return nil
+}
+
+func (t *testBatchExporter) Shutdown(context.Context) error {
+	t.shutdownCount++
+	return nil
+}
+
+func (t *testBatchExporter) len() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return len(t.spans)
+}
+
+func (t *testBatchExporter) getBatchCount() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.batchCount
+}
+
+var _ SpanExporter = (*testBatchExporter)(nil)
+
+func TestNewBatchSpanProcessorWithNilExporter(t *testing.T) {
+	tp := basicTracerProvider(t)
+	bsp := NewBatchSpanProcessor(nil)
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer("NilExporter")
+
+	_, span := tr.Start(t.Context(), "foo")
+	span.End()
+
+	// These should not panic.
+	bsp.OnStart(t.Context(), span.(ReadWriteSpan))
+	bsp.OnEnd(span.(ReadOnlySpan))
+	if err := bsp.ForceFlush(t.Context()); err != nil {
+		t.Errorf("failed to ForceFlush the BatchSpanProcessor: %v", err)
+	}
+	if err := bsp.Shutdown(t.Context()); err != nil {
+		t.Errorf("failed to Shutdown the BatchSpanProcessor: %v", err)
+	}
+}
+
+type testOption struct {
+	name           string
+	o              []BatchSpanProcessorOption
+	wantNumSpans   int
+	wantBatchCount int
+	genNumSpans    int
+	parallel       bool
+	envs           map[string]string
+}
+
+func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
+	schDelay := 200 * time.Millisecond
+	options := []testOption{
+		{
+			name:           "default BatchSpanProcessorOptions",
+			wantNumSpans:   2053,
+			wantBatchCount: 4,
+			genNumSpans:    2053,
+		},
+		{
+			name: "non-default BatchTimeout",
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
+			},
+			wantNumSpans:   2053,
+			wantBatchCount: 4,
+			genNumSpans:    2053,
+		},
+		{
+			name: "non-default MaxQueueSize and BatchTimeout",
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
+				WithMaxQueueSize(200),
+			},
+			wantNumSpans:   205,
+			wantBatchCount: 1,
+			genNumSpans:    205,
+		},
+		{
+			name: "non-default MaxQueueSize, BatchTimeout and MaxExportBatchSize",
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
+				WithMaxQueueSize(205),
+				WithMaxExportBatchSize(20),
+			},
+			wantNumSpans:   210,
+			wantBatchCount: 11,
+			genNumSpans:    210,
+		},
+		{
+			name: "blocking option",
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
+				WithMaxQueueSize(200),
+				WithMaxExportBatchSize(20),
+			},
+			wantNumSpans:   205,
+			wantBatchCount: 11,
+			genNumSpans:    205,
+		},
+		{
+			name: "parallel span generation",
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
+				WithMaxQueueSize(200),
+			},
+			wantNumSpans:   205,
+			wantBatchCount: 1,
+			genNumSpans:    205,
+			parallel:       true,
+		},
+		{
+			name: "parallel span blocking",
+			o: []BatchSpanProcessorOption{
+				WithBatchTimeout(schDelay),
+				WithMaxExportBatchSize(200),
+			},
+			wantNumSpans:   2000,
+			wantBatchCount: 10,
+			genNumSpans:    2000,
+			parallel:       true,
+		},
+	}
+	for _, option := range options {
+		t.Run(option.name, func(t *testing.T) {
+			te := testBatchExporter{}
+			tp := basicTracerProvider(t)
+			ssp := createAndRegisterBatchSP(option, &te)
+			if ssp == nil {
+				t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
+			}
+			tp.RegisterSpanProcessor(ssp)
+			tr := tp.Tracer("BatchSpanProcessorWithOptions")
+
+			if option.parallel {
+				generateSpanParallel(t, tr, option)
+			} else {
+				generateSpan(t, tr, option)
+			}
+
+			tp.UnregisterSpanProcessor(ssp)
+
+			gotNumOfSpans := te.len()
+			if option.wantNumSpans > 0 && option.wantNumSpans != gotNumOfSpans {
+				t.Errorf("number of exported span: got %+v, want %+v\n",
+					gotNumOfSpans, option.wantNumSpans)
+			}
+
+			gotBatchCount := te.getBatchCount()
+			if option.wantBatchCount > 0 && gotBatchCount < option.wantBatchCount {
+				t.Errorf("number batches: got %+v, want >= %+v\n",
+					gotBatchCount, option.wantBatchCount)
+				t.Errorf("Batches %v\n", te.sizes)
+			}
+		})
+	}
+}
+
+func TestNewBatchSpanProcessorInvalidEnvSizes(t *testing.T) {
+	for _, test := range []struct {
+		name, queue, batch string
+		options            []BatchSpanProcessorOption
+		wantQueue          int
+		wantBatch          int
+	}{
+		{name: "negative queue", queue: "-1", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "zero queue", queue: "0", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "negative batch", batch: "-1", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "zero batch", batch: "0", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "both invalid", queue: "-1", batch: "0", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "fallback batch fits queue", queue: "2", batch: "-1", wantQueue: 2, wantBatch: 2},
+		{name: "valid batch with fallback queue", queue: "-1", batch: "1024", wantQueue: DefaultMaxQueueSize, wantBatch: 1024},
+		{name: "smallest valid sizes", queue: "1", batch: "1", wantQueue: 1, wantBatch: 1},
+		{
+			name: "options take precedence", queue: "-1", batch: "-1",
+			options:   []BatchSpanProcessorOption{WithMaxQueueSize(7), WithMaxExportBatchSize(3)},
+			wantQueue: 7, wantBatch: 3,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv(env.BatchSpanProcessorMaxQueueSizeKey, test.queue)
+			t.Setenv(env.BatchSpanProcessorMaxExportBatchSizeKey, test.batch)
+			var processor SpanProcessor
+			require.NotPanics(t, func() {
+				processor = NewBatchSpanProcessor(&testBatchExporter{}, test.options...)
+			})
+			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(t, processor.Shutdown(context.Background()))
+			})
+			bsp := processor.(*batchSpanProcessor)
+			assert.Equal(t, test.wantQueue, bsp.o.MaxQueueSize)
+			assert.Equal(t, test.wantBatch, bsp.o.MaxExportBatchSize)
+		})
+	}
+}
+
+func TestNewBatchSpanProcessorWithEnvOptions(t *testing.T) {
+	options := []testOption{
+		{
+			name:           "BatchSpanProcessorEnvOptions - Basic",
+			wantNumSpans:   2053,
+			wantBatchCount: 1,
+			genNumSpans:    2053,
+			envs: map[string]string{
+				env.BatchSpanProcessorMaxQueueSizeKey:       "5000",
+				env.BatchSpanProcessorMaxExportBatchSizeKey: "5000",
+			},
+		},
+		{
+			name:           "BatchSpanProcessorEnvOptions - A lager max export batch size than queue size",
+			wantNumSpans:   2053,
+			wantBatchCount: 4,
+			genNumSpans:    2053,
+			envs: map[string]string{
+				env.BatchSpanProcessorMaxQueueSizeKey:       "5000",
+				env.BatchSpanProcessorMaxExportBatchSizeKey: "10000",
+			},
+		},
+		{
+			name:           "BatchSpanProcessorEnvOptions - A lage max export batch size with a small queue size",
+			wantNumSpans:   2053,
+			wantBatchCount: 42,
+			genNumSpans:    2053,
+			envs: map[string]string{
+				env.BatchSpanProcessorMaxQueueSizeKey:       "50",
+				env.BatchSpanProcessorMaxExportBatchSizeKey: "10000",
+			},
+		},
+	}
+
+	for _, option := range options {
+		t.Run(option.name, func(t *testing.T) {
+			for k, v := range option.envs {
+				t.Setenv(k, v)
+			}
+
+			te := testBatchExporter{}
+			tp := basicTracerProvider(t)
+			ssp := createAndRegisterBatchSP(option, &te)
+			if ssp == nil {
+				t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
+			}
+			tp.RegisterSpanProcessor(ssp)
+			tr := tp.Tracer("BatchSpanProcessorWithOptions")
+
+			if option.parallel {
+				generateSpanParallel(t, tr, option)
+			} else {
+				generateSpan(t, tr, option)
+			}
+
+			tp.UnregisterSpanProcessor(ssp)
+
+			gotNumOfSpans := te.len()
+			if option.wantNumSpans > 0 && option.wantNumSpans != gotNumOfSpans {
+				t.Errorf("number of exported span: got %+v, want %+v\n",
+					gotNumOfSpans, option.wantNumSpans)
+			}
+
+			gotBatchCount := te.getBatchCount()
+			if option.wantBatchCount > 0 && gotBatchCount < option.wantBatchCount {
+				t.Errorf("number batches: got %+v, want >= %+v\n",
+					gotBatchCount, option.wantBatchCount)
+				t.Errorf("Batches %v\n", te.sizes)
+			}
+		})
+	}
+}
+
+type stuckExporter struct {
+	testBatchExporter
+}
+
+// ExportSpans waits for ctx to expire and returns that error.
+func (e *stuckExporter) ExportSpans(ctx context.Context, _ []ReadOnlySpan) error {
+	<-ctx.Done()
+	e.err = ctx.Err()
+	return ctx.Err()
+}
+
+func TestBatchSpanProcessorExportTimeout(t *testing.T) {
+	exp := new(stuckExporter)
+	bsp := NewBatchSpanProcessor(
+		exp,
+		// Set a non-zero export timeout so a deadline is set.
+		WithExportTimeout(1*time.Microsecond),
+		WithBlocking(),
+	)
+	tp := basicTracerProvider(t)
+	tp.RegisterSpanProcessor(bsp)
+
+	tr := tp.Tracer("BatchSpanProcessorExportTimeout")
+	generateSpan(t, tr, testOption{genNumSpans: 1})
+	tp.UnregisterSpanProcessor(bsp)
+
+	if !errors.Is(exp.err, context.DeadlineExceeded) {
+		t.Errorf("context deadline error not returned: got %+v", exp.err)
+	}
+}
+
+func createAndRegisterBatchSP(option testOption, te *testBatchExporter) SpanProcessor {
+	// Always use blocking queue to avoid flaky tests.
+	options := append(option.o, WithBlocking())
+	return NewBatchSpanProcessor(te, options...)
+}
+
+func generateSpan(t *testing.T, tr trace.Tracer, option testOption) {
+	sc := getSpanContext()
+
+	for i := 0; i < option.genNumSpans; i++ {
+		tid := sc.TraceID()
+		binary.BigEndian.PutUint64(tid[0:8], uint64(i+1))
+		newSc := sc.WithTraceID(tid)
+		ctx := trace.ContextWithRemoteSpanContext(t.Context(), newSc)
+		_, span := tr.Start(ctx, option.name)
+		span.End()
+	}
+}
+
+func generateSpanParallel(t *testing.T, tr trace.Tracer, option testOption) {
+	sc := getSpanContext()
+
+	wg := &sync.WaitGroup{}
+	for i := 0; i < option.genNumSpans; i++ {
+		tid := sc.TraceID()
+		binary.BigEndian.PutUint64(tid[0:8], uint64(i+1))
+
+		wg.Add(1)
+		go func(sc trace.SpanContext) {
+			ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc)
+			_, span := tr.Start(ctx, option.name)
+			span.End()
+			wg.Done()
+		}(sc.WithTraceID(tid))
+	}
+	wg.Wait()
+}
+
+func getSpanContext() trace.SpanContext {
+	tid, _ := trace.TraceIDFromHex("01020304050607080102040810203040")
+	sid, _ := trace.SpanIDFromHex("0102040810203040")
+	return trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    tid,
+		SpanID:     sid,
+		TraceFlags: 0x1,
+	})
+}
+
+func TestBatchSpanProcessorShutdown(t *testing.T) {
+	var bp testBatchExporter
+	bsp := NewBatchSpanProcessor(&bp)
+
+	err := bsp.Shutdown(t.Context())
+	if err != nil {
+		t.Error("Error shutting the BatchSpanProcessor down\n")
+	}
+	assert.Equal(t, 1, bp.shutdownCount, "shutdown from span exporter not called")
+
+	// Multiple call to Shutdown() should not panic.
+	err = bsp.Shutdown(t.Context())
+	if err != nil {
+		t.Error("Error shutting the BatchSpanProcessor down\n")
+	}
+	assert.Equal(t, 1, bp.shutdownCount)
+}
+
+// TestBatchSpanProcessorShutdownErrorPropagated verifies that an error
+// returned by SpanExporter.Shutdown is propagated to the caller of
+// BatchSpanProcessor.Shutdown. Regression test for #6878.
+func TestBatchSpanProcessorShutdownErrorPropagated(t *testing.T) {
+	wantErr := errors.New("exporter shutdown failed")
+	exporter := &errorShutdownExporter{err: wantErr}
+	bsp := NewBatchSpanProcessor(exporter)
+
+	err := bsp.Shutdown(t.Context())
+	assert.ErrorIs(t, err, wantErr)
+}
+
+// errorShutdownExporter is a SpanExporter whose Shutdown always returns err.
+type errorShutdownExporter struct {
+	err error
+}
+
+func (*errorShutdownExporter) ExportSpans(context.Context, []ReadOnlySpan) error { return nil }
+func (e *errorShutdownExporter) Shutdown(context.Context) error                  { return e.err }
+
+func TestBatchSpanProcessorPostShutdown(t *testing.T) {
+	tp := basicTracerProvider(t)
+	be := testBatchExporter{}
+	bsp := NewBatchSpanProcessor(&be)
+
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer("Normal")
+
+	generateSpanParallel(t, tr, testOption{
+		o: []BatchSpanProcessorOption{
+			WithMaxExportBatchSize(50),
+		},
+		genNumSpans: 60,
+	})
+
+	require.NoError(t, bsp.Shutdown(t.Context()), "shutting down BatchSpanProcessor")
+	lenJustAfterShutdown := be.len()
+
+	_, span := tr.Start(t.Context(), "foo")
+	span.End()
+	assert.NoError(t, bsp.ForceFlush(t.Context()), "force flushing BatchSpanProcessor")
+
+	assert.Equal(t, lenJustAfterShutdown, be.len(), "OnEnd and ForceFlush should have no effect after Shutdown")
+}
+
+func TestBatchSpanProcessorForceFlushSucceeds(t *testing.T) {
+	te := testBatchExporter{}
+	tp := basicTracerProvider(t)
+	option := testOption{
+		name: "default BatchSpanProcessorOptions",
+		o: []BatchSpanProcessorOption{
+			WithMaxQueueSize(0),
+			WithMaxExportBatchSize(3000),
+		},
+		wantNumSpans:   2053,
+		wantBatchCount: 1,
+		genNumSpans:    2053,
+	}
+	ssp := createAndRegisterBatchSP(option, &te)
+	if ssp == nil {
+		t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
+	}
+	tp.RegisterSpanProcessor(ssp)
+	tr := tp.Tracer("BatchSpanProcessorWithOption")
+	if option.parallel {
+		generateSpanParallel(t, tr, option)
+	} else {
+		generateSpan(t, tr, option)
+	}
+
+	// Force flush any held span batches
+	err := ssp.ForceFlush(t.Context())
+
+	assertMaxSpanDiff(t, te.len(), option.wantNumSpans, 10)
+
+	gotBatchCount := te.getBatchCount()
+	if gotBatchCount < option.wantBatchCount {
+		t.Errorf("number batches: got %+v, want >= %+v\n",
+			gotBatchCount, option.wantBatchCount)
+		t.Errorf("Batches %v\n", te.sizes)
+	}
+	assert.NoError(t, err)
+}
+
+func TestBatchSpanProcessorDropBatchIfFailed(t *testing.T) {
+	te := testBatchExporter{
+		errors: []error{errors.New("fail to export")},
+	}
+	tp := basicTracerProvider(t)
+	option := testOption{
+		o: []BatchSpanProcessorOption{
+			WithMaxQueueSize(0),
+			WithMaxExportBatchSize(2000),
+		},
+		wantNumSpans:   1000,
+		wantBatchCount: 1,
+		genNumSpans:    1000,
+	}
+	ssp := createAndRegisterBatchSP(option, &te)
+	if ssp == nil {
+		t.Fatalf("%s: Error creating new instance of BatchSpanProcessor\n", option.name)
+	}
+	tp.RegisterSpanProcessor(ssp)
+	tr := tp.Tracer("BatchSpanProcessorWithOption")
+	if option.parallel {
+		generateSpanParallel(t, tr, option)
+	} else {
+		generateSpan(t, tr, option)
+	}
+
+	// Force flush any held span batches
+	err := ssp.ForceFlush(t.Context())
+	assert.Error(t, err)
+	assert.EqualError(t, err, "fail to export")
+
+	// First flush will fail, nothing should be exported.
+	assertMaxSpanDiff(t, te.droppedCount, option.wantNumSpans, 10)
+	assert.Equal(t, 0, te.len())
+	assert.Equal(t, 0, te.getBatchCount())
+
+	// Generate a new batch, this will succeed
+	if option.parallel {
+		generateSpanParallel(t, tr, option)
+	} else {
+		generateSpan(t, tr, option)
+	}
+
+	// Force flush any held span batches
+	err = ssp.ForceFlush(t.Context())
+	assert.NoError(t, err)
+
+	assertMaxSpanDiff(t, te.len(), option.wantNumSpans, 10)
+	gotBatchCount := te.getBatchCount()
+	if gotBatchCount < option.wantBatchCount {
+		t.Errorf("number batches: got %+v, want >= %+v\n",
+			gotBatchCount, option.wantBatchCount)
+		t.Errorf("Batches %v\n", te.sizes)
+	}
+}
+
+func assertMaxSpanDiff(t *testing.T, want, got, maxDif int) {
+	spanDifference := want - got
+	if spanDifference < 0 {
+		spanDifference *= -1
+	}
+	if spanDifference > maxDif {
+		t.Errorf("number of exported span not equal to or within %d less than: got %+v, want %+v\n",
+			maxDif, got, want)
+	}
+}
+
+type indefiniteExporter struct {
+	stop chan struct{}
+}
+
+func newIndefiniteExporter(t *testing.T) indefiniteExporter {
+	e := indefiniteExporter{stop: make(chan struct{})}
+	t.Cleanup(func() {
+		go close(e.stop)
+	})
+	return e
+}
+
+func (indefiniteExporter) Shutdown(context.Context) error {
+	return nil
+}
+
+func (e indefiniteExporter) ExportSpans(ctx context.Context, _ []ReadOnlySpan) error {
+	<-e.stop
+	return ctx.Err()
+}
+
+func TestBatchSpanProcessorForceFlushCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	// Cancel the context
+	cancel()
+
+	bsp := NewBatchSpanProcessor(newIndefiniteExporter(t))
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, bsp.Shutdown(context.Background()))
+	})
+
+	if got, want := bsp.ForceFlush(ctx), context.Canceled; !errors.Is(got, want) {
+		t.Errorf("expected %q error, got %v", want, got)
+	}
+}
+
+func TestBatchSpanProcessorForceFlushTimeout(t *testing.T) {
+	tp := basicTracerProvider(t)
+	exp := newIndefiniteExporter(t)
+	bsp := NewBatchSpanProcessor(exp)
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer(t.Name())
+	_, span := tr.Start(t.Context(), "foo")
+	span.End()
+
+	// Add timeout to context to test deadline
+	ctx, cancel := context.WithTimeout(t.Context(), time.Millisecond)
+	defer cancel()
+
+	if got, want := bsp.ForceFlush(ctx), context.DeadlineExceeded; !errors.Is(got, want) {
+		t.Errorf("expected %q error, got %v", want, got)
+	}
+}
+
+func TestBatchSpanProcessorForceFlushQueuedSpans(t *testing.T) {
+	ctx := t.Context()
+
+	var bp testBatchExporter
+	bsp := NewBatchSpanProcessor(&bp)
+	tp := basicTracerProvider(t)
+	tp.RegisterSpanProcessor(bsp)
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, tp.Shutdown(context.Background()))
+	})
+
+	tracer := tp.Tracer("tracer")
+
+	for i := range 10 {
+		_, span := tracer.Start(ctx, fmt.Sprintf("span%d", i))
+		span.End()
+
+		err := tp.ForceFlush(ctx)
+		assert.NoError(t, err)
+
+		assert.Len(t, bp.spans, i+1)
+	}
+}
+
+func TestBatchSpanProcessorConcurrentSafe(t *testing.T) {
+	ctx := t.Context()
+	var bp testBatchExporter
+	bsp := NewBatchSpanProcessor(&bp)
+	tp := basicTracerProvider(t)
+	tp.RegisterSpanProcessor(bsp)
+	tr := tp.Tracer(t.Name())
+
+	var wg sync.WaitGroup
+
+	wg.Go(func() {
+		generateSpan(t, tr, testOption{genNumSpans: 1})
+	})
+
+	wg.Go(func() {
+		_ = bsp.ForceFlush(ctx)
+	})
+
+	wg.Go(func() {
+		_ = bsp.Shutdown(ctx)
+	})
+
+	wg.Go(func() {
+		_ = tp.ForceFlush(ctx)
+	})
+
+	wg.Go(func() {
+		_ = tp.Shutdown(ctx)
+	})
+
+	wg.Wait()
+}
+
+// Drop metrics not being tested in this test.
+var dropSpanMetricsView = sdkmetric.NewView(
+	sdkmetric.Instrument{
+		Name: "otel.sdk.span.*",
+	},
+	sdkmetric.Stream{Aggregation: sdkmetric.AggregationDrop{}},
+)
+
+func TestBatchSpanProcessorMetricsDisabled(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "false")
+	tp := basicTracerProvider(t)
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(dropSpanMetricsView),
+	)
+	otel.SetMeterProvider(meterProvider)
+	me := newBlockingExporter()
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, me.Shutdown(context.Background()))
+	})
+	bsp := NewBatchSpanProcessor(
+		me,
+		// Make sure timeout doesn't trigger during the test.
+		WithBatchTimeout(time.Hour),
+		WithMaxQueueSize(2),
+		WithMaxExportBatchSize(2),
+	)
+	tp.RegisterSpanProcessor(bsp)
+
+	tr := tp.Tracer("TestBatchSpanProcessorMetricsDisabled")
+	// Generate 2 spans, which export and block during the export call.
+	generateSpan(t, tr, testOption{genNumSpans: 2})
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	assert.NoError(t, me.waitForSpans(ctx, 2))
+
+	// Validate that there are no metrics produced.
+	gotMetrics := new(metricdata.ResourceMetrics)
+	assert.NoError(t, reader.Collect(t.Context(), gotMetrics))
+	require.Empty(t, gotMetrics.ScopeMetrics)
+	// Generate 3 spans.  2 fill the queue, and 1 is dropped because the queue is full.
+	generateSpan(t, tr, testOption{genNumSpans: 3})
+	// Validate that there are no metrics produced.
+	gotMetrics = new(metricdata.ResourceMetrics)
+	assert.NoError(t, reader.Collect(t.Context(), gotMetrics))
+	require.Empty(t, gotMetrics.ScopeMetrics)
+}
+
+func TestBatchSpanProcessorMetrics(t *testing.T) {
+	// Reset for deterministic component ID.
+	processorIDCounter.Store(componentID)
+
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	tp := basicTracerProvider(t)
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(dropSpanMetricsView),
+	)
+	otel.SetMeterProvider(meterProvider)
+	me := newBlockingExporter()
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, me.Shutdown(context.Background()))
+	})
+	bsp := NewBatchSpanProcessor(
+		me,
+		// Make sure timeout doesn't trigger during the test.
+		WithBatchTimeout(time.Hour),
+		WithMaxQueueSize(2),
+		WithMaxExportBatchSize(2),
+	)
+	tp.RegisterSpanProcessor(bsp)
+
+	tr := tp.Tracer("TestBatchSpanProcessorMetrics")
+	// Generate 2 spans, which export and block during the export call.
+	generateSpan(t, tr, testOption{genNumSpans: 2})
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	assert.NoError(t, me.waitForSpans(ctx, 2))
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:    2,
+		queueSize:        0,
+		successProcessed: 2,
+	})
+	// Generate 3 spans.  2 fill the queue, and 1 is dropped because the queue is full.
+	generateSpan(t, tr, testOption{genNumSpans: 3})
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:      2,
+		queueSize:          2,
+		queueFullProcessed: 1,
+		successProcessed:   2,
+	})
+}
+
+func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
+	// Reset for deterministic component ID.
+	processorIDCounter.Store(componentID)
+
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	tp := basicTracerProvider(t)
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithView(dropSpanMetricsView),
+	)
+	otel.SetMeterProvider(meterProvider)
+	me := newBlockingExporter()
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, me.Shutdown(context.Background()))
+	})
+	bsp := NewBatchSpanProcessor(
+		me,
+		WithBlocking(),
+		// Make sure timeout doesn't trigger during the test.
+		WithBatchTimeout(time.Hour),
+		WithMaxQueueSize(2),
+		WithMaxExportBatchSize(2),
+	)
+	tp.RegisterSpanProcessor(bsp)
+
+	tr := tp.Tracer("TestBatchSpanProcessorBlockingMetrics")
+	// Generate 2 spans that are exported to the exporter, which blocks.
+	generateSpan(t, tr, testOption{genNumSpans: 2})
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	assert.NoError(t, me.waitForSpans(ctx, 2))
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:    2,
+		queueSize:        0,
+		successProcessed: 2,
+	})
+	// Generate 2 spans to fill the queue.
+	generateSpan(t, tr, testOption{genNumSpans: 2})
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		// Generate a span which blocks because the queue is full.
+		generateSpan(t, tr, testOption{genNumSpans: 1})
+	})
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:    2,
+		queueSize:        2,
+		successProcessed: 2,
+	})
+
+	// Canceling ForceFlush while the queue is full should not record a dropped span.
+	ctx, cancel = context.WithTimeout(t.Context(), 10*time.Millisecond)
+	defer cancel()
+	assert.ErrorIs(t, tp.ForceFlush(ctx), context.DeadlineExceeded)
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:    2,
+		queueSize:        2,
+		successProcessed: 2,
+	})
+
+	// Unblock the exporter and verify all queued and blocked spans are processed.
+	assert.NoError(t, me.Shutdown(t.Context()))
+	wg.Wait()
+	assert.NoError(t, tp.ForceFlush(t.Context()))
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:    2,
+		queueSize:        0,
+		successProcessed: 5,
+	})
+}
+
+type expectMetrics struct {
+	queueCapacity      int64
+	queueSize          int64
+	successProcessed   int64
+	queueFullProcessed int64
+}
+
+func assertObsScopeMetrics(
+	t *testing.T,
+	reader sdkmetric.Reader,
+	expectation expectMetrics,
+) {
+	t.Helper()
+	gotResourceMetrics := new(metricdata.ResourceMetrics)
+	assert.NoError(t, reader.Collect(t.Context(), gotResourceMetrics))
+
+	componentNameAttr := observ.BSPComponentName(componentID)
+	baseAttrs := attribute.NewSet(
+		semconv.OTelComponentTypeBatchingSpanProcessor,
+		componentNameAttr,
+	)
+	wantMetrics := []metricdata.Metrics{
+		{
+			Name:        otelconv.SDKProcessorSpanQueueCapacity{}.Name(),
+			Description: otelconv.SDKProcessorSpanQueueCapacity{}.Description(),
+			Unit:        otelconv.SDKProcessorSpanQueueCapacity{}.Unit(),
+			Data: metricdata.Sum[int64]{
+				DataPoints:  []metricdata.DataPoint[int64]{{Attributes: baseAttrs, Value: expectation.queueCapacity}},
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: false,
+			},
+		},
+		{
+			Name:        otelconv.SDKProcessorSpanQueueSize{}.Name(),
+			Description: otelconv.SDKProcessorSpanQueueSize{}.Description(),
+			Unit:        otelconv.SDKProcessorSpanQueueSize{}.Unit(),
+			Data: metricdata.Sum[int64]{
+				DataPoints:  []metricdata.DataPoint[int64]{{Attributes: baseAttrs, Value: expectation.queueSize}},
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: false,
+			},
+		},
+	}
+
+	wantProcessedDataPoints := []metricdata.DataPoint[int64]{}
+	if expectation.successProcessed > 0 {
+		wantProcessedDataPoints = append(wantProcessedDataPoints, metricdata.DataPoint[int64]{
+			Value: expectation.successProcessed,
+			Attributes: attribute.NewSet(
+				semconv.OTelComponentTypeBatchingSpanProcessor,
+				componentNameAttr,
+			),
+		})
+	}
+	if expectation.queueFullProcessed > 0 {
+		wantProcessedDataPoints = append(wantProcessedDataPoints, metricdata.DataPoint[int64]{
+			Value: expectation.queueFullProcessed,
+			Attributes: attribute.NewSet(
+				semconv.OTelComponentTypeBatchingSpanProcessor,
+				componentNameAttr,
+				observ.ErrQueueFull,
+			),
+		})
+	}
+
+	if len(wantProcessedDataPoints) > 0 {
+		wantMetrics = append(
+			wantMetrics,
+			metricdata.Metrics{
+				Name:        otelconv.SDKProcessorSpanProcessed{}.Name(),
+				Description: otelconv.SDKProcessorSpanProcessed{}.Description(),
+				Unit:        otelconv.SDKProcessorSpanProcessed{}.Unit(),
+				Data: metricdata.Sum[int64]{
+					DataPoints:  wantProcessedDataPoints,
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			},
+		)
+	}
+
+	wantScopeMetric := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      observ.ScopeName,
+			Version:   sdk.Version(),
+			SchemaURL: observ.SchemaURL,
+		},
+		Metrics: wantMetrics,
+	}
+	metricdatatest.AssertEqual(t, wantScopeMetric, gotResourceMetrics.ScopeMetrics[0], metricdatatest.IgnoreTimestamp())
+}
+
+// blockingExporter blocks until the exported span is removed from the channel.
+type blockingExporter struct {
+	shutdown chan struct{}
+	total    atomic.Int32
+}
+
+func newBlockingExporter() *blockingExporter {
+	e := &blockingExporter{shutdown: make(chan struct{})}
+	return e
+}
+
+func (e *blockingExporter) Shutdown(ctx context.Context) error {
+	select {
+	case <-e.shutdown:
+	default:
+		close(e.shutdown)
+	}
+	return ctx.Err()
+}
+
+func (e *blockingExporter) ExportSpans(ctx context.Context, s []ReadOnlySpan) error {
+	e.total.Add(int32(len(s)))
+	<-e.shutdown
+	return ctx.Err()
+}
+
+func (e *blockingExporter) waitForSpans(ctx context.Context, n int32) error {
+	// Wait for all n spans to reach the export call
+	for e.total.Load() < n {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for %d spans to be exported", n)
+		default:
+			// So the select will not block
+		}
+		runtime.Gosched()
+	}
+	return nil
+}

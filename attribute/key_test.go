@@ -1,0 +1,174 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package attribute_test
+
+import (
+	"encoding/json"
+	"math"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
+)
+
+func TestDefined(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		k    attribute.Key
+		want bool
+	}{
+		{
+			name: "Key.Defined() returns true when len(v.Name) != 0",
+			k:    attribute.Key("foo"),
+			want: true,
+		},
+		{
+			name: "Key.Defined() returns false when len(v.Name) == 0",
+			k:    attribute.Key(""),
+			want: false,
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			// func (k attribute.Key) Defined() bool {
+			have := testcase.k.Defined()
+			if have != testcase.want {
+				t.Errorf("Want: %v, but have: %v", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestJSONValue(t *testing.T) {
+	var kvs any = [2]attribute.KeyValue{
+		attribute.String("A", "B"),
+		attribute.Int64("C", 1),
+	}
+
+	data, err := json.Marshal(kvs)
+	require.NoError(t, err)
+	require.JSONEq(t,
+		`[{"Key":"A","Value":{"Type":"STRING","Value":"B"}},{"Key":"C","Value":{"Type":"INT64","Value":1}}]`,
+		string(data))
+}
+
+func TestEmit(t *testing.T) {
+	for _, testcase := range []struct {
+		name string
+		v    attribute.Value
+		want string
+	}{
+		{
+			name: `test Key.Emit() can emit a string representing self.BOOL`,
+			v:    attribute.BoolValue(true),
+			want: "true",
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.BOOLSLICE`,
+			v:    attribute.BoolSliceValue([]bool{true, false, true}),
+			want: `[true false true]`,
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.INT64SLICE`,
+			v:    attribute.Int64SliceValue([]int64{1, 42}),
+			want: `[1,42]`,
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.INT64`,
+			v:    attribute.Int64Value(42),
+			want: "42",
+		},
+		{
+			name: `test Key.Emit() can representing an int value`,
+			v:    attribute.IntValue(7),
+			want: "7",
+		},
+		{
+			name: `test Key.Emit() can represent an []int value`,
+			v:    attribute.IntSliceValue([]int{1, 2, 3}),
+			want: `[1,2,3]`,
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.FLOAT64SLICE`,
+			v:    attribute.Float64SliceValue([]float64{1.0, 42.5}),
+			want: `[1,42.5]`,
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.FLOAT64`,
+			v:    attribute.Float64Value(42.1),
+			want: "42.1",
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.STRING`,
+			v:    attribute.StringValue("foo"),
+			want: "foo",
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.STRINGSLICE`,
+			v:    attribute.StringSliceValue([]string{"foo", "bar"}),
+			want: `["foo","bar"]`,
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.BYTESLICE`,
+			v:    attribute.ByteSliceValue([]byte("foo")),
+			want: "Zm9v",
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.SLICE`,
+			v: attribute.SliceValue(
+				attribute.BoolValue(true),
+				attribute.StringValue("foo\"bar"),
+				attribute.Float64Value(math.Inf(1)),
+				attribute.ByteSliceValue([]byte("bin")),
+			),
+			want: `[true,"foo\"bar","Infinity","Ymlu"]`,
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.MAP`,
+			v: attribute.MapValue(
+				attribute.String("b", "foo\"bar"),
+				attribute.Float64("a", math.Inf(1)),
+				attribute.Key("bytes").ByteSlice([]byte("bin")),
+			),
+			want: `{"a":"Infinity","b":"foo\"bar","bytes":"Ymlu"}`,
+		},
+		{
+			name: `test Key.Emit() can emit a string representing self.EMPTY`,
+			v:    attribute.Value{},
+			want: "",
+		},
+	} {
+		t.Run(testcase.name, func(t *testing.T) {
+			// proto: func (v attribute.Value) Emit() string {
+			have := testcase.v.Emit() //nolint:staticcheck // Verify the deprecated formatter's legacy output.
+			if have != testcase.want {
+				t.Errorf("Want: %s, but have: %s", testcase.want, have)
+			}
+		})
+	}
+}
+
+func TestString(t *testing.T) {
+	v := attribute.SliceValue(
+		attribute.StringValue("foo\nbar"),
+		attribute.Float64Value(math.NaN()),
+		attribute.SliceValue(
+			attribute.ByteSliceValue([]byte("bin")),
+			attribute.Value{},
+		),
+	)
+
+	require.Equal(t, `["foo\nbar","NaN",["Ymlu",null]]`, v.String())
+
+	m := attribute.MapValue(
+		attribute.String("foo\nbar", "value"),
+		attribute.Float64("nan", math.NaN()),
+		attribute.Key("nested").Map(
+			attribute.Key("bytes").ByteSlice([]byte("bin")),
+			attribute.Key("empty").Slice(attribute.Value{}),
+		),
+	)
+
+	require.JSONEq(t, `{"foo\nbar":"value","nan":"NaN","nested":{"bytes":"Ymlu","empty":[null]}}`, m.String())
+}

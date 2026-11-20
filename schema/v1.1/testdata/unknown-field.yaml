@@ -1,0 +1,15 @@
+file_format: 1.1.0
+schema_url: https://opentelemetry.io/schemas/1.1.0
+
+versions:
+  1.1.0:
+    all: # Valid entry.
+      changes:
+        - rename_attributes:
+            k8s.cluster.name: kubernetes.cluster.name
+    Resources: # Invalid uppercase.
+      changes:
+        - rename_attributes:
+          attribute_map:
+            browser.user_agent: user_agent.original
+  1.0.0:

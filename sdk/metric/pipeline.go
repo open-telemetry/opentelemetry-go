@@ -1,0 +1,966 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package metric
+
+import (
+	"container/list"
+	"context"
+	"errors"
+	"fmt"
+	"slices"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/internal"
+	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
+	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
+	"go.opentelemetry.io/otel/sdk/metric/internal/finish"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/resource"
+)
+
+var (
+	errCreatingAggregators     = errors.New("could not create all aggregators")
+	errIncompatibleAggregation = errors.New("incompatible aggregation")
+	errUnknownAggregation      = errors.New("unrecognized aggregation")
+)
+
+// instrumentSync is a synchronization point between a pipeline and an
+// instrument's aggregate function.
+type instrumentSync struct {
+	name        string
+	description string
+	unit        string
+	compAgg     aggregate.ComputeAggregation
+}
+
+func newPipeline(
+	res *resource.Resource,
+	reader Reader,
+	views []View,
+	exemplarFilter exemplar.Filter,
+	cardinalityLimit int,
+	viewMatchingMode viewMatchingMode,
+) *pipeline {
+	if res == nil {
+		res = resource.Empty()
+	}
+	return &pipeline{
+		resource:         res,
+		reader:           reader,
+		views:            views,
+		int64Measures:    map[observableID[int64]][]aggregate.Measure[int64]{},
+		float64Measures:  map[observableID[float64]][]aggregate.Measure[float64]{},
+		exemplarFilter:   exemplarFilter,
+		cardinalityLimit: cardinalityLimit,
+		viewMatchingMode: viewMatchingMode,
+		// aggregations is lazy allocated when needed.
+	}
+}
+
+// pipeline connects all of the instruments created by a meter provider to a Reader.
+// This is the object that will be `Reader.register()` when a meter provider is created.
+//
+// As instruments are created the instrument should be checked if it exists in
+// the views of a the Reader, and if so each aggregate function should be added
+// to the pipeline.
+type pipeline struct {
+	resource *resource.Resource
+
+	reader Reader
+	views  []View
+
+	sync.Mutex
+	int64Measures    map[observableID[int64]][]aggregate.Measure[int64]
+	float64Measures  map[observableID[float64]][]aggregate.Measure[float64]
+	aggregations     map[instrumentation.Scope][]instrumentSync
+	callbacks        []func(context.Context) error
+	multiCallbacks   list.List
+	exemplarFilter   exemplar.Filter
+	cardinalityLimit int
+	viewMatchingMode viewMatchingMode
+}
+
+// addInt64Measure adds a new int64 measure to the pipeline for each observer.
+func (p *pipeline) addInt64Measure(id observableID[int64], m []aggregate.Measure[int64]) {
+	p.Lock()
+	defer p.Unlock()
+	p.int64Measures[id] = m
+}
+
+// addFloat64Measure adds a new float64 measure to the pipeline for each observer.
+func (p *pipeline) addFloat64Measure(id observableID[float64], m []aggregate.Measure[float64]) {
+	p.Lock()
+	defer p.Unlock()
+	p.float64Measures[id] = m
+}
+
+// addSync adds the instrumentSync to pipeline p with scope. This method is not
+// idempotent. Duplicate calls will result in duplicate additions, it is the
+// callers responsibility to ensure this is called with unique values.
+func (p *pipeline) addSync(scope instrumentation.Scope, iSync instrumentSync) {
+	p.Lock()
+	defer p.Unlock()
+	if p.aggregations == nil {
+		p.aggregations = map[instrumentation.Scope][]instrumentSync{
+			scope: {iSync},
+		}
+		return
+	}
+	p.aggregations[scope] = append(p.aggregations[scope], iSync)
+}
+
+type multiCallback func(context.Context) error
+
+// addMultiCallback registers a multi-instrument callback to be run when
+// `produce()` is called.
+func (p *pipeline) addMultiCallback(c multiCallback) (unregister func()) {
+	p.Lock()
+	defer p.Unlock()
+	e := p.multiCallbacks.PushBack(c)
+	return func() {
+		p.Lock()
+		p.multiCallbacks.Remove(e)
+		p.Unlock()
+	}
+}
+
+// produce returns aggregated metrics from a single collection.
+//
+// This method is safe to call concurrently.
+func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+	// Only check if context is already cancelled before starting, not inside or after callback loops.
+	// If this method returns after executing some callbacks but before running all aggregations,
+	// internal aggregation state can be corrupted and result in incorrect data returned
+	// by future produce calls.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	p.Lock()
+	defer p.Unlock()
+
+	var err error
+	for _, c := range p.callbacks {
+		// TODO make the callbacks parallel. ( #3034 )
+		if e := c(ctx); e != nil {
+			err = errors.Join(err, e)
+		}
+	}
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+		// TODO make the callbacks parallel. ( #3034 )
+		f := e.Value.(multiCallback)
+		if e := f(ctx); e != nil {
+			err = errors.Join(err, e)
+		}
+	}
+
+	rm.Resource = p.resource
+	rm.ScopeMetrics = internal.ReuseSlice(rm.ScopeMetrics, len(p.aggregations))
+
+	i := 0
+	for scope, instruments := range p.aggregations {
+		rm.ScopeMetrics[i].Metrics = internal.ReuseSlice(rm.ScopeMetrics[i].Metrics, len(instruments))
+		j := 0
+		for _, inst := range instruments {
+			data := rm.ScopeMetrics[i].Metrics[j].Data
+			if n := inst.compAgg(&data); n > 0 {
+				rm.ScopeMetrics[i].Metrics[j].Name = inst.name
+				rm.ScopeMetrics[i].Metrics[j].Description = inst.description
+				rm.ScopeMetrics[i].Metrics[j].Unit = inst.unit
+				rm.ScopeMetrics[i].Metrics[j].Data = data
+				j++
+			}
+		}
+		rm.ScopeMetrics[i].Metrics = rm.ScopeMetrics[i].Metrics[:j]
+		if len(rm.ScopeMetrics[i].Metrics) > 0 {
+			rm.ScopeMetrics[i].Scope = scope
+			i++
+		}
+	}
+
+	rm.ScopeMetrics = rm.ScopeMetrics[:i]
+
+	return err
+}
+
+// inserter facilitates inserting of new instruments from a single scope into a
+// pipeline.
+type inserter[N int64 | float64] struct {
+	// aggregators is a cache that holds aggregate function inputs whose
+	// outputs have been inserted into the underlying reader pipeline. This
+	// cache ensures no duplicate aggregate functions are inserted into the
+	// reader pipeline and if a new request during an instrument creation asks
+	// for the same aggregate function input the same instance is returned.
+	aggregators *cache[instID, aggVal[N]]
+
+	// views is a cache that holds instrument identifiers for all the
+	// instruments a Meter has created, it is provided from the Meter that owns
+	// this inserter. This cache ensures during the creation of instruments
+	// with the same name but different options (e.g. description, unit) a
+	// warning message is logged.
+	views *cache[string, instID]
+
+	pipeline *pipeline
+}
+
+func newInserter[N int64 | float64](p *pipeline, vc *cache[string, instID]) *inserter[N] {
+	if vc == nil {
+		vc = &cache[string, instID]{}
+	}
+	return &inserter[N]{
+		aggregators: &cache[instID, aggVal[N]]{},
+		views:       vc,
+		pipeline:    p,
+	}
+}
+
+// Instrument inserts the instrument inst into a pipeline using the configured
+// view matching mode. In independent mode (default), all views the pipeline
+// contains are matched against, and each matching view that creates a unique
+// aggregate function has its output inserted into the pipeline. In composable
+// mode, matching views are combined to produce merged output metric streams.
+//
+// The returned aggregate function inputs are ensured to be deduplicated and
+// unique. If another view in another pipeline that is cached by this
+// inserter's cache has already inserted the same aggregate function for the
+// same instrument, that functions input instance is returned.
+//
+// If another instrument has already been inserted by this inserter, or any
+// other using the same cache, and it conflicts with the instrument being
+// inserted in this call, an aggregate function input matching the arguments
+// will still be returned but an Info level log message will also be logged to
+// the OTel global logger.
+//
+// If the passed instrument would result in an incompatible aggregate function,
+// an error is returned in independent mode (in composable mode it falls back to
+// preceding views or reader default) and that aggregate function output is not
+// inserted nor is its input returned.
+//
+// If an instrument is determined to use a Drop aggregation, that instrument is
+// not inserted nor returned.
+func (i *inserter[N]) Instrument(
+	inst Instrument,
+	allowedKeys []attribute.Key,
+	optIn bool,
+	readerAggregation Aggregation,
+) ([]aggregate.Measure[N], error) {
+	var measures []aggregate.Measure[N]
+	err := i.forEachStream(streamConfig[N]{
+		inst:              inst,
+		allowedKeys:       allowedKeys,
+		optIn:             optIn,
+		readerAggregation: readerAggregation,
+		newAggregation:    i.newStreamAggregation,
+		yield:             func(agg aggVal[N]) { measures = append(measures, agg.Measure) },
+	})
+	return measures, err
+}
+
+// streamConfig bundles the shared parameters for resolving and inserting an
+// instrument's metric streams into a pipeline.
+type streamConfig[N int64 | float64] struct {
+	inst              Instrument
+	allowedKeys       []attribute.Key
+	optIn             bool
+	readerAggregation Aggregation
+	newAggregation    streamAggregationFactory[N]
+	yield             func(aggVal[N])
+}
+
+func (i *inserter[N]) forEachStream(cfg streamConfig[N]) error {
+	if i.pipeline.viewMatchingMode == viewMatchingModeComposable {
+		var matches []Stream
+		for _, v := range i.pipeline.views {
+			if s, match := v(cfg.inst); match {
+				matches = append(matches, s)
+			}
+		}
+		if len(matches) > 0 {
+			return i.composableInstrument(cfg, matches)
+		}
+		return i.defaultInstrument(cfg)
+	}
+	return i.independentInstrument(cfg)
+}
+
+// defaultInstrument resolves the implicit default stream when no views match.
+func (i *inserter[N]) defaultInstrument(cfg streamConfig[N]) error {
+	stream := Stream{
+		Name:        cfg.inst.Name,
+		Description: cfg.inst.Description,
+		Unit:        cfg.inst.Unit,
+	}
+	agg := i.cachedAggregator(
+		cfg.inst.Scope, cfg.inst.Kind, stream, cfg.allowedKeys, cfg.optIn, cfg.readerAggregation, cfg.newAggregation,
+	)
+	if agg.Err != nil {
+		return errors.Join(errCreatingAggregators, agg.Err)
+	}
+	if agg.Measure != nil {
+		cfg.yield(agg)
+	}
+	return nil
+}
+
+// independentInstrument resolves views using independent matching semantics.
+func (i *inserter[N]) independentInstrument(cfg streamConfig[N]) error {
+	var (
+		matched bool
+		err     error
+	)
+
+	seen := make(map[uint64]struct{})
+	for _, v := range i.pipeline.views {
+		stream, match := v(cfg.inst)
+		if !match {
+			continue
+		}
+		matched = true
+		agg := i.cachedAggregator(
+			cfg.inst.Scope,
+			cfg.inst.Kind,
+			stream,
+			cfg.allowedKeys,
+			cfg.optIn,
+			cfg.readerAggregation,
+			cfg.newAggregation,
+		)
+		if agg.Err != nil {
+			err = errors.Join(err, agg.Err)
+		}
+		if agg.Measure == nil { // Drop aggregation.
+			continue
+		}
+		if _, ok := seen[agg.ID]; ok {
+			// This aggregate function has already been added.
+			continue
+		}
+		seen[agg.ID] = struct{}{}
+		cfg.yield(agg)
+	}
+
+	if err != nil {
+		err = errors.Join(errCreatingAggregators, err)
+	}
+
+	if matched {
+		return err
+	}
+
+	defErr := i.defaultInstrument(cfg)
+	if defErr != nil {
+		err = errors.Join(err, defErr)
+	}
+	return err
+}
+
+// composeAttributeFilters combines attribute filters from matching views using logical AND.
+// If no matching views specify an attribute filter, nil is returned.
+func composeAttributeFilters(streams []Stream) attribute.Filter {
+	var filters []attribute.Filter
+	for _, s := range streams {
+		if s.AttributeFilter != nil {
+			filters = append(filters, s.AttributeFilter)
+		}
+	}
+
+	if len(filters) == 0 {
+		return nil
+	}
+	if len(filters) == 1 {
+		return filters[0]
+	}
+
+	return func(kv attribute.KeyValue) bool {
+		for _, f := range filters {
+			if !f(kv) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// resolveAggregation selects the last matching view's aggregation, falling back
+// in reverse registration order if an aggregation is invalid or incompatible
+// with the instrument kind. If no valid compatible aggregation is specified,
+// nil is returned so the caller falls back to the reader default.
+func resolveAggregation(inst Instrument, streams []Stream) Aggregation {
+	for _, s := range slices.Backward(streams) {
+		if s.Aggregation != nil {
+			if e := s.Aggregation.err(); e != nil {
+				global.Error(
+					e, "invalid aggregation in composable view, falling back",
+					"instrument", inst.Name,
+					"aggregation", s.Aggregation,
+				)
+				continue
+			}
+			if e := isAggregatorCompatible(inst.Kind, s.Aggregation); e != nil {
+				global.Error(
+					e, "incompatible aggregation in composable view, falling back",
+					"instrument", inst.Name,
+					"aggregation", s.Aggregation,
+				)
+				continue
+			}
+			return s.Aggregation
+		}
+	}
+	return nil
+}
+
+// composableInstrument resolves matching views into output metric streams using composable
+// view matching semantics: views matching the same instrument are grouped by target stream
+// name, scalar properties use last-wins precedence, aggregations fall back in reverse order,
+// and attribute filters are composed with logical AND.
+func (i *inserter[N]) composableInstrument(cfg streamConfig[N], matches []Stream) error {
+	inst := cfg.inst
+	var explicitNames []string
+	seenNames := make(map[string]struct{})
+	for _, m := range matches {
+		if m.Name != "" && !strings.EqualFold(m.Name, inst.Name) {
+			norm := strings.ToLower(m.Name)
+			if _, ok := seenNames[norm]; !ok {
+				seenNames[norm] = struct{}{}
+				explicitNames = append(explicitNames, m.Name)
+			}
+		}
+	}
+
+	targetNames := explicitNames
+	if len(targetNames) == 0 {
+		targetNames = []string{inst.Name}
+	}
+
+	var (
+		err  error
+		seen = make(map[uint64]struct{})
+	)
+
+	for _, name := range targetNames {
+		var groupStreams []Stream
+		for _, m := range matches {
+			if strings.EqualFold(m.Name, name) || strings.EqualFold(m.Name, inst.Name) || m.Name == "" {
+				groupStreams = append(groupStreams, m)
+			}
+		}
+
+		resolved := Stream{
+			Name:        name,
+			Description: inst.Description,
+			Unit:        inst.Unit,
+		}
+
+		for _, s := range groupStreams {
+			if s.Description != inst.Description {
+				resolved.Description = s.Description
+			}
+			if s.Unit != inst.Unit {
+				resolved.Unit = s.Unit
+			}
+			if s.ExemplarReservoirProviderSelector != nil {
+				resolved.ExemplarReservoirProviderSelector = s.ExemplarReservoirProviderSelector
+			}
+			if s.enabled != nil {
+				resolved.enabled = s.enabled
+			}
+		}
+
+		resolved.Aggregation = resolveAggregation(inst, groupStreams)
+		resolved.AttributeFilter = composeAttributeFilters(groupStreams)
+
+		agg := i.cachedAggregator(
+			inst.Scope, inst.Kind, resolved, cfg.allowedKeys, cfg.optIn, cfg.readerAggregation, cfg.newAggregation,
+		)
+		if agg.Err != nil {
+			err = errors.Join(err, agg.Err)
+		}
+		if agg.Measure == nil {
+			continue
+		}
+		if _, ok := seen[agg.ID]; ok {
+			continue
+		}
+		seen[agg.ID] = struct{}{}
+		cfg.yield(agg)
+	}
+
+	if err != nil {
+		err = errors.Join(errCreatingAggregators, err)
+	}
+	return err
+}
+
+// addCallback registers a single instrument callback to be run when
+// `produce()` is called.
+func (i *inserter[N]) addCallback(cback func(context.Context) error) {
+	i.pipeline.Lock()
+	defer i.pipeline.Unlock()
+	i.pipeline.callbacks = append(i.pipeline.callbacks, cback)
+}
+
+var aggIDCount atomic.Uint64
+
+// aggVal is the instrument-facing value cached for a resolved metric stream.
+type aggVal[N int64 | float64] struct {
+	ID      uint64
+	Measure aggregate.Measure[N]
+	Finish  finish.Func
+	Err     error
+}
+
+// streamAggregation contains the operations of one resolved metric stream.
+// The pipeline retains compute; the instrument retains measure and, when
+// present, finish.
+type streamAggregation[N int64 | float64] struct {
+	measure aggregate.Measure[N]
+	compute aggregate.ComputeAggregation
+	finish  func(attribute.Distinct, time.Time)
+}
+
+// streamAggregationFactory constructs a stream's operations after its Builder
+// has been configured with the stream's temporality, limits, and filters.
+type streamAggregationFactory[N int64 | float64] func(
+	aggregate.Builder[N],
+	Aggregation,
+	InstrumentKind,
+) (streamAggregation[N], error)
+
+// readerDefaultAggregation returns the default aggregation for the instrument
+// kind based on the reader's aggregation preferences. This is used unless the
+// aggregation is overridden with a view.
+func (i *inserter[N]) readerDefaultAggregation(kind InstrumentKind) Aggregation {
+	aggregation := i.pipeline.reader.aggregation(kind)
+	switch aggregation.(type) {
+	case nil, AggregationDefault:
+		// If the reader returns default or nil use the default selector.
+		aggregation = DefaultAggregationSelector(kind)
+	default:
+		// Deep copy and validate before using.
+		aggregation = aggregation.copy()
+		if err := aggregation.err(); err != nil {
+			orig := aggregation
+			aggregation = DefaultAggregationSelector(kind)
+			global.Error(
+				err, "using default aggregation instead",
+				"aggregation", orig,
+				"replacement", aggregation,
+			)
+		}
+	}
+	return aggregation
+}
+
+// cachedAggregator returns the instrument-facing operations for a resolved
+// metric stream. On a cache miss, newAggregation constructs the stream's
+// operations and its compute operation is registered with the pipeline.
+//
+// If the instrument configuration conflicts with an instrument that has
+// already been created (e.g. description, unit, data type) a warning will be
+// logged at the "Info" level with the global OTel logger. Valid new aggregate
+// functions for the instrument configuration will still be returned without an
+// error.
+//
+// If the instrument defines an unknown or incompatible aggregation, an error
+// is returned.
+func (i *inserter[N]) cachedAggregator( // nolint:revive // optIn is not a control flag.
+	scope instrumentation.Scope,
+	kind InstrumentKind,
+	stream Stream,
+	allowedKeys []attribute.Key,
+	optIn bool,
+	readerAggregation Aggregation,
+	newAggregation streamAggregationFactory[N],
+) aggVal[N] {
+	switch stream.Aggregation.(type) {
+	case nil:
+		// The aggregation was not overridden with a view. Use the aggregation
+		// provided by the reader.
+		stream.Aggregation = readerAggregation
+	case AggregationDefault:
+		// The view explicitly requested the default aggregation.
+		stream.Aggregation = DefaultAggregationSelector(kind)
+	}
+	if stream.ExemplarReservoirProviderSelector == nil {
+		stream.ExemplarReservoirProviderSelector = DefaultExemplarReservoirProviderSelector
+	}
+	// If attribute_keys is not provided on the view (AttributeFilter == nil),
+	// use the advisory Attributes configured on the instrument (allowedKeys).
+	// allowedKeys == nil indicates that the WithDefaultAttributes option was not passed,
+	// and all keys are allowed. An empty (non-nil) slice indicates that the option was passed
+	// with an empty set of keys, and no keys are allowed.
+	if stream.AttributeFilter == nil && allowedKeys != nil {
+		stream.AttributeFilter = attribute.NewAllowKeysFilter(allowedKeys...)
+	}
+
+	isEnabled := stream.enabled != nil && *stream.enabled
+	isDisabled := stream.enabled != nil && !*stream.enabled
+	if (optIn && !isEnabled) || isDisabled {
+		stream.Aggregation = AggregationDrop{}
+	}
+
+	if err := isAggregatorCompatible(kind, stream.Aggregation); err != nil {
+		return aggVal[N]{Err: fmt.Errorf(
+			"creating aggregator with instrumentKind: %d, aggregation %v: %w",
+			kind, stream.Aggregation, err,
+		)}
+	}
+	if _, ok := stream.Aggregation.(AggregationDrop); ok {
+		return aggVal[N]{}
+	}
+
+	id := i.instID(kind, stream)
+	// If there is a conflict, the specification says the view should
+	// still be applied and a warning should be logged.
+	i.logConflict(id)
+
+	// If there are requests for the same instrument with different name
+	// casing, the first-seen needs to be returned. Use a normalize ID for the
+	// cache lookup to ensure the correct comparison.
+	normID := id.normalize()
+	cv := i.aggregators.Lookup(normID, func() aggVal[N] {
+		b := aggregate.Builder[N]{
+			Temporality: i.pipeline.reader.temporality(kind),
+			ReservoirFunc: reservoirFunc[N](
+				kind,
+				stream.ExemplarReservoirProviderSelector(stream.Aggregation),
+				i.pipeline.exemplarFilter,
+			),
+		}
+		b.Filter = stream.AttributeFilter
+		// A value less than or equal to zero will disable the aggregation
+		// limits for the builder (an all the created aggregates).
+		b.AggregationLimit = i.getCardinalityLimit(kind)
+		funcs, err := newAggregation(b, stream.Aggregation, kind)
+		if err != nil {
+			return aggVal[N]{Err: err}
+		}
+		if funcs.measure == nil { // Drop aggregator.
+			return aggVal[N]{}
+		}
+		i.pipeline.addSync(scope, instrumentSync{
+			// Use the first-seen name casing for this and all subsequent
+			// requests of this instrument.
+			name:        stream.Name,
+			description: stream.Description,
+			unit:        stream.Unit,
+			compAgg:     funcs.compute,
+		})
+		var finishFunc finish.Func
+		if funcs.finish != nil {
+			finishDistinct := funcs.finish
+			filter := stream.AttributeFilter
+			finishFunc = func(kvs []attribute.KeyValue, t time.Time) {
+				// Canonicalize at the stream boundary so each resolved stream
+				// applies its own View filter before aggregate lookup.
+				finishDistinct(attrnorm.NewDistinct(kvs, filter), t)
+			}
+		}
+		id := aggIDCount.Add(1)
+		return aggVal[N]{
+			ID:      id,
+			Measure: funcs.measure,
+			Finish:  finishFunc,
+		}
+	})
+	return cv
+}
+
+// getCardinalityLimit returns the cardinality limit for the given instrument kind.
+// When the reader's selector returns fallback = true, the pipeline's global
+// limit is used, then the default if global is unset. When fallback is false,
+// the selector's limit is used (0 or less means unlimited).
+func (i *inserter[N]) getCardinalityLimit(kind InstrumentKind) int {
+	limit, fallback := i.pipeline.reader.cardinalityLimit(kind)
+	if fallback {
+		return i.pipeline.cardinalityLimit
+	}
+	return limit
+}
+
+// logConflict validates if an instrument with the same case-insensitive name
+// as id has already been created. If that instrument conflicts with id, a
+// warning is logged.
+func (i *inserter[N]) logConflict(id instID) {
+	// The API specification defines names as case-insensitive. If there is a
+	// different casing of a name it needs to be a conflict.
+	name := id.normalize().Name
+	existing := i.views.Lookup(name, func() instID { return id })
+	if id == existing {
+		return
+	}
+
+	const msg = "duplicate metric stream definitions"
+	args := []any{
+		"names", fmt.Sprintf("%q, %q", existing.Name, id.Name),
+		"descriptions", fmt.Sprintf("%q, %q", existing.Description, id.Description),
+		"kinds", fmt.Sprintf("%s, %s", existing.Kind, id.Kind),
+		"units", fmt.Sprintf("%s, %s", existing.Unit, id.Unit),
+		"numbers", fmt.Sprintf("%s, %s", existing.Number, id.Number),
+	}
+
+	// The specification recommends logging a suggested view to resolve
+	// conflicts if possible.
+	//
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.21.0/specification/metrics/sdk.md#duplicate-instrument-registration
+	if id.Unit != existing.Unit || id.Number != existing.Number {
+		// There is no view resolution for these, don't make a suggestion.
+		global.Warn(msg, args...)
+		return
+	}
+
+	var stream string
+	if id.Name != existing.Name || id.Kind != existing.Kind {
+		stream = `Stream{Name: "{{NEW_NAME}}"}`
+	} else if id.Description != existing.Description {
+		stream = fmt.Sprintf("Stream{Description: %q}", existing.Description)
+	}
+
+	inst := fmt.Sprintf(
+		"Instrument{Name: %q, Description: %q, Kind: %q, Unit: %q}",
+		id.Name, id.Description, "InstrumentKind"+id.Kind.String(), id.Unit,
+	)
+	args = append(args, "suggested.view", fmt.Sprintf("NewView(%s, %s)", inst, stream))
+
+	global.Warn(msg, args...)
+}
+
+func (*inserter[N]) instID(kind InstrumentKind, stream Stream) instID {
+	var zero N
+	return instID{
+		Name:        stream.Name,
+		Description: stream.Description,
+		Unit:        stream.Unit,
+		Kind:        kind,
+		Number:      fmt.Sprintf("%T", zero),
+	}
+}
+
+// newStreamAggregation constructs the operations matching agg and kind. If
+// agg is unknown, an error is returned.
+func (i *inserter[N]) newStreamAggregation(
+	b aggregate.Builder[N],
+	agg Aggregation,
+	kind InstrumentKind,
+) (result streamAggregation[N], err error) {
+	switch a := agg.(type) {
+	case AggregationDefault:
+		return i.newStreamAggregation(b, DefaultAggregationSelector(kind), kind)
+	case AggregationDrop:
+		// Return an empty stream to signify the drop aggregator.
+	case AggregationLastValue:
+		switch kind {
+		case InstrumentKindGauge:
+			result.measure, result.compute = b.LastValue()
+		case InstrumentKindObservableGauge:
+			result.measure, result.compute = b.PrecomputedLastValue()
+		}
+	case AggregationSum:
+		switch kind {
+		case InstrumentKindObservableCounter:
+			result.measure, result.compute = b.PrecomputedSum(true)
+		case InstrumentKindObservableUpDownCounter:
+			result.measure, result.compute = b.PrecomputedSum(false)
+		case InstrumentKindCounter, InstrumentKindHistogram:
+			result.measure, result.compute = b.Sum(true)
+		default:
+			// InstrumentKindUpDownCounter, InstrumentKindObservableGauge, and
+			// instrumentKindUndefined or other invalid instrument kinds.
+			result.measure, result.compute = b.Sum(false)
+		}
+	case AggregationExplicitBucketHistogram:
+		var noSum bool
+		switch kind {
+		case InstrumentKindUpDownCounter,
+			InstrumentKindObservableUpDownCounter,
+			InstrumentKindObservableGauge,
+			InstrumentKindGauge:
+			// The sum should not be collected for any instrument that can make
+			// negative measurements:
+			// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.21.0/specification/metrics/sdk.md#histogram-aggregations
+			noSum = true
+		}
+		result.measure, result.compute = b.ExplicitBucketHistogram(a.Boundaries, a.NoMinMax, noSum)
+	case AggregationBase2ExponentialHistogram:
+		var noSum bool
+		switch kind {
+		case InstrumentKindUpDownCounter,
+			InstrumentKindObservableUpDownCounter,
+			InstrumentKindObservableGauge,
+			InstrumentKindGauge:
+			// The sum should not be collected for any instrument that can make
+			// negative measurements:
+			// https://github.com/open-telemetry/opentelemetry-specification/blob/v1.21.0/specification/metrics/sdk.md#histogram-aggregations
+			noSum = true
+		}
+		result.measure, result.compute = b.ExponentialBucketHistogram(a.MaxSize, a.MaxScale, a.NoMinMax, noSum)
+
+	default:
+		err = errUnknownAggregation
+	}
+
+	return result, err
+}
+
+// isAggregatorCompatible checks if the aggregation can be used by the instrument.
+// Current compatibility:
+//
+// | Instrument Kind          | Drop | LastValue | Sum | Histogram | Exponential Histogram |
+// |--------------------------|------|-----------|-----|-----------|-----------------------|
+// | Counter                  | ✓    |           | ✓   | ✓         | ✓                     |
+// | UpDownCounter            | ✓    |           | ✓   | ✓         | ✓                     |
+// | Histogram                | ✓    |           | ✓   | ✓         | ✓                     |
+// | Gauge                    | ✓    | ✓         |     | ✓         | ✓                     |
+// | Observable Counter       | ✓    |           | ✓   | ✓         | ✓                     |
+// | Observable UpDownCounter | ✓    |           | ✓   | ✓         | ✓                     |
+// | Observable Gauge         | ✓    | ✓         |     | ✓         | ✓                     |.
+func isAggregatorCompatible(kind InstrumentKind, agg Aggregation) error {
+	switch agg.(type) {
+	case AggregationDefault:
+		return nil
+	case AggregationExplicitBucketHistogram, AggregationBase2ExponentialHistogram:
+		switch kind {
+		case InstrumentKindCounter,
+			InstrumentKindUpDownCounter,
+			InstrumentKindHistogram,
+			InstrumentKindGauge,
+			InstrumentKindObservableCounter,
+			InstrumentKindObservableUpDownCounter,
+			InstrumentKindObservableGauge:
+			return nil
+		default:
+			return errIncompatibleAggregation
+		}
+	case AggregationSum:
+		switch kind {
+		case InstrumentKindObservableCounter,
+			InstrumentKindObservableUpDownCounter,
+			InstrumentKindCounter,
+			InstrumentKindHistogram,
+			InstrumentKindUpDownCounter:
+			return nil
+		default:
+			// TODO: review need for aggregation check after
+			// https://github.com/open-telemetry/opentelemetry-specification/issues/2710
+			return errIncompatibleAggregation
+		}
+	case AggregationLastValue:
+		switch kind {
+		case InstrumentKindObservableGauge, InstrumentKindGauge:
+			return nil
+		}
+		// TODO: review need for aggregation check after
+		// https://github.com/open-telemetry/opentelemetry-specification/issues/2710
+		return errIncompatibleAggregation
+	case AggregationDrop:
+		return nil
+	default:
+		// This is used passed checking for default, it should be an error at this point.
+		return fmt.Errorf("%w: %v", errUnknownAggregation, agg)
+	}
+}
+
+// pipelines is the group of pipelines connecting Readers with instrument
+// measurement.
+type pipelines []*pipeline
+
+func newPipelines(
+	res *resource.Resource,
+	readers []Reader,
+	views []View,
+	exemplarFilter exemplar.Filter,
+	cardinalityLimit int,
+	viewMatchingMode viewMatchingMode,
+) pipelines {
+	pipes := make([]*pipeline, 0, len(readers))
+	for _, r := range readers {
+		p := newPipeline(res, r, views, exemplarFilter, cardinalityLimit, viewMatchingMode)
+		r.register(p)
+		pipes = append(pipes, p)
+	}
+	return pipes
+}
+
+type unregisterFuncs struct {
+	embedded.Registration
+	f []func()
+}
+
+func (u unregisterFuncs) Unregister() error {
+	for _, f := range u.f {
+		f()
+	}
+	return nil
+}
+
+// resolver facilitates resolving aggregate functions an instrument calls to
+// aggregate measurements with while updating all pipelines that need to pull
+// from those aggregations.
+type resolver[N int64 | float64] struct {
+	inserters []*inserter[N]
+}
+
+func newResolver[N int64 | float64](p pipelines, vc *cache[string, instID]) resolver[N] {
+	in := make([]*inserter[N], len(p))
+	for i := range in {
+		in[i] = newInserter[N](p[i], vc)
+	}
+	return resolver[N]{in}
+}
+
+// Aggregators returns the Aggregators that must be updated by the instrument
+// defined by key.
+func (r resolver[N]) Aggregators(
+	id Instrument,
+	allowedKeys []attribute.Key,
+	optIn bool,
+) ([]aggregate.Measure[N], error) {
+	var measures []aggregate.Measure[N]
+
+	var err error
+	for _, i := range r.inserters {
+		in, e := i.Instrument(id, allowedKeys, optIn, i.readerDefaultAggregation(id.Kind))
+		if e != nil {
+			err = errors.Join(err, e)
+		}
+		measures = append(measures, in...)
+	}
+	return measures, err
+}
+
+// HistogramAggregators returns the histogram Aggregators that must be updated by the instrument
+// defined by key. If boundaries were provided on instrument instantiation, those take precedence
+// over boundaries provided by the reader. A non-nil empty slice requests a single bucket.
+func (r resolver[N]) HistogramAggregators(
+	id Instrument,
+	allowedKeys []attribute.Key,
+	boundaries []float64,
+	optIn bool,
+) ([]aggregate.Measure[N], error) {
+	var measures []aggregate.Measure[N]
+
+	var err error
+	for _, i := range r.inserters {
+		agg := i.readerDefaultAggregation(id.Kind)
+		if histAgg, ok := agg.(AggregationExplicitBucketHistogram); ok && boundaries != nil {
+			histAgg.Boundaries = boundaries
+			agg = histAgg
+		}
+		in, e := i.Instrument(id, allowedKeys, optIn, agg)
+		if e != nil {
+			err = errors.Join(err, e)
+		}
+		measures = append(measures, in...)
+	}
+	return measures, err
+}

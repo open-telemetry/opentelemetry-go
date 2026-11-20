@@ -1,0 +1,146 @@
+file_format: 1.1.0
+
+schema_url: https://opentelemetry.io/schemas/1.1.0
+
+versions:
+  1.1.0:
+    # Section "all" applies to attribute names for all data types: resources, spans, logs,
+    # span events, metric labels.
+    #
+    # The translations in "all" section are performed first (for each particular version).
+    # Only after that the translations in the specific section ("resources", "traces",
+    # "metrics" or "logs") that corresponds to the data type are applied.
+    #
+    # The only translation possible in section "all" is renaming of attributes in
+    # versions. For human readability versions are listed in reverse chronological
+    # order, however note that the translations are applied in the order defined by
+    # semver ordering.
+    all:
+      changes:
+        - rename_attributes:
+            attribute_map:
+              # Mapping of attribute names (label names for metrics). The key is the old name
+              # used prior to this version, the value is the new name starting from this version.
+
+              # Rename k8s.* to kubernetes.*
+              k8s.cluster.name: kubernetes.cluster.name
+              k8s.namespace.name: kubernetes.namespace.name
+              k8s.node.name: kubernetes.node.name
+              k8s.node.uid: kubernetes.node.uid
+              k8s.pod.name: kubernetes.pod.name
+              k8s.pod.uid: kubernetes.pod.uid
+              k8s.container.name: kubernetes.container.name
+              k8s.replicaset.name: kubernetes.replicaset.name
+              k8s.replicaset.uid: kubernetes.replicaset.uid
+              k8s.cronjob.name: kubernetes.cronjob.name
+              k8s.cronjob.uid: kubernetes.cronjob.uid
+              k8s.job.name: kubernetes.job.name
+              k8s.job.uid: kubernetes.job.uid
+              k8s.statefulset.name: kubernetes.statefulset.name
+              k8s.statefulset.uid: kubernetes.statefulset.uid
+              k8s.daemonset.name: kubernetes.daemonset.name
+              k8s.daemonset.uid: kubernetes.daemonset.uid
+              k8s.deployment.name: kubernetes.deployment.name
+              k8s.deployment.uid: kubernetes.deployment.uid
+
+              service.namespace: service.namespace.name
+
+    # Like "all" the "resources" section may contain only attribute renaming translations.
+    # The only translation possible in this section is renaming of attributes in
+    # versions.
+    resources:
+      changes:
+        - rename_attributes:
+            attribute_map:
+              # Mapping of attribute names. The key is the old name
+              # used prior to this version, the value is the new name starting from this version.
+              telemetry.auto.version: telemetry.auto_instr.version
+
+    spans:
+      changes:
+        # Sequence of translations to apply to convert the schema from a prior version
+        # to this version. The order in this sequence is important. Translations are
+        # applied from top to bottom in the listed order.
+        - rename_attributes:
+            # Rename attributes of all spans, regardless of span name.
+            # The keys are the old attribute name used prior to this version, the values are
+            # the new attribute name starting from this version.
+            attribute_map:
+              peer.service: peer.service.name
+            apply_to_spans:
+              # apply only to spans named "HTTP GET"
+              - "HTTP GET"
+    span_events:
+      changes:
+        # Sequence of translations to apply to convert the schema from a prior version
+        # to this version. The order in this sequence is important. Translations are
+        # applied from top to bottom in the listed order.
+        - rename_events:
+            # Rename events. The keys are old event names, the values are the new event names.
+            name_map: {exception.stacktrace: exception.stack_trace}
+
+        - rename_attributes:
+            # Rename attributes of events.
+            # The keys are the old attribute name used prior to this version, the values are
+            # the new attribute name starting from this version.
+            attribute_map:
+              peer.service: peer.service.name
+
+            apply_to_events:
+              # Optional event names to apply to. If empty applies to all events.
+              # Conditions in apply_to_spans and apply_to_events are logical AND-ed,
+              # both should match for transformation to be applied.
+              - exception.stack_trace
+
+    metrics:
+      changes:
+        # Sequence of translations to apply to convert the schema from a prior version
+        # to this version. The order in this sequence is important. Translations are
+        # applied from top to bottom in the listed order.
+
+        - rename_attributes:
+            # Rename attributes of all metrics, regardless of metric name.
+            # The keys are the old attribute name used prior to this version, the values are
+            # the new attribute name starting from this version.
+            attribute_map:
+              http.status_code: http.response_status_code
+
+        - rename_metrics:
+            # Rename metrics. The keys are old metric names, the values are the new metric names.
+            container.cpu.usage.total: cpu.usage.total
+            container.memory.usage.max: memory.usage.max
+
+        - rename_attributes:
+            apply_to_metrics:
+              # Name of the metric to apply this rule to. If empty the rule applies to all metrics.
+              - system.cpu.utilization
+              - system.memory.usage
+              - system.memory.utilization
+              - system.paging.usage
+            attribute_map:
+              # The keys are the old attribute name used prior to this version, the values are
+              # the new attribute name starting from this version.
+              status: state
+
+        - split:
+            # Rules to split a metric into several metrics using an attribute for split.
+            # This example rule implements the change done by
+            # https://github.com/open-telemetry/opentelemetry-specification/pull/2617
+            # Name of old metric to split.
+            apply_to_metric: system.paging.operations
+            # Name of attribute in the old metric to use for splitting. The attribute will be
+            # eliminated, the new metric will not have it.
+            by_attribute: direction
+            # Names of new metrics to create, one for each possible value of the attribute.
+            metrics_from_attributes:
+              # If "direction" attribute equals "in" create a new metric called "system.paging.operations.in".
+              system.paging.operations.in: in
+              system.paging.operations.out: out
+
+    logs:
+      changes:
+        - rename_attributes:
+            attribute_map:
+              process.executable_name: process.executable.name
+
+  1.0.0:

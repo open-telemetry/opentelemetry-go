@@ -1,0 +1,1985 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package aggregate
+
+import (
+	"context"
+	"fmt"
+	"math"
+	"math/rand"
+	"sync"
+	"sync/atomic"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/internal/global"
+	"go.opentelemetry.io/otel/sdk/internal/x"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+)
+
+type noErrorHandler struct{ t *testing.T }
+
+func (h *noErrorHandler) Handle(e error) {
+	require.NoError(h.t, e)
+}
+
+func withHandler(t *testing.T) func() {
+	t.Helper()
+	h := &noErrorHandler{t: t}
+	original := global.GetErrorHandler()
+	global.SetErrorHandler(h)
+	return func() { global.SetErrorHandler(original) }
+}
+
+func TestExpoHistogramDataPointRecord(t *testing.T) {
+	t.Run("float64", testExpoHistogramDataPointRecord[float64])
+	t.Run("float64 MinMaxSum", testExpoHistogramMinMaxSumFloat64)
+	t.Run("float64-2", testExpoHistogramDataPointRecordFloat64)
+	t.Run("int64", testExpoHistogramDataPointRecord[int64])
+	t.Run("int64 MinMaxSum", testExpoHistogramMinMaxSumInt64)
+}
+
+func testExpoHistogramDataPointRecord[N int64 | float64](t *testing.T) {
+	testCases := []struct {
+		maxSize        int
+		values         []N
+		expectedStart  int32
+		expectedCounts []uint64
+		expectedScale  int32
+	}{
+		{
+			maxSize:        4,
+			values:         []N{2, 4, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 1, 1},
+			expectedScale:  0,
+		},
+		{
+			maxSize:        4,
+			values:         []N{4, 4, 4, 2, 16, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 4, 1},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []N{1, 2, 4},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []N{1, 4, 2},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []N{2, 4, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []N{2, 1, 4},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []N{4, 1, 2},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []N{4, 2, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{1, 2},
+			expectedScale:  -1,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(fmt.Sprint(tt.values), func(t *testing.T) {
+			restore := withHandler(t)
+			defer restore()
+
+			dp := newExpoHistogramDataPoint[N](alice, tt.maxSize, 20, false, false, nil, y2kPlus(0))
+			for _, v := range tt.values {
+				dp.record(v)
+				dp.record(-v)
+			}
+
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.posBuckets, "positive buckets")
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.negBuckets, "negative buckets")
+			assert.Equal(t, tt.expectedScale, dp.scale.Load(), "scale")
+		})
+	}
+}
+
+// TODO: This can be defined in the test after we drop support for go1.19.
+type expectedMinMaxSum[N int64 | float64] struct {
+	min   N
+	max   N
+	sum   N
+	count uint
+}
+type expoHistogramDataPointRecordMinMaxSumTestCase[N int64 | float64] struct {
+	values   []N
+	expected expectedMinMaxSum[N]
+}
+
+func testExpoHistogramMinMaxSumInt64(t *testing.T) {
+	testCases := []expoHistogramDataPointRecordMinMaxSumTestCase[int64]{
+		{
+			values:   []int64{2, 4, 1},
+			expected: expectedMinMaxSum[int64]{1, 4, 7, 3},
+		},
+		{
+			values:   []int64{4, 4, 4, 2, 16, 1},
+			expected: expectedMinMaxSum[int64]{1, 16, 31, 6},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(fmt.Sprint(tt.values), func(t *testing.T) {
+			restore := withHandler(t)
+			defer restore()
+
+			measure, collect := newCumulativeExpoHistogram[int64](4, 20, false, false, 0, dropExemplars[int64])
+			for _, v := range tt.values {
+				measure(t.Context(), v, newLazyFilteredAttributes(alice, nil))
+			}
+			var dest metricdata.Aggregation
+			collect(&dest)
+			eh := dest.(metricdata.ExponentialHistogram[int64])
+			require.Len(t, eh.DataPoints, 1)
+			dp := eh.DataPoints[0]
+
+			maxVal, maxDefined := dp.Max.Value()
+			minVal, minDefined := dp.Min.Value()
+
+			assert.True(t, maxDefined)
+			assert.Equal(t, tt.expected.max, maxVal)
+			assert.True(t, minDefined)
+			assert.Equal(t, tt.expected.min, minVal)
+			assert.InDelta(t, tt.expected.sum, dp.Sum, 0.01)
+		})
+	}
+}
+
+func testExpoHistogramMinMaxSumFloat64(t *testing.T) {
+	testCases := []expoHistogramDataPointRecordMinMaxSumTestCase[float64]{
+		{
+			values:   []float64{2, 4, 1},
+			expected: expectedMinMaxSum[float64]{1, 4, 7, 3},
+		},
+		{
+			values:   []float64{2, 4, 1, math.Inf(1)},
+			expected: expectedMinMaxSum[float64]{1, 4, 7, 4},
+		},
+		{
+			values:   []float64{2, 4, 1, math.Inf(-1)},
+			expected: expectedMinMaxSum[float64]{1, 4, 7, 4},
+		},
+		{
+			values:   []float64{2, 4, 1, math.NaN()},
+			expected: expectedMinMaxSum[float64]{1, 4, 7, 4},
+		},
+		{
+			values:   []float64{4, 4, 4, 2, 16, 1},
+			expected: expectedMinMaxSum[float64]{1, 16, 31, 6},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(fmt.Sprint(tt.values), func(t *testing.T) {
+			restore := withHandler(t)
+			defer restore()
+
+			measure, collect := newCumulativeExpoHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
+			for _, v := range tt.values {
+				measure(t.Context(), v, newLazyFilteredAttributes(alice, nil))
+			}
+			var dest metricdata.Aggregation
+			collect(&dest)
+			eh := dest.(metricdata.ExponentialHistogram[float64])
+			require.Len(t, eh.DataPoints, 1)
+			dp := eh.DataPoints[0]
+
+			maxVal, maxDefined := dp.Max.Value()
+			minVal, minDefined := dp.Min.Value()
+
+			assert.True(t, maxDefined)
+			assert.Equal(t, tt.expected.max, maxVal)
+			assert.True(t, minDefined)
+			assert.Equal(t, tt.expected.min, minVal)
+			assert.InDelta(t, tt.expected.sum, dp.Sum, 0.01)
+		})
+	}
+}
+
+func testExpoHistogramDataPointRecordFloat64(t *testing.T) {
+	type TestCase struct {
+		maxSize        int
+		values         []float64
+		expectedStart  int32
+		expectedCounts []uint64
+		expectedScale  int32
+	}
+
+	testCases := []TestCase{
+		{
+			maxSize:        4,
+			values:         []float64{2, 2, 2, 1, 8, 0.5},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 3, 1},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []float64{1, 0.5, 2},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []float64{1, 2, 0.5},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []float64{2, 0.5, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []float64{2, 1, 0.5},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []float64{0.5, 1, 2},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
+		},
+		{
+			maxSize:        2,
+			values:         []float64{0.5, 2, 1},
+			expectedStart:  -1,
+			expectedCounts: []uint64{2, 1},
+			expectedScale:  -1,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(fmt.Sprint(tt.values), func(t *testing.T) {
+			restore := withHandler(t)
+			defer restore()
+
+			dp := newExpoHistogramDataPoint[float64](alice, tt.maxSize, 20, false, false, nil, y2kPlus(0))
+			for _, v := range tt.values {
+				dp.record(v)
+				dp.record(-v)
+			}
+
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.posBuckets, "positive buckets")
+			assertBuckets(t, tt.expectedStart, tt.expectedCounts, dp.negBuckets, "negative buckets")
+			assert.Equal(t, tt.expectedScale, dp.scale.Load(), "scale")
+			assert.Equal(t, tt.expectedScale, dp.scale.Load())
+		})
+	}
+}
+
+func TestExponentialHistogramDataPointRecordLimits(t *testing.T) {
+	// These bins are calculated from the following formula:
+	// floor( log2( value) * 2^20 ) using an arbitrary precision calculator.
+
+	fdp := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false, nil, y2kPlus(0))
+	fdp.record(math.MaxFloat64)
+
+	if fdp.posBuckets.startBin != 1073741823 {
+		t.Errorf("Expected startBin to be 1073741823, got %d", fdp.posBuckets.startBin)
+	}
+
+	fdp = newExpoHistogramDataPoint[float64](alice, 4, 20, false, false, nil, y2kPlus(0))
+	fdp.record(math.SmallestNonzeroFloat64)
+
+	if fdp.posBuckets.startBin != -1126170625 {
+		t.Errorf("Expected startBin to be -1126170625, got %d", fdp.posBuckets.startBin)
+	}
+
+	idp := newExpoHistogramDataPoint[int64](alice, 4, 20, false, false, nil, y2kPlus(0))
+	idp.record(math.MaxInt64)
+
+	if idp.posBuckets.startBin != 66060287 {
+		t.Errorf("Expected startBin to be 66060287, got %d", idp.posBuckets.startBin)
+	}
+}
+
+func newBucket(startBin int32, counts []uint64) *expoBuckets {
+	if len(counts) == 0 {
+		return &expoBuckets{startBin: startBin}
+	}
+	capSize := nextPowerOf2(int32(len(counts)))
+	b := &expoBuckets{
+		startBin: startBin,
+		length:   int32(len(counts)),
+		counts:   make([]atomic.Uint64, capSize),
+	}
+	for i, v := range counts {
+		b.at(int32(i)).Store(v)
+	}
+	return b
+}
+
+func assertBuckets(t *testing.T, expectedStart int32, expectedCounts []uint64, actual expoBuckets, msg string) {
+	t.Helper()
+	assert.Equal(t, expectedStart, actual.startBin, "%s: startBin", msg)
+	var actualCounts []uint64
+	if actual.length > 0 {
+		actualCounts = make([]uint64, actual.length)
+		for i := range actual.length {
+			actualCounts[i] = actual.at(i).Load()
+		}
+	}
+	assert.Equal(t, expectedCounts, actualCounts, "%s: counts", msg)
+}
+
+func TestExpoBucketDownscale(t *testing.T) {
+	tests := []struct {
+		name       string
+		bucket     *expoBuckets
+		scale      int32
+		wantStart  int32
+		wantCounts []uint64
+	}{
+		{
+			name:       "Empty bucket",
+			bucket:     newBucket(0, nil),
+			scale:      3,
+			wantStart:  0,
+			wantCounts: nil,
+		},
+		{
+			name:       "1 size bucket",
+			bucket:     newBucket(50, []uint64{7}),
+			scale:      4,
+			wantStart:  3,
+			wantCounts: []uint64{7},
+		},
+		{
+			name:       "zero scale",
+			bucket:     newBucket(50, []uint64{7, 5}),
+			scale:      0,
+			wantStart:  50,
+			wantCounts: []uint64{7, 5},
+		},
+		{
+			name:       "aligned bucket scale 1",
+			bucket:     newBucket(0, []uint64{1, 2, 3, 4, 5, 6}),
+			scale:      1,
+			wantStart:  0,
+			wantCounts: []uint64{3, 7, 11},
+		},
+		{
+			name:       "aligned bucket scale 2",
+			bucket:     newBucket(0, []uint64{1, 2, 3, 4, 5, 6}),
+			scale:      2,
+			wantStart:  0,
+			wantCounts: []uint64{10, 11},
+		},
+		{
+			name:       "aligned bucket scale 3",
+			bucket:     newBucket(0, []uint64{1, 2, 3, 4, 5, 6}),
+			scale:      3,
+			wantStart:  0,
+			wantCounts: []uint64{21},
+		},
+		{
+			name:       "unaligned bucket scale 1",
+			bucket:     newBucket(5, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,0,0,1,2,3,4,5,6]
+			scale:      1,
+			wantStart:  2,
+			wantCounts: []uint64{1, 5, 9, 6}, // This is equivalent to [0,0,1,5,9,6]
+		},
+		{
+			name:       "unaligned bucket scale 2",
+			bucket:     newBucket(7, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,0,0,0,0,1,2,3,4,5,6]
+			scale:      2,
+			wantStart:  1,
+			wantCounts: []uint64{1, 14, 6}, // This is equivalent to [0,1,14,6]
+		},
+		{
+			name:       "unaligned bucket scale 3",
+			bucket:     newBucket(3, []uint64{1, 2, 3, 4, 5, 6}), // This is equivalent to [0,0,0,1,2,3,4,5,6]
+			scale:      3,
+			wantStart:  0,
+			wantCounts: []uint64{15, 6}, // This is equivalent to [0,15,6]
+		},
+		{
+			name:       "unaligned bucket scale 1",
+			bucket:     newBucket(1, []uint64{1, 0, 1}),
+			scale:      1,
+			wantStart:  0,
+			wantCounts: []uint64{1, 1},
+		},
+		{
+			name:       "negative startBin",
+			bucket:     newBucket(-1, []uint64{1, 0, 3}),
+			scale:      1,
+			wantStart:  -1,
+			wantCounts: []uint64{1, 3},
+		},
+		{
+			name:       "negative startBin 2",
+			bucket:     newBucket(-4, []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+			scale:      1,
+			wantStart:  -2,
+			wantCounts: []uint64{3, 7, 11, 15, 19},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.bucket.downscale(tt.scale)
+
+			assertBuckets(t, tt.wantStart, tt.wantCounts, *tt.bucket, tt.name)
+		})
+	}
+}
+
+func TestExpoBucketRecord(t *testing.T) {
+	tests := []struct {
+		name       string
+		bucket     *expoBuckets
+		bin        int32
+		wantStart  int32
+		wantCounts []uint64
+	}{
+		{
+			name:       "Empty Bucket creates first count",
+			bucket:     newBucket(0, nil),
+			bin:        -5,
+			wantStart:  -5,
+			wantCounts: []uint64{1},
+		},
+		{
+			name:       "Bin is in the bucket",
+			bucket:     newBucket(3, []uint64{1, 2, 3, 4, 5, 6}),
+			bin:        5,
+			wantStart:  3,
+			wantCounts: []uint64{1, 2, 4, 4, 5, 6},
+		},
+		{
+			name:       "Bin is before the start of the bucket",
+			bucket:     newBucket(1, []uint64{1, 2, 3, 4, 5, 6}),
+			bin:        -2,
+			wantStart:  -2,
+			wantCounts: []uint64{1, 0, 0, 1, 2, 3, 4, 5, 6},
+		},
+		{
+			name:       "Bin is after the end of the bucket",
+			bucket:     newBucket(-2, []uint64{1, 2, 3, 4, 5, 6}),
+			bin:        4,
+			wantStart:  -2,
+			wantCounts: []uint64{1, 2, 3, 4, 5, 6, 1},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.bucket.record(tt.bin)
+
+			assertBuckets(t, tt.wantStart, tt.wantCounts, *tt.bucket, tt.name)
+		})
+	}
+}
+
+func TestScaleChange(t *testing.T) {
+	type args struct {
+		bin      int32
+		startBin int32
+		length   int
+		maxSize  int
+	}
+	tests := []struct {
+		name string
+		args args
+		want int32
+	}{
+		{
+			name: "if length is 0, no rescale is needed",
+			// [] -> [5] Length 1
+			args: args{
+				bin:      5,
+				startBin: 0,
+				length:   0,
+				maxSize:  4,
+			},
+			want: 0,
+		},
+		{
+			name: "if bin is between start, and the end, no rescale needed",
+			// [-1, ..., 8] Length 10 -> [-1, ..., 5, ..., 8] Length 10
+			args: args{
+				bin:      5,
+				startBin: -1,
+				length:   10,
+				maxSize:  20,
+			},
+			want: 0,
+		},
+		{
+			name: "if len([bin,... end]) > maxSize, rescale needed",
+			// [8,9,10] Length 3 -> [5, ..., 10] Length 6
+			args: args{
+				bin:      5,
+				startBin: 8,
+				length:   3,
+				maxSize:  5,
+			},
+			want: 1,
+		},
+		{
+			name: "if len([start, ..., bin]) > maxSize, rescale needed",
+			// [2,3,4] Length 3 -> [2, ..., 7] Length 6
+			args: args{
+				bin:      7,
+				startBin: 2,
+				length:   3,
+				maxSize:  5,
+			},
+			want: 1,
+		},
+		{
+			name: "if len([start, ..., bin]) > maxSize, rescale needed",
+			// [2,3,4] Length 3 -> [2, ..., 7] Length 12
+			args: args{
+				bin:      13,
+				startBin: 2,
+				length:   3,
+				maxSize:  5,
+			},
+			want: 2,
+		},
+		{
+			name: "It should not hang if it will never be able to rescale",
+			args: args{
+				bin:      1,
+				startBin: -1,
+				length:   1,
+				maxSize:  1,
+			},
+			want: 31,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newExpoHistogramDataPoint[float64](alice, tt.args.maxSize, 20, false, false, nil, y2kPlus(0))
+			got := p.scaleChange(tt.args.bin, tt.args.startBin, tt.args.length)
+			if got != tt.want {
+				t.Errorf("scaleChange() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExpoHistogramOverflow(t *testing.T) {
+	t.Run("Delta", func(t *testing.T) {
+		newRes := func(attribute.Set) FilteredExemplarReservoir[int64] {
+			return DropReservoir[int64](attribute.NewSet())
+		}
+		e := newDeltaExpoHistogram[int64](160, 20, false, false, 2, newRes)
+
+		attrA := attribute.NewSet(attribute.String("key", "a"))
+		lazyA := newLazyFilteredAttributes(attrA, nil)
+		e.measure(t.Context(), 10, lazyA)
+
+		// Second distinct attribute set should trigger overflow since aggLimit == 2
+		attrB := attribute.NewSet(attribute.String("key", "b"))
+		lazyB := newLazyFilteredAttributes(attrB, nil)
+		e.measure(t.Context(), 20, lazyB)
+
+		var dest metricdata.Aggregation
+		e.collect(&dest)
+		eh := dest.(metricdata.ExponentialHistogram[int64])
+		require.Len(t, eh.DataPoints, 2)
+		attrs := []attribute.Set{eh.DataPoints[0].Attributes, eh.DataPoints[1].Attributes}
+		assert.ElementsMatch(t, []attribute.Set{attrA, overflowSet}, attrs)
+	})
+
+	t.Run("Cumulative", func(t *testing.T) {
+		newRes := func(attribute.Set) FilteredExemplarReservoir[int64] {
+			return DropReservoir[int64](attribute.NewSet())
+		}
+		measure, collect := newCumulativeExpoHistogram[int64](160, 20, false, false, 2, newRes)
+
+		attrA := attribute.NewSet(attribute.String("key", "a"))
+		lazyA := newLazyFilteredAttributes(attrA, nil)
+		measure(t.Context(), 10, lazyA)
+
+		// Second distinct attribute set should trigger overflow since aggLimit == 2
+		attrB := attribute.NewSet(attribute.String("key", "b"))
+		lazyB := newLazyFilteredAttributes(attrB, nil)
+		measure(t.Context(), 20, lazyB)
+
+		var dest metricdata.Aggregation
+		collect(&dest)
+		eh := dest.(metricdata.ExponentialHistogram[int64])
+		require.Len(t, eh.DataPoints, 2)
+		attrs := []attribute.Set{eh.DataPoints[0].Attributes, eh.DataPoints[1].Attributes}
+		assert.ElementsMatch(t, []attribute.Set{attrA, overflowSet}, attrs)
+	})
+}
+
+func BenchmarkPrepend(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		agg := newExpoHistogramDataPoint[float64](alice, 160, 20, false, false, nil, y2kPlus(0))
+		n := math.MaxFloat64
+		for range 160 {
+			agg.record(n)
+			n /= 2
+		}
+	}
+}
+
+func BenchmarkAppend(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		agg := newExpoHistogramDataPoint[float64](alice, 160, 20, false, false, nil, y2kPlus(0))
+		n := smallestNonZeroNormalFloat64
+		for range 160 {
+			agg.record(n)
+			n *= 2
+		}
+	}
+}
+
+func BenchmarkExponentialHistogram(b *testing.B) {
+	const (
+		maxSize  = 160
+		maxScale = 20
+		noMinMax = false
+		noSum    = false
+	)
+
+	b.Run("Int64/Cumulative", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
+		return Builder[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
+	}))
+	b.Run("Int64/Delta", benchmarkAggregate(func() (Measure[int64], ComputeAggregation) {
+		return Builder[int64]{
+			Temporality: metricdata.DeltaTemporality,
+		}.ExponentialBucketHistogram(maxSize, maxScale, noMinMax, noSum)
+	}))
+}
+
+func TestSubNormal(t *testing.T) {
+	want := &expoHistogramDataPoint[float64]{
+		attrs:   alice,
+		maxSize: 4,
+	}
+	want.minMax.Update(math.SmallestNonzeroFloat64)
+	want.sum.add(3 * math.SmallestNonzeroFloat64)
+	want.scale.Store(20)
+	want.posBuckets = *newBucket(-1126170625, []uint64{3})
+
+	ehdp := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false, nil, y2kPlus(0))
+	ehdp.record(math.SmallestNonzeroFloat64)
+	ehdp.record(math.SmallestNonzeroFloat64)
+	ehdp.record(math.SmallestNonzeroFloat64)
+
+	want.startTime = ehdp.startTime
+
+	assert.Equal(t, want, ehdp)
+}
+
+func TestExponentialHistogramAggregation(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	t.Run("Int64/Delta", testDeltaExpoHist[int64]())
+	c.Reset()
+
+	t.Run("Float64/Delta", testDeltaExpoHist[float64]())
+	c.Reset()
+
+	t.Run("Int64/Cumulative", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		assert.False(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeExpoHist[int64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Int64/Cumulative/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeExpoHist[int64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/Cumulative", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		assert.False(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeExpoHist[float64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/Cumulative/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testCumulativeExpoHist[float64]()(t)
+	})
+	c.Reset()
+}
+
+func testDeltaExpoHist[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 2,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+	ctx := context.Background()
+	return test[N](in, out, []teststep[N]{
+		{
+			input: []arg[N]{},
+			expect: output{
+				n: 0,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints:  []metricdata.ExponentialHistogramDataPoint[N]{},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				{ctx, 4, alice},
+				{ctx, 4, alice},
+				{ctx, 4, alice},
+				{ctx, 2, alice},
+				{ctx, 16, alice},
+				{ctx, 1, alice},
+				{ctx, -1, alice},
+			},
+			expect: output{
+				n: 1,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  y2kPlus(1),
+							Time:       y2kPlus(3),
+							Count:      7,
+							Min:        metricdata.NewExtrema[N](-1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        30,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 4, 1},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			// Delta sums are expected to reset.
+			input: []arg[N]{},
+			expect: output{
+				n: 0,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints:  []metricdata.ExponentialHistogramDataPoint[N]{},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				{ctx, 4, alice},
+				{ctx, 4, alice},
+				{ctx, 4, alice},
+				{ctx, 2, alice},
+				{ctx, 16, alice},
+				{ctx, 1, alice},
+				// These will exceed the cardinality limit.
+				{ctx, 4, bob},
+				{ctx, 4, bob},
+				{ctx, 4, bob},
+				{ctx, 2, carol},
+				{ctx, 16, carol},
+				{ctx, 1, dave},
+				{ctx, -1, alice},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.DeltaTemporality,
+					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  y2kPlus(4),
+							Time:       y2kPlus(7),
+							Count:      7,
+							Min:        metricdata.NewExtrema[N](-1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        30,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 4, 1},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
+							},
+						},
+						{
+							Attributes: overflowSet,
+							StartTime:  y2kPlus(4),
+							Time:       y2kPlus(7),
+							Count:      6,
+							Min:        metricdata.NewExtrema[N](1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        31,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 4, 1},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func testCumulativeExpoHist[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 2,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+
+	aliceStartTime := y2kPlus(0)
+	overflowStartTime := y2kPlus(0)
+
+	if x.PerSeriesStartTimestamps.Enabled() {
+		aliceStartTime = y2kPlus(2)
+		overflowStartTime = y2kPlus(6)
+	}
+
+	ctx := context.Background()
+	return test[N](in, out, []teststep[N]{
+		{
+			input: []arg[N]{},
+			expect: output{
+				n: 0,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints:  []metricdata.ExponentialHistogramDataPoint[N]{},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				{ctx, 4, alice},
+				{ctx, 4, alice},
+				{ctx, 4, alice},
+				{ctx, 2, alice},
+				{ctx, 16, alice},
+				{ctx, 1, alice},
+				{ctx, -1, alice},
+			},
+			expect: output{
+				n: 1,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(3),
+							Count:      7,
+							Min:        metricdata.NewExtrema[N](-1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        30,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 4, 1},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				{ctx, 2, alice},
+				{ctx, 3, alice},
+				{ctx, 8, alice},
+			},
+			expect: output{
+				n: 1,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(4),
+							Count:      10,
+							Min:        metricdata.NewExtrema[N](-1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        43,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 6, 2},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			input: []arg[N]{},
+			expect: output{
+				n: 1,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(5),
+							Count:      10,
+							Min:        metricdata.NewExtrema[N](-1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        43,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 6, 2},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			input: []arg[N]{
+				// These will exceed the cardinality limit.
+				{ctx, 4, bob},
+				{ctx, 4, bob},
+				{ctx, 4, bob},
+				{ctx, 2, carol},
+				{ctx, 16, carol},
+				{ctx, 1, dave},
+			},
+			expect: output{
+				n: 2,
+				agg: metricdata.ExponentialHistogram[N]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.ExponentialHistogramDataPoint[N]{
+						{
+							Attributes: fltrAlice,
+							StartTime:  aliceStartTime,
+							Time:       y2kPlus(7),
+							Count:      10,
+							Min:        metricdata.NewExtrema[N](-1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        43,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 6, 2},
+							},
+							NegativeBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1},
+							},
+						},
+						{
+							Attributes: overflowSet,
+							StartTime:  overflowStartTime,
+							Time:       y2kPlus(7),
+							Count:      6,
+							Min:        metricdata.NewExtrema[N](1),
+							Max:        metricdata.NewExtrema[N](16),
+							Sum:        31,
+							Scale:      -1,
+							PositiveBucket: metricdata.ExponentialBucket{
+								Offset: -1,
+								Counts: []uint64{1, 4, 1},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func TestExponentialHistogramAggregationConcurrentSafe(t *testing.T) {
+	t.Run("Int64/Delta", testDeltaExpoHistConcurrentSafe[int64]())
+	t.Run("Float64/Delta", testDeltaExpoHistConcurrentSafe[float64]())
+	t.Run("Int64/Cumulative", testCumulativeExpoHistConcurrentSafe[int64]())
+	t.Run("Float64/Cumulative", testCumulativeExpoHistConcurrentSafe[float64]())
+}
+
+func testDeltaExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.DeltaTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+	return testAggregationConcurrentSafe[N](in, out, validateExponentialHistogram[N])
+}
+
+func testCumulativeExpoHistConcurrentSafe[N int64 | float64]() func(t *testing.T) {
+	in, out := Builder[N]{
+		Temporality:      metricdata.CumulativeTemporality,
+		Filter:           attrFltr,
+		AggregationLimit: 3,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+	return testAggregationConcurrentSafe[N](in, out, validateExponentialHistogram[N])
+}
+
+func validateExponentialHistogram[N int64 | float64](t *testing.T, aggs []metricdata.Aggregation) {
+	sums := make(map[attribute.Set]N)
+	counts := make(map[attribute.Set]uint64)
+	var isDelta bool
+	for i, agg := range aggs {
+		s, ok := agg.(metricdata.ExponentialHistogram[N])
+		require.True(t, ok)
+		if s.Temporality == metricdata.DeltaTemporality {
+			isDelta = true
+		}
+		require.LessOrEqual(t, len(s.DataPoints), 3, "AggregationLimit of 3 exceeded in a single cycle")
+		for _, dp := range s.DataPoints {
+			assert.False(
+				t,
+				dp.Time.Before(dp.StartTime),
+				"Timestamp %v must not be before start time %v", dp.Time, dp.StartTime,
+			)
+
+			if s.Temporality == metricdata.DeltaTemporality {
+				sums[dp.Attributes] += dp.Sum
+				counts[dp.Attributes] += dp.Count
+			} else if i == len(aggs)-1 {
+				sums[dp.Attributes] = dp.Sum
+				counts[dp.Attributes] = dp.Count
+			}
+
+			var totalCount uint64
+			for _, bc := range dp.PositiveBucket.Counts {
+				totalCount += bc
+			}
+			for _, bc := range dp.NegativeBucket.Counts {
+				totalCount += bc
+			}
+			assert.Equal(t, totalCount, dp.Count)
+		}
+	}
+
+	var totalSum N
+	var totalCount uint64
+	for attr, sum := range sums {
+		totalSum += sum
+		count := counts[attr]
+		totalCount += count
+
+		expectedSingleSum := expectedConcurrentSum[N]() / N(concurrentNumGoroutines)
+		expectedSingleCount := expectedConcurrentCount / uint64(concurrentNumGoroutines)
+
+		if !isDelta {
+			if attr == overflowSet {
+				// The overflow set contains all the goroutines that didn't make the limit of 3
+				assert.Equal(t, uint64(0), count%expectedSingleCount)
+				assertSumEqual[N](t, N(count/expectedSingleCount)*expectedSingleSum, sum)
+			} else {
+				// Individual attributes should have exactly one goroutine's worth of data
+				assert.Equal(t, expectedSingleSum, sum)
+				assert.Equal(t, expectedSingleCount, count)
+			}
+		}
+	}
+	assertSumEqual[N](t, expectedConcurrentSum[N](), totalSum)
+	assert.Equal(t, expectedConcurrentCount, totalCount)
+}
+
+func FuzzGetBin(f *testing.F) {
+	values := []float64{
+		2.0,
+		0x1p35,
+		0x1.0000000000001p35,
+		0x1.fffffffffffffp34,
+		0x1p300,
+		0x1.0000000000001p300,
+		0x1.fffffffffffffp299,
+		0x1p-1069,
+		math.Inf(1),
+		math.Inf(-1),
+		math.NaN(),
+	}
+	scales := []int32{0, 15, -5}
+
+	for _, s := range scales {
+		for _, v := range values {
+			f.Add(v, s)
+		}
+	}
+
+	f.Fuzz(func(t *testing.T, v float64, scale int32) {
+		// GetBin only works on positive values.
+		if math.Signbit(v) {
+			v *= -1
+		}
+		// GetBin only works on finite normal non-zero values.
+		if v < smallestNonZeroNormalFloat64 || math.IsInf(v, 0) || math.IsNaN(v) {
+			t.Skip("skipping test for subnormal, zero, infinity, or NaN")
+		}
+
+		p := newExpoHistogramDataPoint[float64](alice, 4, 20, false, false, nil, y2kPlus(0))
+		// scale range is -10 to 20.
+		scaleValue := (scale%31+31)%31 - 10
+		p.scale.Store(scaleValue)
+		got := p.getBin(v)
+		if v <= lowerBound(got, scaleValue) {
+			t.Errorf(
+				"v=%x scale =%d had bin %d, but was below lower bound %x",
+				v,
+				scaleValue,
+				got,
+				lowerBound(got, scaleValue),
+			)
+		}
+		if v > lowerBound(got+1, scaleValue) {
+			t.Errorf(
+				"v=%x scale =%d had bin %d, but was above upper bound %x",
+				v,
+				scaleValue,
+				got,
+				lowerBound(got+1, scaleValue),
+			)
+		}
+	})
+}
+
+func lowerBound(index, scale int32) float64 {
+	// The lowerBound of the index of Math.SmallestNonzeroFloat64 at any scale
+	// is always rounded down to 0.0.
+	// For example lowerBound(getBin(Math.SmallestNonzeroFloat64, 7), 7) == 0.0
+	// 2 ^ (index * 2 ^ (-scale))
+	return math.Exp2(math.Ldexp(float64(index), -int(scale)))
+}
+
+func TestExponentialHistogramConcurrentSafeEdgeCases(t *testing.T) {
+	t.Run("Int64/Delta", testExpoHistConcurrentSafeEdgeCases[int64](metricdata.DeltaTemporality))
+	t.Run("Float64/Delta", testExpoHistConcurrentSafeEdgeCases[float64](metricdata.DeltaTemporality))
+	t.Run("Int64/Cumulative", testExpoHistConcurrentSafeEdgeCases[int64](metricdata.CumulativeTemporality))
+	t.Run("Float64/Cumulative", testExpoHistConcurrentSafeEdgeCases[float64](metricdata.CumulativeTemporality))
+}
+
+func testExpoHistConcurrentSafeEdgeCases[N int64 | float64](temporality metricdata.Temporality) func(t *testing.T) {
+	return func(t *testing.T) {
+		t.Run("ZeroValues", func(t *testing.T) {
+			meas, comp := Builder[N]{
+				Temporality:      temporality,
+				Filter:           attrFltr,
+				AggregationLimit: 3,
+			}.ExponentialBucketHistogram(160, 20, false, false)
+
+			ctx := t.Context()
+			var wg sync.WaitGroup
+			const numGoroutines = 10
+			const numRecords = 100
+			wg.Add(numGoroutines)
+			for range numGoroutines {
+				go func() {
+					defer wg.Done()
+					for range numRecords {
+						meas(ctx, 0, alice)
+					}
+				}()
+			}
+			wg.Wait()
+
+			dest := new(metricdata.Aggregation)
+			comp(dest)
+			h := (*dest).(metricdata.ExponentialHistogram[N])
+			require.Len(t, h.DataPoints, 1)
+			assert.Equal(t, uint64(numGoroutines*numRecords), h.DataPoints[0].ZeroCount)
+			assert.Equal(t, uint64(numGoroutines*numRecords), h.DataPoints[0].Count)
+		})
+
+		t.Run("RescalingStress", func(t *testing.T) {
+			meas, comp := Builder[N]{
+				Temporality:      temporality,
+				Filter:           attrFltr,
+				AggregationLimit: 3,
+			}.ExponentialBucketHistogram(160, 20, false, false)
+
+			ctx := t.Context()
+			var wg sync.WaitGroup
+			const numGoroutines = 10
+			const numRecords = 100
+
+			// To verify exact outcome, we sequentially record the same to a reference.
+			refMeas, refComp := Builder[N]{
+				Temporality:      temporality,
+				Filter:           attrFltr,
+				AggregationLimit: 3,
+			}.ExponentialBucketHistogram(160, 20, false, false)
+			var m sync.Mutex
+
+			wg.Add(numGoroutines)
+			for i := range numGoroutines {
+				go func(id int) {
+					defer wg.Done()
+					for j := range numRecords {
+						// generate a mix of very large and very small powers of 2
+						valFloat := math.Exp2((float64(j) / float64(numRecords)) * 60.0)
+						if id%2 == 0 {
+							valFloat = -valFloat
+						}
+						val := N(valFloat)
+						// For integers, values less than 1 will truncate to 0. Mix things up.
+						if id%3 == 0 {
+							val = N(float64(id+1) * 100.0)
+						}
+
+						meas(ctx, val, alice)
+
+						m.Lock()
+						refMeas(ctx, val, alice)
+						m.Unlock()
+					}
+				}(i)
+			}
+			wg.Wait()
+
+			dest := new(metricdata.Aggregation)
+			comp(dest)
+			h := (*dest).(metricdata.ExponentialHistogram[N])
+			require.Len(t, h.DataPoints, 1)
+
+			refDest := new(metricdata.Aggregation)
+			refComp(refDest)
+			refH := (*refDest).(metricdata.ExponentialHistogram[N])
+			require.Len(t, refH.DataPoints, 1)
+
+			// StartTime/Time will differ slightly.
+			h.DataPoints[0].StartTime = refH.DataPoints[0].StartTime
+			h.DataPoints[0].Time = refH.DataPoints[0].Time
+
+			// Float sums might be slightly slightly off due to summing wildly different magnitudes
+			// in different orders concurrently versus sequentially.
+			actualSum := float64(h.DataPoints[0].Sum)
+			expectedSum := float64(refH.DataPoints[0].Sum)
+			if actualSum != expectedSum {
+				assert.InEpsilon(t, expectedSum, actualSum, 0.5, "Sum")
+				// Force equality for the deep struct comparison below
+				h.DataPoints[0].Sum = refH.DataPoints[0].Sum
+			}
+
+			// Normalize Exemplars to avoid nil vs empty slice comparison failures
+			h.DataPoints[0].Exemplars = nil
+			refH.DataPoints[0].Exemplars = nil
+
+			assert.Equal(t, refH, h)
+		})
+	}
+}
+
+func TestExpoHistogramRecordUnderflow(t *testing.T) {
+	var errs []error
+	original := global.GetErrorHandler()
+	global.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+		errs = append(errs, e)
+	}))
+	t.Cleanup(func() {
+		global.SetErrorHandler(original)
+	})
+
+	dp := newExpoHistogramDataPoint[float64](attribute.NewSet(), 1, 20, false, false, nil, y2kPlus(0))
+	// Force scale to a low value
+	dp.scale.Store(-10)
+	dp.record(1)
+	dp.record(math.MaxFloat64)
+	require.Len(t, errs, 1)
+	assert.EqualError(t, errs[0], "exponential histogram scale underflow")
+}
+
+func TestExpoHistogramUnderflow(t *testing.T) {
+	tests := []struct {
+		name    string
+		run     func(t *testing.T, ctx context.Context)
+		wantErr string
+	}{
+		{
+			name: "delta measure downscale underflow",
+			run: func(t *testing.T, ctx context.Context) {
+				h := newDeltaExpoHistogram[float64](2, 20, false, false, 0, dropExemplars[float64])
+				h.measure(ctx, math.MaxFloat64, newLazyFilteredAttributes(attribute.NewSet(), nil))
+				h.measure(ctx, math.SmallestNonzeroFloat64, newLazyFilteredAttributes(attribute.NewSet(), nil))
+
+				var dest metricdata.Aggregation
+				h.collect(&dest)
+				eh := dest.(metricdata.ExponentialHistogram[float64])
+				require.Len(t, eh.DataPoints, 1)
+				dp := eh.DataPoints[0]
+
+				assert.Equal(t, uint64(1), dp.Count)
+				assert.Equal(t, math.MaxFloat64, dp.Sum)
+				minVal, minOK := dp.Min.Value()
+				maxVal, maxOK := dp.Max.Value()
+				assert.True(t, minOK)
+				assert.Equal(t, math.MaxFloat64, minVal)
+				assert.True(t, maxOK)
+				assert.Equal(t, math.MaxFloat64, maxVal)
+			},
+			wantErr: "exponential histogram scale underflow",
+		},
+		{
+			name: "cumulative tracker measure underflow",
+			run: func(t *testing.T, ctx context.Context) {
+				measure, collect := newCumulativeExpoHistogram[float64](2, 20, false, false, 0, dropExemplars[float64])
+				measure(ctx, math.MaxFloat64, newLazyFilteredAttributes(attribute.NewSet(), nil))
+				measure(ctx, math.SmallestNonzeroFloat64, newLazyFilteredAttributes(attribute.NewSet(), nil))
+
+				var dest metricdata.Aggregation
+				collect(&dest)
+				eh := dest.(metricdata.ExponentialHistogram[float64])
+				require.Len(t, eh.DataPoints, 1)
+				dp := eh.DataPoints[0]
+
+				assert.Equal(t, uint64(1), dp.Count)
+				assert.Equal(t, math.MaxFloat64, dp.Sum)
+				minVal, minOK := dp.Min.Value()
+				maxVal, maxOK := dp.Max.Value()
+				assert.True(t, minOK)
+				assert.Equal(t, math.MaxFloat64, minVal)
+				assert.True(t, maxOK)
+				assert.Equal(t, math.MaxFloat64, maxVal)
+			},
+			wantErr: "exponential histogram scale underflow",
+		},
+		{
+			name: "cumulative multi-cycle underflow",
+			run: func(t *testing.T, ctx context.Context) {
+				measure, collect := newCumulativeExpoHistogram[float64](2, 20, false, false, 0, dropExemplars[float64])
+				measure(ctx, math.MaxFloat64, newLazyFilteredAttributes(attribute.NewSet(), nil))
+				var dest metricdata.Aggregation
+				collect(&dest) // Collect MaxFloat64
+
+				measure(
+					ctx,
+					math.SmallestNonzeroFloat64,
+					newLazyFilteredAttributes(attribute.NewSet(), nil),
+				) // Underflow happens here during measure
+				collect(
+					&dest,
+				) // Collect again, should not contain SmallestNonzeroFloat64
+
+				eh := dest.(metricdata.ExponentialHistogram[float64])
+				require.Len(t, eh.DataPoints, 1)
+				dp := eh.DataPoints[0]
+
+				assert.Equal(t, uint64(1), dp.Count)
+				assert.Equal(t, math.MaxFloat64, dp.Sum)
+				minVal, minOK := dp.Min.Value()
+				maxVal, maxOK := dp.Max.Value()
+				assert.True(t, minOK)
+				assert.Equal(t, math.MaxFloat64, minVal)
+				assert.True(t, maxOK)
+				assert.Equal(t, math.MaxFloat64, maxVal)
+			},
+			wantErr: "exponential histogram scale underflow",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var errs []error
+			original := global.GetErrorHandler()
+			global.SetErrorHandler(otel.ErrorHandlerFunc(func(e error) {
+				errs = append(errs, e)
+			}))
+			t.Cleanup(func() {
+				global.SetErrorHandler(original)
+			})
+
+			tt.run(t, t.Context())
+
+			require.Len(t, errs, 1)
+			assert.EqualError(t, errs[0], tt.wantErr)
+		})
+	}
+}
+
+func TestDeltaExpoHistogramMeasureNaNAndInf(t *testing.T) {
+	h := newDeltaExpoHistogram[float64](4, 20, false, false, 0, dropExemplars[float64])
+	ctx := t.Context()
+
+	h.measure(ctx, math.NaN(), newLazyFilteredAttributes(attribute.NewSet(), nil))
+	h.measure(ctx, math.Inf(1), newLazyFilteredAttributes(attribute.NewSet(), nil))
+	h.measure(ctx, math.Inf(-1), newLazyFilteredAttributes(attribute.NewSet(), nil))
+
+	var dest metricdata.Aggregation
+	h.collect(&dest)
+	eh := dest.(metricdata.ExponentialHistogram[float64])
+	assert.Empty(t, eh.DataPoints)
+}
+
+func TestExponentialHistogramDatapointReuseLeakedStaleValues(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	// 1. Collect with sum and min/max enabled.
+	in1, out1 := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+
+	ctx := t.Context()
+	in1(ctx, 5, alice)
+
+	dest := new(metricdata.Aggregation)
+	n := out1(dest)
+	require.Equal(t, 1, n)
+
+	h, ok := (*dest).(metricdata.ExponentialHistogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+	require.Equal(t, int64(5), h.DataPoints[0].Sum)
+	val, defined := h.DataPoints[0].Min.Value()
+	require.True(t, defined)
+	require.Equal(t, int64(5), val)
+
+	// 2. Collect with sum and min/max disabled.
+	in2, out2 := Builder[int64]{
+		Temporality: metricdata.DeltaTemporality,
+	}.ExponentialBucketHistogram(4, 20, true, true)
+
+	in2(ctx, 7, alice)
+
+	n = out2(dest)
+	require.Equal(t, 1, n)
+
+	h, ok = (*dest).(metricdata.ExponentialHistogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+
+	// Validate that stale values are not reported.
+	assert.Equal(t, int64(0), h.DataPoints[0].Sum, "stale Sum leaked")
+	_, defined = h.DataPoints[0].Min.Value()
+	assert.False(t, defined, "stale Min leaked")
+	_, defined = h.DataPoints[0].Max.Value()
+	assert.False(t, defined, "stale Max leaked")
+}
+
+func TestExponentialHistogramDatapointReuseLeakedStaleValues_Cumulative(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	// 1. Collect with sum and min/max enabled.
+	in1, out1 := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+	}.ExponentialBucketHistogram(4, 20, false, false)
+
+	ctx := t.Context()
+	in1(ctx, 5, alice)
+
+	dest := new(metricdata.Aggregation)
+	n := out1(dest)
+	require.Equal(t, 1, n)
+
+	h, ok := (*dest).(metricdata.ExponentialHistogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+	require.Equal(t, int64(5), h.DataPoints[0].Sum)
+	val, defined := h.DataPoints[0].Min.Value()
+	require.True(t, defined)
+	require.Equal(t, int64(5), val)
+
+	// 2. Collect with sum and min/max disabled.
+	in2, out2 := Builder[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+	}.ExponentialBucketHistogram(4, 20, true, true)
+
+	in2(ctx, 7, alice)
+
+	n = out2(dest)
+	require.Equal(t, 1, n)
+
+	h, ok = (*dest).(metricdata.ExponentialHistogram[int64])
+	require.True(t, ok)
+	require.Len(t, h.DataPoints, 1)
+
+	// Validate that stale values are not reported.
+	assert.Equal(t, int64(0), h.DataPoints[0].Sum, "stale Sum leaked")
+	_, defined = h.DataPoints[0].Min.Value()
+	assert.False(t, defined, "stale Min leaked")
+	_, defined = h.DataPoints[0].Max.Value()
+	assert.False(t, defined, "stale Max leaked")
+}
+
+func TestExponentialHistogramNoMinMax(t *testing.T) {
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+	ctx := t.Context()
+
+	// Test Delta with noMinMax = true
+	hDelta := newDeltaExpoHistogram[int64](4, 20, true, false, 0, dropExemplars[int64])
+	hDelta.measure(ctx, 1, newLazyFilteredAttributes(alice, nil))
+
+	var dest metricdata.Aggregation
+	hDelta.collect(&dest)
+	ehDelta := dest.(metricdata.ExponentialHistogram[int64])
+	require.Len(t, ehDelta.DataPoints, 1)
+	_, defined := ehDelta.DataPoints[0].Min.Value()
+	assert.False(t, defined, "Min should be invalid when noMinMax is true")
+	_, defined = ehDelta.DataPoints[0].Max.Value()
+	assert.False(t, defined, "Max should be invalid when noMinMax is true")
+
+	// Test Cumulative with noMinMax = true
+	measure, collect := newCumulativeExpoHistogram[int64](4, 20, true, false, 0, dropExemplars[int64])
+	measure(ctx, 1, newLazyFilteredAttributes(alice, nil))
+
+	collect(&dest)
+	ehCumul := dest.(metricdata.ExponentialHistogram[int64])
+	require.Len(t, ehCumul.DataPoints, 1)
+	_, defined = ehCumul.DataPoints[0].Min.Value()
+	assert.False(t, defined, "Min should be invalid when noMinMax is true")
+	_, defined = ehCumul.DataPoints[0].Max.Value()
+	assert.False(t, defined, "Max should be invalid when noMinMax is true")
+}
+
+func TestExponentialHistogramMinMaxUnset(t *testing.T) {
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+	val := newExpoHistogramDataPoint[int64](alice, 4, 20, false, false, nil, now())
+	var dp metricdata.ExponentialHistogramDataPoint[int64]
+	val.uploadTo(&dp, now(), now())
+
+	_, defined := dp.Min.Value()
+	assert.False(t, defined, "Min should be invalid for unrecorded minMax")
+	_, defined = dp.Max.Value()
+	assert.False(t, defined, "Max should be invalid for unrecorded minMax")
+}
+
+func TestExponentialHistogramCumulativeExemplarPreservedAcrossCollections(t *testing.T) {
+	ctx := t.Context()
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	factory := func(attribute.Set) FilteredExemplarReservoir[int64] {
+		return NewFilteredExemplarReservoir[int64](exemplar.AlwaysOnFilter, exemplar.NewFixedSizeReservoir(1))
+	}
+
+	measure, collect := newCumulativeExpoHistogram[int64](4, 20, false, false, 0, factory)
+	measure(ctx, 42, newLazyFilteredAttributes(alice, nil))
+
+	var dest metricdata.Aggregation
+
+	// First collection: exemplar should be reported.
+	collect(&dest)
+	eh := dest.(metricdata.ExponentialHistogram[int64])
+	require.Len(t, eh.DataPoints, 1)
+	require.Len(t, eh.DataPoints[0].Exemplars, 1)
+	assert.Equal(t, int64(42), eh.DataPoints[0].Exemplars[0].Value)
+
+	// Second collection without new measurements: the exemplar should STILL be reported
+	// because cumulative series preserve their reservoir state across collections.
+	collect(&dest)
+	eh = dest.(metricdata.ExponentialHistogram[int64])
+	require.Len(t, eh.DataPoints, 1)
+	require.Len(t, eh.DataPoints[0].Exemplars, 1)
+	assert.Equal(t, int64(42), eh.DataPoints[0].Exemplars[0].Value)
+}
+
+func TestExpoHistogramDataPointMerge(t *testing.T) {
+	alice := attribute.NewSet(attribute.String("user", "alice"))
+
+	testCases := []struct {
+		name     string
+		maxSize  int
+		maxScale int32
+		pVals    []float64
+		oVals    []float64
+		check    func(t *testing.T, p *expoHistogramDataPoint[float64])
+	}{
+		{
+			name:     "positive downscale on merge",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    []float64{1.0},
+			oVals:    []float64{1000.0},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(2), p.count())
+				assert.LessOrEqual(t, int(p.posBuckets.length), 4)
+				assert.Zero(t, p.negBuckets.length)
+				assert.InDelta(t, 1001.0, p.sum.load(), 1e-9)
+			},
+		},
+		{
+			name:     "negative downscale on merge",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    []float64{-1.0},
+			oVals:    []float64{-1000.0},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(2), p.count())
+				assert.LessOrEqual(t, int(p.negBuckets.length), 4)
+				assert.Zero(t, p.posBuckets.length)
+				assert.InDelta(t, -1001.0, p.sum.load(), 1e-9)
+			},
+		},
+		{
+			name:     "positive on p and negative on other",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    []float64{10.0},
+			oVals:    []float64{-10.0},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(2), p.count())
+				assert.Positive(t, p.posBuckets.length)
+				assert.Positive(t, p.negBuckets.length)
+				assert.InDelta(t, 0.0, p.sum.load(), 1e-9)
+			},
+		},
+		{
+			name:     "both positive and negative with downscaling",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    []float64{1.0, -1.0},
+			oVals:    []float64{10000.0, -10000.0},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(4), p.count())
+				assert.LessOrEqual(t, int(p.posBuckets.length), 4)
+				assert.LessOrEqual(t, int(p.negBuckets.length), 4)
+			},
+		},
+		{
+			name:     "p empty other populated",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    nil,
+			oVals:    []float64{2.0, -3.0, 0.0},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(3), p.count())
+				assert.Equal(t, uint64(1), p.zeroCount.Load())
+			},
+		},
+		{
+			name:     "other empty p populated",
+			maxSize:  4,
+			maxScale: 20,
+			pVals:    []float64{2.0, -3.0, 0.0},
+			oVals:    nil,
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(3), p.count())
+				assert.Equal(t, uint64(1), p.zeroCount.Load())
+			},
+		},
+		{
+			name:     "maxSize 3 extreme range merge",
+			maxSize:  3,
+			maxScale: 20,
+			pVals:    []float64{math.MaxFloat64},
+			oVals:    []float64{smallestNonZeroNormalFloat64},
+			check: func(t *testing.T, p *expoHistogramDataPoint[float64]) {
+				assert.Equal(t, uint64(2), p.count())
+				assert.GreaterOrEqual(t, p.scale.Load(), int32(expoMinScale))
+				assert.LessOrEqual(t, int(p.posBuckets.length), 3)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := newExpoHistogramDataPoint[float64](alice, tc.maxSize, tc.maxScale, false, false, nil, now())
+			for _, v := range tc.pVals {
+				p.record(v)
+			}
+			o := newExpoHistogramDataPoint[float64](alice, tc.maxSize, tc.maxScale, false, false, nil, now())
+			for _, v := range tc.oVals {
+				o.record(v)
+			}
+			p.merge(o)
+			tc.check(t, p)
+		})
+	}
+}
+
+func verifyBucketInvariants(t *testing.T, b *expoBuckets, msg string) {
+	t.Helper()
+	if b.length == 0 {
+		if b.startBin != 0 {
+			t.Fatalf("%s: empty bucket startBin should be 0, got %d", msg, b.startBin)
+		}
+		for i := range b.counts {
+			if v := b.counts[i].Load(); v != 0 {
+				t.Fatalf("%s: empty bucket counts slot %d should be 0, got %d", msg, i, v)
+			}
+		}
+		return
+	}
+	// Verify power-of-2 capacity
+	if len(b.counts) == 0 {
+		t.Fatalf("%s: counts slice should not be empty", msg)
+	}
+	if (len(b.counts) & (len(b.counts) - 1)) != 0 {
+		t.Fatalf("%s: capacity %d is not a power of 2", msg, len(b.counts))
+	}
+	if len(b.counts) < int(b.length) {
+		t.Fatalf("%s: capacity %d < length %d", msg, len(b.counts), b.length)
+	}
+
+	// Check logical slots vs physical unused slots
+	firstSlot := b.index(b.startBin)
+	capMask := len(b.counts) - 1
+	for i := range b.counts {
+		offset := (i - firstSlot) & capMask
+		if offset >= int(b.length) {
+			if v := b.counts[i].Load(); v != 0 {
+				t.Fatalf("%s: unused slot %d should be 0, got %d", msg, i, v)
+			}
+		}
+	}
+}
+
+func TestExpoBucketsCircularWraparound(t *testing.T) {
+	// StartBin = 3 in cap 4 means logical bins 3, 4, 5 map to slots 3, 0, 1
+	b := newBucket(3, []uint64{10, 20, 30})
+	verifyBucketInvariants(t, b, "initial wrapped bucket")
+	assert.Len(t, b.counts, 4)
+	assert.Equal(t, uint64(10), b.counts[3].Load())
+	assert.Equal(t, uint64(20), b.counts[0].Load())
+	assert.Equal(t, uint64(30), b.counts[1].Load())
+	assert.Equal(t, uint64(0), b.counts[2].Load())
+
+	// Record inside existing range
+	b.record(4)
+	assertBuckets(t, 3, []uint64{10, 21, 30}, *b, "after record inside")
+	verifyBucketInvariants(t, b, "after record inside")
+
+	// Append within existing capacity
+	b.record(6) // logical bin 6 maps to slot 2
+	assert.Len(t, b.counts, 4)
+	assertBuckets(t, 3, []uint64{10, 21, 30, 1}, *b, "after append to fill capacity")
+	verifyBucketInvariants(t, b, "after append to fill capacity")
+}
+
+func TestExpoBucketsCapacityGrowthRebucketing(t *testing.T) {
+	// Start with wrapped bucket at cap 4
+	b := newBucket(3, []uint64{10, 20, 30, 40})
+	assert.Len(t, b.counts, 4)
+
+	// Prepend to trigger capacity growth from 4 to 8
+	b.record(2)
+	assert.Len(t, b.counts, 8)
+	assertBuckets(t, 2, []uint64{1, 10, 20, 30, 40}, *b, "after growth prepend")
+	verifyBucketInvariants(t, b, "after growth prepend")
+
+	// Append to trigger capacity growth from 8 to 16
+	b.recordCount(10, 5)
+	assert.Len(t, b.counts, 16)
+	assertBuckets(t, 2, []uint64{1, 10, 20, 30, 40, 0, 0, 0, 5}, *b, "after growth append")
+	verifyBucketInvariants(t, b, "after growth append")
+}
+
+func TestExpoBucketsAlternatingPrependAppend(t *testing.T) {
+	b := new(expoBuckets)
+	b.recordCount(0, 1)
+
+	// Alternate prepending and appending
+	for i := int32(1); i <= 10; i++ {
+		b.recordCount(-i, uint64(i))
+		b.recordCount(i, uint64(i*10))
+		verifyBucketInvariants(t, b, fmt.Sprintf("iteration %d", i))
+	}
+
+	assert.Equal(t, int32(-10), b.startBin)
+	assert.Equal(t, int32(21), b.length)
+	assert.Equal(t, uint64(1+55+550), b.count())
+}
+
+func TestExpoBucketsDownscaleWrapped(t *testing.T) {
+	// Start with wrapped bucket at cap 8
+	// bins: 6, 7, 8, 9 -> slots 6, 7, 0, 1
+	b := newBucket(6, []uint64{1, 2, 3, 4})
+	verifyBucketInvariants(t, b, "initial")
+
+	b.downscale(1)
+	// new bins: 6>>1 = 3, 7>>1 = 3 (1+2=3), 8>>1 = 4 (3), 9>>1 = 4 (4) -> [3, 7] at startBin 3
+	assertBuckets(t, 3, []uint64{3, 7}, *b, "after downscale 1")
+	verifyBucketInvariants(t, b, "after downscale 1")
+
+	// Large downscale
+	b2 := newBucket(-100, []uint64{5, 0, 0, 15})
+	b2.downscale(5)
+	// -100 >> 5 = -4, -97 >> 5 = -4 -> sum 20 at startBin -4
+	assertBuckets(t, -4, []uint64{20}, *b2, "large downscale")
+	verifyBucketInvariants(t, b2, "large downscale")
+}
+
+func TestExpoBucketsMergeWrapped(t *testing.T) {
+	b1 := newBucket(3, []uint64{10, 20}) // wrapped at cap 4: slots 3, 0
+	b2 := newBucket(2, []uint64{5, 15})  // slots 2, 3
+
+	b1.merge(b2)
+	assertBuckets(t, 2, []uint64{5, 25, 20}, *b1, "after merge")
+	verifyBucketInvariants(t, b1, "after merge")
+}
+
+func TestExpoBucketsClearPreservesCapacity(t *testing.T) {
+	b := newBucket(3, []uint64{10, 20, 30, 40})
+	b.record(10) // span [3..10] is length 8 -> cap 8
+	capBefore := len(b.counts)
+	assert.Equal(t, 8, capBefore)
+
+	b.clear()
+	assert.Equal(t, int32(0), b.startBin)
+	assert.Equal(t, int32(0), b.length)
+	assert.Len(t, b.counts, capBefore)
+	verifyBucketInvariants(t, b, "after clear")
+
+	// Re-record after clear
+	b.recordCount(5, 42)
+	assert.Equal(t, int32(5), b.startBin)
+	assert.Equal(t, int32(1), b.length)
+	assert.Len(t, b.counts, capBefore)
+	assertBuckets(t, 5, []uint64{42}, *b, "after re-record")
+	verifyBucketInvariants(t, b, "after re-record")
+}
+
+func TestExpoBucketsRecordZeroCount(t *testing.T) {
+	b := new(expoBuckets)
+	b.recordCount(10, 0)
+	assert.Equal(t, int32(0), b.startBin)
+	assert.Equal(t, int32(0), b.length)
+	assert.Empty(t, b.counts)
+
+	b2 := newBucket(5, []uint64{10, 20})
+	b2.recordCount(5, 0)
+	b2.recordCount(100, 0)
+	assertBuckets(t, 5, []uint64{10, 20}, *b2, "zero count records are no-ops")
+}
+
+func TestExpoBucketsProperty(t *testing.T) {
+	rng := rand.New(rand.NewSource(42))
+	for iter := range 1000 {
+		b := new(expoBuckets)
+		ref := make(map[int32]uint64)
+
+		ops := 50
+		for op := range ops {
+			switch rng.Intn(4) {
+			case 0, 1: // recordCount
+				bin := int32(rng.Intn(61) - 30)
+				count := uint64(rng.Intn(10) + 1)
+				b.recordCount(bin, count)
+				ref[bin] += count
+			case 2: // downscale
+				delta := int32(rng.Intn(3) + 1)
+				b.downscale(delta)
+				newRef := make(map[int32]uint64)
+				for k, v := range ref {
+					newRef[k>>delta] += v
+				}
+				ref = newRef
+			case 3: // clear occasionally
+				if rng.Intn(10) == 0 {
+					b.clear()
+					ref = make(map[int32]uint64)
+				}
+			}
+
+			// Verify invariant
+			verifyBucketInvariants(t, b, "property test")
+
+			// Verify equivalence with reference model
+			if len(ref) == 0 {
+				if b.length != 0 {
+					t.Fatalf("iter %d op %d: expected length 0, got %d", iter, op, b.length)
+				}
+				if c := b.count(); c != 0 {
+					t.Fatalf("iter %d op %d: expected count 0, got %d", iter, op, c)
+				}
+			} else {
+				var minBin, maxBin int32 = math.MaxInt32, math.MinInt32
+				var totalCount uint64
+				for k, v := range ref {
+					if v > 0 {
+						if k < minBin {
+							minBin = k
+						}
+						if k > maxBin {
+							maxBin = k
+						}
+						totalCount += v
+					}
+				}
+				if totalCount == 0 {
+					if c := b.count(); c != 0 {
+						t.Fatalf("iter %d op %d: expected count 0, got %d", iter, op, c)
+					}
+				} else {
+					if b.startBin != minBin {
+						t.Fatalf("iter %d op %d: expected startBin %d, got %d", iter, op, minBin, b.startBin)
+					}
+					if expectedLen := maxBin - minBin + 1; b.length != expectedLen {
+						t.Fatalf("iter %d op %d: expected length %d, got %d", iter, op, expectedLen, b.length)
+					}
+					if c := b.count(); c != totalCount {
+						t.Fatalf("iter %d op %d: expected count %d, got %d", iter, op, totalCount, c)
+					}
+					for k := minBin; k <= maxBin; k++ {
+						if expected, actual := ref[k], b.bin(k).Load(); expected != actual {
+							t.Fatalf("iter %d op %d: bin %d expected count %d, got %d", iter, op, k, expected, actual)
+						}
+					}
+				}
+			}
+		}
+	}
+}

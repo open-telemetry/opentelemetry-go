@@ -1,0 +1,205 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package log_test
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/log"
+)
+
+// Initialize the OpenTelemetry Logs SDK and set up logging using a log bridge.
+func Example() {
+	// Create an exporter that will emit log records.
+	// For example, use
+	// go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp to send logs
+	// using OTLP over HTTP:
+	// exporter, err := otlploghttp.New(ctx)
+	var exporter log.Exporter
+
+	// Create a log record processor pipeline.
+	processor := log.NewBatchProcessor(exporter)
+
+	// Create a logger provider.
+	// You can pass this instance directly when creating a log bridge.
+	provider := log.NewLoggerProvider(
+		log.WithProcessor(processor),
+	)
+
+	// Handle shutdown properly so that nothing leaks.
+	defer func() {
+		err := provider.Shutdown(context.Background())
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	// Register it as the global logger provider so that it can be used via
+	// otel.Logger and accessed using otel.GetLoggerProvider.
+	// Most log bridges use the global logger provider by default.
+	// If the global logger provider is not set, then a no-op implementation
+	// is used, which fails to generate data.
+	otel.SetLoggerProvider(provider)
+
+	// Use a bridge so that you can emit logs using your preferred Go logging
+	// library. For example, use go.opentelemetry.io/contrib/bridges/otelslog so
+	// that you can use log/slog:
+	// slog.SetDefault(otelslog.NewLogger("my/pkg/name", otelslog.WithLoggerProvider(provider)))
+}
+
+// Use a processor that filters out records based on the provided context.
+func ExampleProcessor_contextFilter() {
+	// Existing processor that emits telemetry.
+	var processor log.Processor = log.NewBatchProcessor(nil)
+
+	// Wrap the processor so that it ignores processing log records
+	// when a context derived from WithIgnoreLogs is passed
+	// to the logging methods.
+	processor = &ContextFilterProcessor{Processor: processor}
+
+	// The created processor can then be registered with
+	// the OpenTelemetry Logs SDK using the WithProcessor option.
+	_ = log.NewLoggerProvider(
+		log.WithProcessor(processor),
+	)
+}
+
+type key struct{}
+
+var ignoreLogsKey key
+
+// WithIgnoreLogs returns a context that is used by [ContextFilterProcessor]
+// to filter out log records.
+func WithIgnoreLogs(ctx context.Context) context.Context {
+	return context.WithValue(ctx, ignoreLogsKey, true)
+}
+
+// ContextFilterProcessor filters out logs when a context derived from
+// [WithIgnoreLogs] is passed to its methods.
+type ContextFilterProcessor struct {
+	log.Processor
+}
+
+func (p *ContextFilterProcessor) OnEmit(ctx context.Context, record *log.Record) error {
+	if ignoreLogs(ctx) {
+		return nil
+	}
+	return p.Processor.OnEmit(ctx, record)
+}
+
+func (p *ContextFilterProcessor) Enabled(ctx context.Context, param log.EnabledParameters) bool {
+	return !ignoreLogs(ctx) && p.Processor.Enabled(ctx, param)
+}
+
+func ignoreLogs(ctx context.Context) bool {
+	_, ok := ctx.Value(ignoreLogsKey).(bool)
+	return ok
+}
+
+// Use a processor that sets EventName on log records with an "otel.event.name"
+// string attribute.
+// This is useful for users of logging libraries that do not support
+// setting the event name on log records, but do support attributes.
+func ExampleProcessor_eventName() {
+	// Existing processor that emits telemetry.
+	var processor log.Processor = log.NewBatchProcessor(nil)
+
+	// Add a processor so that it sets EventName on log records.
+	eventNameProcessor := &EventNameProcessor{}
+
+	// The created processor can then be registered with
+	// the OpenTelemetry Logs SDK using the WithProcessor option.
+	_ = log.NewLoggerProvider(
+		// Order is important here. Set EventName before handing to the processor.
+		log.WithProcessor(eventNameProcessor),
+		log.WithProcessor(processor),
+	)
+}
+
+// EventNameProcessor is a [log.Processor] that sets the EventName
+// on log records with an "otel.event.name" string attribute.
+// It is useful for logging libraries that do not support
+// setting the event name on log records,
+// but do support attributes.
+type EventNameProcessor struct{}
+
+// Enabled returns true, indicating this Processor will process all records.
+func (*EventNameProcessor) Enabled(context.Context, log.EnabledParameters) bool {
+	return true
+}
+
+// OnEmit sets the EventName on log records with an "otel.event.name" string
+// attribute. The original attribute is not removed.
+func (*EventNameProcessor) OnEmit(_ context.Context, record *log.Record) error {
+	record.WalkAttributes(func(kv attribute.KeyValue) bool {
+		if kv.Key == "otel.event.name" && kv.Value.Type() == attribute.STRING {
+			record.SetEventName(kv.Value.AsString())
+		}
+		return true
+	})
+	return nil
+}
+
+// Shutdown returns nil.
+func (*EventNameProcessor) Shutdown(context.Context) error {
+	return nil
+}
+
+// ForceFlush returns nil.
+func (*EventNameProcessor) ForceFlush(context.Context) error {
+	return nil
+}
+
+// Use a processor that redacts sensitive data from some attributes.
+func ExampleProcessor_redact() {
+	// Existing processor that emits telemetry.
+	var processor log.Processor = log.NewBatchProcessor(nil)
+
+	// Add a processor so that it redacts values from token attributes.
+	redactProcessor := &RedactTokensProcessor{}
+
+	// The created processor can then be registered with
+	// the OpenTelemetry Logs SDK using the WithProcessor option.
+	_ = log.NewLoggerProvider(
+		// Order is important here. Redact before handing to the processor.
+		log.WithProcessor(redactProcessor),
+		log.WithProcessor(processor),
+	)
+}
+
+// RedactTokensProcessor is a [log.Processor] decorator that redacts values
+// from attributes containing "token" in the key.
+type RedactTokensProcessor struct{}
+
+// Enabled returns true, indicating this Processor will process all records.
+func (*RedactTokensProcessor) Enabled(context.Context, log.EnabledParameters) bool {
+	return true
+}
+
+// OnEmit redacts values from attributes containing "token" in the key
+// by replacing them with a "REDACTED" value.
+func (*RedactTokensProcessor) OnEmit(_ context.Context, record *log.Record) error {
+	record.WalkAttributes(func(kv attribute.KeyValue) bool {
+		key := string(kv.Key)
+		if strings.Contains(strings.ToLower(key), "token") {
+			record.AddAttributes(attribute.String(key, "REDACTED"))
+		}
+		return true
+	})
+	return nil
+}
+
+// Shutdown returns nil.
+func (*RedactTokensProcessor) Shutdown(context.Context) error {
+	return nil
+}
+
+// ForceFlush returns nil.
+func (*RedactTokensProcessor) ForceFlush(context.Context) error {
+	return nil
+}

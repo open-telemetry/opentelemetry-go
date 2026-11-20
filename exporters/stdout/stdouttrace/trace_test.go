@@ -1,0 +1,448 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package stdouttrace_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
+	"math"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/counter"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/observ"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/sdk/resource"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
+	"go.opentelemetry.io/otel/trace"
+)
+
+func TestExporterExportSpan(t *testing.T) {
+	// setup test span
+	now := time.Now()
+	traceID, _ := trace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
+	spanID, _ := trace.SpanIDFromHex("0102030405060708")
+	traceState, _ := trace.ParseTraceState("key=val")
+	keyValue := "value"
+	doubleValue := 123.456
+	res := resource.NewSchemaless(attribute.String("rk1", "rv11"))
+
+	ss := tracetest.SpanStub{
+		SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceState: traceState,
+		}),
+		Name:      "/foo",
+		StartTime: now,
+		EndTime:   now,
+		Attributes: []attribute.KeyValue{
+			attribute.String("key", keyValue),
+			attribute.Float64("double", doubleValue),
+		},
+		Events: []tracesdk.Event{
+			{Name: "foo", Attributes: []attribute.KeyValue{attribute.String("key", keyValue)}, Time: now},
+			{Name: "bar", Attributes: []attribute.KeyValue{attribute.Float64("double", doubleValue)}, Time: now},
+		},
+		SpanKind: trace.SpanKindInternal,
+		Status: tracesdk.Status{
+			Code:        codes.Error,
+			Description: "interesting",
+		},
+		Resource: res,
+	}
+
+	tests := []struct {
+		opts      []stdouttrace.Option
+		expectNow time.Time
+		ctx       context.Context
+		wantErr   error
+	}{
+		{
+			opts:      []stdouttrace.Option{stdouttrace.WithPrettyPrint()},
+			expectNow: now,
+			ctx:       t.Context(),
+		},
+		{
+			opts: []stdouttrace.Option{stdouttrace.WithPrettyPrint(), stdouttrace.WithoutTimestamps()},
+			// expectNow is an empty time.Time
+			ctx: t.Context(),
+		},
+		{
+			opts: []stdouttrace.Option{},
+			ctx: func() context.Context {
+				ctx, cancel := context.WithCancel(t.Context())
+				cancel()
+				return ctx
+			}(),
+			wantErr: context.Canceled,
+		},
+	}
+
+	for _, tt := range tests {
+		// write to buffer for testing
+		var b bytes.Buffer
+		ex, err := stdouttrace.New(append(tt.opts, stdouttrace.WithWriter(&b))...)
+		require.NoError(t, err)
+
+		err = ex.ExportSpans(tt.ctx, tracetest.SpanStubs{ss, ss}.Snapshots())
+		assert.Equal(t, tt.wantErr, err)
+
+		if tt.wantErr == nil {
+			decoder := json.NewDecoder(&b)
+			for range 2 {
+				var got json.RawMessage
+				require.NoError(t, decoder.Decode(&got))
+				assert.JSONEq(t, expectedJSON(tt.expectNow), string(got))
+			}
+			var extra any
+			require.ErrorIs(t, decoder.Decode(&extra), io.EOF)
+		}
+	}
+}
+
+func TestExporterNilWriterPreservesWriter(t *testing.T) {
+	var buf bytes.Buffer
+	exp, err := stdouttrace.New(stdouttrace.WithWriter(&buf), stdouttrace.WithWriter(nil))
+	require.NoError(t, err)
+	require.NoError(t, exp.ExportSpans(t.Context(), tracetest.SpanStubs{{Name: "test"}}.Snapshots()))
+	assert.Contains(t, buf.String(), `"Name":"test"`)
+}
+
+func TestWithoutTimestampsPreservesInput(t *testing.T) {
+	now := time.Now()
+	span := tracetest.SpanStub{
+		StartTime: now,
+		EndTime:   now.Add(time.Second),
+		Events: []tracesdk.Event{
+			{Name: "first", Time: now},
+			{Name: "second", Time: now.Add(time.Millisecond)},
+		},
+	}.Snapshot()
+	spans := []tracesdk.ReadOnlySpan{span}
+	var before, without, after bytes.Buffer
+	withTimestamps, err := stdouttrace.New(stdouttrace.WithWriter(&before))
+	require.NoError(t, err)
+	require.NoError(t, withTimestamps.ExportSpans(t.Context(), spans))
+
+	withoutTimestamps, err := stdouttrace.New(stdouttrace.WithWriter(&without), stdouttrace.WithoutTimestamps())
+	require.NoError(t, err)
+	require.NoError(t, withoutTimestamps.ExportSpans(t.Context(), spans))
+
+	var got struct {
+		StartTime time.Time
+		EndTime   time.Time
+		Events    []tracesdk.Event
+	}
+	require.NoError(t, json.Unmarshal(without.Bytes(), &got))
+	assert.Zero(t, got.StartTime)
+	assert.Zero(t, got.EndTime)
+	require.Len(t, got.Events, 2)
+	for _, event := range got.Events {
+		assert.Zero(t, event.Time)
+	}
+
+	withTimestamps, err = stdouttrace.New(stdouttrace.WithWriter(&after))
+	require.NoError(t, err)
+	require.NoError(t, withTimestamps.ExportSpans(t.Context(), spans))
+	assert.JSONEq(t, before.String(), after.String(), "exporting without timestamps must not modify the input span")
+}
+
+func expectedJSON(now time.Time) string {
+	serializedNow, _ := json.Marshal(now)
+	return `{
+	"Name": "/foo",
+	"SpanContext": {
+		"TraceID": "0102030405060708090a0b0c0d0e0f10",
+		"SpanID": "0102030405060708",
+		"TraceFlags": "00",
+		"TraceState": "key=val",
+		"Remote": false
+	},
+	"Parent": {
+		"TraceID": "00000000000000000000000000000000",
+		"SpanID": "0000000000000000",
+		"TraceFlags": "00",
+		"TraceState": "",
+		"Remote": false
+	},
+	"SpanKind": 1,
+	"StartTime": ` + string(serializedNow) + `,
+	"EndTime": ` + string(serializedNow) + `,
+	"Attributes": [
+		{
+			"key": "value"
+		},
+		{
+			"double": 123.456
+		}
+	],
+	"Events": [
+		{
+			"Name": "foo",
+			"Attributes": [
+				{
+					"key": "value"
+				}
+			],
+			"DroppedAttributeCount": 0,
+			"Time": ` + string(serializedNow) + `
+		},
+		{
+			"Name": "bar",
+			"Attributes": [
+				{
+					"double": 123.456
+				}
+			],
+			"DroppedAttributeCount": 0,
+			"Time": ` + string(serializedNow) + `
+		}
+	],
+	"Links": null,
+	"Status": {
+		"Code": "Error",
+		"Description": "interesting"
+	},
+	"DroppedAttributes": 0,
+	"DroppedEvents": 0,
+	"DroppedLinks": 0,
+	"ChildSpanCount": 0,
+	"Resource": {
+		"rk1": "rv11"
+	},
+	"InstrumentationScope": {
+		"Name": "",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": {}
+	},
+	"InstrumentationLibrary": {
+		"Name": "",
+		"Version": "",
+		"SchemaURL": "",
+		"Attributes": {}
+	}
+}
+`
+}
+
+func TestExporterShutdownIgnoresContext(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Minute)
+	t.Cleanup(cancel)
+
+	e, err := stdouttrace.New()
+	if err != nil {
+		t.Fatalf("failed to create exporter: %v", err)
+	}
+
+	innerCtx, innerCancel := context.WithCancel(ctx)
+	innerCancel()
+	err = e.Shutdown(innerCtx)
+	assert.NoError(t, err)
+}
+
+func TestExporterShutdownNoError(t *testing.T) {
+	e, err := stdouttrace.New()
+	if err != nil {
+		t.Fatalf("failed to create exporter: %v", err)
+	}
+
+	if err := e.Shutdown(t.Context()); err != nil {
+		t.Errorf("shutdown errored: expected nil, got %v", err)
+	}
+}
+
+func TestObservability(t *testing.T) {
+	defaultCallExportSpans := func(t *testing.T, exporter *stdouttrace.Exporter) {
+		require.NoError(t, exporter.ExportSpans(t.Context(), tracetest.SpanStubs{
+			{Name: "/foo"},
+			{Name: "/bar"},
+			{Name: "/nonfinite", Attributes: []attribute.KeyValue{attribute.Float64("value", math.NaN())}},
+		}.Snapshots()))
+	}
+
+	tests := []struct {
+		name            string
+		enabled         bool
+		callExportSpans func(t *testing.T, exporter *stdouttrace.Exporter)
+		assertMetrics   func(t *testing.T, rm metricdata.ResourceMetrics)
+	}{
+		{
+			name:            "Disabled",
+			enabled:         false,
+			callExportSpans: defaultCallExportSpans,
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:            "Enabled",
+			enabled:         true,
+			callExportSpans: defaultCallExportSpans,
+			assertMetrics: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				t.Helper()
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				sm := rm.ScopeMetrics[0]
+				require.Len(t, sm.Metrics, 3)
+
+				assert.Equal(t, instrumentation.Scope{
+					Name:      observ.ScopeName,
+					Version:   observ.Version,
+					SchemaURL: observ.SchemaURL,
+				}, sm.Scope)
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanInflight{}.Name(),
+					Description: otelconv.SDKExporterSpanInflight{}.Description(),
+					Unit:        otelconv.SDKExporterSpanInflight{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName(observ.ComponentName(0)),
+									semconv.OTelComponentTypeKey.String(observ.ComponentType),
+								),
+								Value: 0,
+							},
+						},
+					},
+				}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterSpanExported{}.Name(),
+					Description: otelconv.SDKExporterSpanExported{}.Description(),
+					Unit:        otelconv.SDKExporterSpanExported{}.Unit(),
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName(observ.ComponentName(0)),
+									semconv.OTelComponentTypeKey.String(observ.ComponentType),
+								),
+								Value: 3,
+							},
+						},
+					},
+				}, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        otelconv.SDKExporterOperationDuration{}.Name(),
+					Description: otelconv.SDKExporterOperationDuration{}.Description(),
+					Unit:        otelconv.SDKExporterOperationDuration{}.Unit(),
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attribute.NewSet(
+									semconv.OTelComponentName(observ.ComponentName(0)),
+									semconv.OTelComponentTypeKey.String(observ.ComponentType),
+								),
+							},
+						},
+					},
+				}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.enabled {
+				t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+				// Reset component name counter for each test.
+				_ = counter.SetExporterID(0)
+			}
+
+			original := otel.GetMeterProvider()
+			t.Cleanup(func() { otel.SetMeterProvider(original) })
+
+			r := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(r))
+			otel.SetMeterProvider(mp)
+
+			exporter, err := stdouttrace.New(
+				stdouttrace.WithWriter(io.Discard),
+			)
+			require.NoError(t, err)
+
+			tt.callExportSpans(t, exporter)
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, r.Collect(t.Context(), &rm))
+
+			tt.assertMetrics(t, rm)
+		})
+	}
+}
+
+func BenchmarkExporterWithoutTimestamps(b *testing.B) {
+	spans := tracetest.SpanStubs{{
+		Events: []tracesdk.Event{
+			{Name: "first", Time: time.Now()},
+			{Name: "second", Time: time.Now()},
+		},
+	}}.Snapshots()
+	ex, err := stdouttrace.New(stdouttrace.WithWriter(io.Discard), stdouttrace.WithoutTimestamps())
+	require.NoError(b, err)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err := ex.ExportSpans(b.Context(), spans); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkExporterExportSpans(b *testing.B) {
+	ss := tracetest.SpanStubs{
+		{Name: "/foo"},
+		{
+			Name:       "span with a non-finite attribute",
+			Attributes: []attribute.KeyValue{attribute.Float64("", math.Inf(1))},
+		},
+		{Name: "/bar"},
+	}.Snapshots()
+
+	run := func(b *testing.B) {
+		ex, err := stdouttrace.New(stdouttrace.WithWriter(io.Discard))
+		if err != nil {
+			b.Fatalf("failed to create exporter: %v", err)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			err = ex.ExportSpans(b.Context(), ss)
+		}
+		_ = err
+	}
+
+	b.Run("Observability", func(b *testing.B) {
+		b.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+		run(b)
+	})
+
+	b.Run("NoObservability", run)
+}

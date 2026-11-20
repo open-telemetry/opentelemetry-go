@@ -1,0 +1,733 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package attribute_test
+
+import (
+	"math"
+	"reflect"
+	"regexp"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
+)
+
+type testCase struct {
+	kvs []attribute.KeyValue
+
+	keyRe *regexp.Regexp
+
+	encoding string
+	fullEnc  string
+}
+
+func expect(enc string, kvs ...attribute.KeyValue) testCase {
+	return testCase{
+		kvs:      kvs,
+		encoding: enc,
+	}
+}
+
+func expectFiltered(enc, filter, fullEnc string, kvs ...attribute.KeyValue) testCase {
+	return testCase{
+		kvs:      kvs,
+		keyRe:    regexp.MustCompile(filter),
+		encoding: enc,
+		fullEnc:  fullEnc,
+	}
+}
+
+func TestSetDedup(t *testing.T) {
+	cases := []testCase{
+		expect("A=B", attribute.String("A", "2"), attribute.String("A", "B")),
+		expect("A=B", attribute.String("A", "2"), attribute.Int("A", 1), attribute.String("A", "B")),
+		expect("A=[true false]", attribute.BoolSlice("A", []bool{true, false})),
+		expect(
+			"A=B",
+			attribute.String("A", "B"),
+			attribute.String("A", "C"),
+			attribute.String("A", "D"),
+			attribute.String("A", "B"),
+		),
+
+		expect("A=B,C=D", attribute.String("A", "1"), attribute.String("C", "D"), attribute.String("A", "B")),
+		expect("A=B,C=D", attribute.String("A", "2"), attribute.String("A", "B"), attribute.String("C", "D")),
+		expect(
+			"A=B,C=D",
+			attribute.Float64("C", 1.2),
+			attribute.String("A", "2"),
+			attribute.String("A", "B"),
+			attribute.String("C", "D"),
+		),
+		expect(
+			"A=B,C=D",
+			attribute.String("C", "D"),
+			attribute.String("A", "B"),
+			attribute.String("A", "C"),
+			attribute.String("A", "D"),
+			attribute.String("A", "B"),
+		),
+		expect(
+			"A=B,C=D",
+			attribute.String("A", "B"),
+			attribute.String("C", "D"),
+			attribute.String("A", "C"),
+			attribute.String("A", "D"),
+			attribute.String("A", "B"),
+		),
+		expect(
+			"A=B,C=D",
+			attribute.String("A", "B"),
+			attribute.String("A", "C"),
+			attribute.String("A", "D"),
+			attribute.String("A", "B"),
+			attribute.String("C", "D"),
+		),
+	}
+	enc := attribute.DefaultEncoder()
+
+	s2d := map[string][]attribute.Distinct{}
+	d2s := map[attribute.Distinct][]string{}
+
+	for _, tc := range cases {
+		cpy := make([]attribute.KeyValue, len(tc.kvs))
+		copy(cpy, tc.kvs)
+		sl := attribute.NewSet(cpy...)
+
+		// Ensure that the input was reordered but no elements went missing.
+		require.ElementsMatch(t, tc.kvs, cpy)
+
+		str := sl.Encoded(enc)
+		equ := sl.Equivalent()
+
+		s2d[str] = append(s2d[str], equ)
+		d2s[equ] = append(d2s[equ], str)
+
+		require.Equal(t, tc.encoding, str)
+	}
+
+	for s, d := range s2d {
+		// No other Distinct values are equal to this.
+		for s2, d2 := range s2d {
+			if s2 == s {
+				continue
+			}
+			for _, elt := range d {
+				for _, otherDistinct := range d2 {
+					require.NotEqual(t, otherDistinct, elt)
+				}
+			}
+		}
+		for _, strs := range d2s {
+			if strs[0] == s {
+				continue
+			}
+			for _, otherString := range strs {
+				require.NotEqual(t, otherString, s)
+			}
+		}
+	}
+
+	for d, s := range d2s {
+		// No other Distinct values are equal to this.
+		for d2, s2 := range d2s {
+			if d2 == d {
+				continue
+			}
+			for _, elt := range s {
+				for _, otherDistinct := range s2 {
+					require.NotEqual(t, otherDistinct, elt)
+				}
+			}
+		}
+		for _, distincts := range s2d {
+			if distincts[0] == d {
+				continue
+			}
+			for _, otherDistinct := range distincts {
+				require.NotEqual(t, otherDistinct, d)
+			}
+		}
+	}
+}
+
+func TestFiltering(t *testing.T) {
+	a := attribute.String("A", "a")
+	b := attribute.String("B", "b")
+	c := attribute.String("C", "c")
+
+	tests := []struct {
+		name       string
+		in         []attribute.KeyValue
+		filter     attribute.Filter
+		kept, drop []attribute.KeyValue
+	}{
+		{
+			name:   "A",
+			in:     []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool { return kv.Key == "A" },
+			kept:   []attribute.KeyValue{a},
+			drop:   []attribute.KeyValue{b, c},
+		},
+		{
+			name:   "B",
+			in:     []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool { return kv.Key == "B" },
+			kept:   []attribute.KeyValue{b},
+			drop:   []attribute.KeyValue{a, c},
+		},
+		{
+			name:   "C",
+			in:     []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool { return kv.Key == "C" },
+			kept:   []attribute.KeyValue{c},
+			drop:   []attribute.KeyValue{a, b},
+		},
+		{
+			name: "A||B",
+			in:   []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool {
+				return kv.Key == "A" || kv.Key == "B"
+			},
+			kept: []attribute.KeyValue{a, b},
+			drop: []attribute.KeyValue{c},
+		},
+		{
+			name: "B||C",
+			in:   []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool {
+				return kv.Key == "B" || kv.Key == "C"
+			},
+			kept: []attribute.KeyValue{b, c},
+			drop: []attribute.KeyValue{a},
+		},
+		{
+			name: "A||C",
+			in:   []attribute.KeyValue{a, b, c},
+			filter: func(kv attribute.KeyValue) bool {
+				return kv.Key == "A" || kv.Key == "C"
+			},
+			kept: []attribute.KeyValue{a, c},
+			drop: []attribute.KeyValue{b},
+		},
+		{
+			name:   "None",
+			in:     []attribute.KeyValue{a, b, c},
+			filter: func(attribute.KeyValue) bool { return false },
+			kept:   nil,
+			drop:   []attribute.KeyValue{a, b, c},
+		},
+		{
+			name:   "All",
+			in:     []attribute.KeyValue{a, b, c},
+			filter: func(attribute.KeyValue) bool { return true },
+			kept:   []attribute.KeyValue{a, b, c},
+			drop:   nil,
+		},
+		{
+			name:   "Empty",
+			in:     []attribute.KeyValue{},
+			filter: func(attribute.KeyValue) bool { return true },
+			kept:   nil,
+			drop:   nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Run("NewSetWithFiltered", func(t *testing.T) {
+				fltr, drop := attribute.NewSetWithFiltered(test.in, test.filter)
+				assert.Equal(t, test.kept, fltr.ToSlice(), "filtered")
+				assert.ElementsMatch(t, test.drop, drop, "dropped")
+			})
+
+			t.Run("Set.Filter", func(t *testing.T) {
+				s := attribute.NewSet(test.in...)
+				fltr, drop := s.Filter(test.filter)
+				assert.Equal(t, test.kept, fltr.ToSlice(), "filtered")
+				assert.ElementsMatch(t, test.drop, drop, "dropped")
+			})
+		})
+	}
+}
+
+func TestSetFilterNilReceiver(t *testing.T) {
+	var set *attribute.Set
+
+	t.Run("KeepAll", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			got, dropped := set.Filter(func(attribute.KeyValue) bool { return true })
+			assert.Empty(t, got.ToSlice())
+			assert.Nil(t, dropped)
+		})
+	})
+
+	t.Run("NilFilter", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			got, dropped := set.Filter(nil)
+			assert.Empty(t, got.ToSlice())
+			assert.Nil(t, dropped)
+		})
+	})
+}
+
+func TestUniqueness(t *testing.T) {
+	short := []attribute.KeyValue{
+		attribute.String("A", "0"),
+		attribute.String("B", "2"),
+		attribute.String("A", "1"),
+	}
+	long := []attribute.KeyValue{
+		attribute.String("B", "2"),
+		attribute.String("C", "5"),
+		attribute.String("B", "2"),
+		attribute.String("C", "1"),
+		attribute.String("A", "4"),
+		attribute.String("C", "3"),
+		attribute.String("A", "1"),
+	}
+	cases := []testCase{
+		expectFiltered("A=1", "^A$", "B=2", short...),
+		expectFiltered("B=2", "^B$", "A=1", short...),
+		expectFiltered("A=1,B=2", "^A|B$", "", short...),
+		expectFiltered("", "^C", "A=1,B=2", short...),
+
+		expectFiltered("A=1,C=3", "A|C", "B=2", long...),
+		expectFiltered("B=2,C=3", "C|B", "A=1", long...),
+		expectFiltered("C=3", "C", "A=1,B=2", long...),
+		expectFiltered("", "D", "A=1,B=2,C=3", long...),
+	}
+	enc := attribute.DefaultEncoder()
+
+	for _, tc := range cases {
+		cpy := make([]attribute.KeyValue, len(tc.kvs))
+		copy(cpy, tc.kvs)
+		distinct, uniq := attribute.NewSetWithFiltered(cpy, func(attr attribute.KeyValue) bool {
+			return tc.keyRe.MatchString(string(attr.Key))
+		})
+
+		full := attribute.NewSet(uniq...)
+
+		require.Equal(t, tc.encoding, distinct.Encoded(enc))
+		require.Equal(t, tc.fullEnc, full.Encoded(enc))
+	}
+}
+
+func TestLookup(t *testing.T) {
+	set := attribute.NewSet(attribute.Int("C", 3), attribute.Int("A", 1), attribute.Int("B", 2))
+
+	value, has := set.Value("C")
+	require.True(t, has)
+	require.Equal(t, int64(3), value.AsInt64())
+
+	value, has = set.Value("B")
+	require.True(t, has)
+	require.Equal(t, int64(2), value.AsInt64())
+
+	value, has = set.Value("A")
+	require.True(t, has)
+	require.Equal(t, int64(1), value.AsInt64())
+
+	_, has = set.Value("D")
+	require.False(t, has)
+}
+
+func TestZeroSetExportedMethodsNoPanic(t *testing.T) {
+	rType := reflect.TypeFor[*attribute.Set]()
+	rVal := reflect.ValueOf(&attribute.Set{})
+	for mType := range rType.Methods() {
+		if !mType.IsExported() {
+			t.Logf("ignoring unexported %s", mType.Name)
+			continue
+		}
+		t.Run(mType.Name, func(t *testing.T) {
+			m := rVal.MethodByName(mType.Name)
+			if !m.IsValid() {
+				t.Errorf("unknown method: %s", mType.Name)
+			}
+			assert.NotPanics(t, func() { _ = m.Call(args(mType)) })
+		})
+	}
+}
+
+func args(m reflect.Method) []reflect.Value {
+	numIn := m.Type.NumIn() - 1 // Do not include the receiver arg.
+	if numIn <= 0 {
+		return nil
+	}
+	if m.Type.IsVariadic() {
+		numIn--
+	}
+	out := make([]reflect.Value, numIn)
+	for i := range out {
+		aType := m.Type.In(i + 1) // Skip receiver arg.
+		out[i] = reflect.New(aType).Elem()
+	}
+	return out
+}
+
+func TestMarshalJSON(t *testing.T) {
+	for _, tc := range []struct {
+		desc     string
+		kvs      []attribute.KeyValue
+		wantJSON string
+	}{
+		{
+			desc:     "empty",
+			kvs:      []attribute.KeyValue{},
+			wantJSON: `[]`,
+		},
+		{
+			desc:     "single string attribute",
+			kvs:      []attribute.KeyValue{attribute.String("A", "a")},
+			wantJSON: `[{"Key":"A","Value":{"Type":"STRING","Value":"a"}}]`,
+		},
+		{
+			desc: "many mixed attributes",
+			kvs: []attribute.KeyValue{
+				attribute.Bool("A", true),
+				attribute.BoolSlice("B", []bool{true, false}),
+				attribute.Int("C", 1),
+				attribute.IntSlice("D", []int{2, 3}),
+				attribute.Int64("E", 22),
+				attribute.Int64Slice("F", []int64{33, 44}),
+				attribute.Float64("G", 1.1),
+				attribute.Float64Slice("H", []float64{2.2, 3.3}),
+				attribute.String("I", "Z"),
+				attribute.StringSlice("J", []string{"X", "Y"}),
+				attribute.Stringer("K", &simpleStringer{val: "foo"}),
+			},
+			wantJSON: `[
+                         {
+                           "Key": "A",
+                           "Value": {
+                             "Type": "BOOL",
+                             "Value": true
+                           }
+                         },
+                         {
+                           "Key": "B",
+                           "Value": {
+                             "Type": "BOOLSLICE",
+                             "Value": [true, false]
+                           }
+                         },
+                         {
+                           "Key": "C",
+                           "Value": {
+                             "Type": "INT64",
+                             "Value": 1
+                           }
+                         },
+                         {
+                           "Key": "D",
+                           "Value": {
+                             "Type": "INT64SLICE",
+                             "Value": [2, 3]
+                           }
+                         },
+                         {
+                           "Key": "E",
+                           "Value": {
+                             "Type": "INT64",
+                             "Value": 22
+                           }
+                         },
+                         {
+                           "Key": "F",
+                           "Value": {
+                             "Type": "INT64SLICE",
+                             "Value": [33, 44]
+                           }
+                         },
+                         {
+                           "Key": "G",
+                           "Value": {
+                             "Type": "FLOAT64",
+                             "Value": 1.1
+                           }
+                         },
+                         {
+                           "Key": "H",
+                           "Value": {
+                             "Type": "FLOAT64SLICE",
+                             "Value": [2.2, 3.3]
+                           }
+                         },
+                         {
+                           "Key": "I",
+                           "Value": {
+                             "Type": "STRING",
+                             "Value": "Z"
+                           }
+                         },
+                         {
+                           "Key": "J",
+                           "Value": {
+                             "Type": "STRINGSLICE",
+                             "Value": ["X", "Y"]
+                           }
+                         },
+                         {
+                           "Key": "K",
+                           "Value": {
+                             "Type": "STRING",
+                             "Value": "foo"
+                           }
+                         }
+                       ]`,
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			set := attribute.NewSet(tc.kvs...)
+			by, err := set.MarshalJSON()
+			require.NoError(t, err)
+			assert.JSONEq(t, tc.wantJSON, string(by))
+		})
+	}
+}
+
+func TestSetEqualsEmpty(t *testing.T) {
+	e := attribute.EmptySet()
+	empty := *e
+	t.Cleanup(func() { *e = empty })
+
+	alt := attribute.NewSet(attribute.String("A", "B"))
+	*e = alt
+
+	var s attribute.Set
+	assert.Truef(t, s.Equals(&empty), "expected %v to equal empty set %v", s, attribute.EmptySet())
+}
+
+type simpleStringer struct {
+	val string
+}
+
+func (s *simpleStringer) String() string { return s.val }
+
+func BenchmarkFiltering(b *testing.B) {
+	var kvs [26]attribute.KeyValue
+	buf := [1]byte{'A' - 1}
+	for i := range kvs {
+		buf[0]++ // A, B, C ... Z
+		kvs[i] = attribute.String(string(buf[:]), "")
+	}
+
+	var result struct {
+		set     attribute.Set
+		dropped []attribute.KeyValue
+	}
+
+	benchFn := func(fltr attribute.Filter) func(*testing.B) {
+		return func(b *testing.B) {
+			b.Helper()
+			b.Run("Set.Filter", func(b *testing.B) {
+				s := attribute.NewSet(kvs[:]...)
+				b.ResetTimer()
+				b.ReportAllocs()
+				for n := 0; n < b.N; n++ {
+					result.set, result.dropped = s.Filter(fltr)
+				}
+			})
+
+			b.Run("NewSetWithFiltered", func(b *testing.B) {
+				attrs := kvs[:]
+				b.ResetTimer()
+				b.ReportAllocs()
+				for n := 0; n < b.N; n++ {
+					result.set, result.dropped = attribute.NewSetWithFiltered(attrs, fltr)
+				}
+			})
+		}
+	}
+
+	b.Run("NoFilter", benchFn(nil))
+	b.Run("NoFiltered", benchFn(func(attribute.KeyValue) bool { return true }))
+	b.Run("Filtered", benchFn(func(kv attribute.KeyValue) bool { return kv.Key == "A" }))
+	b.Run("AllDropped", benchFn(func(attribute.KeyValue) bool { return false }))
+}
+
+func BenchmarkNewSet(b *testing.B) {
+	attrs := []attribute.KeyValue{
+		attribute.String("B1", "2"),
+		attribute.String("C2", "5"),
+		attribute.String("B3", "2"),
+		attribute.String("C4", "1"),
+		attribute.String("A5", "4"),
+		attribute.String("C6", "3"),
+		attribute.String("A7", "1"),
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		attribute.NewSet(attrs...)
+	}
+}
+
+// generateStringAttrsWithSize creates 5 string attributes with specified key and value lengths.
+func generateStringAttrsWithSize(keyLen, valueLen int) []attribute.KeyValue {
+	// Generate base strings of specified lengths
+	var keyBase strings.Builder
+
+	// Build key base string
+	for i := range keyLen {
+		_, _ = keyBase.WriteString(string(rune('a' + i%26)))
+	}
+
+	// Build value base string
+	var sb strings.Builder
+	for i := range valueLen {
+		_ = sb.WriteByte(byte('0' + i%10))
+	}
+	valueBase := sb.String()
+
+	// Create 5 attributes with different suffixes to ensure uniqueness
+	attrs := []attribute.KeyValue{
+		attribute.String(keyBase.String()+"1", valueBase+"x"),
+		attribute.String(keyBase.String()+"2", valueBase+"y"),
+		attribute.String(keyBase.String()+"3", valueBase+"z"),
+		attribute.String(keyBase.String()+"4", valueBase+"w"),
+		attribute.String(keyBase.String()+"5", valueBase+"v"),
+	}
+	return attrs
+}
+
+func TestSetString(t *testing.T) {
+	tests := []struct {
+		name string
+		set  *attribute.Set
+		want string
+	}{
+		{
+			name: "Nil",
+			set:  nil,
+			want: "{}",
+		},
+		{
+			name: "ZeroValue",
+			set:  new(attribute.Set{}),
+			want: "{}",
+		},
+		{
+			name: "Empty",
+			set:  new(attribute.NewSet()),
+			want: "{}",
+		},
+		{
+			name: "SingleBool",
+			set:  new(attribute.NewSet(attribute.Bool("a", true))),
+			want: `{"a":true}`,
+		},
+		{
+			name: "SingleInt",
+			set:  new(attribute.NewSet(attribute.Int64("count", 42))),
+			want: `{"count":42}`,
+		},
+		{
+			name: "SingleFloat",
+			set:  new(attribute.NewSet(attribute.Float64("pi", 3.14))),
+			want: `{"pi":3.14}`,
+		},
+		{
+			name: "SingleString",
+			set:  new(attribute.NewSet(attribute.String("name", "hello"))),
+			want: `{"name":"hello"}`,
+		},
+		{
+			name: "MultipleAttributes",
+			set: new(attribute.NewSet(
+				attribute.String("b", "world"),
+				attribute.Int64("a", 1),
+			)),
+			want: `{"a":1,"b":"world"}`,
+		},
+		{
+			name: "BoolSlice",
+			set:  new(attribute.NewSet(attribute.BoolSlice("flags", []bool{true, false}))),
+			want: `{"flags":[true,false]}`,
+		},
+		{
+			name: "Int64Slice",
+			set:  new(attribute.NewSet(attribute.Int64Slice("nums", []int64{1, 2, 3}))),
+			want: `{"nums":[1,2,3]}`,
+		},
+		{
+			name: "Float64Slice",
+			set:  new(attribute.NewSet(attribute.Float64Slice("vals", []float64{1.5, 2.5}))),
+			want: `{"vals":[1.5,2.5]}`,
+		},
+		{
+			name: "StringSlice",
+			set:  new(attribute.NewSet(attribute.StringSlice("tags", []string{"a", "b"}))),
+			want: `{"tags":["a","b"]}`,
+		},
+		{
+			name: "ByteSlice",
+			set:  new(attribute.NewSet(attribute.ByteSlice("data", []byte("foo")))),
+			want: `{"data":"Zm9v"}`,
+		},
+		{
+			name: "CompositeValues",
+			set: new(attribute.NewSet(
+				attribute.Map(
+					"context",
+					attribute.String("name", "x"),
+					attribute.Map("nested", attribute.Bool("value", true)),
+				),
+				attribute.KeyValue{Key: "empty"},
+				attribute.Slice(
+					"mixed",
+					attribute.StringValue("x"),
+					attribute.IntValue(2),
+					attribute.BoolValue(false),
+					attribute.Value{},
+				),
+				attribute.Float64("nan", math.NaN()),
+				attribute.Float64("neg-inf", math.Inf(-1)),
+				attribute.Float64("pos-inf", math.Inf(1)),
+			)),
+			want: `{"context":{"name":"x","nested":{"value":true}},"empty":null,"mixed":["x",2,false,null],"nan":"NaN","neg-inf":"-Infinity","pos-inf":"Infinity"}`,
+		},
+		{
+			name: "StringsNeedEscaping",
+			set:  new(attribute.NewSet(attribute.String("k\"ey", "line\n\"quoted\""))),
+			want: `{"k\"ey":"line\n\"quoted\""}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.set.String()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func BenchmarkNewSetStringAttrs(b *testing.B) {
+	testCases := []struct {
+		name     string
+		keyLen   int
+		valueLen int
+	}{
+		{"SmallStrings", 2, 1},        // B1="2"
+		{"MediumStrings", 10, 10},     // realistic service names, etc.
+		{"LargeStrings", 25, 25},      // longer service names, URLs, etc.
+		{"VeryLargeStrings", 50, 100}, // very long values like URLs, descriptions
+		{"HugeStrings", 100, 500},     // extremely large like full URLs, JSON, etc.
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			attrs := generateStringAttrsWithSize(tc.keyLen, tc.valueLen)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				attribute.NewSet(attrs...)
+			}
+		})
+	}
+}

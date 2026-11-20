@@ -1,0 +1,40 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package trace
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/trace"
+)
+
+func TestNewIDs(t *testing.T) {
+	gen := defaultIDGenerator()
+	n := 1000
+
+	for range n {
+		traceID, spanID := gen.NewIDs(t.Context())
+		assert.Truef(t, traceID.IsValid(), "trace id: %s", traceID.String())
+		assert.Truef(t, spanID.IsValid(), "span id: %s", spanID.String())
+	}
+}
+
+func TestNewSpanID(t *testing.T) {
+	gen := defaultIDGenerator()
+	testTraceID := [16]byte{123, 123}
+	n := 1000
+
+	for range n {
+		spanID := gen.NewSpanID(t.Context(), testTraceID)
+		assert.Truef(t, spanID.IsValid(), "span id: %s", spanID.String())
+	}
+}
+
+func TestNewSpanIDWithInvalidTraceID(t *testing.T) {
+	gen := defaultIDGenerator()
+	spanID := gen.NewSpanID(t.Context(), trace.TraceID{})
+	assert.Truef(t, spanID.IsValid(), "span id: %s", spanID.String())
+}

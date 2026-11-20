@@ -1,0 +1,276 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package otlptracehttp_test
+
+import (
+	"bytes"
+	"compress/gzip"
+	"context"
+	"crypto/tls"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+	"google.golang.org/protobuf/proto"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpjson"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
+)
+
+type mockCollector struct {
+	endpoint string
+	server   *http.Server
+
+	spanLock     sync.Mutex
+	spansStorage otlptracetest.SpansStorage
+
+	injectHTTPStatus     []int
+	injectResponseHeader []map[string]string
+	injectContentType    string
+	partial              *collectortracepb.ExportTracePartialSuccess
+	delay                <-chan struct{}
+
+	clientTLSConfig *tls.Config
+	expectedHeaders map[string]string
+}
+
+func (c *mockCollector) Stop() error {
+	return c.server.Shutdown(context.Background())
+}
+
+func (c *mockCollector) MustStop(t *testing.T) {
+	assert.NoError(t, c.server.Shutdown(t.Context()))
+}
+
+func (c *mockCollector) GetSpans() []*tracepb.Span {
+	c.spanLock.Lock()
+	defer c.spanLock.Unlock()
+	return c.spansStorage.GetSpans()
+}
+
+func (c *mockCollector) GetResourceSpans() []*tracepb.ResourceSpans {
+	c.spanLock.Lock()
+	defer c.spanLock.Unlock()
+	return c.spansStorage.GetResourceSpans()
+}
+
+func (c *mockCollector) Endpoint() string {
+	return c.endpoint
+}
+
+func (c *mockCollector) ClientTLSConfig() *tls.Config {
+	return c.clientTLSConfig
+}
+
+func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
+	if c.delay != nil {
+		select {
+		case <-c.delay:
+		case <-r.Context().Done():
+			return
+		}
+	}
+
+	if !c.checkHeaders(r) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	response := collectortracepb.ExportTraceServiceResponse{
+		PartialSuccess: c.partial,
+	}
+	var rawResponse []byte
+	var err error
+	if c.injectContentType == "application/json" {
+		rawResponse, err = otlpjson.MarshalExportTraceServiceResponse(&response)
+	} else {
+		rawResponse, err = proto.Marshal(&response)
+	}
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	h := c.getInjectResponseHeader()
+	if injectedStatus := c.getInjectHTTPStatus(); injectedStatus != 0 {
+		writeReply(w, rawResponse, injectedStatus, c.injectContentType, h)
+		return
+	}
+	rawRequest, err := readRequest(r)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	request, err := unmarshalTraceRequest(rawRequest, r.Header.Get("content-type"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	writeReply(w, rawResponse, 0, c.injectContentType, h)
+	c.spanLock.Lock()
+	defer c.spanLock.Unlock()
+	c.spansStorage.AddSpans(request)
+}
+
+func unmarshalTraceRequest(rawRequest []byte, contentType string) (*collectortracepb.ExportTraceServiceRequest, error) {
+	request := &collectortracepb.ExportTraceServiceRequest{}
+	switch contentType {
+	case "application/x-protobuf":
+		err := proto.Unmarshal(rawRequest, request)
+		return request, err
+	case "application/json":
+		err := otlpjson.UnmarshalExportTraceServiceRequest(rawRequest, request)
+		return request, err
+	default:
+		return request, fmt.Errorf(
+			"invalid content-type: %s, only application/x-protobuf or application/json is supported",
+			contentType,
+		)
+	}
+}
+
+func (c *mockCollector) checkHeaders(r *http.Request) bool {
+	for k, v := range c.expectedHeaders {
+		got := r.Header.Get(k)
+		if got != v {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *mockCollector) getInjectHTTPStatus() int {
+	if len(c.injectHTTPStatus) == 0 {
+		return 0
+	}
+	status := c.injectHTTPStatus[0]
+	c.injectHTTPStatus = c.injectHTTPStatus[1:]
+	if len(c.injectHTTPStatus) == 0 {
+		c.injectHTTPStatus = nil
+	}
+	return status
+}
+
+func (c *mockCollector) getInjectResponseHeader() map[string]string {
+	var h map[string]string
+	if len(c.injectResponseHeader) == 0 {
+		return h
+	}
+	h, c.injectResponseHeader = c.injectResponseHeader[0], c.injectResponseHeader[1:]
+	if len(c.injectResponseHeader) == 0 {
+		c.injectResponseHeader = nil
+	}
+	return h
+}
+
+func readRequest(r *http.Request) ([]byte, error) {
+	if r.Header.Get("Content-Encoding") == "gzip" {
+		return readGzipBody(r.Body)
+	}
+	return io.ReadAll(r.Body)
+}
+
+func readGzipBody(body io.Reader) ([]byte, error) {
+	rawRequest := bytes.Buffer{}
+	gunzipper, err := gzip.NewReader(body)
+	if err != nil {
+		return nil, err
+	}
+	defer gunzipper.Close()
+	_, err = io.Copy(&rawRequest, gunzipper)
+	if err != nil {
+		return nil, err
+	}
+	return rawRequest.Bytes(), nil
+}
+
+func writeReply(w http.ResponseWriter, rawResponse []byte, s int, ct string, h map[string]string) {
+	status := http.StatusOK
+	if s != 0 {
+		status = s
+	}
+	contentType := "application/x-protobuf"
+	if ct != "" {
+		contentType = ct
+	}
+	w.Header().Set("Content-Type", contentType)
+	for k, v := range h {
+		w.Header().Add(k, v)
+	}
+	w.WriteHeader(status)
+	_, _ = w.Write(rawResponse)
+}
+
+type mockCollectorConfig struct {
+	TracesURLPath        string
+	Port                 int
+	InjectHTTPStatus     []int
+	InjectContentType    string
+	InjectResponseHeader []map[string]string
+	Partial              *collectortracepb.ExportTracePartialSuccess
+	Delay                <-chan struct{}
+	WithTLS              bool
+	ExpectedHeaders      map[string]string
+}
+
+func (c *mockCollectorConfig) fillInDefaults() {
+	if c.TracesURLPath == "" {
+		c.TracesURLPath = otlpconfig.DefaultTracesPath
+	}
+}
+
+func runMockCollector(tb testing.TB, cfg mockCollectorConfig) *mockCollector {
+	cfg.fillInDefaults()
+	ln, err := (&net.ListenConfig{}).Listen(tb.Context(), "tcp", fmt.Sprintf("localhost:%d", cfg.Port))
+	require.NoError(tb, err)
+	_, portStr, err := net.SplitHostPort(ln.Addr().String())
+	require.NoError(tb, err)
+	m := &mockCollector{
+		endpoint:             fmt.Sprintf("localhost:%s", portStr),
+		spansStorage:         otlptracetest.NewSpansStorage(),
+		injectHTTPStatus:     cfg.InjectHTTPStatus,
+		injectResponseHeader: cfg.InjectResponseHeader,
+		injectContentType:    cfg.InjectContentType,
+		partial:              cfg.Partial,
+		delay:                cfg.Delay,
+		expectedHeaders:      cfg.ExpectedHeaders,
+	}
+	mux := http.NewServeMux()
+	mux.Handle(cfg.TracesURLPath, http.HandlerFunc(m.serveTraces))
+	server := &http.Server{
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+	if cfg.WithTLS {
+		pem, err := generateWeakCertificate()
+		require.NoError(tb, err)
+		tlsCertificate, err := tls.X509KeyPair(pem.Certificate, pem.PrivateKey)
+		require.NoError(tb, err)
+		server.TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{tlsCertificate},
+		}
+
+		m.clientTLSConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	}
+	go func() {
+		if cfg.WithTLS {
+			_ = server.ServeTLS(ln, "", "")
+		} else {
+			_ = server.Serve(ln)
+		}
+	}()
+	m.server = server
+	return m
+}

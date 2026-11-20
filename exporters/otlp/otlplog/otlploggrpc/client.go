@@ -1,0 +1,303 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package otlploggrpc
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sync/atomic"
+	"time"
+
+	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/observ"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/retry"
+)
+
+// The methods of this type are not expected to be called concurrently.
+type client struct {
+	metadata       metadata.MD
+	exportTimeout  time.Duration
+	maxRequestSize int
+	requestFunc    retry.RequestFunc
+
+	// ourConn keeps track of where conn was created: true if created here in
+	// NewClient, or false if passed with an option. This is important during
+	// Shutdown because conn should only be closed if we created it. Otherwise,
+	// the caller that passed conn is responsible for closing it.
+	ourConn bool
+	conn    *grpc.ClientConn
+	lsc     collogpb.LogsServiceClient
+
+	instrumentation *observ.Instrumentation
+}
+
+// Used for testing.
+var newGRPCClientFn = grpc.NewClient
+
+// newClient creates a new gRPC log client.
+func newClient(cfg config) (*client, error) {
+	c := &client{
+		exportTimeout:  cfg.timeout.Value,
+		maxRequestSize: cfg.maxRequestSize.Value,
+		requestFunc:    cfg.retryCfg.Value.RequestFunc(retryable),
+		conn:           cfg.gRPCConn.Value,
+	}
+
+	if len(cfg.headers.Value) > 0 {
+		c.metadata = metadata.New(cfg.headers.Value)
+	}
+
+	if c.conn == nil {
+		// If the caller did not provide a ClientConn when the client was
+		// created, create one using the configuration they did provide.
+		dialOpts := newGRPCDialOptions(cfg)
+
+		conn, err := newGRPCClientFn(cfg.endpoint.Value, dialOpts...)
+		if err != nil {
+			return nil, err
+		}
+		// Keep track that we own the lifecycle of this conn and need to close
+		// it on Shutdown.
+		c.ourConn = true
+		c.conn = conn
+	}
+
+	c.lsc = collogpb.NewLogsServiceClient(c.conn)
+
+	var err error
+	id := nextExporterID()
+	c.instrumentation, err = observ.NewInstrumentation(id, c.conn.CanonicalTarget())
+	return c, err
+}
+
+var exporterN atomic.Int64
+
+// nextExporterID returns the next unique ID for an exporter.
+func nextExporterID() int64 {
+	const inc = 1
+	return exporterN.Add(inc) - inc
+}
+
+func newGRPCDialOptions(cfg config) []grpc.DialOption {
+	userAgent := "OTel Go OTLP over gRPC logs exporter/" + Version()
+	dialOpts := []grpc.DialOption{grpc.WithUserAgent(userAgent)}
+
+	// Convert other grpc configs to the dial options.
+	// Service config
+	if cfg.serviceConfig.Value != "" {
+		dialOpts = append(dialOpts, grpc.WithDefaultServiceConfig(cfg.serviceConfig.Value))
+	}
+	// Prioritize configured credentials over Insecure (passing both is an error).
+	switch {
+	case cfg.gRPCCredentials.Value != nil:
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(cfg.gRPCCredentials.Value))
+	case cfg.tlsCfg.Value != nil:
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(cfg.tlsCfg.Value)))
+	case cfg.insecure.Value:
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	default:
+		// Default to using the host's root CA.
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(
+			credentials.NewTLS(nil),
+		))
+	}
+	// Compression
+	if cfg.compression.Value == GzipCompression {
+		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
+	}
+	// Reconnection period
+	if cfg.reconnectionPeriod.Value != 0 {
+		p := grpc.ConnectParams{
+			Backoff:           backoff.DefaultConfig,
+			MinConnectTimeout: cfg.reconnectionPeriod.Value,
+		}
+		dialOpts = append(dialOpts, grpc.WithConnectParams(p))
+	}
+
+	// User-supplied options are appended last so they take precedence over
+	// conflicting internal defaults. grpc.DialOption values are opaque, so
+	// precedence is the only way to honor WithDialOption's contract.
+	return append(dialOpts, cfg.dialOptions.Value...)
+}
+
+// UploadLogs sends proto logs to the connected endpoint.
+//
+// Retryable errors from the server will be handled according to any
+// RetryConfig the client was created with.
+//
+// The [Exporter] synchronizes access to client methods and
+// ensures this is not called after the Exporter is shut down. The only thing
+// to do here is send data.
+func (c *client) UploadLogs(ctx context.Context, rl []*logpb.ResourceLogs) (uploadErr error) {
+	select {
+	case <-ctx.Done():
+		// Do not upload if the context is already expired.
+		return ctx.Err()
+	default:
+	}
+
+	ctx, cancel := c.exportContext(ctx)
+	defer cancel()
+
+	pbRequest := &collogpb.ExportLogsServiceRequest{ResourceLogs: rl}
+	code := codes.Unknown
+	if c.instrumentation != nil {
+		var count int64
+		for _, resLogs := range rl {
+			for _, scopeLogs := range resLogs.ScopeLogs {
+				count += int64(len(scopeLogs.LogRecords))
+			}
+		}
+		eo := c.instrumentation.ExportLogs(ctx, count)
+		defer func() {
+			eo.End(uploadErr, code)
+		}()
+	}
+
+	if maxSize := c.maxRequestSize; maxSize > 0 && proto.Size(pbRequest) > maxSize {
+		return fmt.Errorf("request message too large: exceeded %d bytes", maxSize)
+	}
+
+	err := c.requestFunc(ctx, func(ctx context.Context) error {
+		resp, err := c.lsc.Export(ctx, pbRequest)
+		if resp != nil && resp.PartialSuccess != nil {
+			msg := resp.PartialSuccess.GetErrorMessage()
+			n := resp.PartialSuccess.GetRejectedLogRecords()
+			if n != 0 || msg != "" {
+				err := internal.LogPartialSuccessError(n, msg)
+				uploadErr = errors.Join(uploadErr, err)
+			}
+		}
+		// nil is converted to OK.
+		code = status.Code(err)
+		if code == codes.OK {
+			// Success.
+			return nil
+		}
+		return err
+	})
+	return errors.Join(uploadErr, err)
+}
+
+// Shutdown shuts down the client, freeing all resources.
+//
+// Any active connections to a remote endpoint are closed if they were created
+// by the client. Any gRPC connection passed during creation using
+// WithGRPCConn will not be closed. It is the caller's responsibility to
+// handle cleanup of that resource.
+//
+// The [Exporter] synchronizes access to client methods and
+// ensures this is called only once. The only thing that needs to be done
+// here is to release any computational resources the client holds.
+func (c *client) Shutdown(ctx context.Context) error {
+	c.metadata = nil
+	c.requestFunc = nil
+	c.lsc = nil
+
+	// Release the connection if we created it.
+	err := ctx.Err()
+	if c.ourConn {
+		closeErr := c.conn.Close()
+		// A context timeout error takes precedence over this error.
+		if err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}
+	c.conn = nil
+	return err
+}
+
+// exportContext returns a copy of parent with an appropriate deadline and
+// cancellation function based on the client's configured export timeout.
+//
+// It is the caller's responsibility to cancel the returned context once its
+// use is complete, via the parent or directly with the returned CancelFunc, to
+// ensure all resources are correctly released.
+func (c *client) exportContext(parent context.Context) (context.Context, context.CancelFunc) {
+	var (
+		ctx    context.Context
+		cancel context.CancelFunc
+	)
+
+	if c.exportTimeout > 0 {
+		ctx, cancel = context.WithTimeoutCause(parent, c.exportTimeout, errors.New("exporter export timeout"))
+	} else {
+		ctx, cancel = context.WithCancel(parent) //nolint:gosec  // cancel is handled by caller.
+	}
+
+	if c.metadata.Len() > 0 {
+		md := c.metadata
+		if outMD, ok := metadata.FromOutgoingContext(ctx); ok {
+			md = metadata.Join(md, outMD)
+		}
+
+		ctx = metadata.NewOutgoingContext(ctx, md)
+	}
+
+	return ctx, cancel
+}
+
+type noopClient struct{}
+
+func newNoopClient() *noopClient {
+	return &noopClient{}
+}
+
+func (*noopClient) UploadLogs(context.Context, []*logpb.ResourceLogs) error { return nil }
+
+func (*noopClient) Shutdown(context.Context) error { return nil }
+
+// retryable reports whether err identifies a request that can be retried and
+// returns a duration to wait if an explicit throttle time is included in err.
+func retryable(err error) (bool, time.Duration) {
+	s := status.Convert(err)
+	return retryableGRPCStatus(s)
+}
+
+func retryableGRPCStatus(s *status.Status) (bool, time.Duration) {
+	switch s.Code() {
+	// Follows the retryable error codes defined in
+	// https://opentelemetry.io/docs/specs/otlp/#failures
+	case codes.Canceled,
+		codes.DeadlineExceeded,
+		codes.Aborted,
+		codes.OutOfRange,
+		codes.Unavailable,
+		codes.DataLoss:
+		// Additionally, handle RetryInfo.
+		_, d := throttleDelay(s)
+		return true, d
+	case codes.ResourceExhausted:
+		// Retry only if the server signals that the recovery from resource exhaustion is possible.
+		return throttleDelay(s)
+	}
+
+	// Not a retryable error.
+	return false, 0
+}
+
+// throttleDelay reports whether the status contains RetryInfo and returns the
+// duration to wait if an explicit throttle time is included.
+func throttleDelay(s *status.Status) (bool, time.Duration) {
+	for _, detail := range s.Details() {
+		if t, ok := detail.(*errdetails.RetryInfo); ok {
+			return true, t.RetryDelay.AsDuration()
+		}
+	}
+	return false, 0
+}

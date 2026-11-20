@@ -1,0 +1,72 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package metric
+
+import (
+	"errors"
+	"math"
+	"os"
+	"strconv"
+	"time"
+
+	"go.opentelemetry.io/otel/internal/global"
+)
+
+var (
+	errDurationOverflow = errors.New("duration overflows time.Duration")
+	errNonPositiveInt   = errors.New("non-positive integer")
+)
+
+// Environment variable names.
+const (
+	// The time interval (in milliseconds) between the start of two export attempts.
+	envInterval = "OTEL_METRIC_EXPORT_INTERVAL"
+	// Maximum allowed time (in milliseconds) to export data.
+	envTimeout = "OTEL_METRIC_EXPORT_TIMEOUT"
+	// Maximum number of metric data points passed to a single export.
+	envMaxExportBatchSize = "OTEL_METRIC_EXPORT_MAX_BATCH_SIZE"
+)
+
+// envPositiveInt returns an environment variable's value as an int if it
+// exists, or 0 (no limit) if the environment variable is not defined or the
+// value is not a valid positive integer.
+func envPositiveInt(key string) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return 0
+	}
+	n, err := strconv.ParseInt(v, 10, strconv.IntSize)
+	if err != nil {
+		global.Error(err, "parse integer", "environment variable", key, "value", v)
+		return 0
+	}
+	if n <= 0 {
+		global.Error(errNonPositiveInt, "non-positive integer", "environment variable", key, "value", v)
+		return 0
+	}
+	return int(n)
+}
+
+// envDuration returns an environment variable's value as duration in milliseconds if it is exists,
+// or the defaultValue if the environment variable is not defined or the value is not valid.
+func envDuration(key string, defaultValue time.Duration) time.Duration {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultValue
+	}
+	d, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		global.Error(err, "parse duration", "environment variable", key, "value", v)
+		return defaultValue
+	}
+	if d <= 0 {
+		global.Error(errNonPositiveDuration, "non-positive duration", "environment variable", key, "value", v)
+		return defaultValue
+	}
+	if d > math.MaxInt64/int64(time.Millisecond) {
+		global.Error(errDurationOverflow, "duration overflows time.Duration", "environment variable", key, "value", v)
+		return defaultValue
+	}
+	return time.Duration(d) * time.Millisecond
+}

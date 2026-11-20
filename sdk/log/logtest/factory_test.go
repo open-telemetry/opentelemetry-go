@@ -1,0 +1,157 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package logtest
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace"
+)
+
+func TestRecordFactoryEmpty(t *testing.T) {
+	got := RecordFactory{}.NewRecord()
+
+	assert.Empty(t, got.EventName())
+	assert.True(t, got.Timestamp().IsZero())
+	assert.True(t, got.ObservedTimestamp().IsZero())
+	assert.Equal(t, log.SeverityUndefined, got.Severity())
+	assert.Empty(t, got.SeverityText())
+	assert.Equal(t, attribute.Value{}, got.Body())
+	assert.Equal(t, 0, got.AttributesLen())
+	assert.Equal(t, 0, got.DroppedAttributes())
+	assert.Equal(t, trace.TraceID{}, got.TraceID())
+	assert.Equal(t, trace.SpanID{}, got.SpanID())
+	assert.Equal(t, trace.TraceFlags(0), got.TraceFlags())
+	assert.Nil(t, got.Resource())
+	assert.Equal(t, instrumentation.Scope{}, got.InstrumentationScope())
+}
+
+func TestRecordFactory(t *testing.T) {
+	now := time.Now()
+	observed := now.Add(time.Second)
+	eventName := "testing.name"
+	severity := log.SeverityDebug
+	severityText := "DBG"
+	body := attribute.StringValue("Message")
+	attrs := []attribute.KeyValue{
+		attribute.Int("int", 1),
+		attribute.String("str", "foo"),
+		attribute.Float64("flt", 3.14),
+	}
+	traceID := trace.TraceID([16]byte{1})
+	spanID := trace.SpanID([8]byte{2})
+	traceFlags := trace.FlagsSampled
+	dropped := 3
+	scope := instrumentation.Scope{
+		Name: t.Name(),
+	}
+	r := resource.NewSchemaless(attribute.Bool("works", true))
+
+	got := RecordFactory{
+		EventName:            eventName,
+		Timestamp:            now,
+		ObservedTimestamp:    observed,
+		Severity:             severity,
+		SeverityText:         severityText,
+		Body:                 body,
+		Attributes:           attrs,
+		TraceID:              traceID,
+		SpanID:               spanID,
+		TraceFlags:           traceFlags,
+		DroppedAttributes:    dropped,
+		InstrumentationScope: &scope,
+		Resource:             r,
+	}.NewRecord()
+
+	assert.Equal(t, eventName, got.EventName())
+	assert.Equal(t, now, got.Timestamp())
+	assert.Equal(t, observed, got.ObservedTimestamp())
+	assert.Equal(t, severity, got.Severity())
+	assert.Equal(t, severityText, got.SeverityText())
+	assertBody(t, body, got)
+	assertAttributes(t, attrs, got)
+	assert.Equal(t, dropped, got.DroppedAttributes())
+	assert.Equal(t, traceID, got.TraceID())
+	assert.Equal(t, spanID, got.SpanID())
+	assert.Equal(t, traceFlags, got.TraceFlags())
+	assert.Equal(t, scope, got.InstrumentationScope())
+	assert.Equal(t, r, got.Resource())
+}
+
+func TestRecordFactoryKeepsAddedAttributesUnlimited(t *testing.T) {
+	got := RecordFactory{}.NewRecord()
+	deep := attribute.StringValue("value")
+	for range 65 {
+		deep = attribute.MapValue(attribute.KeyValue{Key: "nested", Value: deep})
+	}
+	attrs := []attribute.KeyValue{
+		attribute.String("str", "0123456789"),
+		{Key: "deep", Value: deep},
+	}
+
+	got.AddAttributes(attrs...)
+
+	assertAttributes(t, attrs, got)
+	assert.Equal(t, 0, got.DroppedAttributes())
+}
+
+func TestRecordFactoryMultiple(t *testing.T) {
+	now := time.Now()
+	attrs := []attribute.KeyValue{
+		attribute.Int("int", 1),
+		attribute.String("str", "foo"),
+		attribute.Float64("flt", 3.14),
+	}
+	scope := instrumentation.Scope{
+		Name: t.Name(),
+	}
+
+	f := RecordFactory{
+		Timestamp:            now,
+		Attributes:           attrs,
+		DroppedAttributes:    1,
+		InstrumentationScope: &scope,
+	}
+
+	record1 := f.NewRecord()
+
+	f.Attributes = append(f.Attributes, attribute.Bool("added", true))
+	f.DroppedAttributes = 2
+	record2 := f.NewRecord()
+
+	assert.Equal(t, now, record2.Timestamp())
+	assertAttributes(t, append(attrs, attribute.Bool("added", true)), record2)
+	assert.Equal(t, 2, record2.DroppedAttributes())
+	assert.Equal(t, scope, record2.InstrumentationScope())
+
+	// Previously returned record is unharmed by the builder changes.
+	assert.Equal(t, now, record1.Timestamp())
+	assertAttributes(t, attrs, record1)
+	assert.Equal(t, 1, record1.DroppedAttributes())
+	assert.Equal(t, scope, record1.InstrumentationScope())
+}
+
+func assertBody(t *testing.T, want attribute.Value, r sdklog.Record) {
+	t.Helper()
+	got := r.Body()
+	assert.Equal(t, want, got, "Body value is not equal")
+}
+
+func assertAttributes(t *testing.T, want []attribute.KeyValue, r sdklog.Record) {
+	t.Helper()
+	var got []attribute.KeyValue
+	r.WalkAttributes(func(kv attribute.KeyValue) bool {
+		got = append(got, kv)
+		return true
+	})
+	assert.Equal(t, want, got, "Attributes are not equal")
+}

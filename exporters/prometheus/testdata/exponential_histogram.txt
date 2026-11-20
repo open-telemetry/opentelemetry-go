@@ -1,0 +1,8 @@
+# HELP exponential_histogram_baz_bytes a very nice histogram
+# TYPE exponential_histogram_baz_bytes histogram
+exponential_histogram_baz_bytes_bucket{A="B",C="D",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0",le="+Inf"} 4
+exponential_histogram_baz_bytes_sum{A="B",C="D",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 236
+exponential_histogram_baz_bytes_count{A="B",C="D",otel_scope_fizz="buzz",otel_scope_name="testmeter",otel_scope_schema_url="",otel_scope_version="v0.1.0"} 4
+# HELP target_info Target metadata
+# TYPE target_info gauge
+target_info{"service.name"="prometheus_test","telemetry.sdk.language"="go","telemetry.sdk.name"="opentelemetry","telemetry.sdk.version"="latest"} 1

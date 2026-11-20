@@ -1,0 +1,117 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package noop
+
+import (
+	"reflect"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/trace"
+)
+
+func TestImplementationNoPanics(t *testing.T) {
+	// Check that if type has an embedded interface and that interface has
+	// methods added to it than the No-Op implementation implements them.
+	t.Run("TracerProvider", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(TracerProvider{}),
+		reflect.TypeFor[trace.TracerProvider](),
+	))
+	t.Run("Tracer", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(Tracer{}),
+		reflect.TypeFor[trace.Tracer](),
+	))
+	t.Run("Span", assertAllExportedMethodNoPanic(
+		reflect.ValueOf(Span{}),
+		reflect.TypeFor[trace.Span](),
+	))
+}
+
+func assertAllExportedMethodNoPanic(rVal reflect.Value, rType reflect.Type) func(*testing.T) {
+	return func(t *testing.T) {
+		for mType := range rType.Methods() {
+			if !mType.IsExported() {
+				t.Logf("ignoring unexported %s", mType.Name)
+				continue
+			}
+			m := rVal.MethodByName(mType.Name)
+			if !m.IsValid() {
+				t.Errorf("unknown method for %s: %s", rVal.Type().Name(), mType.Name)
+			}
+
+			numIn := mType.Type.NumIn()
+			if mType.Type.IsVariadic() {
+				numIn--
+			}
+			args := make([]reflect.Value, numIn)
+			ctx := t.Context()
+			for i := range args {
+				aType := mType.Type.In(i)
+				if aType.Name() == "Context" {
+					// Do not panic on a nil context.
+					args[i] = reflect.ValueOf(ctx)
+				} else {
+					args[i] = reflect.New(aType).Elem()
+				}
+			}
+
+			assert.NotPanicsf(t, func() {
+				_ = m.Call(args)
+			}, "%s.%s", rVal.Type().Name(), mType.Name)
+		}
+	}
+}
+
+func TestNewTracerProvider(t *testing.T) {
+	tp := NewTracerProvider()
+	assert.Equal(t, TracerProvider{}, tp)
+	tracer := tp.Tracer("")
+	assert.Equal(t, Tracer{}, tracer)
+}
+
+func TestTracerStartPropagatesSpanContext(t *testing.T) {
+	tracer := NewTracerProvider().Tracer("")
+	spanCtx := trace.SpanContext{}
+
+	ctx := trace.ContextWithSpanContext(t.Context(), spanCtx)
+	ctx, span := tracer.Start(ctx, "test_span")
+	assert.Equal(t, spanCtx, trace.SpanContextFromContext(ctx), "empty span context not set in context")
+	assert.IsType(t, Span{}, span, "non-noop span returned")
+	assert.Equal(t, spanCtx, span.SpanContext(), "empty span context not returned from span")
+	assert.False(t, span.IsRecording(), "empty span context returned recording span")
+
+	spanCtx = spanCtx.WithTraceID(trace.TraceID([16]byte{1}))
+	spanCtx = spanCtx.WithSpanID(trace.SpanID([8]byte{1}))
+	ctx = trace.ContextWithSpanContext(t.Context(), spanCtx)
+	ctx, span = tracer.Start(ctx, "test_span")
+	assert.Equal(t, spanCtx, trace.SpanContextFromContext(ctx), "non-empty span context not set in context")
+	assert.Equal(t, spanCtx, span.SpanContext(), "non-empty span context not returned from span")
+	assert.False(t, span.IsRecording(), "non-empty span context returned recording span")
+
+	rSpan := recordingSpan{Span: Span{sc: spanCtx}}
+	ctx = trace.ContextWithSpan(t.Context(), rSpan)
+	ctx, span = tracer.Start(ctx, "test_span")
+	assert.Equal(t, spanCtx, trace.SpanContextFromContext(ctx), "recording span's span context not set in context")
+	assert.IsType(t, Span{}, span, "non-noop span returned")
+	assert.Equal(t, spanCtx, span.SpanContext(), "recording span's span context not returned from span")
+	assert.False(t, span.IsRecording(), "recording span returned")
+}
+
+func BenchmarkNoopInstance(b *testing.B) {
+	tracer := NewTracerProvider().Tracer("")
+	ctx := trace.ContextWithSpanContext(b.Context(), trace.SpanContext{})
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, span := tracer.Start(ctx, "")
+		span.End()
+	}
+}
+
+type recordingSpan struct{ Span }
+
+func (recordingSpan) IsRecording() bool { return true }

@@ -1,0 +1,168 @@
+{% import 'helpers.j2' as h -%}
+{% import 'instrument.j2' as i -%}
+// Code generated from semantic convention specification. DO NOT EDIT.
+
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+{% set pkg = ctx.root_namespace | camel_case | lower ~ "conv" -%}
+// Package {{ pkg }} provides types and functionality for OpenTelemetry semantic
+// conventions in the "{{ ctx.root_namespace }}" namespace.
+package {{ pkg }}
+
+import (
+	"context"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/semconv/internal/metricpool"
+)
+{%- for attr in ctx.metrics | map(attribute="attributes") | flatten | selectattr("type", "mapping") | unique(attribute="name") | sort(attribute="name") %}
+{%- set name = h.to_go_name(attr.name, ctx.root_namespace) %}
+
+{{ [ name ~ "Attr is an attribute conforming to the " ~ attr.name ~ " semantic conventions. " ~ h.it_reps(attr.brief) ] | comment }}
+type {{ name }}Attr {{ h.member_type(attr.type.members[0]) }}
+
+var (
+{%- for m in attr.type.members %}
+	{%- set m_name = name ~ h.to_go_name(m.id, ctx.root_namespace) -%}
+
+	{% if attr.type.members[0].value is string -%}
+	{%- set m_value = '"' + m.value + '"' -%}
+	{%- else -%}
+	{%- set m_value = m.value -%}
+	{%- endif -%}
+
+	{%- if m.brief is defined %}
+	{%- set m_brief = m.brief -%}
+	{%- else %}
+	{%- set m_brief = "standardized value " + m_value + ' of ' + name + 'Attr.' -%}
+	{%- endif %}
+{{ h.prefix_brief(m_brief, m_name ~ " is ") | comment(format="go_1tab") }}
+	{{ m_name }} {{ name }}Attr = {{ m_value }}
+{%- endfor %}
+)
+{%- endfor %}
+
+{%- for metric in ctx.metrics %}
+{%- set metric_name = h.to_go_name(metric.metric_name, ctx.root_namespace) %}
+{%- set metric_inst = metric.metric_name | map_text("instrument", i.instrument_default(metric)) %}
+{%- set metric_bucket_boundaries = metric.metric_name | map_text("custom_bucket_boundaries", "") %}
+
+{%- set variants = [{"name": metric_name, "inst": metric_inst, "observable": "Observable" is in metric_inst}] %}
+{%- if "Observable" is not in metric_inst and metric.instrument != "histogram" %}
+  {%- if metric.instrument == "updowncounter" %}
+    {%- set obs_inst = metric_inst | replace('UpDownCounter', 'ObservableUpDownCounter') %}
+  {%- elif metric.instrument == "counter" %}
+    {%- set obs_inst = metric_inst | replace('Counter', 'ObservableCounter') %}
+  {%- elif metric.instrument == "gauge" %}
+    {%- set obs_inst = metric_inst | replace('Gauge', 'ObservableGauge') %}
+  {%- endif %}
+  {%- set variants = variants + [{"name": metric_name ~ "Observable", "inst": obs_inst, "observable": true}] %}
+{%- endif %}
+
+{%- for v in variants %}
+
+{{ [ v.name ~ " is an instrument used to record metric values conforming to the \"" ~ metric.metric_name ~ "\" semantic conventions. " ~ h.it_reps(metric.brief)|trim(".") ~ "." ] | comment | trim }}
+//
+// Stability: {{ metric.stability | title }}
+type {{ v.name }} struct {
+	metric.{{ v.inst }}
+}
+
+var new{{ v.name }}Opts = []metric.{{ v.inst }}Option{
+{%- if metric.instrument == "histogram" and metric_bucket_boundaries != "" %}
+	metric.WithExplicitBucketBoundaries({{ metric_bucket_boundaries }}...),
+{%- endif %}
+	metric.WithDescription("{{ i.desc(metric) }}"),
+	metric.WithUnit("{{metric.unit}}"),
+}
+
+{{ ["New" ~ v.name ~ " returns a new " ~ v.name ~ " instrument."] | comment }}
+//
+// Stability: {{ metric.stability | title }}
+func New{{ v.name }}(
+	m metric.Meter,
+	opt ...metric.{{ v.inst}}Option,
+) ({{ v.name }}, error) {
+	// Check if the meter is nil.
+	if m == nil {
+		return {{ v.name }}{noop.{{ v.inst }}{}}, nil
+	}
+
+	if len(opt) == 0 {
+		opt = new{{ v.name }}Opts
+	} else {
+{%- if metric.instrument == "histogram" and metric_bucket_boundaries != "" %}
+		// Bucket advice precedes caller options; semantic metadata stays fixed.
+		opts := make([]metric.{{ v.inst }}Option, 0, len(opt)+len(new{{ v.name }}Opts))
+		opts = append(opts, new{{ v.name }}Opts[0])
+		opts = append(opts, opt...)
+		opt = append(opts, new{{ v.name }}Opts[1:]...)
+{%- else %}
+		opt = append(opt[:len(opt):len(opt)], new{{ v.name }}Opts...)
+{%- endif %}
+	}
+
+	i, err := m.{{ v.inst }}(
+		"{{metric.metric_name}}",
+		opt...,
+	)
+	if err != nil {
+		return {{ v.name }}{noop.{{ v.inst }}{}}, err
+	}
+	return {{ v.name }}{i}, nil
+}
+
+// Inst returns the underlying metric instrument.
+func (m {{ v.name }}) Inst() metric.{{ v.inst }} {
+	return m.{{ v.inst }}
+}
+
+// Name returns the semantic convention name of the instrument.
+func ({{ v.name }}) Name() string {
+	return "{{ metric.metric_name }}"
+}
+
+// Unit returns the semantic convention unit of the instrument
+func ({{ v.name }}) Unit() string {
+	return "{{ metric.unit }}"
+}
+{%- if metric.brief %}
+
+// Description returns the semantic convention description of the instrument
+func ({{ v.name }}) Description() string {
+	return "{{ i.desc(metric) }}"
+}
+{%- endif %}
+{%- if v.observable %}
+{%- elif metric.instrument == "counter" or metric.instrument == "updowncounter" %}
+
+{{ i.add_method(metric, v.inst, ctx.root_namespace) }}
+
+{{ i.add_set_method(metric, v.inst, ctx.root_namespace) }}
+{%- elif metric.instrument == "histogram" or metric.instrument == "gauge" %}
+
+{{ i.record_method(metric, v.inst, ctx.root_namespace) }}
+
+{{ i.record_set_method(metric, v.inst, ctx.root_namespace) }}
+{%- endif %}
+{%- for attr in (metric.attributes if v.observable else metric.attributes | not_required) | attribute_sort %}
+{%- set name = h.to_go_name(attr.name, ctx.root_namespace) %}
+{%- set req_str = "a required" if attr in (metric.attributes | required) else "an optional" %}
+
+{{ [ "Attr" ~ name ~ " returns " ~ req_str ~ " attribute for the \"" ~ attr.name ~ "\" semantic convention. " ~ h.it_reps(attr.brief) ] | comment }}
+{%- if attr.type is mapping %}
+func ({{ v.name }}) Attr{{name}}(val {{ name }}Attr) attribute.KeyValue {
+	return attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", {{ h.member_type(attr.type.members[0]) }}(val))
+}
+{%- else %}
+func ({{ v.name }}) Attr{{name}}(val {{ attr.type | map_text("attribute_type_value")}}) attribute.KeyValue {
+	return attribute.{{ h.attr_type(attr) | map_text("attribute_type_method")}}("{{ attr.name }}", val)
+}
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+{%- endfor %}
+
