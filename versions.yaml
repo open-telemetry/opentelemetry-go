@@ -41,6 +41,10 @@ module-sets:
     version: v0.1.0
     modules:
       - go.opentelemetry.io/otel/sdk/trace/x
+  experimental-profiles:
+    version: v0.0.0
+    modules:
+      - go.opentelemetry.io/otel/sdk/profile
   experimental-schema:
     version: v0.0.19
     modules:
