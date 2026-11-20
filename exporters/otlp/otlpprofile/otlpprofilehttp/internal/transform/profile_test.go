@@ -150,6 +150,30 @@ func TestExportRequestConformanceAndDeduplication(t *testing.T) {
 	// Overwritten "https://old.example" must not appear in string_table.
 	assert.NotContains(t, req.Dictionary.StringTable, "https://old.example")
 	assert.Contains(t, req.Dictionary.StringTable, "https://new.example")
+
+	// Assert converted resource, scope, profile, and sample fields.
+	pbRP := req.ResourceProfiles[0]
+	assert.Equal(t, "https://opentelemetry.io/schemas/1.45.0", pbRP.SchemaUrl)
+	require.NotNil(t, pbRP.Resource)
+	assert.Len(t, pbRP.Resource.Attributes, 2)
+
+	pbSP := pbRP.ScopeProfiles[0]
+	require.NotNil(t, pbSP.Scope)
+	assert.Equal(t, "go.opentelemetry.io/otel/sdk/profile/runtime/heap", pbSP.Scope.Name)
+	assert.Equal(t, "0.0.0", pbSP.Scope.Version)
+	assert.Equal(t, "https://opentelemetry.io/schemas/1.45.0", pbSP.SchemaUrl)
+	assert.Len(t, pbSP.Scope.Attributes, 1)
+
+	pbProf := pbSP.Profiles[0]
+	assert.Equal(t, uint64(start.UnixNano()), pbProf.TimeUnixNano)
+	assert.Equal(t, uint64(time.Second.Nanoseconds()), pbProf.DurationNano)
+	assert.Equal(t, int64(524288), pbProf.Period)
+	assert.Equal(t, []byte{9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0}, pbProf.ProfileId)
+	assert.Equal(t, "pprof", pbProf.OriginalPayloadFormat)
+	assert.Equal(t, []byte("raw-pprof"), pbProf.OriginalPayload)
+	require.Len(t, pbProf.Samples, 2)
+	assert.Equal(t, []int64{4096}, pbProf.Samples[0].Values)
+	assert.Equal(t, []uint64{uint64(start.Add(10 * time.Millisecond).UnixNano())}, pbProf.Samples[0].TimestampsUnixNano)
 }
 
 // assertConformance verifies OTLP Profiles v1development invariants matching
@@ -360,15 +384,53 @@ func assertConformance(t *testing.T, req *colprofilepb.ExportProfilesServiceRequ
 		}
 		seenMappings[key] = i
 	}
+	// Verify no duplicate locations.
+	seenLocations := make(map[string]int, len(dict.LocationTable))
+	for i, loc := range dict.LocationTable {
+		sorted := slices.Clone(loc.AttributeIndices)
+		slices.Sort(sorted)
+		key := fmt.Sprintf("%d:%d:%v:%v", loc.MappingIndex, loc.Address, loc.Lines, sorted)
+		if prev, ok := seenLocations[key]; ok {
+			t.Errorf("duplicate location at indices %d and %d", prev, i)
+		}
+		seenLocations[key] = i
+	}
+	// Verify no duplicate functions and non-empty string invariant.
+	seenFunctions := make(map[string]int, len(dict.FunctionTable))
+	for i, fn := range dict.FunctionTable {
+		if i > 0 {
+			assert.True(t, fn.NameStrindex != 0 || fn.SystemNameStrindex != 0 || fn.FilenameStrindex != 0,
+				"function[%d] must set at least one string index", i)
+		}
+		key := fmt.Sprintf("%d:%d:%d:%d", fn.NameStrindex, fn.SystemNameStrindex, fn.FilenameStrindex, fn.StartLine)
+		if prev, ok := seenFunctions[key]; ok {
+			t.Errorf("duplicate function at indices %d and %d", prev, i)
+		}
+		seenFunctions[key] = i
+	}
+	// Verify no duplicate links.
+	seenLinks := make(map[string]int, len(dict.LinkTable))
+	for i, l := range dict.LinkTable {
+		key := fmt.Sprintf("%x:%x", l.TraceId, l.SpanId)
+		if prev, ok := seenLinks[key]; ok {
+			t.Errorf("duplicate link at indices %d and %d", prev, i)
+		}
+		seenLinks[key] = i
+	}
 }
 
 func TestExportRequestAllAttributeTypesAndEdgeCases(t *testing.T) {
 	// Include every attribute.Type variant, empty values, zero/pre-epoch times,
-	// empty stacks, and an invalid mapping range (start >= limit).
+	// empty stacks, and invalid mapping ranges (start >= limit).
+	nestedMap := attribute.MapValue(
+		attribute.String("mk", "mv"),
+		attribute.Slice("ms", attribute.Int64Value(1), attribute.MapValue(attribute.Bool("deep", true))),
+	)
 	nested := attribute.SliceValue(
 		attribute.BoolValue(true),
 		attribute.Int64Value(7),
 		attribute.StringValue("nested"),
+		nestedMap,
 	)
 	allAttrs := []profiledata.Attribute{
 		{Key: "k.bool", Value: attribute.BoolValue(true)},
@@ -381,7 +443,10 @@ func TestExportRequestAllAttributeTypesAndEdgeCases(t *testing.T) {
 		{Key: "k.strings", Value: attribute.StringSliceValue([]string{"a", "b"})},
 		{Key: "k.bytes", Value: attribute.ByteSliceValue([]byte{0xde, 0xad})},
 		{Key: "k.slice", Value: nested},
+		{Key: "k.map", Value: nestedMap},
+		{Key: "k.map.empty", Value: attribute.MapValue()},
 		{Key: "k.empty", Value: attribute.Value{}},
+		{Key: "", Value: attribute.StringValue("ignored-empty-key")},
 	}
 	res := resource.NewSchemaless(
 		attribute.Bool("r.bool", false),
@@ -394,17 +459,65 @@ func TestExportRequestAllAttributeTypesAndEdgeCases(t *testing.T) {
 		attribute.StringSlice("r.strs", []string{"x"}),
 		attribute.ByteSlice("r.bytes", []byte("ok")),
 		attribute.Slice("r.slice", attribute.StringValue("elem")),
+		attribute.Map("r.map", attribute.String("rk", "rv")),
 	)
 
 	invalidMapping := &profiledata.Mapping{
 		MemoryStart: 0x2000,
 		MemoryLimit: 0x1000, // start > limit; clamped to [0, 0).
+		FileOffset:  0x100,
 		Filename:    "/bin/clamped",
+	}
+	equalRangeMapping := &profiledata.Mapping{
+		MemoryStart: 0x3000,
+		MemoryLimit: 0x3000, // start == limit; clamped to [0, 0).
+		Filename:    "/bin/equal",
 	}
 	loc := &profiledata.Location{
 		Mapping: invalidMapping,
 		Address: 0x1234,
+		Lines: []profiledata.Line{
+			{
+				Function: profiledata.Function{
+					Name:       "fn",
+					SystemName: "sys.fn",
+					Filename:   "fn.go",
+					StartLine:  -5,
+				},
+				Line:   -1,
+				Column: -2,
+			},
+			// Only StartLine set: violates Function non-empty string rule, maps to sentinel 0.
+			{
+				Function: profiledata.Function{StartLine: 99},
+				Line:     10,
+				Column:   4,
+			},
+		},
+		Attributes: []profiledata.Attribute{
+			{Key: "a", Value: attribute.StringValue("1")},
+			{Key: "b", Value: attribute.StringValue("2")},
+		},
 	}
+	// Distinct Location pointer with equal content and swapped attribute order must deduplicate.
+	locCopy := &profiledata.Location{
+		Mapping: invalidMapping,
+		Address: 0x1234,
+		Lines:   slices.Clone(loc.Lines),
+		Attributes: []profiledata.Attribute{
+			{Key: "b", Value: attribute.StringValue("2")},
+			{Key: "a", Value: attribute.StringValue("1")},
+		},
+	}
+	locEqualMapping := &profiledata.Location{
+		Mapping: equalRangeMapping,
+		Address: 0x5678,
+	}
+	link := profiledata.Link{
+		TraceID: trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+		SpanID:  trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+	}
+	tsOnly := time.Unix(1_700_000_050, 0).UTC()
 
 	req := ExportRequest(&profiledata.ResourceProfiles{
 		Resource: res,
@@ -413,25 +526,69 @@ func TestExportRequestAllAttributeTypesAndEdgeCases(t *testing.T) {
 				Scope: instrumentation.Scope{Name: "test"},
 				Profiles: []profiledata.Profile{
 					{
-						SampleType: profiledata.ValueType{Type: "cpu", Unit: "nanoseconds"},
-						Time:       time.Unix(-10, 0).UTC(),
-						Attributes: allAttrs,
+						SampleType:             profiledata.ValueType{Type: "cpu", Unit: "nanoseconds"},
+						Time:                   time.Unix(-10, 0).UTC(),
+						Duration:               -5 * time.Second,
+						DroppedAttributesCount: 3,
+						OriginalPayloadFormat:  "pprof", // No OriginalPayload bytes; omitted.
+						Attributes:             allAttrs,
 						Samples: []profiledata.Sample{
+							{
+								// Empty sample (no Values, no Timestamps) must be skipped without leaving orphans.
+								Stack: []*profiledata.Location{
+									{
+										Address: 0xdead,
+										Lines: []profiledata.Line{
+											{Function: profiledata.Function{Name: "orphan.fn"}},
+										},
+									},
+								},
+								Attributes: []profiledata.Attribute{
+									{Key: "orphan.k", Value: attribute.StringValue("orphan.v")},
+								},
+								Link: profiledata.Link{TraceID: trace.TraceID{9}, SpanID: trace.SpanID{9}},
+							},
 							{
 								Stack:      nil, // Empty stack -> index 0.
 								Values:     []int64{1},
 								Attributes: allAttrs,
+								Link:       link,
 							},
 							{
-								Stack:      []*profiledata.Location{nil, loc},
+								Stack:      []*profiledata.Location{nil, nil}, // All-nil stack -> index 0.
+								Timestamps: []time.Time{tsOnly},               // Timestamps-only sample.
+								Attributes: []profiledata.Attribute{
+									{Key: "", Value: attribute.StringValue("only-empty")},
+								},
+								Link: link, // Reuses link_table entry.
+							},
+							{
+								Stack:      []*profiledata.Location{nil, loc, locCopy, locEqualMapping},
 								Values:     []int64{2},
 								Attributes: allAttrs,
+								Link:       profiledata.Link{TraceID: link.TraceID}, // Missing SpanID -> index 0.
 							},
 						},
 					},
 					{
-						// Empty samples skipped; ensures ScopeProfiles pruning works.
-						SampleType: profiledata.ValueType{},
+						// Profile with no samples still converts cleanly with nil SampleType and one-sided payload ignored.
+						SampleType:      profiledata.ValueType{},
+						OriginalPayload: []byte("orphan-bytes"), // No format; omitted.
+					},
+				},
+			},
+			{
+				// Empty ScopeProfiles (no profiles) is pruned.
+				Scope: instrumentation.Scope{Name: "pruned"},
+			},
+			{
+				// Zero instrumentation.Scope leaves pbSP.Scope nil.
+				Profiles: []profiledata.Profile{
+					{
+						SampleType: profiledata.ValueType{Type: "count", Unit: "count"},
+						Samples: []profiledata.Sample{
+							{Values: []int64{1}, Link: profiledata.Link{SpanID: link.SpanID}},
+						},
 					},
 				},
 			},
@@ -440,10 +597,88 @@ func TestExportRequestAllAttributeTypesAndEdgeCases(t *testing.T) {
 	require.NotNil(t, req)
 	assertConformance(t, req)
 
-	// Clamped invalid mapping keeps memory range valid ([0, 0)).
-	require.Len(t, req.Dictionary.MappingTable, 2)
+	// Verify pre-epoch time, negative duration, dropped attrs, and one-sided payload handling.
+	pbSPs := req.ResourceProfiles[0].ScopeProfiles
+	require.Len(t, pbSPs, 2)
+	assert.Nil(t, pbSPs[1].Scope)
+	assert.Empty(t, pbSPs[1].SchemaUrl)
+
+	pbProf := pbSPs[0].Profiles[0]
+	assert.Zero(t, pbProf.TimeUnixNano)
+	assert.Zero(t, pbProf.DurationNano)
+	assert.Equal(t, uint32(3), pbProf.DroppedAttributesCount)
+	assert.Empty(t, pbProf.OriginalPayloadFormat)
+	assert.Empty(t, pbProf.OriginalPayload)
+	assert.Empty(t, pbSPs[0].Profiles[1].OriginalPayload)
+
+	// Empty sample was skipped, leaving 3 samples and no "orphan.fn" in string table.
+	require.Len(t, pbProf.Samples, 3)
+	assert.NotContains(t, req.Dictionary.StringTable, "orphan.fn")
+	assert.NotContains(t, req.Dictionary.StringTable, "ignored-empty-key")
+	assert.NotContains(t, req.Dictionary.StringTable, "only-empty")
+	assert.Zero(t, pbProf.Samples[1].StackIndex)
+	assert.Nil(t, pbProf.Samples[1].AttributeIndices)
+	assert.Equal(t, []uint64{uint64(tsOnly.UnixNano())}, pbProf.Samples[1].TimestampsUnixNano)
+	assert.Equal(t, pbProf.Samples[0].LinkIndex, pbProf.Samples[1].LinkIndex)
+	assert.Zero(t, pbProf.Samples[2].LinkIndex)
+	assert.Len(t, req.Dictionary.LinkTable, 2) // [zero, link]
+
+	// loc and locCopy deduplicated to a single LocationTable entry.
+	assert.Len(t, req.Dictionary.LocationTable, 3) // [zero, loc, locEqualMapping]
+	// Second line in loc had empty function strings -> FunctionIndex 0; clamped lines >= 0.
+	pbLoc := req.Dictionary.LocationTable[1]
+	require.Len(t, pbLoc.Lines, 2)
+	assert.Zero(t, pbLoc.Lines[0].Line)
+	assert.Zero(t, pbLoc.Lines[0].Column)
+	assert.Zero(t, pbLoc.Lines[1].FunctionIndex)
+	assert.Equal(t, int64(4), pbLoc.Lines[1].Column)
+	assert.Equal(t, int64(0), req.Dictionary.FunctionTable[pbLoc.Lines[0].FunctionIndex].StartLine)
+
+	// Clamped invalid mappings keep memory range valid ([0, 0)).
+	require.Len(t, req.Dictionary.MappingTable, 3) // [zero, invalidMapping, equalRangeMapping]
 	assert.Zero(t, req.Dictionary.MappingTable[1].MemoryStart)
 	assert.Zero(t, req.Dictionary.MappingTable[1].MemoryLimit)
+	assert.Equal(t, uint64(0x100), req.Dictionary.MappingTable[1].FileOffset)
+	assert.Zero(t, req.Dictionary.MappingTable[2].MemoryStart)
+	assert.Zero(t, req.Dictionary.MappingTable[2].MemoryLimit)
+
+	// Verify Resource with SchemaURL only (no attributes) and nil Resource.
+	schemaOnly := ExportRequest(&profiledata.ResourceProfiles{
+		Resource: resource.NewWithAttributes("https://opentelemetry.io/schemas/1.45.0"),
+		ScopeProfiles: []profiledata.ScopeProfiles{
+			{
+				Profiles: []profiledata.Profile{
+					{
+						Samples: []profiledata.Sample{
+							{Values: []int64{1}},
+						},
+					},
+				},
+			},
+		},
+	})
+	require.NotNil(t, schemaOnly)
+	assertConformance(t, schemaOnly)
+	assert.Nil(t, schemaOnly.ResourceProfiles[0].Resource)
+	assert.Equal(t, "https://opentelemetry.io/schemas/1.45.0", schemaOnly.ResourceProfiles[0].SchemaUrl)
+
+	nilRes := ExportRequest(&profiledata.ResourceProfiles{
+		ScopeProfiles: []profiledata.ScopeProfiles{
+			{
+				Profiles: []profiledata.Profile{
+					{
+						Samples: []profiledata.Sample{
+							{Values: []int64{1}},
+						},
+					},
+				},
+			},
+		},
+	})
+	require.NotNil(t, nilRes)
+	assertConformance(t, nilRes)
+	assert.Nil(t, nilRes.ResourceProfiles[0].Resource)
+	assert.Empty(t, nilRes.ResourceProfiles[0].SchemaUrl)
 }
 
 func TestExportRequestWireIdenticalSliceDeduplication(t *testing.T) {
@@ -464,20 +699,57 @@ func TestExportRequestWireIdenticalSliceDeduplication(t *testing.T) {
 									{Key: "floats", Value: attribute.Float64SliceValue([]float64{1.5})},
 									{Key: "strs", Value: attribute.StringSliceValue([]string{"a", "b"})},
 									{Key: "empty", Value: attribute.Int64SliceValue(nil)},
-									{Key: "nested", Value: attribute.SliceValue(attribute.Int64SliceValue([]int64{1}), attribute.Value{})},
-									{Key: "nested_distinct", Value: attribute.SliceValue(attribute.SliceValue(attribute.Int64Value(1), attribute.Value{}))},
+									{
+										Key: "nested",
+										Value: attribute.SliceValue(
+											attribute.Int64SliceValue([]int64{1}),
+											attribute.Value{},
+										),
+									},
+									{
+										Key: "nested_distinct",
+										Value: attribute.SliceValue(
+											attribute.SliceValue(attribute.Int64Value(1), attribute.Value{}),
+										),
+									},
 								},
 							},
 							{
 								Values: []int64{2},
 								Attributes: []profiledata.Attribute{
-									{Key: "bools", Value: attribute.SliceValue(attribute.BoolValue(true), attribute.BoolValue(false))},
-									{Key: "ints", Value: attribute.SliceValue(attribute.Int64Value(1), attribute.Int64Value(2))},
+									{
+										Key: "bools",
+										Value: attribute.SliceValue(
+											attribute.BoolValue(true),
+											attribute.BoolValue(false),
+										),
+									},
+									{
+										Key:   "ints",
+										Value: attribute.SliceValue(attribute.Int64Value(1), attribute.Int64Value(2)),
+									},
 									{Key: "floats", Value: attribute.SliceValue(attribute.Float64Value(1.5))},
-									{Key: "strs", Value: attribute.SliceValue(attribute.StringValue("a"), attribute.StringValue("b"))},
+									{
+										Key: "strs",
+										Value: attribute.SliceValue(
+											attribute.StringValue("a"),
+											attribute.StringValue("b"),
+										),
+									},
 									{Key: "empty", Value: attribute.StringSliceValue(nil)},
-									{Key: "nested", Value: attribute.SliceValue(attribute.SliceValue(attribute.Int64Value(1)), attribute.Value{})},
-									{Key: "nested_distinct", Value: attribute.SliceValue(attribute.SliceValue(attribute.Int64Value(1), attribute.Value{}))},
+									{
+										Key: "nested",
+										Value: attribute.SliceValue(
+											attribute.SliceValue(attribute.Int64Value(1)),
+											attribute.Value{},
+										),
+									},
+									{
+										Key: "nested_distinct",
+										Value: attribute.SliceValue(
+											attribute.SliceValue(attribute.Int64Value(1), attribute.Value{}),
+										),
+									},
 								},
 							},
 							{
