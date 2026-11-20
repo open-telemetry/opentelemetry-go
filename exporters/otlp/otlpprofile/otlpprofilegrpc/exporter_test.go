@@ -106,6 +106,10 @@ func TestExporterEndToEndWithRuntimeProducer(t *testing.T) {
 		otlpprofilegrpc.WithHeaders(map[string]string{"x-custom": "hello"}),
 	)
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, exp.Shutdown(context.Background()))
+	})
 
 	mr := profile.NewManualReader()
 	pp := profile.NewProfilerProvider(
@@ -113,7 +117,10 @@ func TestExporterEndToEndWithRuntimeProducer(t *testing.T) {
 		profile.WithProducer(profile.NewRuntimeProducer()),
 		profile.WithReader(mr),
 	)
-	t.Cleanup(func() { _ = pp.Shutdown(t.Context()) })
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, pp.Shutdown(context.Background()))
+	})
 
 	var rp profiledata.ResourceProfiles
 	require.NoError(t, mr.Collect(t.Context(), &rp))
@@ -161,7 +168,10 @@ func TestExporterPartialSuccessRetriesAndLimits(t *testing.T) {
 			otlpprofilegrpc.WithInsecure(),
 		)
 		require.NoError(t, err)
-		t.Cleanup(func() { _ = exp.Shutdown(t.Context()) })
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
 
 		err = exp.Export(t.Context(), sampleResourceProfiles())
 		require.ErrorIs(t, err, internal.PartialSuccess{})
@@ -200,7 +210,10 @@ func TestExporterPartialSuccessRetriesAndLimits(t *testing.T) {
 			}),
 		)
 		require.NoError(t, err)
-		t.Cleanup(func() { _ = exp.Shutdown(t.Context()) })
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
 
 		require.NoError(t, exp.Export(t.Context(), sampleResourceProfiles()))
 		assert.Equal(t, int32(3), attempts.Load())
@@ -222,7 +235,10 @@ func TestExporterPartialSuccessRetriesAndLimits(t *testing.T) {
 			otlpprofilegrpc.WithInsecure(),
 		)
 		require.NoError(t, err)
-		t.Cleanup(func() { _ = exp.Shutdown(t.Context()) })
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
 
 		err = exp.Export(t.Context(), sampleResourceProfiles())
 		require.Error(t, err)
