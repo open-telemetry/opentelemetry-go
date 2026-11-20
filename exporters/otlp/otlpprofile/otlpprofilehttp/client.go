@@ -298,8 +298,8 @@ type request struct {
 }
 
 func (r *request) reset(ctx context.Context) {
-	r.Body = r.bodyReader()
 	r.Request = r.WithContext(ctx)
+	r.Body = r.bodyReader()
 }
 
 type retryableError struct {
