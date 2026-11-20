@@ -34,6 +34,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Changed
 
+- Skip map deduplication on each measurement when the attribute set has no `SLICE` or `MAP` value in `go.opentelemetry.io/otel/sdk/metric`. (#9289)
 - Rename `rpc.response.status_code` to `rpc.status_code` in experimental self-observability metrics emitted by
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and
