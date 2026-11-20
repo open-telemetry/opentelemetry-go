@@ -480,3 +480,63 @@ func TestClientTLSAndDialOptions(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestClientMetadataAndDevelopmentVersion(t *testing.T) {
+	t.Run("enforces_version_without_headers_option", func(t *testing.T) {
+		srv := &testProfilesServer{}
+		addr := startTestGRPCServer(t, srv)
+
+		exp, err := New(t.Context(), WithEndpoint(addr), WithInsecure())
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
+
+		require.NoError(t, exp.Export(t.Context(), nonEmptyResourceProfiles()))
+		srv.mu.Lock()
+		require.Len(t, srv.mds, 1)
+		assert.Equal(t, []string{profilesDevelopmentVersion}, srv.mds[0].Get(profilesDevelopmentVersionKey))
+		srv.mu.Unlock()
+	})
+
+	t.Run("overrides_conflicting_headers_and_outgoing_context_without_mutating_client", func(t *testing.T) {
+		srv := &testProfilesServer{}
+		addr := startTestGRPCServer(t, srv)
+
+		exp, err := New(
+			t.Context(),
+			WithEndpoint(addr),
+			WithInsecure(),
+			WithHeaders(map[string]string{
+				"OTLP-Profiles-Development-Version": "999",
+				"x-shared":                          "from-opt",
+			}),
+		)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
+
+		ctx1 := metadata.AppendToOutgoingContext(
+			t.Context(),
+			profilesDevelopmentVersionKey, "777",
+			"x-caller", "first",
+			"x-shared", "from-ctx",
+		)
+		require.NoError(t, exp.Export(ctx1, nonEmptyResourceProfiles()))
+		require.NoError(t, exp.Export(t.Context(), nonEmptyResourceProfiles()))
+
+		srv.mu.Lock()
+		require.Len(t, srv.mds, 2)
+		assert.Equal(t, []string{profilesDevelopmentVersion}, srv.mds[0].Get(profilesDevelopmentVersionKey))
+		assert.Equal(t, []string{"first"}, srv.mds[0].Get("x-caller"))
+		assert.ElementsMatch(t, []string{"from-ctx", "from-opt"}, srv.mds[0].Get("x-shared"))
+
+		assert.Equal(t, []string{profilesDevelopmentVersion}, srv.mds[1].Get(profilesDevelopmentVersionKey))
+		assert.Empty(t, srv.mds[1].Get("x-caller"), "subsequent export must not retain prior caller metadata")
+		assert.Equal(t, []string{"from-opt"}, srv.mds[1].Get("x-shared"))
+		srv.mu.Unlock()
+	})
+}
