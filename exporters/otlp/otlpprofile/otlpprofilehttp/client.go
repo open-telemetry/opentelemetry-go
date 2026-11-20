@@ -142,7 +142,7 @@ var ourTransport = &http.Transport{
 func (c *httpClient) uploadProfiles(
 	ctx context.Context,
 	pbRequest *colprofilepb.ExportProfilesServiceRequest,
-) (uploadErr error) {
+) error {
 	if maxSize := c.maxRequestSize; maxSize > 0 && proto.Size(pbRequest) > maxSize {
 		return fmt.Errorf("request body too large: exceeded %d bytes", maxSize)
 	}
@@ -162,7 +162,9 @@ func (c *httpClient) uploadProfiles(
 		defer cancel()
 	}
 
-	return errors.Join(uploadErr, c.requestFunc(ctx, func(iCtx context.Context) error {
+	var uploadErr error
+	reqErr := c.requestFunc(ctx, func(iCtx context.Context) error {
+		uploadErr = nil
 		select {
 		case <-iCtx.Done():
 			return iCtx.Err()
@@ -226,7 +228,8 @@ func (c *httpClient) uploadProfiles(
 		default:
 			return fmt.Errorf("failed to send profiles to %s: %s (%w)", request.URL, resp.Status, bodyErr)
 		}
-	}))
+	})
+	return errors.Join(uploadErr, reqErr)
 }
 
 func (c *httpClient) readResponse(resp *http.Response) ([]byte, error) {
