@@ -12,7 +12,7 @@ import (
 
 func Example() {
 	ctx := context.Background()
-	exp, err := otlpprofilehttp.New(ctx, otlpprofilehttp.WithInsecure())
+	exp, err := otlpprofilehttp.New(ctx)
 	if err != nil {
 		panic(err)
 	}
