@@ -327,7 +327,7 @@ func TestExporterAttributeLists(t *testing.T) {
 				require.Len(t, got.Events, 1)
 				assert.JSONEq(t, tc.want, string(got.Events[0].Attributes))
 				assert.Equal(t, "event", got.Events[0].Name)
-				assert.Equal(t, time.Unix(1, 0).UTC(), got.Events[0].Time)
+				assert.Equal(t, time.Unix(1, 0).UTC(), got.Events[0].Time.UTC())
 				assert.Equal(t, 2, got.Events[0].DroppedAttributeCount)
 				require.Len(t, got.Links, 1)
 				assert.JSONEq(t, tc.want, string(got.Links[0].Attributes))
