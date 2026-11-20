@@ -130,6 +130,32 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 		cfg := newConfig(nil)
 		assert.Nil(t, cfg.tlsCfg.Value)
 	})
+
+	t.Run("timeout_env_bounds", func(t *testing.T) {
+		t.Run("zero_allowed", func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_TIMEOUT", "0")
+			cfg := newConfig(nil)
+			assert.Equal(t, time.Duration(0), cfg.timeout.Value)
+		})
+		t.Run("max_valid_ms", func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_TIMEOUT", "9223372036854")
+			cfg := newConfig(nil)
+			assert.Equal(t, 9223372036854*time.Millisecond, cfg.timeout.Value)
+		})
+		for _, bad := range []string{"-1", "9223372036855", "9223372036854775807"} {
+			t.Run("reject_"+bad, func(t *testing.T) {
+				t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "3000")
+				t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_TIMEOUT", bad)
+				cfg := newConfig(nil)
+				assert.Equal(t, 3*time.Second, cfg.timeout.Value)
+			})
+			t.Run("reject_generic_"+bad, func(t *testing.T) {
+				t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", bad)
+				cfg := newConfig(nil)
+				assert.Equal(t, defaultTimeout, cfg.timeout.Value)
+			})
+		}
+	})
 }
 
 func TestClientHelpers(t *testing.T) {

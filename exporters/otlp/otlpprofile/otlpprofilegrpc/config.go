@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"strconv"
@@ -347,9 +348,12 @@ func convHeaders(s string) (map[string]string, error) {
 }
 
 func convDuration(s string) (time.Duration, error) {
-	d, err := strconv.Atoi(s)
+	d, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return 0, err
+	}
+	if d < 0 || d > math.MaxInt64/int64(time.Millisecond) {
+		return 0, fmt.Errorf("duration out of range: %d", d)
 	}
 	return time.Duration(d) * time.Millisecond, nil
 }
