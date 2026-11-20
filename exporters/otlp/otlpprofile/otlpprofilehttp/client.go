@@ -181,17 +181,20 @@ func (c *httpClient) uploadProfiles(
 		if err != nil {
 			return err
 		}
-		if resp != nil && resp.Body != nil {
+		if resp == nil {
+			return fmt.Errorf("failed to send profiles to %s: nil HTTP response", request.URL)
+		}
+		var respData []byte
+		if resp.Body != nil {
 			defer func() {
 				if closeErr := resp.Body.Close(); closeErr != nil {
 					uploadErr = errors.Join(uploadErr, closeErr)
 				}
 			}()
-		}
-
-		respData, err := c.readResponse(resp)
-		if err != nil {
-			return err
+			respData, err = c.readResponse(resp)
+			if err != nil {
+				return err
+			}
 		}
 		if sc := resp.StatusCode; sc >= 200 && sc <= 299 {
 			if len(respData) == 0 {
