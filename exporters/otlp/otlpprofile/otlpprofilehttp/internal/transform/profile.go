@@ -319,6 +319,11 @@ func (d *dictBuilder) internLocation(loc *profiledata.Location) int32 {
 }
 
 func (d *dictBuilder) internFunction(fn profiledata.Function) int32 {
+	// profiles.proto requires at least one of name, system_name, or filename to
+	// be non-empty on any non-zero Function entry.
+	if fn.Name == "" && fn.SystemName == "" && fn.Filename == "" {
+		return 0
+	}
 	startLine := max(fn.StartLine, 0)
 	key := fnKey{
 		nameIdx:    d.internString(fn.Name),
