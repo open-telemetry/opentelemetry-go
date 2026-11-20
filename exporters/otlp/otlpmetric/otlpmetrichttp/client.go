@@ -191,11 +191,10 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 		request.reset(iCtx)
 		// nolint:gosec // URL is constructed from validated OTLP endpoint configuration
 		resp, err := c.httpClient.Do(request.Request)
-		var urlErr *url.Error
-		if errors.As(err, &urlErr) && urlErr.Temporary() {
-			return newResponseError(http.Header{}, err)
-		}
 		if err != nil {
+			if retryableNetworkError(err) {
+				return newResponseError(http.Header{}, err)
+			}
 			return err
 		}
 		if resp != nil {
@@ -429,4 +428,62 @@ func evaluate(err error) (bool, time.Duration) {
 	}
 
 	return true, rErr.throttle
+}
+
+// retryableNetworkError reports whether err is a transient network failure
+// that should be retried for OTLP/HTTP export.
+//
+// Cancellation is handled by the retry loop. An http.Client.Timeout error
+// matches context.DeadlineExceeded but is retryable while the export context
+// remains live.
+func retryableNetworkError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+
+	if netErr, ok := errors.AsType[net.Error](err); ok {
+		if netErr.Timeout() {
+			return true
+		}
+		// Temporary is deprecated but remains the only signal for some
+		// transient network conditions.
+		//nolint:staticcheck // SA1019: Temporary is deprecated.
+		if netErr.Temporary() {
+			return true
+		}
+	}
+
+	// Dial/read/write failures (connection refused, reset, unreachable)
+	// are wrapped as *net.OpError and are transient for OTLP export. TLS
+	// alerts are also *net.OpError but use the "local error" and "remote
+	// error" ops, and are permanent.
+	opErr, ok := errors.AsType[*net.OpError](err)
+	// net/http wraps failures reaching a proxy in an outer "proxyconnect"
+	// *net.OpError, and SOCKS handshake failures in a "socks connect" one;
+	// classify the underlying failure instead. SOCKS authentication and
+	// protocol failures are not *net.OpError underneath, so stay permanent.
+	for ok && (opErr.Op == "proxyconnect" || opErr.Op == "socks connect") {
+		opErr, ok = errors.AsType[*net.OpError](opErr.Err)
+	}
+	if !ok {
+		return false
+	}
+	switch opErr.Op {
+	case "dial", "read", "write":
+	default:
+		return false
+	}
+	// An invalid endpoint address fails the dial with an *net.AddrError. A DNS
+	// failure that is temporary or a timeout was already accepted above; any
+	// other DNS failure is permanent.
+	if _, ok := errors.AsType[*net.AddrError](err); ok {
+		return false
+	}
+	if _, ok := errors.AsType[*net.DNSError](err); ok {
+		return false
+	}
+	return true
 }
