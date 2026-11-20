@@ -11,6 +11,7 @@ import (
 	"math"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -240,11 +241,16 @@ func WithServiceConfig(serviceConfig string) Option {
 	})
 }
 
-// WithDialOption appends explicit [grpc.DialOption] values when dialing.
-// This option has no effect if WithGRPCConn is used.
+// WithDialOption sets explicit [grpc.DialOption] values to use when
+// establishing a gRPC connection. The options are appended to internal defaults
+// so they take precedence over conflicting internal options; passing
+// WithDialOption more than once replaces earlier dial options.
+// The [grpc.WithBlock], [grpc.WithTimeout], and [grpc.WithReturnConnectionError]
+// dial options are ignored. This option has no effect if WithGRPCConn is used.
 func WithDialOption(opts ...grpc.DialOption) Option {
+	cloned := slices.Clone(opts)
 	return fnOpt(func(c config) config {
-		c.dialOptions = newSetting(opts)
+		c.dialOptions = newSetting(cloned)
 		return c
 	})
 }
