@@ -1,0 +1,34 @@
+name: OSS Scanner environment
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build scanner image
+        run: docker build --file .oss-scanner/Dockerfile --tag otel-go-oss-scanner .
+      - name: Test without network access
+        run: |
+          docker run --rm --network none \
+            --env GOPROXY=off --env GOSUMDB=off \
+            otel-go-oss-scanner \
+            make SHELL=/bin/bash '.SHELLFLAGS=-e -o pipefail -c' \
+            test-race ARGS='-race -count=1'
