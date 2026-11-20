@@ -330,16 +330,21 @@ func isProtobufContentType(contentType string) bool {
 	return strings.EqualFold(mediatype, "application/x-protobuf")
 }
 
+// Cap parsed Retry-After durations at half of math.MaxInt64 so internal/retry's
+// elapsed+throttle > maxElapsedTime check cannot overflow signed int64 and wrap
+// negative on huge Retry-After headers.
+const maxRetryAfter = time.Duration(math.MaxInt64 / 2)
+
 func retryAfterDuration(v string) time.Duration {
 	if t, err := strconv.ParseInt(v, 10, 64); err == nil && t >= 0 {
-		const maxRetryAfterSeconds = math.MaxInt64 / int64(time.Second)
+		const maxRetryAfterSeconds = int64(maxRetryAfter / time.Second)
 		if t > maxRetryAfterSeconds {
-			return time.Duration(math.MaxInt64)
+			return maxRetryAfter
 		}
 		return time.Duration(t) * time.Second
 	}
 	if date, err := http.ParseTime(v); err == nil {
-		return max(time.Until(date), 0)
+		return min(max(time.Until(date), 0), maxRetryAfter)
 	}
 	return 0
 }
