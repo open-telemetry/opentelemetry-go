@@ -22,13 +22,9 @@ func Example() {
 		profile.WithProducer(profile.NewRuntimeProducer()),
 		profile.WithReader(reader),
 	)
-	defer func() {
-		if err := provider.Shutdown(ctx); err != nil {
-			panic(err)
-		}
-	}()
-
-	if err := provider.ForceFlush(ctx); err != nil {
+	// Application runs while PeriodicReader collects and exports profiles.
+	// Shutdown performs a final flush before stopping the exporter.
+	if err := provider.Shutdown(ctx); err != nil {
 		panic(err)
 	}
 }
