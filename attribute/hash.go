@@ -154,7 +154,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 			h = h.Bool(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
-			h = h.Int64(int64(rv.Len()))
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
 				h = h.Bool(rv.Index(i).Bool())
 			}
@@ -178,7 +178,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 			h = h.Int64(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
-			h = h.Int64(int64(rv.Len()))
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
 				h = h.Int64(rv.Index(i).Int())
 			}
@@ -202,7 +202,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 			h = h.Float64(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
-			h = h.Int64(int64(rv.Len()))
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
 				h = h.Float64(rv.Index(i).Float())
 			}
@@ -226,7 +226,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 			h = hashString(h, vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
-			h = h.Int64(int64(rv.Len()))
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
 				h = hashString(h, rv.Index(i).String())
 			}
@@ -239,7 +239,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		switch vals := v.slice.(type) {
 		case [0]Value:
 			h = h.Uint64(0)
-			// No values to hash, but the type identifier is still hashed above.
+			// Empty collection: only the zero count is hashed.
 		case [1]Value:
 			h = h.Uint64(1)
 			h = hashValue(h, vals[0])
@@ -267,7 +267,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 			h = hashValue(h, vals[4])
 		default:
 			rv := reflect.ValueOf(v.slice)
-			h = h.Int64(int64(rv.Len()))
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
 				h = hashValue(h, rv.Index(i).Interface().(Value))
 			}
@@ -277,7 +277,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		switch vals := v.slice.(type) {
 		case [0]KeyValue:
 			h = h.Uint64(0)
-			// No values to hash, but the type identifier is still hashed above.
+			// Empty collection: only the zero count is hashed.
 		case [1]KeyValue:
 			h = h.Uint64(1)
 			h = hashString(h, string(vals[0].Key))
@@ -320,7 +320,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 			h = hashValue(h, vals[4].Value)
 		default:
 			rv := reflect.ValueOf(v.slice)
-			h = h.Int64(int64(rv.Len()))
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
 				kv := rv.Index(i).Interface().(KeyValue)
 				h = hashString(h, string(kv.Key))
