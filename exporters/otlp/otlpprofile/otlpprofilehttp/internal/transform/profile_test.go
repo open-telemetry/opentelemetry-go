@@ -446,6 +446,63 @@ func TestExportRequestAllAttributeTypesAndEdgeCases(t *testing.T) {
 	assert.Zero(t, req.Dictionary.MappingTable[1].MemoryLimit)
 }
 
+func TestExportRequestWireIdenticalSliceDeduplication(t *testing.T) {
+	// Typed Go slices and generic attribute.SliceValue encode to the same
+	// OTLP AnyValue_ArrayValue and must share AttributeTable indices.
+	req := ExportRequest(&profiledata.ResourceProfiles{
+		ScopeProfiles: []profiledata.ScopeProfiles{
+			{
+				Profiles: []profiledata.Profile{
+					{
+						SampleType: profiledata.ValueType{Type: "cpu", Unit: "nanoseconds"},
+						Samples: []profiledata.Sample{
+							{
+								Values: []int64{1},
+								Attributes: []profiledata.Attribute{
+									{Key: "bools", Value: attribute.BoolSliceValue([]bool{true, false})},
+									{Key: "ints", Value: attribute.Int64SliceValue([]int64{1, 2})},
+									{Key: "floats", Value: attribute.Float64SliceValue([]float64{1.5})},
+									{Key: "strs", Value: attribute.StringSliceValue([]string{"a", "b"})},
+									{Key: "empty", Value: attribute.Int64SliceValue(nil)},
+									{Key: "nested", Value: attribute.SliceValue(attribute.Int64SliceValue([]int64{1}), attribute.Value{})},
+									{Key: "nested_distinct", Value: attribute.SliceValue(attribute.SliceValue(attribute.Int64Value(1), attribute.Value{}))},
+								},
+							},
+							{
+								Values: []int64{2},
+								Attributes: []profiledata.Attribute{
+									{Key: "bools", Value: attribute.SliceValue(attribute.BoolValue(true), attribute.BoolValue(false))},
+									{Key: "ints", Value: attribute.SliceValue(attribute.Int64Value(1), attribute.Int64Value(2))},
+									{Key: "floats", Value: attribute.SliceValue(attribute.Float64Value(1.5))},
+									{Key: "strs", Value: attribute.SliceValue(attribute.StringValue("a"), attribute.StringValue("b"))},
+									{Key: "empty", Value: attribute.StringSliceValue(nil)},
+									{Key: "nested", Value: attribute.SliceValue(attribute.SliceValue(attribute.Int64Value(1)), attribute.Value{})},
+									{Key: "nested_distinct", Value: attribute.SliceValue(attribute.SliceValue(attribute.Int64Value(1), attribute.Value{}))},
+								},
+							},
+							{
+								Values: []int64{3},
+								Attributes: []profiledata.Attribute{
+									{Key: "empty", Value: attribute.SliceValue()},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	require.NotNil(t, req)
+	assertConformance(t, req)
+
+	samples := req.ResourceProfiles[0].ScopeProfiles[0].Profiles[0].Samples
+	require.Len(t, samples, 3)
+	assert.Equal(t, samples[0].AttributeIndices, samples[1].AttributeIndices)
+	assert.Equal(t, samples[0].AttributeIndices[4], samples[2].AttributeIndices[0])
+	// [[1], empty] and [[1, empty]] must stay distinct.
+	assert.NotEqual(t, samples[0].AttributeIndices[5], samples[0].AttributeIndices[6])
+}
+
 // Recommended CLI invocation:
 // go test ./internal/transform -run '^$' -bench '^BenchmarkExportRequest$' -benchtime 1s -count 6 -cpu 2 -timeout 999m -benchmem | tee transform_bench.txt.
 func BenchmarkExportRequest(b *testing.B) {

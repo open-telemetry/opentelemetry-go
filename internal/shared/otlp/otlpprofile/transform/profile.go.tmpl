@@ -106,7 +106,6 @@ type locationKey struct {
 type attrKey struct {
 	keyIdx  int32
 	unitIdx int32
-	valType attribute.Type
 	valKey  string
 }
 
@@ -436,12 +435,12 @@ func (d *dictBuilder) internAttributes(attrs []profiledata.Attribute) []int32 {
 func (d *dictBuilder) internAttribute(a profiledata.Attribute) int32 {
 	keyIdx := d.internString(string(a.Key))
 	unitIdx := d.internString(a.Unit)
-	pbVal, valKey := d.anyValue(a.Value)
+	var buf [64]byte
+	pbVal, keyBuf := d.appendAnyValue(buf[:0], a.Value)
 	ak := attrKey{
 		keyIdx:  keyIdx,
 		unitIdx: unitIdx,
-		valType: a.Value.Type(),
-		valKey:  valKey,
+		valKey:  string(keyBuf),
 	}
 	if idx, ok := d.attrIdx[ak]; ok {
 		return idx
@@ -461,10 +460,11 @@ func (d *dictBuilder) keyValuesIter(iter attribute.Iterator) []*cpb.KeyValue {
 	if l == 0 {
 		return nil
 	}
+	var buf [64]byte
 	out := make([]*cpb.KeyValue, 0, l)
 	for iter.Next() {
 		kv := iter.Attribute()
-		val, _ := d.anyValue(kv.Value)
+		val, _ := d.appendAnyValue(buf[:0], kv.Value)
 		out = append(out, &cpb.KeyValue{
 			KeyStrindex: d.internString(string(kv.Key)),
 			Value:       val,
@@ -473,117 +473,135 @@ func (d *dictBuilder) keyValuesIter(iter attribute.Iterator) []*cpb.KeyValue {
 	return out
 }
 
-func (d *dictBuilder) anyValue(v attribute.Value) (*cpb.AnyValue, string) {
+// appendAnyValue converts v to an OTLP AnyValue and appends a canonical,
+// wire-level deduplication key to buf. All Go slice attribute variants emit
+// the same '[...]' array format so wire-identical AnyValue_ArrayValue entries
+// deduplicate in AttributeTable regardless of Go attribute.Type.
+func (d *dictBuilder) appendAnyValue(buf []byte, v attribute.Value) (*cpb.AnyValue, []byte) {
 	av := new(cpb.AnyValue)
 	switch v.Type() {
 	case attribute.BOOL:
 		b := v.AsBool()
 		av.Value = &cpb.AnyValue_BoolValue{BoolValue: b}
 		if b {
-			return av, "1"
+			return av, append(buf, 'b', ':', '1')
 		}
-		return av, "0"
+		return av, append(buf, 'b', ':', '0')
 	case attribute.INT64:
 		n := v.AsInt64()
 		av.Value = &cpb.AnyValue_IntValue{IntValue: n}
-		return av, strconv.FormatInt(n, 10)
+		return av, strconv.AppendInt(append(buf, 'i', ':'), n, 10)
 	case attribute.FLOAT64:
 		f := v.AsFloat64()
 		av.Value = &cpb.AnyValue_DoubleValue{DoubleValue: f}
-		return av, strconv.FormatUint(math.Float64bits(f), 16)
+		return av, strconv.AppendUint(append(buf, 'f', ':'), math.Float64bits(f), 16)
 	case attribute.STRING:
 		idx := d.internString(v.AsString())
 		av.Value = &cpb.AnyValue_StringValueStrindex{StringValueStrindex: idx}
-		return av, strconv.FormatInt(int64(idx), 10)
+		return av, strconv.AppendInt(append(buf, 's', ':'), int64(idx), 10)
 	case attribute.BYTESLICE:
 		bs := v.AsByteSlice()
 		av.Value = &cpb.AnyValue_BytesValue{BytesValue: slices.Clone(bs)}
-		return av, hex.EncodeToString(bs)
+		return av, hex.AppendEncode(append(buf, 'y', ':'), bs)
 	case attribute.BOOLSLICE:
 		vals := v.AsBoolSlice()
 		pbVals := make([]*cpb.AnyValue, len(vals))
-		buf := make([]byte, len(vals))
+		buf = append(buf, '[')
 		for i, b := range vals {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
 			pbVals[i] = &cpb.AnyValue{Value: &cpb.AnyValue_BoolValue{BoolValue: b}}
 			if b {
-				buf[i] = '1'
+				buf = append(buf, 'b', ':', '1')
 			} else {
-				buf[i] = '0'
+				buf = append(buf, 'b', ':', '0')
 			}
 		}
+		buf = append(buf, ']')
 		av.Value = &cpb.AnyValue_ArrayValue{ArrayValue: &cpb.ArrayValue{Values: pbVals}}
-		return av, string(buf)
+		return av, buf
 	case attribute.INT64SLICE:
 		vals := v.AsInt64Slice()
 		pbVals := make([]*cpb.AnyValue, len(vals))
-		var buf []byte
+		buf = append(buf, '[')
 		for i, n := range vals {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
 			pbVals[i] = &cpb.AnyValue{Value: &cpb.AnyValue_IntValue{IntValue: n}}
-			buf = strconv.AppendInt(buf, n, 10)
-			buf = append(buf, ',')
+			buf = strconv.AppendInt(append(buf, 'i', ':'), n, 10)
 		}
+		buf = append(buf, ']')
 		av.Value = &cpb.AnyValue_ArrayValue{ArrayValue: &cpb.ArrayValue{Values: pbVals}}
-		return av, string(buf)
+		return av, buf
 	case attribute.FLOAT64SLICE:
 		vals := v.AsFloat64Slice()
 		pbVals := make([]*cpb.AnyValue, len(vals))
-		var buf []byte
+		buf = append(buf, '[')
 		for i, f := range vals {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
 			pbVals[i] = &cpb.AnyValue{Value: &cpb.AnyValue_DoubleValue{DoubleValue: f}}
-			buf = strconv.AppendUint(buf, math.Float64bits(f), 16)
-			buf = append(buf, ',')
+			buf = strconv.AppendUint(append(buf, 'f', ':'), math.Float64bits(f), 16)
 		}
+		buf = append(buf, ']')
 		av.Value = &cpb.AnyValue_ArrayValue{ArrayValue: &cpb.ArrayValue{Values: pbVals}}
-		return av, string(buf)
+		return av, buf
 	case attribute.STRINGSLICE:
 		vals := v.AsStringSlice()
 		pbVals := make([]*cpb.AnyValue, len(vals))
-		var buf []byte
+		buf = append(buf, '[')
 		for i, s := range vals {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
 			idx := d.internString(s)
 			pbVals[i] = &cpb.AnyValue{Value: &cpb.AnyValue_StringValueStrindex{StringValueStrindex: idx}}
-			buf = strconv.AppendInt(buf, int64(idx), 10)
-			buf = append(buf, ',')
+			buf = strconv.AppendInt(append(buf, 's', ':'), int64(idx), 10)
 		}
+		buf = append(buf, ']')
 		av.Value = &cpb.AnyValue_ArrayValue{ArrayValue: &cpb.ArrayValue{Values: pbVals}}
-		return av, string(buf)
+		return av, buf
 	case attribute.SLICE:
 		vals := v.AsSlice()
 		pbVals := make([]*cpb.AnyValue, len(vals))
-		var buf []byte
+		buf = append(buf, '[')
 		for i, elem := range vals {
-			pbElem, k := d.anyValue(elem)
+			if i > 0 {
+				buf = append(buf, ',')
+			}
+			pbElem, next := d.appendAnyValue(buf, elem)
 			pbVals[i] = pbElem
-			buf = strconv.AppendInt(buf, int64(elem.Type()), 10)
-			buf = append(buf, ':')
-			buf = append(buf, k...)
-			buf = append(buf, '\x00')
+			buf = next
 		}
+		buf = append(buf, ']')
 		av.Value = &cpb.AnyValue_ArrayValue{ArrayValue: &cpb.ArrayValue{Values: pbVals}}
-		return av, string(buf)
+		return av, buf
 	case attribute.MAP:
 		kvs := v.AsMap()
 		pbKVs := make([]*cpb.KeyValue, len(kvs))
-		var buf []byte
+		buf = append(buf, '{')
 		for i, kv := range kvs {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
 			kIdx := d.internString(string(kv.Key))
-			pbElem, vk := d.anyValue(kv.Value)
+			buf = append(strconv.AppendInt(buf, int64(kIdx), 10), '=')
+			pbElem, next := d.appendAnyValue(buf, kv.Value)
 			pbKVs[i] = &cpb.KeyValue{KeyStrindex: kIdx, Value: pbElem}
-			buf = strconv.AppendInt(buf, int64(kIdx), 10)
-			buf = append(buf, '=')
-			buf = strconv.AppendInt(buf, int64(kv.Value.Type()), 10)
-			buf = append(buf, ':')
-			buf = append(buf, vk...)
-			buf = append(buf, '\x00')
+			buf = next
 		}
+		buf = append(buf, '}')
 		av.Value = &cpb.AnyValue_KvlistValue{KvlistValue: &cpb.KeyValueList{Values: pbKVs}}
-		return av, string(buf)
+		return av, buf
 	case attribute.EMPTY:
-		return av, ""
+		return av, append(buf, 'e')
 	default:
 		idx := d.internString("INVALID")
 		av.Value = &cpb.AnyValue_StringValueStrindex{StringValueStrindex: idx}
-		return av, "INVALID"
+		return av, strconv.AppendInt(append(buf, 's', ':'), int64(idx), 10)
 	}
 }
 
