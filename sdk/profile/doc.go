@@ -9,8 +9,9 @@ The Profiles signal is currently Alpha in the OpenTelemetry specification
 in backwards-incompatible ways between releases.
 
 The entry point is [NewProfilerProvider], which coordinates [Producer]
-implementations and [Reader] implementations ([PeriodicReader] and
-[ManualReader]) that collect and export
+implementations (such as [RuntimeProducer] for Go runtime heap, allocation,
+goroutine, mutex, block, and CPU profiles) and [Reader] implementations
+([PeriodicReader] and [ManualReader]) that collect and export
 [go.opentelemetry.io/otel/sdk/profile/profiledata.ResourceProfiles] through an
 [Exporter].
 */

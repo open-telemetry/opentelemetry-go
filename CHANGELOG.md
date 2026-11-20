@@ -15,6 +15,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Added
 
+- Add `RuntimeProducer` to `go.opentelemetry.io/otel/sdk/profile` for collecting Go runtime heap, allocs, goroutine, mutex, block, and CPU profiles. (#9559)
 - Add experimental `go.opentelemetry.io/otel/sdk/profile` module providing `ProfilerProvider`, `ManualReader`, `PeriodicReader`, and `go.opentelemetry.io/otel/sdk/profile/profiledata`. (#9545)
 - Add `go.opentelemetry.io/otel/semconv/v1.45.0` and its metric convenience subpackages from OpenTelemetry Semantic Conventions v1.45.0.
   See the [migration documentation](./semconv/v1.45.0/MIGRATION.md) for upgrading from `go.opentelemetry.io/otel/semconv/v1.44.0`. (#9484)

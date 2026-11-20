@@ -9,7 +9,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/profile/profiledata"
 )
 
-// Producer produces profile data from a profiling source.
+// Producer produces profile data from a profiling source (such as the Go
+// runtime via [RuntimeProducer]).
 type Producer interface {
 	// Produce collects and returns profile data for the current collection
 	// cycle.
