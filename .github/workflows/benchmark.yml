@@ -39,7 +39,7 @@ jobs:
           # Need history so the affected-module detector can diff
           # against the prior commit.
           fetch-depth: 0
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true
@@ -93,7 +93,7 @@ jobs:
       # This makes CodSpeed running inside the container use git correctly.
       - name: Mark workspace as a safe Git directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: ${{ env.DEFAULT_GO_VERSION }}
           check-latest: true

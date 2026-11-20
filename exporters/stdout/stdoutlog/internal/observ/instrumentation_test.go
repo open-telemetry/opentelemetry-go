@@ -13,13 +13,14 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog/internal"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -50,6 +51,45 @@ func (e *errMeter) Int64Counter(string, ...metric.Int64CounterOption) (metric.In
 
 func (e *errMeter) Float64Histogram(string, ...metric.Float64HistogramOption) (metric.Float64Histogram, error) {
 	return nil, e.err
+}
+
+type histogramMeterProvider struct {
+	noop.MeterProvider
+	histogramConfig *metric.Float64HistogramConfig
+}
+
+func (m *histogramMeterProvider) Meter(string, ...metric.MeterOption) metric.Meter {
+	return &histogramMeter{histogramConfig: m.histogramConfig}
+}
+
+type histogramMeter struct {
+	noop.Meter
+	histogramConfig *metric.Float64HistogramConfig
+}
+
+func (m *histogramMeter) Float64Histogram(
+	_ string,
+	opts ...metric.Float64HistogramOption,
+) (metric.Float64Histogram, error) {
+	*m.histogramConfig = metric.NewFloat64HistogramConfig(opts...)
+	return noop.Float64Histogram{}, nil
+}
+
+func TestNewInstrumentationDurationHistogramAdvice(t *testing.T) {
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	var config metric.Float64HistogramConfig
+	otel.SetMeterProvider(&histogramMeterProvider{histogramConfig: &config})
+	inst, err := NewInstrumentation(ID)
+	require.NoError(t, err)
+	require.NotNil(t, inst)
+
+	assert.Equal(t, otelconv.SDKExporterOperationDuration{}.Description(), config.Description())
+	assert.Equal(t, "s", config.Unit())
+	require.NotNil(t, config.ExplicitBucketBoundaries(), "single-bucket advice must be explicit")
+	assert.Empty(t, config.ExplicitBucketBoundaries())
 }
 
 func TestNewInstrumentation(t *testing.T) {
