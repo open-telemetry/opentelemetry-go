@@ -227,6 +227,99 @@ func TestEnvConfig(t *testing.T) {
 			expectedOptions: []testOption{},
 		},
 		{
+			name: "with a zero duration config",
+			reader: EnvOptionsReader{
+				GetEnv: func(n string) string {
+					if n == "HELLO" {
+						return "0"
+					}
+					return ""
+				},
+			},
+			configs: []ConfigFn{
+				WithDuration("HELLO", func(v time.Duration) {
+					options = append(options, testOption{TestDuration: v})
+				}),
+			},
+			expectedOptions: []testOption{
+				{
+					TestDuration: 0,
+				},
+			},
+		},
+		{
+			name: "with a negative duration config",
+			reader: EnvOptionsReader{
+				GetEnv: func(n string) string {
+					if n == "HELLO" {
+						return "-1"
+					}
+					return ""
+				},
+			},
+			configs: []ConfigFn{
+				WithDuration("HELLO", func(v time.Duration) {
+					options = append(options, testOption{TestDuration: v})
+				}),
+			},
+			expectedOptions: []testOption{},
+		},
+		{
+			name: "with the largest duration config",
+			reader: EnvOptionsReader{
+				GetEnv: func(n string) string {
+					if n == "HELLO" {
+						return "9223372036854"
+					}
+					return ""
+				},
+			},
+			configs: []ConfigFn{
+				WithDuration("HELLO", func(v time.Duration) {
+					options = append(options, testOption{TestDuration: v})
+				}),
+			},
+			expectedOptions: []testOption{
+				{
+					TestDuration: 9223372036854 * time.Millisecond,
+				},
+			},
+		},
+		{
+			name: "with an overflowing duration config",
+			reader: EnvOptionsReader{
+				GetEnv: func(n string) string {
+					if n == "HELLO" {
+						return "9223372036855"
+					}
+					return ""
+				},
+			},
+			configs: []ConfigFn{
+				WithDuration("HELLO", func(v time.Duration) {
+					options = append(options, testOption{TestDuration: v})
+				}),
+			},
+			expectedOptions: []testOption{},
+		},
+		{
+			name: "with a max int64 duration config",
+			reader: EnvOptionsReader{
+				GetEnv: func(n string) string {
+					if n == "HELLO" {
+						return "9223372036854775807"
+					}
+					return ""
+				},
+			},
+			configs: []ConfigFn{
+				WithDuration("HELLO", func(v time.Duration) {
+					options = append(options, testOption{TestDuration: v})
+				}),
+			},
+			expectedOptions: []testOption{},
+		},
+		{
 			name: "with headers",
 			reader: EnvOptionsReader{
 				GetEnv: func(n string) string {
