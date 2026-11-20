@@ -4,6 +4,7 @@
 package log
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -158,8 +159,28 @@ func BenchmarkLoggerSetExceptionAttributesAndEmit(b *testing.B) {
 
 func newTestLogger(t testing.TB) log.Logger {
 	provider := NewLoggerProvider(
-		WithProcessor(newFltrProcessor("0", false)),
-		WithProcessor(newFltrProcessor("1", true)),
+		WithProcessor(benchProcessor{enabled: false}),
+		WithProcessor(benchProcessor{enabled: true}),
 	)
 	return provider.Logger(t.Name())
+}
+
+type benchProcessor struct {
+	enabled bool
+}
+
+func (p benchProcessor) Enabled(context.Context, EnabledParameters) bool {
+	return p.enabled
+}
+
+func (benchProcessor) OnEmit(context.Context, *Record) error {
+	return nil
+}
+
+func (benchProcessor) Shutdown(context.Context) error {
+	return nil
+}
+
+func (benchProcessor) ForceFlush(context.Context) error {
+	return nil
 }
