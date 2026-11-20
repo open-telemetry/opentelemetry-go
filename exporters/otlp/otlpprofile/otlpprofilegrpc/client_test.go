@@ -5,8 +5,11 @@ package otlpprofilegrpc
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"net"
+	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -18,6 +21,8 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -327,5 +332,151 @@ func TestRetryableAndThrottleDelay(t *testing.T) {
 		assert.ErrorContains(t, err, "max retry time elapsed")
 		assert.Equal(t, codes.Unavailable, status.Code(err))
 		assert.Greater(t, attempts.Load(), int32(1))
+	})
+}
+
+func TestClientTLSAndDialOptions(t *testing.T) {
+	newMTLSServer := func(t *testing.T, certPath, keyPath string) (string, *testProfilesServer) {
+		t.Helper()
+		serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		require.NoError(t, err)
+		caPEM, err := os.ReadFile(certPath)
+		require.NoError(t, err)
+		clientPool := x509.NewCertPool()
+		require.True(t, clientPool.AppendCertsFromPEM(caPEM))
+
+		srv := &testProfilesServer{}
+		addr := startTestGRPCServer(t, srv, grpc.Creds(credentials.NewTLS(&tls.Config{
+			Certificates: []tls.Certificate{serverCert},
+			ClientAuth:   tls.RequireAndVerifyClientCert,
+			ClientCAs:    clientPool,
+			MinVersion:   tls.VersionTLS12,
+		})))
+		return addr, srv
+	}
+
+	t.Run("mtls_via_env_vars", func(t *testing.T) {
+		certPath, keyPath := writeTestCertAndKey(t)
+		addr, srv := newMTLSServer(t, certPath, keyPath)
+
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_CERTIFICATE", certPath)
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_CLIENT_CERTIFICATE", certPath)
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_CLIENT_KEY", keyPath)
+
+		exp, err := New(t.Context(), WithEndpoint(addr))
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
+
+		require.NoError(t, exp.Export(t.Context(), nonEmptyResourceProfiles()))
+		assert.Equal(t, 1, srv.requestCount())
+	})
+
+	t.Run("with_tls_credentials_overrides_insecure", func(t *testing.T) {
+		certPath, keyPath := writeTestCertAndKey(t)
+		addr, srv := newMTLSServer(t, certPath, keyPath)
+
+		caPool, err := loadCertPool(certPath)
+		require.NoError(t, err)
+		certs, err := loadCertificates(certPath, keyPath)
+		require.NoError(t, err)
+
+		exp, err := New(
+			t.Context(),
+			WithEndpoint(addr),
+			WithInsecure(),
+			WithTLSCredentials(credentials.NewTLS(&tls.Config{
+				RootCAs:      caPool,
+				Certificates: certs,
+				MinVersion:   tls.VersionTLS12,
+			})),
+		)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
+
+		require.NoError(t, exp.Export(t.Context(), nonEmptyResourceProfiles()))
+		assert.Equal(t, 1, srv.requestCount())
+	})
+
+	t.Run("with_insecure_overrides_env_certificate", func(t *testing.T) {
+		certPath, _ := writeTestCertAndKey(t)
+		t.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", certPath)
+
+		srv := &testProfilesServer{}
+		addr := startTestGRPCServer(t, srv)
+
+		exp, err := New(t.Context(), WithEndpoint(addr), WithInsecure())
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
+
+		require.NoError(t, exp.Export(t.Context(), nonEmptyResourceProfiles()))
+		assert.Equal(t, 1, srv.requestCount())
+	})
+
+	t.Run("default_tls_fails_against_plaintext_server", func(t *testing.T) {
+		srv := &testProfilesServer{}
+		addr := startTestGRPCServer(t, srv)
+
+		exp, err := New(
+			t.Context(),
+			WithEndpoint(addr),
+			WithTimeout(200*time.Millisecond),
+			WithRetry(RetryConfig{Enabled: false}),
+		)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
+
+		assert.Error(t, exp.Export(t.Context(), nonEmptyResourceProfiles()))
+		assert.Zero(t, srv.requestCount())
+	})
+
+	t.Run("with_dial_option_overrides_credentials_and_user_agent", func(t *testing.T) {
+		srv := &testProfilesServer{}
+		addr := startTestGRPCServer(t, srv)
+
+		exp, err := New(
+			t.Context(),
+			WithEndpoint(addr),
+			WithServiceConfig(`{}`),
+			WithReconnectionPeriod(time.Second),
+			WithDialOption(
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+				grpc.WithUserAgent("custom-profiles-ua/1.0"),
+			),
+		)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
+
+		require.NoError(t, exp.Export(t.Context(), nonEmptyResourceProfiles()))
+		srv.mu.Lock()
+		require.Len(t, srv.mds, 1)
+		ua := srv.mds[0].Get("user-agent")
+		srv.mu.Unlock()
+		require.NotEmpty(t, ua)
+		assert.Contains(t, ua[0], "custom-profiles-ua/1.0")
+	})
+
+	t.Run("new_propagates_grpc_client_error", func(t *testing.T) {
+		_, err := New(
+			t.Context(),
+			WithEndpoint("127.0.0.1:4317"),
+			WithInsecure(),
+			WithServiceConfig("{invalid-json"),
+		)
+		assert.Error(t, err)
 	})
 }
