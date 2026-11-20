@@ -14,17 +14,18 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// Truncate returns a truncated version of attr. Only string, string slice,
-// byte slice, slice, and map attribute values are truncated. String values are
-// truncated according to limit. Each string slice value is truncated in this
-// fashion (the slice length itself is unaffected), and byte slice values are
-// truncated to at most limit bytes. For slice and map attribute values, the
-// limit is applied recursively to contained values.
+// Truncate returns a truncated version of attr and reports whether truncation
+// changed it. Only string, string slice, byte slice, slice, and map attribute
+// values are truncated. String values are truncated according to limit. Each
+// string slice value is truncated in this fashion (the slice length itself is
+// unaffected), and byte slice values are truncated to at most limit bytes. For
+// slice and map attribute values, the limit is applied recursively to contained
+// values.
 //
 // No truncation is performed for a negative limit.
-func Truncate(limit int, attr attribute.KeyValue) attribute.KeyValue {
+func Truncate(limit int, attr attribute.KeyValue) (attribute.KeyValue, bool) {
 	if limit < 0 {
-		return attr
+		return attr, false
 	}
 
 	// Keep scalar cases in this wrapper. Routing them through the recursive,
@@ -32,20 +33,47 @@ func Truncate(limit int, attr attribute.KeyValue) attribute.KeyValue {
 	// attribute path.
 	switch attr.Value.Type() {
 	case attribute.STRING:
-		attr.Value = attribute.StringValue(truncate(limit, attr.Value.AsString()))
+		s := attr.Value.AsString()
+		// Byte length is an upper bound on rune length, so a string that
+		// already fits cannot change.
+		if len(s) <= limit {
+			return attr, false
+		}
+		truncated := truncate(limit, s)
+		// truncate counts runes. Valid multi-byte UTF-8 can have len(s)
+		// greater than limit and still be returned unchanged, for example
+		// "日本語" (9 bytes, 3 runes) at limit 3.
+		if truncated == s {
+			return attr, false
+		}
+		attr.Value = attribute.StringValue(truncated)
+		return attr, true
 	case attribute.BYTESLICE:
 		s := attr.Value.AsString()
 		if len(s) > limit {
 			attr.Value = attribute.ByteSliceValue([]byte(s[:limit]))
+			return attr, true
 		}
 	case attribute.STRINGSLICE:
-		attr.Value, _ = truncateStringSliceValue(limit, attr.Value)
+		value, changed := truncateStringSliceValue(limit, attr.Value)
+		if changed {
+			attr.Value = value
+		}
+		return attr, changed
 	case attribute.SLICE:
-		attr.Value, _ = truncateSliceValue(limit, attr.Value)
+		value, changed := truncateSliceValue(limit, attr.Value)
+		if changed {
+			attr.Value = value
+		}
+		return attr, changed
 	case attribute.MAP:
-		attr.Value, _ = truncateMapValue(limit, attr.Value)
+		value, changed := truncateMapValue(limit, attr.Value)
+		if changed {
+			attr.Value = value
+		}
+		return attr, changed
 	}
-	return attr
+	return attr, false
 }
 
 // TruncateValue returns a truncated version of v. Only string, string

@@ -71,6 +71,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Fixed
 
+- Apply `SpanLimits.AttributeValueLengthLimit` to span event and link attributes in `go.opentelemetry.io/otel/sdk/trace`. (#9523)
 - Record `otel.sdk.processor.log.processed` with `error.type="queue_full"` synchronously when `BatchProcessor.OnEmit` drops a log record due to a full queue in `go.opentelemetry.io/otel/sdk/log`. (#9524)
 - Use `otlp_http_json_span_exporter` for `otel.component.type` and the component name prefix when JSON encoding is configured in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9492)
 - Honor explicitly empty histogram bucket-boundary advice in `go.opentelemetry.io/otel/sdk/metric`, producing a single bucket while preserving count and sum.
