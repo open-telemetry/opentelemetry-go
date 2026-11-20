@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -57,13 +58,36 @@ func (m *mockProfilesServer) Export(
 	return &colprofilepb.ExportProfilesServiceResponse{}, nil
 }
 
-func startMockServer(t *testing.T, srv *mockProfilesServer) string {
+type compressionStatsHandler struct {
+	mu           sync.Mutex
+	compressions []string
+}
+
+func (*compressionStatsHandler) TagRPC(ctx context.Context, _ *stats.RPCTagInfo) context.Context {
+	return ctx
+}
+
+func (h *compressionStatsHandler) HandleRPC(_ context.Context, s stats.RPCStats) {
+	if ih, ok := s.(*stats.InHeader); ok {
+		h.mu.Lock()
+		h.compressions = append(h.compressions, ih.Compression)
+		h.mu.Unlock()
+	}
+}
+
+func (*compressionStatsHandler) TagConn(ctx context.Context, _ *stats.ConnTagInfo) context.Context {
+	return ctx
+}
+
+func (*compressionStatsHandler) HandleConn(context.Context, stats.ConnStats) {}
+
+func startMockServer(t *testing.T, srv *mockProfilesServer, opts ...grpc.ServerOption) string {
 	t.Helper()
 	var lc net.ListenConfig
 	lis, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	gs := grpc.NewServer()
+	gs := grpc.NewServer(opts...)
 	colprofilepb.RegisterProfilesServiceServer(gs, srv)
 	go func() { _ = gs.Serve(lis) }()
 	t.Cleanup(func() { gs.GracefulStop() })
@@ -96,7 +120,8 @@ func sampleResourceProfiles() *profiledata.ResourceProfiles {
 
 func TestExporterEndToEndWithRuntimeProducer(t *testing.T) {
 	mockSrv := &mockProfilesServer{}
-	addr := startMockServer(t, mockSrv)
+	statsHandler := &compressionStatsHandler{}
+	addr := startMockServer(t, mockSrv, grpc.StatsHandler(statsHandler))
 
 	exp, err := otlpprofilegrpc.New(
 		t.Context(),
@@ -136,6 +161,11 @@ func TestExporterEndToEndWithRuntimeProducer(t *testing.T) {
 
 	assert.Equal(t, []string{"1"}, md.Get("otlp-profiles-development-version"))
 	assert.Equal(t, []string{"hello"}, md.Get("x-custom"))
+	require.NotEmpty(t, md.Get("user-agent"))
+	assert.Contains(t, md.Get("user-agent")[0], "OTel Go OTLP over gRPC profiles exporter/"+otlpprofilegrpc.Version())
+	statsHandler.mu.Lock()
+	assert.Equal(t, []string{"gzip"}, statsHandler.compressions)
+	statsHandler.mu.Unlock()
 	require.Len(t, req.ResourceProfiles, 1)
 	assert.NotEmpty(t, req.ResourceProfiles[0].ScopeProfiles)
 	require.NotNil(t, req.Dictionary)
@@ -252,7 +282,7 @@ func TestExporterPartialSuccessRetriesAndLimits(t *testing.T) {
 
 		conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		require.NoError(t, err)
-		t.Cleanup(func() { _ = conn.Close() })
+		t.Cleanup(func() { assert.NoError(t, conn.Close()) })
 
 		exp, err := otlpprofilegrpc.New(
 			t.Context(),
@@ -263,9 +293,32 @@ func TestExporterPartialSuccessRetriesAndLimits(t *testing.T) {
 
 		err = exp.Export(t.Context(), sampleResourceProfiles())
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "request message too large")
+		assert.ErrorContains(t, err, "request message too large")
 
 		require.NoError(t, exp.Export(t.Context(), nil))
+		require.NoError(t, exp.Export(t.Context(), &profiledata.ResourceProfiles{}))
+
+		mockSrv.mu.Lock()
+		assert.Empty(t, mockSrv.requests, "oversized, nil, and empty exports must not reach server")
+		mockSrv.mu.Unlock()
+
 		require.NoError(t, exp.Shutdown(t.Context()))
+
+		// Verify Shutdown did not close the caller-owned conn and WithMaxRequestSize(0) disables the limit.
+		exp2, err := otlpprofilegrpc.New(
+			t.Context(),
+			otlpprofilegrpc.WithGRPCConn(conn),
+			otlpprofilegrpc.WithMaxRequestSize(0),
+		)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp2.Shutdown(context.Background()))
+		})
+
+		require.NoError(t, exp2.Export(t.Context(), sampleResourceProfiles()))
+		mockSrv.mu.Lock()
+		assert.Len(t, mockSrv.requests, 1)
+		mockSrv.mu.Unlock()
 	})
 }
