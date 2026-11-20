@@ -71,6 +71,12 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Fixed
 
+- Replace `go.opentelemetry.io/proto/otlp` with `go.opentelemetry.io/proto/slim/otlp` in
+  `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` and `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`, removing the
+  `google.golang.org/grpc` and `github.com/grpc-ecosystem/grpc-gateway/v2` dependencies.
+  Public exporter APIs and ordinary OTLP payloads remain compatible.
+  Applications depending on OTLP protobuf reflection identities or external `google.protobuf.Any` type URLs should review the
+  [upstream compatibility notes](https://github.com/open-telemetry/opentelemetry-proto-go/pull/707). (#9499)
 - Use `otlp_http_json_span_exporter` for `otel.component.type` and the component name prefix when JSON encoding is configured in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9492)
 - Honor explicitly empty histogram bucket-boundary advice in `go.opentelemetry.io/otel/sdk/metric`, producing a single bucket while preserving count and sum.
   Calling `WithExplicitBucketBoundaries` in `go.opentelemetry.io/otel/metric` with no arguments or a nil slice now explicitly advises a single unbounded bucket.

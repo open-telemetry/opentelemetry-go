@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
-	cpb "go.opentelemetry.io/proto/otlp/common/v1"
+	cpb "go.opentelemetry.io/proto/slim/otlp/common/v1"
 
 	"go.opentelemetry.io/otel/attribute"
 )

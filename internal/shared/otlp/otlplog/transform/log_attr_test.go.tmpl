@@ -9,7 +9,7 @@ package transform
 import (
 	"testing"
 
-	cpb "go.opentelemetry.io/proto/otlp/common/v1"
+	cpb "{{or (index . "protoImportPath") "go.opentelemetry.io/proto/otlp"}}/common/v1"
 
 	"go.opentelemetry.io/otel/attribute"
 )

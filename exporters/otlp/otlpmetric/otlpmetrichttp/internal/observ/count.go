@@ -3,7 +3,7 @@
 
 package observ
 
-import metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+import metricpb "go.opentelemetry.io/proto/slim/otlp/metrics/v1"
 
 // countDataPoints counts the total number of data points in a ResourceMetrics.
 func countDataPoints(rm *metricpb.ResourceMetrics) int64 {
