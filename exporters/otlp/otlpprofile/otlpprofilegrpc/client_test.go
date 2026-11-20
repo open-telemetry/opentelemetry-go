@@ -5,6 +5,7 @@ package otlpprofilegrpc
 
 import (
 	"context"
+	"errors"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -14,10 +15,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	colprofilepb "go.opentelemetry.io/proto/otlp/collector/profiles/v1development"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 type testProfilesServer struct {
@@ -174,5 +177,155 @@ func TestClientContextCancellationAndTimeout(t *testing.T) {
 			cancelNoDeadline()
 			assert.False(t, hasDeadline, "timeout=%v should not add a deadline", d)
 		}
+	})
+}
+
+func TestRetryableAndThrottleDelay(t *testing.T) {
+	t.Run("all_grpc_codes", func(t *testing.T) {
+		cases := []struct {
+			code          codes.Code
+			wantRetryable bool
+		}{
+			{codes.OK, false},
+			{codes.Canceled, true},
+			{codes.Unknown, false},
+			{codes.InvalidArgument, false},
+			{codes.DeadlineExceeded, true},
+			{codes.NotFound, false},
+			{codes.AlreadyExists, false},
+			{codes.PermissionDenied, false},
+			{codes.ResourceExhausted, false},
+			{codes.FailedPrecondition, false},
+			{codes.Aborted, true},
+			{codes.OutOfRange, true},
+			{codes.Unimplemented, false},
+			{codes.Internal, false},
+			{codes.Unavailable, true},
+			{codes.DataLoss, true},
+			{codes.Unauthenticated, false},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.code.String(), func(t *testing.T) {
+				ok, delay := retryable(status.Error(tc.code, "msg"))
+				assert.Equal(t, tc.wantRetryable, ok)
+				assert.Zero(t, delay)
+			})
+		}
+
+		ok, delay := retryable(errors.New("non-grpc error"))
+		assert.False(t, ok)
+		assert.Zero(t, delay)
+	})
+
+	t.Run("throttle_delay_details", func(t *testing.T) {
+		stNone := status.New(codes.Unavailable, "no details")
+		ok, d := throttleDelay(stNone)
+		assert.False(t, ok)
+		assert.Zero(t, d)
+
+		stErrInfo, err := status.New(codes.ResourceExhausted, "errinfo").WithDetails(&errdetails.ErrorInfo{Reason: "LIMIT"})
+		require.NoError(t, err)
+		ok, d = retryable(stErrInfo.Err())
+		assert.False(t, ok)
+		assert.Zero(t, d)
+
+		stMixed, err := status.New(codes.ResourceExhausted, "mixed").WithDetails(
+			&errdetails.ErrorInfo{Reason: "LIMIT"},
+			&errdetails.RetryInfo{RetryDelay: durationpb.New(25 * time.Millisecond)},
+		)
+		require.NoError(t, err)
+		ok, d = retryable(stMixed.Err())
+		assert.True(t, ok)
+		assert.Equal(t, 25*time.Millisecond, d)
+
+		stMulti, err := status.New(codes.Unavailable, "multi").WithDetails(
+			&errdetails.RetryInfo{RetryDelay: durationpb.New(10 * time.Millisecond)},
+			&errdetails.RetryInfo{RetryDelay: durationpb.New(99 * time.Millisecond)},
+		)
+		require.NoError(t, err)
+		ok, d = retryable(stMulti.Err())
+		assert.True(t, ok)
+		assert.Equal(t, 10*time.Millisecond, d)
+	})
+
+	t.Run("resource_exhausted_without_retry_info_not_retried", func(t *testing.T) {
+		var attempts atomic.Int32
+		srv := &testProfilesServer{
+			handler: func(context.Context, *colprofilepb.ExportProfilesServiceRequest) (*colprofilepb.ExportProfilesServiceResponse, error) {
+				attempts.Add(1)
+				return nil, status.Error(codes.ResourceExhausted, "quota exceeded")
+			},
+		}
+		addr := startTestGRPCServer(t, srv)
+
+		exp, err := New(t.Context(), WithEndpoint(addr), WithInsecure(), WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     5 * time.Millisecond,
+			MaxElapsedTime:  time.Second,
+		}))
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
+
+		err = exp.Export(t.Context(), nonEmptyResourceProfiles())
+		require.Error(t, err)
+		assert.Equal(t, codes.ResourceExhausted, status.Code(err))
+		assert.Equal(t, int32(1), attempts.Load())
+	})
+
+	t.Run("retry_disabled_does_not_retry_unavailable", func(t *testing.T) {
+		var attempts atomic.Int32
+		srv := &testProfilesServer{
+			handler: func(context.Context, *colprofilepb.ExportProfilesServiceRequest) (*colprofilepb.ExportProfilesServiceResponse, error) {
+				attempts.Add(1)
+				return nil, status.Error(codes.Unavailable, "down")
+			},
+		}
+		addr := startTestGRPCServer(t, srv)
+
+		exp, err := New(t.Context(), WithEndpoint(addr), WithInsecure(), WithRetry(RetryConfig{Enabled: false}))
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
+
+		err = exp.Export(t.Context(), nonEmptyResourceProfiles())
+		require.Error(t, err)
+		assert.Equal(t, codes.Unavailable, status.Code(err))
+		assert.Equal(t, int32(1), attempts.Load())
+	})
+
+	t.Run("retry_exhausted_returns_wrapped_error", func(t *testing.T) {
+		var attempts atomic.Int32
+		srv := &testProfilesServer{
+			handler: func(context.Context, *colprofilepb.ExportProfilesServiceRequest) (*colprofilepb.ExportProfilesServiceResponse, error) {
+				attempts.Add(1)
+				return nil, status.Error(codes.Unavailable, "still down")
+			},
+		}
+		addr := startTestGRPCServer(t, srv)
+
+		exp, err := New(t.Context(), WithEndpoint(addr), WithInsecure(), WithRetry(RetryConfig{
+			Enabled:         true,
+			InitialInterval: time.Millisecond,
+			MaxInterval:     2 * time.Millisecond,
+			MaxElapsedTime:  15 * time.Millisecond,
+		}))
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+			assert.NoError(t, exp.Shutdown(context.Background()))
+		})
+
+		err = exp.Export(t.Context(), nonEmptyResourceProfiles())
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "max retry time elapsed")
+		assert.Equal(t, codes.Unavailable, status.Code(err))
+		assert.Greater(t, attempts.Load(), int32(1))
 	})
 }
