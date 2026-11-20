@@ -124,9 +124,13 @@ func newConfig(options []Option) config {
 	c.insecure = c.insecure.Resolve(
 		getEnv(envInsecure, convInsecure),
 	)
-	c.tlsCfg = c.tlsCfg.Resolve(
-		loadEnvTLS[*tls.Config](),
-	)
+	// Skip loading env TLS certificates when transport security is disabled or
+	// overridden by explicit credentials or a caller-provided connection.
+	if !c.insecure.Value && c.gRPCCredentials.Value == nil && c.gRPCConn.Value == nil {
+		c.tlsCfg = c.tlsCfg.Resolve(
+			loadEnvTLS[*tls.Config](),
+		)
+	}
 	c.headers = c.headers.Resolve(
 		getEnv(envHeaders, convHeaders),
 	)

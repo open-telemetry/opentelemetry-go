@@ -81,10 +81,10 @@ func newGRPCDialOptions(cfg config) []grpc.DialOption {
 	switch {
 	case cfg.gRPCCredentials.Value != nil:
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(cfg.gRPCCredentials.Value))
-	case cfg.tlsCfg.Value != nil:
-		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(cfg.tlsCfg.Value)))
 	case cfg.insecure.Value:
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	case cfg.tlsCfg.Value != nil:
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(cfg.tlsCfg.Value)))
 	default:
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(nil)))
 	}

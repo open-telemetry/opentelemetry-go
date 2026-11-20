@@ -131,6 +131,30 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 		assert.Nil(t, cfg.tlsCfg.Value)
 	})
 
+	t.Run("env_tls_skipped_when_insecure_or_explicit_creds", func(t *testing.T) {
+		certPath, keyPath := writeTestCertAndKey(t)
+		t.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", certPath)
+		t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", certPath)
+		t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", keyPath)
+
+		t.Run("with_insecure", func(t *testing.T) {
+			cfg := newConfig([]Option{WithInsecure()})
+			assert.True(t, cfg.insecure.Value)
+			assert.Nil(t, cfg.tlsCfg.Value)
+		})
+		t.Run("with_http_endpoint_url", func(t *testing.T) {
+			cfg := newConfig([]Option{WithEndpointURL("http://localhost:4317")})
+			assert.True(t, cfg.insecure.Value)
+			assert.Nil(t, cfg.tlsCfg.Value)
+		})
+		t.Run("with_tls_credentials", func(t *testing.T) {
+			creds := credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS13})
+			cfg := newConfig([]Option{WithTLSCredentials(creds)})
+			assert.Equal(t, creds, cfg.gRPCCredentials.Value)
+			assert.Nil(t, cfg.tlsCfg.Value)
+		})
+	})
+
 	t.Run("endpoint_option_ignores_env_endpoint_scheme", func(t *testing.T) {
 		t.Run("with_endpoint_not_downgraded_by_http_env", func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
