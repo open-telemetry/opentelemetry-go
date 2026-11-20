@@ -18,11 +18,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel"
 )
 
 func TestConfigDefaultsAndEnvVars(t *testing.T) {
@@ -106,20 +109,103 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 	})
 
 	t.Run("invalid_env_and_option_values_fall_back", func(t *testing.T) {
+		var mu sync.Mutex
+		var handled []error
+		orig := otel.GetErrorHandler()
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			mu.Lock()
+			handled = append(handled, err)
+			mu.Unlock()
+		}))
+		t.Cleanup(func() { otel.SetErrorHandler(orig) })
+
 		t.Setenv("OTEL_EXPORTER_OTLP_COMPRESSION", "brotli")
 		t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "notanint")
 		t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "notabool")
 		t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "://bad")
-		t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "invalid,bad key=1,ok=val")
+		t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT", "://also-bad")
+		t.Setenv(
+			"OTEL_EXPORTER_OTLP_HEADERS",
+			"Authorization=Bearer top-secret-token,invalid,bad key=1,=emptykey,k=%ZZ",
+		)
 
 		cfg := newConfig([]Option{
+			nil,
+			WithEndpoint("kept.example:4318"),
 			WithEndpointURL("://bad"),
+			WithMaxResponseSize(2048),
+			WithMaxResponseSize(0),
+			WithMaxResponseSize(-1),
 		})
-		assert.Equal(t, "localhost:4318", cfg.endpoint.Value)
+		assert.Equal(t, "kept.example:4318", cfg.endpoint.Value)
 		assert.Equal(t, NoCompression, cfg.compression.Value)
 		assert.Equal(t, 10*time.Second, cfg.timeout.Value)
 		assert.False(t, cfg.insecure.Value)
 		assert.Nil(t, cfg.headers.Value)
+		assert.Equal(t, int64(2048), cfg.maxResponseSize.Value)
+
+		mu.Lock()
+		defer mu.Unlock()
+		assert.NotEmpty(t, handled)
+		for _, err := range handled {
+			assert.NotContains(t, err.Error(), "top-secret-token")
+		}
+	})
+
+	t.Run("timeout_env_bounds_and_fallback", func(t *testing.T) {
+		for _, tc := range []struct {
+			name    string
+			general string
+			signal  string
+			want    time.Duration
+		}{
+			{name: "zero", general: "0", want: 0},
+			{name: "negative_uses_default", general: "-1", want: defaultTimeout},
+			{name: "max_valid", general: "9223372036854", want: 9223372036854 * time.Millisecond},
+			{name: "first_overflow", general: "9223372036855", want: defaultTimeout},
+			{name: "max_int64_overflow", general: "9223372036854775807", want: defaultTimeout},
+			{name: "invalid_signal_keeps_general", general: "2500", signal: "-100", want: 2500 * time.Millisecond},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", tc.general)
+				t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_TIMEOUT", tc.signal)
+				cfg := newConfig(nil)
+				assert.Equal(t, tc.want, cfg.timeout.Value)
+			})
+		}
+	})
+
+	t.Run("endpoint_paths_compression_and_scheme_precedence", func(t *testing.T) {
+		t.Run("signal_endpoint_without_path_uses_root", func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_ENDPOINT", "https://collector:4318")
+			t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_INSECURE", "true")
+			t.Setenv("OTEL_EXPORTER_OTLP_COMPRESSION", "none")
+
+			cfg := newConfig(nil)
+			assert.Equal(t, "collector:4318", cfg.endpoint.Value)
+			assert.Equal(t, "/", cfg.path.Value.Path)
+			assert.False(t, cfg.insecure.Value)
+			assert.Equal(t, NoCompression, cfg.compression.Value)
+		})
+
+		t.Run("general_endpoint_trailing_slash_and_raw_path", func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318/a%2Fb/")
+			t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "false")
+
+			cfg := newConfig(nil)
+			assert.Equal(t, "/a/b/v1development/profiles", cfg.path.Value.Path)
+			assert.Equal(t, "/a%2Fb/v1development/profiles", cfg.path.Value.RawPath)
+			assert.True(t, cfg.insecure.Value)
+		})
+
+		t.Run("schemeless_endpoint_preserves_insecure_env", func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "//collector:4318/base")
+			t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "true")
+
+			cfg := newConfig(nil)
+			assert.Equal(t, "collector:4318", cfg.endpoint.Value)
+			assert.True(t, cfg.insecure.Value)
+		})
 	})
 
 	t.Run("env_tls_certificates", func(t *testing.T) {
@@ -132,17 +218,37 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 		require.NotNil(t, cfg.tlsCfg.Value)
 		assert.NotNil(t, cfg.tlsCfg.Value.RootCAs)
 		assert.Len(t, cfg.tlsCfg.Value.Certificates, 1)
+
+		// Explicit WithTLSClientConfig(nil) suppresses env TLS config and allows WithInsecure.
+		exp, err := New(t.Context(), WithInsecure(), WithTLSClientConfig(nil))
+		require.NoError(t, err)
+		require.NoError(t, exp.Shutdown(t.Context()))
 	})
 
 	t.Run("env_tls_errors_ignored_gracefully", func(t *testing.T) {
 		badFile := filepath.Join(t.TempDir(), "bad.pem")
 		require.NoError(t, os.WriteFile(badFile, []byte("not-a-pem"), 0o600))
-		t.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", badFile)
-		t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", badFile)
-		t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", badFile)
+		missingFile := filepath.Join(t.TempDir(), "missing.pem")
 
-		cfg := newConfig(nil)
-		assert.Nil(t, cfg.tlsCfg.Value)
+		t.Run("invalid_pem", func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", badFile)
+			t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", badFile)
+			t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", badFile)
+			assert.Nil(t, newConfig(nil).tlsCfg.Value)
+		})
+
+		t.Run("missing_files", func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", missingFile)
+			t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", missingFile)
+			t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", badFile)
+			assert.Nil(t, newConfig(nil).tlsCfg.Value)
+		})
+
+		t.Run("missing_key_file", func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", badFile)
+			t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", missingFile)
+			assert.Nil(t, newConfig(nil).tlsCfg.Value)
+		})
 	})
 
 	t.Run("insecure_with_tls_rejected", func(t *testing.T) {
@@ -163,11 +269,17 @@ func TestClientHelpers(t *testing.T) {
 	assert.False(t, isProtobufContentType(";;;bad"))
 
 	assert.Equal(t, 5*time.Second, retryAfterDuration("5"))
+	assert.Equal(t, maxRetryAfter, retryAfterDuration("9223372036854775807"))
+	assert.Equal(t, time.Duration(0), retryAfterDuration("-5"))
 	assert.Equal(t, time.Duration(0), retryAfterDuration("not-a-date"))
+	past := time.Now().Add(-time.Hour).UTC().Format(http.TimeFormat)
+	assert.Equal(t, time.Duration(0), retryAfterDuration(past))
 	future := time.Now().Add(time.Hour).UTC().Format(http.TimeFormat)
 	d := retryAfterDuration(future)
 	assert.Greater(t, d, 59*time.Minute)
 	assert.LessOrEqual(t, d, time.Hour)
+
+	assert.NoError(t, newNoopClient().UploadProfiles(t.Context(), nil))
 
 	wrapped := errors.New("boom")
 	rErr := retryableError{throttle: time.Second, err: wrapped}
