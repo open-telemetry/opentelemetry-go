@@ -23,6 +23,8 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+
+	"go.opentelemetry.io/otel"
 )
 
 func TestConfigDefaultsAndEnvVars(t *testing.T) {
@@ -175,6 +177,23 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 			assert.Equal(t, "localhost:4317", cfg.endpoint.Value)
 			assert.True(t, cfg.insecure.Value)
 		})
+	})
+
+	t.Run("header_env_errors_redact_values", func(t *testing.T) {
+		var errs []error
+		origHandler := otel.GetErrorHandler()
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			errs = append(errs, err)
+		}))
+		t.Cleanup(func() { otel.SetErrorHandler(origHandler) })
+
+		const secret = "super-secret-bearer-token"
+		t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "Authorization=Bearer "+secret+",badentry,X-Esc=%ZZ"+secret)
+
+		cfg := newConfig(nil)
+		assert.Nil(t, cfg.headers.Value)
+		require.Len(t, errs, 1)
+		assert.NotContains(t, errs[0].Error(), secret)
 	})
 
 	t.Run("timeout_env_bounds", func(t *testing.T) {

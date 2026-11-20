@@ -133,7 +133,7 @@ func newConfig(options []Option) config {
 		)
 	}
 	c.headers = c.headers.Resolve(
-		getEnv(envHeaders, convHeaders),
+		getEnvRedacted(envHeaders, convHeaders),
 	)
 	c.compression = c.compression.Resolve(
 		getEnv(envCompression, convCompression),
@@ -352,17 +352,17 @@ func convHeaders(s string) (map[string]string, error) {
 	for header := range strings.SplitSeq(s, ",") {
 		rawKey, rawVal, found := strings.Cut(header, "=")
 		if !found {
-			err = errors.Join(err, fmt.Errorf("invalid header: %s", header))
+			err = errors.Join(err, errors.New("invalid header entry: missing '='"))
 			continue
 		}
 		key := strings.TrimSpace(rawKey)
 		if !isValidHeaderKey(key) {
-			err = errors.Join(err, fmt.Errorf("invalid header key: %s", rawKey))
+			err = errors.Join(err, fmt.Errorf("invalid header key: %q", rawKey))
 			continue
 		}
 		escVal, e := url.PathUnescape(rawVal)
 		if e != nil {
-			err = errors.Join(err, fmt.Errorf("invalid header value: %s", rawVal))
+			err = errors.Join(err, fmt.Errorf("invalid header value for key %q: %w", key, e))
 			continue
 		}
 		out[key] = strings.TrimSpace(escVal)
@@ -476,6 +476,24 @@ func (s setting[T]) Resolve(fn ...resolver[T]) setting[T] {
 }
 
 func getEnv[T any](keys []string, conv func(string) (T, error)) resolver[T] {
+	return getEnvWithError(keys, conv, func(key, val string, err error) {
+		otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, val, err))
+	})
+}
+
+// getEnvRedacted behaves like getEnv without logging raw env values that may
+// contain credentials (such as OTLP auth headers).
+func getEnvRedacted[T any](keys []string, conv func(string) (T, error)) resolver[T] {
+	return getEnvWithError(keys, conv, func(key, _ string, err error) {
+		otel.Handle(fmt.Errorf("invalid %s value: %w", key, err))
+	})
+}
+
+func getEnvWithError[T any](
+	keys []string,
+	conv func(string) (T, error),
+	onErr func(key, val string, err error),
+) resolver[T] {
 	return func(s setting[T]) setting[T] {
 		if s.Set {
 			return s
@@ -488,7 +506,7 @@ func getEnv[T any](keys []string, conv func(string) (T, error)) resolver[T] {
 					s.Set = true
 					break
 				}
-				otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
+				onErr(key, vStr, err)
 			}
 		}
 		return s
