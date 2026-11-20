@@ -24,13 +24,12 @@ import (
 
 // Default values.
 var (
-	defaultEndpoint                               = "localhost:4318"
-	defaultPath                                   = "/v1development/profiles"
-	defaultTimeout                                = 10 * time.Second
-	defaultMaxRequestSize                         = 64 * 1024 * 1024
-	defaultMaxResponseSize                        = int64(4 * 1024 * 1024)
-	defaultProxy           HTTPTransportProxyFunc = http.ProxyFromEnvironment
-	defaultRetryCfg                               = retry.DefaultConfig
+	defaultEndpoint        = "localhost:4318"
+	defaultPath            = "/v1development/profiles"
+	defaultTimeout         = 10 * time.Second
+	defaultMaxRequestSize  = 64 * 1024 * 1024
+	defaultMaxResponseSize = int64(4 * 1024 * 1024)
+	defaultRetryCfg        = retry.DefaultConfig
 )
 
 // Environment variable keys.
@@ -149,9 +148,6 @@ func newConfig(options []Option) config {
 	)
 	c.maxResponseSize = c.maxResponseSize.Resolve(
 		fallback(defaultMaxResponseSize),
-	)
-	c.proxy = c.proxy.Resolve(
-		fallback(defaultProxy),
 	)
 	c.retryCfg = c.retryCfg.Resolve(
 		fallback(defaultRetryCfg),
@@ -381,16 +377,24 @@ func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 }
 
 func getenv[T any](keys []string, conv func(string) (T, error)) resolver[T] {
-	return resolveEnv(keys, conv, false)
+	return resolveEnv(keys, conv, func(key, val string, err error) error {
+		return fmt.Errorf("invalid %s value %s: %w", key, val, err)
+	})
 }
 
 // getenvRedacted behaves like getenv but omits raw environment variable values
 // from error messages so credentials in headers are not logged.
 func getenvRedacted[T any](keys []string, conv func(string) (T, error)) resolver[T] {
-	return resolveEnv(keys, conv, true)
+	return resolveEnv(keys, conv, func(key, _ string, err error) error {
+		return fmt.Errorf("invalid %s: %w", key, err)
+	})
 }
 
-func resolveEnv[T any](keys []string, conv func(string) (T, error), redact bool) resolver[T] {
+func resolveEnv[T any](
+	keys []string,
+	conv func(string) (T, error),
+	formatErr func(key, val string, err error) error,
+) resolver[T] {
 	return func(s setting[T]) setting[T] {
 		if s.Set {
 			return s
@@ -403,11 +407,7 @@ func resolveEnv[T any](keys []string, conv func(string) (T, error), redact bool)
 					s.Set = true
 					break
 				}
-				if redact {
-					otel.Handle(fmt.Errorf("invalid %s: %w", key, err))
-				} else {
-					otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
-				}
+				otel.Handle(formatErr(key, vStr, err))
 			}
 		}
 		return s

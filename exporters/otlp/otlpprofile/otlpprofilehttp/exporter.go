@@ -62,7 +62,9 @@ func (e *Exporter) Shutdown(context.Context) error {
 	if e.stopped.Swap(true) {
 		return nil
 	}
-	e.client.Store(newNoopClient())
+	if prev := e.client.Swap(newNoopClient()); prev != nil && prev.stop != nil {
+		prev.stop()
+	}
 	return nil
 }
 

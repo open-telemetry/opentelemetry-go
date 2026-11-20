@@ -36,6 +36,7 @@ const (
 
 type client struct {
 	uploadProfiles func(context.Context, *colprofilepb.ExportProfilesServiceRequest) error
+	stop           func()
 }
 
 func (c *client) UploadProfiles(ctx context.Context, req *colprofilepb.ExportProfilesServiceRequest) error {
@@ -58,6 +59,7 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 
 	hc := cfg.httpClient
 	var exportTimeout time.Duration
+	var closeIdle func()
 	if hc == nil {
 		exportTimeout = cfg.timeout.Value
 		hc = &http.Client{
@@ -65,14 +67,15 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 			Timeout:   exportTimeout,
 		}
 
-		if cfg.tlsCfg.Value != nil || cfg.proxy.Value != nil {
+		if cfg.tlsCfg.Value != nil || cfg.proxy.Set {
 			clonedTransport := ourTransport.Clone()
 			hc.Transport = clonedTransport
+			closeIdle = clonedTransport.CloseIdleConnections
 
 			if cfg.tlsCfg.Value != nil {
 				clonedTransport.TLSClientConfig = cfg.tlsCfg.Value
 			}
-			if cfg.proxy.Value != nil {
+			if cfg.proxy.Set {
 				clonedTransport.Proxy = cfg.proxy.Value
 			}
 		}
@@ -108,7 +111,7 @@ func newHTTPClient(ctx context.Context, cfg config) (*client, error) {
 		client:          hc,
 		exportTimeout:   exportTimeout,
 	}
-	return &client{uploadProfiles: c.uploadProfiles}, nil
+	return &client{uploadProfiles: c.uploadProfiles, stop: closeIdle}, nil
 }
 
 type httpClient struct {
