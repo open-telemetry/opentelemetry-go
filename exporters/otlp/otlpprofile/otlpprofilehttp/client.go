@@ -273,6 +273,8 @@ func (c *httpClient) newRequest(ctx context.Context, body []byte) (request, erro
 
 		req.bodyReader = bodyReader(b.Bytes())
 		req.GetBody = bodyReaderErr(b.Bytes())
+	default:
+		return req, fmt.Errorf("unsupported compression: %d", c.compression)
 	}
 	return req, nil
 }
