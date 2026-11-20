@@ -91,22 +91,57 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 		assert.NotEmpty(t, dialOpts)
 	})
 
-	t.Run("invalid_env_and_option_values_fall_back", func(t *testing.T) {
+	t.Run("invalid_env_values_fall_back", func(t *testing.T) {
+		errs := captureOTelErrors(t)
 		t.Setenv("OTEL_EXPORTER_OTLP_COMPRESSION", "brotli")
 		t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "notanint")
 		t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "notabool")
 		t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "://bad")
-		t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "invalid,bad key=1,ok=val")
+		t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "invalid,bad key=1,=empty,k=%ZZ,ok=val")
 
-		cfg := newConfig([]Option{
-			WithEndpointURL("://bad"),
-			WithCompressor("unknown"),
-		})
+		cfg := newConfig(nil)
 		assert.Equal(t, "localhost:4317", cfg.endpoint.Value)
 		assert.Equal(t, noCompression, cfg.compression.Value)
 		assert.Equal(t, 10*time.Second, cfg.timeout.Value)
 		assert.False(t, cfg.insecure.Value)
 		assert.Nil(t, cfg.headers.Value)
+
+		require.Len(t, *errs, 5)
+		assert.ErrorContains(t, (*errs)[0], "OTEL_EXPORTER_OTLP_ENDPOINT")
+		assert.ErrorContains(t, (*errs)[1], "OTEL_EXPORTER_OTLP_INSECURE")
+		assert.ErrorContains(t, (*errs)[2], "OTEL_EXPORTER_OTLP_HEADERS")
+		assert.ErrorContains(t, (*errs)[3], "OTEL_EXPORTER_OTLP_COMPRESSION")
+		assert.ErrorContains(t, (*errs)[4], "OTEL_EXPORTER_OTLP_TIMEOUT")
+	})
+
+	t.Run("invalid_option_values_fall_back", func(t *testing.T) {
+		errs := captureOTelErrors(t)
+		cfg := newConfig([]Option{
+			nil,
+			WithEndpointURL("://bad"),
+			WithCompressor("unknown"),
+		})
+		assert.Equal(t, "localhost:4317", cfg.endpoint.Value)
+		assert.Equal(t, noCompression, cfg.compression.Value)
+		require.Len(t, *errs, 1)
+		assert.ErrorContains(t, (*errs)[0], "unknown compression: unknown")
+	})
+
+	t.Run("compression_case_insensitive", func(t *testing.T) {
+		for _, tc := range []struct {
+			in   string
+			want compression
+		}{
+			{in: "none", want: noCompression},
+			{in: "NONE", want: noCompression},
+			{in: "", want: noCompression},
+			{in: "gzip", want: gzipCompression},
+			{in: "GZIP", want: gzipCompression},
+		} {
+			got, err := convCompression(tc.in)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		}
 	})
 
 	t.Run("env_tls_certificates", func(t *testing.T) {
@@ -123,14 +158,47 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 	})
 
 	t.Run("env_tls_errors_ignored_gracefully", func(t *testing.T) {
-		badFile := filepath.Join(t.TempDir(), "bad.pem")
-		require.NoError(t, os.WriteFile(badFile, []byte("not-a-pem"), 0o600))
-		t.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", badFile)
-		t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", badFile)
-		t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", badFile)
+		t.Run("invalid_pem", func(t *testing.T) {
+			errs := captureOTelErrors(t)
+			badFile := filepath.Join(t.TempDir(), "bad.pem")
+			require.NoError(t, os.WriteFile(badFile, []byte("not-a-pem"), 0o600))
+			t.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", badFile)
+			t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", badFile)
+			t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", badFile)
 
-		cfg := newConfig(nil)
-		assert.Nil(t, cfg.tlsCfg.Value)
+			cfg := newConfig(nil)
+			assert.Nil(t, cfg.tlsCfg.Value)
+			require.Len(t, *errs, 1)
+			assert.ErrorContains(t, (*errs)[0], "failed to load TLS")
+		})
+		t.Run("missing_files", func(t *testing.T) {
+			missing := filepath.Join(t.TempDir(), "does-not-exist.pem")
+			certPath, _ := writeTestCertAndKey(t)
+
+			t.Run("missing_ca", func(t *testing.T) {
+				errs := captureOTelErrors(t)
+				t.Setenv("OTEL_EXPORTER_OTLP_CERTIFICATE", missing)
+				cfg := newConfig(nil)
+				assert.Nil(t, cfg.tlsCfg.Value)
+				require.Len(t, *errs, 1)
+			})
+			t.Run("missing_client_cert", func(t *testing.T) {
+				errs := captureOTelErrors(t)
+				t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", missing)
+				t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", certPath)
+				cfg := newConfig(nil)
+				assert.Nil(t, cfg.tlsCfg.Value)
+				require.Len(t, *errs, 1)
+			})
+			t.Run("missing_client_key", func(t *testing.T) {
+				errs := captureOTelErrors(t)
+				t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", certPath)
+				t.Setenv("OTEL_EXPORTER_OTLP_CLIENT_KEY", missing)
+				cfg := newConfig(nil)
+				assert.Nil(t, cfg.tlsCfg.Value)
+				require.Len(t, *errs, 1)
+			})
+		})
 	})
 
 	t.Run("env_tls_skipped_when_insecure_or_explicit_creds", func(t *testing.T) {
@@ -180,20 +248,15 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 	})
 
 	t.Run("header_env_errors_redact_values", func(t *testing.T) {
-		var errs []error
-		origHandler := otel.GetErrorHandler()
-		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-			errs = append(errs, err)
-		}))
-		t.Cleanup(func() { otel.SetErrorHandler(origHandler) })
+		errs := captureOTelErrors(t)
 
 		const secret = "super-secret-bearer-token"
 		t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "Authorization=Bearer "+secret+",badentry,X-Esc=%ZZ"+secret)
 
 		cfg := newConfig(nil)
 		assert.Nil(t, cfg.headers.Value)
-		require.Len(t, errs, 1)
-		assert.NotContains(t, errs[0].Error(), secret)
+		require.Len(t, *errs, 1)
+		assert.NotContains(t, (*errs)[0].Error(), secret)
 	})
 
 	t.Run("timeout_env_bounds", func(t *testing.T) {
@@ -209,18 +272,33 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 		})
 		for _, bad := range []string{"-1", "9223372036855", "9223372036854775807"} {
 			t.Run("reject_"+bad, func(t *testing.T) {
+				errs := captureOTelErrors(t)
 				t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "3000")
 				t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_TIMEOUT", bad)
 				cfg := newConfig(nil)
 				assert.Equal(t, 3*time.Second, cfg.timeout.Value)
+				require.Len(t, *errs, 1)
 			})
 			t.Run("reject_generic_"+bad, func(t *testing.T) {
+				errs := captureOTelErrors(t)
 				t.Setenv("OTEL_EXPORTER_OTLP_TIMEOUT", bad)
 				cfg := newConfig(nil)
 				assert.Equal(t, defaultTimeout, cfg.timeout.Value)
+				require.Len(t, *errs, 1)
 			})
 		}
 	})
+}
+
+func captureOTelErrors(t *testing.T) *[]error {
+	t.Helper()
+	var errs []error
+	origHandler := otel.GetErrorHandler()
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		errs = append(errs, err)
+	}))
+	t.Cleanup(func() { otel.SetErrorHandler(origHandler) })
+	return &errs
 }
 
 func TestClientHelpers(t *testing.T) {
