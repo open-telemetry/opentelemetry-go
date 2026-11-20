@@ -433,6 +433,32 @@ func normAttrs(kvs []attribute.KeyValue, depthLimit, lengthLimit int) []attribut
 	return normalized
 }
 
+// normalizeLimitedAttrs applies countLimit, then normalizes only the
+// attributes that limit keeps.
+//
+// Dropped is the number of attributes removed by countLimit, taken from the
+// original length. A negative countLimit is unlimited. A zero countLimit drops
+// every attribute and does not normalize. Values past the limit are not
+// walked, so a discarded string slice does not pay for truncation.
+//
+// The retained slice aliases attrs when no retained value changes, including
+// after the slice is shortened. normAttrs copies before it replaces a changed
+// value, so this function does not write into the caller's backing array.
+func normalizeLimitedAttrs(
+	attrs []attribute.KeyValue,
+	countLimit, depthLimit, lengthLimit int,
+) ([]attribute.KeyValue, int) {
+	if countLimit == 0 {
+		return nil, len(attrs)
+	}
+	dropped := 0
+	if countLimit > 0 && len(attrs) > countLimit {
+		dropped = len(attrs) - countLimit
+		attrs = attrs[:countLimit]
+	}
+	return normAttrs(attrs, depthLimit, lengthLimit), dropped
+}
+
 // End ends the span. This method does nothing if the span is already ended or
 // is not being recorded.
 //
@@ -589,26 +615,18 @@ func (s *recordingSpan) AddEvent(name string, o ...trace.EventOption) {
 // This method assumes s.mu.Lock is held by the caller.
 func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 	c := trace.NewEventConfig(o...)
-	attrs := normAttrs(
+	attrs, dropped := normalizeLimitedAttrs(
 		c.Attributes(),
+		s.tracer.provider.spanLimits.AttributePerEventCountLimit,
 		s.tracer.provider.spanLimits.AttributeValueDepthLimit,
 		s.tracer.provider.spanLimits.AttributeValueLengthLimit,
 	)
-	e := Event{Name: name, Attributes: attrs, Time: c.Timestamp()}
-
-	// Discard attributes over limit.
-	limit := s.tracer.provider.spanLimits.AttributePerEventCountLimit
-	if limit == 0 {
-		// Drop all attributes.
-		e.DroppedAttributeCount = len(e.Attributes)
-		e.Attributes = nil
-	} else if limit > 0 && len(e.Attributes) > limit {
-		// Drop over capacity.
-		e.DroppedAttributeCount = len(e.Attributes) - limit
-		e.Attributes = e.Attributes[:limit]
-	}
-
-	s.events.add(e)
+	s.events.add(Event{
+		Name:                  name,
+		Attributes:            attrs,
+		DroppedAttributeCount: dropped,
+		Time:                  c.Timestamp(),
+	})
 }
 
 // SetName sets the name of this span. If this span is not being recorded than
@@ -773,25 +791,17 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		return
 	}
 
-	attrs := normAttrs(
+	attrs, dropped := normalizeLimitedAttrs(
 		link.Attributes,
+		s.tracer.provider.spanLimits.AttributePerLinkCountLimit,
 		s.tracer.provider.spanLimits.AttributeValueDepthLimit,
 		s.tracer.provider.spanLimits.AttributeValueLengthLimit,
 	)
-	l := Link{SpanContext: link.SpanContext, Attributes: attrs}
-
-	// Discard attributes over limit.
-	limit := s.tracer.provider.spanLimits.AttributePerLinkCountLimit
-	if limit == 0 {
-		// Drop all attributes.
-		l.DroppedAttributeCount = len(l.Attributes)
-		l.Attributes = nil
-	} else if limit > 0 && len(l.Attributes) > limit {
-		l.DroppedAttributeCount = len(l.Attributes) - limit
-		l.Attributes = l.Attributes[:limit]
-	}
-
-	s.links.add(l)
+	s.links.add(Link{
+		SpanContext:           link.SpanContext,
+		Attributes:            attrs,
+		DroppedAttributeCount: dropped,
+	})
 }
 
 // DroppedAttributes returns the number of attributes dropped by the span

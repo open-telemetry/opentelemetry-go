@@ -45,8 +45,7 @@ type SpanLimits struct {
 	// the limit is applied recursively to contained values.
 	//
 	// This limit applies to span, event, and link attributes processed by a
-	// TracerProvider. It does not apply to Resource or instrumentation scope
-	// attributes.
+	// TracerProvider.
 	//
 	// Setting this to a negative value means no limit is applied.
 	AttributeValueLengthLimit int

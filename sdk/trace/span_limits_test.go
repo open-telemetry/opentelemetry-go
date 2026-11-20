@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"unicode/utf8"
 
@@ -886,4 +887,314 @@ func TestEventAndLinkAttributeValueLengthLimitDoesNotMutateCaller(t *testing.T) 
 	assert.Equal(t, wantExported, got.Links()[0].Attributes)
 	assert.Equal(t, wantExported, got.Links()[1].Attributes)
 	assert.Equal(t, wantCaller, caller)
+}
+
+// oversizedStringSlice is a 1,024-element array of strings that exceed a
+// length limit of 3. The depth-only normalizer does not walk it; value-length
+// truncation does.
+func oversizedStringSlice() (long string, values []string, attr attribute.KeyValue) {
+	long = strings.Repeat("abcdefghij", 5)
+	values = make([]string, 1024)
+	for i := range values {
+		values[i] = long
+	}
+	return long, values, attribute.StringSlice("arr", values)
+}
+
+func spanLimitsForAttrCounts(length, count int) SpanLimits {
+	limits := NewSpanLimits()
+	limits.AttributeValueLengthLimit = length
+	limits.AttributePerEventCountLimit = count
+	limits.AttributePerLinkCountLimit = count
+	return limits
+}
+
+func TestEventAndLinkAttributeCountLimitBeforeNormalization(t *testing.T) {
+	long, values, sliceAttr := oversizedStringSlice()
+	sc := testLinkSpanContext()
+
+	tests := []struct {
+		name    string
+		count   int
+		attrs   []attribute.KeyValue
+		want    []attribute.KeyValue
+		dropped int
+	}{
+		{
+			name:    "zero count drops every attribute",
+			count:   0,
+			attrs:   []attribute.KeyValue{attribute.String("a", long), sliceAttr, attribute.Bool("ok", true)},
+			want:    nil,
+			dropped: 3,
+		},
+		{
+			name:  "positive count keeps a normalized prefix",
+			count: 2,
+			attrs: []attribute.KeyValue{
+				attribute.String("keep", long),
+				attribute.Bool("also", true),
+				sliceAttr,
+				attribute.String("drop", long),
+			},
+			want: []attribute.KeyValue{
+				attribute.String("keep", "abc"),
+				attribute.Bool("also", true),
+			},
+			dropped: 2,
+		},
+		{
+			name:  "negative count is unlimited",
+			count: -1,
+			attrs: []attribute.KeyValue{
+				attribute.String("s", long),
+				attribute.StringSlice("ss", []string{long, "xy"}),
+				attribute.Bool("ok", true),
+			},
+			want: []attribute.KeyValue{
+				attribute.String("s", "abc"),
+				attribute.StringSlice("ss", []string{"abc", "xy"}),
+				attribute.Bool("ok", true),
+			},
+		},
+		{
+			name:  "count above length keeps every attribute",
+			count: 8,
+			attrs: []attribute.KeyValue{
+				attribute.String("s", long),
+				attribute.Bool("ok", true),
+			},
+			want: []attribute.KeyValue{
+				attribute.String("s", "abc"),
+				attribute.Bool("ok", true),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			caller := append([]attribute.KeyValue(nil), tt.attrs...)
+			before := append([]attribute.KeyValue(nil), caller...)
+
+			limits := spanLimitsForAttrCounts(3, tt.count)
+			rec := new(recorder)
+			tp := NewTracerProvider(WithRawSpanLimits(limits), WithSpanProcessor(rec))
+			tracer := tp.Tracer(t.Name())
+			ctx := t.Context()
+
+			_, span := tracer.Start(ctx, "span",
+				trace.WithLinks(trace.Link{SpanContext: sc, Attributes: caller}),
+			)
+			assert.Equal(t, before, caller)
+			span.AddEvent("event", trace.WithAttributes(caller...))
+			assert.Equal(t, before, caller)
+			span.AddLink(trace.Link{SpanContext: sc, Attributes: caller})
+			assert.Equal(t, before, caller)
+			span.End()
+			require.NoError(t, tp.Shutdown(ctx))
+			require.Len(t, *rec, 1)
+			got := (*rec)[0]
+
+			require.Len(t, got.Events(), 1)
+			assert.Equal(t, tt.want, got.Events()[0].Attributes)
+			assert.Equal(t, tt.dropped, got.Events()[0].DroppedAttributeCount)
+			require.Len(t, got.Links(), 2)
+			for _, link := range got.Links() {
+				assert.Equal(t, tt.want, link.Attributes)
+				assert.Equal(t, tt.dropped, link.DroppedAttributeCount)
+			}
+			assert.Equal(t, before, caller)
+			// The discarded string slice is a shared value. Truncating it in
+			// place would replace these elements with "abc".
+			assert.Equal(t, values, sliceAttr.Value.AsStringSlice())
+		})
+	}
+
+	t.Run("zero count with no attributes", func(t *testing.T) {
+		limits := spanLimitsForAttrCounts(3, 0)
+		rec := new(recorder)
+		tp := NewTracerProvider(WithRawSpanLimits(limits), WithSpanProcessor(rec))
+		tracer := tp.Tracer(t.Name())
+		ctx := t.Context()
+		_, span := tracer.Start(ctx, "span")
+		span.AddEvent("event")
+		span.AddLink(trace.Link{SpanContext: sc})
+		span.End()
+		require.NoError(t, tp.Shutdown(ctx))
+		require.Len(t, *rec, 1)
+		got := (*rec)[0]
+		require.Len(t, got.Events(), 1)
+		assert.Empty(t, got.Events()[0].Attributes)
+		assert.Zero(t, got.Events()[0].DroppedAttributeCount)
+		require.Len(t, got.Links(), 1)
+		assert.Empty(t, got.Links()[0].Attributes)
+		assert.Zero(t, got.Links()[0].DroppedAttributeCount)
+	})
+
+	// Retained map values are still deduplicated, depth-limited, and
+	// truncated. The discarded suffix is not.
+	t.Run("retained prefix still normalized", func(t *testing.T) {
+		limits := spanLimitsForAttrCounts(3, 1)
+		limits.AttributeValueDepthLimit = 1
+		caller := []attribute.KeyValue{
+			attribute.Map("keep",
+				attribute.String("s", long),
+				attribute.String("s", "zzzzzz"),
+				attribute.Map("child", attribute.String("leaf", long)),
+			),
+			sliceAttr,
+		}
+		want := []attribute.KeyValue{
+			attribute.Map("keep",
+				attribute.KeyValue{Key: "child"},
+				attribute.String("s", "zzz"),
+			),
+		}
+
+		rec := new(recorder)
+		tp := NewTracerProvider(WithRawSpanLimits(limits), WithSpanProcessor(rec))
+		tracer := tp.Tracer(t.Name())
+		ctx := t.Context()
+		_, span := tracer.Start(ctx, "span",
+			trace.WithLinks(trace.Link{SpanContext: sc, Attributes: caller}),
+		)
+		span.AddEvent("event", trace.WithAttributes(caller...))
+		span.AddLink(trace.Link{SpanContext: sc, Attributes: caller})
+		span.End()
+		require.NoError(t, tp.Shutdown(ctx))
+		require.Len(t, *rec, 1)
+		got := (*rec)[0]
+
+		require.Len(t, got.Events(), 1)
+		assert.Equal(t, want, got.Events()[0].Attributes)
+		assert.Equal(t, 1, got.Events()[0].DroppedAttributeCount)
+		require.Len(t, got.Links(), 2)
+		assert.Equal(t, want, got.Links()[0].Attributes)
+		assert.Equal(t, want, got.Links()[1].Attributes)
+		assert.Equal(t, values, caller[1].Value.AsStringSlice())
+		kept := caller[0].Value.AsMap()
+		require.Len(t, kept, 3)
+		assert.Equal(t, attribute.Key("child"), kept[0].Key)
+		child := kept[0].Value.AsMap()
+		require.Len(t, child, 1)
+		assert.Equal(t, long, child[0].Value.AsString())
+		assert.Equal(t, long, kept[1].Value.AsString())
+		assert.Equal(t, "zzzzzz", kept[2].Value.AsString())
+	})
+}
+
+func TestEventAndLinkUnchangedPrefixAliasesCallerSlice(t *testing.T) {
+	_, _, sliceAttr := oversizedStringSlice()
+	caller := []attribute.KeyValue{
+		attribute.String("keep", "ab"),
+		attribute.Bool("also", true),
+		sliceAttr,
+	}
+	before := append([]attribute.KeyValue(nil), caller...)
+
+	limits := spanLimitsForAttrCounts(3, 2)
+	tp := NewTracerProvider(WithRawSpanLimits(limits))
+	tracer := tp.Tracer(t.Name())
+	ctx := t.Context()
+	sc := testLinkSpanContext()
+
+	_, span := tracer.Start(ctx, "span",
+		trace.WithLinks(trace.Link{SpanContext: sc, Attributes: caller}),
+	)
+	span.AddEvent("event", trace.WithAttributes(caller...))
+	span.AddLink(trace.Link{SpanContext: sc, Attributes: caller})
+
+	rs := span.(*recordingSpan)
+	require.Len(t, rs.links.queue, 2)
+	require.Len(t, rs.events.queue, 1)
+	// AddLink and links passed to Tracer.Start store the retained prefix in
+	// place when normalization changes nothing. AddEvent copies attributes
+	// through EventConfig first, so it must not alias the caller either.
+	assert.Same(t, &caller[0], &rs.links.queue[0].Attributes[0])
+	assert.Same(t, &caller[0], &rs.links.queue[1].Attributes[0])
+	assert.Equal(t, []attribute.KeyValue{
+		attribute.String("keep", "ab"),
+		attribute.Bool("also", true),
+	}, rs.links.queue[0].Attributes)
+	assert.Equal(t, rs.links.queue[0].Attributes, rs.links.queue[1].Attributes)
+	assert.Equal(t, 1, rs.links.queue[0].DroppedAttributeCount)
+	assert.Equal(t, 1, rs.links.queue[1].DroppedAttributeCount)
+	assert.Equal(t, []attribute.KeyValue{
+		attribute.String("keep", "ab"),
+		attribute.Bool("also", true),
+	}, rs.events.queue[0].Attributes)
+	assert.Equal(t, 1, rs.events.queue[0].DroppedAttributeCount)
+	assert.NotSame(t, &caller[0], &rs.events.queue[0].Attributes[0])
+	assert.Equal(t, before, caller)
+
+	// Replacing a caller element is visible through the aliased link prefix.
+	// The SDK itself does not write into that backing array.
+	caller[0] = attribute.String("keep", "zz")
+	assert.Equal(t, "zz", rs.links.queue[0].Attributes[0].Value.AsString())
+	assert.Equal(t, "ab", rs.events.queue[0].Attributes[0].Value.AsString())
+
+	span.End()
+	require.NoError(t, tp.Shutdown(ctx))
+}
+
+func TestEventAndLinkCountLimitSkipsDiscardedAllocations(t *testing.T) {
+	long, _, sliceAttr := oversizedStringSlice()
+	dropped := []attribute.KeyValue{attribute.String("a", long), sliceAttr, attribute.Bool("ok", true)}
+	unchangedPrefix := []attribute.KeyValue{
+		attribute.String("keep", "ab"),
+		attribute.Bool("also", true),
+		sliceAttr,
+	}
+	truncatedPrefix := []attribute.KeyValue{
+		attribute.String("keep", long),
+		sliceAttr,
+	}
+
+	// A finite length limit must not allocate more than an unlimited one when
+	// the count limit drops the values truncation would otherwise walk.
+	eventZeroUnlimited, linkZeroUnlimited := measureEventLinkAllocs(t, spanLimitsForAttrCounts(-1, 0), dropped)
+	eventZeroFinite, linkZeroFinite := measureEventLinkAllocs(t, spanLimitsForAttrCounts(3, 0), dropped)
+	assert.Equal(t, eventZeroUnlimited, eventZeroFinite, "AddEvent count 0")
+	assert.Equal(t, linkZeroUnlimited, linkZeroFinite, "AddLink count 0")
+	assert.Zero(t, linkZeroUnlimited, "AddLink measurement allocated")
+	assert.Zero(t, linkZeroFinite, "AddLink count 0")
+
+	_, linkUnchanged := measureEventLinkAllocs(t, spanLimitsForAttrCounts(3, 2), unchangedPrefix)
+	assert.Zero(t, linkUnchanged, "AddLink unchanged retained prefix")
+
+	_, linkTruncated := measureEventLinkAllocs(t, spanLimitsForAttrCounts(3, 1), truncatedPrefix)
+	_, linkKept := measureEventLinkAllocs(t, spanLimitsForAttrCounts(3, -1), truncatedPrefix)
+	assert.Less(t, linkTruncated, linkKept, "discarded string slice was normalized")
+}
+
+func measureEventLinkAllocs(
+	t *testing.T,
+	limits SpanLimits,
+	attrs []attribute.KeyValue,
+) (eventAllocs, linkAllocs float64) {
+	t.Helper()
+
+	limits.EventCountLimit = 1
+	limits.LinkCountLimit = 1
+	tp := NewTracerProvider(WithRawSpanLimits(limits))
+	ctx := t.Context()
+	_, span := tp.Tracer(t.Name()).Start(ctx, "span")
+	t.Cleanup(func() {
+		span.End()
+		//nolint:usetesting // The test context is canceled before Cleanup.
+		require.NoError(t, tp.Shutdown(context.Background()))
+	})
+
+	link := trace.Link{SpanContext: testLinkSpanContext(), Attributes: attrs}
+	span.AddEvent("prime", trace.WithAttributes(attrs...))
+	span.AddEvent("prime", trace.WithAttributes(attrs...))
+	span.AddLink(link)
+	span.AddLink(link)
+
+	eventAllocs = testing.AllocsPerRun(100, func() {
+		span.AddEvent("event", trace.WithAttributes(attrs...))
+	})
+	linkAllocs = testing.AllocsPerRun(100, func() {
+		span.AddLink(link)
+	})
+	return eventAllocs, linkAllocs
 }
