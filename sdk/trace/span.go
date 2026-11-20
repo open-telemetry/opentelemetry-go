@@ -382,20 +382,15 @@ func (s *recordingSpan) addOverCapAttrs(limit int, attrs []attribute.KeyValue) {
 }
 
 func normAttr(attr attribute.KeyValue, depthLimit, lengthLimit int) (attribute.KeyValue, bool) {
-	changed := false
+	var changed bool
 	switch attr.Value.Type() {
 	case attribute.SLICE, attribute.MAP:
 		if depthLimit < 0 {
-			var deduplicated bool
-			attr, deduplicated = attrnorm.KeyValueDedup(attr)
-			changed = deduplicated
+			attr, changed = attrnorm.KeyValueDedup(attr)
 		} else {
-			// Depth limiting and deduplication are independent. Either one
-			// replaces the value, including when truncation later leaves the
-			// surviving value as it is.
-			var depthLimited, deduplicated bool
-			attr, depthLimited, deduplicated = attrnorm.KeyValueDedupLimitDepth(attr, depthLimit)
-			changed = depthLimited || deduplicated
+			var limited, dedup bool
+			attr, limited, dedup = attrnorm.KeyValueDedupLimitDepth(attr, depthLimit)
+			changed = limited || dedup
 		}
 	}
 	attr, truncated := attrnorm.Truncate(lengthLimit, attr)

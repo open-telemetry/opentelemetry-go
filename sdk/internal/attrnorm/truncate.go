@@ -22,11 +22,6 @@ import (
 // slice and map attribute values, the limit is applied recursively to contained
 // values.
 //
-// Numeric and boolean values, including their slices, are never truncated.
-// The boolean is false for those values so callers do not have to compare the
-// arrays. Comparison would walk every element and would treat an unchanged
-// float64 slice containing a NaN as different.
-//
 // No truncation is performed for a negative limit.
 func Truncate(limit int, attr attribute.KeyValue) (attribute.KeyValue, bool) {
 	if limit < 0 {
@@ -45,6 +40,9 @@ func Truncate(limit int, attr attribute.KeyValue) (attribute.KeyValue, bool) {
 			return attr, false
 		}
 		truncated := truncate(limit, s)
+		// truncate counts runes. Valid multi-byte UTF-8 can have len(s)
+		// greater than limit and still be returned unchanged, for example
+		// "日本語" (9 bytes, 3 runes) at limit 3.
 		if truncated == s {
 			return attr, false
 		}

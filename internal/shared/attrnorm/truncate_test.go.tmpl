@@ -12,6 +12,7 @@ import (
 	"math"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -413,6 +414,23 @@ func TestTruncateAttr(t *testing.T) {
 			assert.Equal(t, test.want, got)
 		})
 	}
+}
+
+func TestTruncateValidMultiByteWithinRuneLimit(t *testing.T) {
+	// "日本語" is 9 bytes and 3 runes. The byte length exceeds the limit,
+	// so Truncate does not take its len(s) <= limit fast path. truncate
+	// still returns the input because the rune count fits, and changed
+	// stays false.
+	const s = "日本語"
+	const limit = 3
+	require.Greater(t, len(s), limit)
+	require.LessOrEqual(t, utf8.RuneCountInString(s), limit)
+	require.Equal(t, s, truncate(limit, s))
+
+	attr := attribute.String("cjk", s)
+	got, changed := Truncate(limit, attr)
+	assert.False(t, changed)
+	assert.Equal(t, attr, got)
 }
 
 func TestTruncateValue(t *testing.T) {

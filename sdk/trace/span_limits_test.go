@@ -6,6 +6,7 @@ package trace
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"unicode/utf8"
 
@@ -361,129 +362,286 @@ func testLinkSpanContext() trace.SpanContext {
 	})
 }
 
-// eventLinkLengthAttrs is the attribute set applied to events and links.
-// Nested map keys are deduplicated (last value wins) before length truncation,
-// matching span attributes. Top-level keys are not deduplicated.
-func eventLinkLengthAttrs(limit int) []attribute.KeyValue {
-	ascii, euro, cjk, invalid, exact := "abcdef", "€€€€", "日本語", "ab\x80cd", "abc"
-	strs := []string{"abcdef", "xy", "€€€€"}
-	raw := []byte{1, 2, 3, 4}
-	dupA, dupB := "abcdef", "zzzzzz"
+// assertEventAndLinkAttributes checks that applying limit to in yields want
+// for a span-start link, an added event, and an added link.
+func assertEventAndLinkAttributes(t *testing.T, limit int, in, want []attribute.KeyValue) {
+	t.Helper()
 
-	switch limit {
-	case -1:
-	case 0:
-		ascii, euro, cjk, invalid, exact = "", "", "", "", ""
-		strs = []string{"", "", ""}
-		raw = []byte{}
-		dupA, dupB = "", ""
-	case 3:
-		// "日本語" is 3 runes and 9 bytes, so a limit of 3 keeps it intact.
-		// "abc" is exactly at the limit. "xy" is shorter than the limit.
-		ascii, euro, invalid = "abc", "€€€", "abc"
-		strs = []string{"abc", "xy", "€€€"}
-		raw = []byte{1, 2, 3}
-		dupA, dupB = "abc", "zzz"
-	default:
-		panic("eventLinkLengthAttrs limit must be -1, 0, or 3")
-	}
+	limits := NewSpanLimits()
+	limits.AttributeValueLengthLimit = limit
 
-	return []attribute.KeyValue{
-		attribute.String("ascii", ascii),
-		attribute.String("euro", euro),
-		attribute.String("cjk", cjk),
-		attribute.String("invalid", invalid),
-		attribute.String("exact", exact),
-		attribute.StringSlice("strs", strs),
-		attribute.ByteSlice("bytes", raw),
-		attribute.Bool("flag", true),
-		attribute.Slice("slice",
-			attribute.StringValue(ascii),
-			attribute.StringSliceValue(strs),
-			attribute.ByteSliceValue(raw),
-			attribute.BoolValue(true),
-		),
-		attribute.Map("map",
-			attribute.String("s", ascii),
-			attribute.StringSlice("ss", []string{ascii}),
-			attribute.Map("nested", attribute.String("s", ascii)),
-			attribute.Bool("b", true),
-		),
-		// Nested duplicates collapse to the last value, then that value is
-		// truncated. Both top-level duplicates are kept.
-		attribute.Map("dups",
-			attribute.String("k", dupB),
-		),
-		attribute.String("dup", dupA),
-		attribute.String("dup", dupB),
-	}
-}
+	rec := new(recorder)
+	tp := NewTracerProvider(WithRawSpanLimits(limits), WithSpanProcessor(rec))
+	tracer := tp.Tracer("eventLinkLength")
+	ctx := t.Context()
+	sc := testLinkSpanContext()
 
-func eventLinkLengthInput() []attribute.KeyValue {
-	return []attribute.KeyValue{
-		attribute.String("ascii", "abcdef"),
-		attribute.String("euro", "€€€€"),
-		attribute.String("cjk", "日本語"),
-		attribute.String("invalid", "ab\x80cd"),
-		attribute.String("exact", "abc"),
-		attribute.StringSlice("strs", []string{"abcdef", "xy", "€€€€"}),
-		attribute.ByteSlice("bytes", []byte{1, 2, 3, 4}),
-		attribute.Bool("flag", true),
-		attribute.Slice("slice",
-			attribute.StringValue("abcdef"),
-			attribute.StringSliceValue([]string{"abcdef", "xy", "€€€€"}),
-			attribute.ByteSliceValue([]byte{1, 2, 3, 4}),
-			attribute.BoolValue(true),
-		),
-		attribute.Map("map",
-			attribute.String("s", "abcdef"),
-			attribute.StringSlice("ss", []string{"abcdef"}),
-			attribute.Map("nested", attribute.String("s", "abcdef")),
-			attribute.Bool("b", true),
-		),
-		attribute.Map("dups",
-			attribute.String("k", "abcdef"),
-			attribute.String("k", "zzzzzz"),
-		),
-		attribute.String("dup", "abcdef"),
-		attribute.String("dup", "zzzzzz"),
-	}
+	_, span := tracer.Start(ctx, "span",
+		trace.WithLinks(trace.Link{SpanContext: sc, Attributes: in}),
+	)
+	span.AddEvent("event", trace.WithAttributes(in...))
+	span.AddLink(trace.Link{SpanContext: sc, Attributes: in})
+	span.End()
+	require.NoError(t, tp.Shutdown(ctx))
+	require.Len(t, *rec, 1)
+	got := (*rec)[0]
+
+	require.Len(t, got.Events(), 1)
+	assert.Equal(t, want, got.Events()[0].Attributes)
+	assert.Zero(t, got.Events()[0].DroppedAttributeCount)
+
+	require.Len(t, got.Links(), 2)
+	assert.Equal(t, want, got.Links()[0].Attributes)
+	assert.Equal(t, want, got.Links()[1].Attributes)
+	assert.Zero(t, got.Links()[0].DroppedAttributeCount)
+	assert.Zero(t, got.Links()[1].DroppedAttributeCount)
 }
 
 func TestEventAndLinkAttributeValueLengthLimit(t *testing.T) {
+	tests := []struct {
+		name string
+		in   attribute.KeyValue
+		want map[int]attribute.KeyValue // keyed by limit: -1, 0, 3
+	}{
+		{
+			name: "ascii",
+			in:   attribute.String("ascii", "abcdef"),
+			want: map[int]attribute.KeyValue{
+				-1: attribute.String("ascii", "abcdef"),
+				0:  attribute.String("ascii", ""),
+				3:  attribute.String("ascii", "abc"),
+			},
+		},
+		{
+			name: "euro",
+			in:   attribute.String("euro", "€€€€"),
+			want: map[int]attribute.KeyValue{
+				-1: attribute.String("euro", "€€€€"),
+				0:  attribute.String("euro", ""),
+				3:  attribute.String("euro", "€€€"),
+			},
+		},
+		{
+			// "日本語" is 3 runes and 9 bytes, so a limit of 3 keeps it intact.
+			name: "multi-byte under limit",
+			in:   attribute.String("cjk", "日本語"),
+			want: map[int]attribute.KeyValue{
+				-1: attribute.String("cjk", "日本語"),
+				0:  attribute.String("cjk", ""),
+				3:  attribute.String("cjk", "日本語"),
+			},
+		},
+		{
+			// The invalid byte is dropped, then the remaining runes are truncated.
+			name: "invalid utf-8",
+			in:   attribute.String("invalid", "ab\x80cd"),
+			want: map[int]attribute.KeyValue{
+				-1: attribute.String("invalid", "ab\x80cd"),
+				0:  attribute.String("invalid", ""),
+				3:  attribute.String("invalid", "abc"),
+			},
+		},
+		{
+			name: "exact",
+			in:   attribute.String("exact", "abc"),
+			want: map[int]attribute.KeyValue{
+				-1: attribute.String("exact", "abc"),
+				0:  attribute.String("exact", ""),
+				3:  attribute.String("exact", "abc"),
+			},
+		},
+		{
+			name: "string slice",
+			in:   attribute.StringSlice("strs", []string{"abcdef", "xy", "€€€€"}),
+			want: map[int]attribute.KeyValue{
+				-1: attribute.StringSlice("strs", []string{"abcdef", "xy", "€€€€"}),
+				0:  attribute.StringSlice("strs", []string{"", "", ""}),
+				3:  attribute.StringSlice("strs", []string{"abc", "xy", "€€€"}),
+			},
+		},
+		{
+			name: "byte slice",
+			in:   attribute.ByteSlice("bytes", []byte{1, 2, 3, 4}),
+			want: map[int]attribute.KeyValue{
+				-1: attribute.ByteSlice("bytes", []byte{1, 2, 3, 4}),
+				0:  attribute.ByteSlice("bytes", []byte{}),
+				3:  attribute.ByteSlice("bytes", []byte{1, 2, 3}),
+			},
+		},
+		{
+			name: "bool",
+			in:   attribute.Bool("flag", true),
+			want: map[int]attribute.KeyValue{
+				-1: attribute.Bool("flag", true),
+				0:  attribute.Bool("flag", true),
+				3:  attribute.Bool("flag", true),
+			},
+		},
+		{
+			name: "slice",
+			in: attribute.Slice("slice",
+				attribute.StringValue("abcdef"),
+				attribute.StringSliceValue([]string{"abcdef", "xy", "€€€€"}),
+				attribute.ByteSliceValue([]byte{1, 2, 3, 4}),
+				attribute.BoolValue(true),
+			),
+			want: map[int]attribute.KeyValue{
+				-1: attribute.Slice("slice",
+					attribute.StringValue("abcdef"),
+					attribute.StringSliceValue([]string{"abcdef", "xy", "€€€€"}),
+					attribute.ByteSliceValue([]byte{1, 2, 3, 4}),
+					attribute.BoolValue(true),
+				),
+				0: attribute.Slice("slice",
+					attribute.StringValue(""),
+					attribute.StringSliceValue([]string{"", "", ""}),
+					attribute.ByteSliceValue([]byte{}),
+					attribute.BoolValue(true),
+				),
+				3: attribute.Slice("slice",
+					attribute.StringValue("abc"),
+					attribute.StringSliceValue([]string{"abc", "xy", "€€€"}),
+					attribute.ByteSliceValue([]byte{1, 2, 3}),
+					attribute.BoolValue(true),
+				),
+			},
+		},
+		{
+			name: "map",
+			in: attribute.Map("map",
+				attribute.String("s", "abcdef"),
+				attribute.StringSlice("ss", []string{"abcdef"}),
+				attribute.Map("nested", attribute.String("s", "abcdef")),
+				attribute.Bool("b", true),
+			),
+			want: map[int]attribute.KeyValue{
+				-1: attribute.Map("map",
+					attribute.String("s", "abcdef"),
+					attribute.StringSlice("ss", []string{"abcdef"}),
+					attribute.Map("nested", attribute.String("s", "abcdef")),
+					attribute.Bool("b", true),
+				),
+				0: attribute.Map("map",
+					attribute.String("s", ""),
+					attribute.StringSlice("ss", []string{""}),
+					attribute.Map("nested", attribute.String("s", "")),
+					attribute.Bool("b", true),
+				),
+				3: attribute.Map("map",
+					attribute.String("s", "abc"),
+					attribute.StringSlice("ss", []string{"abc"}),
+					attribute.Map("nested", attribute.String("s", "abc")),
+					attribute.Bool("b", true),
+				),
+			},
+		},
+		{
+			// Nested map keys collapse to the last value, then that value is truncated.
+			name: "nested map duplicates",
+			in: attribute.Map("dups",
+				attribute.String("k", "abcdef"),
+				attribute.String("k", "zzzzzz"),
+			),
+			want: map[int]attribute.KeyValue{
+				-1: attribute.Map("dups", attribute.String("k", "zzzzzz")),
+				0:  attribute.Map("dups", attribute.String("k", "")),
+				3:  attribute.Map("dups", attribute.String("k", "zzz")),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		for _, limit := range []int{-1, 0, 3} {
+			t.Run(fmt.Sprintf("%s/limit=%d", tt.name, limit), func(t *testing.T) {
+				assertEventAndLinkAttributes(t, limit,
+					[]attribute.KeyValue{tt.in},
+					[]attribute.KeyValue{tt.want[limit]},
+				)
+			})
+		}
+	}
+
+	// Top-level keys are not deduplicated. Each value is still truncated.
+	in := []attribute.KeyValue{
+		attribute.String("dup", "abcdef"),
+		attribute.String("dup", "zzzzzz"),
+	}
+	topLevel := map[int][]attribute.KeyValue{
+		-1: {
+			attribute.String("dup", "abcdef"),
+			attribute.String("dup", "zzzzzz"),
+		},
+		0: {
+			attribute.String("dup", ""),
+			attribute.String("dup", ""),
+		},
+		3: {
+			attribute.String("dup", "abc"),
+			attribute.String("dup", "zzz"),
+		},
+	}
+	for _, limit := range []int{-1, 0, 3} {
+		t.Run(fmt.Sprintf("top-level duplicates/limit=%d", limit), func(t *testing.T) {
+			assertEventAndLinkAttributes(t, limit, in, topLevel[limit])
+		})
+	}
+}
+
+func TestSpanAttributeAndRecordErrorValueLengthLimit(t *testing.T) {
 	errType := "*errors.errorString"
 	errMsg := "€€€€"
 
 	tests := []struct {
-		name    string
-		limit   int
-		errType string
-		errMsg  string
+		name      string
+		limit     int
+		spanValue string
+		user      string
+		userSlice []string
+		errType   string
+		errMsg    string
 	}{
-		{name: "Unlimited", limit: -1, errType: errType, errMsg: errMsg},
-		{name: "Zero", limit: 0, errType: "", errMsg: ""},
-		{name: "Truncated", limit: 3, errType: "*er", errMsg: "€€€"},
+		{
+			name:      "Unlimited",
+			limit:     -1,
+			spanValue: "abcdef",
+			user:      "abcdef",
+			userSlice: []string{"abcdef", "€€€€"},
+			errType:   errType,
+			errMsg:    errMsg,
+		},
+		{
+			name:      "Zero",
+			limit:     0,
+			spanValue: "",
+			user:      "",
+			userSlice: []string{"", ""},
+			errType:   "",
+			errMsg:    "",
+		},
+		{
+			name:      "Truncated",
+			limit:     3,
+			spanValue: "abc",
+			user:      "abc",
+			userSlice: []string{"abc", "€€€"},
+			errType:   "*er",
+			errMsg:    "€€€",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			limits := NewSpanLimits()
 			limits.AttributeValueLengthLimit = tt.limit
-			input := eventLinkLengthInput()
-			want := eventLinkLengthAttrs(tt.limit)
 
 			rec := new(recorder)
 			tp := NewTracerProvider(WithRawSpanLimits(limits), WithSpanProcessor(rec))
-			tracer := tp.Tracer("eventLinkLength")
+			tracer := tp.Tracer("spanAndExceptionLength")
 			ctx := t.Context()
-			sc := testLinkSpanContext()
 
 			_, span := tracer.Start(ctx, "span",
 				trace.WithAttributes(attribute.String("span", "abcdef")),
-				trace.WithLinks(trace.Link{SpanContext: sc, Attributes: input}),
 			)
-			span.AddEvent("event", trace.WithAttributes(input...))
-			span.AddLink(trace.Link{SpanContext: sc, Attributes: input})
 			span.RecordError(errors.New(errMsg),
 				trace.WithAttributes(
 					attribute.String("user", "abcdef"),
@@ -496,35 +654,14 @@ func TestEventAndLinkAttributeValueLengthLimit(t *testing.T) {
 			require.Len(t, *rec, 1)
 			got := (*rec)[0]
 
-			spanValue := "abcdef"
-			if tt.limit == 0 {
-				spanValue = ""
-			} else if tt.limit > 0 {
-				spanValue = "abc"
-			}
-			assert.Contains(t, got.Attributes(), attribute.String("span", spanValue))
+			assert.Contains(t, got.Attributes(), attribute.String("span", tt.spanValue))
 
-			require.Len(t, got.Events(), 2)
-			assert.Equal(t, want, got.Events()[0].Attributes)
-			assert.Zero(t, got.Events()[0].DroppedAttributeCount)
-
-			require.Len(t, got.Links(), 2)
-			assert.Equal(t, want, got.Links()[0].Attributes)
-			assert.Equal(t, want, got.Links()[1].Attributes)
-			assert.Zero(t, got.Links()[0].DroppedAttributeCount)
-			assert.Zero(t, got.Links()[1].DroppedAttributeCount)
-
-			user, userSlice := "abcdef", []string{"abcdef", "€€€€"}
-			if tt.limit == 0 {
-				user, userSlice = "", []string{"", ""}
-			} else if tt.limit > 0 {
-				user, userSlice = "abc", []string{"abc", "€€€"}
-			}
-			exc := got.Events()[1]
+			require.Len(t, got.Events(), 1)
+			exc := got.Events()[0]
 			require.GreaterOrEqual(t, len(exc.Attributes), 5)
 			assert.Equal(t, []attribute.KeyValue{
-				attribute.String("user", user),
-				attribute.StringSlice("userSlice", userSlice),
+				attribute.String("user", tt.user),
+				attribute.StringSlice("userSlice", tt.userSlice),
 				semconv.ExceptionType(tt.errType),
 				semconv.ExceptionMessage(tt.errMsg),
 			}, exc.Attributes[:4])
