@@ -69,6 +69,10 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   v1.48.0 is the final planned release of this module.
   Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#9221)
 
+### Changed
+
+- Reduce allocations in `go.opentelemetry.io/otel/exporters/otlp/otlptrace` by allocating protobuf backing storage per attribute list sized from actual contents, with independent ID copies. Each export owns its storage with no reuse, safe for retaining clients. (#8892)
+
 ### Fixed
 
 - Use `otlp_http_json_span_exporter` for `otel.component.type` and the component name prefix when JSON encoding is configured in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9492)
