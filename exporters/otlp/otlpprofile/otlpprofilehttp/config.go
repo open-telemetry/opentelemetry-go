@@ -235,7 +235,8 @@ func WithHeaders(headers map[string]string) Option {
 	})
 }
 
-// WithTimeout sets the maximum duration for each export attempt.
+// WithTimeout sets the maximum duration for an export, across retries.
+// This takes precedence over any retry settings defined by [WithRetry].
 func WithTimeout(duration time.Duration) Option {
 	return fnOpt(func(c config) config {
 		c.timeout = newSetting(duration)
