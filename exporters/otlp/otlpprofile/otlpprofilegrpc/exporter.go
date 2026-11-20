@@ -45,6 +45,8 @@ func New(_ context.Context, options ...Option) (*Exporter, error) {
 	return &Exporter{client: c}, nil
 }
 
+var transformExportRequest = transform.ExportRequest
+
 // Export transforms and transmits rp to an OTLP receiver.
 // Returns [profile.ErrExporterShutdown] if called after Shutdown.
 //
@@ -53,7 +55,7 @@ func (e *Exporter) Export(ctx context.Context, rp *profiledata.ResourceProfiles)
 	if e.stopped.Load() {
 		return profile.ErrExporterShutdown
 	}
-	req := transform.ExportRequest(rp)
+	req := transformExportRequest(rp)
 	if req == nil {
 		return nil
 	}
