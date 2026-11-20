@@ -5,12 +5,15 @@ package otlpprofilehttp
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpprofile/otlpprofilehttp/internal/transform"
 	"go.opentelemetry.io/otel/sdk/profile"
 	"go.opentelemetry.io/otel/sdk/profile/profiledata"
 )
+
+var errExporterNotInitialized = errors.New("otlpprofilehttp: exporter must be created with New")
 
 // Exporter is an OpenTelemetry profile exporter that transports OTLP Profiles
 // v1development protobuf payloads over HTTP.
@@ -50,6 +53,9 @@ func (e *Exporter) Export(ctx context.Context, rp *profiledata.ResourceProfiles)
 	c := e.client.Load()
 	if e.stopped.Load() {
 		return profile.ErrExporterShutdown
+	}
+	if c == nil {
+		return errExporterNotInitialized
 	}
 	return c.UploadProfiles(ctx, req)
 }
