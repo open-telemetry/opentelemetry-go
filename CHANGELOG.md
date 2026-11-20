@@ -31,6 +31,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   in `go.opentelemetry.io/otel/sdk/metric/x`. (#8962)
 - Add experimental support for enabling/disabling `Meter`s per instrumentation scope via `MeterConfigurator`, `MeterConfig`, and `MeterConfiguratorHandle` in `go.opentelemetry.io/otel/sdk/metric/x`. Configuration is set at `MeterProvider` construction via `WithMeterConfigurator` and can be updated live through `MeterConfiguratorHandle.Set`. This gates recording (`Add`/`Record`/`Observe`) only. `MeterProvider`s without it are unaffected. (#8743)
 - Add `WithViewMatchingMode` and `ViewMatchingMode` in `go.opentelemetry.io/otel/sdk/metric/x` to support composable view matching. (#8510)
+- Add experimental support for running observable-instrument callbacks in parallel via a reused worker pool, enabled with the `OTEL_GO_X_PARALLEL_CALLBACKS=true` environment variable, in `go.opentelemetry.io/otel/sdk/metric`. (#8581)
 
 ### Changed
 

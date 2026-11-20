@@ -252,8 +252,14 @@ func (mp *MeterProvider) Shutdown(ctx context.Context) error {
 	if mp.configuratorUnregister != nil {
 		mp.configuratorUnregister()
 	}
+	var err error
 	if mp.shutdown != nil {
-		return mp.shutdown(ctx)
+		err = mp.shutdown(ctx)
 	}
-	return nil
+	// Readers stop their pools on Shutdown; this also covers wrappers that
+	// override Shutdown without delegating. stop is idempotent and nonblocking.
+	for _, p := range mp.pipes {
+		p.stop()
+	}
+	return err
 }

@@ -301,6 +301,8 @@ type testSDKProducer struct {
 
 var prebuiltTestResourceMetricsA = testResourceMetricsA()
 
+func (testSDKProducer) stop() {}
+
 func (p testSDKProducer) produce(ctx context.Context, rm *metricdata.ResourceMetrics) error {
 	if p.produceFunc != nil {
 		return p.produceFunc(ctx, rm)
