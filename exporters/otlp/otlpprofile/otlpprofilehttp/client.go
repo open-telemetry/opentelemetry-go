@@ -143,13 +143,13 @@ func (c *httpClient) uploadProfiles(
 	ctx context.Context,
 	pbRequest *colprofilepb.ExportProfilesServiceRequest,
 ) (uploadErr error) {
+	if maxSize := c.maxRequestSize; maxSize > 0 && proto.Size(pbRequest) > maxSize {
+		return fmt.Errorf("request body too large: exceeded %d bytes", maxSize)
+	}
+
 	body, err := proto.Marshal(pbRequest)
 	if err != nil {
 		return err
-	}
-
-	if maxSize := c.maxRequestSize; maxSize > 0 && len(body) > maxSize {
-		return fmt.Errorf("request body too large: exceeded %d bytes", maxSize)
 	}
 	request, err := c.newRequest(ctx, body)
 	if err != nil {
