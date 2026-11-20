@@ -135,7 +135,7 @@ func newConfig(options []Option) config {
 		loadEnvTLS[*tls.Config](),
 	)
 	c.headers = c.headers.Resolve(
-		getenv(envHeaders, convHeaders),
+		getenvRedacted(envHeaders, convHeaders),
 	)
 	c.compression = c.compression.Resolve(
 		getenv(envCompression, convCompression),
@@ -380,6 +380,16 @@ func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 }
 
 func getenv[T any](keys []string, conv func(string) (T, error)) resolver[T] {
+	return resolveEnv(keys, conv, false)
+}
+
+// getenvRedacted behaves like getenv but omits raw environment variable values
+// from error messages so credentials in headers are not logged.
+func getenvRedacted[T any](keys []string, conv func(string) (T, error)) resolver[T] {
+	return resolveEnv(keys, conv, true)
+}
+
+func resolveEnv[T any](keys []string, conv func(string) (T, error), redact bool) resolver[T] {
 	return func(s setting[T]) setting[T] {
 		if s.Set {
 			return s
@@ -392,7 +402,11 @@ func getenv[T any](keys []string, conv func(string) (T, error)) resolver[T] {
 					s.Set = true
 					break
 				}
-				otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
+				if redact {
+					otel.Handle(fmt.Errorf("invalid %s: %w", key, err))
+				} else {
+					otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
+				}
 			}
 		}
 		return s
@@ -477,17 +491,17 @@ func convHeaders(s string) (map[string]string, error) {
 	for header := range strings.SplitSeq(s, ",") {
 		rawKey, rawVal, found := strings.Cut(header, "=")
 		if !found {
-			err = errors.Join(err, fmt.Errorf("invalid header: %s", header))
+			err = errors.Join(err, errors.New("invalid header: missing '='"))
 			continue
 		}
 		key := strings.TrimSpace(rawKey)
 		if !isValidHeaderKey(key) {
-			err = errors.Join(err, fmt.Errorf("invalid header key: %s", rawKey))
+			err = errors.Join(err, fmt.Errorf("invalid header key: %q", key))
 			continue
 		}
 		escVal, e := url.PathUnescape(rawVal)
 		if e != nil {
-			err = errors.Join(err, fmt.Errorf("invalid header value: %s", rawVal))
+			err = errors.Join(err, fmt.Errorf("invalid header value encoding for key %q", key))
 			continue
 		}
 		out[key] = strings.TrimSpace(escVal)
