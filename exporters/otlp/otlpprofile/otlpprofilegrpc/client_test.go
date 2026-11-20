@@ -229,7 +229,8 @@ func TestRetryableAndThrottleDelay(t *testing.T) {
 		assert.False(t, ok)
 		assert.Zero(t, d)
 
-		stErrInfo, err := status.New(codes.ResourceExhausted, "errinfo").WithDetails(&errdetails.ErrorInfo{Reason: "LIMIT"})
+		stErrInfo, err := status.New(codes.ResourceExhausted, "errinfo").
+			WithDetails(&errdetails.ErrorInfo{Reason: "LIMIT"})
 		require.NoError(t, err)
 		ok, d = retryable(stErrInfo.Err())
 		assert.False(t, ok)

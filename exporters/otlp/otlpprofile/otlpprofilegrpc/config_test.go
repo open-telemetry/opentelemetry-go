@@ -110,8 +110,11 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 				wantInsecure: false,
 			},
 			{
-				name:         "WithEndpoint_overrides_WithEndpointURL_host",
-				opts:         []Option{WithEndpointURL("http://first.example:4317"), WithEndpoint("second.example:9090")},
+				name: "WithEndpoint_overrides_WithEndpointURL_host",
+				opts: []Option{
+					WithEndpointURL("http://first.example:4317"),
+					WithEndpoint("second.example:9090"),
+				},
 				wantEndpoint: "second.example:9090",
 				wantInsecure: true,
 			},
