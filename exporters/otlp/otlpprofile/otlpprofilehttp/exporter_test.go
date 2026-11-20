@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -52,18 +53,21 @@ func sampleResourceProfiles() *profiledata.ResourceProfiles {
 }
 
 func TestExporterEndToEndWithRuntimeProducer(t *testing.T) {
-	var receivedPath, receivedContentType, receivedDevVersion, receivedEncoding, receivedCustomHeader string
-	var receivedReq colprofilepb.ExportProfilesServiceRequest
+	var (
+		mu                   sync.Mutex
+		receivedPath         string
+		receivedContentType  string
+		receivedDevVersion   string
+		receivedEncoding     string
+		receivedCustomHeader string
+		receivedUserAgent    string
+		receivedReq          *colprofilepb.ExportProfilesServiceRequest
+	)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		receivedPath = r.URL.Path
-		receivedContentType = r.Header.Get("Content-Type")
-		receivedDevVersion = r.Header.Get("OTLP-Profiles-Development-Version")
-		receivedEncoding = r.Header.Get("Content-Encoding")
-		receivedCustomHeader = r.Header.Get("X-Custom")
-
 		var reader io.Reader = r.Body
-		if receivedEncoding == "gzip" {
+		encoding := r.Header.Get("Content-Encoding")
+		if encoding == "gzip" {
 			gr, err := gzip.NewReader(r.Body)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -77,10 +81,21 @@ func TestExporterEndToEndWithRuntimeProducer(t *testing.T) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if err := proto.Unmarshal(body, &receivedReq); err != nil {
+		req := new(colprofilepb.ExportProfilesServiceRequest)
+		if err := proto.Unmarshal(body, req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+
+		mu.Lock()
+		receivedPath = r.URL.Path
+		receivedContentType = r.Header.Get("Content-Type")
+		receivedDevVersion = r.Header.Get("OTLP-Profiles-Development-Version")
+		receivedEncoding = encoding
+		receivedCustomHeader = r.Header.Get("X-Custom")
+		receivedUserAgent = r.Header.Get("User-Agent")
+		receivedReq = req
+		mu.Unlock()
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
@@ -110,16 +125,22 @@ func TestExporterEndToEndWithRuntimeProducer(t *testing.T) {
 	require.NotEmpty(t, rp.ScopeProfiles)
 
 	require.NoError(t, exp.Export(t.Context(), &rp))
+
+	mu.Lock()
 	assert.Equal(t, "/v1development/profiles", receivedPath)
 	assert.Equal(t, "application/x-protobuf", receivedContentType)
 	assert.Equal(t, "1", receivedDevVersion)
 	assert.Equal(t, "gzip", receivedEncoding)
 	assert.Equal(t, "hello", receivedCustomHeader)
+	assert.Equal(t, "OTel Go OTLP over HTTP/protobuf profiles exporter/"+otlpprofilehttp.Version(), receivedUserAgent)
+	require.NotNil(t, receivedReq)
 	require.Len(t, receivedReq.ResourceProfiles, 1)
 	assert.NotEmpty(t, receivedReq.ResourceProfiles[0].ScopeProfiles)
 	require.NotNil(t, receivedReq.Dictionary)
 	assert.NotEmpty(t, receivedReq.Dictionary.StringTable)
 	assert.Empty(t, receivedReq.Dictionary.StringTable[0])
+	assert.Contains(t, receivedReq.Dictionary.StringTable, "e2e-svc")
+	mu.Unlock()
 
 	require.NoError(t, exp.ForceFlush(t.Context()))
 	require.NoError(t, exp.Shutdown(t.Context()))
@@ -129,18 +150,19 @@ func TestExporterEndToEndWithRuntimeProducer(t *testing.T) {
 
 func TestExporterPartialSuccessAndRetries(t *testing.T) {
 	t.Run("partial_success", func(t *testing.T) {
+		resp := &colprofilepb.ExportProfilesServiceResponse{
+			PartialSuccess: &colprofilepb.ExportProfilesPartialSuccess{
+				RejectedProfiles: 2,
+				ErrorMessage:     "dropped 2 profiles",
+			},
+		}
+		respBytes, err := proto.Marshal(resp)
+		require.NoError(t, err)
+
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			resp := &colprofilepb.ExportProfilesServiceResponse{
-				PartialSuccess: &colprofilepb.ExportProfilesPartialSuccess{
-					RejectedProfiles: 2,
-					ErrorMessage:     "dropped 2 profiles",
-				},
-			}
-			b, err := proto.Marshal(resp)
-			require.NoError(t, err)
 			w.Header().Set("Content-Type", "application/x-protobuf")
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(b)
+			_, _ = w.Write(respBytes)
 		}))
 		defer srv.Close()
 

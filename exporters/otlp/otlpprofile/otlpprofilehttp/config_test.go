@@ -164,8 +164,10 @@ func TestClientHelpers(t *testing.T) {
 
 	assert.Equal(t, 5*time.Second, retryAfterDuration("5"))
 	assert.Equal(t, time.Duration(0), retryAfterDuration("not-a-date"))
-	future := time.Now().Add(2 * time.Second).UTC().Format(http.TimeFormat)
-	assert.Positive(t, retryAfterDuration(future))
+	future := time.Now().Add(time.Hour).UTC().Format(http.TimeFormat)
+	d := retryAfterDuration(future)
+	assert.Greater(t, d, 59*time.Minute)
+	assert.LessOrEqual(t, d, time.Hour)
 
 	wrapped := errors.New("boom")
 	rErr := retryableError{throttle: time.Second, err: wrapped}
