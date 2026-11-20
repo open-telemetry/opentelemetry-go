@@ -258,7 +258,11 @@ func WithGRPCConn(conn *grpc.ClientConn) Option {
 	})
 }
 
-// WithTimeout sets the maximum duration for each export attempt.
+// WithTimeout sets the maximum total duration the Exporter waits for an
+// export, including retries. This takes precedence over [WithRetry].
+// Values <= 0 disable the exporter timeout. By default, 10 seconds is used
+// unless overridden by OTEL_EXPORTER_OTLP_PROFILES_TIMEOUT or
+// OTEL_EXPORTER_OTLP_TIMEOUT.
 func WithTimeout(duration time.Duration) Option {
 	return fnOpt(func(c config) config {
 		c.timeout = newSetting(duration)
