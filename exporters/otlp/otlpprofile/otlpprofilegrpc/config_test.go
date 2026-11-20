@@ -131,6 +131,28 @@ func TestConfigDefaultsAndEnvVars(t *testing.T) {
 		assert.Nil(t, cfg.tlsCfg.Value)
 	})
 
+	t.Run("endpoint_option_ignores_env_endpoint_scheme", func(t *testing.T) {
+		t.Run("with_endpoint_not_downgraded_by_http_env", func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+			cfg := newConfig([]Option{WithEndpoint("prod.example.com:4317")})
+			assert.Equal(t, "prod.example.com:4317", cfg.endpoint.Value)
+			assert.False(t, cfg.insecure.Value)
+		})
+		t.Run("schemeless_endpoint_url_not_downgraded_by_http_env", func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+			cfg := newConfig([]Option{WithEndpointURL("dns:///prod.example.com:4317")})
+			assert.Equal(t, "dns:///prod.example.com:4317", cfg.endpoint.Value)
+			assert.False(t, cfg.insecure.Value)
+		})
+		t.Run("with_endpoint_still_honors_env_insecure_over_https_env_endpoint", func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "https://remote.example.com:4317")
+			t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_INSECURE", "true")
+			cfg := newConfig([]Option{WithEndpoint("localhost:4317")})
+			assert.Equal(t, "localhost:4317", cfg.endpoint.Value)
+			assert.True(t, cfg.insecure.Value)
+		})
+	})
+
 	t.Run("timeout_env_bounds", func(t *testing.T) {
 		t.Run("zero_allowed", func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_PROFILES_TIMEOUT", "0")

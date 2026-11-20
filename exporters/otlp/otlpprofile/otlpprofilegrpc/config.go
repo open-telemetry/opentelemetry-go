@@ -108,12 +108,20 @@ func newConfig(options []Option) config {
 		}
 	}
 
+	endpointFromOpt := c.endpoint.Set
 	c.endpoint = c.endpoint.Resolve(
 		getEnv(envEndpoint, convEndpoint),
 		fallback(defaultEndpoint),
 	)
+	if !endpointFromOpt {
+		// Only derive transport security from an env endpoint when that env
+		// endpoint actually supplied c.endpoint, so overriding the endpoint via
+		// WithEndpoint or schemeless WithEndpointURL cannot be downgraded.
+		c.insecure = c.insecure.Resolve(
+			loadInsecureFromEnvEndpoint(envEndpoint),
+		)
+	}
 	c.insecure = c.insecure.Resolve(
-		loadInsecureFromEnvEndpoint(envEndpoint),
 		getEnv(envInsecure, convInsecure),
 	)
 	c.tlsCfg = c.tlsCfg.Resolve(
@@ -309,7 +317,7 @@ func loadInsecureFromEnvEndpoint(keys []string) resolver[bool] {
 			if vStr := os.Getenv(key); vStr != "" {
 				u, err := url.Parse(vStr)
 				if err != nil {
-					otel.Handle(fmt.Errorf("invalid %s value %s: %w", key, vStr, err))
+					// Parse errors are already reported while resolving envEndpoint.
 					continue
 				}
 				if insecure, ok := grpcendpoint.Insecure(u); ok {
