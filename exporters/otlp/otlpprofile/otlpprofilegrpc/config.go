@@ -88,7 +88,7 @@ type config struct {
 	insecure       setting[bool]
 	tlsCfg         setting[*tls.Config]
 	headers        setting[map[string]string]
-	compression    setting[Compression]
+	compression    setting[compression]
 	maxRequestSize setting[int]
 	timeout        setting[time.Duration]
 	retryCfg       setting[retry.Config]
@@ -198,14 +198,11 @@ func WithReconnectionPeriod(rp time.Duration) Option {
 	})
 }
 
-// Compression describes the compression used for exported payloads.
-type Compression int
+type compression int
 
 const (
-	// NoCompression indicates that no compression is used.
-	NoCompression Compression = iota
-	// GzipCompression indicates that gzip compression is used.
-	GzipCompression
+	noCompression compression = iota
+	gzipCompression
 )
 
 // WithCompressor sets the gRPC compressor ("none" or "gzip", case-insensitive).
@@ -286,14 +283,14 @@ func WithRetry(rc RetryConfig) Option {
 	})
 }
 
-func convCompression(s string) (Compression, error) {
+func convCompression(s string) (compression, error) {
 	switch strings.ToLower(s) {
 	case "gzip":
-		return GzipCompression, nil
+		return gzipCompression, nil
 	case "none", "":
-		return NoCompression, nil
+		return noCompression, nil
 	}
-	return NoCompression, fmt.Errorf("unknown compression: %s", s)
+	return noCompression, fmt.Errorf("unknown compression: %s", s)
 }
 
 func convEndpoint(s string) (string, error) {
@@ -437,11 +434,11 @@ func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 	return []tls.Certificate{crt}, nil
 }
 
-func compressorToCompression(compressor string) Compression {
+func compressorToCompression(compressor string) compression {
 	c, err := convCompression(compressor)
 	if err != nil {
 		otel.Handle(fmt.Errorf("%w, using no compression as default", err))
-		return NoCompression
+		return noCompression
 	}
 	return c
 }

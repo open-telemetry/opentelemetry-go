@@ -88,7 +88,7 @@ func newGRPCDialOptions(cfg config) []grpc.DialOption {
 	default:
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(credentials.NewTLS(nil)))
 	}
-	if cfg.compression.Value == GzipCompression {
+	if cfg.compression.Value == gzipCompression {
 		dialOpts = append(dialOpts, grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)))
 	}
 	if cfg.reconnectionPeriod.Value != 0 {
