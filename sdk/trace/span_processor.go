@@ -7,6 +7,8 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 // SpanProcessor is a processing pipeline for spans in the trace signal.
@@ -50,18 +52,27 @@ type SpanProcessor interface {
 	// must never be done outside of a new major release.
 }
 
+// onEndingSpanProcessor is the unexported interface that mirrors
+// [go.opentelemetry.io/otel/sdk/trace/x.OnEndingSpanProcessor]. It is
+// detected by structural type assertion at registration time.
+type onEndingSpanProcessor interface {
+	OnEnding(ReadWriteSpan, trace.Span)
+}
+
 // stoppedBit marks admission as closed in spanProcessorState.inflight. The
 // remaining bits count the operations currently in flight.
 const stoppedBit = int64(1) << 62
 
 type spanProcessorState struct {
-	sp    SpanProcessor
-	state sync.Once
+	sp       SpanProcessor
+	onEnding onEndingSpanProcessor
+	state    sync.Once
 
-	// inflight tracks the operations (OnStart, OnEnd, ForceFlush) currently
-	// in flight on sp, so that sp's Shutdown is not invoked until they
-	// complete and no new ones start. It is an atomic counter rather than a
-	// mutex to keep the dispatch hot path cheap under concurrent spans.
+	// inflight tracks the operations (OnStart, OnEnding, OnEnd, ForceFlush)
+	// currently in flight on sp, so that sp's Shutdown is not invoked until
+	// they complete and no new ones start. It is an atomic counter rather
+	// than a mutex to keep the dispatch hot path cheap under concurrent
+	// spans.
 	inflight  atomic.Int64
 	stopOnce  sync.Once
 	drainOnce sync.Once
@@ -69,10 +80,25 @@ type spanProcessorState struct {
 }
 
 func newSpanProcessorState(sp SpanProcessor) *spanProcessorState {
-	return &spanProcessorState{sp: sp, drained: make(chan struct{})}
+	s := &spanProcessorState{sp: sp, drained: make(chan struct{})}
+	if oesp, ok := sp.(onEndingSpanProcessor); ok {
+		s.onEnding = oesp
+	}
+	return s
 }
 
 type spanProcessorStates []*spanProcessorState
+
+// hasOnEnding reports whether any processor in the slice implements the
+// OnEnding callback.
+func (s spanProcessorStates) hasOnEnding() bool {
+	for _, sps := range s {
+		if sps.onEnding != nil {
+			return true
+		}
+	}
+	return false
+}
 
 // begin reports whether a new operation on sp is admitted. If it returns true,
 // the caller must call end when the operation completes.
@@ -144,4 +170,14 @@ func (s *spanProcessorState) forceFlush(ctx context.Context) error {
 	}
 	defer s.end()
 	return s.sp.ForceFlush(ctx)
+}
+
+// onEndingCall invokes the processor's OnEnding callback, if it has one, only
+// if admission is open.
+func (s *spanProcessorState) onEndingCall(rw ReadWriteSpan, sp trace.Span) {
+	if s.onEnding == nil || !s.begin() {
+		return
+	}
+	defer s.end()
+	s.onEnding.OnEnding(rw, sp)
 }
