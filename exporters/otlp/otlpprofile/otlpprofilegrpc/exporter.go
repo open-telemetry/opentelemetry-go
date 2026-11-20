@@ -24,9 +24,13 @@ type profileClient interface {
 // v1development protobuf payloads over gRPC.
 // All Exporter values must be created with [New].
 type Exporter struct {
-	clientMu sync.Mutex
-	client   profileClient
-	stopped  atomic.Bool
+	// clientMu allows concurrent Export calls via RLock (client.UploadProfiles
+	// is concurrency-safe) while Shutdown takes Lock to wait for in-flight
+	// exports before closing the connection.
+	clientMu     sync.RWMutex
+	client       profileClient
+	stopped      atomic.Bool
+	shutdownOnce sync.Once
 }
 
 var _ profile.Exporter = (*Exporter)(nil)
@@ -54,8 +58,8 @@ func (e *Exporter) Export(ctx context.Context, rp *profiledata.ResourceProfiles)
 		return nil
 	}
 
-	e.clientMu.Lock()
-	defer e.clientMu.Unlock()
+	e.clientMu.RLock()
+	defer e.clientMu.RUnlock()
 
 	if e.stopped.Load() {
 		return profile.ErrExporterShutdown
@@ -69,15 +73,16 @@ func (e *Exporter) Export(ctx context.Context, rp *profiledata.ResourceProfiles)
 //
 // This method is safe to call concurrently.
 func (e *Exporter) Shutdown(ctx context.Context) error {
-	if e.stopped.Swap(true) {
-		return nil
-	}
+	e.stopped.Store(true)
 
-	e.clientMu.Lock()
-	defer e.clientMu.Unlock()
+	var err error
+	e.shutdownOnce.Do(func() {
+		e.clientMu.Lock()
+		defer e.clientMu.Unlock()
 
-	err := e.client.Shutdown(ctx)
-	e.client = newNoopClient()
+		err = e.client.Shutdown(ctx)
+		e.client = newNoopClient()
+	})
 	return err
 }
 
