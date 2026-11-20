@@ -164,8 +164,9 @@ func WithInsecure() Option {
 	})
 }
 
-// WithEndpoint sets the target gRPC endpoint.
-// This option has no effect if WithGRPCConn is used.
+// WithEndpoint sets the target gRPC endpoint (host:port or gRPC target name
+// without an "http://" or "https://" scheme). Use [WithEndpointURL] for URLs
+// containing a scheme. This option has no effect if WithGRPCConn is used.
 func WithEndpoint(endpoint string) Option {
 	return fnOpt(func(c config) config {
 		c.endpoint = newSetting(endpoint)
@@ -174,6 +175,9 @@ func WithEndpoint(endpoint string) Option {
 }
 
 // WithEndpointURL sets the target gRPC endpoint URL (scheme and host).
+// Schemes "http", "unix", and "unix-abstract" disable transport security, while
+// "https" enables TLS; other schemes leave transport security unchanged.
+// If rawURL cannot be parsed, the error is logged and the option is ignored.
 // This option has no effect if WithGRPCConn is used.
 func WithEndpointURL(rawURL string) Option {
 	u, err := url.Parse(rawURL)

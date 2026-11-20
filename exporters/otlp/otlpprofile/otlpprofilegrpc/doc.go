@@ -16,6 +16,9 @@ takes precedence over OTEL_EXPORTER_OTLP_ENDPOINT. Overridden by [WithEndpoint],
 
 OTEL_EXPORTER_OTLP_INSECURE, OTEL_EXPORTER_OTLP_PROFILES_INSECURE (default: "false") -
 setting "true" disables client transport security for the gRPC connection.
+Only applies when the configured endpoint has no transport scheme.
+OTEL_EXPORTER_OTLP_PROFILES_INSECURE takes precedence over OTEL_EXPORTER_OTLP_INSECURE.
+Overridden by [WithInsecure], [WithEndpointURL] (when a scheme is present), and [WithGRPCConn].
 
 OTEL_EXPORTER_OTLP_HEADERS, OTEL_EXPORTER_OTLP_PROFILES_HEADERS (default: none) -
 key-value pairs sent as gRPC metadata (e.g. "k1=v1,k2=v2").
