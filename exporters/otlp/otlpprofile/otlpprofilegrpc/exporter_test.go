@@ -179,6 +179,11 @@ func TestExporterPartialSuccessRetriesAndLimits(t *testing.T) {
 	})
 
 	t.Run("retries_unavailable_and_resource_exhausted_with_retry_info", func(t *testing.T) {
+		throttledSt, err := status.New(codes.ResourceExhausted, "throttled").WithDetails(&errdetails.RetryInfo{
+			RetryDelay: durationpb.New(time.Millisecond),
+		})
+		require.NoError(t, err)
+
 		var attempts atomic.Int32
 		mockSrv := &mockProfilesServer{
 			handler: func(context.Context, *colprofilepb.ExportProfilesServiceRequest) (*colprofilepb.ExportProfilesServiceResponse, error) {
@@ -186,11 +191,7 @@ func TestExporterPartialSuccessRetriesAndLimits(t *testing.T) {
 				case 1:
 					return nil, status.Error(codes.Unavailable, "transient")
 				case 2:
-					st, err := status.New(codes.ResourceExhausted, "throttled").WithDetails(&errdetails.RetryInfo{
-						RetryDelay: durationpb.New(time.Millisecond),
-					})
-					require.NoError(t, err)
-					return nil, st.Err()
+					return nil, throttledSt.Err()
 				default:
 					return &colprofilepb.ExportProfilesServiceResponse{}, nil
 				}
