@@ -34,6 +34,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Changed
 
+- Clarify instrument name syntax in `go.opentelemetry.io/otel/metric` documentation: specify ASCII letters/digits and exact allowed punctuation, correct "255 letters" to "255 characters". (#9429)
 - Rename `rpc.response.status_code` to `rpc.status_code` in experimental self-observability metrics emitted by
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and
