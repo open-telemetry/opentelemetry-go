@@ -15,12 +15,19 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+{{- if not .isHTTP }}
 	"google.golang.org/protobuf/proto"
 
 	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
+{{- else }}
+	cpb "go.opentelemetry.io/proto/otlp/common/v1"
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
+	"google.golang.org/protobuf/proto"
+{{- end }}
 
 	"{{ .internalImportPath }}"
 	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
@@ -235,6 +242,28 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 		t.Run("PartialSuccess", func(t *testing.T) {
 			const n, msg = 2, "bad data"
 			rCh := make(chan ExportResult, 3)
+{{- if .isHTTP }}
+			rCh <- ExportResult{
+				Response: &internal.ExportResponse{
+					PartialSuccess: &internal.ExportPartialSuccess{
+						RejectedItems: n,
+						ErrorMessage:  msg,
+					},
+				},
+			}
+			rCh <- ExportResult{
+				Response: &internal.ExportResponse{
+					PartialSuccess: &internal.ExportPartialSuccess{
+						// Should not be logged.
+						RejectedItems: 0,
+						ErrorMessage:  "",
+					},
+				},
+			}
+			rCh <- ExportResult{
+				Response: &internal.ExportResponse{},
+			}
+{{- else }}
 			rCh <- ExportResult{
 				Response: &collpb.ExportMetricsServiceResponse{
 					PartialSuccess: &collpb.ExportMetricsPartialSuccess{
@@ -255,6 +284,7 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 			rCh <- ExportResult{
 				Response: &collpb.ExportMetricsServiceResponse{},
 			}
+{{- end }}
 
 			ctx := t.Context()
 			client, _ := f(rCh)

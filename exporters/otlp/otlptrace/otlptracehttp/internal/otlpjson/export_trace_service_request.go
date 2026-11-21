@@ -19,13 +19,12 @@ import (
 	"strconv"
 	"strings"
 
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
-// ExportTraceServiceRequest corresponds to coltracepb.ExportTraceServiceRequest.
+// ExportTraceServiceRequest corresponds to the OTLP ExportTraceServiceRequest message.
 type ExportTraceServiceRequest struct {
 	ResourceSpans []*ResourceSpans `json:"resourceSpans,omitempty"`
 }
@@ -138,13 +137,11 @@ type Status struct {
 	Code    int32  `json:"code,omitempty"`
 }
 
-// MarshalExportTraceServiceRequest encodes an ExportTraceServiceRequest as JSON Protobuf encoded bytes.
-func MarshalExportTraceServiceRequest(req *coltracepb.ExportTraceServiceRequest) ([]byte, error) {
-	if req == nil {
-		return []byte("{}"), nil
-	}
+// MarshalExportTraceServiceRequest encodes the resource spans of an OTLP
+// ExportTraceServiceRequest as JSON Protobuf encoded bytes.
+func MarshalExportTraceServiceRequest(resourceSpans []*tracepb.ResourceSpans) ([]byte, error) {
 	r := &ExportTraceServiceRequest{}
-	for _, rs := range req.ResourceSpans {
+	for _, rs := range resourceSpans {
 		r.ResourceSpans = append(r.ResourceSpans, encodeResourceSpans(rs))
 	}
 	return json.Marshal(r)
@@ -325,17 +322,19 @@ func encodeAnyValue(av *commonpb.AnyValue) *AnyValue {
 	return out
 }
 
-// UnmarshalExportTraceServiceRequest decodes JSON Protobuf encoded payload into an ExportTraceServiceRequest.
-func UnmarshalExportTraceServiceRequest(data []byte, req *coltracepb.ExportTraceServiceRequest) error {
+// UnmarshalExportTraceServiceRequest decodes a JSON Protobuf encoded
+// ExportTraceServiceRequest payload, returning its resource spans.
+func UnmarshalExportTraceServiceRequest(data []byte) ([]*tracepb.ResourceSpans, error) {
 	var jr ExportTraceServiceRequest
 	if err := json.Unmarshal(data, &jr); err != nil {
-		return err
+		return nil, err
 	}
 
+	var resourceSpans []*tracepb.ResourceSpans
 	for _, rs := range jr.ResourceSpans {
-		req.ResourceSpans = append(req.ResourceSpans, decodeResourceSpans(rs))
+		resourceSpans = append(resourceSpans, decodeResourceSpans(rs))
 	}
-	return nil
+	return resourceSpans, nil
 }
 
 func decodeResourceSpans(jrs *ResourceSpans) *tracepb.ResourceSpans {

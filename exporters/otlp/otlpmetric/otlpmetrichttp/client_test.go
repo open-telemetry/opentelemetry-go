@@ -21,9 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -91,10 +89,10 @@ func TestClientWithHTTPCollectorRespondingPlainText(t *testing.T) {
 }
 
 func TestPartialSuccessWithCaseInsensitiveProtobufContentType(t *testing.T) {
-	response, err := proto.Marshal(&colmetricpb.ExportMetricsServiceResponse{
-		PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
-			RejectedDataPoints: 1,
-			ErrorMessage:       "partially successful",
+	response, err := internal.MarshalExportResponse(&internal.ExportResponse{
+		PartialSuccess: &internal.ExportPartialSuccess{
+			RejectedItems: 1,
+			ErrorMessage:  "partially successful",
 		},
 	})
 	require.NoError(t, err)
@@ -1011,10 +1009,10 @@ func TestClientInstrumentation(t *testing.T) {
 	rCh := make(chan otest.ExportResult, 1)
 	// Test partial success - return HTTP 200 with partial success info
 	rCh <- otest.ExportResult{
-		Response: &colmetricpb.ExportMetricsServiceResponse{
-			PartialSuccess: &colmetricpb.ExportMetricsPartialSuccess{
-				RejectedDataPoints: n,
-				ErrorMessage:       msg,
+		Response: &internal.ExportResponse{
+			PartialSuccess: &internal.ExportPartialSuccess{
+				RejectedItems: n,
+				ErrorMessage:  msg,
 			},
 		},
 	}

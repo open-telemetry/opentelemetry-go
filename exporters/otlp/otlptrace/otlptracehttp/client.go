@@ -20,9 +20,7 @@ import (
 	"sync"
 	"time"
 
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
-	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
@@ -161,14 +159,10 @@ func (c *client) Stop(ctx context.Context) error {
 
 // UploadTraces sends a batch of spans to the collector.
 func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.ResourceSpans) (uploadErr error) {
-	pbRequest := &coltracepb.ExportTraceServiceRequest{
-		ResourceSpans: protoSpans,
-	}
-
 	ctx, cancel := c.contextWithStop(ctx)
 	defer cancel()
 
-	request, err := c.newRequest(pbRequest)
+	request, err := c.newRequest(protoSpans)
 	if err != nil {
 		return err
 	}
@@ -229,23 +223,27 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 				return nil
 			}
 
-			var respProto coltracepb.ExportTraceServiceResponse
+			var respProto *internal.ExportResponse
 			switch {
 			case strings.EqualFold(mediatype, contentTypeProto):
-				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
+				var err error
+				respProto, err = internal.UnmarshalExportResponse(respData.Bytes())
+				if err != nil {
 					return err
 				}
 			case strings.EqualFold(mediatype, contentTypeJSON):
-				if err := otlpjson.UnmarshalExportTraceServiceResponse(respData.Bytes(), &respProto); err != nil {
+				var err error
+				respProto, err = otlpjson.UnmarshalExportTraceServiceResponse(respData.Bytes())
+				if err != nil {
 					return err
 				}
 			default:
 				return nil
 			}
 
-			if respProto.PartialSuccess != nil {
-				msg := respProto.PartialSuccess.GetErrorMessage()
-				n := respProto.PartialSuccess.GetRejectedSpans()
+			if ps := respProto.GetPartialSuccess(); ps != nil {
+				msg := ps.ErrorMessage
+				n := ps.RejectedItems
 				if n != 0 || msg != "" {
 					err := internal.TracePartialSuccessError(n, msg)
 					uploadErr = errors.Join(uploadErr, err)
@@ -283,16 +281,16 @@ func (c *client) UploadTraces(ctx context.Context, protoSpans []*tracepb.Resourc
 	}))
 }
 
-func (c *client) marshalRequest(pbRequest *coltracepb.ExportTraceServiceRequest) ([]byte, error) {
+func (c *client) marshalRequest(protoSpans []*tracepb.ResourceSpans) ([]byte, error) {
 	if c.cfg.Protocol == otlpconfig.ProtocolHTTPJSON {
-		rawRequest, err := otlpjson.MarshalExportTraceServiceRequest(pbRequest)
+		rawRequest, err := otlpjson.MarshalExportTraceServiceRequest(protoSpans)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal request body in json: %w", err)
 		}
 		return rawRequest, nil
 	}
 
-	rawRequest, err := proto.Marshal(pbRequest)
+	rawRequest, err := internal.MarshalExportRequest(protoSpans)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request body in protobuf: %w", err)
 	}
@@ -300,7 +298,7 @@ func (c *client) marshalRequest(pbRequest *coltracepb.ExportTraceServiceRequest)
 	return rawRequest, nil
 }
 
-func (c *client) newRequest(pbRequest *coltracepb.ExportTraceServiceRequest) (request, error) {
+func (c *client) newRequest(protoSpans []*tracepb.ResourceSpans) (request, error) {
 	u := url.URL{Scheme: c.getScheme(), Host: c.cfg.Endpoint, Path: c.cfg.URLPath, RawPath: c.cfg.URLRawPath}
 	r, err := http.NewRequestWithContext(context.Background(), http.MethodPost, u.String(), http.NoBody)
 	if err != nil {
@@ -318,7 +316,7 @@ func (c *client) newRequest(pbRequest *coltracepb.ExportTraceServiceRequest) (re
 		r.Header.Set("Content-Type", contentTypeJSON)
 	}
 
-	body, err := c.marshalRequest(pbRequest)
+	body, err := c.marshalRequest(protoSpans)
 	if err != nil {
 		return request{Request: r}, err
 	}

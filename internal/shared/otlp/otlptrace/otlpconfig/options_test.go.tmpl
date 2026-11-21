@@ -494,9 +494,13 @@ func TestConfigs(t *testing.T) {
 		{
 			name: "Test Default Certificate",
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+{{- if not .isHTTP }}
 				if grpcOption {
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
+{{- else }}
+				if !grpcOption {
+{{- end }}
 					assert.Nil(t, c.Traces.TLSCfg)
 				}
 			},
@@ -507,10 +511,14 @@ func TestConfigs(t *testing.T) {
 				WithTLSClientConfig(tlsCert),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+{{- if not .isHTTP }}
 				if grpcOption {
 					// TODO: make sure gRPC's credentials actually works
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
+{{- else }}
+				if !grpcOption {
+{{- end }}
 					// nolint:staticcheck // Subjects is deprecated but needed for verification
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 				}
@@ -525,9 +533,13 @@ func TestConfigs(t *testing.T) {
 				"cert_path": []byte(WeakCertificate),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+{{- if not .isHTTP }}
 				if grpcOption {
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
+{{- else }}
+				if !grpcOption {
+{{- end }}
 					// nolint:staticcheck // Subjects is deprecated but needed for verification
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 				}
@@ -544,9 +556,13 @@ func TestConfigs(t *testing.T) {
 				"invalid_cert": []byte("invalid certificate file."),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+{{- if not .isHTTP }}
 				if grpcOption {
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
+{{- else }}
+				if !grpcOption {
+{{- end }}
 					// nolint:staticcheck // Subjects is deprecated but needed for verification
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 				}
@@ -562,9 +578,13 @@ func TestConfigs(t *testing.T) {
 				"cert_path": []byte(WeakCertificate),
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+{{- if not .isHTTP }}
 				if grpcOption {
 					assert.NotNil(t, c.Traces.GRPCCredentials)
 				} else {
+{{- else }}
+				if !grpcOption {
+{{- end }}
 					// nolint:staticcheck // Subjects is deprecated but needed for verification
 					assert.Equal(t, tlsCert.RootCAs.Subjects(), c.Traces.TLSCfg.RootCAs.Subjects())
 				}
@@ -940,9 +960,12 @@ func TestConfigs(t *testing.T) {
 			cfg := NewHTTPConfig(asHTTPOptions(tt.opts)...)
 			tt.asserts(t, &cfg, false)
 
+{{- if not .isHTTP }}
+
 			// Tests Generic options as gRPC Options
 			cfg = NewGRPCConfig(asGRPCOptions(tt.opts)...)
 			tt.asserts(t, &cfg, true)
+{{- end }}
 		})
 	}
 }
@@ -996,6 +1019,8 @@ func asHTTPOptions(opts []GenericOption) []HTTPOption {
 	return converted
 }
 
+{{- if not .isHTTP }}
+
 func asGRPCOptions(opts []GenericOption) []GRPCOption {
 	converted := make([]GRPCOption, len(opts))
 	for i, o := range opts {
@@ -1003,6 +1028,7 @@ func asGRPCOptions(opts []GenericOption) []GRPCOption {
 	}
 	return converted
 }
+{{- end }}
 {{- if .isHTTP }}
 
 func TestMaxResponseSize(t *testing.T) {

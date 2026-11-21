@@ -30,7 +30,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
@@ -160,7 +159,7 @@ var (
 )
 
 type exportResult struct {
-	Response *collogpb.ExportLogsServiceResponse
+	Response *internal.ExportResponse
 	Err      error
 }
 
@@ -176,10 +175,10 @@ func newStorage() *storage {
 }
 
 // Add adds the request to the storage.
-func (s *storage) Add(request *collogpb.ExportLogsServiceRequest) {
+func (s *storage) Add(resourceLogs []*lpb.ResourceLogs) {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
-	s.data = append(s.data, request.ResourceLogs...)
+	s.data = append(s.data, resourceLogs...)
 }
 
 // Dump returns all added ResourceLogs and clears the storage.
@@ -193,8 +192,7 @@ func (s *storage) Dump() []*lpb.ResourceLogs {
 }
 
 var emptyExportLogsServiceResponse = func() []byte {
-	body := collogpb.ExportLogsServiceResponse{}
-	r, err := proto.Marshal(&body)
+	r, err := internal.MarshalExportResponse(nil)
 	if err != nil {
 		panic(err)
 	}
@@ -337,8 +335,7 @@ func (c *httpCollector) record(r *http.Request) exportResult {
 	if err != nil {
 		return exportResult{Err: err}
 	}
-	pbRequest := &collogpb.ExportLogsServiceRequest{}
-	err = proto.Unmarshal(body, pbRequest)
+	payloads, err := internal.UnmarshalExportRequest(body)
 	if err != nil {
 		return exportResult{
 			Err: &httpResponseError{
@@ -347,7 +344,20 @@ func (c *httpCollector) record(r *http.Request) exportResult {
 			},
 		}
 	}
-	c.storage.Add(pbRequest)
+	var resourceLogs []*lpb.ResourceLogs
+	for _, payload := range payloads {
+		rl := &lpb.ResourceLogs{}
+		if err := proto.Unmarshal(payload, rl); err != nil {
+			return exportResult{
+				Err: &httpResponseError{
+					Err:    err,
+					Status: http.StatusInternalServerError,
+				},
+			}
+		}
+		resourceLogs = append(resourceLogs, rl)
+	}
+	c.storage.Add(resourceLogs)
 
 	c.headersMu.Lock()
 	for k, vals := range r.Header {
@@ -429,7 +439,7 @@ func (c *httpCollector) respond(w http.ResponseWriter, resp exportResult) {
 	if resp.Response == nil {
 		_, _ = w.Write(emptyExportLogsServiceResponse)
 	} else {
-		r, err := proto.Marshal(resp.Response)
+		r, err := internal.MarshalExportResponse(resp.Response)
 		if err != nil {
 			panic(err)
 		}
@@ -536,24 +546,24 @@ func TestClient(t *testing.T) {
 		const n, msg = 2, "bad data"
 		rCh := make(chan exportResult, 3)
 		rCh <- exportResult{
-			Response: &collogpb.ExportLogsServiceResponse{
-				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
-					RejectedLogRecords: n,
-					ErrorMessage:       msg,
+			Response: &internal.ExportResponse{
+				PartialSuccess: &internal.ExportPartialSuccess{
+					RejectedItems: n,
+					ErrorMessage:  msg,
 				},
 			},
 		}
 		rCh <- exportResult{
-			Response: &collogpb.ExportLogsServiceResponse{
-				PartialSuccess: &collogpb.ExportLogsPartialSuccess{
+			Response: &internal.ExportResponse{
+				PartialSuccess: &internal.ExportPartialSuccess{
 					// Should not be logged.
-					RejectedLogRecords: 0,
-					ErrorMessage:       "",
+					RejectedItems: 0,
+					ErrorMessage:  "",
 				},
 			},
 		}
 		rCh <- exportResult{
-			Response: &collogpb.ExportLogsServiceResponse{},
+			Response: &internal.ExportResponse{},
 		}
 
 		ctx := t.Context()
@@ -569,13 +579,12 @@ func TestClientContentType(t *testing.T) {
 	// A protobuf partial-success response is used so a correctly parsed body
 	// produces a distinguishable error.
 	partialSuccess := func() []byte {
-		resp := collogpb.ExportLogsServiceResponse{
-			PartialSuccess: &collogpb.ExportLogsPartialSuccess{
-				RejectedLogRecords: 1,
-				ErrorMessage:       "case insensitive",
+		b, err := internal.MarshalExportResponse(&internal.ExportResponse{
+			PartialSuccess: &internal.ExportPartialSuccess{
+				RejectedItems: 1,
+				ErrorMessage:  "case insensitive",
 			},
-		}
-		b, err := proto.Marshal(&resp)
+		})
 		require.NoError(t, err)
 		return b
 	}()
@@ -1153,10 +1162,10 @@ func TestClientInstrumentation(t *testing.T) {
 
 	rCh := make(chan exportResult, 1)
 	rCh <- exportResult{
-		Response: &collogpb.ExportLogsServiceResponse{
-			PartialSuccess: &collogpb.ExportLogsPartialSuccess{
-				RejectedLogRecords: 2,
-				ErrorMessage:       "partially successful",
+		Response: &internal.ExportResponse{
+			PartialSuccess: &internal.ExportPartialSuccess{
+				RejectedItems: 2,
+				ErrorMessage:  "partially successful",
 			},
 		},
 	}
@@ -1341,10 +1350,10 @@ func TestResponseBodySizeLimitAfterDecompression(t *testing.T) {
 }
 
 func TestExplicitGzipResponseDecoding(t *testing.T) {
-	body, err := proto.Marshal(&collogpb.ExportLogsServiceResponse{
-		PartialSuccess: &collogpb.ExportLogsPartialSuccess{
-			RejectedLogRecords: 1,
-			ErrorMessage:       "bad",
+	body, err := internal.MarshalExportResponse(&internal.ExportResponse{
+		PartialSuccess: &internal.ExportPartialSuccess{
+			RejectedItems: 1,
+			ErrorMessage:  "bad",
 		},
 	})
 	require.NoError(t, err)

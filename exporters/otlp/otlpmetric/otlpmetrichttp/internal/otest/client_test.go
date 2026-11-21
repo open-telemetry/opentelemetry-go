@@ -11,7 +11,6 @@ import (
 	"errors"
 	"testing"
 
-	cpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
@@ -37,15 +36,13 @@ func (c *client) Collect() *Storage {
 }
 
 func (c *client) UploadMetrics(ctx context.Context, rm *mpb.ResourceMetrics) error {
-	c.storage.Add(&cpb.ExportMetricsServiceRequest{
-		ResourceMetrics: []*mpb.ResourceMetrics{rm},
-	})
+	c.storage.Add([]*mpb.ResourceMetrics{rm})
 	if c.rCh != nil {
 		r := <-c.rCh
 		err := r.Err
-		if r.Response != nil && r.Response.GetPartialSuccess() != nil {
-			msg := r.Response.GetPartialSuccess().GetErrorMessage()
-			n := r.Response.GetPartialSuccess().GetRejectedDataPoints()
+		if ps := r.Response.GetPartialSuccess(); ps != nil {
+			msg := ps.ErrorMessage
+			n := ps.RejectedItems
 			if msg != "" || n > 0 {
 				err = errors.Join(err, internal.MetricPartialSuccessError(n, msg))
 			}

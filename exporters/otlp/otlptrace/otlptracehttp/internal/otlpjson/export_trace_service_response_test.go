@@ -10,7 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
 )
 
 func TestMarshalExportTraceServiceResponse_Nil(t *testing.T) {
@@ -20,15 +21,15 @@ func TestMarshalExportTraceServiceResponse_Nil(t *testing.T) {
 }
 
 func TestMarshalExportTraceServiceResponse_Empty(t *testing.T) {
-	data, err := MarshalExportTraceServiceResponse(&coltracepb.ExportTraceServiceResponse{})
+	data, err := MarshalExportTraceServiceResponse(&internal.ExportResponse{})
 	require.NoError(t, err)
 	assert.JSONEq(t, `{}`, string(data))
 }
 
 func TestMarshalExportTraceServiceResponse_PartialSuccess(t *testing.T) {
-	resp := &coltracepb.ExportTraceServiceResponse{
-		PartialSuccess: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: 5,
+	resp := &internal.ExportResponse{
+		PartialSuccess: &internal.ExportPartialSuccess{
+			RejectedItems: 5,
 			ErrorMessage:  "resource exhausted",
 		},
 	}
@@ -60,9 +61,9 @@ func TestMarshalExportTraceServiceResponse_PartialSuccess(t *testing.T) {
 }
 
 func TestMarshalExportTraceServiceResponse_ZeroRejected(t *testing.T) {
-	resp := &coltracepb.ExportTraceServiceResponse{
-		PartialSuccess: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: 0,
+	resp := &internal.ExportResponse{
+		PartialSuccess: &internal.ExportPartialSuccess{
+			RejectedItems: 0,
 			ErrorMessage:  "partial",
 		},
 	}
@@ -83,36 +84,33 @@ func TestMarshalExportTraceServiceResponse_ZeroRejected(t *testing.T) {
 func TestUnmarshalExportTraceServiceResponse_PartialSuccess(t *testing.T) {
 	input := `{"partialSuccess":{"rejectedSpans":"5","errorMessage":"resource exhausted"}}`
 
-	resp := &coltracepb.ExportTraceServiceResponse{}
-	err := UnmarshalExportTraceServiceResponse([]byte(input), resp)
+	resp, err := UnmarshalExportTraceServiceResponse([]byte(input))
 	require.NoError(t, err)
-	require.NotNil(t, resp.PartialSuccess)
-	assert.Equal(t, int64(5), resp.PartialSuccess.RejectedSpans)
+	require.NotNil(t, resp.GetPartialSuccess())
+	assert.Equal(t, int64(5), resp.PartialSuccess.RejectedItems)
 	assert.Equal(t, "resource exhausted", resp.PartialSuccess.ErrorMessage)
 }
 
 func TestUnmarshalExportTraceServiceResponse_Empty(t *testing.T) {
-	resp := &coltracepb.ExportTraceServiceResponse{}
-	err := UnmarshalExportTraceServiceResponse([]byte(`{}`), resp)
+	resp, err := UnmarshalExportTraceServiceResponse([]byte(`{}`))
 	require.NoError(t, err)
-	assert.Nil(t, resp.PartialSuccess)
+	assert.Nil(t, resp.GetPartialSuccess())
 }
 
 func TestUnmarshalExportTraceServiceResponse_IgnoresUnknownFields(t *testing.T) {
 	input := `{"partialSuccess":{"rejectedSpans":"3","errorMessage":"err","futureField":true},"unknownTop":42}`
 
-	resp := &coltracepb.ExportTraceServiceResponse{}
-	err := UnmarshalExportTraceServiceResponse([]byte(input), resp)
+	resp, err := UnmarshalExportTraceServiceResponse([]byte(input))
 	require.NoError(t, err)
-	require.NotNil(t, resp.PartialSuccess)
-	assert.Equal(t, int64(3), resp.PartialSuccess.RejectedSpans)
+	require.NotNil(t, resp.GetPartialSuccess())
+	assert.Equal(t, int64(3), resp.PartialSuccess.RejectedItems)
 	assert.Equal(t, "err", resp.PartialSuccess.ErrorMessage)
 }
 
 func TestExportTraceServiceResponseRoundTrip(t *testing.T) {
-	original := &coltracepb.ExportTraceServiceResponse{
-		PartialSuccess: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: 42,
+	original := &internal.ExportResponse{
+		PartialSuccess: &internal.ExportPartialSuccess{
+			RejectedItems: 42,
 			ErrorMessage:  "quota exceeded",
 		},
 	}
@@ -120,11 +118,10 @@ func TestExportTraceServiceResponseRoundTrip(t *testing.T) {
 	data, err := MarshalExportTraceServiceResponse(original)
 	require.NoError(t, err)
 
-	decoded := &coltracepb.ExportTraceServiceResponse{}
-	err = UnmarshalExportTraceServiceResponse(data, decoded)
+	decoded, err := UnmarshalExportTraceServiceResponse(data)
 	require.NoError(t, err)
 
-	require.NotNil(t, decoded.PartialSuccess)
-	assert.Equal(t, original.PartialSuccess.RejectedSpans, decoded.PartialSuccess.RejectedSpans)
+	require.NotNil(t, decoded.GetPartialSuccess())
+	assert.Equal(t, original.PartialSuccess.RejectedItems, decoded.PartialSuccess.RejectedItems)
 	assert.Equal(t, original.PartialSuccess.ErrorMessage, decoded.PartialSuccess.ErrorMessage)
 }

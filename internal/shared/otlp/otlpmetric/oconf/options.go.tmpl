@@ -15,15 +15,17 @@ import (
 	"path"
 	"strings"
 	"time"
+{{- if not .isHTTP }}
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
-{{ if not .isHTTP }}
+
 	"{{ .grpcEndpointImportPath }}"
-{{- end }}
+{{- else }}
+{{ end }}
 	"{{ .retryImportPath }}"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -82,10 +84,11 @@ type (
 {{ end }}
 		TemporalitySelector metric.TemporalitySelector
 		AggregationSelector metric.AggregationSelector
+{{- if not .isHTTP }}
 
 		// gRPC configurations
 		GRPCCredentials credentials.TransportCredentials
-
+{{ end }}
 		// HTTP configurations
 		Proxy      HTTPTransportProxyFunc
 		HTTPClient *http.Client
@@ -97,12 +100,14 @@ type (
 		Metrics SignalConfig
 
 		RetryConfig retry.Config
+{{- if not .isHTTP }}
 
 		// gRPC configurations
 		ReconnectionPeriod time.Duration
 		ServiceConfig      string
 		DialOptions        []grpc.DialOption
 		GRPCConn           *grpc.ClientConn
+{{- end }}
 	}
 )
 
@@ -147,6 +152,8 @@ func cleanPath(urlPath, defaultPath string) string {
 	}
 	return tmp
 }
+
+{{- if not .isHTTP }}
 
 // NewGRPCConfig returns a new Config with all settings applied from opts and
 // any unset setting using the default gRPC config values.
@@ -202,6 +209,7 @@ func NewGRPCConfig(opts ...GRPCOption) Config {
 
 	return cfg
 }
+{{- end }}
 
 type (
 	// GenericOption applies an option to the HTTP or gRPC driver.
@@ -402,6 +410,12 @@ func WithRetry(rc retry.Config) GenericOption {
 // WithTLSClientConfig configures the TLS configuration used by the
 // exporter's client.
 func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
+{{- if .isHTTP }}
+	return newGenericOption(func(cfg Config) Config {
+		cfg.Metrics.TLSCfg = tlsCfg.Clone()
+		return cfg
+	})
+{{- else }}
 	return newSplitOption(func(cfg Config) Config {
 		cfg.Metrics.TLSCfg = tlsCfg.Clone()
 		return cfg
@@ -409,6 +423,7 @@ func WithTLSClientConfig(tlsCfg *tls.Config) GenericOption {
 		cfg.Metrics.GRPCCredentials = credentials.NewTLS(tlsCfg)
 		return cfg
 	})
+{{- end }}
 }
 
 // WithInsecure disables client transport security for the exporter's

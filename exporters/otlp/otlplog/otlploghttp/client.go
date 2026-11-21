@@ -21,9 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	logpb "go.opentelemetry.io/proto/otlp/logs/v1"
-	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp/internal/observ"
@@ -160,8 +158,7 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 	// The Exporter synchronizes access to client methods. This is not called
 	// after the Exporter is shut down. The only thing to do here is send data.
 
-	pbRequest := &collogpb.ExportLogsServiceRequest{ResourceLogs: data}
-	body, err := proto.Marshal(pbRequest)
+	body, err := internal.MarshalExportRequest(data)
 	if err != nil {
 		return err
 	}
@@ -231,14 +228,14 @@ func (c *httpClient) uploadLogs(ctx context.Context, data []*logpb.ResourceLogs)
 			}
 
 			if isProtobufContentType(resp.Header.Get("Content-Type")) {
-				var respProto collogpb.ExportLogsServiceResponse
-				if err := proto.Unmarshal(respData, &respProto); err != nil {
+				respProto, err := internal.UnmarshalExportResponse(respData)
+				if err != nil {
 					return err
 				}
 
-				if respProto.PartialSuccess != nil {
-					msg := respProto.PartialSuccess.GetErrorMessage()
-					n := respProto.PartialSuccess.GetRejectedLogRecords()
+				if ps := respProto.GetPartialSuccess(); ps != nil {
+					msg := ps.ErrorMessage
+					n := ps.RejectedItems
 					if n != 0 || msg != "" {
 						err := internal.LogPartialSuccessError(n, msg)
 						uploadErr = errors.Join(uploadErr, err)

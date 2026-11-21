@@ -21,7 +21,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -216,8 +215,8 @@ func TestEndToEnd(t *testing.T) {
 			},
 			mcCfg: mockCollectorConfig{
 				InjectContentType: "application/json",
-				Partial: &coltracepb.ExportTracePartialSuccess{
-					RejectedSpans: 1,
+				Partial: &internal.ExportPartialSuccess{
+					RejectedItems: 1,
 					ErrorMessage:  "missing required attribute aaa",
 				},
 			},
@@ -453,7 +452,7 @@ func TestInsecureWithTLSClientConfig(t *testing.T) {
 func TestNoRetry(t *testing.T) {
 	mc := runMockCollector(t, mockCollectorConfig{
 		InjectHTTPStatus: []int{http.StatusBadRequest},
-		Partial: &coltracepb.ExportTracePartialSuccess{
+		Partial: &internal.ExportPartialSuccess{
 			ErrorMessage: "missing required attribute aaa",
 		},
 	})
@@ -616,8 +615,8 @@ func TestStopWhileExportingConcurrentSafe(t *testing.T) {
 
 func TestPartialSuccess(t *testing.T) {
 	mcCfg := mockCollectorConfig{
-		Partial: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: 2,
+		Partial: &internal.ExportPartialSuccess{
+			RejectedItems: 2,
 			ErrorMessage:  "partially successful",
 		},
 	}
@@ -642,8 +641,8 @@ func TestPartialSuccess(t *testing.T) {
 func TestPartialSuccessWithCaseInsensitiveProtobufContentType(t *testing.T) {
 	mcCfg := mockCollectorConfig{
 		InjectContentType: "Application/X-Protobuf; charset=utf-8",
-		Partial: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: 1,
+		Partial: &internal.ExportPartialSuccess{
+			RejectedItems: 1,
 			ErrorMessage:  "partially successful",
 		},
 	}
@@ -669,9 +668,9 @@ func TestPartialSuccessWithCaseInsensitiveProtobufContentType(t *testing.T) {
 }
 
 func TestPartialSuccessWithCaseInsensitiveJSONContentType(t *testing.T) {
-	response, err := otlpjson.MarshalExportTraceServiceResponse(&coltracepb.ExportTraceServiceResponse{
-		PartialSuccess: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: 1,
+	response, err := otlpjson.MarshalExportTraceServiceResponse(&internal.ExportResponse{
+		PartialSuccess: &internal.ExportPartialSuccess{
+			RejectedItems: 1,
 			ErrorMessage:  "partially successful",
 		},
 	})
@@ -768,8 +767,8 @@ func TestClientInstrumentation(t *testing.T) {
 	const n, msg = 2, "partially successful"
 	mc := runMockCollector(t, mockCollectorConfig{
 		InjectHTTPStatus: []int{400},
-		Partial: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: n,
+		Partial: &internal.ExportPartialSuccess{
+			RejectedItems: n,
 			ErrorMessage:  msg,
 		},
 	})
@@ -943,8 +942,8 @@ func TestClientInstrumentationPartialSuccess(t *testing.T) {
 
 	const n, msg = 2, "partially successful"
 	mc := runMockCollector(t, mockCollectorConfig{
-		Partial: &coltracepb.ExportTracePartialSuccess{
-			RejectedSpans: n,
+		Partial: &internal.ExportPartialSuccess{
+			RejectedItems: n,
 			ErrorMessage:  msg,
 		},
 	})
@@ -1269,8 +1268,8 @@ func BenchmarkExporterExportSpans(b *testing.B) {
 
 	run := func(b *testing.B) {
 		mc := runMockCollector(b, mockCollectorConfig{
-			Partial: &coltracepb.ExportTracePartialSuccess{
-				RejectedSpans: 5,
+			Partial: &internal.ExportPartialSuccess{
+				RejectedItems: 5,
 				ErrorMessage:  "partially successful",
 			},
 		})

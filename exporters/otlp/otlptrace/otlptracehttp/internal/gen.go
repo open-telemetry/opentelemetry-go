@@ -8,6 +8,8 @@ package internal
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/partialsuccess_test.go.tmpl "--data={}" --out=partialsuccess_test.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/response.go.tmpl "--data={}" --out=response.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/response_test.go.tmpl "--data={}" --out=response_test.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/wire.go.tmpl "--data={}" --out=wire.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/wire_test.go.tmpl "--data={}" --out=wire_test.go
 
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/retry/retry.go.tmpl "--data={}" --out=retry/retry.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/retry/retry_test.go.tmpl "--data={}" --out=retry/retry_test.go
@@ -22,7 +24,7 @@ package internal
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlpconfig/tls.go.tmpl "--data={}" --out=otlpconfig/tls.go
 
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlptracetest/client.go.tmpl "--data={}" --out=otlptracetest/client.go
-//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlptracetest/collector.go.tmpl "--data={}" --out=otlptracetest/collector.go
+//go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlptracetest/collector.go.tmpl "--data={\"isHTTP\": true}" --out=otlptracetest/collector.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlptracetest/data.go.tmpl "--data={}" --out=otlptracetest/data.go
 //go:generate gotmpl --body=../../../../../internal/shared/otlp/otlptrace/otlptracetest/otlptest.go.tmpl "--data={}" --out=otlptracetest/otlptest.go
 

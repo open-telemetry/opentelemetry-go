@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"sync"
 	"time"
+{{- if not .isHTTP }}
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -35,6 +36,14 @@ import (
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
 	"{{ .oconfImportPath }}"
+{{- else }}
+
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/protobuf/proto"
+
+	"{{ .internalImportPath }}"
+	"{{ .oconfImportPath }}"
+{{- end }}
 )
 
 // Collector is the collection target a Client sends metric uploads to.
@@ -45,7 +54,11 @@ type Collector interface {
 // ExportResult is the response, or error, a Collector returns to a Client
 // upload request.
 type ExportResult struct {
+{{- if .isHTTP }}
+	Response *internal.ExportResponse
+{{- else }}
 	Response *collpb.ExportMetricsServiceResponse
+{{- end }}
 	Err      error
 }
 
@@ -61,11 +74,19 @@ func NewStorage() *Storage {
 }
 
 // Add adds the request to the Storage.
+{{- if .isHTTP }}
+func (s *Storage) Add(resourceMetrics []*mpb.ResourceMetrics) {
+	s.dataMu.Lock()
+	defer s.dataMu.Unlock()
+	s.data = append(s.data, resourceMetrics...)
+}
+{{- else }}
 func (s *Storage) Add(request *collpb.ExportMetricsServiceRequest) {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
 	s.data = append(s.data, request.ResourceMetrics...)
 }
+{{- end }}
 
 // Dump returns all added ResourceMetrics and clears the storage.
 func (s *Storage) Dump() []*mpb.ResourceMetrics {
@@ -76,6 +97,8 @@ func (s *Storage) Dump() []*mpb.ResourceMetrics {
 	data, s.data = s.data, []*mpb.ResourceMetrics{}
 	return data
 }
+
+{{- if not .isHTTP }}
 
 // GRPCCollector is an OTLP gRPC server that collects all requests it receives.
 type GRPCCollector struct {
@@ -175,6 +198,7 @@ var emptyExportMetricsServiceResponse = func() []byte {
 	}
 	return r
 }()
+{{- end }}
 
 // HTTPResponseError is returned by the HTTPCollector when it responds to a
 // request with a non-2xx status code.
@@ -315,6 +339,31 @@ func (c *HTTPCollector) record(r *http.Request) ExportResult {
 	if err != nil {
 		return ExportResult{Err: err}
 	}
+{{- if .isHTTP }}
+	payloads, err := internal.UnmarshalExportRequest(body)
+	if err != nil {
+		return ExportResult{
+			Err: &HTTPResponseError{
+				Err:    err,
+				Status: http.StatusInternalServerError,
+			},
+		}
+	}
+	var resourceMetrics []*mpb.ResourceMetrics
+	for _, payload := range payloads {
+		rm := &mpb.ResourceMetrics{}
+		if err := proto.Unmarshal(payload, rm); err != nil {
+			return ExportResult{
+				Err: &HTTPResponseError{
+					Err:    err,
+					Status: http.StatusInternalServerError,
+				},
+			}
+		}
+		resourceMetrics = append(resourceMetrics, rm)
+	}
+	c.storage.Add(resourceMetrics)
+{{- else }}
 	pbRequest := &collpb.ExportMetricsServiceRequest{}
 	err = proto.Unmarshal(body, pbRequest)
 	if err != nil {
@@ -326,6 +375,7 @@ func (c *HTTPCollector) record(r *http.Request) ExportResult {
 		}
 	}
 	c.storage.Add(pbRequest)
+{{- end }}
 
 	c.headersMu.Lock()
 	for k, vals := range r.Header {
@@ -404,6 +454,13 @@ func (c *HTTPCollector) respond(w http.ResponseWriter, resp ExportResult) {
 
 	w.Header().Set("Content-Type", "application/x-protobuf")
 	w.WriteHeader(http.StatusOK)
+{{- if .isHTTP }}
+	r, err := internal.MarshalExportResponse(resp.Response)
+	if err != nil {
+		panic(err)
+	}
+	_, _ = w.Write(r)
+{{- else }}
 	if resp.Response == nil {
 		_, _ = w.Write(emptyExportMetricsServiceResponse)
 	} else {
@@ -413,6 +470,7 @@ func (c *HTTPCollector) respond(w http.ResponseWriter, resp ExportResult) {
 		}
 		_, _ = w.Write(r)
 	}
+{{- end }}
 }
 
 // Based on https://golang.org/src/crypto/tls/generate_cert.go,

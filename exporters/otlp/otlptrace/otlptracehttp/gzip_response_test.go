@@ -14,16 +14,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
-	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
 )
 
 func TestGzipResponses(t *testing.T) {
-	partial, err := proto.Marshal(&coltracepb.ExportTraceServiceResponse{
-		PartialSuccess: &coltracepb.ExportTracePartialSuccess{RejectedSpans: 2, ErrorMessage: "two rejected"},
+	partial, err := internal.MarshalExportResponse(&internal.ExportResponse{
+		PartialSuccess: &internal.ExportPartialSuccess{RejectedItems: 2, ErrorMessage: "two rejected"},
 	})
 	require.NoError(t, err)
 	tests := []struct {

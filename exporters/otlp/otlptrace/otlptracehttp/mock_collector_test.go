@@ -18,10 +18,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/protobuf/proto"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpconfig"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlpjson"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal/otlptracetest"
@@ -37,7 +37,7 @@ type mockCollector struct {
 	injectHTTPStatus     []int
 	injectResponseHeader []map[string]string
 	injectContentType    string
-	partial              *collectortracepb.ExportTracePartialSuccess
+	partial              *internal.ExportPartialSuccess
 	delay                <-chan struct{}
 
 	clientTLSConfig *tls.Config
@@ -85,15 +85,15 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	response := collectortracepb.ExportTraceServiceResponse{
+	response := &internal.ExportResponse{
 		PartialSuccess: c.partial,
 	}
 	var rawResponse []byte
 	var err error
 	if c.injectContentType == "application/json" {
-		rawResponse, err = otlpjson.MarshalExportTraceServiceResponse(&response)
+		rawResponse, err = otlpjson.MarshalExportTraceServiceResponse(response)
 	} else {
-		rawResponse, err = proto.Marshal(&response)
+		rawResponse, err = internal.MarshalExportResponse(response)
 	}
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -121,17 +121,26 @@ func (c *mockCollector) serveTraces(w http.ResponseWriter, r *http.Request) {
 	c.spansStorage.AddSpans(request)
 }
 
-func unmarshalTraceRequest(rawRequest []byte, contentType string) (*collectortracepb.ExportTraceServiceRequest, error) {
-	request := &collectortracepb.ExportTraceServiceRequest{}
+func unmarshalTraceRequest(rawRequest []byte, contentType string) ([]*tracepb.ResourceSpans, error) {
 	switch contentType {
 	case "application/x-protobuf":
-		err := proto.Unmarshal(rawRequest, request)
-		return request, err
+		payloads, err := internal.UnmarshalExportRequest(rawRequest)
+		if err != nil {
+			return nil, err
+		}
+		var resourceSpans []*tracepb.ResourceSpans
+		for _, payload := range payloads {
+			rs := &tracepb.ResourceSpans{}
+			if err := proto.Unmarshal(payload, rs); err != nil {
+				return nil, err
+			}
+			resourceSpans = append(resourceSpans, rs)
+		}
+		return resourceSpans, nil
 	case "application/json":
-		err := otlpjson.UnmarshalExportTraceServiceRequest(rawRequest, request)
-		return request, err
+		return otlpjson.UnmarshalExportTraceServiceRequest(rawRequest)
 	default:
-		return request, fmt.Errorf(
+		return nil, fmt.Errorf(
 			"invalid content-type: %s, only application/x-protobuf or application/json is supported",
 			contentType,
 		)
@@ -216,7 +225,7 @@ type mockCollectorConfig struct {
 	InjectHTTPStatus     []int
 	InjectContentType    string
 	InjectResponseHeader []map[string]string
-	Partial              *collectortracepb.ExportTracePartialSuccess
+	Partial              *internal.ExportPartialSuccess
 	Delay                <-chan struct{}
 	WithTLS              bool
 	ExpectedHeaders      map[string]string

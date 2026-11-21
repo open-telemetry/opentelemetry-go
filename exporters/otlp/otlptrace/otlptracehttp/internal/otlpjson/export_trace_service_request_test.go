@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
@@ -20,60 +19,58 @@ import (
 
 var hexPattern = regexp.MustCompile(`^[0-9A-Fa-f]+$`)
 
-func spanForTest() *coltracepb.ExportTraceServiceRequest {
-	return &coltracepb.ExportTraceServiceRequest{
-		ResourceSpans: []*tracepb.ResourceSpans{{
-			Resource: &resourcepb.Resource{
-				Attributes: []*commonpb.KeyValue{{
-					Key:   "service.name",
-					Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "svc"}},
-				}},
-				DroppedAttributesCount: 1,
-				EntityRefs: []*commonpb.EntityRef{{
-					SchemaUrl:       "http://example.com",
-					Type:            "service.instance",
-					IdKeys:          []string{"service.instance.id", "service.name", "service.namespace"},
-					DescriptionKeys: []string{"service.version"},
-				}},
-			},
-			ScopeSpans: []*tracepb.ScopeSpans{{
-				Scope: &commonpb.InstrumentationScope{Name: "lib", Version: "1.0"},
-				Spans: []*tracepb.Span{
-					{
-						TraceId: []byte{
-							0x5B, 0x8E, 0xFF, 0xF7, 0x98, 0x03, 0x81, 0x03,
-							0xD2, 0x69, 0xB6, 0x33, 0x81, 0x3F, 0xC6, 0x0C,
-						},
-						SpanId:                 []byte{0xEE, 0xE1, 0x9B, 0x7E, 0xC3, 0xC1, 0xB1, 0x74},
-						ParentSpanId:           []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
-						Name:                   "op",
-						Kind:                   tracepb.Span_SPAN_KIND_SERVER,
-						StartTimeUnixNano:      1_617_187_200_000_000_000,
-						EndTimeUnixNano:        1_617_187_201_000_000_000,
-						DroppedAttributesCount: 3,
-						Attributes: []*commonpb.KeyValue{{
-							Key:   "key",
-							Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: -42}},
-						}},
-						Events: []*tracepb.Span_Event{{
-							TimeUnixNano: 1_617_187_200_500_000_000,
-							Name:         "evt",
-						}},
-						Links: []*tracepb.Span_Link{{
-							TraceId: []byte{
-								0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-								0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
-							},
-							SpanId: []byte{
-								0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x11,
-							},
-						}},
-						Status: &tracepb.Status{Code: tracepb.Status_STATUS_CODE_OK, Message: "ok"},
-					},
-				},
+func spanForTest() []*tracepb.ResourceSpans {
+	return []*tracepb.ResourceSpans{{
+		Resource: &resourcepb.Resource{
+			Attributes: []*commonpb.KeyValue{{
+				Key:   "service.name",
+				Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_StringValue{StringValue: "svc"}},
 			}},
+			DroppedAttributesCount: 1,
+			EntityRefs: []*commonpb.EntityRef{{
+				SchemaUrl:       "http://example.com",
+				Type:            "service.instance",
+				IdKeys:          []string{"service.instance.id", "service.name", "service.namespace"},
+				DescriptionKeys: []string{"service.version"},
+			}},
+		},
+		ScopeSpans: []*tracepb.ScopeSpans{{
+			Scope: &commonpb.InstrumentationScope{Name: "lib", Version: "1.0"},
+			Spans: []*tracepb.Span{
+				{
+					TraceId: []byte{
+						0x5B, 0x8E, 0xFF, 0xF7, 0x98, 0x03, 0x81, 0x03,
+						0xD2, 0x69, 0xB6, 0x33, 0x81, 0x3F, 0xC6, 0x0C,
+					},
+					SpanId:                 []byte{0xEE, 0xE1, 0x9B, 0x7E, 0xC3, 0xC1, 0xB1, 0x74},
+					ParentSpanId:           []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08},
+					Name:                   "op",
+					Kind:                   tracepb.Span_SPAN_KIND_SERVER,
+					StartTimeUnixNano:      1_617_187_200_000_000_000,
+					EndTimeUnixNano:        1_617_187_201_000_000_000,
+					DroppedAttributesCount: 3,
+					Attributes: []*commonpb.KeyValue{{
+						Key:   "key",
+						Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_IntValue{IntValue: -42}},
+					}},
+					Events: []*tracepb.Span_Event{{
+						TimeUnixNano: 1_617_187_200_500_000_000,
+						Name:         "evt",
+					}},
+					Links: []*tracepb.Span_Link{{
+						TraceId: []byte{
+							0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+							0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10,
+						},
+						SpanId: []byte{
+							0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x11,
+						},
+					}},
+					Status: &tracepb.Status{Code: tracepb.Status_STATUS_CODE_OK, Message: "ok"},
+				},
+			},
 		}},
-	}
+	}}
 }
 
 // unmarshalGeneric parses JSON into nested maps, preserving numbers as json.Number.
@@ -201,18 +198,16 @@ func TestMarshalNonFiniteDoubleValuesAsStrings(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			req := &coltracepb.ExportTraceServiceRequest{
-				ResourceSpans: []*tracepb.ResourceSpans{{
-					Resource: &resourcepb.Resource{
-						Attributes: []*commonpb.KeyValue{{
-							Key: "non-finite",
-							Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{
-								DoubleValue: test.value,
-							}},
+			req := []*tracepb.ResourceSpans{{
+				Resource: &resourcepb.Resource{
+					Attributes: []*commonpb.KeyValue{{
+						Key: "non-finite",
+						Value: &commonpb.AnyValue{Value: &commonpb.AnyValue_DoubleValue{
+							DoubleValue: test.value,
 						}},
-					},
-				}},
-			}
+					}},
+				},
+			}}
 
 			data, err := MarshalExportTraceServiceRequest(req)
 			require.NoError(t, err)
@@ -256,17 +251,15 @@ func TestMarshalFieldNamesAreCamelCase(t *testing.T) {
 }
 
 func TestMarshalOmitsDefaultValues(t *testing.T) {
-	req := &coltracepb.ExportTraceServiceRequest{
-		ResourceSpans: []*tracepb.ResourceSpans{{
-			ScopeSpans: []*tracepb.ScopeSpans{{
-				Spans: []*tracepb.Span{{
-					TraceId: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-					SpanId:  []byte{0, 0, 0, 0, 0, 0, 0, 1},
-					Name:    "minimal",
-				}},
+	req := []*tracepb.ResourceSpans{{
+		ScopeSpans: []*tracepb.ScopeSpans{{
+			Spans: []*tracepb.Span{{
+				TraceId: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+				SpanId:  []byte{0, 0, 0, 0, 0, 0, 0, 1},
+				Name:    "minimal",
 			}},
 		}},
-	}
+	}}
 
 	data, err := MarshalExportTraceServiceRequest(req)
 	require.NoError(t, err)
@@ -284,16 +277,14 @@ func TestMarshalOmitsDefaultValues(t *testing.T) {
 }
 
 func TestMarshalRootSpanOmitsParentSpanID(t *testing.T) {
-	req := &coltracepb.ExportTraceServiceRequest{
-		ResourceSpans: []*tracepb.ResourceSpans{{
-			ScopeSpans: []*tracepb.ScopeSpans{{
-				Spans: []*tracepb.Span{{
-					TraceId: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-					SpanId:  []byte{0, 0, 0, 0, 0, 0, 0, 1},
-				}},
+	req := []*tracepb.ResourceSpans{{
+		ScopeSpans: []*tracepb.ScopeSpans{{
+			Spans: []*tracepb.Span{{
+				TraceId: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+				SpanId:  []byte{0, 0, 0, 0, 0, 0, 0, 1},
 			}},
 		}},
-	}
+	}}
 
 	data, err := MarshalExportTraceServiceRequest(req)
 	require.NoError(t, err)
@@ -318,11 +309,11 @@ func TestUnmarshalIgnoresUnknownFields(t *testing.T) {
 		}]
 	}`
 
-	var req coltracepb.ExportTraceServiceRequest
-	require.NoError(t, UnmarshalExportTraceServiceRequest([]byte(input), &req))
+	resourceSpans, err := UnmarshalExportTraceServiceRequest([]byte(input))
+	require.NoError(t, err)
 
-	require.Len(t, req.ResourceSpans, 1)
-	s := req.ResourceSpans[0].ScopeSpans[0].Spans[0]
+	require.Len(t, resourceSpans, 1)
+	s := resourceSpans[0].ScopeSpans[0].Spans[0]
 	assert.Equal(t, "op", s.Name)
 	assert.Equal(
 		t,
@@ -347,10 +338,10 @@ func TestUnmarshalAcceptsBothHexCases(t *testing.T) {
 				"spanId":"` + tc.spanID + `"
 			}]}]}]}`
 
-			var req coltracepb.ExportTraceServiceRequest
-			require.NoError(t, UnmarshalExportTraceServiceRequest([]byte(input), &req))
+			resourceSpans, err := UnmarshalExportTraceServiceRequest([]byte(input))
+			require.NoError(t, err)
 
-			s := req.ResourceSpans[0].ScopeSpans[0].Spans[0]
+			s := resourceSpans[0].ScopeSpans[0].Spans[0]
 			assert.Equal(
 				t,
 				[]byte{0x5B, 0x8E, 0xFF, 0xF7, 0x98, 0x03, 0x81, 0x03, 0xD2, 0x69, 0xB6, 0x33, 0x81, 0x3F, 0xC6, 0x0C},
@@ -407,10 +398,10 @@ func TestUnmarshalAcceptsFiniteDoubleAsStringOrNumber(t *testing.T) {
 				"value":{"doubleValue":` + tc.value + `}
 			}]}}]}`
 
-			var req coltracepb.ExportTraceServiceRequest
-			require.NoError(t, UnmarshalExportTraceServiceRequest([]byte(input), &req))
+			resourceSpans, err := UnmarshalExportTraceServiceRequest([]byte(input))
+			require.NoError(t, err)
 
-			got := req.ResourceSpans[0].Resource.Attributes[0].Value.GetDoubleValue()
+			got := resourceSpans[0].Resource.Attributes[0].Value.GetDoubleValue()
 			assert.InDelta(t, tc.want, got, 0)
 		})
 	}
@@ -554,28 +545,26 @@ func TestAnyValueRoundTrip(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			req := &coltracepb.ExportTraceServiceRequest{
-				ResourceSpans: []*tracepb.ResourceSpans{{
-					ScopeSpans: []*tracepb.ScopeSpans{{
-						Spans: []*tracepb.Span{{
-							TraceId: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-							SpanId:  []byte{0, 0, 0, 0, 0, 0, 0, 1},
-							Attributes: []*commonpb.KeyValue{{
-								Key:   "test",
-								Value: tc.proto,
-							}},
+			req := []*tracepb.ResourceSpans{{
+				ScopeSpans: []*tracepb.ScopeSpans{{
+					Spans: []*tracepb.Span{{
+						TraceId: []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+						SpanId:  []byte{0, 0, 0, 0, 0, 0, 0, 1},
+						Attributes: []*commonpb.KeyValue{{
+							Key:   "test",
+							Value: tc.proto,
 						}},
 					}},
 				}},
-			}
+			}}
 
 			data, err := MarshalExportTraceServiceRequest(req)
 			require.NoError(t, err)
 
-			var decoded coltracepb.ExportTraceServiceRequest
-			require.NoError(t, UnmarshalExportTraceServiceRequest(data, &decoded))
+			decoded, err := UnmarshalExportTraceServiceRequest(data)
+			require.NoError(t, err)
 
-			attrs := decoded.ResourceSpans[0].ScopeSpans[0].Spans[0].Attributes
+			attrs := decoded[0].ScopeSpans[0].Spans[0].Attributes
 			require.Len(t, attrs, 1)
 			assert.Equal(t, "test", attrs[0].Key)
 			tc.check(t, attrs[0].Value)
@@ -589,12 +578,12 @@ func TestRoundTrip(t *testing.T) {
 	data, err := MarshalExportTraceServiceRequest(original)
 	require.NoError(t, err)
 
-	var decoded coltracepb.ExportTraceServiceRequest
-	require.NoError(t, UnmarshalExportTraceServiceRequest(data, &decoded))
-	require.NotEmpty(t, original.ResourceSpans)
+	decoded, err := UnmarshalExportTraceServiceRequest(data)
+	require.NoError(t, err)
+	require.NotEmpty(t, original)
 
-	orig := original.ResourceSpans[0].ScopeSpans[0].Spans[0]
-	got := decoded.ResourceSpans[0].ScopeSpans[0].Spans[0]
+	orig := original[0].ScopeSpans[0].Spans[0]
+	got := decoded[0].ScopeSpans[0].Spans[0]
 
 	assert.Equal(t, orig.TraceId, got.TraceId)
 	assert.Equal(t, orig.SpanId, got.SpanId)
@@ -620,7 +609,7 @@ func TestRoundTrip(t *testing.T) {
 	assert.Equal(t, orig.Status.Code, got.Status.Code)
 	assert.Equal(t, orig.Status.Message, got.Status.Message)
 
-	rs := decoded.ResourceSpans[0]
+	rs := decoded[0]
 	assert.Equal(t, "service.name", rs.Resource.Attributes[0].Key)
 	assert.Equal(t, "svc", rs.Resource.Attributes[0].Value.GetStringValue())
 	assert.Equal(t, uint32(1), rs.Resource.DroppedAttributesCount)

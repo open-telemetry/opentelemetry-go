@@ -4,19 +4,52 @@
 package otlpjson
 
 import (
-	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	"google.golang.org/protobuf/encoding/protojson"
+	"encoding/json"
+
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp/internal"
 )
 
-// MarshalExportTraceServiceResponse encodes an ExportTraceServiceResponse as JSON Protobuf encoded bytes.
-func MarshalExportTraceServiceResponse(resp *coltracepb.ExportTraceServiceResponse) ([]byte, error) {
-	return protojson.Marshal(resp)
+// exportResponseJSON corresponds to the JSON Protobuf encoding of the OTLP
+// ExportTraceServiceResponse message.
+type exportResponseJSON struct {
+	PartialSuccess *exportPartialSuccessJSON `json:"partialSuccess,omitempty"`
 }
 
-// UnmarshalExportTraceServiceResponse decodes JSON Protobuf encoded payload into an ExportTraceServiceResponse.
-func UnmarshalExportTraceServiceResponse(data []byte, resp *coltracepb.ExportTraceServiceResponse) error {
-	// ignore message fields with unknown names per OTLP specs.
-	var unmarshaler protojson.UnmarshalOptions
-	unmarshaler.DiscardUnknown = true
-	return unmarshaler.Unmarshal(data, resp)
+// exportPartialSuccessJSON corresponds to the JSON Protobuf encoding of the
+// OTLP ExportTracePartialSuccess message. The rejected span count is an
+// int64, which ProtoJSON encodes as a quoted decimal string.
+type exportPartialSuccessJSON struct {
+	ErrorMessage  string `json:"errorMessage,omitempty"`
+	RejectedSpans int64  `json:"rejectedSpans,omitempty,string"`
+}
+
+// MarshalExportTraceServiceResponse encodes an OTLP ExportTraceServiceResponse
+// as JSON Protobuf encoded bytes.
+func MarshalExportTraceServiceResponse(resp *internal.ExportResponse) ([]byte, error) {
+	out := exportResponseJSON{}
+	if ps := resp.GetPartialSuccess(); ps != nil {
+		out.PartialSuccess = &exportPartialSuccessJSON{
+			ErrorMessage:  ps.ErrorMessage,
+			RejectedSpans: ps.RejectedItems,
+		}
+	}
+	return json.Marshal(out)
+}
+
+// UnmarshalExportTraceServiceResponse decodes a JSON Protobuf encoded
+// ExportTraceServiceResponse payload. Unknown message fields are ignored per
+// the OTLP specs.
+func UnmarshalExportTraceServiceResponse(data []byte) (*internal.ExportResponse, error) {
+	var jr exportResponseJSON
+	if err := json.Unmarshal(data, &jr); err != nil {
+		return nil, err
+	}
+	resp := &internal.ExportResponse{}
+	if jr.PartialSuccess != nil {
+		resp.PartialSuccess = &internal.ExportPartialSuccess{
+			ErrorMessage:  jr.PartialSuccess.ErrorMessage,
+			RejectedItems: jr.PartialSuccess.RejectedSpans,
+		}
+	}
+	return resp, nil
 }

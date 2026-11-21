@@ -20,9 +20,7 @@ import (
 	"sync"
 	"time"
 
-	colmetricpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/counter"
@@ -153,10 +151,7 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 	// ensures this is not called after the Exporter is shutdown. Only thing
 	// to do here is send data.
 
-	pbRequest := &colmetricpb.ExportMetricsServiceRequest{
-		ResourceMetrics: []*metricpb.ResourceMetrics{protoMetrics},
-	}
-	body, err := proto.Marshal(pbRequest)
+	body, err := internal.MarshalExportRequest([]*metricpb.ResourceMetrics{protoMetrics})
 	if err != nil {
 		return err
 	}
@@ -222,14 +217,14 @@ func (c *client) UploadMetrics(ctx context.Context, protoMetrics *metricpb.Resou
 			}
 
 			if isProtobufContentType(resp.Header.Get("Content-Type")) {
-				var respProto colmetricpb.ExportMetricsServiceResponse
-				if err := proto.Unmarshal(respData.Bytes(), &respProto); err != nil {
+				respProto, err := internal.UnmarshalExportResponse(respData.Bytes())
+				if err != nil {
 					return err
 				}
 
-				if respProto.PartialSuccess != nil {
-					msg := respProto.PartialSuccess.GetErrorMessage()
-					n := respProto.PartialSuccess.GetRejectedDataPoints()
+				if ps := respProto.GetPartialSuccess(); ps != nil {
+					msg := ps.ErrorMessage
+					n := ps.RejectedItems
 					if n != 0 || msg != "" {
 						err := internal.MetricPartialSuccessError(n, msg)
 						uploadErr = errors.Join(uploadErr, err)

@@ -27,13 +27,10 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	"google.golang.org/protobuf/proto"
 
-	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/oconf"
 )
 
@@ -45,7 +42,7 @@ type Collector interface {
 // ExportResult is the response, or error, a Collector returns to a Client
 // upload request.
 type ExportResult struct {
-	Response *collpb.ExportMetricsServiceResponse
+	Response *internal.ExportResponse
 	Err      error
 }
 
@@ -61,10 +58,10 @@ func NewStorage() *Storage {
 }
 
 // Add adds the request to the Storage.
-func (s *Storage) Add(request *collpb.ExportMetricsServiceRequest) {
+func (s *Storage) Add(resourceMetrics []*mpb.ResourceMetrics) {
 	s.dataMu.Lock()
 	defer s.dataMu.Unlock()
-	s.data = append(s.data, request.ResourceMetrics...)
+	s.data = append(s.data, resourceMetrics...)
 }
 
 // Dump returns all added ResourceMetrics and clears the storage.
@@ -76,105 +73,6 @@ func (s *Storage) Dump() []*mpb.ResourceMetrics {
 	data, s.data = s.data, []*mpb.ResourceMetrics{}
 	return data
 }
-
-// GRPCCollector is an OTLP gRPC server that collects all requests it receives.
-type GRPCCollector struct {
-	collpb.UnimplementedMetricsServiceServer
-
-	headersMu sync.Mutex
-	headers   metadata.MD
-	storage   *Storage
-
-	resultCh <-chan ExportResult
-	listener net.Listener
-	srv      *grpc.Server
-}
-
-// NewGRPCCollector returns a *GRPCCollector that is listening at the provided
-// endpoint.
-//
-// If endpoint is an empty string, the returned collector will be listening on
-// the localhost interface at an OS chosen port.
-//
-// If errCh is not nil, the collector will respond to Export calls with errors
-// sent on that channel. This means that if errCh is not nil Export calls will
-// block until an error is received.
-func NewGRPCCollector(endpoint string, resultCh <-chan ExportResult) (*GRPCCollector, error) {
-	if endpoint == "" {
-		endpoint = "localhost:0"
-	}
-
-	c := &GRPCCollector{
-		storage:  NewStorage(),
-		resultCh: resultCh,
-	}
-
-	var err error
-	c.listener, err = (&net.ListenConfig{}).Listen(context.Background(), "tcp", endpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	c.srv = grpc.NewServer()
-	collpb.RegisterMetricsServiceServer(c.srv, c)
-	go func() { _ = c.srv.Serve(c.listener) }()
-
-	return c, nil
-}
-
-// Shutdown shuts down the gRPC server closing all open connections and
-// listeners immediately.
-func (c *GRPCCollector) Shutdown() { c.srv.Stop() }
-
-// Addr returns the net.Addr c is listening at.
-func (c *GRPCCollector) Addr() net.Addr {
-	return c.listener.Addr()
-}
-
-// Collect returns the Storage holding all collected requests.
-func (c *GRPCCollector) Collect() *Storage {
-	return c.storage
-}
-
-// Headers returns the headers received for all requests.
-func (c *GRPCCollector) Headers() map[string][]string {
-	// Makes a copy.
-	c.headersMu.Lock()
-	defer c.headersMu.Unlock()
-	return metadata.Join(c.headers)
-}
-
-// Export handles the export req.
-func (c *GRPCCollector) Export(
-	ctx context.Context,
-	req *collpb.ExportMetricsServiceRequest,
-) (*collpb.ExportMetricsServiceResponse, error) {
-	c.storage.Add(req)
-
-	if h, ok := metadata.FromIncomingContext(ctx); ok {
-		c.headersMu.Lock()
-		c.headers = metadata.Join(c.headers, h)
-		c.headersMu.Unlock()
-	}
-
-	if c.resultCh != nil {
-		r := <-c.resultCh
-		if r.Response == nil {
-			return &collpb.ExportMetricsServiceResponse{}, r.Err
-		}
-		return r.Response, r.Err
-	}
-	return &collpb.ExportMetricsServiceResponse{}, nil
-}
-
-var emptyExportMetricsServiceResponse = func() []byte {
-	body := collpb.ExportMetricsServiceResponse{}
-	r, err := proto.Marshal(&body)
-	if err != nil {
-		panic(err)
-	}
-	return r
-}()
 
 // HTTPResponseError is returned by the HTTPCollector when it responds to a
 // request with a non-2xx status code.
@@ -315,8 +213,7 @@ func (c *HTTPCollector) record(r *http.Request) ExportResult {
 	if err != nil {
 		return ExportResult{Err: err}
 	}
-	pbRequest := &collpb.ExportMetricsServiceRequest{}
-	err = proto.Unmarshal(body, pbRequest)
+	payloads, err := internal.UnmarshalExportRequest(body)
 	if err != nil {
 		return ExportResult{
 			Err: &HTTPResponseError{
@@ -325,7 +222,20 @@ func (c *HTTPCollector) record(r *http.Request) ExportResult {
 			},
 		}
 	}
-	c.storage.Add(pbRequest)
+	var resourceMetrics []*mpb.ResourceMetrics
+	for _, payload := range payloads {
+		rm := &mpb.ResourceMetrics{}
+		if err := proto.Unmarshal(payload, rm); err != nil {
+			return ExportResult{
+				Err: &HTTPResponseError{
+					Err:    err,
+					Status: http.StatusInternalServerError,
+				},
+			}
+		}
+		resourceMetrics = append(resourceMetrics, rm)
+	}
+	c.storage.Add(resourceMetrics)
 
 	c.headersMu.Lock()
 	for k, vals := range r.Header {
@@ -404,15 +314,11 @@ func (c *HTTPCollector) respond(w http.ResponseWriter, resp ExportResult) {
 
 	w.Header().Set("Content-Type", "application/x-protobuf")
 	w.WriteHeader(http.StatusOK)
-	if resp.Response == nil {
-		_, _ = w.Write(emptyExportMetricsServiceResponse)
-	} else {
-		r, err := proto.Marshal(resp.Response)
-		if err != nil {
-			panic(err)
-		}
-		_, _ = w.Write(r)
+	r, err := internal.MarshalExportResponse(resp.Response)
+	if err != nil {
+		panic(err)
 	}
+	_, _ = w.Write(r)
 }
 
 // Based on https://golang.org/src/crypto/tls/generate_cert.go,

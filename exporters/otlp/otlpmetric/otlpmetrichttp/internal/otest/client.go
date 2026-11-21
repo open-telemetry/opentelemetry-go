@@ -15,12 +15,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
-
-	collpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	cpb "go.opentelemetry.io/proto/otlp/common/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 	rpb "go.opentelemetry.io/proto/otlp/resource/v1"
+	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal"
 	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
@@ -236,24 +234,24 @@ func RunClientTests(f ClientFactory) func(*testing.T) {
 			const n, msg = 2, "bad data"
 			rCh := make(chan ExportResult, 3)
 			rCh <- ExportResult{
-				Response: &collpb.ExportMetricsServiceResponse{
-					PartialSuccess: &collpb.ExportMetricsPartialSuccess{
-						RejectedDataPoints: n,
-						ErrorMessage:       msg,
+				Response: &internal.ExportResponse{
+					PartialSuccess: &internal.ExportPartialSuccess{
+						RejectedItems: n,
+						ErrorMessage:  msg,
 					},
 				},
 			}
 			rCh <- ExportResult{
-				Response: &collpb.ExportMetricsServiceResponse{
-					PartialSuccess: &collpb.ExportMetricsPartialSuccess{
+				Response: &internal.ExportResponse{
+					PartialSuccess: &internal.ExportPartialSuccess{
 						// Should not be logged.
-						RejectedDataPoints: 0,
-						ErrorMessage:       "",
+						RejectedItems: 0,
+						ErrorMessage:  "",
 					},
 				},
 			}
 			rCh <- ExportResult{
-				Response: &collpb.ExportMetricsServiceResponse{},
+				Response: &internal.ExportResponse{},
 			}
 
 			ctx := t.Context()

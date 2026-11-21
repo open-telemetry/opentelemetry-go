@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strings"
 
-	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	resourcepb "go.opentelemetry.io/proto/otlp/resource/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
@@ -38,8 +37,8 @@ func NewSpansStorage() SpansStorage {
 }
 
 // AddSpans adds spans to the spans storage.
-func (s *SpansStorage) AddSpans(request *collectortracepb.ExportTraceServiceRequest) {
-	for _, rs := range request.GetResourceSpans() {
+func (s *SpansStorage) AddSpans(resourceSpans []*tracepb.ResourceSpans) {
+	for _, rs := range resourceSpans {
 		rstr := resourceString(rs.Resource)
 		if existingRs, ok := s.rsm[rstr]; !ok {
 			s.rsm[rstr] = rs

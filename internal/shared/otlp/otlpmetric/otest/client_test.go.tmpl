@@ -10,9 +10,14 @@ import (
 	"context"
 	"errors"
 	"testing"
+{{- if not .isHTTP }}
 
 	cpb "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+{{- else }}
+
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+{{- end }}
 
 	"{{ .internalImportPath }}"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -37,12 +42,25 @@ func (c *client) Collect() *Storage {
 }
 
 func (c *client) UploadMetrics(ctx context.Context, rm *mpb.ResourceMetrics) error {
+{{- if .isHTTP }}
+	c.storage.Add([]*mpb.ResourceMetrics{rm})
+{{- else }}
 	c.storage.Add(&cpb.ExportMetricsServiceRequest{
 		ResourceMetrics: []*mpb.ResourceMetrics{rm},
 	})
+{{- end }}
 	if c.rCh != nil {
 		r := <-c.rCh
 		err := r.Err
+{{- if .isHTTP }}
+		if ps := r.Response.GetPartialSuccess(); ps != nil {
+			msg := ps.ErrorMessage
+			n := ps.RejectedItems
+			if msg != "" || n > 0 {
+				err = errors.Join(err, internal.MetricPartialSuccessError(n, msg))
+			}
+		}
+{{- else }}
 		if r.Response != nil && r.Response.GetPartialSuccess() != nil {
 			msg := r.Response.GetPartialSuccess().GetErrorMessage()
 			n := r.Response.GetPartialSuccess().GetRejectedDataPoints()
@@ -50,6 +68,7 @@ func (c *client) UploadMetrics(ctx context.Context, rm *mpb.ResourceMetrics) err
 				err = errors.Join(err, internal.MetricPartialSuccessError(n, msg))
 			}
 		}
+{{- end }}
 		return err
 	}
 	return ctx.Err()
