@@ -67,10 +67,10 @@ instrument names are allowed.
 Instrument names should ...
 
   - Not be empty.
-  - Have an alphabetic character as their first letter.
-  - Have any letter after the first be an alphanumeric character, ‘_’, ‘.’,
-    ‘-’, or ‘/’.
-  - Have a maximum length of 255 letters.
+  - Have an ASCII letter (A–Z or a–z) as their first character.
+  - Have any character after the first be an ASCII letter (A–Z or a–z),
+    digit (0–9), ‘_’, ‘.’, ‘-’, or ‘/’.
+  - Have a maximum length of 255 characters.
 
 To ensure compatibility with observability platforms, all instruments created
 need to conform to this syntax. Not all implementations of the API will validate
