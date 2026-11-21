@@ -123,6 +123,11 @@ func (l *Set) Get(idx int) (KeyValue, bool) {
 }
 
 // Value returns the value of a specified key in this set.
+//
+// The returned boolean reports whether k is present in the set. If k is
+// absent, the zero [Value] and false are returned. Since an [EMPTY] Value is
+// a valid attribute value, use the boolean to distinguish an absent key from
+// a present key holding an empty value.
 func (l *Set) Value(k Key) (Value, bool) {
 	if l == nil || l.hash == 0 {
 		return Value{}, false
