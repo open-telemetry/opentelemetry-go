@@ -17,8 +17,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric/internal/x"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -128,7 +128,10 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 		e = fmt.Errorf("failed to create metric_data_point exported metric: %w", e)
 		err = errors.Join(err, e)
 	}
-	if em.duration, e = otelconv.NewSDKExporterOperationDuration(m); e != nil {
+	if em.duration, e = otelconv.NewSDKExporterOperationDuration(
+		m,
+		metric.WithExplicitBucketBoundaries(),
+	); e != nil {
 		e = fmt.Errorf("failed to create operation duration metric: %w", e)
 		err = errors.Join(err, e)
 	}

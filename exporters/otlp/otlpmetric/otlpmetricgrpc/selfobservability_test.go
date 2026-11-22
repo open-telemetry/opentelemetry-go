@@ -27,8 +27,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 func TestSelfObservability(t *testing.T) {
@@ -117,7 +117,7 @@ func TestSelfObservability(t *testing.T) {
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.RPCResponseStatusCode(codes.OK.String()),
+										semconv.RPCStatusCode(codes.OK.String()),
 										semconv.ServerAddressKey.String(addr),
 										semconv.ServerPortKey.Int(port),
 									),
@@ -194,7 +194,7 @@ func TestSelfObservability(t *testing.T) {
 								{
 									Attributes: attribute.NewSet(
 										append(
-											[]attribute.KeyValue{semconv.RPCResponseStatusCode("Unavailable")},
+											[]attribute.KeyValue{semconv.RPCStatusCode("Unavailable")},
 											errorAttrs...,
 										)...,
 									),
@@ -266,7 +266,7 @@ func TestSelfObservability(t *testing.T) {
 								{
 									Attributes: attribute.NewSet(
 										append(
-											[]attribute.KeyValue{semconv.RPCResponseStatusCode(codes.OK.String())},
+											[]attribute.KeyValue{semconv.RPCStatusCode(codes.OK.String())},
 											rejectedAttrs...,
 										)...,
 									),
@@ -349,7 +349,7 @@ func TestSelfObservability(t *testing.T) {
 									Attributes: attribute.NewSet(
 										semconv.OTelComponentName(actualComponentName),
 										semconv.OTelComponentTypeKey.String("otlp_grpc_metric_exporter"),
-										semconv.RPCResponseStatusCode(codes.OK.String()),
+										semconv.RPCStatusCode(codes.OK.String()),
 										semconv.ServerAddressKey.String(addr),
 										semconv.ServerPortKey.Int(port),
 									),
