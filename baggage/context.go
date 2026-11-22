@@ -22,6 +22,8 @@ func ContextWithoutBaggage(parent context.Context) context.Context {
 }
 
 // FromContext returns the baggage contained in ctx.
+// If ctx contains no baggage, it returns an empty [Baggage] whose
+// [Baggage.Len] is zero.
 func FromContext(ctx context.Context) Baggage {
 	// Delegate so any hooks for the OpenTracing bridge are handled.
 	return Baggage{list: baggage.ListFromContext(ctx)}
