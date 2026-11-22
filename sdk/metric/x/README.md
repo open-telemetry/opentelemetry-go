@@ -40,7 +40,9 @@ Parameters contain the instrumentation scope, metric name, aggregation kind, and
 Attribute parameters also contain the data point's attributes.
 The aggregation is passed as `metricdata.Aggregation`, matching the collected data, including view-selected aggregations.
 The aggregation is passed as `AggregationKind`, matching the collected data, including view-selected aggregations.
+The aggregation is passed as `AggregationKind`, matching the collected data, including view-selected aggregations.
 If the filter passed to `WithMetricFilter` is nil, the option does nothing.
+
 
 ### View Enabled and Opt-In Instruments
 
