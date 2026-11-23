@@ -114,10 +114,6 @@ func WithAllocsProfile() RuntimeProducerOption
 func WithoutAllocsProfile() RuntimeProducerOption
 func WithGoroutineProfile() RuntimeProducerOption
 func WithoutGoroutineProfile() RuntimeProducerOption
-func WithMutexProfile() RuntimeProducerOption
-func WithMutexProfileFraction(fraction int) RuntimeProducerOption
-func WithBlockProfile() RuntimeProducerOption
-func WithBlockProfileRate(rate int) RuntimeProducerOption
 func WithCPUProfile() RuntimeProducerOption
 func WithoutDeltaProfiles() RuntimeProducerOption
 ```
@@ -126,17 +122,16 @@ func WithoutDeltaProfiles() RuntimeProducerOption
 | :--- | :--- | :--- | :--- | :--- |
 | Live heap (`inuse_space`, `inuse_objects`) | Enabled | Instantaneous snapshot | `.../runtime/heap` | None |
 | Allocations (`alloc_space`, `alloc_objects`) | Enabled | Interval delta (opt-out via `WithoutDeltaProfiles`) | `.../runtime/allocs` | None |
-| Goroutines | Enabled | Instantaneous snapshot | `.../runtime/goroutine` | None |
-| Mutex contention | Opt-in (`WithMutexProfile` / `WithMutexProfileFraction`) | Interval delta | `.../runtime/mutex` | Refcounted `runtime.SetMutexProfileFraction`, restored on `Shutdown` |
-| Blocking | Opt-in (`WithBlockProfile` / `WithBlockProfileRate`) | Interval delta | `.../runtime/block` | Refcounted `runtime.SetBlockProfileRate`, reset on `Shutdown` |
-| CPU | Opt-in (`WithCPUProfile`) | Double-buffered continuous window | `.../runtime/cpu` | Claims process-wide `pprof.StartCPUProfile`, stopped on `Shutdown` |
+| Goroutines (`goroutine`) | Enabled | Instantaneous snapshot | `.../runtime/goroutine` | None |
+| CPU (`cpu`, `samples`) | Opt-in (`WithCPUProfile`) | Double-buffered continuous window | `.../runtime/cpu` | Claims process-wide `pprof.StartCPUProfile`, stopped on `Shutdown` |
+
+Go's `mutex` and `block` profiles are deferred from the initial `v0.0.0` `RuntimeProducer`. Both emit identical `sample_type` pairs (`contentions`/`count` and `delay`/`nanoseconds`), so backends cannot distinguish them on the OTLP wire until the upstream spec defines a profile-identifying attribute (see [spec PR #5409](https://github.com/open-telemetry/opentelemetry-specification/pull/5409#discussion_r4534499496)). Deferring them also keeps global runtime rate mutation (`runtime.SetMutexProfileFraction`, `runtime.SetBlockProfileRate`) out of the initial release. When added in Phase 3, both will be opt-in with reference-counted rate restoration on `Shutdown`.
 
 Implementation invariants in `RuntimeProducer` and `sdk/profile/internal/pprof`:
 
 - `BuildIDCache` reads and caches `process.executable.build_id.htlhash`, Go build ID, and GNU ELF build ID per binary path per [Profiles Mappings Attributes](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/profiles/mappings.md).
 - Converted profiles emit `pprof.scope.default_sample_type`, `pprof.scope.sample_type_order`, `profile.frame.type = "go"`, and `pprof.mapping.*` attributes per [Pprof Compatibility](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/profiles/pprof.md).
 - Samples carrying valid `otel.trace_id` and `otel.span_id` pprof labels convert to `profiledata.Link` and drop those raw labels from sample attributes.
-- Global mutex and block profiling rate updates are reference-counted across `RuntimeProducer` instances so shutting down one instance does not prematurely disable profiling for another.
 
 ## Reader, ManualReader, and PeriodicReader
 
@@ -192,7 +187,7 @@ Comparing this design with [OTel .NET's `ContinuousProfiler`](https://github.com
 | Pipeline lifecycle | `ProfilerProvider`, `Producer`, `Reader` (`PeriodicReader` / `ManualReader`), `Exporter` | `ContinuousProfilerManager`, `SampleExporter` loop, `BufferProcessor`, `IContinuousProfilerExporter` | eBPF ring buffer to collector pipeline | Yes: `ProfilerProvider`, `ProfileReader`, `ProfileProducer`, `ProfileExporter`, `ForceFlush`, `Shutdown` |
 | Scheduling knobs | `interval` (`60s`), `timeout` (`30s`) | Per-sample-type `ExportInterval`, `ExportTimeout` | Collection interval | Yes: `OTEL_PROFILES_EXPORTER`, `OTEL_PROFILES_EXPORT_INTERVAL`, `OTEL_PROFILES_EXPORT_TIMEOUT` |
 | Exporter input | Typed `profiledata.ResourceProfiles` | Raw native `byte[]` buffers | OTLP `Profiles` | Yes: OTLP-aligned typed profile data model |
-| Runtime profile knobs | `heap`, `allocs`, `goroutine`, opt-in `mutex` fraction, `block` rate, `cpu`, delta flag | `ThreadSamplingInterval`, `MaxAllocationSamplesPerMinute`, `SelectedThreads` | Perf events | No: keep runtime-specific; standardize `(sample_type, unit)` names via spec PR [#5409](https://github.com/open-telemetry/opentelemetry-specification/pull/5409) |
+| Runtime profile knobs | `heap`, `allocs`, `goroutine`, opt-in `cpu`, delta flag (deferred: `mutex`, `block`) | `ThreadSamplingInterval`, `MaxAllocationSamplesPerMinute`, `SelectedThreads` | Perf events | No: keep runtime-specific; standardize `(sample_type, unit)` names via spec PR [#5409](https://github.com/open-telemetry/opentelemetry-specification/pull/5409) |
 | Trace correlation | `otel.trace_id` / `otel.span_id` pprof labels to `Sample.Link` | CLR thread-local active `Activity` + `SelectiveSampling` | `ProcessContext` + `ThreadContext` | Yes: contract to populate `Sample.Link`, leaving the hook mechanism per runtime |
 | OTLP exporter config | `OTEL_EXPORTER_OTLP_PROFILES_*`, `/v1development/profiles`, `OTLP-Profiles-Development-Version: 1` | Plugin-provided exporter | OTLP/gRPC | Yes: formalize in `specification/protocol/exporter.md` |
 
@@ -200,7 +195,7 @@ Comparing this design with [OTel .NET's `ContinuousProfiler`](https://github.com
 
 1. Design consensus (this PR): align on module naming (`sdk/profile`), pull-based `Reader`/`Producer` model, protobuf-free `profiledata`, and default-safe `RuntimeProducer` behavior.
 2. Experimental SDK and OTLP exporters: land [#9545](https://github.com/open-telemetry/opentelemetry-go/pull/9545) (`sdk/profile` core and `profiledata`), [#9558](https://github.com/open-telemetry/opentelemetry-go/pull/9558) (`sdk/profile/internal/pprof`), [#9559](https://github.com/open-telemetry/opentelemetry-go/pull/9559) (`RuntimeProducer`), [#9546](https://github.com/open-telemetry/opentelemetry-go/pull/9546) (`otlpprofilehttp`), and [#9547](https://github.com/open-telemetry/opentelemetry-go/pull/9547) (`otlpprofilegrpc`) at `v0.0.0`.
-3. Follow-up Go SDK PRs: opt-in trace-context pprof label integration (with overhead benchmarks), `OTEL_PROFILES_*` environment configuration, `stdoutprofile` exporter, `exporters/README.md` update, and alignment with finalized `sample_type`/`period_type` values from spec PR [#5409](https://github.com/open-telemetry/opentelemetry-specification/pull/5409).
+3. Follow-up Go SDK PRs: opt-in `mutex` and `block` profiles (with reference-counted rate restoration) once the upstream spec settles distinguishing profiles with identical `sample_type` values, opt-in trace-context pprof label integration (with overhead benchmarks), `OTEL_PROFILES_*` environment configuration, `stdoutprofile` exporter, `exporters/README.md` update, and alignment with finalized `sample_type`/`period_type` values from spec PR [#5409](https://github.com/open-telemetry/opentelemetry-specification/pull/5409).
 4. Upstream OpenTelemetry specification: propose `OTEL_EXPORTER_OTLP_PROFILES_*` and `/v1development/profiles` in `specification/protocol/exporter.md`, then bring this Go design and the .NET comparison to the Profiling SIG as an OTEP for `specification/profiles/sdk.md`.
 
 ## Benchmarking
@@ -241,4 +236,4 @@ Exposing `go.opentelemetry.io/proto/otlp/profiles/v1development` in `sdk/profile
 
 ### Enable CPU, mutex, or block profiling by default in `RuntimeProducer`
 
-Go permits only one active `runtime/pprof.StartCPUProfile` per process, and `SetMutexProfileFraction`/`SetBlockProfileRate` mutate global runtime state with measurable overhead. Enabling only `heap`, `allocs`, and `goroutine` by default ensures `NewRuntimeProducer()` will not conflict with `net/http/pprof` or an external profiler unless the caller explicitly opts in.
+Go permits only one active `runtime/pprof.StartCPUProfile` per process, and `SetMutexProfileFraction`/`SetBlockProfileRate` mutate global runtime state with measurable overhead. Enabling only `heap`, `allocs`, and `goroutine` by default ensures `NewRuntimeProducer()` will not conflict with `net/http/pprof` or an external profiler unless the caller explicitly opts in to CPU profiling, or to `mutex`/`block` once they land in Phase 3.
