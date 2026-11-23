@@ -230,6 +230,30 @@ func TestThrottledRetryGreaterThanMaxElapsedTime(t *testing.T) {
 	}).Error(), "max retry time would elapse: ")
 }
 
+func TestThrottledRetryMaxDurationThrottle(t *testing.T) {
+	// A saturated throttle, like the one produced from an oversized
+	// Retry-After or RetryInfo, must not overflow the remaining-budget check.
+	ev := func(error) (bool, time.Duration) { return true, time.Duration(math.MaxInt64) }
+	reqFunc := Config{
+		Enabled:         true,
+		InitialInterval: time.Nanosecond,
+		MaxInterval:     time.Nanosecond,
+		MaxElapsedTime:  time.Hour,
+	}.RequestFunc(ev)
+
+	origWait := waitFunc
+	waitFunc = func(_ context.Context, delay time.Duration) error {
+		assert.Fail(t, "waited on a throttle longer than MaxElapsedTime", "delay: %v", delay)
+		return assert.AnError
+	}
+	defer func() { waitFunc = origWait }()
+
+	ctx := t.Context()
+	assert.Contains(t, reqFunc(ctx, func(context.Context) error {
+		return assert.AnError
+	}).Error(), "max retry time would elapse: ")
+}
+
 func TestMaxElapsedTime(t *testing.T) {
 	ev := func(error) (bool, time.Duration) { return true, 0 }
 	delay := time.Nanosecond

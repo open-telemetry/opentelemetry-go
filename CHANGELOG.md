@@ -71,6 +71,13 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Fixed
 
+- Fail fast instead of blocking until the context is done when a saturated throttle from an oversized `Retry-After` header or gRPC `RetryInfo` overflows the `MaxElapsedTime` check in
+  `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`,
+  `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp`,
+  `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`,
+  `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`,
+  `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, and
+  `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`.
 - Record `otel.sdk.processor.log.processed` with `error.type="queue_full"` synchronously when `BatchProcessor.OnEmit` drops a log record due to a full queue in `go.opentelemetry.io/otel/sdk/log`. (#9524)
 - Fix `Set.Equivalent` and `Hasher.Distinct` in `go.opentelemetry.io/otel/attribute` returning the same `Distinct` for different attributes when adjacent strings or nested slices and maps share a boundary, such as `[]string{"ab", "c"}` and `[]string{"a", "bc"}`.
   This prevented those attribute sets from being kept as separate metric streams in `go.opentelemetry.io/otel/sdk/metric`. (#9508)
