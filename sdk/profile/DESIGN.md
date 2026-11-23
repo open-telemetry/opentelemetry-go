@@ -6,7 +6,9 @@
 
 This design is part of [#8449](https://github.com/open-telemetry/opentelemetry-go/issues/8449). The prototype stack lives in:
 
-- [#9545](https://github.com/open-telemetry/opentelemetry-go/pull/9545): `go.opentelemetry.io/otel/sdk/profile` and `go.opentelemetry.io/otel/sdk/profile/profiledata`
+- [#9545](https://github.com/open-telemetry/opentelemetry-go/pull/9545): core `go.opentelemetry.io/otel/sdk/profile` and `go.opentelemetry.io/otel/sdk/profile/profiledata`
+- [#9558](https://github.com/open-telemetry/opentelemetry-go/pull/9558): `sdk/profile/internal/pprof` decoder, delta subtraction, build IDs, and converter
+- [#9559](https://github.com/open-telemetry/opentelemetry-go/pull/9559): `sdk/profile` `RuntimeProducer`
 - [#9546](https://github.com/open-telemetry/opentelemetry-go/pull/9546): `go.opentelemetry.io/otel/exporters/otlp/otlpprofile/otlpprofilehttp`
 - [#9547](https://github.com/open-telemetry/opentelemetry-go/pull/9547): `go.opentelemetry.io/otel/exporters/otlp/otlpprofile/otlpprofilegrpc`
 
@@ -195,13 +197,13 @@ Comparing this design with [OTel .NET's `ContinuousProfiler`](https://github.com
 ## Phased plan
 
 1. Design consensus (this PR): align on module naming (`sdk/profile`), pull-based `Reader`/`Producer` model, protobuf-free `profiledata`, and default-safe `RuntimeProducer` behavior.
-2. Experimental SDK and OTLP exporters: land [#9545](https://github.com/open-telemetry/opentelemetry-go/pull/9545) (`sdk/profile`), [#9546](https://github.com/open-telemetry/opentelemetry-go/pull/9546) (`otlpprofilehttp`), and [#9547](https://github.com/open-telemetry/opentelemetry-go/pull/9547) (`otlpprofilegrpc`) at `v0.0.0`.
+2. Experimental SDK and OTLP exporters: land [#9545](https://github.com/open-telemetry/opentelemetry-go/pull/9545) (`sdk/profile` core and `profiledata`), [#9558](https://github.com/open-telemetry/opentelemetry-go/pull/9558) (`sdk/profile/internal/pprof`), [#9559](https://github.com/open-telemetry/opentelemetry-go/pull/9559) (`RuntimeProducer`), [#9546](https://github.com/open-telemetry/opentelemetry-go/pull/9546) (`otlpprofilehttp`), and [#9547](https://github.com/open-telemetry/opentelemetry-go/pull/9547) (`otlpprofilegrpc`) at `v0.0.0`.
 3. Follow-up Go SDK PRs: opt-in trace-context pprof label integration (with overhead benchmarks), `OTEL_PROFILES_*` environment configuration, `stdoutprofile` exporter, `exporters/README.md` update, and alignment with finalized `sample_type`/`period_type` values from spec PR [#5409](https://github.com/open-telemetry/opentelemetry-specification/pull/5409).
 4. Upstream OpenTelemetry specification: propose `OTEL_EXPORTER_OTLP_PROFILES_*` and `/v1development/profiles` in `specification/protocol/exporter.md`, then bring this Go design and the .NET comparison to the Profiling SIG as an OTEP for `specification/profiles/sdk.md`.
 
 ## Benchmarking
 
-Benchmarks cover pprof decoding/conversion (`BenchmarkParseAndConvertHeap`, `BenchmarkRuntimeProducerProduce`) and OTLP dictionary construction (`BenchmarkExportRequest`) without network I/O. Baseline `benchstat` results are tracked in [#9545](https://github.com/open-telemetry/opentelemetry-go/pull/9545) and [#9546](https://github.com/open-telemetry/opentelemetry-go/pull/9546).
+Benchmarks cover pprof decoding/conversion (`BenchmarkParseAndConvertHeap`, `BenchmarkRuntimeProducerProduce`) and OTLP dictionary construction (`BenchmarkExportRequest`) without network I/O. Baseline `benchstat` results are tracked in [#9558](https://github.com/open-telemetry/opentelemetry-go/pull/9558), [#9559](https://github.com/open-telemetry/opentelemetry-go/pull/9559), [#9546](https://github.com/open-telemetry/opentelemetry-go/pull/9546), and [#9547](https://github.com/open-telemetry/opentelemetry-go/pull/9547).
 
 ## Open questions
 
