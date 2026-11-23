@@ -34,6 +34,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Changed
 
+- Document that `FromContext` in `go.opentelemetry.io/otel/baggage` returns an empty `Baggage` when the context contains no baggage. (#9574)
 - Rename `rpc.response.status_code` to `rpc.status_code` in experimental self-observability metrics emitted by
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and
