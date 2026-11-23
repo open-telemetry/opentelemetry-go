@@ -4,7 +4,9 @@
 package propagation_test
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -390,4 +392,102 @@ func TestInvalidSpanContextDropped(t *testing.T) {
 func TestTraceContextFields(t *testing.T) {
 	expected := []string{"traceparent", "tracestate"}
 	assert.Equal(t, expected, propagation.TraceContext{}.Fields())
+}
+
+func TestExtractMultipleTraceStateHeaders(t *testing.T) {
+	const tp = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+
+	combinedState, err := trace.ParseTraceState("rojo=00f067aa0ba902b7,congo=t61rcWkgMzE")
+	require.NoError(t, err)
+
+	emptyMidState, err := trace.ParseTraceState("key1=value1,key2=value2")
+	require.NoError(t, err)
+
+	part1 := make([]string, 0, 20)
+	for i := range 20 {
+		part1 = append(part1, fmt.Sprintf("k%02d=v%02d", i, i))
+	}
+	part2 := make([]string, 0, 15)
+	for i := 20; i < 35; i++ {
+		part2 = append(part2, fmt.Sprintf("k%02d=v%02d", i, i))
+	}
+
+	tests := []struct {
+		name    string
+		carrier func() propagation.TextMapCarrier
+		wantTS  trace.TraceState
+	}{
+		{
+			name: "multiple valid tracestate headers combined in order",
+			carrier: func() propagation.TextMapCarrier {
+				return propagation.HeaderCarrier(http.Header{
+					traceparent: []string{tp},
+					tracestate:  []string{"rojo=00f067aa0ba902b7", "congo=t61rcWkgMzE"},
+				})
+			},
+			wantTS: combinedState,
+		},
+		{
+			name: "multiple tracestate headers with empty intermediate header",
+			carrier: func() propagation.TextMapCarrier {
+				return propagation.HeaderCarrier(http.Header{
+					traceparent: []string{tp},
+					tracestate:  []string{"key1=value1", "", "key2=value2"},
+				})
+			},
+			wantTS: emptyMidState,
+		},
+		{
+			name: "duplicate keys across multiple tracestate headers dropped",
+			carrier: func() propagation.TextMapCarrier {
+				return propagation.HeaderCarrier(http.Header{
+					traceparent: []string{tp},
+					tracestate:  []string{"foo=1", "foo=2"},
+				})
+			},
+		},
+		{
+			name: "combined members exceeding 32 across headers dropped",
+			carrier: func() propagation.TextMapCarrier {
+				return propagation.HeaderCarrier(http.Header{
+					traceparent: []string{tp},
+					tracestate:  []string{strings.Join(part1, ","), strings.Join(part2, ",")},
+				})
+			},
+		},
+		{
+			name: "one invalid tracestate header among multiple dropped",
+			carrier: func() propagation.TextMapCarrier {
+				return propagation.HeaderCarrier(http.Header{
+					traceparent: []string{tp},
+					tracestate:  []string{"key1=value1", "invalid$@#=invalid"},
+				})
+			},
+		},
+		{
+			name: "MapCarrier without ValuesGetter uses Get",
+			carrier: func() propagation.TextMapCarrier {
+				return propagation.MapCarrier{
+					"traceparent": tp,
+					"tracestate":  "rojo=00f067aa0ba902b7,congo=t61rcWkgMzE",
+				}
+			},
+			wantTS: combinedState,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := prop.Extract(t.Context(), tt.carrier())
+			got := trace.SpanContextFromContext(ctx)
+			want := trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.FlagsSampled,
+				TraceState: tt.wantTS,
+				Remote:     true,
+			})
+			assert.Equal(t, want, got)
+		})
+	}
 }

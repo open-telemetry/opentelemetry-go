@@ -67,6 +67,10 @@ func (TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
 
 // Extract reads tracecontext from the carrier into a returned Context.
 //
+// If carrier implements [ValuesGetter] (e.g. [HeaderCarrier]), Values is
+// invoked to combine multiple tracestate header values. Otherwise, Get is
+// called.
+//
 // The returned Context will be a copy of ctx and contain the extracted
 // tracecontext as the remote SpanContext. If the extracted tracecontext is
 // invalid, the passed ctx will be returned directly instead.
@@ -116,7 +120,7 @@ func (TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	// Ignore the error returned here. Failure to parse tracestate MUST NOT
 	// affect the parsing of traceparent according to the W3C tracecontext
 	// specification.
-	scc.TraceState, _ = trace.ParseTraceState(carrier.Get(tracestateHeader))
+	scc.TraceState, _ = trace.ParseTraceState(extractTraceState(carrier))
 	scc.Remote = true
 
 	sc := trace.NewSpanContext(scc)
@@ -125,6 +129,21 @@ func (TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 	}
 
 	return sc
+}
+
+func extractTraceState(carrier TextMapCarrier) string {
+	if multiCarrier, ok := carrier.(ValuesGetter); ok {
+		vals := multiCarrier.Values(tracestateHeader)
+		switch len(vals) {
+		case 0:
+			return ""
+		case 1:
+			return vals[0]
+		default:
+			return strings.Join(vals, ",")
+		}
+	}
+	return carrier.Get(tracestateHeader)
 }
 
 func extractPart(dst []byte, h *string, n int) bool {
