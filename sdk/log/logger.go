@@ -21,6 +21,10 @@ import (
 
 var now = time.Now
 
+// attributesBufferSize is the number of attributes newRecord can collect
+// without allocating.
+const attributesBufferSize = 16
+
 const (
 	exceptionTypeKey    = semconv.ExceptionTypeKey
 	exceptionMessageKey = semconv.ExceptionMessageKey
@@ -159,17 +163,19 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	// User-provided exception attributes MUST take precedence. Track message
 	// and type independently so a supplied value suppresses only its own
 	// derivation.
+	//
+	// Collect the attributes and add them in one call. Adding them one at a
+	// time makes de-duplication index every attribute already added, which
+	// is quadratic in the number of attributes.
 	var hasExceptionMessage, hasExceptionType bool
-	r.WalkAttributes(func(kv attribute.KeyValue) bool {
-		switch kv.Key {
-		case exceptionMessageKey:
-			hasExceptionMessage = true
-		case exceptionTypeKey:
-			hasExceptionType = true
-		}
-		newRecord.AddAttributes(kv)
-		return true
-	})
+	if r.AttributesLen() <= attributesBufferSize {
+		var stack [attributesBufferSize]attribute.KeyValue
+		_, hasExceptionMessage, hasExceptionType = addRecordAttrs(&newRecord, &r, stack[:0])
+	} else {
+		buf := getUnique()
+		*buf, hasExceptionMessage, hasExceptionType = addRecordAttrs(&newRecord, &r, *buf)
+		putUnique(buf)
+	}
 
 	// Avoid inspecting the error for attributes when the caller has
 	// already supplied the attributes.
@@ -221,6 +227,73 @@ func (l *logger) newRecord(ctx context.Context, r log.Record) Record {
 	}
 
 	return newRecord
+}
+
+// addRecordAttrs adds the attributes of src to dst, which must have no
+// attributes, using buf as scratch space. It reports whether src has the
+// exception message and type attributes. It returns buf, possibly grown, with
+// length 0 and its contents cleared so it can be reused.
+func addRecordAttrs(
+	dst *Record,
+	src *log.Record,
+	buf []attribute.KeyValue,
+) (_ []attribute.KeyValue, hasExceptionMessage, hasExceptionType bool) {
+	src.WalkAttributes(func(kv attribute.KeyValue) bool {
+		switch kv.Key {
+		case exceptionMessageKey:
+			hasExceptionMessage = true
+		case exceptionTypeKey:
+			hasExceptionType = true
+		}
+		buf = append(buf, kv)
+		return true
+	})
+	dst.addAttrsInPlace(buf)
+	clear(buf)
+	return buf[:0], hasExceptionMessage, hasExceptionType
+}
+
+// addAttrsInPlace adds attrs to r, which must have no attributes. It may
+// overwrite attrs.
+//
+// The result is the same as calling r.AddAttributes for each attribute in
+// turn, but takes linear time instead of quadratic: a repeated key replaces
+// the value at its first position, and once the attribute count limit is
+// reached, every occurrence of a key that was not retained is dropped and
+// counted.
+func (r *Record) addAttrsInPlace(attrs []attribute.KeyValue) {
+	attrs = filterInvalid(attrs)
+	if r.allowDupKeys || len(attrs) <= 1 {
+		attrs, drop := r.head(attrs)
+		r.addDropped(drop)
+		r.addAttrs(attrs)
+		return
+	}
+
+	index := getIndex()
+	defer putIndex(index)
+
+	var n, dropped int
+	var dup bool
+	for _, a := range attrs {
+		if idx, found := index[a.Key]; found {
+			dup = true
+			attrs[idx] = a
+			continue
+		}
+		if r.hasAttributeCountLimit() && n >= r.attributeCountLimit {
+			dropped++
+			continue
+		}
+		index[a.Key] = n
+		attrs[n] = a
+		n++
+	}
+	if dup {
+		logKeyValuePairDropped()
+	}
+	r.addDropped(dropped)
+	r.addAttrs(attrs[:n])
 }
 
 func errorType(err error) string {
