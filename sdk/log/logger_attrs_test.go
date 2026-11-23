@@ -145,6 +145,19 @@ func TestLoggerEmitAttributeDeduplication(t *testing.T) {
 			want: []attribute.KeyValue{a2},
 		},
 		{
+			name:        "InvalidKeysNotCountedTowardLimit",
+			opts:        []LoggerProviderOption{WithAttributeCountLimit(1)},
+			in:          []attribute.KeyValue{attribute.String("", "x"), a1, b},
+			want:        []attribute.KeyValue{a1},
+			wantDropped: 1,
+		},
+		{
+			name:        "ZeroCountLimit",
+			opts:        []LoggerProviderOption{WithAttributeCountLimit(0)},
+			in:          manyDups,
+			wantDropped: len(manyDups),
+		},
+		{
 			name: "MapValueDeduplicated",
 			in: []attribute.KeyValue{
 				attribute.Map("m", attribute.String("x", "1"), attribute.String("x", "2")),
@@ -281,5 +294,40 @@ func BenchmarkLoggerEmitAttributes(b *testing.B) {
 				}
 			})
 		}
+	}
+}
+
+// BenchmarkLoggerEmitAttributesFewRetained emits records with many attributes
+// of which few are retained. The scratch space used should depend on the
+// retained attributes, not the input.
+func BenchmarkLoggerEmitAttributesFewRetained(b *testing.B) {
+	discard := newProcessor("discard")
+	discard.onEmitFunc = func(context.Context, *Record) error { return nil }
+
+	const n = 2000
+	sameKey := make([]attribute.KeyValue, n)
+	for i := range sameKey {
+		sameKey[i] = attribute.Int("k", i)
+	}
+
+	for _, bc := range []struct {
+		name   string
+		record log.Record
+		opts   []LoggerProviderOption
+	}{
+		{"SameKey", apiRecord(sameKey...), nil},
+		{"CountLimit0", apiRecord(keys(n)...), []LoggerProviderOption{WithAttributeCountLimit(0)}},
+		{"CountLimit10", apiRecord(keys(n)...), []LoggerProviderOption{WithAttributeCountLimit(10)}},
+		{"DefaultCountLimit", apiRecord(keys(n)...), nil},
+	} {
+		opts := append([]LoggerProviderOption{WithProcessor(discard)}, bc.opts...)
+		logger := NewLoggerProvider(opts...).Logger(b.Name())
+		b.Run(bc.name, func(b *testing.B) {
+			ctx := b.Context()
+			b.ReportAllocs()
+			for b.Loop() {
+				logger.Emit(ctx, bc.record)
+			}
+		})
 	}
 }
