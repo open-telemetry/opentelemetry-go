@@ -713,3 +713,107 @@ func BenchmarkHasher(b *testing.B) {
 		_ = h.Distinct()
 	}
 }
+
+func TestHashBoundaries(t *testing.T) {
+	tests := []struct {
+		name string
+		a, b []KeyValue
+	}{
+		{
+			name: "string slice element boundary",
+			a:    []KeyValue{StringSlice("k", []string{"ab", "c"})},
+			b:    []KeyValue{StringSlice("k", []string{"a", "bc"})},
+		},
+		{
+			name: "string slice empty element",
+			a:    []KeyValue{StringSlice("k", []string{"a", ""})},
+			b:    []KeyValue{StringSlice("k", []string{"a"})},
+		},
+		{
+			name: "string value and next key boundary",
+			a:    []KeyValue{String("a", "x"), Int64("bc", 1)},
+			b:    []KeyValue{String("a", "xb"), Int64("c", 1)},
+		},
+		{
+			name: "map key and value boundary",
+			a:    []KeyValue{Map("m", String("a", "x"), Int64("bc", 1))},
+			b:    []KeyValue{Map("m", String("a", "xb"), Int64("c", 1))},
+		},
+		{
+			name: "map followed by attribute",
+			a:    []KeyValue{Map("a", Int("b", 1)), Int("c", 2)},
+			b:    []KeyValue{Map("a", Int("b", 1), Int("c", 2))},
+		},
+		{
+			name: "nested slice followed by value",
+			a:    []KeyValue{Slice("k", SliceValue(IntValue(1)), IntValue(2))},
+			b:    []KeyValue{Slice("k", SliceValue(IntValue(1), IntValue(2)))},
+		},
+		{
+			name: "nested map followed by key",
+			a:    []KeyValue{Map("m", Map("a", Int("b", 1)), Int("c", 2))},
+			b:    []KeyValue{Map("m", Map("a", Int("b", 1), Int("c", 2)))},
+		},
+		{
+			name: "long slices",
+			a: []KeyValue{Slice("k",
+				SliceValue(IntValue(1), IntValue(2), IntValue(3), IntValue(4), IntValue(5), IntValue(6)),
+				IntValue(7),
+			)},
+			b: []KeyValue{Slice("k",
+				SliceValue(IntValue(1), IntValue(2), IntValue(3), IntValue(4), IntValue(5), IntValue(6), IntValue(7)),
+			)},
+		},
+		{
+			name: "numeric slice boundary",
+			// A type identifier can also occur as ordinary numeric element data.
+			a: []KeyValue{Slice("k",
+				Int64SliceValue([]int64{1, 2, 3, int64(int64SliceID)}),
+				Int64SliceValue(nil),
+			)},
+			b: []KeyValue{Slice("k",
+				Int64SliceValue([]int64{1, 2, 3}),
+				Int64SliceValue([]int64{int64(int64SliceID)}),
+			)},
+		},
+		{
+			name: "empty nested slices",
+			a:    []KeyValue{Slice("k", SliceValue(SliceValue()), SliceValue())},
+			b:    []KeyValue{Slice("k", SliceValue(), SliceValue(SliceValue()))},
+		},
+		{
+			name: "empty map followed by map",
+			a:    []KeyValue{Map("a"), Map("b")},
+			b:    []KeyValue{Map("a", Map("b"))},
+		},
+		{
+			name: "long map followed by attribute",
+			a: []KeyValue{
+				Map("a",
+					Int("b", 1), Int("c", 2), Int("d", 3),
+					Int("e", 4), Int("f", 5), Int("g", 6),
+				),
+				Int("h", 7),
+			},
+			b: []KeyValue{
+				Map("a",
+					Int("b", 1), Int("c", 2), Int("d", 3),
+					Int("e", 4), Int("f", 5), Int("g", 6),
+					Int("h", 7),
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if hashKVs(tt.a) == hashKVs(tt.b) {
+				t.Error("distinct attributes hash to the same value")
+			}
+			setA, setB := NewSet(tt.a...), NewSet(tt.b...)
+			if setA.Equivalent() == setB.Equivalent() {
+				t.Error("distinct sets have the same Equivalent")
+			}
+		})
+	}
+}
