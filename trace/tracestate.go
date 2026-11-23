@@ -194,7 +194,7 @@ func ParseTraceState(ts string) (TraceState, error) {
 	for ts != "" {
 		var memberStr string
 		memberStr, ts, _ = strings.Cut(ts, listDelimiters)
-		if memberStr == "" {
+		if isOWS(memberStr) {
 			continue
 		}
 
@@ -330,4 +330,13 @@ func (ts TraceState) Delete(key string) TraceState {
 // Len returns the number of list-members in the TraceState.
 func (ts TraceState) Len() int {
 	return len(ts.list)
+}
+
+func isOWS(s string) bool {
+	for i := range len(s) {
+		if s[i] != ' ' && s[i] != '\t' {
+			return false
+		}
+	}
+	return true
 }

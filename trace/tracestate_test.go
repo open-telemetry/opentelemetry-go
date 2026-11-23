@@ -274,6 +274,66 @@ var testcases = []struct {
 			{Key: "foo", Value: "1"},
 		}},
 	},
+	{
+		name: "with OWS-only list-member spaces",
+		in:   "foo=1, ,bar=2",
+		out:  "foo=1,bar=2",
+		tracestate: TraceState{list: []member{
+			{Key: "foo", Value: "1"},
+			{Key: "bar", Value: "2"},
+		}},
+	},
+	{
+		name: "with OWS-only list-member tab",
+		in:   "foo=1,\t,bar=2",
+		out:  "foo=1,bar=2",
+		tracestate: TraceState{list: []member{
+			{Key: "foo", Value: "1"},
+			{Key: "bar", Value: "2"},
+		}},
+	},
+	{
+		name: "with trailing OWS-only list-member",
+		in:   "foo=1, ",
+		out:  "foo=1",
+		tracestate: TraceState{list: []member{
+			{Key: "foo", Value: "1"},
+		}},
+	},
+	{
+		name: "with leading OWS-only list-member",
+		in:   " ,foo=1",
+		out:  "foo=1",
+		tracestate: TraceState{list: []member{
+			{Key: "foo", Value: "1"},
+		}},
+	},
+	{
+		name: "space-only input",
+		in:   " ",
+	},
+	{
+		name: "tab-only input",
+		in:   "\t",
+	},
+	{
+		name: "with leading space preserved in value",
+		in:   "foo= 1 ",
+		out:  "foo= 1",
+		tracestate: TraceState{list: []member{
+			{Key: "foo", Value: " 1"},
+		}},
+	},
+	{
+		name: "only spaces after equals",
+		in:   "foo= ",
+		err:  errInvalidMember,
+	},
+	{
+		name: "vertical tab invalid in value",
+		in:   "foo=1\v",
+		err:  errInvalidMember,
+	},
 }
 
 var maxMembers = func() TraceState {
@@ -299,6 +359,11 @@ func TestParseTraceState(t *testing.T) {
 			}
 		})
 	}
+	t.Run("maximum members with OWS-only list-member", func(t *testing.T) {
+		got, err := ParseTraceState(maxMembers.String() + ", ")
+		assert.NoError(t, err)
+		assert.Equal(t, maxMembers, got)
+	})
 }
 
 func TestTraceStateString(t *testing.T) {
