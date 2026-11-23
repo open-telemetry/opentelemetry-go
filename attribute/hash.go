@@ -102,10 +102,24 @@ func hashKVs(kvs []KeyValue) uint64 {
 
 // hashKV returns the xxHash64 hash of kv with h as the base.
 func hashKV(h xxhash.Hash, kv KeyValue) xxhash.Hash {
-	h = h.String(string(kv.Key))
+	h = hashString(h, string(kv.Key))
 	return hashValue(h, kv.Value)
 }
 
+// hashString hashes s prefixed with its length. Without the prefix, adjacent
+// strings are not delimited in the digest, so values like []string{"ab", "c"}
+// and []string{"a", "bc"}, or the attribute sets {a="x", bc=1} and
+// {a="xb", c=1}, would hash identically.
+func hashString(h xxhash.Hash, s string) xxhash.Hash {
+	return h.Uint64(uint64(len(s))).String(s)
+}
+
+// hashValue hashes v with h as the base.
+//
+// Slice and map values are prefixed with their element count. Without it the
+// end of a nested collection is not marked in the digest, so a map holding
+// b=1 followed by the attribute c=2 would hash the same as a map holding both
+// b=1 and c=2.
 func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 	switch v.Type() {
 	case BOOL:
@@ -120,22 +134,27 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.Uint64(v.numeric)
 	case STRING:
 		h = h.Uint64(stringID)
-		h = h.String(v.stringly)
+		h = hashString(h, v.stringly)
 	case BOOLSLICE:
 		h = h.Uint64(boolSliceID)
 		switch vals := v.slice.(type) {
 		case [0]bool:
+			h = h.Uint64(0)
 		case [1]bool:
+			h = h.Uint64(1)
 			h = h.Bool(vals[0])
 		case [2]bool:
+			h = h.Uint64(2)
 			h = h.Bool(vals[0])
 			h = h.Bool(vals[1])
 		case [3]bool:
+			h = h.Uint64(3)
 			h = h.Bool(vals[0])
 			h = h.Bool(vals[1])
 			h = h.Bool(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
 				h = h.Bool(rv.Index(i).Bool())
 			}
@@ -144,17 +163,22 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.Uint64(int64SliceID)
 		switch vals := v.slice.(type) {
 		case [0]int64:
+			h = h.Uint64(0)
 		case [1]int64:
+			h = h.Uint64(1)
 			h = h.Int64(vals[0])
 		case [2]int64:
+			h = h.Uint64(2)
 			h = h.Int64(vals[0])
 			h = h.Int64(vals[1])
 		case [3]int64:
+			h = h.Uint64(3)
 			h = h.Int64(vals[0])
 			h = h.Int64(vals[1])
 			h = h.Int64(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
 				h = h.Int64(rv.Index(i).Int())
 			}
@@ -163,17 +187,22 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.Uint64(float64SliceID)
 		switch vals := v.slice.(type) {
 		case [0]float64:
+			h = h.Uint64(0)
 		case [1]float64:
+			h = h.Uint64(1)
 			h = h.Float64(vals[0])
 		case [2]float64:
+			h = h.Uint64(2)
 			h = h.Float64(vals[0])
 			h = h.Float64(vals[1])
 		case [3]float64:
+			h = h.Uint64(3)
 			h = h.Float64(vals[0])
 			h = h.Float64(vals[1])
 			h = h.Float64(vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
 				h = h.Float64(rv.Index(i).Float())
 			}
@@ -182,44 +211,55 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.Uint64(stringSliceID)
 		switch vals := v.slice.(type) {
 		case [0]string:
+			h = h.Uint64(0)
 		case [1]string:
-			h = h.String(vals[0])
+			h = h.Uint64(1)
+			h = hashString(h, vals[0])
 		case [2]string:
-			h = h.String(vals[0])
-			h = h.String(vals[1])
+			h = h.Uint64(2)
+			h = hashString(h, vals[0])
+			h = hashString(h, vals[1])
 		case [3]string:
-			h = h.String(vals[0])
-			h = h.String(vals[1])
-			h = h.String(vals[2])
+			h = h.Uint64(3)
+			h = hashString(h, vals[0])
+			h = hashString(h, vals[1])
+			h = hashString(h, vals[2])
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
-				h = h.String(rv.Index(i).String())
+				h = hashString(h, rv.Index(i).String())
 			}
 		}
 	case BYTESLICE:
 		h = h.Uint64(byteSliceID)
-		h = h.String(v.stringly)
+		h = hashString(h, v.stringly)
 	case SLICE:
 		h = h.Uint64(sliceID)
 		switch vals := v.slice.(type) {
 		case [0]Value:
-			// No values to hash, but the type identifier is still hashed above.
+			h = h.Uint64(0)
+			// Empty collection: only the zero count is hashed.
 		case [1]Value:
+			h = h.Uint64(1)
 			h = hashValue(h, vals[0])
 		case [2]Value:
+			h = h.Uint64(2)
 			h = hashValue(h, vals[0])
 			h = hashValue(h, vals[1])
 		case [3]Value:
+			h = h.Uint64(3)
 			h = hashValue(h, vals[0])
 			h = hashValue(h, vals[1])
 			h = hashValue(h, vals[2])
 		case [4]Value:
+			h = h.Uint64(4)
 			h = hashValue(h, vals[0])
 			h = hashValue(h, vals[1])
 			h = hashValue(h, vals[2])
 			h = hashValue(h, vals[3])
 		case [5]Value:
+			h = h.Uint64(5)
 			h = hashValue(h, vals[0])
 			h = hashValue(h, vals[1])
 			h = hashValue(h, vals[2])
@@ -227,6 +267,7 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 			h = hashValue(h, vals[4])
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
 				h = hashValue(h, rv.Index(i).Interface().(Value))
 			}
@@ -235,47 +276,54 @@ func hashValue(h xxhash.Hash, v Value) xxhash.Hash {
 		h = h.Uint64(mapID)
 		switch vals := v.slice.(type) {
 		case [0]KeyValue:
-			// No values to hash, but the type identifier is still hashed above.
+			h = h.Uint64(0)
+			// Empty collection: only the zero count is hashed.
 		case [1]KeyValue:
-			h = h.String(string(vals[0].Key))
+			h = h.Uint64(1)
+			h = hashString(h, string(vals[0].Key))
 			h = hashValue(h, vals[0].Value)
 		case [2]KeyValue:
-			h = h.String(string(vals[0].Key))
+			h = h.Uint64(2)
+			h = hashString(h, string(vals[0].Key))
 			h = hashValue(h, vals[0].Value)
-			h = h.String(string(vals[1].Key))
+			h = hashString(h, string(vals[1].Key))
 			h = hashValue(h, vals[1].Value)
 		case [3]KeyValue:
-			h = h.String(string(vals[0].Key))
+			h = h.Uint64(3)
+			h = hashString(h, string(vals[0].Key))
 			h = hashValue(h, vals[0].Value)
-			h = h.String(string(vals[1].Key))
+			h = hashString(h, string(vals[1].Key))
 			h = hashValue(h, vals[1].Value)
-			h = h.String(string(vals[2].Key))
+			h = hashString(h, string(vals[2].Key))
 			h = hashValue(h, vals[2].Value)
 		case [4]KeyValue:
-			h = h.String(string(vals[0].Key))
+			h = h.Uint64(4)
+			h = hashString(h, string(vals[0].Key))
 			h = hashValue(h, vals[0].Value)
-			h = h.String(string(vals[1].Key))
+			h = hashString(h, string(vals[1].Key))
 			h = hashValue(h, vals[1].Value)
-			h = h.String(string(vals[2].Key))
+			h = hashString(h, string(vals[2].Key))
 			h = hashValue(h, vals[2].Value)
-			h = h.String(string(vals[3].Key))
+			h = hashString(h, string(vals[3].Key))
 			h = hashValue(h, vals[3].Value)
 		case [5]KeyValue:
-			h = h.String(string(vals[0].Key))
+			h = h.Uint64(5)
+			h = hashString(h, string(vals[0].Key))
 			h = hashValue(h, vals[0].Value)
-			h = h.String(string(vals[1].Key))
+			h = hashString(h, string(vals[1].Key))
 			h = hashValue(h, vals[1].Value)
-			h = h.String(string(vals[2].Key))
+			h = hashString(h, string(vals[2].Key))
 			h = hashValue(h, vals[2].Value)
-			h = h.String(string(vals[3].Key))
+			h = hashString(h, string(vals[3].Key))
 			h = hashValue(h, vals[3].Value)
-			h = h.String(string(vals[4].Key))
+			h = hashString(h, string(vals[4].Key))
 			h = hashValue(h, vals[4].Value)
 		default:
 			rv := reflect.ValueOf(v.slice)
+			h = h.Uint64(uint64(rv.Len())) // nolint:gosec // A length is never negative.
 			for i := 0; i < rv.Len(); i++ {
 				kv := rv.Index(i).Interface().(KeyValue)
-				h = h.String(string(kv.Key))
+				h = hashString(h, string(kv.Key))
 				h = hashValue(h, kv.Value)
 			}
 		}
