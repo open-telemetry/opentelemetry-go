@@ -4,8 +4,6 @@
 package metric
 
 import (
-	"slices"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -54,40 +52,6 @@ type metricFilter interface {
 	) int
 }
 
-func cloneAggregationForFiltering(data metricdata.Aggregation) metricdata.Aggregation {
-	switch d := data.(type) {
-	case metricdata.Sum[int64]:
-		d.DataPoints = slices.Clone(d.DataPoints)
-		return d
-	case metricdata.Sum[float64]:
-		d.DataPoints = slices.Clone(d.DataPoints)
-		return d
-	case metricdata.Gauge[int64]:
-		d.DataPoints = slices.Clone(d.DataPoints)
-		return d
-	case metricdata.Gauge[float64]:
-		d.DataPoints = slices.Clone(d.DataPoints)
-		return d
-	case metricdata.Histogram[int64]:
-		d.DataPoints = slices.Clone(d.DataPoints)
-		return d
-	case metricdata.Histogram[float64]:
-		d.DataPoints = slices.Clone(d.DataPoints)
-		return d
-	case metricdata.ExponentialHistogram[int64]:
-		d.DataPoints = slices.Clone(d.DataPoints)
-		return d
-	case metricdata.ExponentialHistogram[float64]:
-		d.DataPoints = slices.Clone(d.DataPoints)
-		return d
-	case metricdata.Summary:
-		d.DataPoints = slices.Clone(d.DataPoints)
-		return d
-	default:
-		return data
-	}
-}
-
 // filterScopeMetrics compacts scopes and metrics in-place. Shared data points
 // are copied during partial filtering. Empty scopes are dropped.
 func filterScopeMetrics(
@@ -122,9 +86,6 @@ func filterMetrics(
 		switch filter.TestMetric(scope, metrics[i].Name, kind, metrics[i].Unit) {
 		case metricFilterAccept:
 		case metricFilterAcceptPartial:
-			if storage == filterSharedData {
-				metrics[i].Data = cloneAggregationForFiltering(metrics[i].Data)
-			}
 			keep := func(attrs attribute.Set) bool {
 				return filter.TestAttributes(
 					scope,
@@ -134,7 +95,7 @@ func filterMetrics(
 					attrs,
 				) == metricFilterAttrAccept
 			}
-			metrics[i].Data = filterAggregation(metrics[i].Data, keep)
+			metrics[i].Data = filterAggregation(metrics[i].Data, keep, storage)
 			if dataPointCount(metrics[i].Data) == 0 {
 				continue
 			}
@@ -200,34 +161,35 @@ func dataPointCount(data metricdata.Aggregation) int {
 func filterAggregation(
 	data metricdata.Aggregation,
 	keep func(attribute.Set) bool,
+	storage filterStorage,
 ) metricdata.Aggregation {
 	switch d := data.(type) {
 	case metricdata.Sum[int64]:
-		d.DataPoints = filterDataPoints(d.DataPoints, keep)
+		d.DataPoints = filterDataPoints(d.DataPoints, keep, storage)
 		return d
 	case metricdata.Sum[float64]:
-		d.DataPoints = filterDataPoints(d.DataPoints, keep)
+		d.DataPoints = filterDataPoints(d.DataPoints, keep, storage)
 		return d
 	case metricdata.Gauge[int64]:
-		d.DataPoints = filterDataPoints(d.DataPoints, keep)
+		d.DataPoints = filterDataPoints(d.DataPoints, keep, storage)
 		return d
 	case metricdata.Gauge[float64]:
-		d.DataPoints = filterDataPoints(d.DataPoints, keep)
+		d.DataPoints = filterDataPoints(d.DataPoints, keep, storage)
 		return d
 	case metricdata.Histogram[int64]:
-		d.DataPoints = filterHistogramDataPoints(d.DataPoints, keep)
+		d.DataPoints = filterHistogramDataPoints(d.DataPoints, keep, storage)
 		return d
 	case metricdata.Histogram[float64]:
-		d.DataPoints = filterHistogramDataPoints(d.DataPoints, keep)
+		d.DataPoints = filterHistogramDataPoints(d.DataPoints, keep, storage)
 		return d
 	case metricdata.ExponentialHistogram[int64]:
-		d.DataPoints = filterExponentialHistogramDataPoints(d.DataPoints, keep)
+		d.DataPoints = filterExponentialHistogramDataPoints(d.DataPoints, keep, storage)
 		return d
 	case metricdata.ExponentialHistogram[float64]:
-		d.DataPoints = filterExponentialHistogramDataPoints(d.DataPoints, keep)
+		d.DataPoints = filterExponentialHistogramDataPoints(d.DataPoints, keep, storage)
 		return d
 	case metricdata.Summary:
-		d.DataPoints = filterSummaryDataPoints(d.DataPoints, keep)
+		d.DataPoints = filterSummaryDataPoints(d.DataPoints, keep, storage)
 		return d
 	default:
 		return d
@@ -240,8 +202,19 @@ func filterAggregation(
 func filterDataPoints[N int64 | float64](
 	pts []metricdata.DataPoint[N],
 	keep func(attribute.Set) bool,
+	storage filterStorage,
 ) []metricdata.DataPoint[N] {
 	j := 0
+	if storage == filterSharedData {
+		var kept []metricdata.DataPoint[N]
+		for _, point := range pts {
+			if keep(point.Attributes) {
+				kept = append(kept, point)
+			}
+		}
+		return kept
+	}
+
 	for i := range pts {
 		if keep(pts[i].Attributes) {
 			pts[j], pts[i] = pts[i], pts[j]
@@ -254,7 +227,17 @@ func filterDataPoints[N int64 | float64](
 func filterHistogramDataPoints[N int64 | float64](
 	pts []metricdata.HistogramDataPoint[N],
 	keep func(attribute.Set) bool,
+	storage filterStorage,
 ) []metricdata.HistogramDataPoint[N] {
+	if storage == filterSharedData {
+		var kept []metricdata.HistogramDataPoint[N]
+		for _, point := range pts {
+			if keep(point.Attributes) {
+				kept = append(kept, point)
+			}
+		}
+		return kept
+	}
 	j := 0
 	for i := range pts {
 		if keep(pts[i].Attributes) {
@@ -268,7 +251,17 @@ func filterHistogramDataPoints[N int64 | float64](
 func filterExponentialHistogramDataPoints[N int64 | float64](
 	pts []metricdata.ExponentialHistogramDataPoint[N],
 	keep func(attribute.Set) bool,
+	storage filterStorage,
 ) []metricdata.ExponentialHistogramDataPoint[N] {
+	if storage == filterSharedData {
+		var kept []metricdata.ExponentialHistogramDataPoint[N]
+		for _, point := range pts {
+			if keep(point.Attributes) {
+				kept = append(kept, point)
+			}
+		}
+		return kept
+	}
 	j := 0
 	for i := range pts {
 		if keep(pts[i].Attributes) {
@@ -282,7 +275,17 @@ func filterExponentialHistogramDataPoints[N int64 | float64](
 func filterSummaryDataPoints(
 	pts []metricdata.SummaryDataPoint,
 	keep func(attribute.Set) bool,
+	storage filterStorage,
 ) []metricdata.SummaryDataPoint {
+	if storage == filterSharedData {
+		var kept []metricdata.SummaryDataPoint
+		for _, point := range pts {
+			if keep(point.Attributes) {
+				kept = append(kept, point)
+			}
+		}
+		return kept
+	}
 	j := 0
 	for i := range pts {
 		if keep(pts[i].Attributes) {

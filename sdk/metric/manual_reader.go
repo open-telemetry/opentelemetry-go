@@ -53,14 +53,7 @@ func NewManualReader(opts ...ManualReaderOption) *ManualReader {
 		cardinalityLimitSelector: cfg.cardinalityLimitSelector,
 		metricFilter:             cfg.metricFilter,
 	}
-	producers := cfg.producers
-	if cfg.metricFilter != nil {
-		producers = make([]Producer, len(producers))
-		for i, p := range cfg.producers {
-			producers[i] = &filteringProducer{inner: p, filter: cfg.metricFilter}
-		}
-	}
-	r.externalProducers.Store(producers)
+	r.externalProducers.Store(wrapProducers(cfg.producers, cfg.metricFilter))
 
 	var err error
 	r.inst, err = observ.NewInstrumentation(manualReaderType, nextManualReaderID())

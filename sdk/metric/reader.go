@@ -142,6 +142,18 @@ type filteringProducer struct {
 	filter metricFilter
 }
 
+func wrapProducers(producers []Producer, filter metricFilter) []Producer {
+	if filter == nil {
+		return producers
+	}
+
+	wrapped := make([]Producer, len(producers))
+	for i, producer := range producers {
+		wrapped[i] = &filteringProducer{inner: producer, filter: filter}
+	}
+	return wrapped
+}
+
 func (p *filteringProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
 	sm, err := p.inner.Produce(ctx)
 	if p.filter == nil {
