@@ -17,8 +17,8 @@ github.com/grpc-ecosystem/grpc-gateway/v2 v2.34.0 h1:vzlTzzi4tHLa/JQdIE5LeXw6SEX
 github.com/grpc-ecosystem/grpc-gateway/v2 v2.34.0/go.mod h1:FHXQZnW5pA0txiMr3jApv9uNJzZ+7mYZd+u+PPenCFU=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
-go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
-go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
+go.opentelemetry.io/auto/sdk v1.2.2 h1:ErNn7NW2t1F9CFBLb9iyPMyLRbcEd07l5m/StCe9AEE=
+go.opentelemetry.io/auto/sdk v1.2.2/go.mod h1:Ca3X8ec6gdTYjAirla//dnp05ECtQPfN4Ut74OJLVsQ=
 go.opentelemetry.io/proto/otlp v1.11.0 h1:5rrYs0Ykyj50sdU/JU0x8etU+LubXWb+gED6TbEdMIk=
 go.opentelemetry.io/proto/otlp v1.11.0/go.mod h1:SmVizdCOAm3XBtG1g1NnOdhW6jtddT72hLMhv8VwA8E=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
