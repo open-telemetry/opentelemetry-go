@@ -313,7 +313,7 @@ func TestFilterHistogramDataPointsPreservesStorage(t *testing.T) {
 
 	filtered := filterHistogramDataPoints(points, func(attrs attribute.Set) bool {
 		return !attrs.Equals(&drop)
-	}, filterSharedData)
+	}, filterInPlace)
 
 	require.Len(t, filtered, 2)
 	assert.Equal(t, keep1, filtered[0].Attributes)
