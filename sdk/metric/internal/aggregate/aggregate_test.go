@@ -318,3 +318,67 @@ func benchmarkCollectCycle[N int64 | float64](factory func() (Measure[N], Comput
 		}
 	}
 }
+
+func benchmarkBoundAggregate[N int64 | float64](
+	factory func() (Measure[N], ComputeAggregation, Binder[N]),
+) func(*testing.B) {
+	counts := []int{1, 10, 100}
+	return func(b *testing.B) {
+		for _, n := range counts {
+			b.Run(strconv.Itoa(n), func(b *testing.B) {
+				benchmarkBoundAggregateN(b, factory, n)
+			})
+		}
+	}
+}
+
+func benchmarkBoundAggregateN[N int64 | float64](
+	b *testing.B,
+	factory func() (Measure[N], ComputeAggregation, Binder[N]),
+	count int,
+) {
+	ctx := b.Context()
+	attrs := make([]attribute.Set, count)
+	for i := range attrs {
+		attrs[i] = attribute.NewSet(attribute.Int("value", i))
+	}
+
+	b.Run("BoundMeasure", func(b *testing.B) {
+		got := &bmarkRes
+		_, comp, binder := factory()
+		handles := make([]BoundMeasure[N], len(attrs))
+		for i, attr := range attrs {
+			handles[i] = binder(attr)
+		}
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for n := 0; n < b.N; n++ {
+			for _, bm := range handles {
+				bm(ctx, 1)
+			}
+		}
+
+		comp(got)
+	})
+
+	b.Run("ComputeAggregation", func(b *testing.B) {
+		comps := make([]ComputeAggregation, b.N)
+		for n := range comps {
+			_, comp, binder := factory()
+			for _, attr := range attrs {
+				bm := binder(attr)
+				bm(ctx, 1)
+			}
+			comps[n] = comp
+		}
+
+		got := &bmarkRes
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for n := 0; n < b.N; n++ {
+			comps[n](got)
+		}
+	})
+}
