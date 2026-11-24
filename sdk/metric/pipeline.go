@@ -516,16 +516,18 @@ type aggVal[N int64 | float64] struct {
 	ID      uint64
 	Measure aggregate.Measure[N]
 	Finish  finish.Func
+	Bind    aggregate.Binder[N]
 	Err     error
 }
 
 // streamAggregation contains the operations of one resolved metric stream.
 // The pipeline retains compute; the instrument retains measure and, when
-// present, finish.
+// present, finish or bind.
 type streamAggregation[N int64 | float64] struct {
 	measure aggregate.Measure[N]
 	compute aggregate.ComputeAggregation
 	finish  func(attribute.Distinct, time.Time)
+	bind    aggregate.Binder[N]
 }
 
 // streamAggregationFactory constructs a stream's operations after its Builder
@@ -671,6 +673,7 @@ func (i *inserter[N]) cachedAggregator( // nolint:revive // optIn is not a contr
 			ID:      id,
 			Measure: funcs.measure,
 			Finish:  finishFunc,
+			Bind:    funcs.bind,
 		}
 	})
 	return cv
