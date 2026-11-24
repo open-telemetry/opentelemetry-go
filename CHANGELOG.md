@@ -9,6 +9,11 @@ with further details in the [versioning policy](VERSIONING.md).
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.48.0/0.70.0/0.24.0/0.1.1] - 2026-11-24
+
 This release contains the first stable release of the OpenTelemetry Go stdout log exporter.
 Our project stability guarantees now apply to the `go.opentelemetry.io/otel/exporters/stdout/stdoutlog` module.
 See our [versioning policy](VERSIONING.md) for more information about these stability guarantees.
@@ -23,6 +28,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Support the `OTEL_METRIC_EXPORT_MAX_BATCH_SIZE` environment variable in `NewPeriodicReader` in `go.opentelemetry.io/otel/sdk/metric`. The `WithMaxExportBatchSize` option takes precedence. (#9316)
 - Add `go.opentelemetry.io/otel/semconv/v1.44.0` package. The package contains semantic conventions from the `v1.44.0` version of the OpenTelemetry Semantic Conventions.
   See the [migration documentation](./semconv/v1.44.0/MIGRATION.md) for information on how to upgrade from `go.opentelemetry.io/otel/semconv/v1.43.0`. (#9265)
+- Generate floating-point instruments for metrics that record fractional values in `go.opentelemetry.io/otel/semconv/v1.44.0` and let caller-supplied histogram options override the recommended boundaries without mutating the option slice. (#9332)
 - Implement per-series start timestamps for cumulative asynchronous instruments when `OTEL_GO_X_PER_SERIES_START_TIMESTAMPS=true` is set in `go.opentelemetry.io/otel/sdk/metric`. (#9311)
 - Add experimental `WithOptIn` instrument option in `go.opentelemetry.io/otel/metric/x` and experimental View `Enabled` configuration (`Stream`, `View`, `NewView`, and `WithView`) in `go.opentelemetry.io/otel/sdk/metric/x`. (#9298)
 - Add experimental `WithFinish` support for `Float64Counter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9186)
@@ -34,6 +40,8 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Changed
 
+- Adopt OpenTelemetry Semantic Conventions v1.45.0 across SDK components and exporters, including the schema URL reported by resource detectors and SDK metric instrumentation scopes. (#9492)
+- Use one unbounded histogram bucket by default for the experimental `otel.sdk.exporter.operation.duration` and `otel.sdk.metric_reader.collection.duration` metrics. This preserves count and sum. Configure a View with explicit aggregation to collect a bucket distribution. (#9492)
 - Rename `rpc.response.status_code` to `rpc.status_code` in experimental self-observability metrics emitted by
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and
@@ -51,6 +59,8 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Support custom encoders implementing `SetIndent` with `WithPrettyPrint` in `go.opentelemetry.io/otel/exporters/stdout/stdoutmetric`. (#9308)
 - Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
+- Reduce scrape allocations in `go.opentelemetry.io/otel/exporters/prometheus` by reusing label data and descriptors within each scrape. (#9248, #9325, #9337)
+- Update dependencies in `go.opentelemetry.io/otel/sdk/trace/x`, including `go.opentelemetry.io/auto/sdk` v1.2.2. (#9562)
 - Improve the performance of sum, last-value, and explicit-bucket histogram measurements immediately after collection in `go.opentelemetry.io/otel/sdk/metric` for delta temporality by lazily clearing storage. (#8276)
 - Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
   Include instructions for upgrading the bridge to v1.47.0.
@@ -145,6 +155,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Treat `unix-abstract://` endpoints from `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` as insecure in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, matching `unix://` endpoints and the metric exporters. (#9261)
 - ⚠️ **Breaking Change:** Let an `http` or `https` scheme in `OTEL_EXPORTER_OTLP_ENDPOINT` or the signal-specific endpoint environment variable take precedence over `OTEL_EXPORTER_OTLP_INSECURE` and the signal-specific insecure environment variable in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc`, `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`, `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9273)
   Previously, `OTEL_EXPORTER_OTLP_INSECURE=true` made these exporters send plaintext to an `https://` endpoint.
+  Programmatic options still take precedence over environment variables.
 - Preserve `ScopeMetrics` slice capacity in `PeriodicReader`'s `sync.Pool` by resetting slice length instead of overwriting the struct, avoiding per-cycle heap allocations in `go.opentelemetry.io/otel/sdk/metric`. (#8535)
 - Reject negative and overflowing `OTEL_EXPORTER_OTLP_TIMEOUT` and `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT` values in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9338)
   Previously, such a value produced a negative timeout that removed the export deadline.
@@ -154,13 +165,11 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 ### Removed
 
 - Remove the experimental `WithUnsafeAttributes` option from `go.opentelemetry.io/otel/metric/x`.
+  Use `metric.WithAttributes` after any other attribute options to preserve precedence for duplicate keys. (#9276)
 - Remove the deprecated `WithoutUnits` and `WithoutCounterSuffixes` options in `go.opentelemetry.io/otel/exporters/prometheus`.
   Use `WithTranslationStrategy` instead. (#9275)
 - Remove support for the deprecated `OTEL_GO_X_CARDINALITY_LIMIT` environment variable in `go.opentelemetry.io/otel/sdk/metric`.
   Use `WithCardinalityLimit` instead, including `WithCardinalityLimit(0)` to disable the default limit of 2000. (#9210)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.47.0/0.69.0/0.23.0/0.1.0] - 2026-10-02
 
@@ -4054,7 +4063,8 @@ It contains api and sdk for trace and meter.
 - CircleCI build CI manifest files.
 - CODEOWNERS file to track owners of this project.
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.47.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go/compare/v1.48.0...HEAD
+[1.48.0/0.70.0/0.24.0/0.1.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.48.0
 [1.47.0/0.69.0/0.23.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.47.0
 [1.47.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.47.0-rc.1
 [1.46.0/0.68.0/0.22.0/0.0.19]: https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.46.0
