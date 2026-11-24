@@ -22,7 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 	"go.opentelemetry.io/otel/trace/internal/telemetry"
 )
 
@@ -412,7 +412,7 @@ func TestSpanCreation(t *testing.T) {
 			ss := sss[0]
 			assert.Equal(t, tracerName, ss.Scope.Name, "tracer name")
 			assert.Equal(t, tracerVer, ss.Scope.Version, "tracer version")
-			assert.Equal(t, semconv.SchemaURL, ss.SchemaURL, "tracer schema URL")
+			assert.Equal(t, "https://opentelemetry.io/schemas/1.45.0", ss.SchemaURL, "tracer schema URL")
 		}
 	}
 

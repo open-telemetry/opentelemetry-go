@@ -21,7 +21,7 @@ import (
 	semconv121 "go.opentelemetry.io/otel/semconv/v1.21.0"
 	semconv125 "go.opentelemetry.io/otel/semconv/v1.25.0"
 	semconv138 "go.opentelemetry.io/otel/semconv/v1.38.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -241,6 +241,8 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 
 // Rank determines selection order for remote endpoint. See the specification
 // https://github.com/open-telemetry/opentelemetry-specification/blob/v1.28.0/specification/trace/sdk_exporters/zipkin.md#otlp---zipkin
+// Older semconv imports preserve conversion of historical attributes required
+// by this mapping, including keys removed from current semantic conventions.
 var remoteEndpointKeyRank = map[attribute.Key]int{
 	semconv138.PeerServiceKey:         1,
 	semconv.ServerAddressKey:          2,

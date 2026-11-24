@@ -17,7 +17,7 @@ The `semconv-generate` make target is used for this.
 For example,
 
 ```sh
-export TAG="v1.30.0" # Change to the release version you are generating.
+export TAG="v1.45.0" # Change to the release version you are generating.
 make semconv-generate # Uses the exported TAG.
 ```
 
@@ -38,13 +38,13 @@ Once the new semconv module has been generated, update all semconv imports throu
 
 ```go
 // Before
-semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-"go.opentelemetry.io/otel/semconv/v1.37.0/otelconv"
+semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
 
 
 // After
-semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
-"go.opentelemetry.io/otel/semconv/v1.39.0/otelconv"
+semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 ```
 
 Once complete, run `make` to check for any compilation or test failures.

@@ -17,8 +17,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace/internal/x"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -138,7 +138,7 @@ func NewInstrumentation(id int64) (*Instrumentation, error) {
 	}
 	i.exportedSpans = exportedSpans.Inst()
 
-	opDuration, e := otelconv.NewSDKExporterOperationDuration(m)
+	opDuration, e := otelconv.NewSDKExporterOperationDuration(m, metric.WithExplicitBucketBoundaries())
 	if e != nil {
 		e = fmt.Errorf("failed to create operation duration metric: %w", e)
 		err = errors.Join(err, e)
