@@ -60,6 +60,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 - Emit log bodies and attributes using the [OpenTelemetry representation for non-OTLP protocols](https://opentelemetry.io/docs/specs/otel/common/#anyvalue-representation-for-non-otlp-protocols) in `go.opentelemetry.io/otel/exporters/stdout/stdoutlog`. (#9150)
 - Improve performance of exponential histogram measurements in `go.opentelemetry.io/otel/sdk/metric`. (#9277)
 - Reduce scrape allocations in `go.opentelemetry.io/otel/exporters/prometheus` by reusing label data and descriptors within each scrape. (#9248, #9325, #9337)
+- Update dependencies in `go.opentelemetry.io/otel/sdk/trace/x`, including `go.opentelemetry.io/auto/sdk` v1.2.2. (#9562)
 - Improve the performance of sum, last-value, and explicit-bucket histogram measurements immediately after collection in `go.opentelemetry.io/otel/sdk/metric` for delta temporality by lazily clearing storage. (#8276)
 - Document a compatibility regression introduced in `go.opentelemetry.io/otel` v1.47.0 that breaks compilation with `go.opentelemetry.io/otel/bridge/opentracing` v1.46.0 and earlier.
   Include instructions for upgrading the bridge to v1.47.0.
@@ -164,7 +165,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 ### Removed
 
 - Remove the experimental `WithUnsafeAttributes` option from `go.opentelemetry.io/otel/metric/x`.
-  Use `attribute.NewSet` with `metric.WithAttributeSet` to attach the attributes. (#9276)
+  Use `metric.WithAttributes` after any other attribute options to preserve precedence for duplicate keys. (#9276)
 - Remove the deprecated `WithoutUnits` and `WithoutCounterSuffixes` options in `go.opentelemetry.io/otel/exporters/prometheus`.
   Use `WithTranslationStrategy` instead. (#9275)
 - Remove support for the deprecated `OTEL_GO_X_CARDINALITY_LIMIT` environment variable in `go.opentelemetry.io/otel/sdk/metric`.
