@@ -34,6 +34,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Changed
 
+- Document the internal logging levels used by `SetLogger` and the `logr.FromSlogHandler` adapter for `log/slog` users in `go.opentelemetry.io/otel`.
 - Rename `rpc.response.status_code` to `rpc.status_code` in experimental self-observability metrics emitted by
   `go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc`,
   `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc`, and

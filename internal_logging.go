@@ -10,6 +10,14 @@ import (
 )
 
 // SetLogger configures the logger used internally to opentelemetry.
+//
+// The internal logger uses the following verbosity levels:
+//   - V(1): Warn messages.
+//   - V(4): Info messages.
+//   - V(8): Debug messages.
+//
+// For log/slog users, [logr.FromSlogHandler] adapts a slog.Handler to a
+// [logr.Logger].
 func SetLogger(logger logr.Logger) {
 	global.SetLogger(logger)
 }
