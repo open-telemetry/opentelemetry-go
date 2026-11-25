@@ -26,8 +26,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace/internal/env"
 	"go.opentelemetry.io/otel/sdk/trace/internal/observ"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -222,6 +222,45 @@ func TestNewBatchSpanProcessorWithOptions(t *testing.T) {
 					gotBatchCount, option.wantBatchCount)
 				t.Errorf("Batches %v\n", te.sizes)
 			}
+		})
+	}
+}
+
+func TestNewBatchSpanProcessorInvalidEnvSizes(t *testing.T) {
+	for _, test := range []struct {
+		name, queue, batch string
+		options            []BatchSpanProcessorOption
+		wantQueue          int
+		wantBatch          int
+	}{
+		{name: "negative queue", queue: "-1", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "zero queue", queue: "0", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "negative batch", batch: "-1", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "zero batch", batch: "0", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "both invalid", queue: "-1", batch: "0", wantQueue: DefaultMaxQueueSize, wantBatch: DefaultMaxExportBatchSize},
+		{name: "fallback batch fits queue", queue: "2", batch: "-1", wantQueue: 2, wantBatch: 2},
+		{name: "valid batch with fallback queue", queue: "-1", batch: "1024", wantQueue: DefaultMaxQueueSize, wantBatch: 1024},
+		{name: "smallest valid sizes", queue: "1", batch: "1", wantQueue: 1, wantBatch: 1},
+		{
+			name: "options take precedence", queue: "-1", batch: "-1",
+			options:   []BatchSpanProcessorOption{WithMaxQueueSize(7), WithMaxExportBatchSize(3)},
+			wantQueue: 7, wantBatch: 3,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv(env.BatchSpanProcessorMaxQueueSizeKey, test.queue)
+			t.Setenv(env.BatchSpanProcessorMaxExportBatchSizeKey, test.batch)
+			var processor SpanProcessor
+			require.NotPanics(t, func() {
+				processor = NewBatchSpanProcessor(&testBatchExporter{}, test.options...)
+			})
+			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(t, processor.Shutdown(context.Background()))
+			})
+			bsp := processor.(*batchSpanProcessor)
+			assert.Equal(t, test.wantQueue, bsp.o.MaxQueueSize)
+			assert.Equal(t, test.wantBatch, bsp.o.MaxExportBatchSize)
 		})
 	}
 }
@@ -776,7 +815,6 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	})
 	bsp := NewBatchSpanProcessor(
 		me,
-		// Use WithBlocking so we can trigger a queueFull using ForceFlush.
 		WithBlocking(),
 		// Make sure timeout doesn't trigger during the test.
 		WithBatchTimeout(time.Hour),
@@ -798,25 +836,35 @@ func TestBatchSpanProcessorBlockingMetrics(t *testing.T) {
 	})
 	// Generate 2 spans to fill the queue.
 	generateSpan(t, tr, testOption{genNumSpans: 2})
-	go func() {
+	var wg sync.WaitGroup
+	wg.Go(func() {
 		// Generate a span which blocks because the queue is full.
 		generateSpan(t, tr, testOption{genNumSpans: 1})
-	}()
+	})
 	assertObsScopeMetrics(t, reader, expectMetrics{
 		queueCapacity:    2,
 		queueSize:        2,
 		successProcessed: 2,
 	})
 
-	// Use ForceFlush to force the span that is blocking on the full queue to be dropped.
+	// Canceling ForceFlush while the queue is full should not record a dropped span.
 	ctx, cancel = context.WithTimeout(t.Context(), 10*time.Millisecond)
 	defer cancel()
-	assert.Error(t, tp.ForceFlush(ctx))
+	assert.ErrorIs(t, tp.ForceFlush(ctx), context.DeadlineExceeded)
 	assertObsScopeMetrics(t, reader, expectMetrics{
-		queueCapacity:      2,
-		queueSize:          2,
-		queueFullProcessed: 1,
-		successProcessed:   2,
+		queueCapacity:    2,
+		queueSize:        2,
+		successProcessed: 2,
+	})
+
+	// Unblock the exporter and verify all queued and blocked spans are processed.
+	assert.NoError(t, me.Shutdown(t.Context()))
+	wg.Wait()
+	assert.NoError(t, tp.ForceFlush(t.Context()))
+	assertObsScopeMetrics(t, reader, expectMetrics{
+		queueCapacity:    2,
+		queueSize:        0,
+		successProcessed: 5,
 	})
 }
 

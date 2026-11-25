@@ -71,7 +71,7 @@ func NewServerActiveConnections(
 	if len(opt) == 0 {
 		opt = newServerActiveConnectionsOpts
 	} else {
-		opt = append(opt, newServerActiveConnectionsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerActiveConnectionsOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -198,7 +198,7 @@ func NewServerActiveConnectionsObservable(
 	if len(opt) == 0 {
 		opt = newServerActiveConnectionsObservableOpts
 	} else {
-		opt = append(opt, newServerActiveConnectionsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerActiveConnectionsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -271,7 +271,7 @@ func NewServerConnectionDuration(
 	if len(opt) == 0 {
 		opt = newServerConnectionDurationOpts
 	} else {
-		opt = append(opt, newServerConnectionDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerConnectionDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(

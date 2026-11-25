@@ -73,7 +73,7 @@ func NewCosmosDBClientActiveInstanceCount(
 	if len(opt) == 0 {
 		opt = newCosmosDBClientActiveInstanceCountOpts
 	} else {
-		opt = append(opt, newCosmosDBClientActiveInstanceCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCosmosDBClientActiveInstanceCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -190,7 +190,7 @@ func NewCosmosDBClientActiveInstanceCountObservable(
 	if len(opt) == 0 {
 		opt = newCosmosDBClientActiveInstanceCountObservableOpts
 	} else {
-		opt = append(opt, newCosmosDBClientActiveInstanceCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCosmosDBClientActiveInstanceCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -242,10 +242,10 @@ func (CosmosDBClientActiveInstanceCountObservable) AttrServerAddress(val string)
 //
 // [Request units]: https://learn.microsoft.com/azure/cosmos-db/request-units
 type CosmosDBClientOperationRequestCharge struct {
-	metric.Int64Histogram
+	metric.Float64Histogram
 }
 
-var newCosmosDBClientOperationRequestChargeOpts = []metric.Int64HistogramOption{
+var newCosmosDBClientOperationRequestChargeOpts = []metric.Float64HistogramOption{
 	metric.WithDescription("[Request units](https://learn.microsoft.com/azure/cosmos-db/request-units) consumed by the operation."),
 	metric.WithUnit("{request_unit}"),
 }
@@ -254,32 +254,32 @@ var newCosmosDBClientOperationRequestChargeOpts = []metric.Int64HistogramOption{
 // CosmosDBClientOperationRequestCharge instrument.
 func NewCosmosDBClientOperationRequestCharge(
 	m metric.Meter,
-	opt ...metric.Int64HistogramOption,
+	opt ...metric.Float64HistogramOption,
 ) (CosmosDBClientOperationRequestCharge, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return CosmosDBClientOperationRequestCharge{noop.Int64Histogram{}}, nil
+		return CosmosDBClientOperationRequestCharge{noop.Float64Histogram{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newCosmosDBClientOperationRequestChargeOpts
 	} else {
-		opt = append(opt, newCosmosDBClientOperationRequestChargeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCosmosDBClientOperationRequestChargeOpts...)
 	}
 
-	i, err := m.Int64Histogram(
+	i, err := m.Float64Histogram(
 		"azure.cosmosdb.client.operation.request_charge",
 		opt...,
 	)
 	if err != nil {
-		return CosmosDBClientOperationRequestCharge{noop.Int64Histogram{}}, err
+		return CosmosDBClientOperationRequestCharge{noop.Float64Histogram{}}, err
 	}
 	return CosmosDBClientOperationRequestCharge{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m CosmosDBClientOperationRequestCharge) Inst() metric.Int64Histogram {
-	return m.Int64Histogram
+func (m CosmosDBClientOperationRequestCharge) Inst() metric.Float64Histogram {
+	return m.Float64Histogram
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -305,15 +305,15 @@ func (CosmosDBClientOperationRequestCharge) Description() string {
 // All additional attrs passed are included in the recorded value.
 func (m CosmosDBClientOperationRequestCharge) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	dbOperationName string,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Histogram.Enabled(ctx) {
+	if !m.Float64Histogram.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Histogram.Record(ctx, val, metric.WithAttributes(
+		m.Float64Histogram.Record(ctx, val, metric.WithAttributes(
 			attribute.String("db.operation.name", dbOperationName),
 		))
 		return
@@ -332,16 +332,16 @@ func (m CosmosDBClientOperationRequestCharge) Record(
 		),
 	)
 
-	m.Int64Histogram.Record(ctx, val, *o...)
+	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m CosmosDBClientOperationRequestCharge) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Histogram.Enabled(ctx) {
+func (m CosmosDBClientOperationRequestCharge) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Histogram.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Histogram.Record(ctx, val)
+		m.Float64Histogram.Record(ctx, val)
 		return
 	}
 
@@ -349,7 +349,7 @@ func (m CosmosDBClientOperationRequestCharge) RecordSet(ctx context.Context, val
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Histogram.Record(ctx, val, *o...)
+	m.Float64Histogram.Record(ctx, val, *o...)
 }
 
 // AttrCosmosDBConsistencyLevel returns an optional attribute for the

@@ -143,7 +143,7 @@ func NewSDKExporterLogExported(
 	if len(opt) == 0 {
 		opt = newSDKExporterLogExportedOpts
 	} else {
-		opt = append(opt, newSDKExporterLogExportedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterLogExportedOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -311,7 +311,7 @@ func NewSDKExporterLogExportedObservable(
 	if len(opt) == 0 {
 		opt = newSDKExporterLogExportedObservableOpts
 	} else {
-		opt = append(opt, newSDKExporterLogExportedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterLogExportedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -404,7 +404,7 @@ func NewSDKExporterLogInflight(
 	if len(opt) == 0 {
 		opt = newSDKExporterLogInflightOpts
 	} else {
-		opt = append(opt, newSDKExporterLogInflightOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterLogInflightOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -547,7 +547,7 @@ func NewSDKExporterLogInflightObservable(
 	if len(opt) == 0 {
 		opt = newSDKExporterLogInflightObservableOpts
 	} else {
-		opt = append(opt, newSDKExporterLogInflightObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterLogInflightObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -634,7 +634,7 @@ func NewSDKExporterMetricDataPointExported(
 	if len(opt) == 0 {
 		opt = newSDKExporterMetricDataPointExportedOpts
 	} else {
-		opt = append(opt, newSDKExporterMetricDataPointExportedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterMetricDataPointExportedOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -802,7 +802,7 @@ func NewSDKExporterMetricDataPointExportedObservable(
 	if len(opt) == 0 {
 		opt = newSDKExporterMetricDataPointExportedObservableOpts
 	} else {
-		opt = append(opt, newSDKExporterMetricDataPointExportedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterMetricDataPointExportedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -897,7 +897,7 @@ func NewSDKExporterMetricDataPointInflight(
 	if len(opt) == 0 {
 		opt = newSDKExporterMetricDataPointInflightOpts
 	} else {
-		opt = append(opt, newSDKExporterMetricDataPointInflightOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterMetricDataPointInflightOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1041,7 +1041,7 @@ func NewSDKExporterMetricDataPointInflightObservable(
 	if len(opt) == 0 {
 		opt = newSDKExporterMetricDataPointInflightObservableOpts
 	} else {
-		opt = append(opt, newSDKExporterMetricDataPointInflightObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterMetricDataPointInflightObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1127,7 +1127,7 @@ func NewSDKExporterOperationDuration(
 	if len(opt) == 0 {
 		opt = newSDKExporterOperationDurationOpts
 	} else {
-		opt = append(opt, newSDKExporterOperationDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterOperationDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -1310,7 +1310,7 @@ func NewSDKExporterSpanExported(
 	if len(opt) == 0 {
 		opt = newSDKExporterSpanExportedOpts
 	} else {
-		opt = append(opt, newSDKExporterSpanExportedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterSpanExportedOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1476,7 +1476,7 @@ func NewSDKExporterSpanExportedObservable(
 	if len(opt) == 0 {
 		opt = newSDKExporterSpanExportedObservableOpts
 	} else {
-		opt = append(opt, newSDKExporterSpanExportedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterSpanExportedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1569,7 +1569,7 @@ func NewSDKExporterSpanInflight(
 	if len(opt) == 0 {
 		opt = newSDKExporterSpanInflightOpts
 	} else {
-		opt = append(opt, newSDKExporterSpanInflightOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterSpanInflightOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1713,7 +1713,7 @@ func NewSDKExporterSpanInflightObservable(
 	if len(opt) == 0 {
 		opt = newSDKExporterSpanInflightObservableOpts
 	} else {
-		opt = append(opt, newSDKExporterSpanInflightObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKExporterSpanInflightObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1798,7 +1798,7 @@ func NewSDKLogCreated(
 	if len(opt) == 0 {
 		opt = newSDKLogCreatedOpts
 	} else {
-		opt = append(opt, newSDKLogCreatedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKLogCreatedOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1890,7 +1890,7 @@ func NewSDKLogCreatedObservable(
 	if len(opt) == 0 {
 		opt = newSDKLogCreatedObservableOpts
 	} else {
-		opt = append(opt, newSDKLogCreatedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKLogCreatedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1950,7 +1950,7 @@ func NewSDKMetricReaderCollectionDuration(
 	if len(opt) == 0 {
 		opt = newSDKMetricReaderCollectionDurationOpts
 	} else {
-		opt = append(opt, newSDKMetricReaderCollectionDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKMetricReaderCollectionDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -2088,7 +2088,7 @@ func NewSDKProcessorLogProcessed(
 	if len(opt) == 0 {
 		opt = newSDKProcessorLogProcessedOpts
 	} else {
-		opt = append(opt, newSDKProcessorLogProcessedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKProcessorLogProcessedOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -2254,7 +2254,7 @@ func NewSDKProcessorLogProcessedObservable(
 	if len(opt) == 0 {
 		opt = newSDKProcessorLogProcessedObservableOpts
 	} else {
-		opt = append(opt, newSDKProcessorLogProcessedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKProcessorLogProcessedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -2334,7 +2334,7 @@ func NewSDKProcessorLogQueueCapacity(
 	if len(opt) == 0 {
 		opt = newSDKProcessorLogQueueCapacityOpts
 	} else {
-		opt = append(opt, newSDKProcessorLogQueueCapacityOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKProcessorLogQueueCapacityOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2407,7 +2407,7 @@ func NewSDKProcessorLogQueueSize(
 	if len(opt) == 0 {
 		opt = newSDKProcessorLogQueueSizeOpts
 	} else {
-		opt = append(opt, newSDKProcessorLogQueueSizeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKProcessorLogQueueSizeOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2481,7 +2481,7 @@ func NewSDKProcessorSpanProcessed(
 	if len(opt) == 0 {
 		opt = newSDKProcessorSpanProcessedOpts
 	} else {
-		opt = append(opt, newSDKProcessorSpanProcessedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKProcessorSpanProcessedOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -2647,7 +2647,7 @@ func NewSDKProcessorSpanProcessedObservable(
 	if len(opt) == 0 {
 		opt = newSDKProcessorSpanProcessedObservableOpts
 	} else {
-		opt = append(opt, newSDKProcessorSpanProcessedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKProcessorSpanProcessedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -2727,7 +2727,7 @@ func NewSDKProcessorSpanQueueCapacity(
 	if len(opt) == 0 {
 		opt = newSDKProcessorSpanQueueCapacityOpts
 	} else {
-		opt = append(opt, newSDKProcessorSpanQueueCapacityOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKProcessorSpanQueueCapacityOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2801,7 +2801,7 @@ func NewSDKProcessorSpanQueueSize(
 	if len(opt) == 0 {
 		opt = newSDKProcessorSpanQueueSizeOpts
 	} else {
-		opt = append(opt, newSDKProcessorSpanQueueSizeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKProcessorSpanQueueSizeOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2874,7 +2874,7 @@ func NewSDKSpanLive(
 	if len(opt) == 0 {
 		opt = newSDKSpanLiveOpts
 	} else {
-		opt = append(opt, newSDKSpanLiveOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKSpanLiveOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2992,7 +2992,7 @@ func NewSDKSpanLiveObservable(
 	if len(opt) == 0 {
 		opt = newSDKSpanLiveObservableOpts
 	} else {
-		opt = append(opt, newSDKSpanLiveObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKSpanLiveObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -3057,7 +3057,7 @@ func NewSDKSpanStarted(
 	if len(opt) == 0 {
 		opt = newSDKSpanStartedOpts
 	} else {
-		opt = append(opt, newSDKSpanStartedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKSpanStartedOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -3184,7 +3184,7 @@ func NewSDKSpanStartedObservable(
 	if len(opt) == 0 {
 		opt = newSDKSpanStartedObservableOpts
 	} else {
-		opt = append(opt, newSDKSpanStartedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSDKSpanStartedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(

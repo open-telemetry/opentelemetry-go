@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -21,8 +20,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal/x"
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -43,7 +42,7 @@ var (
 				1 + // server.addr
 				1 + // server.port
 				1 + // error.type
-				1 // rpc.grpc.status_code
+				1 // rpc.status_code
 			s := make([]attribute.KeyValue, 0, n)
 			// Return a pointer to a slice instead of a slice itself
 			// to avoid allocations on every call.
@@ -136,7 +135,10 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	}
 	i.logExportedMetric = logExportedMetric.Inst()
 
-	logOpDurationMetric, e := otelconv.NewSDKExporterOperationDuration(m)
+	logOpDurationMetric, e := otelconv.NewSDKExporterOperationDuration(
+		m,
+		metric.WithExplicitBucketBoundaries(),
+	)
 	if e != nil {
 		e = fmt.Errorf("failed to create log operation duration metric: %w", e)
 		err = errors.Join(err, e)
@@ -151,7 +153,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	i.addOpt = metric.WithAttributeSet(attribute.NewSet(i.presetAttrs...))
 	i.recOpt = metric.WithAttributeSet(attribute.NewSet(append(
 		// Default to OK status code.
-		[]attribute.KeyValue{semconv.RPCResponseStatusCode(codes.OK.String())},
+		[]attribute.KeyValue{semconv.RPCStatusCode(codes.OK.String())},
 		i.presetAttrs...,
 	)...))
 	return i, nil
@@ -188,13 +190,14 @@ type ExportOp struct {
 
 // End completes the observation of the operation being observed by a call to
 // [Instrumentation.ExportLogs].
-// Any error that is encountered is provided as err.
+// Any error that is encountered is provided as err, and code is the gRPC status
+// code of the last gRPC request performed in scope of this export call.
 //
 // If err is not nil, all logs will be recorded as failures unless the error is of
 // type [internal.PartialSuccess]. In the case of a PartialSuccess, the number
 // of successfully exported logs will be determined by inspecting the
 // RejectedItems field of the PartialSuccess.
-func (e ExportOp) End(err error) {
+func (e ExportOp) End(err error, code codes.Code) {
 	inflightEnabled := e.inst.logInflightMetric.Enabled(e.ctx)
 	exportedEnabled := e.inst.logExportedMetric.Enabled(e.ctx)
 
@@ -230,25 +233,23 @@ func (e ExportOp) End(err error) {
 	if e.inst.logExportedDurationMetric.Enabled(e.ctx) {
 		recordOpt := get[metric.RecordOption](recordOptPool)
 		defer put(recordOptPool, recordOpt)
-		*recordOpt = append(*recordOpt, e.inst.recordOption(err))
+		*recordOpt = append(*recordOpt, e.inst.recordOption(err, code))
 		e.inst.logExportedDurationMetric.Record(e.ctx, time.Since(e.start).Seconds(), *recordOpt...)
 	}
 }
 
-func (i *Instrumentation) recordOption(err error) metric.RecordOption {
-	if err == nil {
+func (i *Instrumentation) recordOption(err error, code codes.Code) metric.RecordOption {
+	if err == nil && code == codes.OK {
 		return i.recOpt
 	}
 	attrs := get[attribute.KeyValue](attrsPool)
 	defer put(attrsPool, attrs)
 
 	*attrs = append(*attrs, i.presetAttrs...)
-	code := status.Code(err)
-	*attrs = append(
-		*attrs,
-		semconv.RPCResponseStatusCode(code.String()),
-		semconv.ErrorType(err),
-	)
+	*attrs = append(*attrs, semconv.RPCStatusCode(code.String()))
+	if err != nil {
+		*attrs = append(*attrs, semconv.ErrorType(err))
+	}
 
 	return metric.WithAttributeSet(attribute.NewSet(*attrs...))
 }

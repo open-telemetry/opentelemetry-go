@@ -10,13 +10,16 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp/internal/envconfig"
+	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -329,6 +332,93 @@ func TestConfigs(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "Test Environment Endpoint with HTTPS scheme takes precedence over insecure",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "https://env_endpoint",
+				"OTEL_EXPORTER_OTLP_INSECURE": "true",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
+				assert.False(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Endpoint with HTTPS scheme takes precedence over insecure",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "https://env_metrics_endpoint",
+				"OTEL_EXPORTER_OTLP_INSECURE":         "true",
+				"OTEL_EXPORTER_OTLP_METRICS_INSECURE": "true",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, "env_metrics_endpoint", c.Metrics.Endpoint)
+				assert.False(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Endpoint with HTTP scheme takes precedence over insecure",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":         "http://env_endpoint",
+				"OTEL_EXPORTER_OTLP_METRICS_INSECURE": "false",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, "env_endpoint", c.Metrics.Endpoint)
+				assert.True(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Endpoint Without Scheme uses insecure",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "//env_endpoint:4317",
+				"OTEL_EXPORTER_OTLP_INSECURE": "true",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.True(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Endpoint Without Scheme resets precedence",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT":         "https://env_endpoint",
+				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "//env_metrics_endpoint:4317",
+				"OTEL_EXPORTER_OTLP_INSECURE":         "true",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, "env_metrics_endpoint:4317", c.Metrics.Endpoint)
+				assert.True(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Endpoint with uppercase HTTPS scheme takes precedence over insecure",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_ENDPOINT": "HTTPS://env.endpoint",
+				"OTEL_EXPORTER_OTLP_INSECURE": "true",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, "env.endpoint", c.Metrics.Endpoint)
+				assert.False(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Endpoint with unix scheme does not take precedence over insecure",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "unix:///tmp/otel.sock",
+				"OTEL_EXPORTER_OTLP_INSECURE":         "false",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.False(t, c.Metrics.Insecure)
+			},
+		},
+		{
+			name: "Test Environment Endpoint with unix-abstract scheme does not take precedence over insecure",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT": "unix-abstract:///otel.sock",
+				"OTEL_EXPORTER_OTLP_INSECURE":         "false",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.False(t, c.Metrics.Insecure)
+			},
+		},
 
 		// Certificate tests
 		{
@@ -469,9 +559,27 @@ func TestConfigs(t *testing.T) {
 			},
 		},
 		{
+			name: "Test Environment Compression Case Insensitive",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION": "GZIP",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, GzipCompression, c.Metrics.Compression)
+			},
+		},
+		{
 			name: "Test Environment Signal Specific Compression",
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "gzip",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, GzipCompression, c.Metrics.Compression)
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Compression Case Insensitive",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "GZip",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.Equal(t, GzipCompression, c.Metrics.Compression)
@@ -484,6 +592,47 @@ func TestConfigs(t *testing.T) {
 			},
 			env: map[string]string{
 				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "gzip",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, NoCompression, c.Metrics.Compression)
+			},
+		},
+
+		{
+			name: "Test Environment Invalid Compression",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":         "bogus",
+				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, NoCompression, c.Metrics.Compression)
+			},
+		},
+		{
+			name: "Test Environment Invalid Compression Override",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":         "gzip",
+				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "bogus",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, GzipCompression, c.Metrics.Compression)
+			},
+		},
+		{
+			name: "Test Environment Explicit None Compression Override",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":         "gzip",
+				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "none",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, NoCompression, c.Metrics.Compression)
+			},
+		},
+		{
+			name: "Test Environment Case Insensitive None Compression Override",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_COMPRESSION":         "gzip",
+				"OTEL_EXPORTER_OTLP_METRICS_COMPRESSION": "NoNe",
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.Equal(t, NoCompression, c.Metrics.Compression)
@@ -517,6 +666,34 @@ func TestConfigs(t *testing.T) {
 			},
 			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
 				assert.Equal(t, 28*time.Second, c.Metrics.Timeout)
+			},
+		},
+		{
+			name: "Test Environment Negative Timeout",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TIMEOUT": "-1",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, DefaultTimeout, c.Metrics.Timeout)
+			},
+		},
+		{
+			name: "Test Environment Overflowing Timeout",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TIMEOUT": "9223372036854775807",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, DefaultTimeout, c.Metrics.Timeout)
+			},
+		},
+		{
+			name: "Test Environment Signal Specific Negative Timeout",
+			env: map[string]string{
+				"OTEL_EXPORTER_OTLP_TIMEOUT":         "15000",
+				"OTEL_EXPORTER_OTLP_METRICS_TIMEOUT": "-1",
+			},
+			asserts: func(t *testing.T, c *Config, grpcOption bool) { //nolint:revive // interface compliance
+				assert.Equal(t, 15*time.Second, c.Metrics.Timeout)
 			},
 		},
 		{
@@ -794,4 +971,26 @@ func TestCleanPath(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestWithEnvCompressionInvalidValue(t *testing.T) {
+	var output strings.Builder
+	origLogger := global.GetLogger()
+	t.Cleanup(func() { global.SetLogger(origLogger) })
+	global.SetLogger(funcr.New(func(_, message string) {
+		output.WriteString(message)
+	}, funcr.Options{Verbosity: 1}))
+
+	reader := envconfig.EnvOptionsReader{
+		Namespace: "OTEL_EXPORTER_OTLP",
+		GetEnv:    func(string) string { return "BoGuS" },
+	}
+	called := false
+	reader.Apply(WithEnvCompression("COMPRESSION", func(Compression) { called = true }))
+	assert.False(t, called, "invalid values must not override existing configuration")
+	assert.Contains(t, output.String(), "OTEL_EXPORTER_OTLP_COMPRESSION")
+	assert.Contains(t, output.String(), "BoGuS")
+	assert.Contains(t, output.String(), "Supported values:")
+	assert.Contains(t, output.String(), "gzip")
+	assert.Contains(t, output.String(), "none")
 }

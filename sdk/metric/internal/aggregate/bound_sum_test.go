@@ -1,0 +1,1051 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package aggregate
+
+import (
+	"context"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+	"unsafe"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/internal/x"
+	"go.opentelemetry.io/otel/sdk/metric/exemplar"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+)
+
+type testPinVal struct {
+	attrs attribute.Set
+}
+
+func assertDeltaEntrySmaller[N int64 | float64](t *testing.T) {
+	t.Helper()
+	resFunc := func(attribute.Set) FilteredExemplarReservoir[N] {
+		return &dropRes[N]{}
+	}
+	ds := newBoundDeltaSum[N](false, 0, resFunc)
+	cs := newBoundCumulativeSum[N](false, 0, resFunc)
+	lazy := newLazyFilteredAttributes(alice, nil)
+
+	deltaEntry := ds.vals.pin(lazy, ds.initValue)[0]
+	cumEntry := cs.values.pin(lazy, cs.initValue)
+	require.NotNil(t, deltaEntry)
+	require.NotNil(t, cumEntry)
+
+	assert.Less(t, unsafe.Sizeof(*deltaEntry), unsafe.Sizeof(*cumEntry))
+	assert.Less(
+		t,
+		unsafe.Sizeof(*deltaEntry)-unsafe.Sizeof(deltaEntry.val),
+		unsafe.Sizeof(sync.Once{}),
+	)
+}
+
+func TestBoundEntryDeltaSmallerThanCumulative(t *testing.T) {
+	t.Run("Int64", assertDeltaEntrySmaller[int64])
+	t.Run("Float64", assertDeltaEntrySmaller[float64])
+}
+
+func TestBoundLimitedSyncMapPin(t *testing.T) {
+	initVal := func(v *testPinVal, attr attribute.Set) {
+		v.attrs = attr
+	}
+
+	newMap := func(limit int) boundLimitedSyncMap[testPinVal] {
+		return boundLimitedSyncMap[testPinVal]{
+			limitedSyncMap: limitedSyncMap[*boundEntry[testPinVal]]{aggLimit: limit},
+		}
+	}
+
+	t.Run("IdleUntilMeasured", func(t *testing.T) {
+		m := newMap(3)
+		attr1 := attribute.NewSet(attribute.String("k", "1"))
+		lazy1 := newLazyFilteredAttributes(attr1, nil)
+
+		e1 := m.pin(lazy1, initVal)
+		assert.True(t, e1.bound)
+		assert.False(t, e1.measured.Load())
+		assert.Equal(t, 1, m.Len(), "bound series is resident in map")
+
+		// Duplicate pin returns identical entry.
+		e1Dup := m.pin(lazy1, initVal)
+		assert.Same(t, e1, e1Dup)
+		assert.Equal(t, 1, m.Len())
+
+		// Marking measured and clearing resets measured while keeping entry in map.
+		e1.measured.Store(true)
+		m.Clear()
+		assert.False(t, e1.measured.Load())
+		assert.Equal(t, 1, m.Len())
+	})
+
+	t.Run("UnboundPromotedByPin", func(t *testing.T) {
+		m := newMap(3)
+		attr1 := attribute.NewSet(attribute.String("k", "1"))
+		lazy1 := newLazyFilteredAttributes(attr1, nil)
+
+		vUnbound := m.LoadOrStoreAttr(lazy1, initVal)
+		assert.False(t, vUnbound.bound)
+		assert.Equal(t, 1, m.Len())
+
+		eBound := m.pin(lazy1, initVal)
+		assert.True(t, eBound.bound)
+		assert.Same(t, vUnbound, eBound, "pin must promote existing unbound entry in-place")
+		assert.Equal(t, 1, m.Len())
+	})
+
+	t.Run("PinnedReusedByUnbound", func(t *testing.T) {
+		m := newMap(3)
+		attr1 := attribute.NewSet(attribute.String("k", "1"))
+		lazy1 := newLazyFilteredAttributes(attr1, nil)
+
+		eBound := m.pin(lazy1, initVal)
+		assert.Equal(t, 1, m.Len())
+
+		vUnbound := m.LoadOrStoreAttr(lazy1, initVal)
+		assert.Same(t, eBound, vUnbound, "unbound LoadOrStoreAttr must reuse pinned entry")
+		assert.Equal(t, 1, m.Len())
+	})
+
+	t.Run("CardinalityLimitAndClearPreservesPinnedSlots", func(t *testing.T) {
+		m := newMap(3) // 2 concrete + 1 overflow
+		attr1 := attribute.NewSet(attribute.String("k", "1"))
+		attr2 := attribute.NewSet(attribute.String("k", "2"))
+		attr3 := attribute.NewSet(attribute.String("k", "3"))
+		attr4 := attribute.NewSet(attribute.String("k", "4"))
+
+		lazy1 := newLazyFilteredAttributes(attr1, nil)
+		lazy2 := newLazyFilteredAttributes(attr2, nil)
+		lazy3 := newLazyFilteredAttributes(attr3, nil)
+		lazy4 := newLazyFilteredAttributes(attr4, nil)
+
+		// Pin 1 concrete series (reserves 1 of 2 concrete slots).
+		e1 := m.pin(lazy1, initVal)
+		assert.Equal(t, attr1, e1.val.attrs)
+
+		// Record 1 unbound concrete series (uses 2nd concrete slot) and 1 unbound overflow series.
+		v2 := m.LoadOrStoreAttr(lazy2, initVal)
+		v3 := m.LoadOrStoreAttr(lazy3, initVal)
+		assert.Equal(t, attr2, v2.val.attrs)
+		assert.Equal(t, overflowSet, v3.val.attrs)
+
+		// An unbound measurement for the pre-bound concrete series (attr1)
+		// after overflow has already occurred must still resolve to e1 (not overflowSet).
+		v1Unbound := m.LoadOrStoreAttr(lazy1, initVal)
+		assert.Same(t, e1, v1Unbound)
+		assert.Equal(t, 3, m.Len())
+
+		// Clear deletes unbound entries (attr2 and overflowSet),
+		// while keeping attr1's pinned concrete slot resident in the map.
+		m.Clear()
+		assert.False(t, e1.measured.Load())
+		assert.Equal(t, 1, m.Len())
+
+		// In the next cycle, attr4 should get the 1 available concrete slot, while attr3 overflows.
+		v4 := m.LoadOrStoreAttr(lazy4, initVal)
+		v3Next := m.LoadOrStoreAttr(lazy3, initVal)
+		assert.Equal(t, attr4, v4.val.attrs)
+		assert.Equal(t, overflowSet, v3Next.val.attrs)
+
+		// Even after overflow in the second cycle, an unbound measurement for attr1
+		// must still resolve to e1 rather than routing to overflowSet.
+		v1Next := m.LoadOrStoreAttr(lazy1, initVal)
+		assert.Same(t, e1, v1Next)
+	})
+
+	t.Run("OverflowAttributePinnedBeforeLimit", func(t *testing.T) {
+		m := newMap(3) // 2 concrete + 1 overflow
+		lazyOverflow := newLazyFilteredAttributes(overflowSet, nil)
+		attr2 := attribute.NewSet(attribute.String("k", "2"))
+		attr3 := attribute.NewSet(attribute.String("k", "3"))
+		attr4 := attribute.NewSet(attribute.String("k", "4"))
+		lazy2 := newLazyFilteredAttributes(attr2, nil)
+		lazy3 := newLazyFilteredAttributes(attr3, nil)
+		lazy4 := newLazyFilteredAttributes(attr4, nil)
+
+		// Pin literal overflowSet before limit (uses 1 of 2 concrete slots).
+		eOver := m.pin(lazyOverflow, initVal)
+		assert.False(t, m.boundOverflow)
+
+		// Use 2nd concrete slot.
+		v2 := m.LoadOrStoreAttr(lazy2, initVal)
+		assert.Equal(t, attr2, v2.val.attrs)
+
+		// 3rd series overflows into existing eOver without freeing a concrete slot.
+		v3 := m.LoadOrStoreAttr(lazy3, initVal)
+		assert.Same(t, eOver, v3)
+
+		// 4th series must also overflow into eOver (not allocate a new concrete slot).
+		v4 := m.LoadOrStoreAttr(lazy4, initVal)
+		assert.Same(t, eOver, v4)
+		e4 := m.pin(lazy4, initVal)
+		assert.Same(t, eOver, e4)
+	})
+
+	t.Run("UnboundOverflowAttributePromotedByOverflowingPin", func(t *testing.T) {
+		m := newMap(3) // 2 concrete + 1 overflow
+		lazyOverflow := newLazyFilteredAttributes(overflowSet, nil)
+		attr1 := attribute.NewSet(attribute.String("k", "1"))
+		attr2 := attribute.NewSet(attribute.String("k", "2"))
+		attr3 := attribute.NewSet(attribute.String("k", "3"))
+		lazy1 := newLazyFilteredAttributes(attr1, nil)
+		lazy2 := newLazyFilteredAttributes(attr2, nil)
+		lazy3 := newLazyFilteredAttributes(attr3, nil)
+
+		// Pin 1 concrete series and record literal overflowSet unbound (filling 2 concrete slots).
+		_ = m.pin(lazy1, initVal)
+		vOver := m.LoadOrStoreAttr(lazyOverflow, initVal)
+
+		// Pinning attr2 at limit must promote vOver as the overflow entry.
+		e2 := m.pin(lazy2, initVal)
+		assert.Same(t, vOver, e2)
+		assert.True(t, m.boundOverflow)
+
+		// After Clear(), the 2nd concrete slot is available again for attr3.
+		m.Clear()
+		v3 := m.LoadOrStoreAttr(lazy3, initVal)
+		assert.Equal(t, attr3, v3.val.attrs)
+	})
+}
+
+func TestBoundHotColdMapPin(t *testing.T) {
+	initVal := func(v *testPinVal, attr attribute.Set) {
+		v.attrs = attr
+	}
+
+	var m boundHotColdMap[testPinVal]
+	m.init(3) // 2 concrete + 1 overflow
+
+	attr1 := attribute.NewSet(attribute.String("k", "1"))
+	attr2 := attribute.NewSet(attribute.String("k", "2"))
+	attr3 := attribute.NewSet(attribute.String("k", "3"))
+	lazy1 := newLazyFilteredAttributes(attr1, nil)
+	lazy2 := newLazyFilteredAttributes(attr2, nil)
+	lazy3 := newLazyFilteredAttributes(attr3, nil)
+
+	// Record unbound attr1 and attr2 in the current hot buffer (filling all 2 concrete slots in hot).
+	h := m.start()
+	u1 := m.hot(h).LoadOrStoreAttr(lazy1, initVal)
+	u1.measured.Store(true)
+	_ = m.hot(h).LoadOrStoreAttr(lazy2, initVal)
+	m.done(h)
+
+	// Pinning attr1 promotes u1 in the hot buffer and creates a fresh pinned entry in the cold buffer.
+	entries1 := m.pin(lazy1, initVal)
+	assert.Equal(t, attr1, entries1[0].val.attrs)
+	assert.Same(t, u1, entries1[h])
+	assert.NotSame(t, entries1[0], entries1[1])
+	assert.True(t, entries1[h].measured.Load())
+	assert.False(t, entries1[1-h].measured.Load())
+
+	// Pinning attr3 while hot has 2 concrete slots occupied must overflow in BOTH buffers.
+	entries3 := m.pin(lazy3, initVal)
+	assert.Equal(t, overflowSet, entries3[0].val.attrs)
+	assert.Equal(t, overflowSet, entries3[1].val.attrs)
+
+	// Swap hot/cold without clearing the now-cold buffer yet; pinning attr2 on the
+	// new hot buffer must NOT alias the stale unbound u2 still sitting in the cold buffer.
+	readIdx := m.swapHotAndWait()
+	staleU2, ok := m.hotColdValMap[readIdx].Load(attr2.Equivalent())
+	require.True(t, ok)
+	entries2 := m.pin(lazy2, initVal)
+	assert.NotSame(t, staleU2, entries2[readIdx], "pin must not alias un-cleared cold buffer entry")
+	m.Clear(readIdx)
+}
+
+func TestBoundSum(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	t.Run("Int64/DeltaSum", testBoundDeltaSum[int64]())
+	c.Reset()
+
+	t.Run("Float64/DeltaSum", testBoundDeltaSum[float64]())
+	c.Reset()
+
+	t.Run("Int64/CumulativeSum", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		assert.False(t, x.PerSeriesStartTimestamps.Enabled())
+		testBoundCumulativeSum[int64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Int64/CumulativeSum/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testBoundCumulativeSum[int64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/CumulativeSum", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "false")
+		assert.False(t, x.PerSeriesStartTimestamps.Enabled())
+		testBoundCumulativeSum[float64]()(t)
+	})
+	c.Reset()
+
+	t.Run("Float64/CumulativeSum/PerSeriesStartTimeEnabled", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", "true")
+		assert.True(t, x.PerSeriesStartTimestamps.Enabled())
+		testBoundCumulativeSum[float64]()(t)
+	})
+	c.Reset()
+}
+
+func testBoundDeltaSum[N int64 | float64]() func(t *testing.T) {
+	return func(t *testing.T) {
+		ctx := t.Context()
+		mono := false
+		agg := Builder[N]{
+			Temporality:      metricdata.DeltaTemporality,
+			Filter:           attrFltr,
+			AggregationLimit: 3,
+		}.BoundSum(mono)
+		in, out, bind := agg.Measure, agg.ComputeAggregation, agg.Bind
+
+		boundAlice := bind(alice)
+		boundBob := bind(bob)
+
+		got := new(metricdata.Aggregation)
+
+		// Step 0: Idle bound handles before any measurements do not report.
+		assert.Equal(t, 0, out(got))
+		metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
+			IsMonotonic: mono,
+			Temporality: metricdata.DeltaTemporality,
+			DataPoints:  []metricdata.DataPoint[N]{},
+		}, *got)
+
+		// Step 1: Bound measurements + mixed unbound measurement on alice.
+		boundAlice(ctx, 1)
+		boundBob(ctx, -1)
+		in(ctx, 2, alice)
+		boundBob(ctx, -10)
+
+		assert.Equal(t, 2, out(got))
+		metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
+			IsMonotonic: mono,
+			Temporality: metricdata.DeltaTemporality,
+			DataPoints: []metricdata.DataPoint[N]{
+				{
+					Attributes: fltrAlice,
+					StartTime:  y2kPlus(1),
+					Time:       y2kPlus(2),
+					Value:      3,
+				},
+				{
+					Attributes: fltrBob,
+					StartTime:  y2kPlus(1),
+					Time:       y2kPlus(2),
+					Value:      -11,
+				},
+			},
+		}, *got)
+
+		// Step 2: Zero-net delta (+5 and -5) on alice and explicit 0 on bob MUST still report,
+		// while a cycle with no measurements in Step 3 does not report.
+		boundAlice(ctx, 5)
+		boundAlice(ctx, -5)
+		boundBob(ctx, 0)
+
+		assert.Equal(t, 2, out(got))
+		metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
+			IsMonotonic: mono,
+			Temporality: metricdata.DeltaTemporality,
+			DataPoints: []metricdata.DataPoint[N]{
+				{
+					Attributes: fltrAlice,
+					StartTime:  y2kPlus(2),
+					Time:       y2kPlus(3),
+					Value:      0,
+				},
+				{
+					Attributes: fltrBob,
+					StartTime:  y2kPlus(2),
+					Time:       y2kPlus(3),
+					Value:      0,
+				},
+			},
+		}, *got)
+
+		// Step 3: Idle cycle resets and reports 0 data points.
+		assert.Equal(t, 0, out(got))
+		metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
+			IsMonotonic: mono,
+			Temporality: metricdata.DeltaTemporality,
+			DataPoints:  []metricdata.DataPoint[N]{},
+		}, *got)
+
+		// Step 4: Cardinality limit enforcement across bound and unbound measurements.
+		// alice and bob already hold the 2 concrete slots; carol (bound) and dave (unbound) overflow.
+		boundCarol := bind(carol)
+		boundAlice(ctx, 1)
+		boundBob(ctx, 2)
+		boundCarol(ctx, 3)
+		in(ctx, 4, dave)
+
+		assert.Equal(t, 3, out(got))
+		metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
+			IsMonotonic: mono,
+			Temporality: metricdata.DeltaTemporality,
+			DataPoints: []metricdata.DataPoint[N]{
+				{
+					Attributes: fltrAlice,
+					StartTime:  y2kPlus(4),
+					Time:       y2kPlus(5),
+					Value:      1,
+				},
+				{
+					Attributes: fltrBob,
+					StartTime:  y2kPlus(4),
+					Time:       y2kPlus(5),
+					Value:      2,
+				},
+				{
+					Attributes: overflowSet,
+					StartTime:  y2kPlus(4),
+					Time:       y2kPlus(5),
+					Value:      7,
+				},
+			},
+		}, *got)
+	}
+}
+
+func testBoundCumulativeSum[N int64 | float64]() func(t *testing.T) {
+	return func(t *testing.T) {
+		ctx := t.Context()
+		mono := false
+		agg := Builder[N]{
+			Temporality:      metricdata.CumulativeTemporality,
+			Filter:           attrFltr,
+			AggregationLimit: 3,
+		}.BoundSum(mono)
+		in, out, bind := agg.Measure, agg.ComputeAggregation, agg.Bind
+
+		boundAlice := bind(alice)
+		boundBob := bind(bob)
+
+		aliceStartTime := y2kPlus(0)
+		bobStartTime := y2kPlus(0)
+		overflowStartTime := y2kPlus(0)
+		if x.PerSeriesStartTimestamps.Enabled() {
+			aliceStartTime = y2kPlus(2)
+			bobStartTime = y2kPlus(3)
+			overflowStartTime = y2kPlus(6)
+		}
+
+		got := new(metricdata.Aggregation)
+
+		// Step 0: Idle bound handles before any measurements do not report.
+		assert.Equal(t, 0, out(got))
+		metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
+			IsMonotonic: mono,
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints:  []metricdata.DataPoint[N]{},
+		}, *got)
+
+		// Step 1: Bound + unbound measurements accumulate into the same series.
+		boundAlice(ctx, 1)
+		boundBob(ctx, -1)
+		in(ctx, 3, alice)
+		boundBob(ctx, -10)
+
+		assert.Equal(t, 2, out(got))
+		metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
+			IsMonotonic: mono,
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints: []metricdata.DataPoint[N]{
+				{
+					Attributes: fltrAlice,
+					StartTime:  aliceStartTime,
+					Time:       y2kPlus(4),
+					Value:      4,
+				},
+				{
+					Attributes: fltrBob,
+					StartTime:  bobStartTime,
+					Time:       y2kPlus(4),
+					Value:      -11,
+				},
+			},
+		}, *got)
+
+		// Step 2: Subsequent cumulative measurements add to existing totals.
+		boundAlice(ctx, 10)
+		boundBob(ctx, 3)
+
+		assert.Equal(t, 2, out(got))
+		metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
+			IsMonotonic: mono,
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints: []metricdata.DataPoint[N]{
+				{
+					Attributes: fltrAlice,
+					StartTime:  aliceStartTime,
+					Time:       y2kPlus(5),
+					Value:      14,
+				},
+				{
+					Attributes: fltrBob,
+					StartTime:  bobStartTime,
+					Time:       y2kPlus(5),
+					Value:      -8,
+				},
+			},
+		}, *got)
+
+		// Step 3: Exceed cardinality limit via bound + unbound measurements.
+		boundCarol := bind(carol)
+		boundCarol(ctx, 1)
+		in(ctx, 1, dave)
+
+		assert.Equal(t, 3, out(got))
+		metricdatatest.AssertAggregationsEqual(t, metricdata.Sum[N]{
+			IsMonotonic: mono,
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints: []metricdata.DataPoint[N]{
+				{
+					Attributes: fltrAlice,
+					StartTime:  aliceStartTime,
+					Time:       y2kPlus(7),
+					Value:      14,
+				},
+				{
+					Attributes: fltrBob,
+					StartTime:  bobStartTime,
+					Time:       y2kPlus(7),
+					Value:      -8,
+				},
+				{
+					Attributes: overflowSet,
+					StartTime:  overflowStartTime,
+					Time:       y2kPlus(7),
+					Value:      2,
+				},
+			},
+		}, *got)
+	}
+}
+
+func TestBoundSumExemplarDroppedAttributes(t *testing.T) {
+	for _, temp := range []metricdata.Temporality{
+		metricdata.DeltaTemporality,
+		metricdata.CumulativeTemporality,
+	} {
+		t.Run(temp.String(), func(t *testing.T) {
+			agg := Builder[int64]{
+				Temporality: temp,
+				Filter:      attrFltr,
+				ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+					return NewFilteredExemplarReservoir[int64](
+						exemplar.AlwaysOnFilter,
+						exemplar.NewFixedSizeReservoir(1),
+					)
+				},
+			}.BoundSum(true)
+
+			bm := agg.Bind(alice) // alice has userAlice (kept) and adminTrue (dropped by attrFltr)
+			bm(t.Context(), 42)
+
+			var dest metricdata.Aggregation
+			require.Equal(t, 1, agg.ComputeAggregation(&dest))
+			s, ok := dest.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.Len(t, s.DataPoints, 1)
+			assert.Equal(t, fltrAlice, s.DataPoints[0].Attributes)
+			assert.Equal(t, int64(42), s.DataPoints[0].Value)
+			require.Len(t, s.DataPoints[0].Exemplars, 1)
+			assert.Equal(t, int64(42), s.DataPoints[0].Exemplars[0].Value)
+			assert.Equal(t, []attribute.KeyValue{adminTrue}, s.DataPoints[0].Exemplars[0].FilteredAttributes)
+		})
+	}
+}
+
+func TestBoundDeltaSumOfferPanicDoesNotHangCollect(t *testing.T) {
+	collectWithTimeout := func(t *testing.T, out ComputeAggregation) metricdata.Sum[int64] {
+		t.Helper()
+		done := make(chan int, 1)
+		var dest metricdata.Aggregation
+		go func() {
+			done <- out(&dest)
+		}()
+		select {
+		case n := <-done:
+			require.Equal(t, 1, n)
+			s, ok := dest.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.Len(t, s.DataPoints, 1)
+			return s
+		case <-time.After(5 * time.Second):
+			t.Fatal("ComputeAggregation hung after panic in Offer")
+			return metricdata.Sum[int64]{}
+		}
+	}
+
+	t.Run("BoundAndUnboundSubsequentCycles", func(t *testing.T) {
+		for _, tc := range []struct {
+			name  string
+			setup func(agg BoundSum[int64]) func(ctx context.Context, v int64)
+		}{
+			{
+				name: "Bound",
+				setup: func(agg BoundSum[int64]) func(ctx context.Context, v int64) {
+					return agg.Bind(alice)
+				},
+			},
+			{
+				name: "Unbound",
+				setup: func(agg BoundSum[int64]) func(ctx context.Context, v int64) {
+					return func(ctx context.Context, v int64) {
+						agg.Measure(ctx, v, alice)
+					}
+				},
+			},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				var shouldPanic atomic.Bool
+				shouldPanic.Store(true)
+				panicFilter := func(context.Context) bool {
+					if shouldPanic.Load() {
+						panic("offer panic")
+					}
+					return false
+				}
+				agg := Builder[int64]{
+					Temporality: metricdata.DeltaTemporality,
+					Filter:      attrFltr,
+					ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+						return NewFilteredExemplarReservoir[int64](
+							panicFilter,
+							exemplar.NewFixedSizeReservoir(1),
+						)
+					},
+				}.BoundSum(true)
+
+				record := tc.setup(agg)
+				assert.PanicsWithValue(t, "offer panic", func() {
+					record(t.Context(), 5)
+				})
+
+				s := collectWithTimeout(t, agg.ComputeAggregation)
+				assert.Equal(t, int64(5), s.DataPoints[0].Value)
+
+				// Subsequent non-panicking cycle on the swapped buffer must also stay balanced.
+				shouldPanic.Store(false)
+				record(t.Context(), 7)
+				s = collectWithTimeout(t, agg.ComputeAggregation)
+				assert.Equal(t, int64(7), s.DataPoints[0].Value)
+			})
+		}
+	})
+
+	t.Run("MixedDropExemplarsBuffers", func(t *testing.T) {
+		var calls atomic.Int32
+		panicFilter := func(context.Context) bool {
+			panic("offer panic")
+		}
+		agg := Builder[int64]{
+			Temporality: metricdata.DeltaTemporality,
+			Filter:      attrFltr,
+			ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+				if calls.Add(1) == 1 {
+					return &dropRes[int64]{}
+				}
+				return NewFilteredExemplarReservoir[int64](
+					panicFilter,
+					exemplar.NewFixedSizeReservoir(1),
+				)
+			},
+		}.BoundSum(true)
+
+		bm := agg.Bind(alice)
+		// Cycle 1 uses buffer 0 (dropRes): does not panic.
+		bm(t.Context(), 3)
+		s := collectWithTimeout(t, agg.ComputeAggregation)
+		assert.Equal(t, int64(3), s.DataPoints[0].Value)
+
+		// Cycle 2 uses buffer 1 (panicking reservoir): must still release wait group via defer.
+		assert.PanicsWithValue(t, "offer panic", func() {
+			bm(t.Context(), 9)
+		})
+		s = collectWithTimeout(t, agg.ComputeAggregation)
+		assert.Equal(t, int64(9), s.DataPoints[0].Value)
+	})
+}
+
+func TestBoundSumReservoirPanicSafety(t *testing.T) {
+	fltrCarol := attribute.NewSet(userCarol)
+	collectWithTimeout := func(t *testing.T, out ComputeAggregation) metricdata.Sum[int64] {
+		t.Helper()
+		done := make(chan int, 1)
+		var dest metricdata.Aggregation
+		go func() {
+			done <- out(&dest)
+		}()
+		select {
+		case <-done:
+			s, ok := dest.(metricdata.Sum[int64])
+			require.True(t, ok)
+			return s
+		case <-time.After(5 * time.Second):
+			t.Fatal("ComputeAggregation hung after ReservoirFunc panic")
+			return metricdata.Sum[int64]{}
+		}
+	}
+
+	t.Run("CumulativeDoesNotLeakCardinalitySlot", func(t *testing.T) {
+		var shouldPanic atomic.Bool
+		shouldPanic.Store(true)
+		agg := Builder[int64]{
+			Temporality:      metricdata.CumulativeTemporality,
+			Filter:           attrFltr,
+			AggregationLimit: 3, // 2 concrete + 1 overflow
+			ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+				if shouldPanic.Load() {
+					panic("reservoir panic")
+				}
+				return &dropRes[int64]{}
+			},
+		}.BoundSum(true)
+
+		// Two panicking Bind calls must not consume any cardinality slots.
+		assert.PanicsWithValue(t, "reservoir panic", func() { agg.Bind(alice) })
+		assert.PanicsWithValue(t, "reservoir panic", func() { agg.Bind(bob) })
+
+		shouldPanic.Store(false)
+		bmAlice := agg.Bind(alice)
+		bmBob := agg.Bind(bob)
+		bmAlice(t.Context(), 1)
+		bmBob(t.Context(), 2)
+
+		s := collectWithTimeout(t, agg.ComputeAggregation)
+		require.Len(t, s.DataPoints, 2)
+		attrs := []attribute.Set{s.DataPoints[0].Attributes, s.DataPoints[1].Attributes}
+		assert.ElementsMatch(t, []attribute.Set{fltrAlice, fltrBob}, attrs)
+	})
+
+	t.Run("DeltaHotBufferPanicReleasesLockAndSlot", func(t *testing.T) {
+		var shouldPanic atomic.Bool
+		shouldPanic.Store(true)
+		agg := Builder[int64]{
+			Temporality:      metricdata.DeltaTemporality,
+			Filter:           attrFltr,
+			AggregationLimit: 3, // 2 concrete + 1 overflow
+			ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+				if shouldPanic.Load() {
+					panic("reservoir panic")
+				}
+				return &dropRes[int64]{}
+			},
+		}.BoundSum(true)
+
+		// Panic on buf[0] (hot).
+		assert.PanicsWithValue(t, "reservoir panic", func() { agg.Bind(alice) })
+
+		// Collect twice so hot swaps buf[0] -> buf[1] -> buf[0], verifying both
+		// lenMux is unlocked and buf[0]'s cardinality slots are directly tested.
+		assert.Empty(t, collectWithTimeout(t, agg.ComputeAggregation).DataPoints)
+		assert.Empty(t, collectWithTimeout(t, agg.ComputeAggregation).DataPoints)
+
+		shouldPanic.Store(false)
+		bmAlice := agg.Bind(alice)
+		bmBob := agg.Bind(bob)
+		bmAlice(t.Context(), 1)
+		bmBob(t.Context(), 2)
+
+		s := collectWithTimeout(t, agg.ComputeAggregation)
+		require.Len(t, s.DataPoints, 2)
+		attrs := []attribute.Set{s.DataPoints[0].Attributes, s.DataPoints[1].Attributes}
+		assert.ElementsMatch(t, []attribute.Set{fltrAlice, fltrBob}, attrs)
+	})
+
+	t.Run("DeltaColdBufferPanicIsAtomicAndPreservesLimit", func(t *testing.T) {
+		t.Run("BeforeSwapNoPrematureOverflow", func(t *testing.T) {
+			var calls atomic.Int32
+			agg := Builder[int64]{
+				Temporality:      metricdata.DeltaTemporality,
+				Filter:           attrFltr,
+				AggregationLimit: 3, // 2 concrete + 1 overflow
+				ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+					if calls.Add(1) == 2 {
+						panic("cold reservoir panic")
+					}
+					return &dropRes[int64]{}
+				},
+			}.BoundSum(true)
+
+			// 1st call (buf[0]) succeeds, 2nd call (buf[1]) panics: neither buffer may commit.
+			assert.PanicsWithValue(t, "cold reservoir panic", func() { agg.Bind(alice) })
+
+			// Both concrete slots on buf[0] must remain free (no partial pin of alice).
+			bmBob := agg.Bind(bob)
+			bmCarol := agg.Bind(carol)
+			bmBob(t.Context(), 1)
+			bmCarol(t.Context(), 2)
+
+			s := collectWithTimeout(t, agg.ComputeAggregation)
+			require.Len(t, s.DataPoints, 2)
+			attrs := []attribute.Set{s.DataPoints[0].Attributes, s.DataPoints[1].Attributes}
+			assert.ElementsMatch(t, []attribute.Set{fltrBob, fltrCarol}, attrs)
+		})
+
+		t.Run("AfterSwapNoLimitViolationOrColdSlotLeak", func(t *testing.T) {
+			var calls atomic.Int32
+			agg := Builder[int64]{
+				Temporality:      metricdata.DeltaTemporality,
+				Filter:           attrFltr,
+				AggregationLimit: 3, // 2 concrete + 1 overflow
+				ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+					if calls.Add(1) == 2 {
+						panic("cold reservoir panic")
+					}
+					return &dropRes[int64]{}
+				},
+			}.BoundSum(true)
+
+			assert.PanicsWithValue(t, "cold reservoir panic", func() { agg.Bind(alice) })
+
+			// Swap hot to buf[1] (the buffer where initValue panicked).
+			assert.Empty(t, collectWithTimeout(t, agg.ComputeAggregation).DataPoints)
+
+			// Bind bob & carol on buf[1]: verifies no buf[1].len leak (both concrete).
+			bmBob := agg.Bind(bob)
+			bmCarol := agg.Bind(carol)
+			bmBob(t.Context(), 1)
+			bmCarol(t.Context(), 2)
+			s := collectWithTimeout(t, agg.ComputeAggregation)
+			require.Len(t, s.DataPoints, 2)
+			attrs := []attribute.Set{s.DataPoints[0].Attributes, s.DataPoints[1].Attributes}
+			assert.ElementsMatch(t, []attribute.Set{fltrBob, fltrCarol}, attrs)
+
+			// Now hot is back on buf[0]. Recording alice (unbound), bob, carol, and dave
+			// must emit at most AggregationLimit (3) points: bob, carol, and overflow.
+			agg.Measure(t.Context(), 10, alice)
+			bmBob(t.Context(), 1)
+			bmCarol(t.Context(), 2)
+			agg.Measure(t.Context(), 20, dave)
+
+			s = collectWithTimeout(t, agg.ComputeAggregation)
+			require.Len(t, s.DataPoints, 3)
+			attrs = []attribute.Set{
+				s.DataPoints[0].Attributes,
+				s.DataPoints[1].Attributes,
+				s.DataPoints[2].Attributes,
+			}
+			assert.ElementsMatch(t, []attribute.Set{fltrBob, fltrCarol, overflowSet}, attrs)
+		})
+	})
+
+	t.Run("DeltaUnboundPromotionColdPanicDoesNotPinHot", func(t *testing.T) {
+		var shouldPanic atomic.Bool
+		agg := Builder[int64]{
+			Temporality:      metricdata.DeltaTemporality,
+			Filter:           attrFltr,
+			AggregationLimit: 3, // 2 concrete + 1 overflow
+			ReservoirFunc: func(attribute.Set) FilteredExemplarReservoir[int64] {
+				if shouldPanic.Load() {
+					panic("reservoir panic")
+				}
+				return &dropRes[int64]{}
+			},
+		}.BoundSum(true)
+
+		// Record unbound alice in buf[0] (hot).
+		agg.Measure(t.Context(), 5, alice)
+
+		// Enable unconditional panic: Bind(alice) finds alice in buf[0] without calling
+		// ReservoirFunc, then panics on buf[1]. alice must stay unbound in buf[0].
+		shouldPanic.Store(true)
+		assert.PanicsWithValue(t, "reservoir panic", func() { agg.Bind(alice) })
+
+		// Collect buf[0]: emits alice (value 5) and must evict it since it stayed unbound.
+		s := collectWithTimeout(t, agg.ComputeAggregation)
+		require.Len(t, s.DataPoints, 1)
+		assert.Equal(t, fltrAlice, s.DataPoints[0].Attributes)
+		assert.Equal(t, int64(5), s.DataPoints[0].Value)
+
+		// Swap back to buf[0] and confirm both concrete slots are available (alice evicted).
+		assert.Empty(t, collectWithTimeout(t, agg.ComputeAggregation).DataPoints)
+		shouldPanic.Store(false)
+		bmBob := agg.Bind(bob)
+		bmCarol := agg.Bind(carol)
+		bmBob(t.Context(), 1)
+		bmCarol(t.Context(), 2)
+
+		s = collectWithTimeout(t, agg.ComputeAggregation)
+		require.Len(t, s.DataPoints, 2)
+		attrs := []attribute.Set{s.DataPoints[0].Attributes, s.DataPoints[1].Attributes}
+		assert.ElementsMatch(t, []attribute.Set{fltrBob, fltrCarol}, attrs)
+	})
+}
+
+func TestBoundCumulativeSumDelayedFirstMeasurement(t *testing.T) {
+	c := new(clock)
+	t.Cleanup(c.Register())
+
+	for _, enabled := range []bool{false, true} {
+		name := "PerSeriesStartTimeDisabled"
+		if enabled {
+			name = "PerSeriesStartTimeEnabled"
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_PER_SERIES_START_TIMESTAMPS", strconv.FormatBool(enabled))
+			c.Reset()
+
+			agg := Builder[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				Filter:      attrFltr,
+			}.BoundSum(true)
+
+			// Step 0: Bind handle while clock is at tick 0 (agg.start is tick 0).
+			// Binding must not record a start timestamp before the first measurement.
+			boundAlice := agg.Bind(alice)
+
+			// Step 1: Multiple collection cycles while the handle is idle.
+			var got metricdata.Aggregation
+			require.Equal(t, 0, agg.ComputeAggregation(&got))
+			require.Equal(t, 0, agg.ComputeAggregation(&got))
+
+			// Step 2: First measurement occurs after delayed idle cycles.
+			measurementTime := y2kPlus(c.ticks.Load())
+			boundAlice(t.Context(), 42)
+
+			// Step 3: Collect aggregation.
+			require.Equal(t, 1, agg.ComputeAggregation(&got))
+			s, ok := got.(metricdata.Sum[int64])
+			require.True(t, ok)
+			require.Len(t, s.DataPoints, 1)
+
+			expectedStartTime := y2kPlus(0)
+			if enabled {
+				expectedStartTime = measurementTime
+			}
+			assert.Equal(t, expectedStartTime, s.DataPoints[0].StartTime)
+			assert.Equal(t, int64(42), s.DataPoints[0].Value)
+		})
+	}
+}
+
+func TestBoundSumConcurrentSafe(t *testing.T) {
+	t.Run("Int64/DeltaSum", testBoundSumConcurrentSafe[int64](metricdata.DeltaTemporality))
+	t.Run("Float64/DeltaSum", testBoundSumConcurrentSafe[float64](metricdata.DeltaTemporality))
+	t.Run("Int64/CumulativeSum", testBoundSumConcurrentSafe[int64](metricdata.CumulativeTemporality))
+	t.Run("Float64/CumulativeSum", testBoundSumConcurrentSafe[float64](metricdata.CumulativeTemporality))
+}
+
+func testBoundSumConcurrentSafe[N int64 | float64](temp metricdata.Temporality) func(t *testing.T) {
+	return func(t *testing.T) {
+		agg := Builder[N]{
+			Temporality:      temp,
+			Filter:           attrFltr,
+			AggregationLimit: 3,
+		}.BoundSum(false)
+		in, out, bind := agg.Measure, agg.ComputeAggregation, agg.Bind
+
+		ctx := t.Context()
+		var wg sync.WaitGroup
+
+		attrs := make([]attribute.Set, concurrentNumGoroutines)
+		for i := range attrs {
+			attrs[i] = attribute.NewSet(attribute.String(keyUser, strconv.Itoa(i)), adminTrue)
+		}
+
+		vals := getConcurrentVals[N]()
+
+		// Pre-bind half the attribute sets before concurrent writes, and bind the
+		// other half dynamically from inside the worker goroutines while also
+		// mixing bound and unbound measurements.
+		prebound := make([]BoundMeasure[N], concurrentNumGoroutines/2)
+		for i := range prebound {
+			prebound[i] = bind(attrs[i])
+		}
+
+		wg.Add(concurrentNumGoroutines)
+		for i := range concurrentNumGoroutines {
+			go func(id int) {
+				defer wg.Done()
+				attr := attrs[id]
+				var bm BoundMeasure[N]
+				if id < len(prebound) {
+					bm = prebound[id]
+				}
+
+				for j := range concurrentNumRecords {
+					v := vals[j%len(vals)]
+					if bm == nil && j == len(vals) {
+						bm = bind(attr)
+					}
+					if bm != nil && j%2 == 0 {
+						bm(ctx, v)
+					} else {
+						in(ctx, v, attr)
+					}
+				}
+			}(i)
+		}
+
+		var results []metricdata.Aggregation
+		wg.Go(func() {
+			for range concurrentNumRecords {
+				got := new(metricdata.Aggregation)
+				out(got)
+				results = append(results, *got)
+			}
+		})
+
+		wg.Wait()
+
+		got := new(metricdata.Aggregation)
+		out(got)
+		results = append(results, *got)
+
+		validateSum[N](false)(t, results)
+	}
+}
+
+func BenchmarkBoundSum(b *testing.B) {
+	b.Run(
+		"Int64/Cumulative",
+		benchmarkBoundAggregate(func() (Measure[int64], ComputeAggregation, Binder[int64]) {
+			s := Builder[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+			}.BoundSum(false)
+			return s.Measure, s.ComputeAggregation, s.Bind
+		}),
+	)
+	b.Run(
+		"Int64/Delta",
+		benchmarkBoundAggregate(func() (Measure[int64], ComputeAggregation, Binder[int64]) {
+			s := Builder[int64]{
+				Temporality: metricdata.DeltaTemporality,
+			}.BoundSum(false)
+			return s.Measure, s.ComputeAggregation, s.Bind
+		}),
+	)
+	b.Run(
+		"Float64/Cumulative",
+		benchmarkBoundAggregate(func() (Measure[float64], ComputeAggregation, Binder[float64]) {
+			s := Builder[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+			}.BoundSum(false)
+			return s.Measure, s.ComputeAggregation, s.Bind
+		}),
+	)
+	b.Run(
+		"Float64/Delta",
+		benchmarkBoundAggregate(func() (Measure[float64], ComputeAggregation, Binder[float64]) {
+			s := Builder[float64]{
+				Temporality: metricdata.DeltaTemporality,
+			}.BoundSum(false)
+			return s.Measure, s.ComputeAggregation, s.Bind
+		}),
+	)
+}

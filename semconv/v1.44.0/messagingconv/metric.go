@@ -108,7 +108,7 @@ func NewClientConsumedMessages(
 	if len(opt) == 0 {
 		opt = newClientConsumedMessagesOpts
 	} else {
-		opt = append(opt, newClientConsumedMessagesOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConsumedMessagesOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -297,7 +297,7 @@ func NewClientConsumedMessagesObservable(
 	if len(opt) == 0 {
 		opt = newClientConsumedMessagesObservableOpts
 	} else {
-		opt = append(opt, newClientConsumedMessagesObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConsumedMessagesObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -426,7 +426,7 @@ func NewClientOperationDuration(
 	if len(opt) == 0 {
 		opt = newClientOperationDurationOpts
 	} else {
-		opt = append(opt, newClientOperationDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientOperationDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -613,7 +613,7 @@ func NewClientSentMessages(
 	if len(opt) == 0 {
 		opt = newClientSentMessagesOpts
 	} else {
-		opt = append(opt, newClientSentMessagesOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientSentMessagesOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -780,7 +780,7 @@ func NewClientSentMessagesObservable(
 	if len(opt) == 0 {
 		opt = newClientSentMessagesObservableOpts
 	} else {
-		opt = append(opt, newClientSentMessagesObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientSentMessagesObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -894,7 +894,7 @@ func NewProcessDuration(
 	if len(opt) == 0 {
 		opt = newProcessDurationOpts
 	} else {
-		opt = append(opt, newProcessDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newProcessDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(

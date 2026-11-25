@@ -106,7 +106,7 @@ func NewClientActiveRequests(
 	if len(opt) == 0 {
 		opt = newClientActiveRequestsOpts
 	} else {
-		opt = append(opt, newClientActiveRequestsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientActiveRequestsOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -249,7 +249,7 @@ func NewClientActiveRequestsObservable(
 	if len(opt) == 0 {
 		opt = newClientActiveRequestsObservableOpts
 	} else {
-		opt = append(opt, newClientActiveRequestsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientActiveRequestsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -345,7 +345,7 @@ func NewClientConnectionDuration(
 	if len(opt) == 0 {
 		opt = newClientConnectionDurationOpts
 	} else {
-		opt = append(opt, newClientConnectionDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientConnectionDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -487,7 +487,7 @@ func NewClientOpenConnections(
 	if len(opt) == 0 {
 		opt = newClientOpenConnectionsOpts
 	} else {
-		opt = append(opt, newClientOpenConnectionsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientOpenConnectionsOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -636,7 +636,7 @@ func NewClientOpenConnectionsObservable(
 	if len(opt) == 0 {
 		opt = newClientOpenConnectionsObservableOpts
 	} else {
-		opt = append(opt, newClientOpenConnectionsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientOpenConnectionsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -737,7 +737,7 @@ func NewClientRequestBodySize(
 	if len(opt) == 0 {
 		opt = newClientRequestBodySizeOpts
 	} else {
-		opt = append(opt, newClientRequestBodySizeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientRequestBodySizeOpts...)
 	}
 
 	i, err := m.Int64Histogram(
@@ -907,9 +907,9 @@ type ClientRequestDuration struct {
 }
 
 var newClientRequestDurationOpts = []metric.Float64HistogramOption{
+	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 	metric.WithDescription("Duration of HTTP client requests."),
 	metric.WithUnit("s"),
-	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 }
 
 // NewClientRequestDuration returns a new ClientRequestDuration instrument.
@@ -925,7 +925,11 @@ func NewClientRequestDuration(
 	if len(opt) == 0 {
 		opt = newClientRequestDurationOpts
 	} else {
-		opt = append(opt, newClientRequestDurationOpts...)
+		// Bucket advice precedes caller options; semantic metadata stays fixed.
+		opts := make([]metric.Float64HistogramOption, 0, len(opt)+len(newClientRequestDurationOpts))
+		opts = append(opts, newClientRequestDurationOpts[0])
+		opts = append(opts, opt...)
+		opt = append(opts, newClientRequestDurationOpts[1:]...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -1098,7 +1102,7 @@ func NewClientResponseBodySize(
 	if len(opt) == 0 {
 		opt = newClientResponseBodySizeOpts
 	} else {
-		opt = append(opt, newClientResponseBodySizeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientResponseBodySizeOpts...)
 	}
 
 	i, err := m.Int64Histogram(
@@ -1285,7 +1289,7 @@ func NewServerActiveRequests(
 	if len(opt) == 0 {
 		opt = newServerActiveRequestsOpts
 	} else {
-		opt = append(opt, newServerActiveRequestsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerActiveRequestsOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1419,7 +1423,7 @@ func NewServerActiveRequestsObservable(
 	if len(opt) == 0 {
 		opt = newServerActiveRequestsObservableOpts
 	} else {
-		opt = append(opt, newServerActiveRequestsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerActiveRequestsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1506,7 +1510,7 @@ func NewServerRequestBodySize(
 	if len(opt) == 0 {
 		opt = newServerRequestBodySizeOpts
 	} else {
-		opt = append(opt, newServerRequestBodySizeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerRequestBodySizeOpts...)
 	}
 
 	i, err := m.Int64Histogram(
@@ -1683,9 +1687,9 @@ type ServerRequestDuration struct {
 }
 
 var newServerRequestDurationOpts = []metric.Float64HistogramOption{
+	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 	metric.WithDescription("Duration of HTTP server requests."),
 	metric.WithUnit("s"),
-	metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}...),
 }
 
 // NewServerRequestDuration returns a new ServerRequestDuration instrument.
@@ -1701,7 +1705,11 @@ func NewServerRequestDuration(
 	if len(opt) == 0 {
 		opt = newServerRequestDurationOpts
 	} else {
-		opt = append(opt, newServerRequestDurationOpts...)
+		// Bucket advice precedes caller options; semantic metadata stays fixed.
+		opts := make([]metric.Float64HistogramOption, 0, len(opt)+len(newServerRequestDurationOpts))
+		opts = append(opts, newServerRequestDurationOpts[0])
+		opts = append(opts, opt...)
+		opt = append(opts, newServerRequestDurationOpts[1:]...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -1881,7 +1889,7 @@ func NewServerResponseBodySize(
 	if len(opt) == 0 {
 		opt = newServerResponseBodySizeOpts
 	} else {
-		opt = append(opt, newServerResponseBodySizeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerResponseBodySizeOpts...)
 	}
 
 	i, err := m.Int64Histogram(

@@ -17,11 +17,10 @@ import (
 	"go.opentelemetry.io/otel/internal/global"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 
@@ -38,7 +37,7 @@ var (
 				1 /* server.address */ +
 				1 /* server.port */ +
 				1 /* error.type */ +
-				1 /* rpc.grpc.status_code */
+				1 /* rpc.status_code */
 			s := make([]attribute.KeyValue, 0, n)
 			return &s
 		},
@@ -97,7 +96,10 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 		err = errors.Join(err, fmt.Errorf("failed to create inflight metric: %w", instrumentErr))
 	}
 
-	em.duration, instrumentErr = otelconv.NewSDKExporterOperationDuration(meter)
+	em.duration, instrumentErr = otelconv.NewSDKExporterOperationDuration(
+		meter,
+		metric.WithExplicitBucketBoundaries(),
+	)
 	if instrumentErr != nil {
 		err = errors.Join(err, fmt.Errorf("failed to create duration metric: %w", instrumentErr))
 	}
@@ -107,7 +109,7 @@ func NewInstrumentation(id int64, target string) (*Instrumentation, error) {
 	attrSet := attribute.NewSet(em.attrs...)
 	em.addOpt = metric.WithAttributeSet(attrSet)
 	em.recOpt = metric.WithAttributeSet(attribute.NewSet(append(
-		[]attribute.KeyValue{semconv.RPCResponseStatusCode(codes.OK.String())},
+		[]attribute.KeyValue{semconv.RPCStatusCode(codes.OK.String())},
 		em.attrs...,
 	)...))
 
@@ -206,8 +208,9 @@ type ExportOp struct {
 // End completes the observation of the operation being observed by a call to
 // [Instrumentation.TrackExport].
 //
-// Any error that is encountered is provided as err.
-func (e ExportOp) End(err error) {
+// Any error that is encountered is provided as err, and code is the gRPC status
+// code of the last gRPC request performed in scope of this export call.
+func (e ExportOp) End(err error, code codes.Code) {
 	if e.inst == nil {
 		return
 	}
@@ -238,7 +241,7 @@ func (e ExportOp) End(err error) {
 
 	if e.inst.duration.Enabled(e.ctx) {
 		d := time.Since(e.start).Seconds()
-		if err != nil {
+		if err != nil || code != codes.OK {
 			recOptPtr := recOptPool.Get().(*[]metric.RecordOption)
 			defer func() {
 				*recOptPtr = (*recOptPtr)[:0]
@@ -252,11 +255,10 @@ func (e ExportOp) End(err error) {
 			}()
 
 			*attrsPtr = append(*attrsPtr, e.inst.attrs...)
-			*attrsPtr = append(
-				*attrsPtr,
-				semconv.ErrorType(err),
-				semconv.RPCResponseStatusCode(status.Code(err).String()),
-			)
+			*attrsPtr = append(*attrsPtr, semconv.RPCStatusCode(code.String()))
+			if err != nil {
+				*attrsPtr = append(*attrsPtr, semconv.ErrorType(err))
+			}
 
 			set := attribute.NewSet(*attrsPtr...)
 			*recOptPtr = append(*recOptPtr, metric.WithAttributeSet(set))

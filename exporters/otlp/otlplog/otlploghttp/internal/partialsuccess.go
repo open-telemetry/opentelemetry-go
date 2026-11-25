@@ -31,6 +31,11 @@ func (PartialSuccess) Is(err error) bool {
 	return ok
 }
 
+// ErrorType returns the semantic convention error.type value for partial-success rejections.
+func (PartialSuccess) ErrorType() string {
+	return "rejected"
+}
+
 // LogPartialSuccessError returns an error describing a partial-success
 // response for the log signal.
 func LogPartialSuccessError(itemsRejected int64, errorMessage string) error {

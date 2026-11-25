@@ -730,6 +730,20 @@ func TestOptInWithFinishAndMeterConfigurator(t *testing.T) {
 			f.Finish(t.Context())
 		}
 
+		ig, err := m.Int64Gauge("optin.gauge.int64", metricx.WithOptIn())
+		require.NoError(t, err)
+		assert.False(t, ig.Enabled(t.Context()))
+		ig.Record(t.Context(), 1)
+		require.Implements(t, (*metricx.Finisher)(nil), ig)
+		ig.(metricx.Finisher).Finish(t.Context())
+
+		fg, err := m.Float64Gauge("optin.gauge.float64", metricx.WithOptIn())
+		require.NoError(t, err)
+		assert.False(t, fg.Enabled(t.Context()))
+		fg.Record(t.Context(), 1.5)
+		require.Implements(t, (*metricx.Finisher)(nil), fg)
+		fg.(metricx.Finisher).Finish(t.Context())
+
 		var rm metricdata.ResourceMetrics
 		require.NoError(t, rdr.Collect(t.Context(), &rm))
 		assert.Empty(t, rm.ScopeMetrics)

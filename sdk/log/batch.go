@@ -6,7 +6,6 @@ package log
 import (
 	"context"
 	"errors"
-	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -248,9 +247,6 @@ func (b *BatchProcessor) shutdownExporter(ctx context.Context) error {
 
 func (b *BatchProcessor) logDroppedRecords() {
 	if d := b.q.Dropped(); d > 0 {
-		if b.inst != nil {
-			b.inst.ProcessedQueueFull(context.Background(), int64(min(math.MaxInt64, d))) // nolint:gosec
-		}
 		global.Warn("dropped log records", "dropped", d)
 	}
 }
@@ -268,13 +264,17 @@ func (*BatchProcessor) Enabled(context.Context, EnabledParameters) bool {
 }
 
 // OnEmit batches the provided log record.
-func (b *BatchProcessor) OnEmit(_ context.Context, r *Record) error {
+func (b *BatchProcessor) OnEmit(ctx context.Context, r *Record) error {
 	if b.stopped.Load() || b.q == nil {
 		return nil
 	}
 	// The record is cloned so that changes done by subsequent processors
 	// are not going to lead to a data race.
-	if n, accepted := b.q.Enqueue(r.Clone()); accepted && n >= b.batchSize {
+	n, accepted, dropped := b.q.Enqueue(r.Clone())
+	if dropped && b.inst != nil {
+		b.inst.ProcessedQueueFull(ctx, 1)
+	}
+	if accepted && n >= b.batchSize {
 		b.triggerExport()
 	}
 	return nil
@@ -363,17 +363,18 @@ func (q *queue) Dropped() uint64 {
 	return q.dropped.Swap(0)
 }
 
-// Enqueue adds r to the queue. The queue size, including the addition of r, is
-// returned.
+// Enqueue adds r to the queue. The queue size, including the addition of r,
+// whether r was enqueued, and whether an older Record was dropped due to
+// capacity are returned.
 //
 // If enqueueing r would exceed the capacity of q, the oldest Record held in q
 // will be dropped and r will be retained.
-func (q *queue) Enqueue(r Record) (int, bool) {
+func (q *queue) Enqueue(r Record) (n int, accepted, dropped bool) {
 	q.Lock()
 	defer q.Unlock()
 
 	if q.closed {
-		return q.len, false
+		return q.len, false, false
 	}
 
 	q.write.Value = r
@@ -385,8 +386,9 @@ func (q *queue) Enqueue(r Record) (int, bool) {
 		q.len = q.cap
 		q.read = q.read.Next()
 		q.dropped.Add(1)
+		dropped = true
 	}
-	return q.len, true
+	return q.len, true, dropped
 }
 
 // Dequeue removes up to len(buf) records from the queue and copies them into

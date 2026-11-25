@@ -121,7 +121,7 @@ func NewContextSwitches(
 	if len(opt) == 0 {
 		opt = newContextSwitchesOpts
 	} else {
-		opt = append(opt, newContextSwitchesOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContextSwitchesOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -233,7 +233,7 @@ func NewContextSwitchesObservable(
 	if len(opt) == 0 {
 		opt = newContextSwitchesObservableOpts
 	} else {
-		opt = append(opt, newContextSwitchesObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newContextSwitchesObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -299,7 +299,7 @@ func NewCPUTime(
 	if len(opt) == 0 {
 		opt = newCPUTimeOpts
 	} else {
-		opt = append(opt, newCPUTimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCPUTimeOpts...)
 	}
 
 	i, err := m.Float64ObservableCounter(
@@ -343,10 +343,10 @@ func (CPUTime) AttrCPUMode(val CPUModeAttr) attribute.KeyValue {
 // in process.cpu.time since the last measurement, divided by the elapsed time
 // and number of CPUs available to the process.
 type CPUUtilization struct {
-	metric.Int64Gauge
+	metric.Float64Gauge
 }
 
-var newCPUUtilizationOpts = []metric.Int64GaugeOption{
+var newCPUUtilizationOpts = []metric.Float64GaugeOption{
 	metric.WithDescription("Difference in process.cpu.time since the last measurement, divided by the elapsed time and number of CPUs available to the process."),
 	metric.WithUnit("1"),
 }
@@ -354,32 +354,32 @@ var newCPUUtilizationOpts = []metric.Int64GaugeOption{
 // NewCPUUtilization returns a new CPUUtilization instrument.
 func NewCPUUtilization(
 	m metric.Meter,
-	opt ...metric.Int64GaugeOption,
+	opt ...metric.Float64GaugeOption,
 ) (CPUUtilization, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return CPUUtilization{noop.Int64Gauge{}}, nil
+		return CPUUtilization{noop.Float64Gauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newCPUUtilizationOpts
 	} else {
-		opt = append(opt, newCPUUtilizationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCPUUtilizationOpts...)
 	}
 
-	i, err := m.Int64Gauge(
+	i, err := m.Float64Gauge(
 		"process.cpu.utilization",
 		opt...,
 	)
 	if err != nil {
-		return CPUUtilization{noop.Int64Gauge{}}, err
+		return CPUUtilization{noop.Float64Gauge{}}, err
 	}
 	return CPUUtilization{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m CPUUtilization) Inst() metric.Int64Gauge {
-	return m.Int64Gauge
+func (m CPUUtilization) Inst() metric.Float64Gauge {
+	return m.Float64Gauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -402,15 +402,15 @@ func (CPUUtilization) Description() string {
 // The cpuMode is the the CPU mode for this data point.
 func (m CPUUtilization) Record(
 	ctx context.Context,
-	val int64,
+	val float64,
 	cpuMode CPUModeAttr,
 	attrs ...attribute.KeyValue,
 ) {
-	if !m.Int64Gauge.Enabled(ctx) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if len(attrs) == 0 {
-		m.Int64Gauge.Record(ctx, val, metric.WithAttributes(
+		m.Float64Gauge.Record(ctx, val, metric.WithAttributes(
 			attribute.String("cpu.mode", string(cpuMode)),
 		))
 		return
@@ -429,16 +429,16 @@ func (m CPUUtilization) Record(
 		),
 	)
 
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // RecordSet records val to the current distribution for set.
-func (m CPUUtilization) RecordSet(ctx context.Context, val int64, set attribute.Set) {
-	if !m.Int64Gauge.Enabled(ctx) {
+func (m CPUUtilization) RecordSet(ctx context.Context, val float64, set attribute.Set) {
+	if !m.Float64Gauge.Enabled(ctx) {
 		return
 	}
 	if set.Len() == 0 {
-		m.Int64Gauge.Record(ctx, val)
+		m.Float64Gauge.Record(ctx, val)
 		return
 	}
 
@@ -446,7 +446,7 @@ func (m CPUUtilization) RecordSet(ctx context.Context, val int64, set attribute.
 	defer metricpool.PutRecordOptions(o)
 
 	*o = append(*o, metric.WithAttributeSet(set))
-	m.Int64Gauge.Record(ctx, val, *o...)
+	m.Float64Gauge.Record(ctx, val, *o...)
 }
 
 // CPUUtilizationObservable is an instrument used to record metric values
@@ -454,10 +454,10 @@ func (m CPUUtilization) RecordSet(ctx context.Context, val int64, set attribute.
 // represents the difference in process.cpu.time since the last measurement,
 // divided by the elapsed time and number of CPUs available to the process.
 type CPUUtilizationObservable struct {
-	metric.Int64ObservableGauge
+	metric.Float64ObservableGauge
 }
 
-var newCPUUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
+var newCPUUtilizationObservableOpts = []metric.Float64ObservableGaugeOption{
 	metric.WithDescription("Difference in process.cpu.time since the last measurement, divided by the elapsed time and number of CPUs available to the process."),
 	metric.WithUnit("1"),
 }
@@ -465,32 +465,32 @@ var newCPUUtilizationObservableOpts = []metric.Int64ObservableGaugeOption{
 // NewCPUUtilizationObservable returns a new CPUUtilizationObservable instrument.
 func NewCPUUtilizationObservable(
 	m metric.Meter,
-	opt ...metric.Int64ObservableGaugeOption,
+	opt ...metric.Float64ObservableGaugeOption,
 ) (CPUUtilizationObservable, error) {
 	// Check if the meter is nil.
 	if m == nil {
-		return CPUUtilizationObservable{noop.Int64ObservableGauge{}}, nil
+		return CPUUtilizationObservable{noop.Float64ObservableGauge{}}, nil
 	}
 
 	if len(opt) == 0 {
 		opt = newCPUUtilizationObservableOpts
 	} else {
-		opt = append(opt, newCPUUtilizationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCPUUtilizationObservableOpts...)
 	}
 
-	i, err := m.Int64ObservableGauge(
+	i, err := m.Float64ObservableGauge(
 		"process.cpu.utilization",
 		opt...,
 	)
 	if err != nil {
-		return CPUUtilizationObservable{noop.Int64ObservableGauge{}}, err
+		return CPUUtilizationObservable{noop.Float64ObservableGauge{}}, err
 	}
 	return CPUUtilizationObservable{i}, nil
 }
 
 // Inst returns the underlying metric instrument.
-func (m CPUUtilizationObservable) Inst() metric.Int64ObservableGauge {
-	return m.Int64ObservableGauge
+func (m CPUUtilizationObservable) Inst() metric.Float64ObservableGauge {
+	return m.Float64ObservableGauge
 }
 
 // Name returns the semantic convention name of the instrument.
@@ -539,7 +539,7 @@ func NewDiskIO(
 	if len(opt) == 0 {
 		opt = newDiskIOOpts
 	} else {
-		opt = append(opt, newDiskIOOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDiskIOOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -649,7 +649,7 @@ func NewDiskIOObservable(
 	if len(opt) == 0 {
 		opt = newDiskIOObservableOpts
 	} else {
-		opt = append(opt, newDiskIOObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDiskIOObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -713,7 +713,7 @@ func NewDiskOperations(
 	if len(opt) == 0 {
 		opt = newDiskOperationsOpts
 	} else {
-		opt = append(opt, newDiskOperationsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDiskOperationsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -823,7 +823,7 @@ func NewDiskOperationsObservable(
 	if len(opt) == 0 {
 		opt = newDiskOperationsObservableOpts
 	} else {
-		opt = append(opt, newDiskOperationsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newDiskOperationsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -887,7 +887,7 @@ func NewMemoryUsage(
 	if len(opt) == 0 {
 		opt = newMemoryUsageOpts
 	} else {
-		opt = append(opt, newMemoryUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryUsageOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -979,7 +979,7 @@ func NewMemoryUsageObservable(
 	if len(opt) == 0 {
 		opt = newMemoryUsageObservableOpts
 	} else {
-		opt = append(opt, newMemoryUsageObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryUsageObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1037,7 +1037,7 @@ func NewMemoryUtilization(
 	if len(opt) == 0 {
 		opt = newMemoryUtilizationOpts
 	} else {
-		opt = append(opt, newMemoryUtilizationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryUtilizationOpts...)
 	}
 
 	i, err := m.Float64Gauge(
@@ -1131,7 +1131,7 @@ func NewMemoryUtilizationObservable(
 	if len(opt) == 0 {
 		opt = newMemoryUtilizationObservableOpts
 	} else {
-		opt = append(opt, newMemoryUtilizationObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryUtilizationObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableGauge(
@@ -1189,7 +1189,7 @@ func NewMemoryVirtual(
 	if len(opt) == 0 {
 		opt = newMemoryVirtualOpts
 	} else {
-		opt = append(opt, newMemoryVirtualOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryVirtualOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1281,7 +1281,7 @@ func NewMemoryVirtualObservable(
 	if len(opt) == 0 {
 		opt = newMemoryVirtualObservableOpts
 	} else {
-		opt = append(opt, newMemoryVirtualObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemoryVirtualObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1339,7 +1339,7 @@ func NewNetworkIO(
 	if len(opt) == 0 {
 		opt = newNetworkIOOpts
 	} else {
-		opt = append(opt, newNetworkIOOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkIOOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1452,7 +1452,7 @@ func NewNetworkIOObservable(
 	if len(opt) == 0 {
 		opt = newNetworkIOObservableOpts
 	} else {
-		opt = append(opt, newNetworkIOObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetworkIOObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1519,7 +1519,7 @@ func NewPagingFaults(
 	if len(opt) == 0 {
 		opt = newPagingFaultsOpts
 	} else {
-		opt = append(opt, newPagingFaultsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPagingFaultsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1632,7 +1632,7 @@ func NewPagingFaultsObservable(
 	if len(opt) == 0 {
 		opt = newPagingFaultsObservableOpts
 	} else {
-		opt = append(opt, newPagingFaultsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newPagingFaultsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1699,7 +1699,7 @@ func NewSignalsPending(
 	if len(opt) == 0 {
 		opt = newSignalsPendingOpts
 	} else {
-		opt = append(opt, newSignalsPendingOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSignalsPendingOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1791,7 +1791,7 @@ func NewSignalsPendingObservable(
 	if len(opt) == 0 {
 		opt = newSignalsPendingObservableOpts
 	} else {
-		opt = append(opt, newSignalsPendingObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newSignalsPendingObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1849,7 +1849,7 @@ func NewThreadCount(
 	if len(opt) == 0 {
 		opt = newThreadCountOpts
 	} else {
-		opt = append(opt, newThreadCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newThreadCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -1941,7 +1941,7 @@ func NewThreadCountObservable(
 	if len(opt) == 0 {
 		opt = newThreadCountObservableOpts
 	} else {
-		opt = append(opt, newThreadCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newThreadCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -1999,7 +1999,7 @@ func NewUnixFileDescriptorCount(
 	if len(opt) == 0 {
 		opt = newUnixFileDescriptorCountOpts
 	} else {
-		opt = append(opt, newUnixFileDescriptorCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newUnixFileDescriptorCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2093,7 +2093,7 @@ func NewUnixFileDescriptorCountObservable(
 	if len(opt) == 0 {
 		opt = newUnixFileDescriptorCountObservableOpts
 	} else {
-		opt = append(opt, newUnixFileDescriptorCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newUnixFileDescriptorCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
@@ -2151,7 +2151,7 @@ func NewUptime(
 	if len(opt) == 0 {
 		opt = newUptimeOpts
 	} else {
-		opt = append(opt, newUptimeOpts...)
+		opt = append(opt[:len(opt):len(opt)], newUptimeOpts...)
 	}
 
 	i, err := m.Float64Gauge(
@@ -2251,7 +2251,7 @@ func NewUptimeObservable(
 	if len(opt) == 0 {
 		opt = newUptimeObservableOpts
 	} else {
-		opt = append(opt, newUptimeObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newUptimeObservableOpts...)
 	}
 
 	i, err := m.Float64ObservableGauge(
@@ -2309,7 +2309,7 @@ func NewWindowsHandleCount(
 	if len(opt) == 0 {
 		opt = newWindowsHandleCountOpts
 	} else {
-		opt = append(opt, newWindowsHandleCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newWindowsHandleCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2402,7 +2402,7 @@ func NewWindowsHandleCountObservable(
 	if len(opt) == 0 {
 		opt = newWindowsHandleCountObservableOpts
 	} else {
-		opt = append(opt, newWindowsHandleCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newWindowsHandleCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(

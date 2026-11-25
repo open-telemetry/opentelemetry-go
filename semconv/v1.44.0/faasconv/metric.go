@@ -61,7 +61,7 @@ func NewColdstarts(
 	if len(opt) == 0 {
 		opt = newColdstartsOpts
 	} else {
-		opt = append(opt, newColdstartsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newColdstartsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -172,7 +172,7 @@ func NewColdstartsObservable(
 	if len(opt) == 0 {
 		opt = newColdstartsObservableOpts
 	} else {
-		opt = append(opt, newColdstartsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newColdstartsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -237,7 +237,7 @@ func NewCPUUsage(
 	if len(opt) == 0 {
 		opt = newCPUUsageOpts
 	} else {
-		opt = append(opt, newCPUUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newCPUUsageOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -348,7 +348,7 @@ func NewErrors(
 	if len(opt) == 0 {
 		opt = newErrorsOpts
 	} else {
-		opt = append(opt, newErrorsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newErrorsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -459,7 +459,7 @@ func NewErrorsObservable(
 	if len(opt) == 0 {
 		opt = newErrorsObservableOpts
 	} else {
-		opt = append(opt, newErrorsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newErrorsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -524,7 +524,7 @@ func NewInitDuration(
 	if len(opt) == 0 {
 		opt = newInitDurationOpts
 	} else {
-		opt = append(opt, newInitDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newInitDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -635,7 +635,7 @@ func NewInvocations(
 	if len(opt) == 0 {
 		opt = newInvocationsOpts
 	} else {
-		opt = append(opt, newInvocationsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newInvocationsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -746,7 +746,7 @@ func NewInvocationsObservable(
 	if len(opt) == 0 {
 		opt = newInvocationsObservableOpts
 	} else {
-		opt = append(opt, newInvocationsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newInvocationsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -811,7 +811,7 @@ func NewInvokeDuration(
 	if len(opt) == 0 {
 		opt = newInvokeDurationOpts
 	} else {
-		opt = append(opt, newInvokeDurationOpts...)
+		opt = append(opt[:len(opt):len(opt)], newInvokeDurationOpts...)
 	}
 
 	i, err := m.Float64Histogram(
@@ -922,7 +922,7 @@ func NewMemUsage(
 	if len(opt) == 0 {
 		opt = newMemUsageOpts
 	} else {
-		opt = append(opt, newMemUsageOpts...)
+		opt = append(opt[:len(opt):len(opt)], newMemUsageOpts...)
 	}
 
 	i, err := m.Int64Histogram(
@@ -1033,7 +1033,7 @@ func NewNetIO(
 	if len(opt) == 0 {
 		opt = newNetIOOpts
 	} else {
-		opt = append(opt, newNetIOOpts...)
+		opt = append(opt[:len(opt):len(opt)], newNetIOOpts...)
 	}
 
 	i, err := m.Int64Histogram(
@@ -1144,7 +1144,7 @@ func NewTimeouts(
 	if len(opt) == 0 {
 		opt = newTimeoutsOpts
 	} else {
-		opt = append(opt, newTimeoutsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newTimeoutsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1255,7 +1255,7 @@ func NewTimeoutsObservable(
 	if len(opt) == 0 {
 		opt = newTimeoutsObservableOpts
 	} else {
-		opt = append(opt, newTimeoutsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newTimeoutsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(

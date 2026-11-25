@@ -89,7 +89,7 @@ func NewClientNetCount(
 	if len(opt) == 0 {
 		opt = newClientNetCountOpts
 	} else {
-		opt = append(opt, newClientNetCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientNetCountOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -210,7 +210,7 @@ func NewClientNetCountObservable(
 	if len(opt) == 0 {
 		opt = newClientNetCountObservableOpts
 	} else {
-		opt = append(opt, newClientNetCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientNetCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -280,7 +280,7 @@ func NewClientNetTCPConnectionAccepted(
 	if len(opt) == 0 {
 		opt = newClientNetTCPConnectionAcceptedOpts
 	} else {
-		opt = append(opt, newClientNetTCPConnectionAcceptedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientNetTCPConnectionAcceptedOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -378,7 +378,7 @@ func NewClientNetTCPConnectionAcceptedObservable(
 	if len(opt) == 0 {
 		opt = newClientNetTCPConnectionAcceptedObservableOpts
 	} else {
-		opt = append(opt, newClientNetTCPConnectionAcceptedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientNetTCPConnectionAcceptedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -436,7 +436,7 @@ func NewClientOperationCount(
 	if len(opt) == 0 {
 		opt = newClientOperationCountOpts
 	} else {
-		opt = append(opt, newClientOperationCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientOperationCountOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -553,7 +553,7 @@ func NewClientOperationCountObservable(
 	if len(opt) == 0 {
 		opt = newClientOperationCountObservableOpts
 	} else {
-		opt = append(opt, newClientOperationCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientOperationCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -623,7 +623,7 @@ func NewClientProcedureCount(
 	if len(opt) == 0 {
 		opt = newClientProcedureCountOpts
 	} else {
-		opt = append(opt, newClientProcedureCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientProcedureCountOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -741,7 +741,7 @@ func NewClientProcedureCountObservable(
 	if len(opt) == 0 {
 		opt = newClientProcedureCountObservableOpts
 	} else {
-		opt = append(opt, newClientProcedureCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientProcedureCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -814,7 +814,7 @@ func NewClientRPCAuthrefreshCount(
 	if len(opt) == 0 {
 		opt = newClientRPCAuthrefreshCountOpts
 	} else {
-		opt = append(opt, newClientRPCAuthrefreshCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientRPCAuthrefreshCountOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -912,7 +912,7 @@ func NewClientRPCAuthrefreshCountObservable(
 	if len(opt) == 0 {
 		opt = newClientRPCAuthrefreshCountObservableOpts
 	} else {
-		opt = append(opt, newClientRPCAuthrefreshCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientRPCAuthrefreshCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -971,7 +971,7 @@ func NewClientRPCCount(
 	if len(opt) == 0 {
 		opt = newClientRPCCountOpts
 	} else {
-		opt = append(opt, newClientRPCCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientRPCCountOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1068,7 +1068,7 @@ func NewClientRPCCountObservable(
 	if len(opt) == 0 {
 		opt = newClientRPCCountObservableOpts
 	} else {
-		opt = append(opt, newClientRPCCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientRPCCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1126,7 +1126,7 @@ func NewClientRPCRetransmitCount(
 	if len(opt) == 0 {
 		opt = newClientRPCRetransmitCountOpts
 	} else {
-		opt = append(opt, newClientRPCRetransmitCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientRPCRetransmitCountOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1224,7 +1224,7 @@ func NewClientRPCRetransmitCountObservable(
 	if len(opt) == 0 {
 		opt = newClientRPCRetransmitCountObservableOpts
 	} else {
-		opt = append(opt, newClientRPCRetransmitCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newClientRPCRetransmitCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1282,7 +1282,7 @@ func NewServerFhStaleCount(
 	if len(opt) == 0 {
 		opt = newServerFhStaleCountOpts
 	} else {
-		opt = append(opt, newServerFhStaleCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerFhStaleCountOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1381,7 +1381,7 @@ func NewServerFhStaleCountObservable(
 	if len(opt) == 0 {
 		opt = newServerFhStaleCountObservableOpts
 	} else {
-		opt = append(opt, newServerFhStaleCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerFhStaleCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1440,7 +1440,7 @@ func NewServerIO(
 	if len(opt) == 0 {
 		opt = newServerIOOpts
 	} else {
-		opt = append(opt, newServerIOOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerIOOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1560,7 +1560,7 @@ func NewServerIOObservable(
 	if len(opt) == 0 {
 		opt = newServerIOObservableOpts
 	} else {
-		opt = append(opt, newServerIOObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerIOObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1627,7 +1627,7 @@ func NewServerNetCount(
 	if len(opt) == 0 {
 		opt = newServerNetCountOpts
 	} else {
-		opt = append(opt, newServerNetCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerNetCountOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1748,7 +1748,7 @@ func NewServerNetCountObservable(
 	if len(opt) == 0 {
 		opt = newServerNetCountObservableOpts
 	} else {
-		opt = append(opt, newServerNetCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerNetCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1818,7 +1818,7 @@ func NewServerNetTCPConnectionAccepted(
 	if len(opt) == 0 {
 		opt = newServerNetTCPConnectionAcceptedOpts
 	} else {
-		opt = append(opt, newServerNetTCPConnectionAcceptedOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerNetTCPConnectionAcceptedOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -1916,7 +1916,7 @@ func NewServerNetTCPConnectionAcceptedObservable(
 	if len(opt) == 0 {
 		opt = newServerNetTCPConnectionAcceptedObservableOpts
 	} else {
-		opt = append(opt, newServerNetTCPConnectionAcceptedObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerNetTCPConnectionAcceptedObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -1974,7 +1974,7 @@ func NewServerOperationCount(
 	if len(opt) == 0 {
 		opt = newServerOperationCountOpts
 	} else {
-		opt = append(opt, newServerOperationCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerOperationCountOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -2091,7 +2091,7 @@ func NewServerOperationCountObservable(
 	if len(opt) == 0 {
 		opt = newServerOperationCountObservableOpts
 	} else {
-		opt = append(opt, newServerOperationCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerOperationCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -2161,7 +2161,7 @@ func NewServerProcedureCount(
 	if len(opt) == 0 {
 		opt = newServerProcedureCountOpts
 	} else {
-		opt = append(opt, newServerProcedureCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerProcedureCountOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -2279,7 +2279,7 @@ func NewServerProcedureCountObservable(
 	if len(opt) == 0 {
 		opt = newServerProcedureCountObservableOpts
 	} else {
-		opt = append(opt, newServerProcedureCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerProcedureCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -2351,7 +2351,7 @@ func NewServerRepcacheRequests(
 	if len(opt) == 0 {
 		opt = newServerRepcacheRequestsOpts
 	} else {
-		opt = append(opt, newServerRepcacheRequestsOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerRepcacheRequestsOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -2465,7 +2465,7 @@ func NewServerRepcacheRequestsObservable(
 	if len(opt) == 0 {
 		opt = newServerRepcacheRequestsObservableOpts
 	} else {
-		opt = append(opt, newServerRepcacheRequestsObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerRepcacheRequestsObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -2531,7 +2531,7 @@ func NewServerRPCCount(
 	if len(opt) == 0 {
 		opt = newServerRPCCountOpts
 	} else {
-		opt = append(opt, newServerRPCCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerRPCCountOpts...)
 	}
 
 	i, err := m.Int64Counter(
@@ -2652,7 +2652,7 @@ func NewServerRPCCountObservable(
 	if len(opt) == 0 {
 		opt = newServerRPCCountObservableOpts
 	} else {
-		opt = append(opt, newServerRPCCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerRPCCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableCounter(
@@ -2717,7 +2717,7 @@ func NewServerThreadCount(
 	if len(opt) == 0 {
 		opt = newServerThreadCountOpts
 	} else {
-		opt = append(opt, newServerThreadCountOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerThreadCountOpts...)
 	}
 
 	i, err := m.Int64UpDownCounter(
@@ -2814,7 +2814,7 @@ func NewServerThreadCountObservable(
 	if len(opt) == 0 {
 		opt = newServerThreadCountObservableOpts
 	} else {
-		opt = append(opt, newServerThreadCountObservableOpts...)
+		opt = append(opt[:len(opt):len(opt)], newServerThreadCountObservableOpts...)
 	}
 
 	i, err := m.Int64ObservableUpDownCounter(
