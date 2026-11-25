@@ -282,7 +282,6 @@ func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 // - allocating a Sortable for use as a temporary in this method
 // - allocating a Set for storing the return value of this constructor.
 //
-//
 // The second []KeyValue return value is a list of attributes that were
 // excluded by the Filter (if non-nil).
 //
