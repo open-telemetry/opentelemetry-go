@@ -15,8 +15,7 @@ import (
 
 type (
 	// Set is the representation for a distinct attribute set. It manages an
-	// immutable set of attributes, with an internal cache for storing
-	// attribute encodings.
+	// immutable set of attributes.
 	//
 	// This type will remain comparable for backwards compatibility. The
 	// equivalence of Sets across versions is not guaranteed to be stable.
@@ -283,8 +282,6 @@ func NewSetWithFiltered(kvs []KeyValue, filter Filter) (Set, []KeyValue) {
 // - allocating a Sortable for use as a temporary in this method
 // - allocating a Set for storing the return value of this constructor.
 //
-// The result maintains a cache of encoded attributes, by attribute.EncoderID.
-// This value should not be copied after its first use.
 //
 // The second []KeyValue return value is a list of attributes that were
 // excluded by the Filter (if non-nil).
