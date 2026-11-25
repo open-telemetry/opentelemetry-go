@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/counter"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc/internal/observ"
@@ -26,7 +27,7 @@ type Exporter struct {
 	// Ensure synchronous access to the client across all functionality.
 	clientMu sync.Mutex
 	client   interface {
-		UploadMetrics(context.Context, *metricpb.ResourceMetrics) error
+		uploadMetrics(context.Context, *metricpb.ResourceMetrics) (codes.Code, error)
 		Shutdown(context.Context) error
 	}
 
@@ -98,11 +99,12 @@ func (e *Exporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) e
 	op := e.inst.TrackExport(ctx, otlpRm)
 
 	var upErr error
-	defer func() { op.End(upErr) }()
+	code := codes.Unknown
+	defer func() { op.End(upErr, code) }()
 
 	// Best effort upload of transformable metrics.
 	e.clientMu.Lock()
-	upErr = e.client.UploadMetrics(ctx, otlpRm)
+	code, upErr = e.client.uploadMetrics(ctx, otlpRm)
 	e.clientMu.Unlock()
 
 	if upErr != nil {
@@ -156,8 +158,8 @@ func (shutdownClient) err(ctx context.Context) error {
 	return errShutdown
 }
 
-func (c shutdownClient) UploadMetrics(ctx context.Context, _ *metricpb.ResourceMetrics) error {
-	return c.err(ctx)
+func (c shutdownClient) uploadMetrics(ctx context.Context, _ *metricpb.ResourceMetrics) (codes.Code, error) {
+	return codes.Unknown, c.err(ctx)
 }
 
 func (c shutdownClient) Shutdown(ctx context.Context) error {

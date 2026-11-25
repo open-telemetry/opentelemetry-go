@@ -85,12 +85,41 @@ func testFinishLastValueLifecycle[N int64 | float64](t *testing.T, first, last N
 	}
 }
 
+func TestFinishLastValueFinishTimestamp(t *testing.T) {
+	t.Run("Int64", testFinishLastValueFinishTimestamp[int64])
+	t.Run("Float64", testFinishLastValueFinishTimestamp[float64])
+}
+
+func testFinishLastValueFinishTimestamp[N int64 | float64](t *testing.T) {
+	var c clock
+	t.Cleanup(c.Register())
+	for _, offset := range []int64{-1, 0, 1} {
+		t.Run(fmt.Sprint(offset), func(t *testing.T) {
+			c.Reset()
+			agg := Builder[N]{}.FinishLastValue()
+			agg.Measure(t.Context(), N(-3), alice)
+			agg.Finish(alice.Equivalent(), y2kPlus(offset))
+			points := finishLastValuePoints[N](t, agg.ComputeAggregation)
+			require.Len(t, points, 1)
+			assert.Equal(t, y2k, points[0].StartTime)
+			assert.Equal(t, N(-3), points[0].Value)
+			if offset < 0 {
+				assert.Equal(t, y2kPlus(1), points[0].Time)
+				assert.Len(t, finishLastValuePoints[N](t, agg.ComputeAggregation), 1)
+			} else {
+				assert.Equal(t, y2kPlus(offset), points[0].Time)
+				assert.Empty(t, finishLastValuePoints[N](t, agg.ComputeAggregation))
+			}
+		})
+	}
+}
+
 func TestFinishLastValueAttributes(t *testing.T) {
 	t.Run("EmptyZero", func(t *testing.T) {
 		agg := Builder[int64]{}.FinishLastValue()
 		attrs := attribute.NewSet()
 		agg.Measure(t.Context(), 0, attrs)
-		agg.Finish(attrs.Equivalent(), y2k)
+		agg.Finish(attrs.Equivalent(), now())
 		points := finishLastValuePoints[int64](t, agg.ComputeAggregation)
 		require.Len(t, points, 1)
 		assert.Zero(t, points[0].Value)
@@ -106,7 +135,7 @@ func TestFinishLastValueAttributes(t *testing.T) {
 			},
 		}.FinishLastValue()
 		agg.Measure(t.Context(), 7, alice)
-		agg.Finish(fltrAlice.Equivalent(), y2k)
+		agg.Finish(fltrAlice.Equivalent(), now())
 		points := finishLastValuePoints[int64](t, agg.ComputeAggregation)
 		require.Len(t, points, 1)
 		assert.Equal(t, fltrAlice, points[0].Attributes)
@@ -125,14 +154,14 @@ func TestFinishLastValueCardinality(t *testing.T) {
 	agg.Measure(t.Context(), 2, bob)
 	agg.Measure(t.Context(), 3, carol)
 	agg.Measure(t.Context(), 4, carol)
-	agg.Finish(carol.Equivalent(), y2k)
-	agg.Finish(alice.Equivalent(), y2k)
+	agg.Finish(carol.Equivalent(), now())
+	agg.Finish(alice.Equivalent(), now())
 	points := finishLastValuePoints[int64](t, agg.ComputeAggregation)
 	require.Len(t, points, 3)
 	assert.Equal(t, int64(4), pointWithAttrs(t, points, overflowSet).Value)
 
 	agg.Measure(t.Context(), 5, dave)
-	agg.Finish(overflowSet.Equivalent(), y2k)
+	agg.Finish(overflowSet.Equivalent(), now())
 	points = finishLastValuePoints[int64](t, agg.ComputeAggregation)
 	require.Len(t, points, 3)
 	assert.Equal(t, int64(5), pointWithAttrs(t, points, dave).Value)
@@ -143,7 +172,7 @@ func TestFinishLastValueOverflowProvenance(t *testing.T) {
 	t.Run("UnlimitedMarkerSeries", func(t *testing.T) {
 		agg := Builder[int64]{}.FinishLastValue()
 		agg.Measure(t.Context(), 1, overflowSet)
-		agg.Finish(overflowSet.Equivalent(), y2k)
+		agg.Finish(overflowSet.Equivalent(), now())
 		require.Len(t, finishLastValuePoints[int64](t, agg.ComputeAggregation), 1)
 		assert.Empty(t, finishLastValuePoints[int64](t, agg.ComputeAggregation))
 	})
@@ -152,7 +181,7 @@ func TestFinishLastValueOverflowProvenance(t *testing.T) {
 		agg.Measure(t.Context(), 1, overflowSet)
 		agg.Measure(t.Context(), 2, alice)
 		agg.Measure(t.Context(), 3, bob)
-		agg.Finish(overflowSet.Equivalent(), y2k)
+		agg.Finish(overflowSet.Equivalent(), now())
 		agg.Measure(t.Context(), 4, attribute.NewSet(userCarol))
 		points := finishLastValuePoints[int64](t, agg.ComputeAggregation)
 		require.Len(t, points, 3)

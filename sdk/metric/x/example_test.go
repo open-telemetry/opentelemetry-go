@@ -6,6 +6,7 @@ package x_test
 import (
 	"context"
 
+	metricx "go.opentelemetry.io/otel/metric/x"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	x "go.opentelemetry.io/otel/sdk/metric/x"
@@ -38,4 +39,24 @@ func ExampleMeterConfiguratorHandle_Set() {
 		}
 		return x.MeterConfig{}
 	})
+}
+
+// ExampleWithView demonstrates how to enable an opt-in instrument using
+// x.WithView and x.NewView.
+func ExampleWithView() {
+	mp := sdkmetric.NewMeterProvider(
+		x.WithView(
+			x.NewView(
+				sdkmetric.Instrument{Name: "http.server.active_requests"},
+				x.Stream{Enabled: new(true)},
+			),
+		),
+	)
+	defer mp.Shutdown(context.Background()) //nolint:errcheck
+
+	meter := mp.Meter("example")
+	_, _ = meter.Int64UpDownCounter(
+		"http.server.active_requests",
+		metricx.WithOptIn(),
+	)
 }

@@ -22,8 +22,8 @@ The configuration can be overridden by [WithEndpoint], [WithEndpointURL], [WithI
 OTEL_EXPORTER_OTLP_INSECURE, OTEL_EXPORTER_OTLP_TRACES_INSECURE (default: "false") -
 setting "true" disables client transport security for the exporter's gRPC connection.
 You can use this only when an endpoint is provided without the http or https scheme.
-OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_TRACES_ENDPOINT setting overrides
-the scheme defined via OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_TRACES_ENDPOINT.
+An http or https scheme in OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+takes precedence over this setting.
 OTEL_EXPORTER_OTLP_TRACES_INSECURE takes precedence over OTEL_EXPORTER_OTLP_INSECURE.
 The configuration can be overridden by [WithInsecure], [WithGRPCConn] options.
 
@@ -42,7 +42,8 @@ The configuration can be overridden by [WithTimeout] option.
 
 OTEL_EXPORTER_OTLP_COMPRESSION, OTEL_EXPORTER_OTLP_TRACES_COMPRESSION (default: none) -
 the gRPC compressor the exporter uses.
-Supported value: "gzip".
+Supported values: "gzip" and "none" (case-insensitive).
+Invalid values are warned about and ignored.
 OTEL_EXPORTER_OTLP_TRACES_COMPRESSION takes precedence over OTEL_EXPORTER_OTLP_COMPRESSION.
 The configuration can be overridden by [WithCompressor], [WithGRPCConn] options.
 

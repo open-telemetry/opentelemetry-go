@@ -208,7 +208,12 @@ func (m *configuratorMeter) Int64ObservableCounter(
 		Kind:        InstrumentKindObservableCounter,
 		Scope:       m.scope,
 	}
-	return m.int64ObservableInstrument(id, defaultAttributes(options), m.gateInt64Callbacks(cfg.Callbacks()))
+	return m.int64ObservableInstrument(
+		id,
+		defaultAttributes(options),
+		isOptIn(options),
+		m.gateInt64Callbacks(cfg.Callbacks()),
+	)
 }
 
 func (m *configuratorMeter) Int64ObservableUpDownCounter(
@@ -223,7 +228,12 @@ func (m *configuratorMeter) Int64ObservableUpDownCounter(
 		Kind:        InstrumentKindObservableUpDownCounter,
 		Scope:       m.scope,
 	}
-	return m.int64ObservableInstrument(id, defaultAttributes(options), m.gateInt64Callbacks(cfg.Callbacks()))
+	return m.int64ObservableInstrument(
+		id,
+		defaultAttributes(options),
+		isOptIn(options),
+		m.gateInt64Callbacks(cfg.Callbacks()),
+	)
 }
 
 func (m *configuratorMeter) Int64ObservableGauge(
@@ -238,7 +248,12 @@ func (m *configuratorMeter) Int64ObservableGauge(
 		Kind:        InstrumentKindObservableGauge,
 		Scope:       m.scope,
 	}
-	return m.int64ObservableInstrument(id, defaultAttributes(options), m.gateInt64Callbacks(cfg.Callbacks()))
+	return m.int64ObservableInstrument(
+		id,
+		defaultAttributes(options),
+		isOptIn(options),
+		m.gateInt64Callbacks(cfg.Callbacks()),
+	)
 }
 
 func (m *configuratorMeter) Float64ObservableCounter(
@@ -253,7 +268,12 @@ func (m *configuratorMeter) Float64ObservableCounter(
 		Kind:        InstrumentKindObservableCounter,
 		Scope:       m.scope,
 	}
-	return m.float64ObservableInstrument(id, defaultAttributes(options), m.gateFloat64Callbacks(cfg.Callbacks()))
+	return m.float64ObservableInstrument(
+		id,
+		defaultAttributes(options),
+		isOptIn(options),
+		m.gateFloat64Callbacks(cfg.Callbacks()),
+	)
 }
 
 func (m *configuratorMeter) Float64ObservableUpDownCounter(
@@ -268,7 +288,12 @@ func (m *configuratorMeter) Float64ObservableUpDownCounter(
 		Kind:        InstrumentKindObservableUpDownCounter,
 		Scope:       m.scope,
 	}
-	return m.float64ObservableInstrument(id, defaultAttributes(options), m.gateFloat64Callbacks(cfg.Callbacks()))
+	return m.float64ObservableInstrument(
+		id,
+		defaultAttributes(options),
+		isOptIn(options),
+		m.gateFloat64Callbacks(cfg.Callbacks()),
+	)
 }
 
 func (m *configuratorMeter) Float64ObservableGauge(
@@ -283,7 +308,12 @@ func (m *configuratorMeter) Float64ObservableGauge(
 		Kind:        InstrumentKindObservableGauge,
 		Scope:       m.scope,
 	}
-	return m.float64ObservableInstrument(id, defaultAttributes(options), m.gateFloat64Callbacks(cfg.Callbacks()))
+	return m.float64ObservableInstrument(
+		id,
+		defaultAttributes(options),
+		isOptIn(options),
+		m.gateFloat64Callbacks(cfg.Callbacks()),
+	)
 }
 
 // RegisterCallback registers f with the base meter, skipped while the meter is

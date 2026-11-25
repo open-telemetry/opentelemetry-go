@@ -4,7 +4,9 @@
 package observ
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,12 +17,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/internal"
 	mapi "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -54,6 +58,45 @@ func (m *errMeter) Int64Counter(string, ...mapi.Int64CounterOption) (mapi.Int64C
 
 func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
 	return nil, m.err
+}
+
+type histogramMeterProvider struct {
+	noop.MeterProvider
+	histogramConfig *mapi.Float64HistogramConfig
+}
+
+func (m *histogramMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
+	return &histogramMeter{histogramConfig: m.histogramConfig}
+}
+
+type histogramMeter struct {
+	noop.Meter
+	histogramConfig *mapi.Float64HistogramConfig
+}
+
+func (m *histogramMeter) Float64Histogram(
+	_ string,
+	opts ...mapi.Float64HistogramOption,
+) (mapi.Float64Histogram, error) {
+	*m.histogramConfig = mapi.NewFloat64HistogramConfig(opts...)
+	return noop.Float64Histogram{}, nil
+}
+
+func TestNewInstrumentationDurationHistogramAdvice(t *testing.T) {
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+
+	var config mapi.Float64HistogramConfig
+	otel.SetMeterProvider(&histogramMeterProvider{histogramConfig: &config})
+	inst, err := NewInstrumentation(ID, TARGET)
+	require.NoError(t, err)
+	require.NotNil(t, inst)
+
+	assert.Equal(t, otelconv.SDKExporterOperationDuration{}.Description(), config.Description())
+	assert.Equal(t, "s", config.Unit())
+	require.NotNil(t, config.ExplicitBucketBoundaries(), "single-bucket advice must be explicit")
+	assert.Empty(t, config.ExplicitBucketBoundaries())
 }
 
 func TestNewExporterMetrics(t *testing.T) {
@@ -175,7 +218,7 @@ func logOperationDurationMetrics(err error, code codes.Code) metricdata.Metrics 
 	attrs := []attribute.KeyValue{
 		semconv.OTelComponentName(GetComponentName(ID)),
 		semconv.OTelComponentTypeKey.String(string(otelconv.ComponentTypeOtlpGRPCLogExporter)),
-		semconv.RPCResponseStatusCode(code.String()),
+		semconv.RPCStatusCode(code.String()),
 	}
 	attrs = append(attrs, ServerAddrAttrs(TARGET)...)
 	if err != nil {
@@ -255,7 +298,7 @@ func assertMetrics(
 func TestInstrumentationExportLogs(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
-	inst.ExportLogs(t.Context(), n).End(nil)
+	inst.ExportLogs(t.Context(), n).End(nil, codes.OK)
 	assertMetrics(t, collect(), n, n, nil, codes.OK)
 }
 
@@ -265,16 +308,16 @@ func TestInstrumentationExportLogPartialErrors(t *testing.T) {
 	const success = 5
 
 	err := internal.PartialSuccess{RejectedItems: n - success}
-	inst.ExportLogs(t.Context(), n).End(err)
+	inst.ExportLogs(t.Context(), n).End(err, codes.OK)
 
-	assertMetrics(t, collect(), n, success, err, status.Code(err))
+	assertMetrics(t, collect(), n, success, err, codes.OK)
 }
 
 func TestInstrumentationExportLogAllErrors(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
 	const success = 0
-	inst.ExportLogs(t.Context(), n).End(assert.AnError)
+	inst.ExportLogs(t.Context(), n).End(assert.AnError, status.Code(assert.AnError))
 
 	assertMetrics(t, collect(), n, success, assert.AnError, status.Code(assert.AnError))
 }
@@ -283,16 +326,111 @@ func TestInstrumentationExportLogsInvalidPartialErrored(t *testing.T) {
 	inst, collect := setup(t)
 	const n = 10
 	err := internal.PartialSuccess{RejectedItems: -5}
-	inst.ExportLogs(t.Context(), n).End(err)
+	inst.ExportLogs(t.Context(), n).End(err, codes.OK)
 
 	success := int64(n)
-	assertMetrics(t, collect(), n, success, err, status.Code(err))
+	assertMetrics(t, collect(), n, success, err, codes.OK)
 
 	err.RejectedItems = n + 5
-	inst.ExportLogs(t.Context(), n).End(err)
+	inst.ExportLogs(t.Context(), n).End(err, codes.OK)
 
 	success += 0
-	assertMetrics(t, collect(), n+n, success, err, status.Code(err))
+	assertMetrics(t, collect(), n+n, success, err, codes.OK)
+}
+
+type instrumentSpy struct {
+	enabled      bool
+	enabledCalls int
+	calls        int
+}
+
+func (s *instrumentSpy) Enabled(context.Context) bool {
+	s.enabledCalls++
+	return s.enabled
+}
+
+type upDownCounterSpy struct {
+	embedded.Int64UpDownCounter
+	instrumentSpy
+}
+
+func (c *upDownCounterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.calls++ }
+
+type counterSpy struct {
+	embedded.Int64Counter
+	instrumentSpy
+}
+
+func (c *counterSpy) Add(context.Context, int64, ...mapi.AddOption) { c.calls++ }
+
+type histogramSpy struct {
+	embedded.Float64Histogram
+	instrumentSpy
+}
+
+func (h *histogramSpy) Record(context.Context, float64, ...mapi.RecordOption) { h.calls++ }
+
+func TestEndSkipsDisabledInstruments(t *testing.T) {
+	tests := []struct {
+		name     string
+		inflight bool
+		exported bool
+		duration bool
+	}{
+		{name: "all disabled"},
+		{name: "inflight only", inflight: true},
+		{name: "exported only", exported: true},
+		{name: "duration only", duration: true},
+		{name: "inflight disabled", exported: true, duration: true},
+		{name: "exported disabled", inflight: true, duration: true},
+		{name: "duration disabled", inflight: true, exported: true},
+		{name: "all enabled", inflight: true, exported: true, duration: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, result := range []struct {
+				name string
+				err  error
+			}{
+				{name: "success"},
+				{name: "partial failure", err: internal.PartialSuccess{RejectedItems: 5}},
+				{name: "failure", err: assert.AnError},
+			} {
+				t.Run(result.name, func(t *testing.T) {
+					inflight := &upDownCounterSpy{instrumentSpy: instrumentSpy{enabled: tt.inflight}}
+					exported := &counterSpy{instrumentSpy: instrumentSpy{enabled: tt.exported}}
+					duration := &histogramSpy{instrumentSpy: instrumentSpy{enabled: tt.duration}}
+					inst := &Instrumentation{
+						logInflightMetric:         inflight,
+						logExportedMetric:         exported,
+						logExportedDurationMetric: duration,
+					}
+					op := ExportOp{inst: inst, ctx: t.Context(), nLogs: 10, start: time.Now()}
+					op.End(result.err, codes.OK)
+
+					assert.Equal(t, 1, inflight.enabledCalls)
+					assert.Equal(t, 1, exported.enabledCalls)
+					assert.Equal(t, 1, duration.enabledCalls)
+					var wantInflight, wantExported, wantDuration int
+					if tt.inflight {
+						wantInflight = 1
+					}
+					if tt.exported {
+						wantExported = 1
+						if result.err != nil {
+							wantExported++
+						}
+					}
+					if tt.duration {
+						wantDuration = 1
+					}
+					assert.Equal(t, wantInflight, inflight.calls)
+					assert.Equal(t, wantExported, exported.calls)
+					assert.Equal(t, wantDuration, duration.calls)
+				})
+			}
+		})
+	}
 }
 
 func BenchmarkInstrumentationExportLogs(b *testing.B) {
@@ -305,19 +443,19 @@ func BenchmarkInstrumentationExportLogs(b *testing.B) {
 		}
 		return inst
 	}
-	run := func(err error) func(*testing.B) {
+	run := func(err error, code codes.Code) func(*testing.B) {
 		return func(b *testing.B) {
 			inst := setup(b)
 			b.ReportAllocs()
 			b.ResetTimer()
 			for b.Loop() {
-				inst.ExportLogs(b.Context(), 10).End(err)
+				inst.ExportLogs(b.Context(), 10).End(err, code)
 			}
 		}
 	}
-	b.Run("NoError", run(nil))
-	b.Run("PartialError", run(&internal.PartialSuccess{RejectedItems: 6}))
-	b.Run("FullError", run(assert.AnError))
+	b.Run("NoError", run(nil, codes.OK))
+	b.Run("PartialError", run(&internal.PartialSuccess{RejectedItems: 6}, codes.OK))
+	b.Run("FullError", run(assert.AnError, codes.Unknown))
 }
 
 func BenchmarkSetPresetAttrs(b *testing.B) {

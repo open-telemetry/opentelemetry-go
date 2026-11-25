@@ -18,6 +18,12 @@ var now = time.Now
 // Measure receives measurements to be aggregated.
 type Measure[N int64 | float64] func(context.Context, N, attribute.Set)
 
+// BoundMeasure receives measurements for a bound attribute set.
+type BoundMeasure[N int64 | float64] func(context.Context, N)
+
+// Binder binds an attribute set to a BoundMeasure.
+type Binder[N int64 | float64] func(attribute.Set) BoundMeasure[N]
+
 // ComputeAggregation stores the aggregate of measurements into dest and
 // returns the number of aggregate data-points output.
 type ComputeAggregation func(dest *metricdata.Aggregation) int
@@ -68,6 +74,20 @@ func (b Builder[N]) filter(f fltrMeasure[N]) Measure[N] {
 	}
 	return func(ctx context.Context, n N, a attribute.Set) {
 		f(ctx, n, newLazyFilteredAttributes(a, nil))
+	}
+}
+
+type fltrBind[N int64 | float64] func(lazy lazyFilteredAttributes) BoundMeasure[N]
+
+func (b Builder[N]) bind(f fltrBind[N]) Binder[N] {
+	if b.Filter != nil {
+		fltr := b.Filter // Copy to make it immutable after assignment.
+		return func(a attribute.Set) BoundMeasure[N] {
+			return f(newLazyFilteredAttributes(a, fltr))
+		}
+	}
+	return func(a attribute.Set) BoundMeasure[N] {
+		return f(newLazyFilteredAttributes(a, nil))
 	}
 }
 

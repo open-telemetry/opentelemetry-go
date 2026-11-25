@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"testing"
@@ -1215,23 +1217,47 @@ func (l *logSink) String() string {
 }
 
 func TestGlobalInstRegisterCallback(t *testing.T) {
+	// Run in a subprocess to get fresh global MeterProvider and delegate state.
+	// Restoring the global MeterProvider is not sufficient because
+	// delegateMeterOnce cannot be reset after it has executed.
+	const env = "OTEL_TEST_GLOBAL_INST_REGISTER_CALLBACK"
+
+	if os.Getenv(env) != "1" {
+		cmd := exec.CommandContext(
+			t.Context(),
+			os.Args[0],
+			"-test.run=^TestGlobalInstRegisterCallback$",
+		)
+		cmd.Env = append(os.Environ(), env+"=1")
+
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err, "subprocess output:\n%s", output)
+		return
+	}
+
 	l := newLogSink(t)
 	otel.SetLogger(logr.New(l))
 
 	const mtrName = "TestGlobalInstRegisterCallback"
+
 	preMtr := otel.Meter(mtrName)
 	preInt64Ctr, err := preMtr.Int64ObservableCounter("pre.int64.counter")
 	require.NoError(t, err)
+
 	preFloat64Ctr, err := preMtr.Float64ObservableCounter("pre.float64.counter")
 	require.NoError(t, err)
 
 	rdr := NewManualReader()
-	mp := NewMeterProvider(WithReader(rdr), WithResource(resource.Empty()))
+	mp := NewMeterProvider(
+		WithReader(rdr),
+		WithResource(resource.Empty()),
+	)
 	otel.SetMeterProvider(mp)
 
 	postMtr := otel.Meter(mtrName)
 	postInt64Ctr, err := postMtr.Int64ObservableCounter("post.int64.counter")
 	require.NoError(t, err)
+
 	postFloat64Ctr, err := postMtr.Float64ObservableCounter("post.float64.counter")
 	require.NoError(t, err)
 
@@ -1243,17 +1269,24 @@ func TestGlobalInstRegisterCallback(t *testing.T) {
 		return nil
 	}
 
-	_, err = preMtr.RegisterCallback(cb, preInt64Ctr, preFloat64Ctr, postInt64Ctr, postFloat64Ctr)
-	assert.NoError(t, err)
+	_, err = preMtr.RegisterCallback(
+		cb,
+		preInt64Ctr,
+		preFloat64Ctr,
+		postInt64Ctr,
+		postFloat64Ctr,
+	)
+	require.NoError(t, err)
 
 	got := metricdata.ResourceMetrics{}
-	err = rdr.Collect(t.Context(), &got)
-	assert.NoError(t, err)
+	require.NoError(t, rdr.Collect(t.Context(), &got))
+
 	assert.Emptyf(t, l.messages, "Warnings and errors logged:\n%s", l)
+
 	metricdatatest.AssertEqual(t, metricdata.ResourceMetrics{
 		ScopeMetrics: []metricdata.ScopeMetrics{
 			{
-				Scope: instrumentation.Scope{Name: "TestGlobalInstRegisterCallback"},
+				Scope: instrumentation.Scope{Name: mtrName},
 				Metrics: []metricdata.Metrics{
 					{
 						Name: "pre.int64.counter",
@@ -2282,64 +2315,189 @@ func TestMalformedSelectors(t *testing.T) {
 
 func TestHistogramBucketPrecedenceOrdering(t *testing.T) {
 	defaultBuckets := []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000}
-	aggregationSelector := func(InstrumentKind) Aggregation {
-		return AggregationExplicitBucketHistogram{Boundaries: []float64{0, 1, 2, 3, 4, 5}}
-	}
+	readerBuckets := []float64{0, 1, 2, 3, 4, 5}
+	adviceBuckets := []float64{0, 2, 4, 6, 8, 10}
+	viewBuckets := []float64{0, 3, 6, 9, 12, 15}
+	customReader := WithAggregationSelector(func(InstrumentKind) Aggregation {
+		return AggregationExplicitBucketHistogram{Boundaries: readerBuckets}
+	})
+	exponential := AggregationBase2ExponentialHistogram{MaxSize: 160, MaxScale: 20}
 	for _, tt := range []struct {
 		desc                     string
-		reader                   Reader
+		readerOpts               []ManualReaderOption
 		views                    []View
-		histogramOpts            []metric.Float64HistogramOption
+		histogramOpt             metric.HistogramOption
 		expectedBucketBoundaries []float64
+		expectedExponential      bool
 	}{
 		{
 			desc:                     "default",
-			reader:                   NewManualReader(),
 			expectedBucketBoundaries: defaultBuckets,
 		},
 		{
+			desc:         "nil advice overrides default",
+			histogramOpt: metric.WithExplicitBucketBoundaries(nil...),
+		},
+		{
 			desc:                     "custom reader aggregation overrides default",
-			reader:                   NewManualReader(WithAggregationSelector(aggregationSelector)),
-			expectedBucketBoundaries: []float64{0, 1, 2, 3, 4, 5},
+			readerOpts:               []ManualReaderOption{customReader},
+			expectedBucketBoundaries: readerBuckets,
 		},
 		{
-			desc:   "overridden by histogram option",
-			reader: NewManualReader(WithAggregationSelector(aggregationSelector)),
-			histogramOpts: []metric.Float64HistogramOption{
-				metric.WithExplicitBucketBoundaries(0, 2, 4, 6, 8, 10),
-			},
-			expectedBucketBoundaries: []float64{0, 2, 4, 6, 8, 10},
+			desc:         "nil advice overrides custom reader aggregation",
+			readerOpts:   []ManualReaderOption{customReader},
+			histogramOpt: metric.WithExplicitBucketBoundaries(nil...),
 		},
 		{
-			desc:   "overridden by view",
-			reader: NewManualReader(WithAggregationSelector(aggregationSelector)),
-			histogramOpts: []metric.Float64HistogramOption{
-				metric.WithExplicitBucketBoundaries(0, 2, 4, 6, 8, 10),
-			},
+			desc:         "no argument advice overrides default",
+			histogramOpt: metric.WithExplicitBucketBoundaries(),
+		},
+		{
+			desc:         "no argument advice overrides custom reader aggregation",
+			readerOpts:   []ManualReaderOption{customReader},
+			histogramOpt: metric.WithExplicitBucketBoundaries(),
+		},
+		{
+			desc:         "empty advice overrides default",
+			histogramOpt: metric.WithExplicitBucketBoundaries([]float64{}...),
+		},
+		{
+			desc:         "empty advice overrides custom reader aggregation",
+			readerOpts:   []ManualReaderOption{customReader},
+			histogramOpt: metric.WithExplicitBucketBoundaries([]float64{}...),
+		},
+		{
+			desc:                     "overridden by histogram option",
+			readerOpts:               []ManualReaderOption{customReader},
+			histogramOpt:             metric.WithExplicitBucketBoundaries(adviceBuckets...),
+			expectedBucketBoundaries: adviceBuckets,
+		},
+		{
+			desc:         "overridden by view",
+			readerOpts:   []ManualReaderOption{customReader},
+			histogramOpt: metric.WithExplicitBucketBoundaries(adviceBuckets...),
 			views: []View{NewView(Instrument{Name: "*"}, Stream{
-				Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{0, 3, 6, 9, 12, 15}},
+				Aggregation: AggregationExplicitBucketHistogram{Boundaries: viewBuckets},
 			})},
-			expectedBucketBoundaries: []float64{0, 3, 6, 9, 12, 15},
+			expectedBucketBoundaries: viewBuckets,
+		},
+		{
+			desc:         "view overrides empty advice",
+			histogramOpt: metric.WithExplicitBucketBoundaries(),
+			views: []View{NewView(Instrument{Name: "*"}, Stream{
+				Aggregation: AggregationExplicitBucketHistogram{Boundaries: viewBuckets},
+			})},
+			expectedBucketBoundaries: viewBuckets,
+		},
+		{
+			desc:         "nil view boundaries override advice",
+			histogramOpt: metric.WithExplicitBucketBoundaries(adviceBuckets...),
+			views: []View{NewView(Instrument{Name: "*"}, Stream{
+				Aggregation: AggregationExplicitBucketHistogram{Boundaries: nil},
+			})},
+		},
+		{
+			desc:         "empty view boundaries override advice",
+			histogramOpt: metric.WithExplicitBucketBoundaries(adviceBuckets...),
+			views: []View{NewView(Instrument{Name: "*"}, Stream{
+				Aggregation: AggregationExplicitBucketHistogram{Boundaries: []float64{}},
+			})},
+		},
+		{
+			desc:         "view without aggregation honors empty advice",
+			readerOpts:   []ManualReaderOption{customReader},
+			histogramOpt: metric.WithExplicitBucketBoundaries(),
+			views:        []View{NewView(Instrument{Name: "*"}, Stream{Description: "view without aggregation"})},
+		},
+		{
+			desc:         "exponential view overrides empty advice",
+			histogramOpt: metric.WithExplicitBucketBoundaries(),
+			views: []View{NewView(Instrument{Name: "*"}, Stream{
+				Aggregation: exponential,
+			})},
+			expectedExponential: true,
+		},
+		{
+			desc: "exponential reader ignores advice",
+			readerOpts: []ManualReaderOption{WithAggregationSelector(func(InstrumentKind) Aggregation {
+				return exponential
+			})},
+			histogramOpt:        metric.WithExplicitBucketBoundaries(adviceBuckets...),
+			expectedExponential: true,
+		},
+		{
+			desc: "exponential reader ignores empty advice",
+			readerOpts: []ManualReaderOption{WithAggregationSelector(func(InstrumentKind) Aggregation {
+				return exponential
+			})},
+			histogramOpt:        metric.WithExplicitBucketBoundaries(),
+			expectedExponential: true,
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
+			reader := NewManualReader(tt.readerOpts...)
 			meter := NewMeterProvider(
 				WithView(tt.views...),
-				WithReader(tt.reader),
+				WithReader(reader),
 			).Meter("TestHistogramBucketPrecedenceOrdering")
-			sfHistogram, err := meter.Float64Histogram("sync.float64.histogram", tt.histogramOpts...)
+			var intOpts []metric.Int64HistogramOption
+			var floatOpts []metric.Float64HistogramOption
+			if tt.histogramOpt != nil {
+				intOpts = append(intOpts, tt.histogramOpt)
+				floatOpts = append(floatOpts, tt.histogramOpt)
+			}
+			intHistogram, err := meter.Int64Histogram("sync.int64.histogram", intOpts...)
 			require.NoError(t, err)
-			sfHistogram.Record(t.Context(), 1)
+			floatHistogram, err := meter.Float64Histogram("sync.float64.histogram", floatOpts...)
+			require.NoError(t, err)
+			intHistogram.Record(t.Context(), 1)
+			intHistogram.Record(t.Context(), 3)
+			floatHistogram.Record(t.Context(), 1)
+			floatHistogram.Record(t.Context(), 3)
+			const (
+				wantCount = 2
+				wantSum   = 1 + 3
+			)
 			var rm metricdata.ResourceMetrics
-			err = tt.reader.Collect(t.Context(), &rm)
-			require.NoError(t, err)
+			require.NoError(t, reader.Collect(t.Context(), &rm))
 			require.Len(t, rm.ScopeMetrics, 1)
-			require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-			gotHist, ok := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
-			require.True(t, ok)
-			require.Len(t, gotHist.DataPoints, 1)
-			assert.Equal(t, tt.expectedBucketBoundaries, gotHist.DataPoints[0].Bounds)
+			require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+			t.Run("Int64Histogram", func(t *testing.T) {
+				assertHistogramBucketPrecedence[int64](t, rm.ScopeMetrics[0].Metrics[0].Data,
+					tt.expectedBucketBoundaries, tt.expectedExponential, wantCount, wantSum)
+			})
+			t.Run("Float64Histogram", func(t *testing.T) {
+				assertHistogramBucketPrecedence[float64](t, rm.ScopeMetrics[0].Metrics[1].Data,
+					tt.expectedBucketBoundaries, tt.expectedExponential, wantCount, wantSum)
+			})
 		})
+	}
+}
+
+func assertHistogramBucketPrecedence[N int64 | float64](
+	t *testing.T, data metricdata.Aggregation, boundaries []float64, expectedExponential bool,
+	wantCount uint64, wantSum N,
+) {
+	t.Helper()
+	if hist, ok := data.(metricdata.ExponentialHistogram[N]); ok {
+		assert.True(t, expectedExponential)
+		require.Len(t, hist.DataPoints, 1)
+		assert.Equal(t, wantCount, hist.DataPoints[0].Count)
+		assert.Equal(t, wantSum, hist.DataPoints[0].Sum)
+		return
+	}
+	assert.False(t, expectedExponential)
+	hist, ok := data.(metricdata.Histogram[N])
+	require.True(t, ok)
+	require.Len(t, hist.DataPoints, 1)
+	point := hist.DataPoints[0]
+	assert.Equal(t, wantCount, point.Count)
+	assert.Equal(t, wantSum, point.Sum)
+	if len(boundaries) == 0 {
+		assert.Empty(t, point.Bounds)
+		assert.Equal(t, []uint64{wantCount}, point.BucketCounts)
+	} else {
+		assert.Equal(t, boundaries, point.Bounds)
 	}
 }
 

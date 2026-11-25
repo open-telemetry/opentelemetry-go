@@ -158,6 +158,10 @@ type Stream struct {
 	//
 	// If unspecified, [DefaultExemplarReservoirProviderSelector] is used.
 	ExemplarReservoirProviderSelector ExemplarReservoirProviderSelector
+
+	// enabled controls whether the stream is enabled when configured via
+	// experimental views in go.opentelemetry.io/otel/sdk/metric/x.
+	enabled *bool
 }
 
 // instID are the identifying properties of a instrument.

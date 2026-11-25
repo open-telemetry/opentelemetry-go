@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric/exemplar"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -254,6 +255,33 @@ func TestWithNilViewPreservesViewOrder(t *testing.T) {
 	stream, match = cfg.views[1](Instrument{Kind: InstrumentKindCounter})
 	require.True(t, match)
 	assert.Equal(t, "b", stream.Name)
+}
+
+type testViewMatchingModeOption struct {
+	Option
+	mode int
+}
+
+func (testViewMatchingModeOption) Experimental()           {}
+func (o testViewMatchingModeOption) ViewMatchingMode() int { return o.mode }
+
+var _ viewMatchingModeOption = testViewMatchingModeOption{}
+
+func TestWithViewMatchingMode(t *testing.T) {
+	c := newConfig([]Option{testViewMatchingModeOption{mode: 1}})
+	assert.Equal(t, viewMatchingModeComposable, c.viewMatchingMode)
+
+	var handledErr error
+	origHandler := otel.GetErrorHandler()
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		handledErr = err
+	}))
+	t.Cleanup(func() { otel.SetErrorHandler(origHandler) })
+
+	cInvalid := newConfig([]Option{testViewMatchingModeOption{mode: 99}})
+	assert.Equal(t, viewMatchingModeIndependent, cInvalid.viewMatchingMode)
+	require.Error(t, handledErr)
+	assert.Contains(t, handledErr.Error(), "unsupported view matching mode 99")
 }
 
 func TestWithExemplarFilterOff(t *testing.T) {
