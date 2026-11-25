@@ -34,3 +34,16 @@ func ExampleNew() {
 	// Now, you can use the resource (e.g. pass it to a tracer or meter provider).
 	fmt.Println(res.SchemaURL())
 }
+
+func ExampleMerge() {
+	a := resource.NewSchemaless(attribute.String("service.name", "first"))
+	b := resource.NewSchemaless(attribute.String("service.name", "second"))
+
+	merged, _ := resource.Merge(a, b)
+
+	for _, kv := range merged.Attributes() {
+		fmt.Println(kv.Key, kv.Value.AsString())
+	}
+
+	// Output: service.name second
+}
