@@ -145,7 +145,7 @@ type Reader interface {
 `Reader` omits `ForceFlush` (matching `sdk/metric.Reader`), so pull readers do not expose a no-op method. `ProfilerProvider.ForceFlush` type-asserts `interface{ ForceFlush(context.Context) error }` on each registered reader.
 
 - `ManualReader` supports on-demand collection in tests and custom pull pipelines, omits `ForceFlush`, and shuts down its attached producers on `Shutdown`.
-- `PeriodicReader` runs a single background goroutine ticking on `WithInterval` (default `60s`) with per-cycle `WithTimeout` (default `30s`). Its `ForceFlush` method triggers an immediate collect-and-export cycle and resets the ticker. `Shutdown` stops the loop, runs one final collect-and-export cycle, shuts down reader-attached producers, and shuts down the `Exporter`.
+- `PeriodicReader` runs a single background goroutine ticking on `WithInterval` (default `60s`) with per-cycle `WithTimeout` (default `30s`), deferring default `OTEL_PROFILES_EXPORT_INTERVAL` and `OTEL_PROFILES_EXPORT_TIMEOUT` parsing until those environment variables are formalized upstream. Its `ForceFlush` method triggers an immediate collect-and-export cycle and resets the ticker. `Shutdown` stops the loop, runs one final collect-and-export cycle, shuts down reader-attached producers, and shuts down the `Exporter`.
 
 ## Exporter and OTLP transport
 
@@ -193,7 +193,7 @@ Comparing this design with [OTel .NET's `ContinuousProfiler`](https://github.com
 
 1. Design consensus (this PR): align on module naming (`sdk/profile`), pull-based `Reader`/`Producer` model, protobuf-free `profiledata`, and default-safe `RuntimeProducer` behavior.
 2. Experimental SDK and OTLP exporters: land [#9545](https://github.com/open-telemetry/opentelemetry-go/pull/9545) (`sdk/profile` core and `profiledata`), [#9558](https://github.com/open-telemetry/opentelemetry-go/pull/9558) (`sdk/profile/internal/pprof`), [#9559](https://github.com/open-telemetry/opentelemetry-go/pull/9559) (`RuntimeProducer`), [#9546](https://github.com/open-telemetry/opentelemetry-go/pull/9546) (`otlpprofilehttp`), and [#9547](https://github.com/open-telemetry/opentelemetry-go/pull/9547) (`otlpprofilegrpc`) at `v0.0.0`.
-3. Follow-up Go SDK PRs: opt-in `mutex` and `block` profiles (with reference-counted rate restoration) once the upstream spec settles distinguishing profiles with identical `sample_type` values, opt-in trace-context pprof label integration (with overhead benchmarks), `OTEL_PROFILES_*` environment configuration, `stdoutprofile` exporter, `exporters/README.md` update, and alignment with finalized `sample_type`/`period_type` values from spec PR [#5409](https://github.com/open-telemetry/opentelemetry-specification/pull/5409).
+3. Follow-up Go SDK PRs: opt-in `mutex` and `block` profiles (with reference-counted rate restoration) once the upstream spec settles distinguishing profiles with identical `sample_type` values, opt-in trace-context pprof label integration (with overhead benchmarks), `OTEL_PROFILES_*` environment configuration once formalized upstream, `stdoutprofile` exporter, `exporters/README.md` update, and alignment with finalized `sample_type`/`period_type` values from spec PR [#5409](https://github.com/open-telemetry/opentelemetry-specification/pull/5409).
 4. Upstream OpenTelemetry specification: propose `OTEL_EXPORTER_OTLP_PROFILES_*` and `/v1development/profiles` in `specification/protocol/exporter.md`, align pprof trace and span label keys with the Profiling SIG, and bring this Go design and the .NET comparison as an OTEP for `specification/profiles/sdk.md`.
 
 ## Benchmarking
@@ -203,7 +203,6 @@ Benchmarks cover pprof decoding/conversion (`BenchmarkParseAndConvertHeap`, `Ben
 ## Open questions
 
 - Which pprof label keys should represent trace and span IDs (`otel.trace_id` / `otel.span_id` vs. `trace_id` / `span_id` as used by `grafana/otel-profiling-go`)? These keys should be aligned with the Profiling SIG before trace-context correlation lands.
-- Should `PeriodicReader` read `OTEL_PROFILES_EXPORT_INTERVAL` and `OTEL_PROFILES_EXPORT_TIMEOUT` now, or wait until environment variable names are formalized upstream in `opentelemetry-specification`?
 - Should in-process trace-context correlation live as a `sdk/trace.SpanProcessor` / wrapper in `sdk/profile` (adding a dependency from `sdk/profile` on `sdk/trace`) or in a separate bridge package?
 - Should `otlpprofilehttp` and `otlpprofilegrpc` add self-observability metrics (`internal/observ`) in `v0.0.0`, or wait for profiling exporter semantic conventions?
 
