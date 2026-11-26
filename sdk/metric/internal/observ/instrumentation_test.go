@@ -19,8 +19,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/observ"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 const (
@@ -31,25 +31,45 @@ const (
 var Scope = instrumentation.Scope{
 	Name:      observ.ScopeName,
 	Version:   sdk.Version(),
-	SchemaURL: observ.SchemaURL,
+	SchemaURL: "https://opentelemetry.io/schemas/1.45.0",
 }
 
 type errMeterProvider struct {
 	mapi.MeterProvider
-	err error
+	err              error
+	histogramOptions *[]mapi.Float64HistogramOption
 }
 
 func (m *errMeterProvider) Meter(string, ...mapi.MeterOption) mapi.Meter {
-	return &errMeter{err: m.err}
+	return &errMeter{err: m.err, histogramOptions: m.histogramOptions}
 }
 
 type errMeter struct {
 	mapi.Meter
-	err error
+	err              error
+	histogramOptions *[]mapi.Float64HistogramOption
 }
 
-func (m *errMeter) Float64Histogram(string, ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
+func (m *errMeter) Float64Histogram(_ string, opts ...mapi.Float64HistogramOption) (mapi.Float64Histogram, error) {
+	if m.histogramOptions != nil {
+		*m.histogramOptions = opts
+	}
 	return nil, m.err
+}
+
+func TestNewInstrumentationDurationBucketAdvice(t *testing.T) {
+	t.Setenv("OTEL_GO_X_OBSERVABILITY", "true")
+	orig := otel.GetMeterProvider()
+	t.Cleanup(func() { otel.SetMeterProvider(orig) })
+	var opts []mapi.Float64HistogramOption
+	otel.SetMeterProvider(&errMeterProvider{err: assert.AnError, histogramOptions: &opts})
+
+	_, err := observ.NewInstrumentation(ComponentType, ID)
+	require.ErrorIs(t, err, assert.AnError)
+
+	boundaries := mapi.NewFloat64HistogramConfig(opts...).ExplicitBucketBoundaries()
+	require.NotNil(t, boundaries, "specify advice rather than leave boundaries unspecified")
+	assert.Empty(t, boundaries, "recommend a single bucket with no boundaries")
 }
 
 func TestNewInstrumentationObservabilityErrors(t *testing.T) {

@@ -41,7 +41,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.44.0/otelconv"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/otelconv"
 )
 
 func TestMain(m *testing.M) {
@@ -624,7 +624,7 @@ func TestClientInstrumentation(t *testing.T) {
 						{Attributes: attribute.NewSet(append(
 							attrs,
 							otelconv.SDKExporterOperationDuration{}.AttrErrorType("rejected"),
-							otelconv.SDKExporterOperationDuration{}.AttrRPCResponseStatusCode(
+							otelconv.SDKExporterOperationDuration{}.AttrRPCStatusCode(
 								codes.OK.String(),
 							),
 						)...)},

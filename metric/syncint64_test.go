@@ -47,6 +47,41 @@ type int64Config interface {
 
 func TestInt64ExplicitBucketHistogramConfiguration(t *testing.T) {
 	bounds := []float64{0.1, 0.5, 1.0}
-	got := NewInt64HistogramConfig(WithExplicitBucketBoundaries(bounds...))
-	assert.Equal(t, bounds, got.ExplicitBucketBoundaries(), "boundaries")
+	for _, tt := range []struct {
+		name string
+		opts []Int64HistogramOption
+		want []float64
+	}{
+		{name: "omitted"},
+		{
+			name: "no arguments",
+			opts: []Int64HistogramOption{WithExplicitBucketBoundaries()},
+			want: []float64{},
+		},
+		{
+			name: "nil slice",
+			opts: []Int64HistogramOption{WithExplicitBucketBoundaries(nil...)},
+			want: []float64{},
+		},
+		{
+			name: "empty slice",
+			opts: []Int64HistogramOption{WithExplicitBucketBoundaries([]float64{}...)},
+			want: []float64{},
+		},
+		{
+			name: "boundaries",
+			opts: []Int64HistogramOption{WithExplicitBucketBoundaries(bounds...)},
+			want: bounds,
+		},
+		{
+			name: "last option wins",
+			opts: []Int64HistogramOption{WithExplicitBucketBoundaries(bounds...), WithExplicitBucketBoundaries()},
+			want: []float64{},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NewInt64HistogramConfig(tt.opts...)
+			assert.Equal(t, tt.want, got.ExplicitBucketBoundaries(), "boundaries")
+		})
+	}
 }
