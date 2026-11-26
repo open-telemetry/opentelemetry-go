@@ -167,11 +167,11 @@ Both `otlpprofilehttp` and `otlpprofilegrpc` generate their `internal/transform`
 
 ## Trace context correlation
 
-`sdk/profile/internal/pprof.Convert` already parses `otel.trace_id` and `otel.span_id` pprof labels into `profiledata.Sample.Link`, while `RuntimeProducer` does not automatically write goroutine pprof labels when spans start.
+`sdk/profile/internal/pprof.Convert` already parses trace and span ID pprof labels (currently `otel.trace_id` and `otel.span_id`) into `profiledata.Sample.Link`, while `RuntimeProducer` does not automatically write goroutine pprof labels when spans start.
 
 Two complementary mechanisms cover trace correlation in Go:
 
-1. In-process pprof labels (planned follow-up): an opt-in helper or `sdk/trace` integration that attaches `otel.trace_id` and `otel.span_id` via `runtime/pprof.Do` or `runtime/pprof.SetGoroutineLabels` on span start/end. Stdlib `runtime/pprof` currently attaches goroutine labels to CPU and goroutine profiles, not heap, allocs, mutex, or block profiles.
+1. In-process pprof labels (planned follow-up): an opt-in `trace.TracerProvider` wrapper (similar to `grafana/otel-profiling-go`) that attaches and restores pprof labels via `runtime/pprof.WithLabels` and `runtime/pprof.SetGoroutineLabels` around `Tracer.Start` and `Span.End`. A `sdk/trace.SpanProcessor` cannot do this because `OnStart` does not return a `context.Context` and `OnEnd` takes no `context.Context` and may run on another goroutine. The wrapper only depends on `go.opentelemetry.io/otel/trace`, which `sdk/profile` already imports for `profiledata.Link`, so it can live in `sdk/profile` without adding a `sdk/trace` dependency. Stdlib `runtime/pprof` currently attaches goroutine labels to CPU and goroutine profiles, not heap, allocs, mutex, or block profiles.
 2. Out-of-process context sharing ([OTEP 4719](https://github.com/open-telemetry/opentelemetry-specification/blob/main/oteps/profiles/4719-process-ctx.md) / [spec PR #5370](https://github.com/open-telemetry/opentelemetry-specification/pull/5370) and [OTEP 4947](https://github.com/open-telemetry/opentelemetry-specification/blob/main/oteps/profiles/4947-thread-ctx.md)): `ProcessContext` publishes process `Resource` for eBPF profilers, while `ThreadContext` uses ELF TLS, which does not directly map to Go's M:N goroutine scheduler without runtime hooks. Keeping `sdk/profile` decoupled lets both evolve independently.
 
 ## Cross-language alignment and OTel specification
@@ -203,7 +203,6 @@ Benchmarks cover pprof decoding/conversion (`BenchmarkParseAndConvertHeap`, `Ben
 ## Open questions
 
 - Which pprof label keys should represent trace and span IDs (`otel.trace_id` / `otel.span_id` vs. `trace_id` / `span_id` as used by `grafana/otel-profiling-go`)? These keys should be aligned with the Profiling SIG before trace-context correlation lands.
-- Should in-process trace-context correlation live as a `sdk/trace.SpanProcessor` / wrapper in `sdk/profile` (adding a dependency from `sdk/profile` on `sdk/trace`) or in a separate bridge package?
 - Should `otlpprofilehttp` and `otlpprofilegrpc` add self-observability metrics (`internal/observ`) in `v0.0.0`, or wait for profiling exporter semantic conventions?
 
 ## Rejected alternatives
