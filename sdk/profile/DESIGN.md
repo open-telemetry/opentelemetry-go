@@ -67,7 +67,7 @@ flowchart LR
 
 ## ProfilerProvider
 
-`ProfilerProvider` coordinates a single `*resource.Resource` (defaulting to `resource.Default()`), registered `Producer` instances, and registered `Reader` instances:
+`ProfilerProvider` coordinates a single `*resource.Resource` (defaulting to `resource.Default()`) and registered `Reader` instances:
 
 ```go
 type ProfilerProvider struct { /* ... */ }
@@ -79,10 +79,9 @@ func (*ProfilerProvider) Shutdown(ctx context.Context) error
 type Option interface { /* unexported */ }
 func WithResource(res *resource.Resource) Option
 func WithReader(r Reader) Option
-func WithProducer(p Producer) ProducerOption
 ```
 
-`Shutdown` is idempotent (`sync.Once`). It shuts down readers first so their final collection and export can read from provider-level producers, then shuts down producers implementing `Shutdown(context.Context) error`.
+`Shutdown` is idempotent (`sync.Once`) and shuts down registered readers, which run any final collection and export before shutting down their attached producers implementing `Shutdown(context.Context) error`.
 
 ## Producer and RuntimeProducer
 
@@ -94,9 +93,9 @@ type Producer interface {
 }
 ```
 
-Producers that hold runtime state may also implement `Shutdown(context.Context) error`, which `ProfilerProvider` and readers invoke during shutdown. `WithProducer(p)` returns a `ProducerOption` accepted by `ManualReader` and `PeriodicReader`, matching `sdk/metric.WithProducer`, and by `ProfilerProvider` for single-reader setups or stateless snapshot producers.
+Producers that hold runtime state may also implement `Shutdown(context.Context) error`, which their owning reader invokes during shutdown. `WithProducer(p)` returns a `ReaderOption` accepted only by `ManualReader` and `PeriodicReader`, matching `sdk/metric.WithProducer`.
 
-Do not share a stateful producer that tracks delta baselines or continuous capture windows across multiple independent readers. That includes `RuntimeProducer` with delta profiles or CPU profiling enabled. Each `Produce` call advances delta baselines and rotates the CPU buffer, so an on-demand `ManualReader` collection would consume data meant for the next `PeriodicReader` export. Attach a separate `RuntimeProducer` to each reader via reader-level `WithProducer` when readers need independent intervals. When multiple destinations need the same collected batch, including process-wide CPU profiling where Go permits only one active profiler, fan out at the `Exporter` layer instead.
+Keeping `WithProducer` reader-only prevents cross-reader delta baseline and CPU window corruption by construction, since `RuntimeProducer` is stateful by default. Attach a separate `RuntimeProducer` to each reader when readers need independent intervals, and do not pass the same stateful producer instance to multiple readers. When multiple destinations need the same collected batch, including process-wide CPU profiling where Go permits only one active profiler, attach one producer to a single reader and fan out at the `Exporter` layer instead.
 
 `RuntimeProducer` collects profiles from Go's `runtime/pprof` and decodes them with an internal zero-dependency pprof wire decoder (`sdk/profile/internal/pprof`):
 
@@ -146,7 +145,7 @@ type Reader interface {
 }
 ```
 
-- `ManualReader` supports on-demand collection in tests and custom pull pipelines.
+- `ManualReader` supports on-demand collection in tests and custom pull pipelines and shuts down its attached producers on `Shutdown`.
 - `PeriodicReader` runs a single background goroutine ticking on `WithInterval` (default `60s`) with per-cycle `WithTimeout` (default `30s`). `ForceFlush` triggers an immediate collect-and-export cycle and resets the ticker. `Shutdown` stops the loop, runs one final collect-and-export cycle, shuts down reader-attached producers, and shuts down the `Exporter`.
 
 ## Exporter and OTLP transport
@@ -216,7 +215,7 @@ Traces, metrics, and logs require a lightweight API module because instrumented 
 
 ### Use `Processor` (push model, like `sdk/log`) instead of `Reader` and `Producer` (pull model, like `sdk/metric`)
 
-Go runtime profiles are collected on a schedule and converted in batches rather than emitted event-by-event. The pull-based `ProfilerProvider` + `Producer` + `Reader` + `Exporter` pattern from `sdk/metric` fits this lifecycle directly. Multiple readers, such as periodic OTLP export alongside an on-demand diagnostic reader, can share one `ProfilerProvider` for `Resource`, `ForceFlush`, `Shutdown`, and stateless snapshot producers. Stateful delta or CPU producers attach per reader via reader-level `WithProducer`, or fan out at the `Exporter` layer, so diagnostic collections do not consume intervals meant for periodic export.
+Go runtime profiles are collected on a schedule and converted in batches rather than emitted event-by-event. The pull-based `ProfilerProvider` + `Producer` + `Reader` + `Exporter` pattern from `sdk/metric` fits this lifecycle directly. Multiple readers, such as periodic OTLP export alongside an on-demand diagnostic reader, can share one `ProfilerProvider` for `Resource`, `ForceFlush`, and `Shutdown`. Producers attach only per reader via `WithProducer` (or fan out at the `Exporter` layer when destinations share one collection, such as process-wide CPU profiling), preventing diagnostic collections from consuming intervals meant for periodic export.
 
 ### Name the module `sdk/profiles` (plural)
 
