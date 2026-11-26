@@ -42,10 +42,11 @@ Exporter modules:
 
 ```mermaid
 flowchart LR
-    RP["RuntimeProducer (runtime/pprof)"] --> PP["ProfilerProvider (+ Resource)"]
-    CP["Custom Producer"] --> PP
-    PP --> PR["PeriodicReader (interval / timeout)"]
-    PP --> MR["ManualReader (Collect)"]
+    PP["ProfilerProvider (+ Resource)"] -->|registers| PR["PeriodicReader (interval / timeout)"]
+    PP -->|registers| MR["ManualReader (Collect)"]
+    RP1["RuntimeProducer (runtime/pprof)"] --> PR
+    CP["Custom Producer"] --> PR
+    RP2["RuntimeProducer (runtime/pprof)"] --> MR
     PR --> EXP["Exporter"]
     EXP --> HTTP["otlpprofilehttp (proto/slim/otlp)"]
     EXP --> GRPC["otlpprofilegrpc (proto/otlp)"]
