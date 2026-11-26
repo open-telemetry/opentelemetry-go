@@ -236,12 +236,15 @@ type Exemplar[N int64 | float64] struct {
 	Time time.Time
 	// Value is the measured value.
 	Value N
-	// SpanID is the ID of the span that was active during the measurement. If
-	// no span was active or the span was not sampled this will be empty.
+	// SpanID is the ID of the span that was active during the measurement.
+	// It is empty if the span context captured with the measurement has no
+	// span ID. It is not cleared for unsampled spans; the exemplar filter
+	// determines which measurements are offered.
 	SpanID []byte `json:",omitempty"`
 	// TraceID is the ID of the trace the active span belonged to during the
-	// measurement. If no span was active or the span was not sampled this will
-	// be empty.
+	// measurement. It is empty if the span context captured with the
+	// measurement has no trace ID. It is not cleared for unsampled spans; the
+	// exemplar filter determines which measurements are offered.
 	TraceID []byte `json:",omitempty"`
 }
 
