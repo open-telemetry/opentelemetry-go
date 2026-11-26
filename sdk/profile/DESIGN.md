@@ -132,19 +132,20 @@ Implementation invariants in `RuntimeProducer` and `sdk/profile/internal/pprof`:
 
 ## Reader, ManualReader, and PeriodicReader
 
-`Reader` mirrors `sdk/metric.Reader` with an unexported `register` method plus `Collect`, `ForceFlush`, and `Shutdown`:
+`Reader` mirrors `sdk/metric.Reader` with an unexported `register` method plus `Collect` and `Shutdown`:
 
 ```go
 type Reader interface {
 	register(sdkProducer)
 	Collect(ctx context.Context, rp *profiledata.ResourceProfiles) error
-	ForceFlush(ctx context.Context) error
 	Shutdown(ctx context.Context) error
 }
 ```
 
-- `ManualReader` supports on-demand collection in tests and custom pull pipelines and shuts down its attached producers on `Shutdown`.
-- `PeriodicReader` runs a single background goroutine ticking on `WithInterval` (default `60s`) with per-cycle `WithTimeout` (default `30s`). `ForceFlush` triggers an immediate collect-and-export cycle and resets the ticker. `Shutdown` stops the loop, runs one final collect-and-export cycle, shuts down reader-attached producers, and shuts down the `Exporter`.
+`Reader` omits `ForceFlush` (matching `sdk/metric.Reader`), so pull readers do not expose a no-op method. `ProfilerProvider.ForceFlush` type-asserts `interface{ ForceFlush(context.Context) error }` on each registered reader.
+
+- `ManualReader` supports on-demand collection in tests and custom pull pipelines, omits `ForceFlush`, and shuts down its attached producers on `Shutdown`.
+- `PeriodicReader` runs a single background goroutine ticking on `WithInterval` (default `60s`) with per-cycle `WithTimeout` (default `30s`). Its `ForceFlush` method triggers an immediate collect-and-export cycle and resets the ticker. `Shutdown` stops the loop, runs one final collect-and-export cycle, shuts down reader-attached producers, and shuts down the `Exporter`.
 
 ## Exporter and OTLP transport
 
