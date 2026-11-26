@@ -354,7 +354,7 @@ func truncate(limit int, s string) string {
 		if c != utf8.RuneError {
 			count++
 			if count > limit {
-				return s[:i]
+				return strings.Clone(s[:i])
 			}
 			continue
 		}
@@ -369,7 +369,14 @@ func truncate(limit int, s string) string {
 		if size == 1 {
 			// Removing this byte makes len(s)-1 an upper bound for a rebuilt
 			// result. Keep the valid prefix before rescanning s[i:].
-			b.Grow(len(s) - 1)
+			// A rebuilt result holds at most limit runes of up to utf8.UTFMax
+			// bytes each. Do not size it to len(s): the result would keep that
+			// whole allocation alive.
+			capacity := len(s) - 1
+			if limit < capacity/utf8.UTFMax {
+				capacity = limit * utf8.UTFMax
+			}
+			b.Grow(capacity)
 			_, _ = b.WriteString(s[:i])
 			s = s[i:]
 			break
@@ -378,7 +385,7 @@ func truncate(limit int, s string) string {
 		// A valid U+FFFD still consumes one character of the limit.
 		count++
 		if count > limit {
-			return s[:i]
+			return strings.Clone(s[:i])
 		}
 	}
 
