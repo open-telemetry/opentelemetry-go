@@ -1009,6 +1009,19 @@ func TestConvCappedAttrsDedupAndEmpty(t *testing.T) {
 	assert.Equal(t, want, got, "unlimited dedup")
 	assert.Zero(t, dropped, "unlimited dedup dropped")
 
+	// Past smallAttrs entries the key index replaces the scan.
+	long := make([]attribute.KeyValue, 0, 2*smallAttrs)
+	for i := range 2 * smallAttrs {
+		long = append(long, attribute.Int("k"+strconv.Itoa(i%3), i))
+	}
+	last := 2*smallAttrs - 1
+	got, dropped = convCappedAttrs(2, long)
+	assert.Equal(t, []telemetry.Attr{
+		telemetry.Int("k0", last-last%3),
+		telemetry.Int("k1", last-(last-1)%3),
+	}, got, "indexed dedup then cap")
+	assert.Equal(t, uint32(2*smallAttrs/3), dropped, "indexed rejected key dropped")
+
 	// A valid top-level empty attribute value is kept, not counted dropped.
 	empty := attribute.KeyValue{Key: "empty"}
 	got, dropped = convCappedAttrs(128, []attribute.KeyValue{empty})
@@ -1022,8 +1035,9 @@ func TestConvCappedAttrsDedupAndEmpty(t *testing.T) {
 }
 
 func TestConvCappedAttrsConvertsKeptValueOnce(t *testing.T) {
-	// A repeated key keeps its last value, and the earlier values are never
-	// converted, so the allocations do not grow with the number of repeats.
+	// A repeated key keeps its last value. Past smallAttrs entries the
+	// earlier values are never converted, so the allocations do not grow with
+	// the number of repeats.
 	input := func(n int) []attribute.KeyValue {
 		out := make([]attribute.KeyValue, n)
 		for i := range out {
@@ -1043,85 +1057,95 @@ func TestConvCappedAttrsConvertsKeptValueOnce(t *testing.T) {
 	allocs := func(in []attribute.KeyValue) float64 {
 		return testing.AllocsPerRun(10, func() { _, _ = convCappedAttrs(1, in) })
 	}
-	assert.Equal(t, allocs(few), allocs(many), "allocations per repeat")
+	assert.LessOrEqual(t, allocs(many), allocs(few), "allocations per repeat")
 }
 
 func TestSpanAttributeDedupAndEmpty(t *testing.T) {
 	orig := maxSpan
 	t.Cleanup(func() { maxSpan = orig })
-
-	input := []attribute.KeyValue{
-		attribute.Int("a", 1),
-		attribute.Int("a", 2),
-		attribute.Int("b", 3),
-	}
-	want := []telemetry.Attr{
-		telemetry.Int("a", 2),
-		telemetry.Int("b", 3),
-	}
-	empty := attribute.KeyValue{Key: "empty"}
-
 	maxSpan.Attrs = 2
-
-	s := spanBuilder{Options: []SpanStartOption{WithAttributes(input...)}}.Build()
-	assert.Equal(t, want, s.span.Attrs, "span creation dedup")
-	assert.Zero(t, s.span.DroppedAttrs, "span creation dropped")
-
-	s = spanBuilder{}.Build()
-	s.SetAttributes(input...)
-	assert.Equal(t, want, s.span.Attrs, "SetAttributes dedup")
-	assert.Zero(t, s.span.DroppedAttrs, "SetAttributes dropped")
-
-	s = spanBuilder{Options: []SpanStartOption{WithAttributes(empty)}}.Build()
-	assert.Equal(t, []telemetry.Attr{{Key: "empty"}}, s.span.Attrs, "creation keeps empty value")
-	assert.Zero(t, s.span.DroppedAttrs, "creation empty dropped")
-
-	s = spanBuilder{}.Build()
-	s.SetAttributes(empty)
-	assert.Equal(t, []telemetry.Attr{{Key: "empty"}}, s.span.Attrs, "SetAttributes keeps empty value")
-	assert.Zero(t, s.span.DroppedAttrs, "SetAttributes empty dropped")
-
-	// At capacity an existing key still updates; a new key drops.
-	s = spanBuilder{Options: []SpanStartOption{WithAttributes(
-		attribute.Int("a", 1),
-		attribute.Int("b", 2),
-	)}}.Build()
-	s.SetAttributes(attribute.Int("a", 9), attribute.Int("c", 3))
-	assert.Equal(t, []telemetry.Attr{
-		telemetry.Int("a", 9),
-		telemetry.Int("b", 2),
-	}, s.span.Attrs, "update at capacity")
-	assert.Equal(t, uint32(1), s.span.DroppedAttrs, "new key at capacity dropped")
-
-	maxSpan.Attrs = 128
 	maxSpan.EventAttrs = 2
 	maxSpan.LinkAttrs = 2
 
-	s = spanBuilder{}.Build()
-	s.AddEvent("e", WithAttributes(input...))
-	require.Len(t, s.span.Events, 1)
-	assert.Equal(t, want, s.span.Events[0].Attrs, "event dedup")
-	assert.Zero(t, s.span.Events[0].DroppedAttrs, "event dropped")
+	entryPoints := []struct {
+		name  string
+		build func(*testing.T, ...attribute.KeyValue) ([]telemetry.Attr, uint32)
+	}{
+		{"span creation", func(_ *testing.T, in ...attribute.KeyValue) ([]telemetry.Attr, uint32) {
+			s := spanBuilder{Options: []SpanStartOption{WithAttributes(in...)}}.Build()
+			return s.span.Attrs, s.span.DroppedAttrs
+		}},
+		{"SetAttributes", func(_ *testing.T, in ...attribute.KeyValue) ([]telemetry.Attr, uint32) {
+			s := spanBuilder{}.Build()
+			s.SetAttributes(in...)
+			return s.span.Attrs, s.span.DroppedAttrs
+		}},
+		{"AddEvent", func(t *testing.T, in ...attribute.KeyValue) ([]telemetry.Attr, uint32) {
+			s := spanBuilder{}.Build()
+			s.AddEvent("e", WithAttributes(in...))
+			require.Len(t, s.span.Events, 1)
+			return s.span.Events[0].Attrs, s.span.Events[0].DroppedAttrs
+		}},
+		{"AddLink", func(t *testing.T, in ...attribute.KeyValue) ([]telemetry.Attr, uint32) {
+			s := spanBuilder{}.Build()
+			s.AddLink(Link{SpanContext: spanContext0, Attributes: in})
+			require.Len(t, s.span.Links, 1)
+			return s.span.Links[0].Attrs, s.span.Links[0].DroppedAttrs
+		}},
+		{"link creation", func(_ *testing.T, in ...attribute.KeyValue) ([]telemetry.Attr, uint32) {
+			s := spanBuilder{Options: []SpanStartOption{WithLinks(Link{
+				SpanContext: spanContext0,
+				Attributes:  in,
+			})}}.Build()
+			require.Len(t, s.span.Links, 1)
+			return s.span.Links[0].Attrs, s.span.Links[0].DroppedAttrs
+		}},
+	}
+	cases := []struct {
+		name string
+		in   []attribute.KeyValue
+		want []telemetry.Attr
+	}{
+		{
+			name: "dedup",
+			in: []attribute.KeyValue{
+				attribute.Int("a", 1),
+				attribute.Int("a", 2),
+				attribute.Int("b", 3),
+			},
+			want: []telemetry.Attr{
+				telemetry.Int("a", 2),
+				telemetry.Int("b", 3),
+			},
+		},
+		{
+			name: "empty value kept",
+			in:   []attribute.KeyValue{{Key: "empty"}},
+			want: []telemetry.Attr{{Key: "empty"}},
+		},
+	}
+	for _, ep := range entryPoints {
+		for _, c := range cases {
+			t.Run(ep.name+"/"+c.name, func(t *testing.T) {
+				got, dropped := ep.build(t, c.in...)
+				assert.Equal(t, c.want, got, "attrs")
+				assert.Zero(t, dropped, "dropped")
+			})
+		}
+	}
 
-	s = spanBuilder{}.Build()
-	s.AddEvent("e", WithAttributes(empty))
-	require.Len(t, s.span.Events, 1)
-	assert.Equal(t, []telemetry.Attr{{Key: "empty"}}, s.span.Events[0].Attrs, "event keeps empty value")
-	assert.Zero(t, s.span.Events[0].DroppedAttrs, "event empty dropped")
-
-	s = spanBuilder{}.Build()
-	s.AddLink(Link{SpanContext: spanContext0, Attributes: input})
-	require.Len(t, s.span.Links, 1)
-	assert.Equal(t, want, s.span.Links[0].Attrs, "AddLink dedup")
-	assert.Zero(t, s.span.Links[0].DroppedAttrs, "AddLink dropped")
-
-	s = spanBuilder{Options: []SpanStartOption{WithLinks(Link{
-		SpanContext: spanContext0,
-		Attributes:  input,
-	})}}.Build()
-	require.Len(t, s.span.Links, 1)
-	assert.Equal(t, want, s.span.Links[0].Attrs, "link creation dedup")
-	assert.Zero(t, s.span.Links[0].DroppedAttrs, "link creation dropped")
+	t.Run("SetAttributes/update at capacity", func(t *testing.T) {
+		s := spanBuilder{Options: []SpanStartOption{WithAttributes(
+			attribute.Int("a", 1),
+			attribute.Int("b", 2),
+		)}}.Build()
+		s.SetAttributes(attribute.Int("a", 9), attribute.Int("c", 3))
+		assert.Equal(t, []telemetry.Attr{
+			telemetry.Int("a", 9),
+			telemetry.Int("b", 2),
+		}, s.span.Attrs, "existing key updates")
+		assert.Equal(t, uint32(1), s.span.DroppedAttrs, "new key dropped")
+	})
 }
 
 func TestSpanAttributeValueLimits(t *testing.T) {
