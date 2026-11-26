@@ -66,6 +66,8 @@ flowchart LR
 
 `profiledata.Attribute` reuses `go.opentelemetry.io/otel/attribute` for keys and structured `attribute.Value` (matching `go.opentelemetry.io/otel/sdk/log`) while adding the optional UCUM `Unit` field required by OTLP `KeyValueAndUnit`. `Location` and `Mapping` are shared pointers within a batch so exporters can cache dictionary indices by pointer identity before falling back to content deduplication.
 
+`attribute.MapValue` can carry duplicate keys. `sdk/profile` normalizes map attributes once per collected batch at the collection boundary, before `Collect` returns or the batch reaches exporters. It reuses `internal/shared/attrnorm` via `dedup.go.tmpl`, which deduplicates nested maps and maps inside arrays with last-value-wins semantics. Copy-on-change updates preserve producer-owned data and keep scalar attributes on the fast path.
+
 Keeping `profiledata` as a separate package mirrors `sdk/metric/metricdata` and avoids `profile.Profile` stuttering while separating the data schema from pipeline lifecycle types and options. Packages that only build, convert, transform, or test profile payloads (`sdk/profile/internal/pprof`, `otlpprofile*/internal/transform`, third-party converters or custom producers relying on structural typing, and a future `profiledata/profiledatatest` helper matching `metricdatatest`) can import only `profiledata` without pulling in `ProfilerProvider`, readers, or `RuntimeProducer`.
 
 ## ProfilerProvider
