@@ -11,6 +11,7 @@
 // bump of the API package).
 //
 // [OpenTelemetry Logs API]: https://pkg.go.dev/go.opentelemetry.io/otel/log
+// [OpenTelemetry Logs Bridge API]: https://opentelemetry.io/docs/specs/otel/logs/bridge-api/
 package embedded
 
 // LoggerProvider is embedded in the [Logs API LoggerProvider].
@@ -22,6 +23,7 @@ package embedded
 // signals that they need to update to your latest implementation.
 //
 // [Logs API LoggerProvider]: https://pkg.go.dev/go.opentelemetry.io/otel/log#LoggerProvider
+// [Logs Bridge API LoggerProvider]: https://pkg.go.dev/go.opentelemetry.io/otel/log#LoggerProvider
 type LoggerProvider interface{ loggerProvider() }
 
 // Logger is embedded in the [Logs API Logger].
