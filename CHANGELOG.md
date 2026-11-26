@@ -72,6 +72,8 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 ### Fixed
 
 - Record `otel.sdk.processor.log.processed` with `error.type="queue_full"` synchronously when `BatchProcessor.OnEmit` drops a log record due to a full queue in `go.opentelemetry.io/otel/sdk/log`. (#9524)
+- Fix `Set.Equivalent` and `Hasher.Distinct` in `go.opentelemetry.io/otel/attribute` returning the same `Distinct` for different attributes when adjacent strings or nested slices and maps share a boundary, such as `[]string{"ab", "c"}` and `[]string{"a", "bc"}`.
+  This prevented those attribute sets from being kept as separate metric streams in `go.opentelemetry.io/otel/sdk/metric`. (#9508)
 - Use `otlp_http_json_span_exporter` for `otel.component.type` and the component name prefix when JSON encoding is configured in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp`. (#9492)
 - Honor explicitly empty histogram bucket-boundary advice in `go.opentelemetry.io/otel/sdk/metric`, producing a single bucket while preserving count and sum.
   Calling `WithExplicitBucketBoundaries` in `go.opentelemetry.io/otel/metric` with no arguments or a nil slice now explicitly advises a single unbounded bucket.
@@ -148,6 +150,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   Previously, such a value produced a negative timeout that removed the export deadline.
 - Reject negative and overflowing `OTEL_EXPORTER_OTLP_TIMEOUT` and `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT` values in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9338)
   Previously, such a value produced a negative timeout that removed the export deadline.
+- Trim surrounding whitespace from an `OTEL_RESOURCE_ATTRIBUTES` value that fails percent-decoding in `go.opentelemetry.io/otel/sdk/resource`. (#9442)
 
 ### Removed
 

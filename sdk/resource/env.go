@@ -78,7 +78,8 @@ func constructOTResources(s string) (*Resource, error) {
 			continue
 		}
 		key := strings.TrimSpace(k)
-		val, err := url.PathUnescape(strings.TrimSpace(v))
+		v = strings.TrimSpace(v)
+		val, err := url.PathUnescape(v)
 		if err != nil {
 			// Retain original value if decoding fails, otherwise it will be
 			// an empty string.
