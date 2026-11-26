@@ -119,7 +119,7 @@ func WithoutDeltaProfiles() RuntimeProducerOption
 | :--- | :--- | :--- | :--- | :--- |
 | Live heap (`inuse_space`, `inuse_objects`) | Enabled | Instantaneous snapshot | `.../runtime/heap` | None |
 | Allocations (`alloc_space`, `alloc_objects`) | Enabled | Interval delta (opt-out via `WithoutDeltaProfiles`) | `.../runtime/allocs` | None |
-| Goroutines (`goroutine`) | Enabled | Instantaneous snapshot | `.../runtime/goroutine` | None |
+| Goroutines (`goroutine`) | Enabled | Instantaneous snapshot | `.../runtime/goroutine` | Two brief STW pauses and a live-goroutine stack walk per collection, adding latency and allocations at high goroutine counts (disable via `WithoutGoroutineProfile`) |
 | CPU (`cpu`, `samples`) | Opt-in (`WithCPUProfile`) | Double-buffered continuous window | `.../runtime/cpu` | Claims process-wide `pprof.StartCPUProfile`, stopped on `Shutdown` |
 
 Go's `mutex` and `block` profiles are deferred from the initial `v0.0.0` `RuntimeProducer`. Both emit identical `sample_type` pairs (`contentions`/`count` and `delay`/`nanoseconds`), so backends cannot distinguish them on the OTLP wire until the upstream spec defines a profile-identifying attribute (see [spec PR #5409](https://github.com/open-telemetry/opentelemetry-specification/pull/5409#discussion_r4534499496)). Deferring them also keeps global runtime rate mutation (`runtime.SetMutexProfileFraction`, `runtime.SetBlockProfileRate`) out of the initial release. When added in Phase 3, both will be opt-in with reference-counted rate restoration on `Shutdown`.
