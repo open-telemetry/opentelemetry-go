@@ -113,6 +113,7 @@ func TestDetectServiceNameFromEnv(t *testing.T) {
 
 func TestInvalidPercentDecodingTrimsValue(t *testing.T) {
 	t.Setenv(resourceAttrKey, "key= %invalid ,k=v")
+	t.Setenv(svcNameKey, "")
 	detector := &fromEnv{}
 	res, err := detector.Detect(t.Context())
 	assert.NoError(t, err)
