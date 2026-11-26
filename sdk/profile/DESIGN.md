@@ -164,6 +164,7 @@ Both `otlpprofilehttp` and `otlpprofilegrpc` generate their `internal/transform`
 - Dictionary invariants: index 0 of all seven tables (`StringTable`, `MappingTable`, `LocationTable`, `FunctionTable`, `LinkTable`, `AttributeTable`, `StackTable`) holds the zero-value sentinel. Entries are deduplicated by canonical OTLP wire representation (including across Go slice `attribute.Type` variants) and kept orphan-free. String keys and values use dictionary references (`KeyStrindex`, `StringValueStrindex`).
 - `otlpprofilehttp` posts to `/v1development/profiles` on `localhost:4318` by default, sets `Content-Type: application/x-protobuf` and `OTLP-Profiles-Development-Version: 1`, reads `OTEL_EXPORTER_OTLP_PROFILES_*` with fallback to `OTEL_EXPORTER_OTLP_*`, supports gzip, `Retry-After` retries (`429`, `502`, `503`, `504`), partial-success (`rejected_profiles`) reporting, 64 MiB default max request size (checked via `proto.Size` before marshaling), and 4 MiB max decompressed response size.
 - `otlpprofilegrpc` shares the same environment variables, sends `otlp-profiles-development-version: 1` gRPC metadata, and supports TLS/mTLS, gzip, `RetryInfo` throttling, and partial-success reporting.
+- Both OTLP exporters include `internal/observ` self-observability metrics from `v0.0.0`, gated behind `OTEL_GO_X_OBSERVABILITY` to match the other OTLP exporters.
 
 ## Trace context correlation
 
@@ -203,7 +204,6 @@ Benchmarks cover pprof decoding/conversion (`BenchmarkParseAndConvertHeap`, `Ben
 ## Open questions
 
 - Which pprof label keys should represent trace and span IDs (`otel.trace_id` / `otel.span_id` vs. `trace_id` / `span_id` as used by `grafana/otel-profiling-go`)? These keys should be aligned with the Profiling SIG before trace-context correlation lands.
-- Should `otlpprofilehttp` and `otlpprofilegrpc` add self-observability metrics (`internal/observ`) in `v0.0.0`, or wait for profiling exporter semantic conventions?
 
 ## Rejected alternatives
 
