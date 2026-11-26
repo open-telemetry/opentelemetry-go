@@ -128,7 +128,7 @@ Implementation invariants in `RuntimeProducer` and `sdk/profile/internal/pprof`:
 
 - `BuildIDCache` reads and caches `process.executable.build_id.htlhash`, Go build ID, and GNU ELF build ID per binary path per [Profiles Mappings Attributes](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/profiles/mappings.md).
 - Converted profiles emit `pprof.scope.default_sample_type`, `pprof.scope.sample_type_order`, `profile.frame.type = "go"`, and `pprof.mapping.*` attributes per [Pprof Compatibility](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/profiles/pprof.md).
-- Samples carrying valid `otel.trace_id` and `otel.span_id` pprof labels convert to `profiledata.Link` and drop those raw labels from sample attributes.
+- Samples carrying valid trace and span ID pprof labels (currently `otel.trace_id` and `otel.span_id`, pending Profiling SIG alignment) convert to `profiledata.Link` and drop those raw labels from sample attributes.
 
 ## Reader, ManualReader, and PeriodicReader
 
@@ -186,7 +186,7 @@ Comparing this design with [OTel .NET's `ContinuousProfiler`](https://github.com
 | Scheduling knobs | `interval` (`60s`), `timeout` (`30s`) | Per-sample-type `ExportInterval`, `ExportTimeout` | Collection interval | Yes: `OTEL_PROFILES_EXPORTER`, `OTEL_PROFILES_EXPORT_INTERVAL`, `OTEL_PROFILES_EXPORT_TIMEOUT` |
 | Exporter input | Typed `profiledata.ResourceProfiles` | Raw native `byte[]` buffers | OTLP `Profiles` | Yes: OTLP-aligned typed profile data model |
 | Runtime profile knobs | `heap`, `allocs`, `goroutine`, opt-in `cpu`, delta flag (deferred: `mutex`, `block`) | `ThreadSamplingInterval`, `MaxAllocationSamplesPerMinute`, `SelectedThreads` | Perf events | No: keep runtime-specific; standardize `(sample_type, unit)` names via spec PR [#5409](https://github.com/open-telemetry/opentelemetry-specification/pull/5409) |
-| Trace correlation | `otel.trace_id` / `otel.span_id` pprof labels to `Sample.Link` | CLR thread-local active `Activity` + `SelectiveSampling` | `ProcessContext` + `ThreadContext` | Yes: contract to populate `Sample.Link`, leaving the hook mechanism per runtime |
+| Trace correlation | Trace/span pprof labels (currently `otel.trace_id` / `otel.span_id`) to `Sample.Link` | CLR thread-local active `Activity` + `SelectiveSampling` | `ProcessContext` + `ThreadContext` | Yes: contract to populate `Sample.Link` and standardize pprof label keys, leaving the hook mechanism per runtime |
 | OTLP exporter config | `OTEL_EXPORTER_OTLP_PROFILES_*`, `/v1development/profiles`, `OTLP-Profiles-Development-Version: 1` | Plugin-provided exporter | OTLP/gRPC | Yes: formalize in `specification/protocol/exporter.md` |
 
 ## Phased plan
@@ -194,7 +194,7 @@ Comparing this design with [OTel .NET's `ContinuousProfiler`](https://github.com
 1. Design consensus (this PR): align on module naming (`sdk/profile`), pull-based `Reader`/`Producer` model, protobuf-free `profiledata`, and default-safe `RuntimeProducer` behavior.
 2. Experimental SDK and OTLP exporters: land [#9545](https://github.com/open-telemetry/opentelemetry-go/pull/9545) (`sdk/profile` core and `profiledata`), [#9558](https://github.com/open-telemetry/opentelemetry-go/pull/9558) (`sdk/profile/internal/pprof`), [#9559](https://github.com/open-telemetry/opentelemetry-go/pull/9559) (`RuntimeProducer`), [#9546](https://github.com/open-telemetry/opentelemetry-go/pull/9546) (`otlpprofilehttp`), and [#9547](https://github.com/open-telemetry/opentelemetry-go/pull/9547) (`otlpprofilegrpc`) at `v0.0.0`.
 3. Follow-up Go SDK PRs: opt-in `mutex` and `block` profiles (with reference-counted rate restoration) once the upstream spec settles distinguishing profiles with identical `sample_type` values, opt-in trace-context pprof label integration (with overhead benchmarks), `OTEL_PROFILES_*` environment configuration, `stdoutprofile` exporter, `exporters/README.md` update, and alignment with finalized `sample_type`/`period_type` values from spec PR [#5409](https://github.com/open-telemetry/opentelemetry-specification/pull/5409).
-4. Upstream OpenTelemetry specification: propose `OTEL_EXPORTER_OTLP_PROFILES_*` and `/v1development/profiles` in `specification/protocol/exporter.md`, then bring this Go design and the .NET comparison to the Profiling SIG as an OTEP for `specification/profiles/sdk.md`.
+4. Upstream OpenTelemetry specification: propose `OTEL_EXPORTER_OTLP_PROFILES_*` and `/v1development/profiles` in `specification/protocol/exporter.md`, align pprof trace and span label keys with the Profiling SIG, and bring this Go design and the .NET comparison as an OTEP for `specification/profiles/sdk.md`.
 
 ## Benchmarking
 
@@ -202,6 +202,7 @@ Benchmarks cover pprof decoding/conversion (`BenchmarkParseAndConvertHeap`, `Ben
 
 ## Open questions
 
+- Which pprof label keys should represent trace and span IDs (`otel.trace_id` / `otel.span_id` vs. `trace_id` / `span_id` as used by `grafana/otel-profiling-go`)? These keys should be aligned with the Profiling SIG before trace-context correlation lands.
 - Should `PeriodicReader` read `OTEL_PROFILES_EXPORT_INTERVAL` and `OTEL_PROFILES_EXPORT_TIMEOUT` now, or wait until environment variable names are formalized upstream in `opentelemetry-specification`?
 - Should in-process trace-context correlation live as a `sdk/trace.SpanProcessor` / wrapper in `sdk/profile` (adding a dependency from `sdk/profile` on `sdk/trace`) or in a separate bridge package?
 - Should `otlpprofilehttp` and `otlpprofilegrpc` add self-observability metrics (`internal/observ`) in `v0.0.0`, or wait for profiling exporter semantic conventions?
