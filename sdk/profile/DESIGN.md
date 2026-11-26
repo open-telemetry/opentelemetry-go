@@ -108,11 +108,8 @@ func (*RuntimeProducer) Produce(ctx context.Context) ([]profiledata.ScopeProfile
 func (*RuntimeProducer) Shutdown(ctx context.Context) error
 
 type RuntimeProducerOption interface { /* unexported */ }
-func WithHeapProfile() RuntimeProducerOption
 func WithoutHeapProfile() RuntimeProducerOption
-func WithAllocsProfile() RuntimeProducerOption
 func WithoutAllocsProfile() RuntimeProducerOption
-func WithGoroutineProfile() RuntimeProducerOption
 func WithoutGoroutineProfile() RuntimeProducerOption
 func WithCPUProfile() RuntimeProducerOption
 func WithoutDeltaProfiles() RuntimeProducerOption
