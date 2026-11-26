@@ -234,3 +234,7 @@ Exposing `go.opentelemetry.io/proto/otlp/profiles/v1development` in `sdk/profile
 ### Enable CPU, mutex, or block profiling by default in `RuntimeProducer`
 
 Go permits only one active `runtime/pprof.StartCPUProfile` per process, and `SetMutexProfileFraction`/`SetBlockProfileRate` mutate global runtime state with measurable overhead. Enabling only `heap`, `allocs`, and `goroutine` by default ensures `NewRuntimeProducer()` will not conflict with `net/http/pprof` or an external profiler unless the caller explicitly opts in to CPU profiling, or to `mutex`/`block` once they land in Phase 3.
+
+### Bundle fgprof-style wall-clock profiling in `RuntimeProducer`
+
+Polling `runtime.GoroutineProfile` at 99 Hz (as `fgprof` does) incurs repeated STW pauses and full stack-walk overhead on services with many goroutines. Leaving wall-clock profiling out of `sdk/profile` keeps `RuntimeProducer` low-overhead; callers who want `fgprof` can integrate it via a custom `Producer` or a separate contrib module.
