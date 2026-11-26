@@ -134,7 +134,7 @@ When added in Phase 3, both will be opt-in with reference-counted rate managemen
 
 Implementation invariants in `RuntimeProducer` and `sdk/profile/internal/pprof`:
 
-- `BuildIDCache` reads and caches `process.executable.build_id.htlhash`, Go build ID, and GNU ELF build ID per binary path per [Profiles Mappings Attributes](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/profiles/mappings.md).
+- `BuildIDCache` reads and caches `process.executable.build_id.htlhash`, Go build ID, and GNU ELF build ID per binary path per [Profiles Mappings Attributes](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/profiles/mappings.md). Because the Alpha Profiles spec requires every non-sentinel mapping to carry a GNU, Go, or HTL build ID, synthetic Go pprof mappings with no filename or build ID, such as when `/proc/self/maps` yields no mappings, are left unset (`Location.Mapping` is `nil`). OTLP then encodes mapping index `0` while preserving stack and function data, verified by a synthetic pprof fixture.
 - Converted profiles emit `pprof.scope.default_sample_type`, `pprof.scope.sample_type_order`, `profile.frame.type = "go"`, and `pprof.mapping.*` attributes per [Pprof Compatibility](https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/profiles/pprof.md).
 - Samples carrying valid trace and span ID pprof labels (currently `otel.trace_id` and `otel.span_id`, pending Profiling SIG alignment) convert to `profiledata.Link` and drop those raw labels from sample attributes.
 
