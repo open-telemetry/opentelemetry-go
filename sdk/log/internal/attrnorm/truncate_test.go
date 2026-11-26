@@ -17,6 +17,7 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -1037,6 +1038,15 @@ func TestTruncateDoesNotRetainInput(t *testing.T) {
 		assert.NotSame(t, unsafe.StringData(input), unsafe.StringData(got))
 	})
 
+	t.Run("U+FFFD at the limit", func(t *testing.T) {
+		// The limit is reached on a valid U+FFFD, which takes a second
+		// copy path.
+		input := strings.Repeat("a", 10) + "\uFFFD" + strings.Repeat("b", size)
+		got := truncate(10, input)
+		assert.Equal(t, input[:10], got)
+		assert.NotSame(t, unsafe.StringData(input), unsafe.StringData(got))
+	})
+
 	t.Run("InvalidUTF-8", func(t *testing.T) {
 		input := "\xff" + strings.Repeat("a", size)
 		assert.Equal(t, "aaaaaaaaaa", truncate(10, input))
@@ -1056,6 +1066,43 @@ func TestTruncateDoesNotRetainInput(t *testing.T) {
 	})
 }
 
+func TestTruncateStringSliceDoesNotRetainInput(t *testing.T) {
+	const limit = 64
+
+	// Lengths 1 to 70 cover the fixed-size storage, the reflect path and more
+	// than 64 strings.
+	for n := 1; n <= 70; n++ {
+		inputs := make([]string, n)
+		for i := range inputs {
+			inputs[i] = strings.Repeat("a", limit+1)
+		}
+
+		value, changed := truncateStringSliceValue(limit, attribute.StringSliceValue(inputs))
+		require.True(t, changed)
+		got := value.AsStringSlice()
+		require.Len(t, got, n)
+		for i := range got {
+			assert.Equal(t, inputs[i][:limit], got[i])
+			assert.NotSame(t, unsafe.StringData(inputs[i]), unsafe.StringData(got[i]))
+		}
+	}
+}
+
+func TestTruncateStringSliceAllocations(t *testing.T) {
+	const limit = 64
+	inputs := make([]string, 16)
+	for i := range inputs {
+		inputs[i] = strings.Repeat("a", limit+1)
+	}
+	value := attribute.StringSliceValue(inputs)
+
+	// The shortened strings share one allocation, not one each.
+	allocs := testing.AllocsPerRun(100, func() {
+		_, _ = truncateStringSliceValue(limit, value)
+	})
+	assert.LessOrEqual(t, allocs, float64(4))
+}
+
 func TestTruncateExtremeLimits(t *testing.T) {
 	invalid := "a\xffbc\xffd"
 
@@ -1065,6 +1112,31 @@ func TestTruncateExtremeLimits(t *testing.T) {
 	// A zero limit truncates to the empty string.
 	assert.Empty(t, truncate(0, invalid))
 	assert.Empty(t, truncate(0, "abc"))
+}
+
+func BenchmarkTruncateStringSlice(b *testing.B) {
+	const limit = 64
+	for _, n := range []int{2, 16} {
+		for _, tc := range []struct {
+			name string
+			size int
+		}{
+			{name: "Fitting", size: limit},
+			{name: "NearLimit", size: limit + 1},
+		} {
+			inputs := make([]string, n)
+			for i := range inputs {
+				inputs[i] = strings.Repeat("a", tc.size)
+			}
+			value := attribute.StringSliceValue(inputs)
+			b.Run(fmt.Sprintf("%d/%s", n, tc.name), func(b *testing.B) {
+				b.ReportAllocs()
+				for b.Loop() {
+					_, _ = truncateStringSliceValue(limit, value)
+				}
+			})
+		}
+	}
 }
 
 func BenchmarkTruncate(b *testing.B) {
