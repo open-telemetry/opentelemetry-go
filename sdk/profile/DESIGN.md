@@ -19,7 +19,7 @@ Out-of-process eBPF profilers such as [opentelemetry-ebpf-profiler](https://gith
 The Go Profiles SDK fills that gap with four design goals:
 
 - Collect live heap, interval-delta allocations, and goroutine snapshots by default without mutating global Go runtime profiling rates or claiming the single process-wide CPU profiler.
-- Keep `go.opentelemetry.io/otel/sdk/profile` free of protobuf and third-party dependencies, and keep `otlpprofilehttp` free of `google.golang.org/grpc` by using `go.opentelemetry.io/proto/slim/otlp`.
+- Keep `go.opentelemetry.io/otel/sdk/profile` free of protobuf and additional third-party dependencies beyond those inherited from existing OpenTelemetry modules, and keep `otlpprofilehttp` free of `google.golang.org/grpc` by using `go.opentelemetry.io/proto/slim/otlp`.
 - Reuse the pull-oriented `Provider`, `Producer`, `Reader`, and `Exporter` architecture from `go.opentelemetry.io/otel/sdk/metric`, sealed `Option` interfaces, and existing OTLP exporter patterns.
 - Emit deduplicated, orphan-free `ProfilesDictionary` payloads that pass [sig-profiling/profcheck](https://github.com/open-telemetry/sig-profiling/tree/main/profcheck).
 
@@ -228,7 +228,7 @@ Exposing `go.opentelemetry.io/proto/otlp/profiles/v1development` in `sdk/profile
 
 ### Depend on `github.com/google/pprof/profile`
 
-`sdk/profile` only needs to decode standard Go runtime pprof protobuf output. A focused internal decoder (`sdk/profile/internal/pprof`) keeps `sdk/profile` free of third-party dependencies and supports direct delta subtraction and conversion to `profiledata` with low allocations.
+`sdk/profile` only needs to decode standard Go runtime pprof protobuf output. A focused internal decoder (`sdk/profile/internal/pprof`) avoids adding a `github.com/google/pprof` dependency to `sdk/profile` and supports direct delta subtraction and conversion to `profiledata` with low allocations.
 
 ### Use full `go.opentelemetry.io/proto/otlp` in `otlpprofilehttp`
 
