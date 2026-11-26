@@ -66,6 +66,8 @@ flowchart LR
 
 `profiledata.Attribute` reuses `go.opentelemetry.io/otel/attribute` for keys and structured `attribute.Value` (matching `go.opentelemetry.io/otel/sdk/log`) while adding the optional UCUM `Unit` field required by OTLP `KeyValueAndUnit`. `Location` and `Mapping` are shared pointers within a batch so exporters can cache dictionary indices by pointer identity before falling back to content deduplication.
 
+Keeping `profiledata` as a separate package mirrors `sdk/metric/metricdata` and avoids `profile.Profile` stuttering while separating the data schema from pipeline lifecycle types and options. Packages that only build, convert, transform, or test profile payloads (`sdk/profile/internal/pprof`, `otlpprofile*/internal/transform`, third-party converters or custom producers relying on structural typing, and a future `profiledata/profiledatatest` helper matching `metricdatatest`) can import only `profiledata` without pulling in `ProfilerProvider`, readers, or `RuntimeProducer`.
+
 ## ProfilerProvider
 
 `ProfilerProvider` coordinates a single `*resource.Resource` (defaulting to `resource.Default()`) and registered `Reader` instances:
