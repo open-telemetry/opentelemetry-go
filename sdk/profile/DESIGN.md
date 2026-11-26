@@ -100,6 +100,8 @@ type Producer interface {
 
 Producers that hold runtime state may also implement `Shutdown(context.Context) error`, which their owning reader invokes during shutdown. `WithProducer(p)` returns a `ReaderOption` accepted only by `ManualReader` and `PeriodicReader`, matching `sdk/metric.WithProducer`.
 
+`Producer.Produce` must be safe for concurrent calls. On `Shutdown`, a reader immediately rejects new `Collect` calls with `ErrReaderShutdown`, and `PeriodicReader` stops its background loop and completes its final collection before shutting down attached producers. Readers do not wait for unrelated concurrent `Collect` calls to drain before invoking producer `Shutdown`, because waiting could stall teardown when `Shutdown` is needed to unblock a stuck `Produce`. Producers implementing `Shutdown` must synchronize `Shutdown` with `Produce` and handle `Produce` calls that overlap with or arrive after shutdown.
+
 Keeping `WithProducer` reader-only prevents cross-reader delta baseline and CPU window corruption by construction, since `RuntimeProducer` is stateful by default. Attach a separate `RuntimeProducer` to each reader when readers need independent intervals, and do not pass the same stateful producer instance to multiple readers. When multiple destinations need the same collected batch, including process-wide CPU profiling where Go permits only one active profiler, attach one producer to a single reader and fan out at the `Exporter` layer instead.
 
 `RuntimeProducer` collects profiles from Go's `runtime/pprof` and decodes them with an internal zero-dependency pprof wire decoder (`sdk/profile/internal/pprof`):
