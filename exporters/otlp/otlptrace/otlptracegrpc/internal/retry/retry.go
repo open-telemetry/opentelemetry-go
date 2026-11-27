@@ -109,8 +109,11 @@ func (c Config) RequestFunc(evaluate EvaluateFunc) RequestFunc {
 			bOff := b.NextBackOff()
 			delay := max(throttle, bOff)
 
+			// Compare against the remaining budget instead of summing. A
+			// saturated throttle (math.MaxInt64 from an oversized Retry-After or
+			// RetryInfo) overflows elapsed+throttle and would skip this check.
 			elapsed := time.Since(startTime)
-			if maxElapsedTime != 0 && elapsed+throttle > maxElapsedTime {
+			if maxElapsedTime != 0 && throttle > maxElapsedTime-elapsed {
 				return fmt.Errorf("max retry time would elapse: %w", err)
 			}
 
