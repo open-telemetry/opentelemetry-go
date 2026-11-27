@@ -44,6 +44,9 @@ type SpanLimits struct {
 	// will be truncated to this length. For slice and map attribute values,
 	// the limit is applied recursively to contained values.
 	//
+	// This limit applies to span, event, and link attributes processed by a
+	// TracerProvider.
+	//
 	// Setting this to a negative value means no limit is applied.
 	AttributeValueLengthLimit int
 
