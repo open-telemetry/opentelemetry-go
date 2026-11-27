@@ -15,6 +15,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
 
 ### Added
 
+- Add experimental `WithBinding` support for `Int64Counter`, `Float64Counter`, `Int64UpDownCounter`, and `Float64UpDownCounter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9590)
 - Add `go.opentelemetry.io/otel/semconv/v1.45.0` and its metric convenience subpackages from OpenTelemetry Semantic Conventions v1.45.0.
   See the [migration documentation](./semconv/v1.45.0/MIGRATION.md) for upgrading from `go.opentelemetry.io/otel/semconv/v1.44.0`. (#9484)
 - Add experimental `WithFinish` support for `Int64UpDownCounter` and `Float64UpDownCounter` Sum aggregation in `go.opentelemetry.io/otel/sdk/metric/x`. (#9251)
