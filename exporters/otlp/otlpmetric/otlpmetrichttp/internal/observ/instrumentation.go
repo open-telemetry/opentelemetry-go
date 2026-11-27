@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	metricpb "go.opentelemetry.io/proto/slim/otlp/metrics/v1"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
