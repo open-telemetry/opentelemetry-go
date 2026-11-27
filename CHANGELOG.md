@@ -69,6 +69,10 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   v1.48.0 is the final planned release of this module.
   Use native OpenTelemetry APIs and SDKs instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#9221)
 
+### Changed
+
+- Reduce allocations in `go.opentelemetry.io/otel/exporters/otlp/otlptrace` by allocating protobuf backing storage per attribute list sized from actual contents, with independent ID copies. Each export owns its storage with no reuse, safe for retaining clients. (#8892)
+
 ### Fixed
 
 - Record `otel.sdk.processor.log.processed` with `error.type="queue_full"` synchronously when `BatchProcessor.OnEmit` drops a log record due to a full queue in `go.opentelemetry.io/otel/sdk/log`. (#9524)
