@@ -518,6 +518,9 @@ type Baggage struct { //nolint:golint
 // members are dropped until the limits are satisfied and an error is returned
 // along with the partial result.
 //
+// If multiple members share the same key, the last one wins. The member and
+// byte limits are checked after duplicates are removed.
+//
 // It expects all the provided members to have already been validated.
 func New(members ...Member) (Baggage, error) {
 	if len(members) == 0 {
