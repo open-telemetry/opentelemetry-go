@@ -13,6 +13,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
@@ -70,9 +71,17 @@ func WithBool(n string, fn func(bool)) ConfigFn {
 func WithDuration(n string, fn func(time.Duration)) func(e *EnvOptionsReader) {
 	return func(e *EnvOptionsReader) {
 		if v, ok := e.GetEnvValue(n); ok {
-			d, err := strconv.Atoi(v)
+			d, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
 				global.Error(err, "parse duration", "input", v)
+				return
+			}
+			if d < 0 {
+				global.Error(errors.New("negative duration"), "parse duration", "input", v)
+				return
+			}
+			if d > math.MaxInt64/int64(time.Millisecond) {
+				global.Error(errors.New("duration overflows time.Duration"), "parse duration", "input", v)
 				return
 			}
 			fn(time.Duration(d) * time.Millisecond)

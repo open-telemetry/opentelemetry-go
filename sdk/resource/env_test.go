@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 func TestDetectOnePair(t *testing.T) {
@@ -109,4 +109,16 @@ func TestDetectServiceNameFromEnv(t *testing.T) {
 		attribute.String("key", "value"),
 		semconv.ServiceName("bar"),
 	))
+}
+
+func TestInvalidPercentDecodingTrimsValue(t *testing.T) {
+	t.Setenv(resourceAttrKey, "key= %invalid ,k=v")
+	t.Setenv(svcNameKey, "")
+	detector := &fromEnv{}
+	res, err := detector.Detect(t.Context())
+	assert.NoError(t, err)
+	assert.Equal(t, NewSchemaless(
+		attribute.String("key", "%invalid"),
+		attribute.String("k", "v"),
+	), res)
 }

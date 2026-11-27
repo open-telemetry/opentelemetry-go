@@ -12,7 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.44.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 const (
@@ -78,7 +78,8 @@ func constructOTResources(s string) (*Resource, error) {
 			continue
 		}
 		key := strings.TrimSpace(k)
-		val, err := url.PathUnescape(strings.TrimSpace(v))
+		v = strings.TrimSpace(v)
+		val, err := url.PathUnescape(v)
 		if err != nil {
 			// Retain original value if decoding fails, otherwise it will be
 			// an empty string.
