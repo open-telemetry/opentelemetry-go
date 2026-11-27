@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metricpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	metricpb "go.opentelemetry.io/proto/slim/otlp/metrics/v1"
 )
 
 func TestCountDataPoints(t *testing.T) {
