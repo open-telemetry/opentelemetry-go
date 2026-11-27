@@ -4,6 +4,7 @@
 package env
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,11 +16,13 @@ func TestEnvParse(t *testing.T) {
 		keys     []string
 		f        func(int) int
 		positive bool
+		duration bool
 	}{
 		{
-			name: "BatchSpanProcessorScheduleDelay",
-			keys: []string{BatchSpanProcessorScheduleDelayKey},
-			f:    BatchSpanProcessorScheduleDelay,
+			name:     "BatchSpanProcessorScheduleDelay",
+			keys:     []string{BatchSpanProcessorScheduleDelayKey},
+			f:        BatchSpanProcessorScheduleDelay,
+			duration: true,
 		},
 
 		{
@@ -109,6 +112,22 @@ func TestEnvParse(t *testing.T) {
 						assert.Equal(t, defVal, tc.f(defVal), "negative value")
 					} else {
 						assert.Equal(t, 0, tc.f(defVal), "zero value")
+					}
+
+					if tc.duration {
+						t.Setenv(key, "-1")
+						assert.Equal(t, defVal, tc.f(defVal), "negative duration")
+
+						t.Setenv(key, "9223372036854")
+						maxDurationMS := int64(9223372036854)
+						expectedMax := defVal
+						if maxDurationMS <= math.MaxInt {
+							expectedMax = int(maxDurationMS)
+						}
+						assert.Equal(t, expectedMax, tc.f(defVal), "maximum duration")
+
+						t.Setenv(key, "9223372036855")
+						assert.Equal(t, defVal, tc.f(defVal), "duration overflows time.Duration")
 					}
 				})
 			}
