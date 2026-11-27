@@ -66,18 +66,13 @@ var (
 		"OTEL_EXPORTER_OTLP_LOGS_CERTIFICATE",
 		"OTEL_EXPORTER_OTLP_CERTIFICATE",
 	}
-	envTLSClient = []struct {
-		Certificate string
-		Key         string
-	}{
-		{
-			"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE",
-			"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY",
-		},
-		{
-			"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE",
-			"OTEL_EXPORTER_OTLP_CLIENT_KEY",
-		},
+	envTLSClientCert = []string{
+		"OTEL_EXPORTER_OTLP_LOGS_CLIENT_CERTIFICATE",
+		"OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE",
+	}
+	envTLSClientKey = []string{
+		"OTEL_EXPORTER_OTLP_LOGS_CLIENT_KEY",
+		"OTEL_EXPORTER_OTLP_CLIENT_KEY",
 	}
 )
 
@@ -466,15 +461,12 @@ func loadEnvTLS[T *tls.Config]() resolver[T] {
 		}
 
 		var certs []tls.Certificate
-		for _, pair := range envTLSClient {
-			cert := os.Getenv(pair.Certificate)
-			key := os.Getenv(pair.Key)
-			if cert != "" && key != "" {
-				var e error
-				certs, e = loadCertificates(cert, key)
-				err = errors.Join(err, e)
-				break
-			}
+		cert := firstEnvValue(envTLSClientCert)
+		key := firstEnvValue(envTLSClientKey)
+		if cert != "" && key != "" {
+			var e error
+			certs, e = loadCertificates(cert, key)
+			err = errors.Join(err, e)
 		}
 
 		if err != nil {
@@ -521,6 +513,17 @@ func loadCertificates(certPath, keyPath string) ([]tls.Certificate, error) {
 		return nil, err
 	}
 	return []tls.Certificate{crt}, nil
+}
+
+// firstEnvValue returns the value of the first environment variable in keys
+// that is set to a non-empty value.
+func firstEnvValue(keys []string) string {
+	for _, key := range keys {
+		if v := os.Getenv(key); v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // getenv returns a resolver that will apply an environment variable value
