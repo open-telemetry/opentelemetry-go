@@ -1142,7 +1142,8 @@ func TestTagsTransformation(t *testing.T) {
 				},
 			},
 			want: map[string]string{
-				"otel.scope.name": instrLibName,
+				"otel.scope.name":   instrLibName,
+				"otel.library.name": instrLibName,
 			},
 		},
 		{
@@ -1155,8 +1156,34 @@ func TestTagsTransformation(t *testing.T) {
 				},
 			},
 			want: map[string]string{
-				"otel.scope.name":    instrLibName,
-				"otel.scope.version": instrLibVersion,
+				"otel.scope.name":      instrLibName,
+				"otel.scope.version":   instrLibVersion,
+				"otel.library.name":    instrLibName,
+				"otel.library.version": instrLibVersion,
+			},
+		},
+		{
+			name: "dropped-counts",
+			data: tracetest.SpanStub{
+				DroppedAttributes: 3,
+				DroppedEvents:     2,
+				DroppedLinks:      1,
+			},
+			want: map[string]string{
+				"otel.dropped_attributes_count": "3",
+				"otel.dropped_events_count":     "2",
+				"otel.dropped_links_count":      "1",
+			},
+		},
+		{
+			name: "dropped-counts-zero-omitted",
+			data: tracetest.SpanStub{
+				Attributes:    []attribute.KeyValue{attribute.String("key", keyValue)},
+				DroppedEvents: 4,
+			},
+			want: map[string]string{
+				"key":                       keyValue,
+				"otel.dropped_events_count": "4",
 			},
 		},
 	}
