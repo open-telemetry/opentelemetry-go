@@ -1088,6 +1088,24 @@ func TestTruncateStringSliceDoesNotRetainInput(t *testing.T) {
 	}
 }
 
+func TestTruncateStringSliceZeroLimitDoesNotRetainInput(t *testing.T) {
+	for n := 1; n <= 70; n++ {
+		inputs := make([]string, n)
+		for i := range inputs {
+			inputs[i] = strings.Repeat("a", 65)
+		}
+
+		value, changed := truncateStringSliceValue(0, attribute.StringSliceValue(inputs))
+		require.True(t, changed)
+		got := value.AsStringSlice()
+		require.Len(t, got, n)
+		for i := range got {
+			assert.Empty(t, got[i])
+			assert.NotSame(t, unsafe.StringData(inputs[i]), unsafe.StringData(got[i]))
+		}
+	}
+}
+
 func TestTruncateStringSliceAllocations(t *testing.T) {
 	const limit = 64
 	inputs := make([]string, 16)

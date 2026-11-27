@@ -231,6 +231,13 @@ func (f *flagSet) has(i int) bool {
 // of them keeps an original string alive.
 func detachStrings(truncated []string, shared flagSet, size int) {
 	if size == 0 {
+		// Only empty strings remain. They can still point into an original
+		// string (s[:0]), so replace them to drop that reference.
+		for i := range truncated {
+			if shared.has(i) {
+				truncated[i] = ""
+			}
+		}
 		return
 	}
 
