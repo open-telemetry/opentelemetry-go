@@ -157,6 +157,30 @@ func TestLinks(t *testing.T) {
 	assert.Equal(t, l[1].DroppedAttributeCount, int(got[1].DroppedAttributesCount))
 }
 
+func TestLinkTraceState(t *testing.T) {
+	ts, err := trace.ParseTraceState("vendor1=opaque,vendor2=value")
+	require.NoError(t, err)
+
+	got := links([]tracesdk.Link{
+		{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    trace.TraceID{0x01},
+				SpanID:     trace.SpanID{0x02},
+				TraceState: ts,
+			}),
+		},
+		{
+			SpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: trace.TraceID{0x01},
+				SpanID:  trace.SpanID{0x02},
+			}),
+		},
+	})
+	require.Len(t, got, 2)
+	assert.Equal(t, "vendor1=opaque,vendor2=value", got[0].TraceState)
+	assert.Empty(t, got[1].TraceState)
+}
+
 func TestStatus(t *testing.T) {
 	for _, test := range []struct {
 		code       codes.Code
