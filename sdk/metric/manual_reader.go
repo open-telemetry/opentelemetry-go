@@ -73,7 +73,8 @@ func nextManualReaderID() int64 {
 // to read metrics from the SDK on demand.
 func (mr *ManualReader) register(p sdkProducer) {
 	// Only register once. If producer is already set, do nothing.
-	if !mr.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
+	if !mr.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce, stop: p.stop}) {
+		p.stop()
 		msg := "did not register manual reader"
 		global.Error(errDuplicateRegister, msg)
 	}
@@ -103,9 +104,10 @@ func (mr *ManualReader) Shutdown(context.Context) error {
 	err := ErrReaderShutdown
 	mr.shutdownOnce.Do(func() {
 		// Any future call to Collect will now return ErrReaderShutdown.
-		mr.sdkProducer.Store(produceHolder{
+		ph := mr.sdkProducer.Swap(produceHolder{
 			produce: shutdownProducer{}.produce,
 		})
+		stopProducer(ph)
 		mr.mu.Lock()
 		defer mr.mu.Unlock()
 		mr.isShutdown = true

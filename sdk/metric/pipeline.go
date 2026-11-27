@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -23,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/internal/aggregate"
 	"go.opentelemetry.io/otel/sdk/metric/internal/attrnorm"
 	"go.opentelemetry.io/otel/sdk/metric/internal/finish"
+	"go.opentelemetry.io/otel/sdk/metric/internal/x"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -53,7 +55,7 @@ func newPipeline(
 	if res == nil {
 		res = resource.Empty()
 	}
-	return &pipeline{
+	p := &pipeline{
 		resource:         res,
 		reader:           reader,
 		views:            views,
@@ -64,6 +66,12 @@ func newPipeline(
 		viewMatchingMode: viewMatchingMode,
 		// aggregations is lazy allocated when needed.
 	}
+	if x.ParallelCallbacks.Enabled() {
+		// Callbacks are expected to be fast and local, so a small pool sized to
+		// GOMAXPROCS suffices.
+		p.pool.Store(newCallbackPool(runtime.GOMAXPROCS(0)))
+	}
+	return p
 }
 
 // pipeline connects all of the instruments created by a meter provider to a Reader.
@@ -87,6 +95,11 @@ type pipeline struct {
 	exemplarFilter   exemplar.Filter
 	cardinalityLimit int
 	viewMatchingMode viewMatchingMode
+
+	// pool runs observable callbacks concurrently during produce when the
+	// experimental parallel-callbacks feature is enabled; it holds nil
+	// otherwise.
+	pool atomic.Pointer[callbackPool]
 }
 
 // addInt64Measure adds a new int64 measure to the pipeline for each observer.
@@ -148,20 +161,7 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 	p.Lock()
 	defer p.Unlock()
 
-	var err error
-	for _, c := range p.callbacks {
-		// TODO make the callbacks parallel. ( #3034 )
-		if e := c(ctx); e != nil {
-			err = errors.Join(err, e)
-		}
-	}
-	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
-		// TODO make the callbacks parallel. ( #3034 )
-		f := e.Value.(multiCallback)
-		if e := f(ctx); e != nil {
-			err = errors.Join(err, e)
-		}
-	}
+	err := p.runCallbacks(ctx)
 
 	rm.Resource = p.resource
 	rm.ScopeMetrics = internal.ReuseSlice(rm.ScopeMetrics, len(p.aggregations))
@@ -190,6 +190,190 @@ func (p *pipeline) produce(ctx context.Context, rm *metricdata.ResourceMetrics) 
 	rm.ScopeMetrics = rm.ScopeMetrics[:i]
 
 	return err
+}
+
+func (p *pipeline) runCallbacks(ctx context.Context) error {
+	pool := p.pool.Load()
+	if pool == nil {
+		return p.runCallbacksSequential(ctx)
+	}
+	return p.runCallbacksParallel(ctx, pool)
+}
+
+func (p *pipeline) runCallbacksSequential(ctx context.Context) error {
+	var err error
+	for _, c := range p.callbacks {
+		if e := c(ctx); e != nil {
+			err = errors.Join(err, e)
+		}
+	}
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+		if e2 := e.Value.(multiCallback)(ctx); e2 != nil {
+			err = errors.Join(err, e2)
+		}
+	}
+	return err
+}
+
+// runCallbacksParallel relies on produce holding p's lock, and on stop taking
+// that lock before tearing the pool down, so only one batch uses the pool at a
+// time.
+func (p *pipeline) runCallbacksParallel(ctx context.Context, pool *callbackPool) error {
+	pool.begin(ctx)
+	for _, c := range p.callbacks {
+		pool.submit(c)
+	}
+	for e := p.multiCallbacks.Front(); e != nil; e = e.Next() {
+		pool.submit(e.Value.(multiCallback))
+	}
+	return pool.wait()
+}
+
+// stop tears down this pipeline's callback pool on shutdown. It never
+// synchronously waits on an in-flight collection: the sequential default never
+// blocked Shutdown on produce, and enabling the pool must preserve that.
+func (p *pipeline) stop() {
+	pool := p.pool.Swap(nil)
+	if pool == nil {
+		return
+	}
+	// If no collection is running, tear the pool down synchronously so Shutdown
+	// fully completes in the common case.
+	if p.TryLock() {
+		p.Unlock()
+		pool.stop()
+		return
+	}
+	// A collection holds the lock; detach so Shutdown does not wait on it. A
+	// callback that never returns leaks only this goroutine, as sequential mode
+	// already leaks its collection.
+	go p.stopAfterCollect(pool)
+}
+
+// stopAfterCollect stops pool once the collection releases the lock; stopping
+// mid-batch would block produce on a job send.
+func (p *pipeline) stopAfterCollect(pool *callbackPool) {
+	p.Lock()
+	defer p.Unlock()
+	pool.stop()
+}
+
+// callbackPool is a fixed set of long-lived worker goroutines that execute
+// observable callbacks during collection. Workers are started once and reused
+// across collections, avoiding per-collection goroutine churn.
+type callbackPool struct {
+	jobs   chan func(context.Context) error
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+
+	// Per-batch state, reused to avoid allocations; the pipeline lock gives one
+	// produce call exclusive use. mu guards err, panicVal, and goexited; ctx is
+	// published by the job send, which happens-before the worker's receive.
+	batch    sync.WaitGroup
+	mu       sync.Mutex
+	err      error
+	panicVal any
+	goexited bool
+	ctx      context.Context
+}
+
+// newCallbackPool starts worker goroutines that block waiting for jobs until
+// stop is called.
+func newCallbackPool(workers int) *callbackPool {
+	ctx, cancel := context.WithCancel(context.Background())
+	p := &callbackPool{jobs: make(chan func(context.Context) error), cancel: cancel}
+	for range workers {
+		p.wg.Go(func() { p.worker(ctx) })
+	}
+	return p
+}
+
+// worker runs the pool's job loop until ctx is canceled by stop. It is a named
+// method so tests can count live workers by a stable symbol in a goroutine
+// profile; a closure's ordinal name would break as closures are added or moved.
+func (p *callbackPool) worker(ctx context.Context) {
+	stopped := false
+	// A callback calling runtime.Goexit unwinds this goroutine; replace it so
+	// the pool never runs out of workers. Adding to wg here is safe: this
+	// goroutine's own Done has not run yet.
+	defer func() {
+		if !stopped {
+			p.wg.Go(func() { p.worker(ctx) })
+		}
+	}()
+	for {
+		select {
+		case cb := <-p.jobs:
+			p.runJob(cb)
+		case <-ctx.Done():
+			stopped = true
+			return
+		}
+	}
+}
+
+// begin starts a batch whose callbacks receive ctx. ctx is published to workers
+// by the job send in submit, which happens-before the worker's receive.
+func (p *callbackPool) begin(ctx context.Context) {
+	p.ctx = ctx
+}
+
+func (p *callbackPool) submit(cb func(context.Context) error) {
+	p.batch.Add(1)
+	p.jobs <- cb
+}
+
+func (p *callbackPool) runJob(cb func(context.Context) error) {
+	defer p.batch.Done()
+	returned := false
+	// An unrecovered worker panic would crash the host; record it, or a
+	// runtime.Goexit, so produce re-raises it.
+	defer func() {
+		r := recover()
+		if returned {
+			return
+		}
+		p.mu.Lock()
+		if r == nil {
+			p.goexited = true
+		} else if p.panicVal == nil {
+			p.panicVal = r
+		}
+		p.mu.Unlock()
+	}()
+	e := cb(p.ctx)
+	returned = true
+	if e != nil {
+		p.mu.Lock()
+		p.err = errors.Join(p.err, e)
+		p.mu.Unlock()
+	}
+}
+
+// wait blocks until every submitted callback has returned, then clears the
+// batch state so the pool retains nothing between collections. A callback panic
+// or runtime.Goexit is re-raised on the caller's goroutine, matching sequential
+// mode.
+func (p *callbackPool) wait() error {
+	p.batch.Wait()
+
+	p.mu.Lock()
+	panicVal, goexited, err := p.panicVal, p.goexited, p.err
+	p.ctx, p.panicVal, p.goexited, p.err = nil, nil, false, nil
+	p.mu.Unlock()
+
+	if panicVal != nil {
+		panic(panicVal)
+	}
+	if goexited {
+		runtime.Goexit()
+	}
+	return err
+}
+
+func (p *callbackPool) stop() {
+	p.cancel()
+	p.wg.Wait()
 }
 
 // inserter facilitates inserting of new instruments from a single scope into a

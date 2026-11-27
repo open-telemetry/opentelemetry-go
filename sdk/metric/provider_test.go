@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr/funcr"
 	"github.com/go-logr/logr/testr"
@@ -33,6 +34,57 @@ func TestMeterConcurrentSafe(*testing.T) {
 
 	_ = mp.Meter(name)
 	<-done
+}
+
+// TestShutdownReturnsPromptlyDuringInFlightCollect verifies Shutdown does not
+// block on an in-flight collection that holds the pipeline lock, matching the
+// sequential default. The callback pool is torn down asynchronously once the
+// collection releases the lock, so Shutdown returns promptly with no error
+// rather than waiting for teardown.
+func TestShutdownReturnsPromptlyDuringInFlightCollect(t *testing.T) {
+	// Only a callback pool can make Shutdown wait on an in-flight collection;
+	// with the feature disabled there is nothing to tear down, so enable it to
+	// exercise the contended teardown path.
+	t.Setenv("OTEL_GO_X_PARALLEL_CALLBACKS", "true")
+
+	reader := NewManualReader()
+	mp := NewMeterProvider(WithReader(reader))
+	m := mp.Meter("test")
+
+	started := make(chan struct{})
+	release := make(chan struct{})
+	_, err := m.Int64ObservableCounter("ctr",
+		api.WithInt64Callback(func(context.Context, api.Int64Observer) error {
+			close(started)
+			<-release // Hold the pipeline lock until the test releases it.
+			return nil
+		}))
+	require.NoError(t, err)
+
+	// Start a collection that parks in the callback while holding the pipeline
+	// lock, then wait until it has actually started.
+	collectDone := make(chan struct{})
+	go func() {
+		defer close(collectDone)
+		var rm metricdata.ResourceMetrics
+		_ = reader.Collect(t.Context(), &rm)
+	}()
+	<-started
+
+	shutdownDone := make(chan error, 1)
+	go func() { shutdownDone <- mp.Shutdown(t.Context()) }()
+
+	select {
+	case err := <-shutdownDone:
+		require.NoError(t, err)
+	case <-time.After(2 * time.Second):
+		t.Fatal("Shutdown blocked on an in-flight collection")
+	}
+
+	// Release the callback so it frees the pipeline lock.
+	close(release)
+	// Wait so the collection goroutine does not outlive the test.
+	<-collectDone
 }
 
 func TestForceFlushConcurrentSafe(t *testing.T) {
