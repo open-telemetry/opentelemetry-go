@@ -52,7 +52,12 @@ func TestNewPipeline(t *testing.T) {
 	assert.Equal(t, resource.Empty(), output.Resource)
 	assert.Empty(t, output.ScopeMetrics)
 
-	iSync := instrumentSync{"name", "desc", "1", testSumAggregateOutput}
+	iSync := instrumentSync{
+		name:        "name",
+		description: "desc",
+		unit:        "1",
+		compAgg:     testSumAggregateOutput,
+	}
 	assert.NotPanics(t, func() {
 		pipe.addSync(instrumentation.Scope{}, iSync)
 	})
@@ -94,7 +99,12 @@ func TestPipelineConcurrentSafe(t *testing.T) {
 		go func(n int) {
 			defer wg.Done()
 			name := fmt.Sprintf("name %d", n)
-			sync := instrumentSync{name, "desc", "1", testSumAggregateOutput}
+			sync := instrumentSync{
+				name:        name,
+				description: "desc",
+				unit:        "1",
+				compAgg:     testSumAggregateOutput,
+			}
 			pipe.addSync(instrumentation.Scope{}, sync)
 		}(i)
 

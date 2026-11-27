@@ -6,6 +6,7 @@ package metric
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
@@ -120,6 +121,50 @@ type Producer interface {
 // type.
 type produceHolder struct {
 	produce func(context.Context, *metricdata.ResourceMetrics) error
+}
+
+func wrapProduce(
+	produce func(context.Context, *metricdata.ResourceMetrics) error,
+	filter metricFilter,
+) func(context.Context, *metricdata.ResourceMetrics) error {
+	return func(ctx context.Context, rm *metricdata.ResourceMetrics) error {
+		err := produce(ctx, rm)
+		if filter == nil {
+			return err
+		}
+		rm.ScopeMetrics = filterScopeMetrics(rm.ScopeMetrics, filter, filterInPlace)
+		return err
+	}
+}
+
+type filteringProducer struct {
+	inner  Producer
+	filter metricFilter
+}
+
+func wrapProducers(producers []Producer, filter metricFilter) []Producer {
+	if filter == nil {
+		return producers
+	}
+
+	wrapped := make([]Producer, len(producers))
+	for i, producer := range producers {
+		wrapped[i] = &filteringProducer{inner: producer, filter: filter}
+	}
+	return wrapped
+}
+
+func (p *filteringProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+	sm, err := p.inner.Produce(ctx)
+	if p.filter == nil {
+		return sm, err
+	}
+	// External producers may share their backing arrays with other readers.
+	sm = slices.Clone(sm)
+	for i := range sm {
+		sm[i].Metrics = slices.Clone(sm[i].Metrics)
+	}
+	return filterScopeMetrics(sm, p.filter, filterSharedData), err
 }
 
 // shutdownProducer produces an ErrReaderShutdown error always.

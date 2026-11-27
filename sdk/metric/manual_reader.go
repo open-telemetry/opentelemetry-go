@@ -37,6 +37,8 @@ type ManualReader struct {
 	cardinalityLimitSelector CardinalityLimitSelector
 
 	inst *observ.Instrumentation
+
+	metricFilter metricFilter
 }
 
 // Compile time check the manualReader implements Reader and is comparable.
@@ -49,8 +51,9 @@ func NewManualReader(opts ...ManualReaderOption) *ManualReader {
 		temporalitySelector:      cfg.temporalitySelector,
 		aggregationSelector:      cfg.aggregationSelector,
 		cardinalityLimitSelector: cfg.cardinalityLimitSelector,
+		metricFilter:             cfg.metricFilter,
 	}
-	r.externalProducers.Store(cfg.producers)
+	r.externalProducers.Store(wrapProducers(cfg.producers, cfg.metricFilter))
 
 	var err error
 	r.inst, err = observ.NewInstrumentation(manualReaderType, nextManualReaderID())
@@ -72,8 +75,12 @@ func nextManualReaderID() int64 {
 // register stores the sdkProducer which enables the caller
 // to read metrics from the SDK on demand.
 func (mr *ManualReader) register(p sdkProducer) {
+	produce := p.produce
+	if mr.metricFilter != nil {
+		produce = wrapProduce(produce, mr.metricFilter)
+	}
 	// Only register once. If producer is already set, do nothing.
-	if !mr.sdkProducer.CompareAndSwap(nil, produceHolder{produce: p.produce}) {
+	if !mr.sdkProducer.CompareAndSwap(nil, produceHolder{produce: produce}) {
 		msg := "did not register manual reader"
 		global.Error(errDuplicateRegister, msg)
 	}
@@ -190,6 +197,7 @@ type manualReaderConfig struct {
 	aggregationSelector      AggregationSelector
 	cardinalityLimitSelector CardinalityLimitSelector
 	producers                []Producer
+	metricFilter             metricFilter
 }
 
 // newManualReaderConfig returns a manualReaderConfig configured with options.
@@ -200,6 +208,13 @@ func newManualReaderConfig(opts []ManualReaderOption) manualReaderConfig {
 		cardinalityLimitSelector: defaultCardinalityLimitSelector,
 	}
 	for _, opt := range opts {
+		if o, ok := opt.(metricFilter); ok {
+			cfg.metricFilter = o
+			continue
+		}
+		if _, ok := opt.(experimentalOption); ok {
+			continue
+		}
 		cfg = opt.applyManual(cfg)
 	}
 	return cfg
