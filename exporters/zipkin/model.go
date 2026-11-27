@@ -28,6 +28,14 @@ import (
 const (
 	keyPeerHostname attribute.Key = "peer.hostname"
 	keyPeerAddress  attribute.Key = "peer.address"
+
+	// Tag names defined by the OpenTelemetry mapping to non-OTLP formats.
+	// https://opentelemetry.io/docs/specs/otel/common/mapping-to-non-otlp/
+	keyLibraryName          = "otel.library.name"
+	keyLibraryVersion       = "otel.library.version"
+	keyDroppedAttributesCnt = "otel.dropped_attributes_count"
+	keyDroppedEventsCnt     = "otel.dropped_events_count"
+	keyDroppedLinksCnt      = "otel.dropped_links_count"
 )
 
 var defaultServiceName string
@@ -198,6 +206,11 @@ var extraZipkinTagsLen = len([]attribute.Key{
 	semconv.OTelStatusCodeKey,
 	semconv.OTelScopeNameKey,
 	semconv.OTelScopeVersionKey,
+	attribute.Key(keyLibraryName),
+	attribute.Key(keyLibraryVersion),
+	attribute.Key(keyDroppedAttributesCnt),
+	attribute.Key(keyDroppedEventsCnt),
+	attribute.Key(keyDroppedLinksCnt),
 })
 
 func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
@@ -227,9 +240,23 @@ func toZipkinTags(data tracesdk.ReadOnlySpan) map[string]string {
 
 	if is := data.InstrumentationScope(); is.Name != "" {
 		m[string(semconv.OTelScopeNameKey)] = is.Name
+		// The deprecated library aliases must carry the same values.
+		m[keyLibraryName] = is.Name
 		if is.Version != "" {
 			m[string(semconv.OTelScopeVersionKey)] = is.Version
+			m[keyLibraryVersion] = is.Version
 		}
+	}
+
+	// Dropped counts are only reported when they are non-zero.
+	if n := data.DroppedAttributes(); n > 0 {
+		m[keyDroppedAttributesCnt] = strconv.Itoa(n)
+	}
+	if n := data.DroppedEvents(); n > 0 {
+		m[keyDroppedEventsCnt] = strconv.Itoa(n)
+	}
+	if n := data.DroppedLinks(); n > 0 {
+		m[keyDroppedLinksCnt] = strconv.Itoa(n)
 	}
 
 	if len(m) == 0 {
