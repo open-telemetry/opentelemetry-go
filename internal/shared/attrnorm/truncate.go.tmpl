@@ -127,10 +127,16 @@ func truncateStringSliceValue(limit int, value attribute.Value) (attribute.Value
 
 func truncateStrings(limit int, value attribute.Value, values []string) (attribute.Value, bool) {
 	var truncated []string
+	var shared flagSet
+	size := 0
 	for i, s := range values {
-		newS := truncate(limit, s)
+		newS, alias := truncateShared(limit, s)
 		if truncated != nil {
 			truncated[i] = newS
+			if alias {
+				shared.set(i)
+				size += len(newS)
+			}
 			continue
 		}
 		if newS == s {
@@ -140,20 +146,32 @@ func truncateStrings(limit int, value attribute.Value, values []string) (attribu
 		truncated = make([]string, len(values))
 		copy(truncated, values[:i])
 		truncated[i] = newS
+		shared.init(len(values))
+		if alias {
+			shared.set(i)
+			size = len(newS)
+		}
 	}
 	if truncated == nil {
 		return value, false
 	}
+	detachStrings(truncated, shared, size)
 	return attribute.StringSliceValue(truncated), true
 }
 
 func truncateStringArray(limit int, value attribute.Value, values reflect.Value) (attribute.Value, bool) {
 	var truncated []string
+	var shared flagSet
+	size := 0
 	for i := range values.Len() {
 		s := values.Index(i).String()
-		newS := truncate(limit, s)
+		newS, alias := truncateShared(limit, s)
 		if truncated != nil {
 			truncated[i] = newS
+			if alias {
+				shared.set(i)
+				size += len(newS)
+			}
 			continue
 		}
 		if newS == s {
@@ -165,11 +183,78 @@ func truncateStringArray(limit int, value attribute.Value, values reflect.Value)
 			truncated[j] = values.Index(j).String()
 		}
 		truncated[i] = newS
+		shared.init(values.Len())
+		if alias {
+			shared.set(i)
+			size = len(newS)
+		}
 	}
 	if truncated == nil {
 		return value, false
 	}
+	detachStrings(truncated, shared, size)
 	return attribute.StringSliceValue(truncated), true
+}
+
+// flagSet is a set of small non-negative integers. It needs no allocation
+// for fewer than 64 elements.
+type flagSet struct {
+	small uint64
+	large []bool
+}
+
+// init prepares f to hold values below n.
+func (f *flagSet) init(n int) {
+	if n > 64 {
+		f.large = make([]bool, n)
+	}
+}
+
+func (f *flagSet) set(i int) {
+	if f.large != nil {
+		f.large[i] = true
+		return
+	}
+	f.small |= 1 << uint(i)
+}
+
+func (f *flagSet) has(i int) bool {
+	if f.large != nil {
+		return f.large[i]
+	}
+	return f.small&(1<<uint(i)) != 0
+}
+
+// detachStrings replaces every string in truncated that shares memory with a
+// longer original string (shared has its index) by a copy. All copies live in
+// one allocation of size bytes instead of one allocation per string, and none
+// of them keeps an original string alive.
+func detachStrings(truncated []string, shared flagSet, size int) {
+	if size == 0 {
+		// Only empty strings remain. They can still point into an original
+		// string (s[:0]), so replace them to drop that reference.
+		for i := range truncated {
+			if shared.has(i) {
+				truncated[i] = ""
+			}
+		}
+		return
+	}
+
+	var b strings.Builder
+	b.Grow(size)
+	for i, s := range truncated {
+		if shared.has(i) {
+			_, _ = b.WriteString(s)
+		}
+	}
+	buf := b.String()
+	for i, s := range truncated {
+		if shared.has(i) {
+			truncated[i] = buf[:len(s)]
+			buf = buf[len(s):]
+		}
+	}
 }
 
 func truncateSliceValue(limit int, value attribute.Value) (attribute.Value, bool) {
@@ -326,7 +411,8 @@ func truncateKeyValueArray(limit int, value attribute.Value, keyValues reflect.V
 
 var stringType = reflect.TypeFor[string]()
 
-// truncate returns a version of s truncated according to limit.
+// truncate returns a version of s truncated according to limit. The result
+// never shares memory with s, so it does not keep a larger s alive.
 //
 // If limit is negative, it returns the original string.
 //
@@ -336,6 +422,17 @@ var stringType = reflect.TypeFor[string]()
 // If s already contains at most limit bytes, it is returned unchanged. No
 // invalid characters are removed.
 func truncate(limit int, s string) string {
+	t, shared := truncateShared(limit, s)
+	if shared {
+		return strings.Clone(t)
+	}
+	return t
+}
+
+// truncateShared is like truncate, but when the second result is true the
+// returned string is a prefix of s that shares its memory. The caller must copy
+// it before keeping it.
+func truncateShared(limit int, s string) (string, bool) {
 	// This prioritizes performance in the following order based on the most
 	// common expected use cases.
 	//
@@ -344,7 +441,7 @@ func truncate(limit int, s string) string {
 	//  - No limit.
 	//  - Strings with invalid encodings that exceed the limit.
 	if limit < 0 || len(s) <= limit {
-		return s
+		return s, false
 	}
 
 	// Optimistically, assume all valid UTF-8.
@@ -354,14 +451,14 @@ func truncate(limit int, s string) string {
 		if c != utf8.RuneError {
 			count++
 			if count > limit {
-				return s[:i]
+				return s[:i], true
 			}
 			continue
 		}
 
 		// A zero limit also truncates a leading invalid byte or U+FFFD.
 		if limit == 0 {
-			return ""
+			return "", false
 		}
 		// Range reports RuneError for both an invalid byte and a valid U+FFFD.
 		// Only a size-1 decoding indicates invalid UTF-8.
@@ -369,7 +466,14 @@ func truncate(limit int, s string) string {
 		if size == 1 {
 			// Removing this byte makes len(s)-1 an upper bound for a rebuilt
 			// result. Keep the valid prefix before rescanning s[i:].
-			b.Grow(len(s) - 1)
+			// A rebuilt result holds at most limit runes of up to utf8.UTFMax
+			// bytes each. Do not size it to len(s): the result would keep that
+			// whole allocation alive.
+			capacity := len(s) - 1
+			if limit <= capacity/utf8.UTFMax {
+				capacity = limit * utf8.UTFMax
+			}
+			b.Grow(capacity)
 			_, _ = b.WriteString(s[:i])
 			s = s[i:]
 			break
@@ -378,13 +482,13 @@ func truncate(limit int, s string) string {
 		// A valid U+FFFD still consumes one character of the limit.
 		count++
 		if count > limit {
-			return s[:i]
+			return s[:i], true
 		}
 	}
 
 	// Fast-path, no invalid input.
 	if b.Cap() == 0 {
-		return s
+		return s, false
 	}
 
 	// The builder holds the valid prefix before the first invalid byte, and
@@ -412,5 +516,5 @@ func truncate(limit int, s string) string {
 		count++
 	}
 
-	return b.String()
+	return b.String(), false
 }
