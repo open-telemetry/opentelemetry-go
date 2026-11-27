@@ -7,10 +7,10 @@
 package attrnorm
 
 import (
-	{{- if index . "DepthLimit" }}
 	"fmt"
-	{{- end }}
+	"slices"
 	"testing"
+	"unsafe"
 
 	"github.com/google/go-cmp/cmp"
 
@@ -960,5 +960,69 @@ func TestInvalidArrayStorage(t *testing.T) {
 		-1,
 	); got.Type() != attribute.EMPTY {
 		t.Fatalf("arrayAt() = %v, want empty value", got)
+	}
+}
+
+func TestHasSliceOrMap(t *testing.T) {
+	dup := attribute.Map("m", attribute.String("k", "first"), attribute.String("k", "second"))
+	if hasSliceOrMap(&attribute.Set{}) {
+		t.Error("zero-value set reported as possibly holding a slice or map")
+	}
+	for size := range maxInlineSetSize + 2 {
+		scalars := make([]attribute.KeyValue, 0, size)
+		for i := range size {
+			scalars = append(scalars, attribute.Int(fmt.Sprintf("k%02d", i), i))
+		}
+		set := attribute.NewSet(scalars...)
+		got := hasSliceOrMap(&set)
+		if got && size <= maxInlineSetSize {
+			t.Errorf("size %d: scalar-only set reported as possibly holding a slice or map", size)
+		}
+		if !got && size > maxInlineSetSize {
+			t.Errorf("size %d: set above the limit must take the full SetDedup path", size)
+		}
+
+		if size == 0 {
+			continue
+		}
+		for _, at := range []int{0, size - 1} {
+			// NewSet sorts by key. Changing only the value keeps this attribute in place.
+			kvs := slices.Clone(scalars)
+			kvs[at].Value = attribute.SliceValue(dup.Value)
+			withSlice := attribute.NewSet(kvs...)
+			if !hasSliceOrMap(&withSlice) {
+				t.Errorf("size %d, index %d: SLICE value not detected", size, at)
+			}
+
+			kvs = slices.Clone(scalars)
+			kvs[at].Value = dup.Value
+			withMap := attribute.NewSet(kvs...)
+			if !hasSliceOrMap(&withMap) {
+				t.Errorf("size %d, index %d: MAP value not detected", size, at)
+			}
+			if _, changed := SetDedup(withMap); !changed {
+				t.Errorf("size %d, index %d: duplicate map key not deduplicated", size, at)
+			}
+		}
+	}
+}
+
+func TestSetMirrorLayout(t *testing.T) {
+	var set attribute.Set
+	if got, want := unsafe.Sizeof(set), unsafe.Sizeof(rawSet{}); got != want {
+		t.Fatalf("attribute.Set size = %d, rawSet size = %d", got, want)
+	}
+	set = attribute.NewSet(attribute.String("a", "b"))
+	if _, ok := (*rawSet)(unsafe.Pointer(&set)).data.([1]attribute.KeyValue); !ok { //nolint:gosec // Checks that rawSet matches attribute.Set.
+		t.Fatal("rawSet does not mirror attribute.Set storage")
+	}
+
+	kvs := make([]attribute.KeyValue, maxInlineSetSize)
+	for i := range kvs {
+		kvs[i] = attribute.Int(fmt.Sprintf("k%02d", i), i)
+	}
+	set = attribute.NewSet(kvs...)
+	if _, ok := (*rawSet)(unsafe.Pointer(&set)).data.([maxInlineSetSize]attribute.KeyValue); !ok { //nolint:gosec // Checks that rawSet matches attribute.Set.
+		t.Fatal("rawSet does not mirror attribute.Set storage for the largest inline size")
 	}
 }

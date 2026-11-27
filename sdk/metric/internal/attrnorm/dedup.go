@@ -90,10 +90,10 @@ func KeyValuesDedup(kvs []attribute.KeyValue) ([]attribute.KeyValue, bool) {
 // Top-level key uniqueness remains attribute.Set's responsibility; this only
 // normalizes map attribute values.
 func SetDedup(set attribute.Set) (attribute.Set, bool) {
-	length := set.Len()
-	if length == 0 {
+	if !hasSliceOrMap(&set) {
 		return set, false
 	}
+	length := set.Len()
 
 	// Most attribute sets contain no duplicate map keys. Delay allocation until
 	// the first changed value so the no-op path returns the original Set.
@@ -305,4 +305,77 @@ func arrayAt[T any](storage any, elem reflect.Type, i int) T {
 		return zero
 	}
 	return array.Index(i).Interface().(T)
+}
+
+// rawSet has the same fields as attribute.Set. computeDataFixed stops at 10, but
+// larger sets match too: reflect.ArrayOf returns the same [N]KeyValue type.
+type rawSet struct {
+	hash uint64
+	data any
+}
+
+// maxInlineSetSize is the largest set size that hasSliceOrMap handles.
+// Go needs one switch case per array type, so add or remove cases to change it.
+const maxInlineSetSize = 20
+
+// hasSliceOrMap reports whether set may hold a SLICE or MAP value. It can return
+// true for a set that holds none, never false for one that does.
+func hasSliceOrMap(set *attribute.Set) bool {
+	// Each size needs its own case because the array type includes its length.
+	switch kvs := (*rawSet)(unsafe.Pointer(set)).data.(type) { //nolint:gosec // Reads the private data field of attribute.Set.
+	case nil, [0]attribute.KeyValue:
+		return false
+	case [1]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [2]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [3]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [4]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [5]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [6]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [7]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [8]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [9]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [10]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [11]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [12]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [13]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [14]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [15]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [16]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [17]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [18]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [19]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	case [20]attribute.KeyValue:
+		return anySliceOrMap(kvs[:])
+	default:
+		// Rarer large sets keep the full SetDedup path.
+		return true
+	}
+}
+
+func anySliceOrMap(kvs []attribute.KeyValue) bool {
+	for i := range kvs {
+		if t := kvs[i].Value.Type(); t == attribute.SLICE || t == attribute.MAP {
+			return true
+		}
+	}
+	return false
 }
