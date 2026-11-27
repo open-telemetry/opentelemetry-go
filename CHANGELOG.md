@@ -156,6 +156,7 @@ See our [versioning policy](VERSIONING.md) for more information about these stab
   Previously, such a value produced a negative timeout that removed the export deadline.
 - Reject negative and overflowing `OTEL_EXPORTER_OTLP_TIMEOUT` and `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT` values in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc` and `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp`. (#9338)
   Previously, such a value produced a negative timeout that removed the export deadline.
+- Trim surrounding whitespace from an `OTEL_RESOURCE_ATTRIBUTES` value that fails percent-decoding in `go.opentelemetry.io/otel/sdk/resource`. (#9442)
 
 ### Removed
 
