@@ -235,17 +235,18 @@ func (s *autoSpan) SetAttributes(attrs ...attribute.KeyValue) {
 		return
 	}
 
+	// Keep in sync with convCappedAttrs.
 	m := make(map[string]int)
 	for i, a := range s.span.Attrs {
 		m[a.Key] = i
 	}
 
 	for _, a := range attrs {
-		val := convAttrValue(a.Value)
-		if val.Empty() {
+		if !a.Valid() {
 			s.span.DroppedAttrs++
 			continue
 		}
+		val := convAttrValue(a.Value)
 
 		if idx, ok := m[string(a.Key)]; ok {
 			s.span.Attrs[idx] = telemetry.Attr{
@@ -264,47 +265,112 @@ func (s *autoSpan) SetAttributes(attrs ...attribute.KeyValue) {
 	}
 }
 
-// convCappedAttrs converts up to limit attrs into a []telemetry.Attr. The
-// number of dropped attributes is also returned.
+// smallAttrs is the input length up to which convCappedAttrs finds a repeated
+// key by scanning its output instead of allocating a key index.
+const smallAttrs = 8
+
+// convCappedAttrs converts attrs into a []telemetry.Attr, applying the
+// attribute count limit the same way SetAttributes does: invalid key-values are
+// dropped, a repeated key keeps its last value without consuming a limit slot,
+// and entries for keys rejected at the limit count as dropped. The number of
+// dropped attributes is also returned.
+//
+// Keep in sync with SetAttributes.
 func convCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, uint32) {
-	n := len(attrs)
 	if limit == 0 {
 		var out uint32
-		if n > 0 {
+		if n := len(attrs); n > 0 {
 			out = uint32(min(int64(n), math.MaxUint32)) // nolint: gosec  // Bounds checked.
 		}
 		return nil, out
 	}
-
-	if limit < 0 {
-		// Unlimited.
-		return convAttrs(attrs), 0
-	}
-
-	if n < 0 {
-		n = 0
-	}
-
-	limit = min(n, limit)
-	return convAttrs(attrs[:limit]), uint32(n - limit) // nolint: gosec  // Bounds checked.
-}
-
-func convAttrs(attrs []attribute.KeyValue) []telemetry.Attr {
 	if len(attrs) == 0 {
 		// Avoid allocations if not necessary.
-		return nil
+		return nil, 0
 	}
 
-	out := make([]telemetry.Attr, 0, len(attrs))
-	for _, attr := range attrs {
-		key := string(attr.Key)
-		val := convAttrValue(attr.Value)
-		if val.Empty() {
+	if len(attrs) <= smallAttrs {
+		return convSmallCappedAttrs(limit, attrs)
+	}
+
+	// Without a limit, let the output grow with the distinct keys.
+	var hint int
+	if limit > 0 {
+		hint = min(len(attrs), limit)
+	}
+
+	var (
+		out []telemetry.Attr
+		src []int // src[j] is the index in attrs of the value kept for out[j].
+	)
+	idx := make(map[attribute.Key]int, hint)
+	dropped := 0
+	for i, a := range attrs {
+		if !a.Valid() {
+			dropped++
 			continue
 		}
-		out = append(out, telemetry.Attr{Key: key, Value: val})
+		if j, ok := idx[a.Key]; ok {
+			src[j] = i
+			continue
+		}
+		if limit > 0 && len(out) >= limit {
+			dropped++
+			continue
+		}
+		if out == nil {
+			out = make([]telemetry.Attr, 0, hint)
+			src = make([]int, 0, hint)
+		}
+		idx[a.Key] = len(out)
+		out = append(out, telemetry.Attr{Key: string(a.Key)})
+		src = append(src, i)
 	}
-	return out
+	for j := range out {
+		out[j].Value = convAttrValue(attrs[src[j]].Value)
+	}
+	return out, uint32(min(int64(dropped), math.MaxUint32)) // nolint: gosec  // Bounds checked.
+}
+
+// convSmallCappedAttrs is convCappedAttrs for at most smallAttrs entries. It
+// finds a repeated key by scanning the output, which is cheaper than a map at
+// this size, and converts each value as it goes.
+func convSmallCappedAttrs(limit int, attrs []attribute.KeyValue) ([]telemetry.Attr, uint32) {
+	n := len(attrs)
+	if limit > 0 {
+		n = min(n, limit)
+	}
+	var out []telemetry.Attr
+	var dropped uint32
+	for _, a := range attrs {
+		if !a.Valid() {
+			dropped++
+			continue
+		}
+		if j := indexOfKey(out, a.Key); j >= 0 {
+			out[j].Value = convAttrValue(a.Value)
+			continue
+		}
+		if limit > 0 && len(out) >= limit {
+			dropped++
+			continue
+		}
+		if out == nil {
+			out = make([]telemetry.Attr, 0, n)
+		}
+		out = append(out, telemetry.Attr{Key: string(a.Key), Value: convAttrValue(a.Value)})
+	}
+	return out, dropped
+}
+
+// indexOfKey returns the index of the attribute with key in attrs, or -1.
+func indexOfKey(attrs []telemetry.Attr, key attribute.Key) int {
+	for i := range attrs {
+		if attrs[i].Key == string(key) {
+			return i
+		}
+	}
+	return -1
 }
 
 func convAttrValue(value attribute.Value) telemetry.Value {
