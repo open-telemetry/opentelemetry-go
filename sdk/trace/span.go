@@ -393,6 +393,19 @@ func normAttr(attr attribute.KeyValue, depthLimit, lengthLimit int) attribute.Ke
 	return attrnorm.Truncate(lengthLimit, attr)
 }
 
+// truncateAttrs returns a copy of attrs with the attribute value length limit
+// applied. attrs is copied because it may be owned by the caller.
+func truncateAttrs(limit int, attrs []attribute.KeyValue) []attribute.KeyValue {
+	if limit < 0 || len(attrs) == 0 {
+		return attrs
+	}
+	out := slices.Clone(attrs)
+	for i, a := range out {
+		out[i] = attrnorm.Truncate(limit, a)
+	}
+	return out
+}
+
 // End ends the span. This method does nothing if the span is already ended or
 // is not being recorded.
 //
@@ -553,6 +566,7 @@ func (s *recordingSpan) addEvent(name string, o ...trace.EventOption) {
 		c.Attributes(),
 		s.tracer.provider.spanLimits.AttributeValueDepthLimit,
 	)
+	attrs = truncateAttrs(s.tracer.provider.spanLimits.AttributeValueLengthLimit, attrs)
 	e := Event{Name: name, Attributes: attrs, Time: c.Timestamp()}
 
 	// Discard attributes over limit.
@@ -736,6 +750,7 @@ func (s *recordingSpan) AddLink(link trace.Link) {
 		link.Attributes,
 		s.tracer.provider.spanLimits.AttributeValueDepthLimit,
 	)
+	attrs = truncateAttrs(s.tracer.provider.spanLimits.AttributeValueLengthLimit, attrs)
 	l := Link{SpanContext: link.SpanContext, Attributes: attrs}
 
 	// Discard attributes over limit.
