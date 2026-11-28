@@ -6,8 +6,10 @@
 package env
 
 import (
+	"math"
 	"os"
 	"strconv"
+	"time"
 
 	"go.opentelemetry.io/otel/internal/global"
 )
@@ -95,6 +97,23 @@ func IntEnvOr(key string, defaultValue int) int {
 	return intValue
 }
 
+// millisecondsEnvOr returns the value of the environment variable with name
+// key, interpreted as a number of milliseconds, if it is a valid int that is
+// non-negative and fits in a [time.Duration]. Otherwise, defaultValue is
+// returned.
+func millisecondsEnvOr(key string, defaultValue int) int {
+	value := IntEnvOr(key, defaultValue)
+	if value < 0 {
+		global.Warn("Got invalid value, non-negative number expected.", key, value)
+		return defaultValue
+	}
+	if int64(value) > math.MaxInt64/int64(time.Millisecond) {
+		global.Warn("Got invalid value, duration overflows time.Duration.", key, value)
+		return defaultValue
+	}
+	return value
+}
+
 func positiveIntEnvOr(key string, defaultValue int) int {
 	value := IntEnvOr(key, defaultValue)
 	if value <= 0 {
@@ -105,10 +124,11 @@ func positiveIntEnvOr(key string, defaultValue int) int {
 }
 
 // BatchSpanProcessorScheduleDelay returns the environment variable value for
-// the OTEL_BSP_SCHEDULE_DELAY key if it exists, otherwise defaultValue is
+// the OTEL_BSP_SCHEDULE_DELAY key if it is a non-negative integer that does
+// not overflow a [time.Duration] in milliseconds, otherwise defaultValue is
 // returned.
 func BatchSpanProcessorScheduleDelay(defaultValue int) int {
-	return IntEnvOr(BatchSpanProcessorScheduleDelayKey, defaultValue)
+	return millisecondsEnvOr(BatchSpanProcessorScheduleDelayKey, defaultValue)
 }
 
 // BatchSpanProcessorExportTimeout returns the environment variable value for

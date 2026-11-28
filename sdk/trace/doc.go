@@ -31,9 +31,9 @@ The configuration can be overridden by the [WithSampler] option.
 
 OTEL_BSP_SCHEDULE_DELAY (default: "5000") - the maximum time (in milliseconds)
 a span processor returned from [NewBatchSpanProcessor] waits before exporting
-the spans it holds. Values that cannot be parsed as an integer are ignored,
-and the default is used instead. Other values are used as-is; valid values are
-non-negative.
+the spans it holds. Values that cannot be parsed as an integer, that are
+negative, or that overflow a [time.Duration] when converted to milliseconds are
+ignored, and the default is used instead.
 The configuration can be overridden by the [WithBatchTimeout] option.
 
 OTEL_BSP_EXPORT_TIMEOUT (default: "30000") - the maximum time (in
